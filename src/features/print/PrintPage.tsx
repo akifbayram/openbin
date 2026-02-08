@@ -119,7 +119,7 @@ export function PrintPage() {
             <Card>
               <CardContent>
                 <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal mb-3 block">Preview</Label>
-                <div className="bg-white rounded-[var(--radius-md)] p-4 overflow-auto">
+                <div className="bg-white rounded-[var(--radius-md)] p-4 overflow-auto dark:border dark:border-[var(--border-subtle)]">
                   <LabelSheet bins={selectedBins} />
                 </div>
               </CardContent>

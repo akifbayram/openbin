@@ -100,7 +100,7 @@ export function BinListPage() {
           onClick={() => setCreateOpen(true)}
           size="icon"
           className="h-10 w-10 rounded-full"
-          title="Create bin"
+          aria-label="Create bin"
         >
           <Plus className="h-5 w-5" />
         </Button>
@@ -158,6 +158,7 @@ export function BinListPage() {
             size="icon"
             className="h-8 w-8 rounded-full"
             onClick={clearSelection}
+            aria-label="Clear selection"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -169,7 +170,7 @@ export function BinListPage() {
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="gap-1 pr-1.5 py-1">
             "{search}"
-            <button onClick={() => setSearch('')} className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]">
+            <button onClick={() => setSearch('')} aria-label="Clear search" className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]">
               <X className="h-2.5 w-2.5" />
             </button>
           </Badge>

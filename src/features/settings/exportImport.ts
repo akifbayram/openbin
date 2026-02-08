@@ -1,6 +1,19 @@
 import { db } from '@/db';
 import type { Bin, Photo, ExportData, ExportedPhoto } from '@/types';
 
+export const MAX_IMPORT_SIZE = 100 * 1024 * 1024; // 100 MB
+
+export type ImportErrorCode = 'INVALID_JSON' | 'INVALID_FORMAT' | 'FILE_TOO_LARGE';
+
+export class ImportError extends Error {
+  code: ImportErrorCode;
+  constructor(code: ImportErrorCode, message: string) {
+    super(message);
+    this.name = 'ImportError';
+    this.code = code;
+  }
+}
+
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -68,6 +81,10 @@ export function downloadExport(data: ExportData): void {
   URL.revokeObjectURL(url);
 }
 
+function isISODate(s: unknown): boolean {
+  return typeof s === 'string' && !isNaN(Date.parse(s));
+}
+
 export function validateExportData(data: unknown): data is ExportData {
   if (!data || typeof data !== 'object') return false;
   const d = data as Record<string, unknown>;
@@ -75,13 +92,53 @@ export function validateExportData(data: unknown): data is ExportData {
   if (typeof d.exportedAt !== 'string') return false;
   if (!Array.isArray(d.bins)) return false;
   if (!Array.isArray(d.photos)) return false;
-  return d.bins.every(
-    (b: unknown) =>
-      b &&
-      typeof b === 'object' &&
-      typeof (b as Record<string, unknown>).id === 'string' &&
-      typeof (b as Record<string, unknown>).name === 'string'
-  );
+
+  const binsValid = d.bins.every((b: unknown) => {
+    if (!b || typeof b !== 'object') return false;
+    const bin = b as Record<string, unknown>;
+    return (
+      typeof bin.id === 'string' &&
+      typeof bin.name === 'string' &&
+      typeof bin.contents === 'string' &&
+      Array.isArray(bin.tags) &&
+      (bin.tags as unknown[]).every((t) => typeof t === 'string') &&
+      isISODate(bin.createdAt) &&
+      isISODate(bin.updatedAt)
+    );
+  });
+  if (!binsValid) return false;
+
+  const photosValid = (d.photos as unknown[]).every((p: unknown) => {
+    if (!p || typeof p !== 'object') return false;
+    const photo = p as Record<string, unknown>;
+    return (
+      typeof photo.id === 'string' &&
+      typeof photo.binId === 'string' &&
+      typeof photo.dataBase64 === 'string' &&
+      typeof photo.filename === 'string' &&
+      typeof photo.mimeType === 'string' &&
+      typeof photo.size === 'number' &&
+      isISODate(photo.createdAt)
+    );
+  });
+  return photosValid;
+}
+
+export async function parseImportFile(file: File): Promise<ExportData> {
+  if (file.size > MAX_IMPORT_SIZE) {
+    throw new ImportError('FILE_TOO_LARGE', `File exceeds ${MAX_IMPORT_SIZE / 1024 / 1024} MB limit`);
+  }
+  const text = await file.text();
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new ImportError('INVALID_JSON', 'File is not valid JSON');
+  }
+  if (!validateExportData(json)) {
+    throw new ImportError('INVALID_FORMAT', 'File does not match the expected backup format');
+  }
+  return json;
 }
 
 export interface ImportResult {

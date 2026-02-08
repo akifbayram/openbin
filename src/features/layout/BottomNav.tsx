@@ -7,7 +7,7 @@ export function BottomNav() {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed bottom-[calc(12px+var(--safe-bottom))] left-1/2 -translate-x-1/2 z-40 lg:hidden print-hide">
+    <nav aria-label="Main navigation" className="fixed bottom-[calc(12px+var(--safe-bottom))] left-1/2 -translate-x-1/2 z-40 lg:hidden print-hide">
       <div className="glass-nav rounded-[var(--radius-full)] flex items-center gap-1 px-1.5 h-[var(--nav-height)]">
         {navItems.map(({ path, label, icon: Icon }) => {
           const isActive =
@@ -19,6 +19,8 @@ export function BottomNav() {
             <button
               key={path}
               onClick={() => navigate(path)}
+              aria-label={label}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-2 px-5 py-2 rounded-[var(--radius-full)] text-[13px] font-medium transition-all duration-200',
                 isActive

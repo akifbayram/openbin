@@ -13,7 +13,7 @@ export function Sidebar({ theme, onToggleTheme }: SidebarProps) {
   const navigate = useNavigate();
 
   return (
-    <aside className="hidden lg:flex flex-col w-[var(--sidebar-width)] h-dvh fixed left-0 top-0 print-hide">
+    <aside aria-label="Main navigation" className="hidden lg:flex flex-col w-[var(--sidebar-width)] h-dvh fixed left-0 top-0 print-hide">
       <div className="flex-1 flex flex-col px-5 pt-6 pb-4 gap-1">
         {/* Brand */}
         <div className="px-3 pt-2 pb-6">
@@ -34,6 +34,8 @@ export function Sidebar({ theme, onToggleTheme }: SidebarProps) {
             <button
               key={path}
               onClick={() => navigate(path)}
+              aria-label={label}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium transition-all duration-200 w-full text-left',
                 isActive
@@ -52,6 +54,7 @@ export function Sidebar({ theme, onToggleTheme }: SidebarProps) {
       <div className="px-5 py-4 border-t border-[var(--border-subtle)]">
         <button
           onClick={onToggleTheme}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors w-full"
         >
           {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}

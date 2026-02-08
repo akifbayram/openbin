@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -9,8 +10,26 @@ interface PhotoLightboxProps {
 }
 
 export function PhotoLightbox({ src, filename, onClose, onDelete }: PhotoLightboxProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    containerRef.current?.focus();
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center">
+    <div
+      ref={containerRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Photo: ${filename}`}
+      tabIndex={-1}
+      className="fixed inset-0 z-[70] flex items-center justify-center outline-none"
+    >
       <div
         className="fixed inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
@@ -21,8 +40,8 @@ export function PhotoLightbox({ src, filename, onClose, onDelete }: PhotoLightbo
             variant="ghost"
             size="icon"
             onClick={onDelete}
+            aria-label="Delete photo"
             className="rounded-full h-10 w-10 bg-black/40 text-white hover:bg-black/60 hover:text-red-400"
-            title="Delete photo"
           >
             <Trash2 className="h-5 w-5" />
           </Button>
@@ -30,8 +49,8 @@ export function PhotoLightbox({ src, filename, onClose, onDelete }: PhotoLightbo
             variant="ghost"
             size="icon"
             onClick={onClose}
+            aria-label="Close"
             className="rounded-full h-10 w-10 bg-black/40 text-white hover:bg-black/60"
-            title="Close"
           >
             <X className="h-5 w-5" />
           </Button>

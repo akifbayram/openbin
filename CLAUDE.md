@@ -62,6 +62,10 @@ npx tsc --noEmit   # Zero type errors
 npx vite build     # Successful production build
 ```
 
+## Git Workflow
+
+- **Push after phase implementations** — after completing a phase (or significant milestone), commit and push changes to the remote repository.
+
 ## Agent Team Plan (3 Parallel Agents)
 
 For large features, split into three domain-aligned agents. Use Slack (`#qrbin-dev`) for cross-agent coordination.

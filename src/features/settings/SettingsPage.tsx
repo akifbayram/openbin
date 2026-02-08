@@ -19,14 +19,16 @@ import type { ExportData } from '@/types';
 import {
   exportAllData,
   downloadExport,
-  validateExportData,
+  parseImportFile,
   importData,
+  ImportError,
 } from './exportImport';
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
   const [confirmReplace, setConfirmReplace] = useState(false);
   const [pendingData, setPendingData] = useState<ExportData | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -51,25 +53,29 @@ export function SettingsPage() {
     fileInputRef.current?.click();
   }
 
+  function importErrorMessage(err: unknown): string {
+    if (err instanceof ImportError) {
+      switch (err.code) {
+        case 'FILE_TOO_LARGE': return 'File is too large (max 100 MB)';
+        case 'INVALID_JSON': return 'File is not valid JSON';
+        case 'INVALID_FORMAT': return 'Invalid backup file format';
+      }
+    }
+    return 'Failed to read backup file';
+  }
+
   async function handleFileSelected(files: FileList | null) {
     if (!files?.[0]) return;
-    const file = files[0];
     try {
-      const text = await file.text();
-      const json = JSON.parse(text);
-      if (!validateExportData(json)) {
-        showToast({ message: 'Invalid backup file format' });
-        return;
-      }
-      // Default: merge. Store data in case user wants replace.
-      setPendingData(json);
-      const result = await importData(json, 'merge');
+      const data = await parseImportFile(files[0]);
+      setPendingData(data);
+      const result = await importData(data, 'merge');
       showToast({
         message: `Imported ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}${result.binsSkipped ? ` (${result.binsSkipped} skipped)` : ''}`,
       });
       setPendingData(null);
-    } catch {
-      showToast({ message: 'Failed to read backup file' });
+    } catch (err) {
+      showToast({ message: importErrorMessage(err) });
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
@@ -90,19 +96,14 @@ export function SettingsPage() {
 
   async function handleReplaceFileSelected(files: FileList | null) {
     if (!files?.[0]) return;
-    const file = files[0];
     try {
-      const text = await file.text();
-      const json = JSON.parse(text);
-      if (!validateExportData(json)) {
-        showToast({ message: 'Invalid backup file format' });
-        return;
-      }
-      setPendingData(json);
+      const data = await parseImportFile(files[0]);
+      setPendingData(data);
       setConfirmReplace(true);
-    } catch {
-      showToast({ message: 'Failed to read backup file' });
+    } catch (err) {
+      showToast({ message: importErrorMessage(err) });
     }
+    if (replaceInputRef.current) replaceInputRef.current.value = '';
   }
 
   return (
@@ -149,14 +150,7 @@ export function SettingsPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => {
-                // Use a separate ref trick: swap handler temporarily
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.json';
-                input.onchange = () => handleReplaceFileSelected(input.files);
-                input.click();
-              }}
+              onClick={() => replaceInputRef.current?.click()}
               className="justify-start rounded-[var(--radius-sm)] h-11 text-[var(--destructive)]"
             >
               <AlertTriangle className="h-4 w-4 mr-2.5" />
@@ -169,6 +163,13 @@ export function SettingsPage() {
             accept=".json"
             className="hidden"
             onChange={(e) => handleFileSelected(e.target.files)}
+          />
+          <input
+            ref={replaceInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={(e) => handleReplaceFileSelected(e.target.files)}
           />
         </CardContent>
       </Card>

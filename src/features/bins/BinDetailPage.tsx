@@ -98,7 +98,7 @@ export function BinDetailPage() {
               variant="ghost"
               size="icon"
               onClick={startEdit}
-              title="Edit"
+              aria-label="Edit bin"
               className="rounded-full h-9 w-9"
             >
               <Pencil className="h-[18px] w-[18px]" />
@@ -107,7 +107,7 @@ export function BinDetailPage() {
               variant="ghost"
               size="icon"
               onClick={() => navigate(`/print?ids=${id}`)}
-              title="Print"
+              aria-label="Print label"
               className="rounded-full h-9 w-9"
             >
               <Printer className="h-[18px] w-[18px]" />
@@ -116,7 +116,7 @@ export function BinDetailPage() {
               variant="ghost"
               size="icon"
               onClick={handleDelete}
-              title="Delete"
+              aria-label="Delete bin"
               className="rounded-full h-9 w-9 text-[var(--destructive)]"
             >
               <Trash2 className="h-[18px] w-[18px]" />

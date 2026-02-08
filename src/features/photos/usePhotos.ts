@@ -48,7 +48,10 @@ export async function deletePhoto(id: string): Promise<Photo | undefined> {
 }
 
 export async function restorePhoto(photo: Photo): Promise<void> {
-  await db.photos.add(photo);
+  await db.transaction('rw', [db.photos, db.bins], async () => {
+    await db.photos.add(photo);
+    await db.bins.update(photo.binId, { updatedAt: new Date() });
+  });
 }
 
 export async function deletePhotosForBin(binId: string): Promise<void> {

@@ -30,13 +30,30 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
     }
   }
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') {
+      if (e.shiftKey && selectable) {
+        onSelect?.(bin.id);
+      } else if (e.shiftKey) {
+        onSelect?.(bin.id);
+      } else {
+        handleClick();
+      }
+    }
+  }
+
   return (
     <div
+      tabIndex={0}
+      role="button"
+      aria-selected={selectable ? selected : undefined}
       className={cn(
-        'glass-card rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.98]',
-        selected && 'ring-2 ring-[var(--accent)]'
+        'glass-card rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
+        selected && 'ring-2 ring-[var(--accent)]',
+        selectable && !selected && 'active:bg-[var(--bg-active)]'
       )}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       onContextMenu={(e) => {
         e.preventDefault();
         handleLongPress();

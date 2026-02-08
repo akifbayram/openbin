@@ -46,6 +46,7 @@ function DialogContent({
   className?: string;
 }) {
   const { open, onOpenChange } = React.useContext(DialogContext);
+  const contentRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     if (open) {
@@ -54,6 +55,48 @@ function DialogContent({
       document.body.style.overflow = '';
     }
     return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
+  // Escape key to close
+  React.useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onOpenChange(false);
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onOpenChange]);
+
+  // Focus trap
+  React.useEffect(() => {
+    if (!open || !contentRef.current) return;
+    const el = contentRef.current;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    // Focus first focusable element
+    const focusableSelector = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+    const firstFocusable = el.querySelector<HTMLElement>(focusableSelector);
+    firstFocusable?.focus();
+
+    function trapFocus(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return;
+      const focusables = el.querySelectorAll<HTMLElement>(focusableSelector);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener('keydown', trapFocus);
+    return () => {
+      document.removeEventListener('keydown', trapFocus);
+      previouslyFocused?.focus();
+    };
   }, [open]);
 
   if (!open) return null;
@@ -65,6 +108,9 @@ function DialogContent({
         onClick={() => onOpenChange(false)}
       />
       <div
+        ref={contentRef}
+        role="dialog"
+        aria-modal="true"
         className={cn(
           'relative z-[60] w-full sm:max-w-md glass-heavy',
           'rounded-t-[var(--radius-xl)] sm:rounded-[var(--radius-xl)]',
@@ -78,6 +124,7 @@ function DialogContent({
           <div className="w-9 h-[5px] rounded-full bg-[var(--text-tertiary)] opacity-30" />
         </div>
         <button
+          aria-label="Close"
           className="absolute right-5 top-5 rounded-full p-1.5 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors hidden sm:flex items-center justify-center"
           onClick={() => onOpenChange(false)}
         >

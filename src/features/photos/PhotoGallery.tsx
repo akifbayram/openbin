@@ -80,6 +80,7 @@ export function PhotoGallery({ binId }: PhotoGalleryProps) {
                 <button
                   type="button"
                   onClick={() => setLightboxPhoto(photo)}
+                  aria-label={`View ${photo.filename}`}
                   className="block w-full aspect-square rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-input)]"
                 >
                   <img
@@ -93,7 +94,7 @@ export function PhotoGallery({ binId }: PhotoGalleryProps) {
                   size="icon"
                   onClick={() => handleDelete(photo)}
                   className="absolute top-1 right-1 h-7 w-7 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70 hover:text-red-400"
-                  title="Delete photo"
+                  aria-label="Delete photo"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
@@ -104,6 +105,7 @@ export function PhotoGallery({ binId }: PhotoGalleryProps) {
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
+            aria-label="Add photo"
             className="flex flex-col items-center justify-center aspect-square rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
           >
             <Plus className="h-6 w-6" />
