@@ -17,6 +17,8 @@ async function createTestBin(id = 'test-bin') {
     items: [],
     notes: '',
     tags: [],
+    icon: '',
+    color: '',
     createdAt: new Date(),
     updatedAt: new Date(),
   });

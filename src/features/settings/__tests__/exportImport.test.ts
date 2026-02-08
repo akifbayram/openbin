@@ -166,6 +166,8 @@ describe('importData', () => {
       items: [],
       notes: '',
       tags: [],
+      icon: '',
+      color: '',
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -200,6 +202,8 @@ describe('importData', () => {
       items: [],
       notes: '',
       tags: [],
+      icon: '',
+      color: '',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -262,6 +266,28 @@ describe('importData', () => {
     expect(bin!.notes).toBe('');
   });
 
+  it('imports bins with icon and color from export', async () => {
+    const data = makeValidExportData({
+      bins: [makeExportBin({ id: 'icon-bin', icon: 'Wrench', color: 'blue' })],
+    });
+    const result = await importData(data, 'replace');
+    expect(result.binsImported).toBe(1);
+    const bin = await db.bins.get('icon-bin');
+    expect(bin?.icon).toBe('Wrench');
+    expect(bin?.color).toBe('blue');
+  });
+
+  it('defaults icon and color when missing from export', async () => {
+    const data = makeValidExportData({
+      bins: [makeExportBin({ id: 'no-icon-bin' })],
+    });
+    const result = await importData(data, 'replace');
+    expect(result.binsImported).toBe(1);
+    const bin = await db.bins.get('no-icon-bin');
+    expect(bin?.icon).toBe('');
+    expect(bin?.color).toBe('');
+  });
+
   it('duplicate photo IDs are skipped in merge mode', async () => {
     // Pre-populate a bin and photo
     await db.bins.add({
@@ -271,6 +297,8 @@ describe('importData', () => {
       items: [],
       notes: '',
       tags: [],
+      icon: '',
+      color: '',
       createdAt: new Date(),
       updatedAt: new Date(),
     });

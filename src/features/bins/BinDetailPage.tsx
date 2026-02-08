@@ -13,7 +13,11 @@ import { useToast } from '@/components/ui/toast';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
 import { TagInput } from './TagInput';
 import { ItemsInput } from './ItemsInput';
+import { IconPicker } from './IconPicker';
+import { ColorPicker } from './ColorPicker';
 import { useBin, updateBin, deleteBin, restoreBin } from './useBins';
+import { resolveIcon } from '@/lib/iconMap';
+import { getColorPreset } from '@/lib/colorPalette';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { getPhotosForBin } from '@/features/photos/usePhotos';
 import type { Bin } from '@/types';
@@ -29,6 +33,8 @@ export function BinDetailPage() {
   const [editItems, setEditItems] = useState<string[]>([]);
   const [editNotes, setEditNotes] = useState('');
   const [editTags, setEditTags] = useState<string[]>([]);
+  const [editIcon, setEditIcon] = useState('');
+  const [editColor, setEditColor] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   if (bin === undefined) {
@@ -67,6 +73,8 @@ export function BinDetailPage() {
     setEditItems([...bin.items]);
     setEditNotes(bin.notes);
     setEditTags([...bin.tags]);
+    setEditIcon(bin.icon);
+    setEditColor(bin.color);
     setEditing(true);
   }
 
@@ -78,6 +86,8 @@ export function BinDetailPage() {
       items: editItems,
       notes: editNotes.trim(),
       tags: editTags,
+      icon: editIcon,
+      color: editColor,
     });
     setEditing(false);
   }
@@ -182,6 +192,14 @@ export function BinDetailPage() {
               <Label>Tags</Label>
               <TagInput tags={editTags} onChange={setEditTags} />
             </div>
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <IconPicker value={editIcon} onChange={setEditIcon} />
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <ColorPicker value={editColor} onChange={setEditColor} />
+            </div>
             <div className="flex gap-2.5 justify-end pt-1">
               <Button variant="ghost" onClick={() => setEditing(false)} className="rounded-[var(--radius-full)]">
                 Cancel
@@ -196,9 +214,13 @@ export function BinDetailPage() {
       ) : (
         <>
           {/* Title */}
-          <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-tight">
-            {bin.name}
-          </h1>
+          <div className="flex items-center gap-2.5">
+            {(() => { const Icon = resolveIcon(bin.icon); return <Icon className="h-7 w-7 text-[var(--text-secondary)] shrink-0" />; })()}
+            {bin.color && (() => { const preset = getColorPreset(bin.color); return preset ? <span className="h-3.5 w-3.5 rounded-full shrink-0" style={{ backgroundColor: preset.dot }} /> : null; })()}
+            <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-tight">
+              {bin.name}
+            </h1>
+          </div>
 
           {/* QR Code */}
           <Card>

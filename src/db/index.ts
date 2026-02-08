@@ -33,6 +33,15 @@ class BinDatabase extends Dexie {
         bin.location = '';
       });
     });
+    this.version(5).stores({
+      bins: 'id, name, *tags, createdAt, updatedAt',
+      photos: 'id, binId, createdAt',
+    }).upgrade((tx) => {
+      return tx.table('bins').toCollection().modify((bin) => {
+        bin.icon = '';
+        bin.color = '';
+      });
+    });
   }
 }
 

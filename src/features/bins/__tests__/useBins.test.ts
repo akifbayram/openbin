@@ -11,7 +11,7 @@ beforeEach(async () => {
 describe('addBin', () => {
   it('creates a bin with uuid, correct fields, and Date timestamps', async () => {
     const before = new Date();
-    const id = await addBin('My Bin', ['stuff inside'], 'some notes', ['electronics', 'cables']);
+    const id = await addBin({ name: 'My Bin', items: ['stuff inside'], notes: 'some notes', tags: ['electronics', 'cables'] });
     const after = new Date();
 
     expect(id).toBeDefined();
@@ -26,6 +26,8 @@ describe('addBin', () => {
     expect(bin!.items).toEqual(['stuff inside']);
     expect(bin!.notes).toBe('some notes');
     expect(bin!.tags).toEqual(['electronics', 'cables']);
+    expect(bin!.icon).toBe('');
+    expect(bin!.color).toBe('');
     expect(bin!.createdAt).toBeInstanceOf(Date);
     expect(bin!.updatedAt).toBeInstanceOf(Date);
     expect(bin!.createdAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
@@ -34,17 +36,26 @@ describe('addBin', () => {
   });
 
   it('uses default values for items, notes, and tags', async () => {
-    const id = await addBin('Minimal Bin');
+    const id = await addBin({ name: 'Minimal Bin' });
     const bin = await db.bins.get(id);
     expect(bin!.items).toEqual([]);
     expect(bin!.notes).toBe('');
     expect(bin!.tags).toEqual([]);
+    expect(bin!.icon).toBe('');
+    expect(bin!.color).toBe('');
+  });
+
+  it('creates a bin with icon and color', async () => {
+    const id = await addBin({ name: 'Colored Bin', icon: 'Wrench', color: 'blue' });
+    const bin = await db.bins.get(id);
+    expect(bin!.icon).toBe('Wrench');
+    expect(bin!.color).toBe('blue');
   });
 });
 
 describe('updateBin', () => {
   it('updates specified fields and sets new updatedAt', async () => {
-    const id = await addBin('Original', ['original item'], 'original notes', ['old']);
+    const id = await addBin({ name: 'Original', items: ['original item'], notes: 'original notes', tags: ['old'] });
     const binBefore = await db.bins.get(id);
 
     // Small delay to ensure updatedAt differs
@@ -61,11 +72,19 @@ describe('updateBin', () => {
       binBefore!.updatedAt.getTime()
     );
   });
+
+  it('updates icon and color', async () => {
+    const id = await addBin({ name: 'Icon Bin' });
+    await updateBin(id, { icon: 'Wrench', color: 'red' });
+    const bin = await db.bins.get(id);
+    expect(bin!.icon).toBe('Wrench');
+    expect(bin!.color).toBe('red');
+  });
 });
 
 describe('deleteBin', () => {
   it('removes bin AND its photos transactionally', async () => {
-    const id = await addBin('Doomed Bin');
+    const id = await addBin({ name: 'Doomed Bin' });
     // Add photos for this bin
     await db.photos.add({
       id: 'photo-a',
@@ -105,6 +124,8 @@ describe('restoreBin', () => {
       items: ['restored item'],
       notes: 'restored notes',
       tags: ['restored'],
+      icon: '',
+      color: '',
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -142,6 +163,8 @@ describe('restoreBin', () => {
       items: [],
       notes: '',
       tags: [],
+      icon: '',
+      color: '',
       createdAt: new Date(),
       updatedAt: new Date(),
     };

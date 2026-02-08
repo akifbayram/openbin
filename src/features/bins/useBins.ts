@@ -39,22 +39,28 @@ export function useBin(id: string | undefined) {
   }, [id]);
 }
 
-export async function addBin(
-  name: string,
-  items: string[] = [],
-  notes: string = '',
-  tags: string[] = [],
-  location: string = ''
-): Promise<string> {
+export interface AddBinOptions {
+  name: string;
+  items?: string[];
+  notes?: string;
+  tags?: string[];
+  location?: string;
+  icon?: string;
+  color?: string;
+}
+
+export async function addBin(options: AddBinOptions): Promise<string> {
   const id = uuidv4();
   const now = new Date();
   await db.bins.add({
     id,
-    name,
-    location,
-    items,
-    notes,
-    tags,
+    name: options.name,
+    location: options.location ?? '',
+    items: options.items ?? [],
+    notes: options.notes ?? '',
+    tags: options.tags ?? [],
+    icon: options.icon ?? '',
+    color: options.color ?? '',
     createdAt: now,
     updatedAt: now,
   });
@@ -63,7 +69,7 @@ export async function addBin(
 
 export async function updateBin(
   id: string,
-  changes: Partial<Pick<Bin, 'name' | 'location' | 'items' | 'notes' | 'tags'>>
+  changes: Partial<Pick<Bin, 'name' | 'location' | 'items' | 'notes' | 'tags' | 'icon' | 'color'>>
 ): Promise<void> {
   await db.bins.update(id, {
     ...changes,

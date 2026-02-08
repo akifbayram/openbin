@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/dialog';
 import { TagInput } from './TagInput';
 import { ItemsInput } from './ItemsInput';
+import { IconPicker } from './IconPicker';
+import { ColorPicker } from './ColorPicker';
 import { addBin } from './useBins';
 
 interface BinCreateDialogProps {
@@ -29,6 +31,8 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
   const [items, setItems] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [icon, setIcon] = useState('');
+  const [color, setColor] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -36,12 +40,14 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
     if (!name.trim()) return;
     setLoading(true);
     try {
-      const id = await addBin(name.trim(), items, notes.trim(), tags, location.trim());
+      const id = await addBin({ name: name.trim(), items, notes: notes.trim(), tags, location: location.trim(), icon, color });
       setName('');
       setLocation('');
       setItems([]);
       setNotes('');
       setTags([]);
+      setIcon('');
+      setColor('');
       onOpenChange(false);
       navigate(`/bin/${id}`);
     } finally {
@@ -94,6 +100,14 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
           <div className="space-y-2">
             <Label>Tags</Label>
             <TagInput tags={tags} onChange={setTags} />
+          </div>
+          <div className="space-y-2">
+            <Label>Icon</Label>
+            <IconPicker value={icon} onChange={setIcon} />
+          </div>
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <ColorPicker value={color} onChange={setColor} />
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

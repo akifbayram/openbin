@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Sun, Moon, Download, Upload, AlertTriangle } from 'lucide-react';
+import { Sun, Moon, Download, Upload, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { useTheme } from '@/lib/theme';
+import { useAppSettings } from '@/lib/appSettings';
 import { db } from '@/db';
 import type { ExportData } from '@/types';
 import {
@@ -26,6 +28,7 @@ import {
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
+  const { settings, updateSettings, resetSettings } = useAppSettings();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
@@ -126,6 +129,41 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Personalization */}
+      <Card>
+        <CardContent>
+          <Label>Personalization</Label>
+          <div className="flex flex-col gap-3 mt-3">
+            <div className="space-y-1.5">
+              <label htmlFor="app-name" className="text-[13px] text-[var(--text-secondary)]">App Name</label>
+              <Input
+                id="app-name"
+                value={settings.appName}
+                onChange={(e) => updateSettings({ appName: e.target.value })}
+                placeholder="QR Bin"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="app-subtitle" className="text-[13px] text-[var(--text-secondary)]">Subtitle</label>
+              <Input
+                id="app-subtitle"
+                value={settings.appSubtitle}
+                onChange={(e) => updateSettings({ appSubtitle: e.target.value })}
+                placeholder="Inventory"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={resetSettings}
+              className="justify-start rounded-[var(--radius-sm)] h-11"
+            >
+              <RotateCcw className="h-4 w-4 mr-2.5" />
+              Reset to Default
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Data */}
       <Card>
         <CardContent>
@@ -179,7 +217,7 @@ export function SettingsPage() {
         <CardContent>
           <Label>About</Label>
           <div className="mt-3 space-y-2 text-[15px] text-[var(--text-secondary)]">
-            <p className="font-semibold text-[var(--text-primary)]">QR Bin Inventory</p>
+            <p className="font-semibold text-[var(--text-primary)]">{settings.appName} {settings.appSubtitle}</p>
             <p>{binCount ?? 0} bin{binCount !== 1 ? 's' : ''} &middot; {photoCount ?? 0} photo{photoCount !== 1 ? 's' : ''}</p>
           </div>
         </CardContent>

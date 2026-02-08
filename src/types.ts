@@ -5,6 +5,8 @@ export interface Bin {
   items: string[];
   notes: string;
   tags: string[];
+  icon: string;
+  color: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +49,8 @@ export interface ExportBinV2 {
   items: string[];
   notes: string;
   tags: string[];
+  icon?: string;
+  color?: string;
   createdAt: string;
   updatedAt: string;
 }

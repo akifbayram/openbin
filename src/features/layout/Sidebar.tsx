@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Sun, Moon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { navItems } from '@/lib/navItems';
+import { useAppSettings } from '@/lib/appSettings';
 
 interface SidebarProps {
   theme: 'light' | 'dark';
@@ -11,6 +12,7 @@ interface SidebarProps {
 export function Sidebar({ theme, onToggleTheme }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { settings } = useAppSettings();
 
   return (
     <aside aria-label="Main navigation" className="hidden lg:flex flex-col w-[260px] h-dvh fixed left-0 top-0 print-hide">
@@ -18,9 +20,11 @@ export function Sidebar({ theme, onToggleTheme }: SidebarProps) {
         {/* Brand */}
         <div className="px-3 pt-2 pb-6">
           <h1 className="text-[22px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-            QR Bin
+            {settings.appName}
           </h1>
-          <p className="text-[12px] text-[var(--text-tertiary)] mt-1">Inventory</p>
+          {settings.appSubtitle && (
+            <p className="text-[12px] text-[var(--text-tertiary)] mt-1">{settings.appSubtitle}</p>
+          )}
         </div>
 
         {/* Nav items */}

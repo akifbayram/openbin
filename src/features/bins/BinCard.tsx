@@ -1,9 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
 import { cn, haptic } from '@/lib/utils';
+import { resolveIcon } from '@/lib/iconMap';
+import { getColorPreset } from '@/lib/colorPalette';
+import { useTheme } from '@/lib/theme';
 import type { Bin } from '@/types';
 
 interface BinCardProps {
@@ -17,6 +20,10 @@ interface BinCardProps {
 
 export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable, selected, onSelect, searchQuery = '' }: BinCardProps) {
   const navigate = useNavigate();
+  const { theme } = useTheme();
+  const BinIcon = resolveIcon(bin.icon);
+  const colorPreset = getColorPreset(bin.color);
+  const colorBg = colorPreset ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg) : undefined;
 
   function handleClick() {
     if (selectable) {
@@ -55,6 +62,7 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
         selected && 'ring-2 ring-[var(--accent)]',
         selectable && !selected && 'active:bg-[var(--bg-active)]'
       )}
+      style={colorBg ? { backgroundColor: colorBg } : undefined}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onContextMenu={(e) => {
@@ -75,7 +83,7 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
             {selected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
           </div>
         ) : (
-          <Package className="h-5 w-5 mt-0.5 text-[var(--text-tertiary)] shrink-0" />
+          <BinIcon className="h-5 w-5 mt-0.5 text-[var(--text-tertiary)] shrink-0" />
         )}
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug">
@@ -113,6 +121,8 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
     prev.bin.name === next.bin.name &&
     prev.bin.items.length === next.bin.items.length &&
     prev.bin.items.every((item, i) => item === next.bin.items[i]) &&
+    prev.bin.icon === next.bin.icon &&
+    prev.bin.color === next.bin.color &&
     prev.bin.updatedAt === next.bin.updatedAt &&
     prev.selectable === next.selectable &&
     prev.selected === next.selected &&

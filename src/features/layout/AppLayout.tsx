@@ -6,6 +6,7 @@ import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { useTheme } from '@/lib/theme';
 import { useOnlineStatus } from '@/lib/useOnlineStatus';
+import { useAppSettings } from '@/lib/appSettings';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -15,6 +16,7 @@ interface BeforeInstallPromptEvent extends Event {
 export function AppLayout() {
   const { theme, toggleTheme } = useTheme();
   const online = useOnlineStatus();
+  const { settings } = useAppSettings();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -53,7 +55,7 @@ export function AppLayout() {
             <div className="mx-5 mt-4 glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">
               <Download className="h-5 w-5 text-[var(--accent)] shrink-0" />
               <p className="flex-1 text-[14px] text-[var(--text-primary)]">
-                Install QR Bin for quick access
+                Install {settings.appName} for quick access
               </p>
               <Button
                 size="sm"

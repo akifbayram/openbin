@@ -62,6 +62,8 @@ export async function exportAllData(): Promise<ExportDataV2> {
       items: b.items,
       notes: b.notes,
       tags: b.tags,
+      icon: b.icon,
+      color: b.color,
       createdAt: b.createdAt.toISOString(),
       updatedAt: b.updatedAt.toISOString(),
     })),
@@ -200,12 +202,13 @@ export async function importData(
         items = contents.split('\n').map((s: string) => s.trim()).filter(Boolean);
         notes = '';
       } else {
-        const v2Bin = b as unknown as { items: string[]; notes: string; location?: string };
+        const v2Bin = b as unknown as { items: string[]; notes: string; location?: string; icon?: string; color?: string };
         items = v2Bin.items;
         notes = v2Bin.notes;
         location = v2Bin.location ?? '';
       }
 
+      const v2Bin = b as unknown as { icon?: string; color?: string };
       const bin: Bin = {
         id: b.id,
         name: b.name,
@@ -213,6 +216,8 @@ export async function importData(
         items,
         notes,
         tags: b.tags,
+        icon: v2Bin.icon ?? '',
+        color: v2Bin.color ?? '',
         createdAt: new Date(b.createdAt),
         updatedAt: new Date(b.updatedAt),
       };
