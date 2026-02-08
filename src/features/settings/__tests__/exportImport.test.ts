@@ -7,11 +7,11 @@ import {
   ImportError,
   MAX_IMPORT_SIZE,
 } from '../exportImport';
-import type { ExportData } from '@/types';
+import type { ExportDataV2 } from '@/types';
 
-function makeValidExportData(overrides?: Partial<ExportData>): ExportData {
+function makeValidExportData(overrides?: Partial<ExportDataV2>): ExportDataV2 {
   return {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     bins: [],
     photos: [],
@@ -23,7 +23,8 @@ function makeExportBin(overrides?: Record<string, unknown>) {
   return {
     id: 'bin-1',
     name: 'Test Bin',
-    contents: 'Some contents',
+    items: ['Some item'],
+    notes: 'Some notes',
     tags: ['tag1'],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -58,6 +59,23 @@ describe('validateExportData', () => {
     expect(validateExportData(data)).toBe(true);
   });
 
+  it('returns true for valid v1 data', () => {
+    const data = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      bins: [{
+        id: 'bin-1',
+        name: 'Test',
+        contents: 'stuff',
+        tags: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }],
+      photos: [],
+    };
+    expect(validateExportData(data)).toBe(true);
+  });
+
   it('returns false when version is missing', () => {
     const data = { exportedAt: 'x', bins: [], photos: [] };
     expect(validateExportData(data)).toBe(false);
@@ -70,14 +88,14 @@ describe('validateExportData', () => {
 
   it('returns false for invalid bin (missing name)', () => {
     const data = makeValidExportData({
-      bins: [makeExportBin({ name: undefined })] as ExportData['bins'],
+      bins: [makeExportBin({ name: undefined })] as ExportDataV2['bins'],
     });
     expect(validateExportData(data)).toBe(false);
   });
 
   it('returns false for invalid photo (missing dataBase64)', () => {
     const data = makeValidExportData({
-      photos: [makeExportPhoto({ dataBase64: undefined })] as ExportData['photos'],
+      photos: [makeExportPhoto({ dataBase64: undefined })] as ExportDataV2['photos'],
     });
     expect(validateExportData(data)).toBe(false);
   });
@@ -95,7 +113,7 @@ describe('parseImportFile', () => {
       type: 'application/json',
     });
     const result = await parseImportFile(file);
-    expect(result.version).toBe(1);
+    expect(result.version).toBe(2);
     expect(result.bins).toHaveLength(1);
     expect(result.bins[0].name).toBe('Test Bin');
   });
@@ -144,7 +162,8 @@ describe('importData', () => {
     const existingBin = {
       id: 'bin-1',
       name: 'Existing',
-      contents: '',
+      items: [],
+      notes: '',
       tags: [],
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -176,7 +195,8 @@ describe('importData', () => {
     await db.bins.add({
       id: 'old-bin',
       name: 'Old',
-      contents: '',
+      items: [],
+      notes: '',
       tags: [],
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -216,12 +236,37 @@ describe('importData', () => {
     expect(orphan).toBeUndefined();
   });
 
+  it('imports v1 data and migrates contents to items', async () => {
+    const v1Data = {
+      version: 1 as const,
+      exportedAt: new Date().toISOString(),
+      bins: [{
+        id: 'v1-bin',
+        name: 'Legacy Bin',
+        contents: 'item one\nitem two\n\nitem three',
+        tags: ['legacy'],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }],
+      photos: [],
+    };
+
+    const result = await importData(v1Data, 'replace');
+    expect(result.binsImported).toBe(1);
+
+    const bin = await db.bins.get('v1-bin');
+    expect(bin).toBeDefined();
+    expect(bin!.items).toEqual(['item one', 'item two', 'item three']);
+    expect(bin!.notes).toBe('');
+  });
+
   it('duplicate photo IDs are skipped in merge mode', async () => {
     // Pre-populate a bin and photo
     await db.bins.add({
       id: 'bin-1',
       name: 'Bin',
-      contents: '',
+      items: [],
+      notes: '',
       tags: [],
       createdAt: new Date(),
       updatedAt: new Date(),

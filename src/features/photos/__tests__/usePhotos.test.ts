@@ -13,7 +13,8 @@ async function createTestBin(id = 'test-bin') {
   await db.bins.add({
     id,
     name: 'Test Bin',
-    contents: '',
+    items: [],
+    notes: '',
     tags: [],
     createdAt: new Date(),
     updatedAt: new Date(),

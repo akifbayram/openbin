@@ -13,6 +13,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { TagInput } from './TagInput';
+import { ItemsInput } from './ItemsInput';
 import { addBin } from './useBins';
 
 interface BinCreateDialogProps {
@@ -24,7 +25,8 @@ interface BinCreateDialogProps {
 export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDialogProps) {
   const navigate = useNavigate();
   const [name, setName] = useState(prefillName ?? '');
-  const [contents, setContents] = useState('');
+  const [items, setItems] = useState<string[]>([]);
+  const [notes, setNotes] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -33,9 +35,10 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
     if (!name.trim()) return;
     setLoading(true);
     try {
-      const id = await addBin(name.trim(), contents.trim(), tags);
+      const id = await addBin(name.trim(), items, notes.trim(), tags);
       setName('');
-      setContents('');
+      setItems([]);
+      setNotes('');
       setTags([]);
       onOpenChange(false);
       navigate(`/bin/${id}`);
@@ -64,13 +67,17 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="bin-contents">Contents</Label>
+            <Label>Items</Label>
+            <ItemsInput items={items} onChange={setItems} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="bin-notes">Notes</Label>
             <Textarea
-              id="bin-contents"
-              value={contents}
-              onChange={(e) => setContents(e.target.value)}
-              placeholder="Describe what's in this bin..."
-              rows={3}
+              id="bin-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Additional notes..."
+              rows={2}
             />
           </div>
           <div className="space-y-2">

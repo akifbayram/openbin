@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import type { Bin, Photo, ExportData, ExportedPhoto } from '@/types';
+import type { Bin, Photo, ExportData, ExportDataV2, ExportedPhoto } from '@/types';
 
 export const MAX_IMPORT_SIZE = 100 * 1024 * 1024; // 100 MB
 
@@ -36,7 +36,7 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
   return new Blob([arr], { type: mimeType });
 }
 
-export async function exportAllData(): Promise<ExportData> {
+export async function exportAllData(): Promise<ExportDataV2> {
   const bins = await db.bins.toArray();
   const photos = await db.photos.toArray();
 
@@ -53,12 +53,13 @@ export async function exportAllData(): Promise<ExportData> {
   );
 
   return {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     bins: bins.map((b) => ({
       id: b.id,
       name: b.name,
-      contents: b.contents,
+      items: b.items,
+      notes: b.notes,
       tags: b.tags,
       createdAt: b.createdAt.toISOString(),
       updatedAt: b.updatedAt.toISOString(),
@@ -88,23 +89,33 @@ function isISODate(s: unknown): boolean {
 export function validateExportData(data: unknown): data is ExportData {
   if (!data || typeof data !== 'object') return false;
   const d = data as Record<string, unknown>;
-  if (d.version !== 1) return false;
+  if (d.version !== 1 && d.version !== 2) return false;
   if (typeof d.exportedAt !== 'string') return false;
   if (!Array.isArray(d.bins)) return false;
   if (!Array.isArray(d.photos)) return false;
 
+  const isV2 = d.version === 2;
+
   const binsValid = d.bins.every((b: unknown) => {
     if (!b || typeof b !== 'object') return false;
     const bin = b as Record<string, unknown>;
-    return (
+    const baseValid =
       typeof bin.id === 'string' &&
       typeof bin.name === 'string' &&
-      typeof bin.contents === 'string' &&
       Array.isArray(bin.tags) &&
       (bin.tags as unknown[]).every((t) => typeof t === 'string') &&
       isISODate(bin.createdAt) &&
-      isISODate(bin.updatedAt)
-    );
+      isISODate(bin.updatedAt);
+    if (!baseValid) return false;
+
+    if (isV2) {
+      return (
+        Array.isArray(bin.items) &&
+        (bin.items as unknown[]).every((i) => typeof i === 'string') &&
+        typeof bin.notes === 'string'
+      );
+    }
+    return typeof bin.contents === 'string';
   });
   if (!binsValid) return false;
 
@@ -179,10 +190,24 @@ export async function importData(
         result.binsSkipped++;
         continue;
       }
+
+      let items: string[];
+      let notes: string;
+      if (data.version === 1) {
+        const contents = (b as unknown as { contents: string }).contents;
+        items = contents.split('\n').map((s: string) => s.trim()).filter(Boolean);
+        notes = '';
+      } else {
+        const v2Bin = b as unknown as { items: string[]; notes: string };
+        items = v2Bin.items;
+        notes = v2Bin.notes;
+      }
+
       const bin: Bin = {
         id: b.id,
         name: b.name,
-        contents: b.contents,
+        items,
+        notes,
         tags: b.tags,
         createdAt: new Date(b.createdAt),
         updatedAt: new Date(b.updatedAt),

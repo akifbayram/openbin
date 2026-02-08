@@ -22,7 +22,8 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated') {
       bins = bins.filter(
         (bin) =>
           bin.name.toLowerCase().includes(q) ||
-          bin.contents.toLowerCase().includes(q) ||
+          bin.items.some((item) => item.toLowerCase().includes(q)) ||
+          bin.notes.toLowerCase().includes(q) ||
           bin.tags.some((tag) => tag.toLowerCase().includes(q))
       );
     }
@@ -39,7 +40,8 @@ export function useBin(id: string | undefined) {
 
 export async function addBin(
   name: string,
-  contents: string = '',
+  items: string[] = [],
+  notes: string = '',
   tags: string[] = []
 ): Promise<string> {
   const id = uuidv4();
@@ -47,7 +49,8 @@ export async function addBin(
   await db.bins.add({
     id,
     name,
-    contents,
+    items,
+    notes,
     tags,
     createdAt: now,
     updatedAt: now,
@@ -57,7 +60,7 @@ export async function addBin(
 
 export async function updateBin(
   id: string,
-  changes: Partial<Pick<Bin, 'name' | 'contents' | 'tags'>>
+  changes: Partial<Pick<Bin, 'name' | 'items' | 'notes' | 'tags'>>
 ): Promise<void> {
   await db.bins.update(id, {
     ...changes,

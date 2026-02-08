@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
 import { TagInput } from './TagInput';
+import { ItemsInput } from './ItemsInput';
 import { useBin, updateBin, deleteBin, restoreBin } from './useBins';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { getPhotosForBin } from '@/features/photos/usePhotos';
@@ -24,7 +25,8 @@ export function BinDetailPage() {
   const { showToast } = useToast();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
-  const [editContents, setEditContents] = useState('');
+  const [editItems, setEditItems] = useState<string[]>([]);
+  const [editNotes, setEditNotes] = useState('');
   const [editTags, setEditTags] = useState<string[]>([]);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -60,7 +62,8 @@ export function BinDetailPage() {
   function startEdit() {
     if (!bin) return;
     setEditName(bin.name);
-    setEditContents(bin.contents);
+    setEditItems([...bin.items]);
+    setEditNotes(bin.notes);
     setEditTags([...bin.tags]);
     setEditing(true);
   }
@@ -69,7 +72,8 @@ export function BinDetailPage() {
     if (!id || !editName.trim()) return;
     await updateBin(id, {
       name: editName.trim(),
-      contents: editContents.trim(),
+      items: editItems,
+      notes: editNotes.trim(),
       tags: editTags,
     });
     setEditing(false);
@@ -150,12 +154,16 @@ export function BinDetailPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-contents">Contents</Label>
+              <Label>Items</Label>
+              <ItemsInput items={editItems} onChange={setEditItems} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-notes">Notes</Label>
               <Textarea
-                id="edit-contents"
-                value={editContents}
-                onChange={(e) => setEditContents(e.target.value)}
-                rows={4}
+                id="edit-notes"
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                rows={3}
               />
             </div>
             <div className="space-y-2">
@@ -189,13 +197,30 @@ export function BinDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Contents */}
-          {bin.contents && (
+          {/* Items */}
+          {bin.items.length > 0 && (
             <Card>
               <CardContent>
-                <Label>Contents</Label>
+                <Label>Items</Label>
+                <ul className="mt-2 space-y-1">
+                  {bin.items.map((item, i) => (
+                    <li key={i} className="flex items-start gap-2 text-[15px] text-[var(--text-primary)] leading-relaxed">
+                      <span className="text-[var(--text-tertiary)] mt-0.5">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notes */}
+          {bin.notes && (
+            <Card>
+              <CardContent>
+                <Label>Notes</Label>
                 <p className="mt-2 text-[15px] text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
-                  {bin.contents}
+                  {bin.notes}
                 </p>
               </CardContent>
             </Card>

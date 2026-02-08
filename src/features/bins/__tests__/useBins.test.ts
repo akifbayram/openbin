@@ -11,7 +11,7 @@ beforeEach(async () => {
 describe('addBin', () => {
   it('creates a bin with uuid, correct fields, and Date timestamps', async () => {
     const before = new Date();
-    const id = await addBin('My Bin', 'stuff inside', ['electronics', 'cables']);
+    const id = await addBin('My Bin', ['stuff inside'], 'some notes', ['electronics', 'cables']);
     const after = new Date();
 
     expect(id).toBeDefined();
@@ -23,7 +23,8 @@ describe('addBin', () => {
     const bin = await db.bins.get(id);
     expect(bin).toBeDefined();
     expect(bin!.name).toBe('My Bin');
-    expect(bin!.contents).toBe('stuff inside');
+    expect(bin!.items).toEqual(['stuff inside']);
+    expect(bin!.notes).toBe('some notes');
     expect(bin!.tags).toEqual(['electronics', 'cables']);
     expect(bin!.createdAt).toBeInstanceOf(Date);
     expect(bin!.updatedAt).toBeInstanceOf(Date);
@@ -32,17 +33,18 @@ describe('addBin', () => {
     expect(bin!.createdAt.getTime()).toBe(bin!.updatedAt.getTime());
   });
 
-  it('uses default values for contents and tags', async () => {
+  it('uses default values for items, notes, and tags', async () => {
     const id = await addBin('Minimal Bin');
     const bin = await db.bins.get(id);
-    expect(bin!.contents).toBe('');
+    expect(bin!.items).toEqual([]);
+    expect(bin!.notes).toBe('');
     expect(bin!.tags).toEqual([]);
   });
 });
 
 describe('updateBin', () => {
   it('updates specified fields and sets new updatedAt', async () => {
-    const id = await addBin('Original', 'original contents', ['old']);
+    const id = await addBin('Original', ['original item'], 'original notes', ['old']);
     const binBefore = await db.bins.get(id);
 
     // Small delay to ensure updatedAt differs
@@ -52,7 +54,8 @@ describe('updateBin', () => {
     const binAfter = await db.bins.get(id);
 
     expect(binAfter!.name).toBe('Updated');
-    expect(binAfter!.contents).toBe('original contents'); // unchanged
+    expect(binAfter!.items).toEqual(['original item']); // unchanged
+    expect(binAfter!.notes).toBe('original notes'); // unchanged
     expect(binAfter!.tags).toEqual(['new']);
     expect(binAfter!.updatedAt.getTime()).toBeGreaterThan(
       binBefore!.updatedAt.getTime()
@@ -98,7 +101,8 @@ describe('restoreBin', () => {
     const bin: Bin = {
       id: 'restored-bin',
       name: 'Restored',
-      contents: 'restored contents',
+      items: ['restored item'],
+      notes: 'restored notes',
       tags: ['restored'],
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -133,7 +137,8 @@ describe('restoreBin', () => {
     const bin: Bin = {
       id: 'bin-no-photos',
       name: 'No Photos',
-      contents: '',
+      items: [],
+      notes: '',
       tags: [],
       createdAt: new Date(),
       updatedAt: new Date(),
