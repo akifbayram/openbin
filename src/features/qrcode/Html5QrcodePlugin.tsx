@@ -10,6 +10,7 @@ export function Html5QrcodePlugin({ onScanSuccess, onScanFailure }: Html5QrcodeP
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerId = 'html5-qrcode-scanner';
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,7 +34,9 @@ export function Html5QrcodePlugin({ onScanSuccess, onScanFailure }: Html5QrcodeP
           }
         )
         .catch((err) => {
-          console.error('Scanner start error:', err);
+          if (!cancelled) {
+            setError(err instanceof Error ? err.message : 'Failed to start camera');
+          }
         });
     });
 
@@ -46,11 +49,20 @@ export function Html5QrcodePlugin({ onScanSuccess, onScanFailure }: Html5QrcodeP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-12 text-center px-4">
+        <p className="text-[15px] font-medium text-[var(--text-primary)]">Failed to start scanner</p>
+        <p className="text-[13px] text-[var(--text-tertiary)]">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <>
       {loading && (
-        <div className="flex items-center justify-center py-12 text-[var(--text-tertiary)] text-[13px]">
-          Loading scanner…
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 rounded-full border-2 border-[var(--bg-active)] border-t-[var(--accent)] animate-spin" />
         </div>
       )}
       <div id={containerId} className="w-full" />

@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
 import { TagInput } from './TagInput';
@@ -24,11 +26,21 @@ export function BinDetailPage() {
   const [editName, setEditName] = useState('');
   const [editContents, setEditContents] = useState('');
   const [editTags, setEditTags] = useState<string[]>([]);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   if (bin === undefined) {
     return (
-      <div className="flex items-center justify-center py-20 text-[var(--text-tertiary)]">
-        Loading...
+      <div className="flex flex-col gap-4 px-[var(--page-px)] pt-4 pb-2">
+        <Skeleton className="h-8 w-20" />
+        <Skeleton className="h-8 w-3/4" />
+        <div className="glass-card rounded-[var(--radius-lg)] p-6">
+          <Skeleton className="h-40 w-40 mx-auto" />
+        </div>
+        <div className="glass-card rounded-[var(--radius-lg)] p-4 space-y-3">
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
       </div>
     );
   }
@@ -115,7 +127,7 @@ export function BinDetailPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleDelete}
+              onClick={() => setDeleteOpen(true)}
               aria-label="Delete bin"
               className="rounded-full h-9 w-9 text-[var(--destructive)]"
             >
@@ -227,6 +239,31 @@ export function BinDetailPage() {
           </Card>
         </>
       )}
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this bin?</DialogTitle>
+            <DialogDescription>
+              This will delete '{bin.name}' and all its photos. You can undo this action briefly after deletion.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)} className="rounded-[var(--radius-full)]">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setDeleteOpen(false);
+                handleDelete();
+              }}
+              className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:bg-[var(--destructive-hover)] text-[var(--text-on-accent)]"
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

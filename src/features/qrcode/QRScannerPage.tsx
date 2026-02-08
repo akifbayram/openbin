@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Html5QrcodePlugin } from './Html5QrcodePlugin';
 import { db } from '@/db';
+import { haptic } from '@/lib/utils';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 
 const BIN_URL_REGEX = /#\/bin\/([a-f0-9-]{36})/i;
@@ -21,6 +22,7 @@ export function QRScannerPage() {
       const match = decodedText.match(BIN_URL_REGEX);
       if (match) {
         const binId = match[1];
+        haptic();
         setScanning(false);
         const bin = await db.bins.get(binId);
         if (bin) {

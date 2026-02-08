@@ -104,7 +104,7 @@ function DialogContent({
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+        className="fixed inset-0 bg-[var(--overlay-backdrop)] backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
       />
       <div

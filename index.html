@@ -8,7 +8,8 @@
     <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self';">
+    <link rel="apple-touch-icon" sizes="180x180" href="/pwa-192x192.png" />
     <title>QR Bin Inventory</title>
     <script>
       // Apply stored theme before first paint to prevent flash

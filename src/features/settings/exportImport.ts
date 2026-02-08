@@ -192,8 +192,14 @@ export async function importData(
       result.binsImported++;
     }
 
+    const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
     for (const p of data.photos) {
       if (mode === 'merge' && existingPhotoIds.has(p.id)) {
+        result.photosSkipped++;
+        continue;
+      }
+      if (!ALLOWED_MIME_TYPES.has(p.mimeType)) {
         result.photosSkipped++;
         continue;
       }

@@ -2,7 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { Highlight } from '@/components/ui/highlight';
+import { cn, haptic } from '@/lib/utils';
 import type { Bin } from '@/types';
 
 interface BinCardProps {
@@ -11,9 +12,10 @@ interface BinCardProps {
   selectable?: boolean;
   selected?: boolean;
   onSelect?: (id: string) => void;
+  searchQuery?: string;
 }
 
-export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable, selected, onSelect }: BinCardProps) {
+export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable, selected, onSelect, searchQuery = '' }: BinCardProps) {
   const navigate = useNavigate();
 
   function handleClick() {
@@ -26,6 +28,7 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
 
   function handleLongPress() {
     if (!selectable) {
+      haptic();
       onSelect?.(bin.id);
     }
   }
@@ -76,11 +79,11 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
         )}
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug">
-            {bin.name}
+            <Highlight text={bin.name} query={searchQuery} />
           </h3>
           {bin.contents && (
             <p className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-2 leading-relaxed">
-              {bin.contents}
+              <Highlight text={bin.contents} query={searchQuery} />
             </p>
           )}
         </div>
@@ -113,6 +116,7 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
     prev.selectable === next.selectable &&
     prev.selected === next.selected &&
     prev.onTagClick === next.onTagClick &&
-    prev.onSelect === next.onSelect
+    prev.onSelect === next.onSelect &&
+    prev.searchQuery === next.searchQuery
   );
 });

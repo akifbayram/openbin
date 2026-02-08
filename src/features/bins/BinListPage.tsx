@@ -12,7 +12,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
+import { haptic } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
 import { useBinList, deleteBin, restoreBin, type SortOption } from './useBins';
 import { getPhotosForBin } from '@/features/photos/usePhotos';
@@ -35,6 +37,7 @@ export function BinListPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
+  // Filtering is handled inside useBinList's Dexie live query — no extra memoization needed
   const bins = useBinList(debouncedSearch, sort);
   const { showToast } = useToast();
 
@@ -75,6 +78,7 @@ export function BinListPage() {
       })
     );
     await Promise.all(toDelete.map((b) => deleteBin(b.id)));
+    haptic([50, 30, 50]);
     clearSelection();
     showToast({
       message: `Deleted ${snapshot.length} bin${snapshot.length !== 1 ? 's' : ''}`,
@@ -124,7 +128,7 @@ export function BinListPage() {
           className="shrink-0 rounded-[var(--radius-full)] gap-1.5 h-10 px-3.5"
         >
           <ArrowUpDown className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline text-[13px]">{sortLabels[sort]}</span>
+          <span className="text-[13px]">{sortLabels[sort]}</span>
         </Button>
       </div>
 
@@ -179,8 +183,14 @@ export function BinListPage() {
 
       {/* Bin grid */}
       {bins === undefined ? (
-        <div className="flex items-center justify-center py-20 text-[var(--text-tertiary)]">
-          Loading...
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-3">
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          ))}
         </div>
       ) : bins.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
@@ -210,6 +220,7 @@ export function BinListPage() {
               selectable={selectable}
               selected={selectedIds.has(bin.id)}
               onSelect={toggleSelect}
+              searchQuery={debouncedSearch}
             />
           ))}
         </div>

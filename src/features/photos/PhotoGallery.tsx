@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo } from 'react';
+import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -35,7 +35,7 @@ export function PhotoGallery({ binId }: PhotoGalleryProps) {
     };
   }, [urls]);
 
-  async function handleFiles(files: FileList | null) {
+  const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files) return;
     for (const file of Array.from(files)) {
       if (!file.type.startsWith('image/')) continue;
@@ -49,9 +49,9 @@ export function PhotoGallery({ binId }: PhotoGalleryProps) {
       }
     }
     if (inputRef.current) inputRef.current.value = '';
-  }
+  }, [binId, showToast]);
 
-  async function handleDelete(photo: Photo) {
+  const handleDelete = useCallback(async (photo: Photo) => {
     const snapshot = await deletePhoto(photo.id);
     setLightboxPhoto(null);
     if (snapshot) {
@@ -63,7 +63,7 @@ export function PhotoGallery({ binId }: PhotoGalleryProps) {
         },
       });
     }
-  }
+  }, [showToast]);
 
   const lightboxUrl = lightboxPhoto ? urls.get(lightboxPhoto.id) : undefined;
 
@@ -93,7 +93,7 @@ export function PhotoGallery({ binId }: PhotoGalleryProps) {
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDelete(photo)}
-                  className="absolute top-1 right-1 h-7 w-7 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70 hover:text-red-400"
+                  className="absolute top-1 right-1 h-7 w-7 rounded-full bg-[var(--overlay-button)] text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
                   aria-label="Delete photo"
                 >
                   <Trash2 className="h-3.5 w-3.5" />

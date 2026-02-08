@@ -5,6 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { db } from '@/db';
 import { LabelSheet } from './LabelSheet';
 import type { Bin } from '@/types';
@@ -23,7 +24,17 @@ export function PrintPage() {
 
   if (!allBins) {
     return (
-      <div className="flex items-center justify-center py-20 text-[var(--text-tertiary)]">Loading...</div>
+      <div className="print-hide flex flex-col gap-4 px-[var(--page-px)] pt-6 pb-2">
+        <Skeleton className="h-10 w-24" />
+        <div className="glass-card rounded-[var(--radius-lg)] p-4 space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 px-3 py-3">
+              <Skeleton className="h-[22px] w-[22px] rounded-full shrink-0" />
+              <Skeleton className="h-4 flex-1" />
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 

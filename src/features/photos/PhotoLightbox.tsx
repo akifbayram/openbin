@@ -31,7 +31,7 @@ export function PhotoLightbox({ src, filename, onClose, onDelete }: PhotoLightbo
       className="fixed inset-0 z-[70] flex items-center justify-center outline-none"
     >
       <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+        className="fixed inset-0 bg-[var(--overlay-heavy)] backdrop-blur-sm"
         onClick={onClose}
       />
       <div className="relative z-[70] flex flex-col items-center w-full max-w-3xl px-4">
@@ -41,7 +41,7 @@ export function PhotoLightbox({ src, filename, onClose, onDelete }: PhotoLightbo
             size="icon"
             onClick={onDelete}
             aria-label="Delete photo"
-            className="rounded-full h-10 w-10 bg-black/40 text-white hover:bg-black/60 hover:text-red-400"
+            className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
           >
             <Trash2 className="h-5 w-5" />
           </Button>
@@ -50,7 +50,7 @@ export function PhotoLightbox({ src, filename, onClose, onDelete }: PhotoLightbo
             size="icon"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-full h-10 w-10 bg-black/40 text-white hover:bg-black/60"
+            className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)]"
           >
             <X className="h-5 w-5" />
           </Button>
