@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+/* ─── iOS 26 Liquid Glass Design Tokens ─── */
+:root {
+  --bg-base: #f2f2f7;
+  --bg-elevated: rgba(255, 255, 255, 0.72);
+  --bg-glass: rgba(255, 255, 255, 0.55);
+  --bg-glass-heavy: rgba(255, 255, 255, 0.78);
+  --bg-input: rgba(120, 120, 128, 0.12);
+  --bg-hover: rgba(120, 120, 128, 0.08);
+  --bg-active: rgba(120, 120, 128, 0.16);
+  --border-glass: rgba(255, 255, 255, 0.45);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --text-primary: #1c1c1e;
+  --text-secondary: #3c3c43;
+  --text-tertiary: #8e8e93;
+  --text-on-accent: #ffffff;
+  --accent: #007aff;
+  --accent-hover: #0066d6;
+  --destructive: #ff3b30;
+  --destructive-hover: #d63028;
+  --shadow-glass: 0 2px 16px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1);
+  --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+  --radius-full: 9999px;
+  --nav-height: 52px;
+  --sidebar-width: 260px;
+  --page-px: 20px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+
+.dark {
+  --bg-base: #000000;
+  --bg-elevated: rgba(28, 28, 30, 0.72);
+  --bg-glass: rgba(44, 44, 46, 0.55);
+  --bg-glass-heavy: rgba(44, 44, 46, 0.78);
+  --bg-input: rgba(120, 120, 128, 0.24);
+  --bg-hover: rgba(120, 120, 128, 0.18);
+  --bg-active: rgba(120, 120, 128, 0.28);
+  --border-glass: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --text-primary: #f5f5f7;
+  --text-secondary: #ebebf0;
+  --text-tertiary: #8e8e93;
+  --text-on-accent: #ffffff;
+  --accent: #0a84ff;
+  --accent-hover: #409cff;
+  --destructive: #ff453a;
+  --destructive-hover: #ff6961;
+  --shadow-glass: 0 2px 16px rgba(0, 0, 0, 0.32), 0 0 1px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 1px rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
+}
+
+/* ─── Base ─── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+    'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ─── Liquid Glass Utilities ─── */
+.glass-card {
+  background: var(--bg-glass);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 0.5px solid var(--border-glass);
+  box-shadow: var(--shadow-glass);
+}
+
+.glass-heavy {
+  background: var(--bg-glass-heavy);
+  backdrop-filter: blur(60px) saturate(200%);
+  -webkit-backdrop-filter: blur(60px) saturate(200%);
+  border: 0.5px solid var(--border-glass);
+  box-shadow: var(--shadow-elevated);
+}
+
+.glass-nav {
+  background: var(--bg-glass-heavy);
+  backdrop-filter: blur(50px) saturate(180%);
+  -webkit-backdrop-filter: blur(50px) saturate(180%);
+  border: 0.5px solid var(--border-glass);
+  box-shadow: var(--shadow-glass);
+}
+
+/* ─── Print: Avery 5160 ─── */
+.print-show {
+  display: none;
+}
+
+.label-sheet {
+  display: grid;
+  grid-template-columns: repeat(3, 2.625in);
+  grid-auto-rows: 1in;
+  gap: 0;
+  color: black;
+}
+
+.label-cell {
+  width: 2.625in;
+  height: 1in;
+  padding: 2pt 4pt;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.label-qr {
+  width: 0.75in;
+  height: 0.75in;
+}
+
+.label-name {
+  font-size: 9pt;
+  line-height: 1.2;
+}
+
+.label-contents {
+  font-size: 7pt;
+  line-height: 1.2;
+}
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0.5in 0.1875in;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .print-hide,
+  .print-hide *,
+  nav,
+  header,
+  aside {
+    display: none !important;
+  }
+
+  .print-show {
+    display: block !important;
+  }
+}
+
+/* ─── Scrollbar (Webkit) ─── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-active);
+  border-radius: var(--radius-full);
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+/* ─── html5-qrcode overrides ─── */
+#html5-qrcode-scanner video {
+  border-radius: var(--radius-lg) !important;
+}
+#html5-qrcode-scanner img[alt="Info icon"] {
+  display: none !important;
+}
+#html5-qrcode-scanner select,
+#html5-qrcode-scanner span {
+  color: var(--text-primary) !important;
+}
