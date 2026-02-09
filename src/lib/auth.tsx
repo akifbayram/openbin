@@ -14,6 +14,7 @@ interface AuthContextValue extends AuthState {
   register: (username: string, password: string, displayName: string) => Promise<void>;
   logout: () => void;
   setActiveHomeId: (id: string | null) => void;
+  updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -99,6 +100,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, activeHomeId: id }));
   }, []);
 
+  const updateUser = useCallback((user: User) => {
+    setState((s) => ({ ...s, user }));
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -107,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         setActiveHomeId,
+        updateUser,
       }}
     >
       {children}

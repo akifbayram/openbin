@@ -38,6 +38,7 @@ src/
     bins/           # BinListPage, BinDetailPage, useBins, BinCard, TagInput, IconPicker, ColorPicker
     homes/          # HomesPage, HomeSelector, HomeMembersDialog, useHomes
     photos/         # PhotoGallery, PhotoLightbox, usePhotos, compressImage
+    profile/        # ProfilePage (avatar, display name, email, password change)
     qrcode/         # QRScannerPage, QRCodeDisplay, Html5QrcodePlugin
     print/          # PrintPage, LabelSheet, LabelCell
     settings/       # SettingsPage, exportImport
@@ -64,13 +65,13 @@ nginx.conf          # Reverse proxy config
 - **Feature hooks pattern**: each feature exposes a React hook (e.g. `useBinList`) for real-time data via `useShape()` and plain async functions (e.g. `addBin`, `deleteBin`) for mutations via `apiFetch()`. Hooks live alongside plain functions in the same file.
 - **Data hooks return `{ data, isLoading }`** — e.g. `useBinList()` returns `{ bins, isLoading }`, `useBin(id)` returns `{ bin, isLoading }`.
 - **`apiFetch<T>(path, options)`** in `lib/api.ts` — wraps fetch with JWT from localStorage, auto JSON stringify, FormData support. Throws `ApiError` on failure.
-- **`useAuth()`** in `lib/auth.tsx` — provides `user`, `token`, `activeHomeId`, plus `login()`, `register()`, `logout()`, `setActiveHomeId()`.
+- **`useAuth()`** in `lib/auth.tsx` — provides `user`, `token`, `activeHomeId`, plus `login()`, `register()`, `logout()`, `setActiveHomeId()`, `updateUser()`.
 - **Undo-delete pattern**: server returns deleted bin snapshot on DELETE, pass to `restoreBin(bin)` in the toast undo callback.
 - **Snake_case field names** on DB-backed interfaces (`Bin`, `Photo`, `Home`, `HomeMember`) to match PostgreSQL columns from ElectricSQL. Export types remain camelCase.
 - **`[key: string]: unknown` index signatures** on DB interfaces for ElectricSQL `Row` type compatibility.
 - **CSS**: use `var(--token)` design tokens, not raw colors. Glass effects via utility classes `glass-card`, `glass-nav`, `glass-heavy`.
 - **Responsive**: mobile-first. Bottom nav on mobile (`lg:hidden`), sidebar on desktop (`hidden lg:flex`). Breakpoint is `lg` (1024px).
-- **Lazy loading**: Scanner, Print, Settings, Auth, and Homes pages are `React.lazy` with `<Suspense>`.
+- **Lazy loading**: Scanner, Print, Settings, Auth, Homes, and Profile pages are `React.lazy` with `<Suspense>`.
 - **`cn()` helper** (clsx + tailwind-merge) for conditional class composition.
 - **`addBin()` accepts an options object** (`AddBinOptions`): `{ name, homeId, items?, notes?, tags?, location?, icon?, color? }`. `homeId` is required.
 - **Icon/color fields**: `icon` and `color` are strings on the `Bin` interface. Empty string `''` means default (Package icon, no color). Icon stores PascalCase lucide name (e.g. `'Wrench'`); color stores a preset key (e.g. `'blue'`).
@@ -78,10 +79,12 @@ nginx.conf          # Reverse proxy config
 - **`getColorPreset(key)`** in `lib/colorPalette.ts` returns `{ bg, bgDark, dot }` for theme-aware tinting. `bg`/`bgDark` are used for BinCard backgrounds; `dot` is unused but retained in the palette.
 - **Colored bin contrast**: BinCard overrides muted text/icon colors on colored bins via inline `style` — `rgba(255,255,255,0.7)` (dark) / `rgba(0,0,0,0.55)` (light) — because `--text-tertiary` (`#8e8e93`) is the same in both modes and has poor contrast against colored backgrounds. The `useTheme()` hook ensures correct recomputation on theme switch.
 - **App settings**: `useAppSettings()` in `lib/appSettings.ts` manages app name/subtitle via `localStorage('qrbin-app-name')`.
+- **User profile fields**: `User` interface includes `email: string | null` and `avatarUrl: string | null`. Avatars stored in `uploads/avatars/` with UUID filenames, served via `GET /api/auth/avatar/:userId`.
+- **`updateUser(user)`** on auth context allows immediate UI updates after profile edits (avatar, display name, email) without re-fetching `/me`.
 
 ## Server API Routes
 
-- **Auth**: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`
+- **Auth**: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, `PUT /api/auth/profile`, `PUT /api/auth/password`, `POST /api/auth/avatar`, `DELETE /api/auth/avatar`, `GET /api/auth/avatar/:userId`
 - **Homes**: `GET /api/homes`, `POST /api/homes`, `PUT /api/homes/:id`, `DELETE /api/homes/:id`, `POST /api/homes/join`, `DELETE /api/homes/:id/members/:userId`, `POST /api/homes/:id/regenerate-invite`
 - **Bins**: `POST /api/bins`, `GET /api/bins/:id`, `PUT /api/bins/:id`, `DELETE /api/bins/:id`, `PUT /api/bins/:id/add-tags`, `POST /api/bins/:id/photos`
 - **Photos**: `GET /api/photos/:id/file`, `DELETE /api/photos/:id`
@@ -99,6 +102,7 @@ nginx.conf          # Reverse proxy config
 - **BrowserRouter** — path-based URLs (e.g. `/bin/:id`). QR scanner regex handles both old hash (`#/bin/`) and new path (`/bin/`) URLs.
 - **PWA caching**: `vite-plugin-pwa` uses `generateSW` mode. After changing precached assets, users may need a refresh to get the new service worker.
 - **Auth tokens**: JWT stored in `localStorage('qrbin-token')`, active home in `localStorage('qrbin-active-home')`.
+- **Profile page** (`/profile`) is not in `navItems` — accessed from the account card on Settings or the user info area in the Sidebar.
 
 ## Verification
 

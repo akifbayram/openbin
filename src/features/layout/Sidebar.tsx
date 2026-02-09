@@ -63,12 +63,19 @@ export function Sidebar({ theme, onToggleTheme }: SidebarProps) {
       {/* Bottom section: user info + theme toggle */}
       <div className="px-5 py-4 border-t border-[var(--border-subtle)] space-y-1">
         {user && (
-          <div className="flex items-center gap-3 px-3 py-2 text-[14px] text-[var(--text-secondary)]">
-            <div className="h-7 w-7 rounded-full bg-[var(--bg-active)] flex items-center justify-center text-[12px] font-semibold shrink-0">
-              {user.displayName?.[0]?.toUpperCase() || user.username[0].toUpperCase()}
-            </div>
+          <button
+            onClick={() => navigate('/profile')}
+            className="flex items-center gap-3 px-3 py-2 text-[14px] text-[var(--text-secondary)] rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] transition-colors w-full text-left"
+          >
+            {user.avatarUrl ? (
+              <img src={user.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover shrink-0" />
+            ) : (
+              <div className="h-7 w-7 rounded-full bg-[var(--bg-active)] flex items-center justify-center text-[12px] font-semibold shrink-0">
+                {user.displayName?.[0]?.toUpperCase() || user.username[0].toUpperCase()}
+              </div>
+            )}
             <span className="flex-1 truncate">{user.displayName || user.username}</span>
-          </div>
+          </button>
         )}
         <button
           onClick={onToggleTheme}

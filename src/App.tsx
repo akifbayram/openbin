@@ -33,6 +33,10 @@ const HomesPage = React.lazy(() =>
   import('@/features/homes/HomesPage').then((m) => ({ default: m.HomesPage }))
 );
 
+const ProfilePage = React.lazy(() =>
+  import('@/features/profile/ProfilePage').then((m) => ({ default: m.ProfilePage }))
+);
+
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
@@ -185,6 +189,14 @@ export default function App() {
                   element={
                     <Suspense fallback={<LoadingFallback />}>
                       <SettingsPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <ProfilePage />
                     </Suspense>
                   }
                 />

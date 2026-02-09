@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { Sun, Moon, Download, Upload, AlertTriangle, RotateCcw, LogOut, User, Home, Plus, LogIn, Users, Crown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Sun, Moon, Download, Upload, AlertTriangle, RotateCcw, LogOut, Home, Plus, LogIn, Users, Crown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,7 @@ import {
 } from './exportImport';
 
 export function SettingsPage() {
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { settings, updateSettings, resetSettings } = useAppSettings();
   const { user, activeHomeId, setActiveHomeId, logout } = useAuth();
@@ -174,15 +176,25 @@ export function SettingsPage() {
           <CardContent>
             <Label>Account</Label>
             <div className="flex flex-col gap-3 mt-3">
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
-                <User className="h-5 w-5 text-[var(--text-tertiary)]" />
+              <button
+                onClick={() => navigate('/profile')}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] transition-colors w-full text-left"
+              >
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="h-9 w-9 rounded-full bg-[var(--bg-active)] flex items-center justify-center text-[14px] font-semibold text-[var(--text-secondary)] shrink-0">
+                    {user.displayName?.[0]?.toUpperCase() || user.username[0].toUpperCase()}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-medium text-[var(--text-primary)] truncate">
                     {user.displayName || user.username}
                   </p>
                   <p className="text-[13px] text-[var(--text-tertiary)]">@{user.username}</p>
                 </div>
-              </div>
+                <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+              </button>
               <Button
                 variant="outline"
                 onClick={logout}
