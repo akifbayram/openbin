@@ -1,18 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Printer, CheckCircle2, Circle } from 'lucide-react';
-import { useLiveQuery } from 'dexie-react-hooks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { db } from '@/db';
+import { useBinList } from '@/features/bins/useBins';
 import { LabelSheet } from './LabelSheet';
 import type { Bin } from '@/types';
 
 export function PrintPage() {
   const [searchParams] = useSearchParams();
-  const allBins = useLiveQuery(() => db.bins.orderBy('name').toArray());
+  const { bins: allBins, isLoading } = useBinList(undefined, 'name');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -22,7 +21,7 @@ export function PrintPage() {
     }
   }, [searchParams]);
 
-  if (!allBins) {
+  if (isLoading) {
     return (
       <div className="print-hide flex flex-col gap-4 px-5 pt-6 pb-2">
         <Skeleton className="h-10 w-24" />
@@ -50,7 +49,6 @@ export function PrintPage() {
   }
 
   function selectAll() {
-    if (!allBins) return;
     setSelectedIds(new Set(allBins.map((b) => b.id)));
   }
 

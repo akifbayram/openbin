@@ -1,7 +1,7 @@
-import { db } from '@/db';
-import type { Bin, Photo, ExportData, ExportDataV2, ExportedPhoto } from '@/types';
+import { apiFetch } from '@/lib/api';
+import type { ExportData, ExportDataV2 } from '@/types';
 
-export const MAX_IMPORT_SIZE = 100 * 1024 * 1024; // 100 MB
+export const MAX_IMPORT_SIZE = 100 * 1024 * 1024;
 
 export type ImportErrorCode = 'INVALID_JSON' | 'INVALID_FORMAT' | 'FILE_TOO_LARGE';
 
@@ -14,61 +14,8 @@ export class ImportError extends Error {
   }
 }
 
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      // strip data URL prefix
-      resolve(result.split(',')[1]);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-function base64ToBlob(base64: string, mimeType: string): Blob {
-  const bytes = atob(base64);
-  const arr = new Uint8Array(bytes.length);
-  for (let i = 0; i < bytes.length; i++) {
-    arr[i] = bytes.charCodeAt(i);
-  }
-  return new Blob([arr], { type: mimeType });
-}
-
-export async function exportAllData(): Promise<ExportDataV2> {
-  const bins = await db.bins.toArray();
-  const photos = await db.photos.toArray();
-
-  const exportedPhotos: ExportedPhoto[] = await Promise.all(
-    photos.map(async (p) => ({
-      id: p.id,
-      binId: p.binId,
-      dataBase64: await blobToBase64(p.data),
-      filename: p.filename,
-      mimeType: p.mimeType,
-      size: p.size,
-      createdAt: p.createdAt.toISOString(),
-    }))
-  );
-
-  return {
-    version: 2,
-    exportedAt: new Date().toISOString(),
-    bins: bins.map((b) => ({
-      id: b.id,
-      name: b.name,
-      location: b.location,
-      items: b.items,
-      notes: b.notes,
-      tags: b.tags,
-      icon: b.icon,
-      color: b.color,
-      createdAt: b.createdAt.toISOString(),
-      updatedAt: b.updatedAt.toISOString(),
-    })),
-    photos: exportedPhotos,
-  };
+export async function exportAllData(homeId: string): Promise<ExportDataV2> {
+  return apiFetch<ExportDataV2>(`/api/homes/${homeId}/export`);
 }
 
 export function downloadExport(data: ExportData): void {
@@ -95,7 +42,9 @@ export function validateExportData(data: unknown): data is ExportData {
   if (d.version !== 1 && d.version !== 2) return false;
   if (typeof d.exportedAt !== 'string') return false;
   if (!Array.isArray(d.bins)) return false;
-  if (!Array.isArray(d.photos)) return false;
+
+  // photos is optional — server format nests them in bins; legacy format has top-level array
+  if (d.photos !== undefined && !Array.isArray(d.photos)) return false;
 
   const isV2 = d.version === 2;
 
@@ -122,20 +71,25 @@ export function validateExportData(data: unknown): data is ExportData {
   });
   if (!binsValid) return false;
 
-  const photosValid = (d.photos as unknown[]).every((p: unknown) => {
-    if (!p || typeof p !== 'object') return false;
-    const photo = p as Record<string, unknown>;
-    return (
-      typeof photo.id === 'string' &&
-      typeof photo.binId === 'string' &&
-      typeof photo.dataBase64 === 'string' &&
-      typeof photo.filename === 'string' &&
-      typeof photo.mimeType === 'string' &&
-      typeof photo.size === 'number' &&
-      isISODate(photo.createdAt)
-    );
-  });
-  return photosValid;
+  // Validate top-level photos if present (legacy format)
+  if (Array.isArray(d.photos)) {
+    const photosValid = (d.photos as unknown[]).every((p: unknown) => {
+      if (!p || typeof p !== 'object') return false;
+      const photo = p as Record<string, unknown>;
+      return (
+        typeof photo.id === 'string' &&
+        typeof photo.binId === 'string' &&
+        typeof photo.dataBase64 === 'string' &&
+        typeof photo.filename === 'string' &&
+        typeof photo.mimeType === 'string' &&
+        typeof photo.size === 'number' &&
+        isISODate(photo.createdAt)
+      );
+    });
+    if (!photosValid) return false;
+  }
+
+  return true;
 }
 
 export async function parseImportFile(file: File): Promise<ExportData> {
@@ -163,100 +117,48 @@ export interface ImportResult {
 }
 
 export async function importData(
+  homeId: string,
   data: ExportData,
   mode: 'merge' | 'replace'
 ): Promise<ImportResult> {
-  const result: ImportResult = {
-    binsImported: 0,
-    binsSkipped: 0,
-    photosImported: 0,
-    photosSkipped: 0,
-  };
+  // Server expects { bins, mode } where bins have nested photos
+  const d = data as unknown as Record<string, unknown>;
+  const rawBins = (d.bins ?? []) as Record<string, unknown>[];
 
-  await db.transaction('rw', [db.bins, db.photos], async () => {
-    if (mode === 'replace') {
-      await db.photos.clear();
-      await db.bins.clear();
+  // If legacy format with top-level photos, merge them into bins
+  const topPhotos = d.photos;
+  let bins: unknown[] = rawBins;
+  if (Array.isArray(topPhotos) && topPhotos.length > 0) {
+    const photosMap = new Map<string, { id: string; filename: string; mimeType: string; data: string }[]>();
+    for (const p of topPhotos as Array<Record<string, unknown>>) {
+      const binId = (p.binId as string) || '';
+      const arr = photosMap.get(binId) || [];
+      arr.push({
+        id: p.id as string,
+        filename: p.filename as string,
+        mimeType: p.mimeType as string,
+        data: p.dataBase64 as string,
+      });
+      photosMap.set(binId, arr);
     }
+    bins = rawBins.map((bin) => ({
+      ...bin,
+      photos: photosMap.get(bin.id as string) || bin.photos || [],
+    }));
+  }
 
-    const existingBinIds = new Set(
-      mode === 'merge' ? (await db.bins.toCollection().primaryKeys()) : []
-    );
-    const existingPhotoIds = new Set(
-      mode === 'merge' ? (await db.photos.toCollection().primaryKeys()) : []
-    );
-
-    const importedBinIds = new Set<string>();
-
-    for (const b of data.bins) {
-      if (mode === 'merge' && existingBinIds.has(b.id)) {
-        result.binsSkipped++;
-        continue;
-      }
-
-      let items: string[];
-      let notes: string;
-      let location = '';
-      if (data.version === 1) {
-        const contents = (b as unknown as { contents: string }).contents;
-        items = contents.split('\n').map((s: string) => s.trim()).filter(Boolean);
-        notes = '';
-      } else {
-        const v2Bin = b as unknown as { items: string[]; notes: string; location?: string; icon?: string; color?: string };
-        items = v2Bin.items;
-        notes = v2Bin.notes;
-        location = v2Bin.location ?? '';
-      }
-
-      const v2Bin = b as unknown as { icon?: string; color?: string };
-      const bin: Bin = {
-        id: b.id,
-        name: b.name,
-        location,
-        items,
-        notes,
-        tags: b.tags,
-        icon: v2Bin.icon ?? '',
-        color: v2Bin.color ?? '',
-        createdAt: new Date(b.createdAt),
-        updatedAt: new Date(b.updatedAt),
-      };
-      await db.bins.add(bin);
-      importedBinIds.add(b.id);
-      result.binsImported++;
-    }
-
-    const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-
-    for (const p of data.photos) {
-      if (mode === 'merge' && existingPhotoIds.has(p.id)) {
-        result.photosSkipped++;
-        continue;
-      }
-      if (!ALLOWED_MIME_TYPES.has(p.mimeType)) {
-        result.photosSkipped++;
-        continue;
-      }
-      // Skip orphan photos (bin not in DB)
-      const binExists =
-        importedBinIds.has(p.binId) || existingBinIds.has(p.binId);
-      if (!binExists) {
-        result.photosSkipped++;
-        continue;
-      }
-      const photo: Photo = {
-        id: p.id,
-        binId: p.binId,
-        data: base64ToBlob(p.dataBase64, p.mimeType),
-        filename: p.filename,
-        mimeType: p.mimeType,
-        size: p.size,
-        createdAt: new Date(p.createdAt),
-      };
-      await db.photos.add(photo);
-      result.photosImported++;
-    }
+  return apiFetch<ImportResult>(`/api/homes/${homeId}/import`, {
+    method: 'POST',
+    body: { bins, mode },
   });
+}
 
-  return result;
+export async function importLegacyData(
+  homeId: string,
+  data: ExportData
+): Promise<ImportResult> {
+  return apiFetch<ImportResult>('/api/import/legacy', {
+    method: 'POST',
+    body: { homeId, data },
+  });
 }

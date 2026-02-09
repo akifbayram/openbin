@@ -4,11 +4,11 @@ import { ScanLine, AlertCircle, RotateCcw, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Html5QrcodePlugin } from './Html5QrcodePlugin';
-import { db } from '@/db';
+import { apiFetch } from '@/lib/api';
 import { haptic } from '@/lib/utils';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 
-const BIN_URL_REGEX = /#\/bin\/([a-f0-9-]{36})/i;
+const BIN_URL_REGEX = /(?:#\/bin\/|\/bin\/)([a-f0-9-]{36})/i;
 
 export function QRScannerPage() {
   const navigate = useNavigate();
@@ -24,10 +24,10 @@ export function QRScannerPage() {
         const binId = match[1];
         haptic();
         setScanning(false);
-        const bin = await db.bins.get(binId);
-        if (bin) {
+        try {
+          await apiFetch(`/api/bins/${binId}`);
           navigate(`/bin/${binId}`);
-        } else {
+        } catch {
           setUnknownId(binId);
         }
       } else {

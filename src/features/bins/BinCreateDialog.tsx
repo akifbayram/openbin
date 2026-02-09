@@ -17,6 +17,7 @@ import { ItemsInput } from './ItemsInput';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { addBin } from './useBins';
+import { useAuth } from '@/lib/auth';
 
 interface BinCreateDialogProps {
   open: boolean;
@@ -26,6 +27,7 @@ interface BinCreateDialogProps {
 
 export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDialogProps) {
   const navigate = useNavigate();
+  const { activeHomeId } = useAuth();
   const [name, setName] = useState(prefillName ?? '');
   const [location, setLocation] = useState('');
   const [items, setItems] = useState<string[]>([]);
@@ -37,10 +39,19 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !activeHomeId) return;
     setLoading(true);
     try {
-      const id = await addBin({ name: name.trim(), items, notes: notes.trim(), tags, location: location.trim(), icon, color });
+      const id = await addBin({
+        name: name.trim(),
+        homeId: activeHomeId,
+        items,
+        notes: notes.trim(),
+        tags,
+        location: location.trim(),
+        icon,
+        color,
+      });
       setName('');
       setLocation('');
       setItems([]);
@@ -113,7 +124,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!name.trim() || loading}>
+            <Button type="submit" disabled={!name.trim() || !activeHomeId || loading}>
               {loading ? 'Creating...' : 'Create'}
             </Button>
           </DialogFooter>

@@ -1,3 +1,3 @@
 export function getBinUrl(binId: string): string {
-  return `${window.location.origin}${window.location.pathname}#/bin/${binId}`;
+  return `${window.location.origin}/bin/${binId}`;
 }

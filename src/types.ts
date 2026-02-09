@@ -1,5 +1,34 @@
-export interface Bin {
+export interface User {
   id: string;
+  username: string;
+  displayName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Home {
+  [key: string]: unknown;  // ElectricSQL Row compatibility
+  id: string;
+  name: string;
+  created_by: string;
+  invite_code: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HomeMember {
+  [key: string]: unknown;  // ElectricSQL Row compatibility
+  id: string;
+  home_id: string;
+  user_id: string;
+  role: 'owner' | 'member';
+  joined_at: string;
+}
+
+export interface Bin {
+  [key: string]: unknown;  // ElectricSQL Row compatibility
+  id: string;
+  home_id: string;
   name: string;
   location: string;
   items: string[];
@@ -7,18 +36,21 @@ export interface Bin {
   tags: string[];
   icon: string;
   color: string;
-  createdAt: Date;
-  updatedAt: Date;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Photo {
+  [key: string]: unknown;  // ElectricSQL Row compatibility
   id: string;
-  binId: string;
-  data: Blob;
+  bin_id: string;
   filename: string;
-  mimeType: string;
+  mime_type: string;
   size: number;
-  createdAt: Date;
+  storage_path: string;
+  created_by: string;
+  created_at: string;
 }
 
 export interface ExportedPhoto {
@@ -53,6 +85,15 @@ export interface ExportBinV2 {
   color?: string;
   createdAt: string;
   updatedAt: string;
+  photos?: ExportBinPhoto[];
+}
+
+/** Photo embedded in a bin export (server format) */
+export interface ExportBinPhoto {
+  id: string;
+  filename: string;
+  mimeType: string;
+  data: string;
 }
 
 export interface ExportDataV1 {
@@ -65,8 +106,9 @@ export interface ExportDataV1 {
 export interface ExportDataV2 {
   version: 2;
   exportedAt: string;
+  homeName?: string;
   bins: ExportBinV2[];
-  photos: ExportedPhoto[];
+  photos?: ExportedPhoto[];
 }
 
 export type ExportData = ExportDataV1 | ExportDataV2;

@@ -19,13 +19,16 @@ import { useBin, updateBin, deleteBin, restoreBin } from './useBins';
 import { resolveIcon } from '@/lib/iconMap';
 import { getColorPreset } from '@/lib/colorPalette';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
-import { getPhotosForBin } from '@/features/photos/usePhotos';
 import type { Bin } from '@/types';
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export function BinDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const bin = useBin(id);
+  const { bin, isLoading } = useBin(id);
   const { showToast } = useToast();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -37,7 +40,7 @@ export function BinDetailPage() {
   const [editColor, setEditColor] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  if (bin === undefined) {
+  if (isLoading || bin === undefined) {
     return (
       <div className="flex flex-col gap-4 px-5 pt-4 pb-2">
         <Skeleton className="h-8 w-20" />
@@ -54,7 +57,7 @@ export function BinDetailPage() {
     );
   }
 
-  if (bin === null || (!bin && id)) {
+  if (bin === null) {
     return (
       <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
         <p className="text-[17px] font-semibold text-[var(--text-secondary)]">Bin not found</p>
@@ -95,14 +98,13 @@ export function BinDetailPage() {
   async function handleDelete() {
     if (!id || !bin) return;
     const snapshot: Bin = { ...bin };
-    const photoSnapshot = await getPhotosForBin(id);
     await deleteBin(id);
     navigate('/');
     showToast({
       message: `Deleted "${snapshot.name}"`,
       action: {
         label: 'Undo',
-        onClick: () => restoreBin(snapshot, photoSnapshot),
+        onClick: () => restoreBin(snapshot),
       },
     });
   }
@@ -296,13 +298,13 @@ export function BinDetailPage() {
                 <div>
                   <Label>Created</Label>
                   <p className="mt-1.5 text-[13px] text-[var(--text-secondary)]">
-                    {bin.createdAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {formatDate(bin.created_at)}
                   </p>
                 </div>
                 <div>
                   <Label>Updated</Label>
                   <p className="mt-1.5 text-[13px] text-[var(--text-secondary)]">
-                    {bin.updatedAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {formatDate(bin.updated_at)}
                   </p>
                 </div>
               </div>
@@ -316,7 +318,7 @@ export function BinDetailPage() {
           <DialogHeader>
             <DialogTitle>Delete this bin?</DialogTitle>
             <DialogDescription>
-              This will delete '{bin.name}' and all its photos. You can undo this action briefly after deletion.
+              This will delete &apos;{bin.name}&apos; and all its photos. You can undo this action briefly after deletion.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

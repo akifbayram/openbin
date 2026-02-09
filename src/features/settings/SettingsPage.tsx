@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { Sun, Moon, Download, Upload, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Sun, Moon, Download, Upload, AlertTriangle, RotateCcw, LogOut, User, Home, Plus, LogIn, Users, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,10 @@ import {
 import { useToast } from '@/components/ui/toast';
 import { useTheme } from '@/lib/theme';
 import { useAppSettings } from '@/lib/appSettings';
-import { db } from '@/db';
+import { useAuth } from '@/lib/auth';
+import { useBinList } from '@/features/bins/useBins';
+import { useHomeList, createHome, joinHome } from '@/features/homes/useHomes';
+import { HomeMembersDialog } from '@/features/homes/HomeMembersDialog';
 import type { ExportData } from '@/types';
 import {
   exportAllData,
@@ -29,6 +33,7 @@ import {
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { settings, updateSettings, resetSettings } = useAppSettings();
+  const { user, activeHomeId, setActiveHomeId, logout } = useAuth();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
@@ -36,13 +41,61 @@ export function SettingsPage() {
   const [pendingData, setPendingData] = useState<ExportData | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  const binCount = useLiveQuery(() => db.bins.count());
-  const photoCount = useLiveQuery(() => db.photos.count());
+  // Homes state
+  const { homes, isLoading: homesLoading } = useHomeList();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [membersHomeId, setMembersHomeId] = useState<string | null>(null);
+  const [newName, setNewName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState(false);
+
+  const { bins } = useBinList();
+  const binCount = bins.length;
+
+  async function handleCreateHome(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setCreating(true);
+    try {
+      const home = await createHome(newName.trim());
+      setActiveHomeId(home.id);
+      setNewName('');
+      setCreateOpen(false);
+      showToast({ message: `Created "${home.name}"` });
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : 'Failed to create home' });
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleJoinHome(e: React.FormEvent) {
+    e.preventDefault();
+    if (!inviteCode.trim()) return;
+    setJoining(true);
+    try {
+      const home = await joinHome(inviteCode.trim());
+      setActiveHomeId(home.id);
+      setInviteCode('');
+      setJoinOpen(false);
+      showToast({ message: `Joined "${home.name}"` });
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : 'Failed to join home' });
+    } finally {
+      setJoining(false);
+    }
+  }
 
   async function handleExport() {
+    if (!activeHomeId) {
+      showToast({ message: 'Select a home first' });
+      return;
+    }
     setExporting(true);
     try {
-      const data = await exportAllData();
+      const data = await exportAllData(activeHomeId);
       downloadExport(data);
       showToast({ message: 'Backup exported successfully' });
     } catch {
@@ -68,11 +121,11 @@ export function SettingsPage() {
   }
 
   async function handleFileSelected(files: FileList | null) {
-    if (!files?.[0]) return;
+    if (!files?.[0] || !activeHomeId) return;
     try {
       const data = await parseImportFile(files[0]);
       setPendingData(data);
-      const result = await importData(data, 'merge');
+      const result = await importData(activeHomeId, data, 'merge');
       showToast({
         message: `Imported ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}${result.binsSkipped ? ` (${result.binsSkipped} skipped)` : ''}`,
       });
@@ -84,9 +137,9 @@ export function SettingsPage() {
   }
 
   async function handleReplaceImport() {
-    if (!pendingData) return;
+    if (!pendingData || !activeHomeId) return;
     try {
-      const result = await importData(pendingData, 'replace');
+      const result = await importData(activeHomeId, pendingData, 'replace');
       showToast({
         message: `Replaced all data: ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}`,
       });
@@ -114,6 +167,117 @@ export function SettingsPage() {
       <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
         Settings
       </h1>
+
+      {/* Account */}
+      {user && (
+        <Card>
+          <CardContent>
+            <Label>Account</Label>
+            <div className="flex flex-col gap-3 mt-3">
+              <div className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+                <User className="h-5 w-5 text-[var(--text-tertiary)]" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-medium text-[var(--text-primary)] truncate">
+                    {user.displayName || user.username}
+                  </p>
+                  <p className="text-[13px] text-[var(--text-tertiary)]">@{user.username}</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={logout}
+                className="justify-start rounded-[var(--radius-sm)] h-11 text-[var(--destructive)]"
+              >
+                <LogOut className="h-4 w-4 mr-2.5" />
+                Sign Out
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Homes */}
+      <Card>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <Label>Homes</Label>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setJoinOpen(true)}
+                className="rounded-[var(--radius-full)] h-8 px-3"
+              >
+                <LogIn className="h-3.5 w-3.5 mr-1.5" />
+                Join
+              </Button>
+              <Button
+                onClick={() => setCreateOpen(true)}
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                aria-label="Create home"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 mt-3">
+            {homesLoading ? (
+              <div className="space-y-2">
+                {[1, 2].map((i) => (
+                  <Skeleton key={i} className="h-12 rounded-[var(--radius-sm)]" />
+                ))}
+              </div>
+            ) : homes.length === 0 ? (
+              <p className="text-[13px] text-[var(--text-tertiary)] py-4 text-center">
+                No homes yet. Create one or join with an invite code.
+              </p>
+            ) : (
+              homes.map((home) => {
+                const isActive = home.id === activeHomeId;
+                const isOwner = home.created_by === user?.id;
+                return (
+                  <button
+                    key={home.id}
+                    className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-left transition-colors hover:bg-[var(--bg-hover)] ${isActive ? 'ring-2 ring-[var(--accent)] bg-[var(--bg-input)]' : ''}`}
+                    onClick={() => setActiveHomeId(home.id)}
+                  >
+                    <Home className="h-5 w-5 text-[var(--text-secondary)] shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
+                          {home.name}
+                        </span>
+                        {isOwner && (
+                          <Badge variant="secondary" className="text-[11px] gap-1 py-0">
+                            <Crown className="h-3 w-3" />
+                            Owner
+                          </Badge>
+                        )}
+                        {isActive && (
+                          <Badge className="text-[11px] py-0">Active</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 rounded-[var(--radius-full)] h-8 px-3"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMembersHomeId(home.id);
+                      }}
+                    >
+                      <Users className="h-3.5 w-3.5 mr-1.5" />
+                      Members
+                    </Button>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Appearance */}
       <Card>
@@ -172,7 +336,7 @@ export function SettingsPage() {
             <Button
               variant="outline"
               onClick={handleExport}
-              disabled={exporting}
+              disabled={exporting || !activeHomeId}
               className="justify-start rounded-[var(--radius-sm)] h-11"
             >
               <Download className="h-4 w-4 mr-2.5" />
@@ -181,6 +345,7 @@ export function SettingsPage() {
             <Button
               variant="outline"
               onClick={handleImportClick}
+              disabled={!activeHomeId}
               className="justify-start rounded-[var(--radius-sm)] h-11"
             >
               <Upload className="h-4 w-4 mr-2.5" />
@@ -189,6 +354,7 @@ export function SettingsPage() {
             <Button
               variant="outline"
               onClick={() => replaceInputRef.current?.click()}
+              disabled={!activeHomeId}
               className="justify-start rounded-[var(--radius-sm)] h-11 text-[var(--destructive)]"
             >
               <AlertTriangle className="h-4 w-4 mr-2.5" />
@@ -218,7 +384,7 @@ export function SettingsPage() {
           <Label>About</Label>
           <div className="mt-3 space-y-2 text-[15px] text-[var(--text-secondary)]">
             <p className="font-semibold text-[var(--text-primary)]">{settings.appName} {settings.appSubtitle}</p>
-            <p>{binCount ?? 0} bin{binCount !== 1 ? 's' : ''} &middot; {photoCount ?? 0} photo{photoCount !== 1 ? 's' : ''}</p>
+            <p>{binCount} bin{binCount !== 1 ? 's' : ''}</p>
           </div>
         </CardContent>
       </Card>
@@ -229,7 +395,7 @@ export function SettingsPage() {
           <DialogHeader>
             <DialogTitle>Replace All Data?</DialogTitle>
             <DialogDescription>
-              This will delete all existing bins and photos, then import from the backup file. This action cannot be undone.
+              This will delete all existing bins and photos in the current home, then import from the backup file. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -252,6 +418,81 @@ export function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Create Home Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Home</DialogTitle>
+            <DialogDescription>
+              A home is a shared space where members can manage bins together.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateHome} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="home-name">Name</Label>
+              <Input
+                id="home-name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="e.g., My House, Office"
+                autoFocus
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!newName.trim() || creating}>
+                {creating ? 'Creating...' : 'Create'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Join Home Dialog */}
+      <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Join Home</DialogTitle>
+            <DialogDescription>
+              Enter the invite code shared by a home owner to join.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleJoinHome} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="invite-code">Invite Code</Label>
+              <Input
+                id="invite-code"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                placeholder="Enter invite code"
+                autoFocus
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setJoinOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!inviteCode.trim() || joining}>
+                {joining ? 'Joining...' : 'Join'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Members Dialog */}
+      {membersHomeId && (
+        <HomeMembersDialog
+          homeId={membersHomeId}
+          open={!!membersHomeId}
+          onOpenChange={(open) => !open && setMembersHomeId(null)}
+        />
+      )}
     </div>
   );
 }

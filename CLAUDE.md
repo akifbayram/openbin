@@ -2,16 +2,27 @@
 
 ## Project Overview
 
-Offline-first PWA for organizing physical storage bins. Users create named bins, attach QR codes, scan them to look up contents, and print label sheets. Photos can be attached to bins for visual reference. All data lives in IndexedDB — no server, no accounts. Export/import provides JSON backup with base64-encoded photos. Designed with an iOS 26 Liquid Glass aesthetic for a native-app feel on mobile.
+Multi-user PWA for organizing physical storage bins with real-time sync. Users register accounts, create/join households ("homes"), and share bins with household members. Users create named bins, attach QR codes, scan them to look up contents, and print label sheets. Photos can be attached to bins for visual reference. Data synced via ElectricSQL from PostgreSQL. Export/import provides JSON backup. Designed with an iOS 26 Liquid Glass aesthetic for a native-app feel on mobile.
 
-**Core flows**: Create bin -> Print QR label -> Stick on container -> Scan to find contents. Attach photos, search/filter by name/tag/content, bulk-select via long-press for batch operations.
+**Core flows**: Register/login -> Create/join a home -> Create bin -> Print QR label -> Stick on container -> Scan to find contents. Attach photos, search/filter by name/tag/content, bulk-select via long-press for batch operations.
+
+## Architecture
+
+```
+Client (React + @electric-sql/react)
+  ├── Reads:  useShape() → Express proxy → Electric → Postgres
+  └── Writes: fetch('/api/...') → Express API → Postgres
+```
+
+**Docker Compose services**: `postgres` (16-alpine, wal_level=logical), `electric` (electricsql/electric), `api` (Express), `nginx` (serves frontend + proxies API)
 
 ## Stack
 
 - **Runtime**: React 18 + TypeScript 5 (strict) + Vite 5
 - **Styling**: Tailwind CSS 4 with CSS custom properties (iOS 26 Liquid Glass design system)
-- **Data**: Dexie.js 4 (IndexedDB), schema version 5 — tables: `bins`, `photos`
-- **Routing**: react-router-dom 6 (HashRouter), lazy-loaded routes
+- **Data**: ElectricSQL (`@electric-sql/client`, `@electric-sql/react`) for real-time Postgres sync
+- **Server**: Express 4, PostgreSQL 16, JWT auth (bcrypt + jsonwebtoken)
+- **Routing**: react-router-dom 6 (BrowserRouter), lazy-loaded routes
 - **QR**: `qrcode` (generation), `html5-qrcode` (scanning)
 - **PWA**: vite-plugin-pwa
 - **Icons**: lucide-react
@@ -23,83 +34,98 @@ Offline-first PWA for organizing physical storage bins. Users create named bins,
 src/
   components/ui/    # Reusable primitives (button, card, dialog, input, toast, etc.)
   features/         # Feature modules — each owns its pages, hooks, and helpers
+    auth/           # LoginPage, RegisterPage, AuthGuard
     bins/           # BinListPage, BinDetailPage, useBins, BinCard, TagInput, IconPicker, ColorPicker
+    homes/          # HomesPage, HomeSelector, HomeMembersDialog, useHomes
     photos/         # PhotoGallery, PhotoLightbox, usePhotos, compressImage
     qrcode/         # QRScannerPage, QRCodeDisplay, Html5QrcodePlugin
     print/          # PrintPage, LabelSheet, LabelCell
     settings/       # SettingsPage, exportImport
     layout/         # AppLayout, Sidebar, BottomNav
-  lib/              # Shared utilities (utils.ts, theme.ts, navItems.ts, constants.ts, iconMap.ts, colorPalette.ts, appSettings.ts)
-  db/index.ts       # Dexie singleton
+  lib/              # Shared utilities (utils.ts, theme.ts, api.ts, auth.tsx, electric.ts, navItems.ts, constants.ts, iconMap.ts, colorPalette.ts, appSettings.ts)
   types.ts          # All shared interfaces
+server/
+  src/              # Express API server
+    index.ts        # App entry, route mounting
+    db.ts           # pg Pool singleton
+    migrate.ts      # SQL migration runner
+    middleware/      # auth.ts (JWT), homeAccess.ts (home membership)
+    routes/         # auth, homes, bins, photos, shapes, export
+  migrations/       # SQL migration files
+  Dockerfile        # Multi-stage build
+docker-compose.yml  # Postgres, Electric, API, nginx
+nginx.conf          # Reverse proxy config
+.env.example        # Environment variables template
 ```
 
 ## Code Conventions
 
 - **Named exports only** — no default exports except `App.tsx` (Vite entry).
-- **Feature hooks pattern**: each feature exposes a React hook (e.g. `useBinList`) for live queries and plain async functions (e.g. `addBin`, `deleteBin`) for mutations. Hooks live alongside plain functions in the same file.
-- **Transactions for multi-table writes** — always wrap cross-table mutations in `db.transaction('rw', [...tables])`.
-- **Undo-delete pattern**: snapshot the record (and related photos) _before_ deleting, pass snapshot to `restoreBin(bin, photos?)` in the toast undo callback.
+- **Feature hooks pattern**: each feature exposes a React hook (e.g. `useBinList`) for real-time data via `useShape()` and plain async functions (e.g. `addBin`, `deleteBin`) for mutations via `apiFetch()`. Hooks live alongside plain functions in the same file.
+- **Data hooks return `{ data, isLoading }`** — e.g. `useBinList()` returns `{ bins, isLoading }`, `useBin(id)` returns `{ bin, isLoading }`.
+- **`apiFetch<T>(path, options)`** in `lib/api.ts` — wraps fetch with JWT from localStorage, auto JSON stringify, FormData support. Throws `ApiError` on failure.
+- **`useAuth()`** in `lib/auth.tsx` — provides `user`, `token`, `activeHomeId`, plus `login()`, `register()`, `logout()`, `setActiveHomeId()`.
+- **Undo-delete pattern**: server returns deleted bin snapshot on DELETE, pass to `restoreBin(bin)` in the toast undo callback.
+- **Snake_case field names** on DB-backed interfaces (`Bin`, `Photo`, `Home`, `HomeMember`) to match PostgreSQL columns from ElectricSQL. Export types remain camelCase.
+- **`[key: string]: unknown` index signatures** on DB interfaces for ElectricSQL `Row` type compatibility.
 - **CSS**: use `var(--token)` design tokens, not raw colors. Glass effects via utility classes `glass-card`, `glass-nav`, `glass-heavy`.
 - **Responsive**: mobile-first. Bottom nav on mobile (`lg:hidden`), sidebar on desktop (`hidden lg:flex`). Breakpoint is `lg` (1024px).
-- **Lazy loading**: Scanner, Print, and Settings pages are `React.lazy` with `<Suspense>`.
+- **Lazy loading**: Scanner, Print, Settings, Auth, and Homes pages are `React.lazy` with `<Suspense>`.
 - **`cn()` helper** (clsx + tailwind-merge) for conditional class composition.
-- **`addBin()` accepts an options object** (`AddBinOptions`): `{ name, items?, notes?, tags?, location?, icon?, color? }`. Do not use positional arguments.
+- **`addBin()` accepts an options object** (`AddBinOptions`): `{ name, homeId, items?, notes?, tags?, location?, icon?, color? }`. `homeId` is required.
 - **Icon/color fields**: `icon` and `color` are strings on the `Bin` interface. Empty string `''` means default (Package icon, no color). Icon stores PascalCase lucide name (e.g. `'Wrench'`); color stores a preset key (e.g. `'blue'`).
 - **`resolveIcon(name)`** in `lib/iconMap.ts` returns a LucideIcon, falling back to Package.
 - **`getColorPreset(key)`** in `lib/colorPalette.ts` returns `{ bg, bgDark, dot }` for theme-aware tinting.
 - **App settings**: `useAppSettings()` in `lib/appSettings.ts` manages app name/subtitle via `localStorage('qrbin-app-name')`.
 
+## Server API Routes
+
+- **Auth**: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`
+- **Homes**: `GET /api/homes`, `POST /api/homes`, `PUT /api/homes/:id`, `DELETE /api/homes/:id`, `POST /api/homes/join`, `DELETE /api/homes/:id/members/:userId`, `POST /api/homes/:id/regenerate-invite`
+- **Bins**: `POST /api/bins`, `GET /api/bins/:id`, `PUT /api/bins/:id`, `DELETE /api/bins/:id`, `PUT /api/bins/:id/add-tags`, `POST /api/bins/:id/photos`
+- **Photos**: `GET /api/photos/:id/file`, `DELETE /api/photos/:id`
+- **Shapes** (Electric proxy): `GET /api/shapes/bins?home_id=X`, `GET /api/shapes/photos?home_id=X`, `GET /api/shapes/homes`, `GET /api/shapes/home-members?home_id=X`
+- **Export/Import**: `GET /api/homes/:id/export`, `POST /api/homes/:id/import`, `POST /api/import/legacy`
+
 ## Gotchas
 
 - **No shadcn CLI** — do not run `npx shadcn` commands. All UI components are custom.
 - **Theme**: stored in `localStorage('qrbin-theme')`, applied via `<html class="dark|light">` before first paint (inline script in `index.html`). The `useTheme()` hook in `lib/theme.ts` is the single source of truth at runtime.
-- **Dexie dates**: IndexedDB stores `Date` objects natively. Export serializes to ISO strings; import deserializes back.
+- **ISO date strings**: ElectricSQL returns dates as ISO strings. All date fields on Bin/Photo/Home are `string`, not `Date`.
 - **Export backward compatibility**: `ExportBinV2` has optional `icon?`, `color?` fields. Import defaults missing fields to `''`. Old backups without these fields import cleanly.
 - **`html5-qrcode` is ~330KB gzipped** — always dynamic-import the scanner page; never import statically.
-- **Photo blobs**: stored as raw `Blob` in IndexedDB. Object URLs must be revoked on cleanup. Export converts to base64.
-- **HashRouter** — all internal links use `#/path` format. `useNavigate` handles this transparently.
+- **Photos served via API**: `getPhotoUrl(id)` returns `/api/photos/${id}/file`. No Blob/ObjectURL management needed.
+- **BrowserRouter** — path-based URLs (e.g. `/bin/:id`). QR scanner regex handles both old hash (`#/bin/`) and new path (`/bin/`) URLs.
 - **PWA caching**: `vite-plugin-pwa` uses `generateSW` mode. After changing precached assets, users may need a refresh to get the new service worker.
+- **Auth tokens**: JWT stored in `localStorage('qrbin-token')`, active home in `localStorage('qrbin-active-home')`.
 
 ## Verification
 
 ```sh
+# Frontend
 npx tsc --noEmit   # Zero type errors
 npx vitest run     # All tests pass
 npx vite build     # Successful production build
+
+# Server
+cd server && npx tsc --noEmit  # Zero type errors
+
+# Docker stack
+docker compose up -d
+docker compose ps   # All 4 services healthy
 ```
 
 ## Testing
 
 - **Vitest 4** with **happy-dom** environment (not jsdom — jsdom 27 has ESM/CJS incompatibility).
-- `fake-indexeddb/auto` imported in test setup for Dexie testing.
+- Tests mock `apiFetch` from `@/lib/api` and `useAuth` from `@/lib/auth`.
 - `@testing-library/jest-dom` for DOM matchers.
 - Test files live in `__tests__/` directories next to their feature code.
 
-## Git Workflow
+## Docker Deployment
 
-- **Push after phase implementations** — after completing a phase (or significant milestone), commit and push changes to the remote repository.
-
-## Agent Team Plan (3 Parallel Agents)
-
-For large features, split into three domain-aligned agents. Use Slack (`#qrbin-dev`) for cross-agent coordination.
-
-| Agent | Name | Role | Owns |
-|-------|------|------|------|
-| 1 | **data-layer** | DB, hooks, pure logic | `src/db/`, `src/types.ts`, `src/features/*/use*.ts`, `src/features/settings/exportImport.ts` |
-| 2 | **ui-components** | Pages, components, styling | `src/features/*/Page.tsx`, `src/features/*/*.tsx` (non-hook), `src/components/ui/` |
-| 3 | **infra-nav** | Routing, layout, build, PWA | `src/App.tsx`, `src/features/layout/`, `src/lib/`, `vite.config.ts`, `index.html` |
-
-### Workflow
-
-1. **data-layer** starts first — types and DB schema must land before UI can import them.
-2. **ui-components** and **infra-nav** run in parallel once types exist.
-3. Each agent posts to Slack on completion: `data-layer done: types + hooks merged`.
-4. **infra-nav** runs final `tsc --noEmit && vite build` and posts result to Slack.
-5. Any agent blocked by another posts to Slack with `BLOCKED: need X from @agent-name`.
-
-### Slack Integration
-
-- Channel: `#qrbin-dev`
-- Post on: task start, completion, blockers, build results
-- Use `SendMessage` for direct agent-to-agent coordination; Slack for team-wide visibility
+1. Copy `.env.example` to `.env` and set secure values for `POSTGRES_PASSWORD` and `JWT_SECRET`
+2. Build frontend: `npx vite build`
+3. Start stack: `docker compose up -d`
+4. API runs migrations automatically on startup
+5. Access at `http://localhost`

@@ -1,46 +1,128 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { v4 as uuidv4 } from 'uuid';
-import { db } from '@/db';
-import type { Bin, Photo } from '@/types';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
+import type { Bin } from '@/types';
+
+const BINS_CHANGED_EVENT = 'bins-changed';
+
+/** Notify all useBinList / useBin instances to refetch */
+export function notifyBinsChanged() {
+  window.dispatchEvent(new Event(BINS_CHANGED_EVENT));
+}
 
 export type SortOption = 'updated' | 'created' | 'name';
 
 export function useBinList(searchQuery?: string, sort: SortOption = 'updated') {
-  return useLiveQuery(async () => {
-    let bins: Bin[];
+  const { activeHomeId, token } = useAuth();
+  const [rawBins, setRawBins] = useState<Bin[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
-    if (sort === 'name') {
-      bins = await db.bins.orderBy('name').toArray();
-    } else if (sort === 'created') {
-      bins = await db.bins.orderBy('createdAt').reverse().toArray();
-    } else {
-      bins = await db.bins.orderBy('updatedAt').reverse().toArray();
+  useEffect(() => {
+    if (!token || !activeHomeId) {
+      setRawBins([]);
+      setIsLoading(false);
+      return;
     }
 
-    if (searchQuery && searchQuery.trim()) {
+    let cancelled = false;
+    setIsLoading(true);
+
+    apiFetch<Bin[]>(`/api/bins?home_id=${encodeURIComponent(activeHomeId)}`)
+      .then((data) => {
+        if (!cancelled) setRawBins(data);
+      })
+      .catch(() => {
+        if (!cancelled) setRawBins([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [token, activeHomeId, refreshCounter]);
+
+  // Listen for bins-changed events
+  useEffect(() => {
+    const handler = () => setRefreshCounter((c) => c + 1);
+    window.addEventListener(BINS_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(BINS_CHANGED_EVENT, handler);
+  }, []);
+
+  const bins = useMemo(() => {
+    let filtered = [...rawBins];
+
+    if (searchQuery?.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      bins = bins.filter(
+      filtered = filtered.filter(
         (bin) =>
           bin.name.toLowerCase().includes(q) ||
           bin.location.toLowerCase().includes(q) ||
-          bin.items.some((item) => item.toLowerCase().includes(q)) ||
+          (Array.isArray(bin.items) ? bin.items : []).some((item: string) => item.toLowerCase().includes(q)) ||
           bin.notes.toLowerCase().includes(q) ||
-          bin.tags.some((tag) => tag.toLowerCase().includes(q))
+          (Array.isArray(bin.tags) ? bin.tags : []).some((tag: string) => tag.toLowerCase().includes(q))
       );
     }
-    return bins;
-  }, [searchQuery, sort]);
+
+    if (sort === 'name') {
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sort === 'created') {
+      filtered.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    } else {
+      filtered.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+    }
+
+    return filtered;
+  }, [rawBins, searchQuery, sort]);
+
+  const refresh = useCallback(() => setRefreshCounter((c) => c + 1), []);
+
+  return { bins, isLoading, refresh };
 }
 
 export function useBin(id: string | undefined) {
-  return useLiveQuery(async () => {
-    if (!id) return undefined;
-    return db.bins.get(id);
-  }, [id]);
+  const { token } = useAuth();
+  const [bin, setBin] = useState<Bin | null | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
+  useEffect(() => {
+    if (!id || !token) {
+      setBin(undefined);
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoading(true);
+
+    apiFetch<Bin>(`/api/bins/${id}`)
+      .then((data) => {
+        if (!cancelled) setBin(data);
+      })
+      .catch(() => {
+        if (!cancelled) setBin(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [id, token, refreshCounter]);
+
+  // Listen for bins-changed events
+  useEffect(() => {
+    const handler = () => setRefreshCounter((c) => c + 1);
+    window.addEventListener(BINS_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(BINS_CHANGED_EVENT, handler);
+  }, []);
+
+  return { bin: bin ?? undefined, isLoading };
 }
 
 export interface AddBinOptions {
   name: string;
+  homeId: string;
   items?: string[];
   notes?: string;
   tags?: string[];
@@ -50,46 +132,56 @@ export interface AddBinOptions {
 }
 
 export async function addBin(options: AddBinOptions): Promise<string> {
-  const id = uuidv4();
-  const now = new Date();
-  await db.bins.add({
-    id,
-    name: options.name,
-    location: options.location ?? '',
-    items: options.items ?? [],
-    notes: options.notes ?? '',
-    tags: options.tags ?? [],
-    icon: options.icon ?? '',
-    color: options.color ?? '',
-    createdAt: now,
-    updatedAt: now,
+  const result = await apiFetch<{ id: string }>('/api/bins', {
+    method: 'POST',
+    body: {
+      homeId: options.homeId,
+      name: options.name,
+      location: options.location ?? '',
+      items: options.items ?? [],
+      notes: options.notes ?? '',
+      tags: options.tags ?? [],
+      icon: options.icon ?? '',
+      color: options.color ?? '',
+    },
   });
-  return id;
+  notifyBinsChanged();
+  return result.id;
 }
 
 export async function updateBin(
   id: string,
   changes: Partial<Pick<Bin, 'name' | 'location' | 'items' | 'notes' | 'tags' | 'icon' | 'color'>>
 ): Promise<void> {
-  await db.bins.update(id, {
-    ...changes,
-    updatedAt: new Date(),
+  await apiFetch(`/api/bins/${id}`, {
+    method: 'PUT',
+    body: changes,
   });
+  notifyBinsChanged();
 }
 
-export async function deleteBin(id: string): Promise<void> {
-  await db.transaction('rw', [db.bins, db.photos], async () => {
-    await db.photos.where('binId').equals(id).delete();
-    await db.bins.delete(id);
+export async function deleteBin(id: string): Promise<Bin> {
+  const bin = await apiFetch<Bin>(`/api/bins/${id}`, {
+    method: 'DELETE',
   });
+  notifyBinsChanged();
+  return bin;
 }
 
-/** Re-add a bin (and optionally its photos) for undo. */
-export async function restoreBin(bin: Bin, photos?: Photo[]): Promise<void> {
-  await db.transaction('rw', [db.bins, db.photos], async () => {
-    await db.bins.add(bin);
-    if (photos?.length) {
-      await db.photos.bulkAdd(photos);
-    }
+export async function restoreBin(bin: Bin): Promise<void> {
+  await apiFetch('/api/bins', {
+    method: 'POST',
+    body: {
+      id: bin.id,
+      homeId: bin.home_id,
+      name: bin.name,
+      location: bin.location,
+      items: bin.items,
+      notes: bin.notes,
+      tags: bin.tags,
+      icon: bin.icon,
+      color: bin.color,
+    },
   });
+  notifyBinsChanged();
 }

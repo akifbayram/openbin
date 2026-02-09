@@ -8,7 +8,9 @@ import {
   Tag,
   X,
   CheckCircle2,
+  Home,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,12 +18,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { haptic } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
+import { useAuth } from '@/lib/auth';
 import { useBinList, deleteBin, restoreBin, type SortOption } from './useBins';
-import { getPhotosForBin } from '@/features/photos/usePhotos';
 import { BinCard } from './BinCard';
 import { BinCreateDialog } from './BinCreateDialog';
 import { BulkTagDialog } from './BulkTagDialog';
-import type { Bin, Photo } from '@/types';
+import type { Bin } from '@/types';
 
 const sortLabels: Record<SortOption, string> = {
   updated: 'Recently Updated',
@@ -37,9 +39,10 @@ export function BinListPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
-  // Filtering is handled inside useBinList's Dexie live query — no extra memoization needed
-  const bins = useBinList(debouncedSearch, sort);
+  const { activeHomeId } = useAuth();
+  const { bins, isLoading } = useBinList(debouncedSearch, sort);
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const selectable = selectedIds.size > 0;
 
@@ -68,25 +71,18 @@ export function BinListPage() {
   }
 
   async function bulkDelete() {
-    if (!bins) return;
     const toDelete = bins.filter((b) => selectedIds.has(b.id));
-    const snapshot: Bin[] = toDelete.map((b) => ({ ...b }));
-    const photoSnapshots: Map<string, Photo[]> = new Map();
-    await Promise.all(
-      toDelete.map(async (b) => {
-        photoSnapshots.set(b.id, await getPhotosForBin(b.id));
-      })
-    );
+    const snapshots: Bin[] = toDelete.map((b) => ({ ...b }));
     await Promise.all(toDelete.map((b) => deleteBin(b.id)));
     haptic([50, 30, 50]);
     clearSelection();
     showToast({
-      message: `Deleted ${snapshot.length} bin${snapshot.length !== 1 ? 's' : ''}`,
+      message: `Deleted ${snapshots.length} bin${snapshots.length !== 1 ? 's' : ''}`,
       action: {
         label: 'Undo',
         onClick: async () => {
-          for (const bin of snapshot) {
-            await restoreBin(bin, photoSnapshots.get(bin.id));
+          for (const bin of snapshots) {
+            await restoreBin(bin);
           }
         },
       },
@@ -100,37 +96,41 @@ export function BinListPage() {
         <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
           Bins
         </h1>
-        <Button
-          onClick={() => setCreateOpen(true)}
-          size="icon"
-          className="h-10 w-10 rounded-full"
-          aria-label="Create bin"
-        >
-          <Plus className="h-5 w-5" />
-        </Button>
+        {activeHomeId && (
+          <Button
+            onClick={() => setCreateOpen(true)}
+            size="icon"
+            className="h-10 w-10 rounded-full"
+            aria-label="Create bin"
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
-      {/* Search + Sort */}
-      <div className="flex items-center gap-2.5">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search bins..."
-            className="pl-10 rounded-[var(--radius-full)] h-10 text-[15px]"
-          />
+      {/* Search + Sort (only when a home is active) */}
+      {activeHomeId && (
+        <div className="flex items-center gap-2.5">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search bins..."
+              className="pl-10 rounded-[var(--radius-full)] h-10 text-[15px]"
+            />
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={cycleSort}
+            className="shrink-0 rounded-[var(--radius-full)] gap-1.5 h-10 px-3.5"
+          >
+            <ArrowUpDown className="h-3.5 w-3.5" />
+            <span className="text-[13px] truncate">{sortLabels[sort]}</span>
+          </Button>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={cycleSort}
-          className="shrink-0 rounded-[var(--radius-full)] gap-1.5 h-10 px-3.5"
-        >
-          <ArrowUpDown className="h-3.5 w-3.5" />
-          <span className="text-[13px] truncate">{sortLabels[sort]}</span>
-        </Button>
-      </div>
+      )}
 
       {/* Bulk action bar */}
       {selectable && (
@@ -181,8 +181,23 @@ export function BinListPage() {
         </div>
       )}
 
-      {/* Bin grid */}
-      {bins === undefined ? (
+      {/* No home selected prompt */}
+      {!activeHomeId ? (
+        <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
+          <Home className="h-16 w-16 opacity-40" />
+          <div className="text-center space-y-1.5">
+            <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
+              No home selected
+            </p>
+            <p className="text-[13px]">Create or join a home to start organizing bins</p>
+          </div>
+          <Button onClick={() => navigate('/homes')} variant="outline" className="rounded-[var(--radius-full)] mt-1">
+            <Home className="h-4 w-4 mr-2" />
+            Manage Homes
+          </Button>
+        </div>
+      ) : /* Bin grid */
+      isLoading ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-3">

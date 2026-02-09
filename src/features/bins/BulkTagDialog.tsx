@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { TagInput } from './TagInput';
-import { db } from '@/db';
+import { apiFetch } from '@/lib/api';
 
 interface BulkTagDialogProps {
   open: boolean;
@@ -27,14 +27,23 @@ export function BulkTagDialog({ open, onOpenChange, binIds, onDone }: BulkTagDia
     if (tags.length === 0) return;
     setLoading(true);
     try {
-      await db.transaction('rw', db.bins, async () => {
-        for (const id of binIds) {
-          const bin = await db.bins.get(id);
-          if (!bin) continue;
-          const merged = [...new Set([...bin.tags, ...tags])];
-          await db.bins.update(id, { tags: merged, updatedAt: new Date() });
-        }
-      });
+      await Promise.all(
+        binIds.map((id) =>
+          apiFetch(`/api/bins/${id}/add-tags`, {
+            method: 'PUT',
+            body: { tags },
+          }).catch(() => {
+            // If add-tags endpoint doesn't exist, fall back to fetching the bin and updating
+            return apiFetch<{ tags: string[] }>(`/api/bins/${id}`).then((bin) => {
+              const merged = [...new Set([...bin.tags, ...tags])];
+              return apiFetch(`/api/bins/${id}`, {
+                method: 'PUT',
+                body: { tags: merged },
+              });
+            });
+          })
+        )
+      );
       setTags([]);
       onOpenChange(false);
       onDone();

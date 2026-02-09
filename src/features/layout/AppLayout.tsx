@@ -7,7 +7,8 @@ import { Sidebar } from './Sidebar';
 import { useTheme } from '@/lib/theme';
 import { useOnlineStatus } from '@/lib/useOnlineStatus';
 import { useAppSettings } from '@/lib/appSettings';
-
+import { useAuth } from '@/lib/auth';
+import { useHomeList } from '@/features/homes/useHomes';
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -17,8 +18,19 @@ export function AppLayout() {
   const { theme, toggleTheme } = useTheme();
   const online = useOnlineStatus();
   const { settings } = useAppSettings();
+  const { activeHomeId, setActiveHomeId } = useAuth();
+  const { homes } = useHomeList();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
+
+  // Auto-select first home when none is active or active home no longer exists
+  useEffect(() => {
+    if (homes.length > 0) {
+      if (!activeHomeId || !homes.some((h) => h.id === activeHomeId)) {
+        setActiveHomeId(homes[0].id);
+      }
+    }
+  }, [activeHomeId, homes, setActiveHomeId]);
 
   useEffect(() => {
     function handleBeforeInstall(e: Event) {
@@ -75,7 +87,7 @@ export function AppLayout() {
           )}
           {!online && (
             <div className="mx-5 mt-4 rounded-[var(--radius-lg)] bg-[var(--bg-input)] px-4 py-2.5 text-center text-[13px] text-[var(--text-secondary)]">
-              You're offline — changes are saved locally
+              You're offline — changes may not sync
             </div>
           )}
           <Outlet />

@@ -123,7 +123,7 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
     prev.bin.items.every((item, i) => item === next.bin.items[i]) &&
     prev.bin.icon === next.bin.icon &&
     prev.bin.color === next.bin.color &&
-    prev.bin.updatedAt === next.bin.updatedAt &&
+    prev.bin.updated_at === next.bin.updated_at &&
     prev.selectable === next.selectable &&
     prev.selected === next.selected &&
     prev.onTagClick === next.onTagClick &&

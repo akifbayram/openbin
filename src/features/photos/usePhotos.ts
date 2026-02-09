@@ -1,63 +1,81 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { v4 as uuidv4 } from 'uuid';
-import { db } from '@/db';
+import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import type { Photo } from '@/types';
 
-const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5 MB
+const PHOTOS_CHANGED_EVENT = 'photos-changed';
+
+/** Notify all usePhotos instances to refetch */
+export function notifyPhotosChanged() {
+  window.dispatchEvent(new Event(PHOTOS_CHANGED_EVENT));
+}
 
 export function usePhotos(binId: string | undefined) {
-  return useLiveQuery(async () => {
-    if (!binId) return [];
-    return db.photos.where('binId').equals(binId).sortBy('createdAt');
-  }, [binId]);
+  const { token } = useAuth();
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
+  useEffect(() => {
+    if (!binId || !token) {
+      setPhotos([]);
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoading(true);
+
+    apiFetch<Photo[]>(`/api/photos?bin_id=${encodeURIComponent(binId)}`)
+      .then((data) => {
+        if (!cancelled) {
+          // Sort by created_at ascending
+          const sorted = [...data].sort((a, b) => a.created_at.localeCompare(b.created_at));
+          setPhotos(sorted);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPhotos([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [binId, token, refreshCounter]);
+
+  // Listen for photos-changed events
+  useEffect(() => {
+    const handler = () => setRefreshCounter((c) => c + 1);
+    window.addEventListener(PHOTOS_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(PHOTOS_CHANGED_EVENT, handler);
+  }, []);
+
+  const refresh = useCallback(() => setRefreshCounter((c) => c + 1), []);
+
+  return { photos, isLoading, refresh };
 }
 
-export async function addPhoto(
-  binId: string,
-  data: Blob,
-  filename: string
-): Promise<string> {
-  if (data.size > MAX_PHOTO_SIZE) {
-    throw new Error('Photo exceeds 5 MB limit');
-  }
-  const id = uuidv4();
-  await db.transaction('rw', [db.photos, db.bins], async () => {
-    await db.photos.add({
-      id,
-      binId,
-      data,
-      filename,
-      mimeType: data.type,
-      size: data.size,
-      createdAt: new Date(),
-    });
-    await db.bins.update(binId, { updatedAt: new Date() });
+export function getPhotoUrl(photoId: string): string {
+  return `/api/photos/${photoId}/file`;
+}
+
+export async function addPhoto(binId: string, file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('photo', file);
+
+  const result = await apiFetch<{ id: string }>(`/api/bins/${binId}/photos`, {
+    method: 'POST',
+    body: formData,
   });
-  return id;
+  notifyPhotosChanged();
+  return result.id;
 }
 
-export async function deletePhoto(id: string): Promise<Photo | undefined> {
-  let snapshot: Photo | undefined;
-  await db.transaction('rw', [db.photos, db.bins], async () => {
-    snapshot = await db.photos.get(id);
-    if (!snapshot) return;
-    await db.photos.delete(id);
-    await db.bins.update(snapshot.binId, { updatedAt: new Date() });
+export async function deletePhoto(id: string): Promise<Photo> {
+  const photo = await apiFetch<Photo>(`/api/photos/${id}`, {
+    method: 'DELETE',
   });
-  return snapshot;
-}
-
-export async function restorePhoto(photo: Photo): Promise<void> {
-  await db.transaction('rw', [db.photos, db.bins], async () => {
-    await db.photos.add(photo);
-    await db.bins.update(photo.binId, { updatedAt: new Date() });
-  });
-}
-
-export async function deletePhotosForBin(binId: string): Promise<void> {
-  await db.photos.where('binId').equals(binId).delete();
-}
-
-export async function getPhotosForBin(binId: string): Promise<Photo[]> {
-  return db.photos.where('binId').equals(binId).toArray();
+  notifyPhotosChanged();
+  return photo;
 }

@@ -1,11 +1,21 @@
-import React, { Suspense, useEffect, useState } from 'react';
-import { HashRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { ChevronLeft, AlertCircle, DatabaseZap } from 'lucide-react';
+import React, { Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { ChevronLeft, AlertCircle } from 'lucide-react';
 import { ToastProvider, useToast } from '@/components/ui/toast';
+import { AuthProvider } from '@/lib/auth';
+import { AuthGuard } from '@/features/auth/AuthGuard';
 import { AppLayout } from '@/features/layout/AppLayout';
 import { BinListPage } from '@/features/bins/BinListPage';
 import { BinDetailPage } from '@/features/bins/BinDetailPage';
 import { Button } from '@/components/ui/button';
+
+const LoginPage = React.lazy(() =>
+  import('@/features/auth/LoginPage').then((m) => ({ default: m.LoginPage }))
+);
+
+const RegisterPage = React.lazy(() =>
+  import('@/features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage }))
+);
 
 const QRScannerPage = React.lazy(() =>
   import('@/features/qrcode/QRScannerPage').then((m) => ({ default: m.QRScannerPage }))
@@ -19,53 +29,16 @@ const SettingsPage = React.lazy(() =>
   import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage }))
 );
 
+const HomesPage = React.lazy(() =>
+  import('@/features/homes/HomesPage').then((m) => ({ default: m.HomesPage }))
+);
+
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
       <div className="h-8 w-8 rounded-full border-2 border-[var(--bg-active)] border-t-[var(--accent)] animate-spin" />
     </div>
   );
-}
-
-function IndexedDBUnavailable() {
-  return (
-    <div className="min-h-dvh flex flex-col items-center justify-center gap-5 px-6 bg-[var(--bg-base)] text-[var(--text-primary)]">
-      <DatabaseZap className="h-16 w-16 text-[var(--destructive)] opacity-60" />
-      <h1 className="text-[22px] font-bold">Storage Unavailable</h1>
-      <p className="text-[15px] text-[var(--text-secondary)] text-center max-w-sm">
-        QR Bin Inventory requires IndexedDB to store your data. This may be
-        unavailable in private browsing mode or if storage is disabled.
-      </p>
-      <Button
-        onClick={() => window.location.reload()}
-        className="rounded-[var(--radius-full)] mt-2"
-      >
-        Retry
-      </Button>
-    </div>
-  );
-}
-
-function IndexedDBCheck({ children }: { children: React.ReactNode }) {
-  const [available, setAvailable] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    try {
-      const request = indexedDB.open('__idb_check');
-      request.onsuccess = () => {
-        request.result.close();
-        indexedDB.deleteDatabase('__idb_check');
-        setAvailable(true);
-      };
-      request.onerror = () => setAvailable(false);
-    } catch {
-      setAvailable(false);
-    }
-  }, []);
-
-  if (available === null) return null;
-  if (!available) return <IndexedDBUnavailable />;
-  return <>{children}</>;
 }
 
 class ErrorBoundary extends React.Component<
@@ -149,13 +122,38 @@ function NotFoundPage() {
 
 export default function App() {
   return (
-    <IndexedDBCheck>
-      <ErrorBoundary>
-        <HashRouter>
-          <ToastProvider>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <ToastProvider>
+          <AuthProvider>
             <SWUpdateNotifier />
             <Routes>
-              <Route element={<AppLayout />}>
+              {/* Public routes */}
+              <Route
+                path="/login"
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <LoginPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/register"
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <RegisterPage />
+                  </Suspense>
+                }
+              />
+
+              {/* Protected routes */}
+              <Route
+                element={
+                  <AuthGuard>
+                    <AppLayout />
+                  </AuthGuard>
+                }
+              >
                 <Route path="/" element={<BinListPage />} />
                 <Route path="/bin/:id" element={<BinDetailPage />} />
                 <Route
@@ -175,6 +173,14 @@ export default function App() {
                   }
                 />
                 <Route
+                  path="/homes"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <HomesPage />
+                    </Suspense>
+                  }
+                />
+                <Route
                   path="/settings"
                   element={
                     <Suspense fallback={<LoadingFallback />}>
@@ -185,9 +191,9 @@ export default function App() {
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Routes>
-          </ToastProvider>
-        </HashRouter>
-      </ErrorBoundary>
-    </IndexedDBCheck>
+          </AuthProvider>
+        </ToastProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
