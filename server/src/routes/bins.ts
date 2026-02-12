@@ -72,7 +72,7 @@ async function verifyLocationMembership(locationId: string, userId: string): Pro
 // POST /api/bins — create bin
 router.post('/', async (req, res) => {
   try {
-    const { locationId, name, location, items, notes, tags, icon, color, id, shortCode } = req.body;
+    const { locationId, name, areaId, items, notes, tags, icon, color, id, shortCode } = req.body;
 
     if (!locationId) {
       res.status(400).json({ error: 'locationId is required' });
@@ -98,7 +98,7 @@ router.post('/', async (req, res) => {
       const params: unknown[] = [
         locationId,
         name.trim(),
-        location || '',
+        areaId || null,
         items || [],
         notes || '',
         tags || [],
@@ -110,19 +110,27 @@ router.post('/', async (req, res) => {
 
       let sql: string;
       if (id) {
-        sql = `INSERT INTO bins (id, location_id, name, location, items, notes, tags, icon, color, created_by, short_code)
+        sql = `INSERT INTO bins (id, location_id, name, area_id, items, notes, tags, icon, color, created_by, short_code)
                VALUES ($11, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-               RETURNING id, location_id, name, location, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`;
+               RETURNING id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`;
         params.push(id);
       } else {
-        sql = `INSERT INTO bins (location_id, name, location, items, notes, tags, icon, color, created_by, short_code)
+        sql = `INSERT INTO bins (location_id, name, area_id, items, notes, tags, icon, color, created_by, short_code)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-               RETURNING id, location_id, name, location, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`;
+               RETURNING id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`;
       }
 
       try {
         const result = await query(sql, params);
-        res.status(201).json(result.rows[0]);
+        const bin = result.rows[0];
+        // Fetch area_name if area_id is set
+        if (bin.area_id) {
+          const areaResult = await query('SELECT name FROM areas WHERE id = $1', [bin.area_id]);
+          bin.area_name = areaResult.rows[0]?.name ?? '';
+        } else {
+          bin.area_name = '';
+        }
+        res.status(201).json(bin);
         return;
       } catch (err: unknown) {
         const pgErr = err as { code?: string; constraint?: string };
@@ -156,8 +164,9 @@ router.get('/', async (req, res) => {
     }
 
     const result = await query(
-      `SELECT id, location_id, name, location, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at
-       FROM bins WHERE location_id = $1 ORDER BY updated_at DESC`,
+      `SELECT b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_by, b.created_at, b.updated_at
+       FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+       WHERE b.location_id = $1 ORDER BY b.updated_at DESC`,
       [locationId]
     );
 
@@ -174,8 +183,9 @@ router.get('/lookup/:shortCode', async (req, res) => {
     const code = req.params.shortCode.toUpperCase();
 
     const result = await query(
-      `SELECT b.id, b.location_id, b.name, b.location, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_by, b.created_at, b.updated_at
+      `SELECT b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_by, b.created_at, b.updated_at
        FROM bins b
+       LEFT JOIN areas a ON a.id = b.area_id
        JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
        WHERE UPPER(b.short_code) = $1`,
       [code, req.user!.id]
@@ -205,7 +215,9 @@ router.get('/:id', async (req, res) => {
     }
 
     const result = await query(
-      'SELECT id, location_id, name, location, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at FROM bins WHERE id = $1',
+      `SELECT b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_by, b.created_at, b.updated_at
+       FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+       WHERE b.id = $1`,
       [id]
     );
 
@@ -232,7 +244,7 @@ router.put('/:id', async (req, res) => {
       return;
     }
 
-    const { name, location, items, notes, tags, icon, color } = req.body;
+    const { name, areaId, items, notes, tags, icon, color } = req.body;
 
     const setClauses: string[] = ['updated_at = now()'];
     const params: unknown[] = [];
@@ -242,9 +254,9 @@ router.put('/:id', async (req, res) => {
       setClauses.push(`name = $${paramIdx++}`);
       params.push(name);
     }
-    if (location !== undefined) {
-      setClauses.push(`location = $${paramIdx++}`);
-      params.push(location);
+    if (areaId !== undefined) {
+      setClauses.push(`area_id = $${paramIdx++}`);
+      params.push(areaId || null);
     }
     if (items !== undefined) {
       setClauses.push(`items = $${paramIdx++}`);
@@ -271,9 +283,19 @@ router.put('/:id', async (req, res) => {
 
     const result = await query(
       `UPDATE bins SET ${setClauses.join(', ')} WHERE id = $${paramIdx}
-       RETURNING id, location_id, name, location, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`,
+       RETURNING id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`,
       params
     );
+
+    if (result.rows.length > 0) {
+      const bin = result.rows[0];
+      if (bin.area_id) {
+        const areaResult = await query('SELECT name FROM areas WHERE id = $1', [bin.area_id]);
+        bin.area_name = areaResult.rows[0]?.name ?? '';
+      } else {
+        bin.area_name = '';
+      }
+    }
 
     if (result.rows.length === 0) {
       res.status(404).json({ error: 'Bin not found' });
@@ -300,7 +322,9 @@ router.delete('/:id', async (req, res) => {
 
     // Fetch bin before deleting for undo
     const binResult = await query(
-      'SELECT id, location_id, name, location, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at FROM bins WHERE id = $1',
+      `SELECT b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_by, b.created_at, b.updated_at
+       FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+       WHERE b.id = $1`,
       [id]
     );
 

@@ -61,9 +61,9 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
             <span>{bin.name}</span>
           </div>
         )}
-        {showLocation && bin.location && (
+        {showLocation && bin.area_name && (
           <div className="label-contents text-gray-600 line-clamp-2" style={{ fontSize: format.contentFontSize }}>
-            {bin.location}
+            {bin.area_name}
           </div>
         )}
         {showBinCode && bin.short_code && (

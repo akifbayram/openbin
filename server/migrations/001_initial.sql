@@ -29,11 +29,22 @@ CREATE TABLE IF NOT EXISTS location_members (
   UNIQUE(location_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS areas (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  location_id   UUID NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+  name          VARCHAR(100) NOT NULL,
+  created_by    UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(location_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_areas_location_id ON areas(location_id);
+
 CREATE TABLE IF NOT EXISTS bins (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   location_id   UUID NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
   name          VARCHAR(255) NOT NULL,
-  location      VARCHAR(255) NOT NULL DEFAULT '',
+  area_id       UUID REFERENCES areas(id) ON DELETE SET NULL,
   items         TEXT[] NOT NULL DEFAULT '{}',
   notes         TEXT NOT NULL DEFAULT '',
   tags          TEXT[] NOT NULL DEFAULT '{}',
@@ -70,6 +81,7 @@ ALTER TABLE tag_colors REPLICA IDENTITY FULL;
 
 CREATE INDEX IF NOT EXISTS idx_bins_location_id ON bins(location_id);
 CREATE INDEX IF NOT EXISTS idx_bins_location_updated ON bins(location_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bins_area_id ON bins(area_id);
 CREATE INDEX IF NOT EXISTS idx_photos_bin_id ON photos(bin_id);
 CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id);

@@ -3,7 +3,7 @@ import { LayoutDashboard, ScanLine, Printer, Settings, MapPin, Package } from 'l
 export const navItems = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
   { path: '/bins', label: 'Bins', icon: Package },
-  { path: '/locations', label: 'Locations', icon: MapPin },
+  { path: '/areas', label: 'Areas', icon: MapPin },
   { path: '/print', label: 'Print', icon: Printer },
   { path: '/scan', label: 'Scan', icon: ScanLine },
 ] as const;

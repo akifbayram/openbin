@@ -16,6 +16,7 @@ import { ItemsInput } from './ItemsInput';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { useBin, updateBin, deleteBin, restoreBin, useAllTags } from './useBins';
+import { AreaPicker } from '@/features/areas/AreaPicker';
 import { resolveIcon } from '@/lib/iconMap';
 import { getColorPreset } from '@/lib/colorPalette';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
@@ -25,6 +26,7 @@ import { useAiAnalysis } from '@/features/ai/useAiAnalysis';
 import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/theme';
+import { useAuth } from '@/lib/auth';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import type { Bin } from '@/types';
 
@@ -39,10 +41,11 @@ export function BinDetailPage() {
   const allTags = useAllTags();
   const { showToast } = useToast();
   const { theme } = useTheme();
+  const { activeLocationId } = useAuth();
   const { tagColors } = useTagColorsContext();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
-  const [editLocation, setEditLocation] = useState('');
+  const [editAreaId, setEditAreaId] = useState<string | null>(null);
   const [editItems, setEditItems] = useState<string[]>([]);
   const [editNotes, setEditNotes] = useState('');
   const [editTags, setEditTags] = useState<string[]>([]);
@@ -100,7 +103,7 @@ export function BinDetailPage() {
   function startEdit() {
     if (!bin) return;
     setEditName(bin.name);
-    setEditLocation(bin.location);
+    setEditAreaId(bin.area_id);
     setEditItems([...bin.items]);
     setEditNotes(bin.notes);
     setEditTags([...bin.tags]);
@@ -113,7 +116,7 @@ export function BinDetailPage() {
     if (!id || !editName.trim()) return;
     await updateBin(id, {
       name: editName.trim(),
-      location: editLocation.trim(),
+      areaId: editAreaId,
       items: editItems,
       notes: editNotes.trim(),
       tags: editTags,
@@ -253,13 +256,8 @@ export function BinDetailPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-location">Location</Label>
-              <Input
-                id="edit-location"
-                value={editLocation}
-                onChange={(e) => setEditLocation(e.target.value)}
-                placeholder="e.g., Garage shelf 3"
-              />
+              <Label>Area</Label>
+              <AreaPicker locationId={activeLocationId ?? undefined} value={editAreaId} onChange={setEditAreaId} />
             </div>
             <div className="space-y-2">
               <Label>Items</Label>
@@ -307,9 +305,9 @@ export function BinDetailPage() {
               <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-tight">
                 {bin.name}
               </h1>
-              {bin.location && (
+              {bin.area_name && (
                 <p className="text-[15px] text-[var(--text-secondary)] mt-0.5 truncate">
-                  {bin.location}
+                  {bin.area_name}
                 </p>
               )}
             </div>

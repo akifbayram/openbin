@@ -49,7 +49,7 @@ describe('addBin', () => {
       body: {
         locationId: 'location-1',
         name: 'My Bin',
-        location: '',
+        areaId: null,
         items: ['stuff'],
         notes: 'some notes',
         tags: ['electronics'],
@@ -69,13 +69,26 @@ describe('addBin', () => {
       body: {
         locationId: 'location-1',
         name: 'Minimal',
-        location: '',
+        areaId: null,
         items: [],
         notes: '',
         tags: [],
         icon: '',
         color: '',
       },
+    });
+  });
+
+  it('passes areaId when provided', async () => {
+    mockApiFetch.mockResolvedValue({ id: 'new-id' });
+
+    await addBin({ name: 'With Area', locationId: 'location-1', areaId: 'area-1' });
+
+    expect(mockApiFetch).toHaveBeenCalledWith('/api/bins', {
+      method: 'POST',
+      body: expect.objectContaining({
+        areaId: 'area-1',
+      }),
     });
   });
 });
@@ -89,6 +102,17 @@ describe('updateBin', () => {
     expect(mockApiFetch).toHaveBeenCalledWith('/api/bins/bin-1', {
       method: 'PUT',
       body: { name: 'Updated', tags: ['new'] },
+    });
+  });
+
+  it('sends areaId in update', async () => {
+    mockApiFetch.mockResolvedValue(undefined);
+
+    await updateBin('bin-1', { areaId: 'area-2' });
+
+    expect(mockApiFetch).toHaveBeenCalledWith('/api/bins/bin-1', {
+      method: 'PUT',
+      body: { areaId: 'area-2' },
     });
   });
 });
@@ -108,14 +132,15 @@ describe('deleteBin', () => {
 });
 
 describe('restoreBin', () => {
-  it('calls apiFetch with POST and includes bin id', async () => {
+  it('calls apiFetch with POST and includes bin id and areaId', async () => {
     mockApiFetch.mockResolvedValue(undefined);
 
     await restoreBin({
       id: 'restored-bin',
       location_id: 'location-1',
       name: 'Restored',
-      location: '',
+      area_id: 'area-1',
+      area_name: 'Garage',
       items: [],
       notes: '',
       tags: [],
@@ -133,6 +158,7 @@ describe('restoreBin', () => {
         id: 'restored-bin',
         locationId: 'location-1',
         name: 'Restored',
+        areaId: 'area-1',
       }),
     });
   });

@@ -64,7 +64,7 @@ function SectionHeader({
 export function DashboardPage() {
   const navigate = useNavigate();
   const { activeLocationId } = useAuth();
-  const { totalBins, totalItems, recentlyScanned, recentlyUpdated, isLoading } =
+  const { totalBins, totalItems, totalAreas, recentlyScanned, recentlyUpdated, isLoading } =
     useDashboard();
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -144,6 +144,13 @@ export function DashboardPage() {
             onClick={() => navigate('/bins')}
           />
           <StatCard label="Total Items" value={totalItems} />
+          {totalAreas > 0 && (
+            <StatCard
+              label="Areas"
+              value={totalAreas}
+              onClick={() => navigate('/areas')}
+            />
+          )}
         </div>
       )}
 

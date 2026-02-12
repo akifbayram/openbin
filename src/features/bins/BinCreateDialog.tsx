@@ -18,6 +18,7 @@ import { ItemsInput } from './ItemsInput';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { addBin, useAllTags } from './useBins';
+import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAuth } from '@/lib/auth';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
@@ -41,7 +42,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
   const [name, setName] = useState(prefillName ?? '');
-  const [location, setLocation] = useState('');
+  const [areaId, setAreaId] = useState<string | null>(null);
   const [items, setItems] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -79,7 +80,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
 
   function resetForm() {
     setName(prefillName ?? '');
-    setLocation('');
+    setAreaId(null);
     setItems([]);
     setNotes('');
     setTags([]);
@@ -160,7 +161,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
         items,
         notes: notes.trim(),
         tags,
-        location: location.trim(),
+        areaId,
         icon,
         color,
       });
@@ -276,13 +277,8 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="bin-location">Location</Label>
-              <Input
-                id="bin-location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g., Garage shelf 3"
-              />
+              <Label>Area</Label>
+              <AreaPicker locationId={activeLocationId ?? undefined} value={areaId} onChange={setAreaId} />
             </div>
             <div className="space-y-2">
               <Label>Items</Label>

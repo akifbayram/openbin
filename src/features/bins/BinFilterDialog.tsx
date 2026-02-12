@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { COLOR_PALETTE, getColorPreset } from '@/lib/colorPalette';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import { useTheme } from '@/lib/theme';
+import { useAreaList } from '@/features/areas/useAreas';
+import { useAuth } from '@/lib/auth';
 import type { BinFilters } from './useBins';
 import { EMPTY_FILTERS } from './useBins';
 
@@ -27,6 +29,8 @@ export function BinFilterDialog({
   const [draft, setDraft] = useState<BinFilters>(filters);
   const { tagColors } = useTagColorsContext();
   const { theme } = useTheme();
+  const { activeLocationId } = useAuth();
+  const { areas } = useAreaList(activeLocationId);
 
   // Sync draft when dialog opens
   useEffect(() => {
@@ -44,6 +48,13 @@ export function BinFilterDialog({
     setDraft((d) => ({
       ...d,
       colors: d.colors.includes(key) ? d.colors.filter((c) => c !== key) : [...d.colors, key],
+    }));
+  }
+
+  function toggleArea(areaId: string) {
+    setDraft((d) => ({
+      ...d,
+      areas: d.areas.includes(areaId) ? d.areas.filter((a) => a !== areaId) : [...d.areas, areaId],
     }));
   }
 
@@ -130,6 +141,47 @@ export function BinFilterDialog({
               </div>
             )}
           </div>
+
+          {/* Area */}
+          {areas.length > 0 && (
+            <div className="space-y-2.5">
+              <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
+                Area
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => toggleArea('__unassigned__')}
+                  className={cn(
+                    'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
+                    draft.areas.includes('__unassigned__')
+                      ? 'bg-[var(--accent)] text-white'
+                      : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
+                  )}
+                >
+                  Unassigned
+                </button>
+                {areas.map((area) => {
+                  const selected = draft.areas.includes(area.id);
+                  return (
+                    <button
+                      key={area.id}
+                      type="button"
+                      onClick={() => toggleArea(area.id)}
+                      className={cn(
+                        'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
+                        selected
+                          ? 'bg-[var(--accent)] text-white'
+                          : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
+                      )}
+                    >
+                      {area.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Color */}
           <div className="space-y-2.5">

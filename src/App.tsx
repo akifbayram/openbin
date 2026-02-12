@@ -49,6 +49,10 @@ const ItemsPage = React.lazy(() =>
   import('@/features/items/ItemsPage').then((m) => ({ default: m.ItemsPage }))
 );
 
+const AreasPage = React.lazy(() =>
+  import('@/features/areas/AreasPage').then((m) => ({ default: m.AreasPage }))
+);
+
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
@@ -225,6 +229,14 @@ export default function App() {
                   element={
                     <Suspense fallback={<LoadingFallback />}>
                       <ItemsPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/areas"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <AreasPage />
                     </Suspense>
                   }
                 />

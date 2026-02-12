@@ -88,9 +88,11 @@ router.get('/locations/:id/export', requireLocationMember(), async (req, res) =>
 
     const locationName = locationResult.rows[0].name;
 
-    // Get all bins for this location
+    // Get all bins for this location (JOIN areas for backward-compat export)
     const binsResult = await query(
-      'SELECT id, name, location, items, notes, tags, icon, color, short_code, created_at, updated_at FROM bins WHERE location_id = $1 ORDER BY updated_at DESC',
+      `SELECT b.id, b.name, COALESCE(a.name, '') AS location, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_at, b.updated_at
+       FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+       WHERE b.location_id = $1 ORDER BY b.updated_at DESC`,
       [locationId]
     );
 
@@ -202,19 +204,37 @@ router.post('/locations/:id/import', requireLocationMember(), async (req, res) =
 
         const binId = bin.id || uuidv4();
 
+        // Resolve area from location string
+        let areaId: string | null = null;
+        const locationStr = (bin.location || '').trim();
+        if (locationStr) {
+          // Insert or find existing area
+          await client.query(
+            'INSERT INTO areas (location_id, name, created_by) VALUES ($1, $2, $3) ON CONFLICT (location_id, name) DO NOTHING',
+            [locationId, locationStr, req.user!.id]
+          );
+          const areaResult = await client.query(
+            'SELECT id FROM areas WHERE location_id = $1 AND name = $2',
+            [locationId, locationStr]
+          );
+          if (areaResult.rows.length > 0) {
+            areaId = areaResult.rows[0].id;
+          }
+        }
+
         // Generate short_code with retry on collision
         let shortCodeInserted = false;
         for (let attempt = 0; attempt <= 10; attempt++) {
           const code = attempt === 0 && bin.shortCode ? bin.shortCode : generateShortCode();
           try {
             await client.query(
-              `INSERT INTO bins (id, location_id, name, location, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at)
+              `INSERT INTO bins (id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
               [
                 binId,
                 locationId,
                 bin.name,
-                bin.location || '',
+                areaId,
                 bin.items || [],
                 bin.notes || '',
                 bin.tags || [],
@@ -354,19 +374,36 @@ router.post('/import/legacy', async (req, res) => {
         const existing = await client.query('SELECT id FROM bins WHERE id = $1', [binId]);
         if (existing.rows.length > 0) continue;
 
+        // Resolve area from location string
+        let legacyAreaId: string | null = null;
+        const legacyLocation = (bin.location || '').trim();
+        if (legacyLocation) {
+          await client.query(
+            'INSERT INTO areas (location_id, name, created_by) VALUES ($1, $2, $3) ON CONFLICT (location_id, name) DO NOTHING',
+            [locationId, legacyLocation, req.user!.id]
+          );
+          const areaResult = await client.query(
+            'SELECT id FROM areas WHERE location_id = $1 AND name = $2',
+            [locationId, legacyLocation]
+          );
+          if (areaResult.rows.length > 0) {
+            legacyAreaId = areaResult.rows[0].id;
+          }
+        }
+
         // Generate short_code with retry on collision
         let legacyCodeInserted = false;
         for (let attempt = 0; attempt <= 10; attempt++) {
           const code = generateShortCode();
           try {
             await client.query(
-              `INSERT INTO bins (id, location_id, name, location, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at)
+              `INSERT INTO bins (id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
               [
                 binId,
                 locationId,
                 bin.name,
-                bin.location,
+                legacyAreaId,
                 bin.items,
                 bin.notes,
                 bin.tags,

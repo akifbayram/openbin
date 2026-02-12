@@ -10,24 +10,26 @@ export function notifyBinsChanged() {
   window.dispatchEvent(new Event(BINS_CHANGED_EVENT));
 }
 
-export type SortOption = 'updated' | 'created' | 'name';
+export type SortOption = 'updated' | 'created' | 'name' | 'area';
 
 export interface BinFilters {
   tags: string[];
   tagMode: 'any' | 'all';
   colors: string[];
+  areas: string[];
   hasItems: boolean;
   hasNotes: boolean;
 }
 
 export const EMPTY_FILTERS: BinFilters = {
-  tags: [], tagMode: 'any', colors: [], hasItems: false, hasNotes: false,
+  tags: [], tagMode: 'any', colors: [], areas: [], hasItems: false, hasNotes: false,
 };
 
 export function countActiveFilters(f: BinFilters): number {
   let n = 0;
   if (f.tags.length) n++;
   if (f.colors.length) n++;
+  if (f.areas.length) n++;
   if (f.hasItems) n++;
   if (f.hasNotes) n++;
   return n;
@@ -78,7 +80,7 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
       filtered = filtered.filter(
         (bin) =>
           bin.name.toLowerCase().includes(q) ||
-          bin.location.toLowerCase().includes(q) ||
+          (bin.area_name ?? '').toLowerCase().includes(q) ||
           (Array.isArray(bin.items) ? bin.items : []).some((item: string) => item.toLowerCase().includes(q)) ||
           bin.notes.toLowerCase().includes(q) ||
           (Array.isArray(bin.tags) ? bin.tags : []).some((tag: string) => tag.toLowerCase().includes(q)) ||
@@ -101,6 +103,12 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
         const colorSet = new Set(filters.colors);
         filtered = filtered.filter((bin) => colorSet.has(bin.color));
       }
+      if (filters.areas.length > 0) {
+        const areaSet = new Set(filters.areas);
+        filtered = filtered.filter((bin) =>
+          bin.area_id ? areaSet.has(bin.area_id) : areaSet.has('__unassigned__')
+        );
+      }
       if (filters.hasItems) {
         filtered = filtered.filter((bin) => Array.isArray(bin.items) && bin.items.length > 0);
       }
@@ -113,6 +121,13 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
       filtered.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sort === 'created') {
       filtered.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    } else if (sort === 'area') {
+      filtered.sort((a, b) => {
+        const aArea = a.area_name || '\uffff'; // Unassigned sorts last
+        const bArea = b.area_name || '\uffff';
+        const cmp = aArea.localeCompare(bArea);
+        return cmp !== 0 ? cmp : a.name.localeCompare(b.name);
+      });
     } else {
       filtered.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
     }
@@ -171,7 +186,7 @@ export interface AddBinOptions {
   items?: string[];
   notes?: string;
   tags?: string[];
-  location?: string;
+  areaId?: string | null;
   icon?: string;
   color?: string;
 }
@@ -182,7 +197,7 @@ export async function addBin(options: AddBinOptions): Promise<string> {
     body: {
       locationId: options.locationId,
       name: options.name,
-      location: options.location ?? '',
+      areaId: options.areaId ?? null,
       items: options.items ?? [],
       notes: options.notes ?? '',
       tags: options.tags ?? [],
@@ -196,7 +211,7 @@ export async function addBin(options: AddBinOptions): Promise<string> {
 
 export async function updateBin(
   id: string,
-  changes: Partial<Pick<Bin, 'name' | 'location' | 'items' | 'notes' | 'tags' | 'icon' | 'color'>>
+  changes: Partial<Pick<Bin, 'name' | 'items' | 'notes' | 'tags' | 'icon' | 'color'>> & { areaId?: string | null }
 ): Promise<void> {
   await apiFetch(`/api/bins/${id}`, {
     method: 'PUT',
@@ -220,7 +235,7 @@ export async function restoreBin(bin: Bin): Promise<void> {
       id: bin.id,
       locationId: bin.location_id,
       name: bin.name,
-      location: bin.location,
+      areaId: bin.area_id,
       items: bin.items,
       notes: bin.notes,
       tags: bin.tags,

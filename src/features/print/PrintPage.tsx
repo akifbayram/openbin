@@ -8,6 +8,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useBinList } from '@/features/bins/useBins';
+import { useAreaList } from '@/features/areas/useAreas';
+import { useAuth } from '@/lib/auth';
 import { LabelSheet } from './LabelSheet';
 import { LABEL_FORMATS, getLabelFormat, DEFAULT_LABEL_FORMAT, getSavedPresets, savePreset, deletePreset, getOrientation } from './labelFormats';
 import type { LabelFormat } from './labelFormats';
@@ -132,6 +134,8 @@ const CUSTOM_FIELDS: { label: string; key: keyof LabelFormat; min: string; max?:
 export function PrintPage() {
   const [searchParams] = useSearchParams();
   const { bins: allBins, isLoading } = useBinList(undefined, 'name');
+  const { activeLocationId } = useAuth();
+  const { areas } = useAreaList(activeLocationId);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [formatKey, setFormatKey] = useState(() => localStorage.getItem(FORMAT_STORAGE_KEY) || DEFAULT_LABEL_FORMAT);
   const [labelOptions, setLabelOptions] = useState<LabelOptions>(loadLabelOptions);
@@ -290,6 +294,11 @@ export function PrintPage() {
     setSelectedIds(new Set());
   }
 
+  function selectByArea(areaId: string | null) {
+    const ids = allBins.filter((b) => b.area_id === areaId).map((b) => b.id);
+    setSelectedIds(new Set(ids));
+  }
+
   function updateLabelOption<K extends keyof LabelOptions>(key: K, value: LabelOptions[K]) {
     const next = { ...labelOptions, [key]: value };
     setLabelOptions(next);
@@ -339,6 +348,35 @@ export function PrintPage() {
 
             {binsExpanded && (
               <>
+                {areas.length > 0 && allBins.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
+                    {areas.map((area) => {
+                      const count = allBins.filter((b) => b.area_id === area.id).length;
+                      if (count === 0) return null;
+                      return (
+                        <button
+                          key={area.id}
+                          type="button"
+                          onClick={() => selectByArea(area.id)}
+                          className="inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)] transition-colors"
+                        >
+                          {area.name}
+                          <span className="ml-1 text-[var(--text-tertiary)]">({count})</span>
+                        </button>
+                      );
+                    })}
+                    {allBins.some((b) => !b.area_id) && (
+                      <button
+                        type="button"
+                        onClick={() => selectByArea(null)}
+                        className="inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors italic"
+                      >
+                        Unassigned
+                        <span className="ml-1">({allBins.filter((b) => !b.area_id).length})</span>
+                      </button>
+                    )}
+                  </div>
+                )}
                 {allBins.length === 0 ? (
                   <p className="text-[13px] text-[var(--text-tertiary)] py-8 text-center">
                     No bins to print. Create some bins first.
@@ -592,7 +630,7 @@ export function PrintPage() {
                     { key: 'showQrCode' as const, label: 'QR Code' },
                     { key: 'showBinName' as const, label: 'Bin Name' },
                     { key: 'showIcon' as const, label: 'Bin Icon' },
-                    { key: 'showLocation' as const, label: 'Location' },
+                    { key: 'showLocation' as const, label: 'Area' },
                     { key: 'showBinCode' as const, label: 'Bin Code' },
                     { key: 'showColorSwatch' as const, label: 'Color Swatch' },
                   ]).map(({ key, label }) => (

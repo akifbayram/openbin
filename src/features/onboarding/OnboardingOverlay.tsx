@@ -44,7 +44,6 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
   const [locationName, setLocationName] = useState('');
   // Step 1 state
   const [binName, setBinName] = useState('');
-  const [binLocation, setBinLocation] = useState('');
   const [binColor, setBinColor] = useState('');
   const [binTags, setBinTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -215,7 +214,6 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
       const binId = await addBin({
         name: binName.trim(),
         locationId,
-        location: binLocation.trim() || undefined,
         color: binColor || undefined,
         tags: binTags.length > 0 ? binTags : undefined,
         items: binItems.length > 0 ? binItems : undefined,
@@ -411,11 +409,6 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
                   onChange={(e) => setBinName(e.target.value)}
                   placeholder="Bin name"
                   autoFocus
-                />
-                <Input
-                  value={binLocation}
-                  onChange={(e) => setBinLocation(e.target.value)}
-                  placeholder="Location (optional)"
                 />
 
                 {/* Items input */}

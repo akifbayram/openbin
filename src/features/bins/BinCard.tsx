@@ -97,6 +97,11 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
           <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug">
             <Highlight text={bin.name} query={searchQuery} />
           </h3>
+          {bin.area_name && (
+            <p className="text-[12px] text-[var(--text-tertiary)] truncate leading-relaxed" style={mutedColor ? { color: mutedColor } : undefined}>
+              <Highlight text={bin.area_name} query={searchQuery} />
+            </p>
+          )}
           {bin.items.length > 0 && (
             <p className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed" style={mutedColor ? { color: mutedColor } : undefined}>
               <Highlight text={bin.items.join(', ')} query={searchQuery} />
@@ -138,6 +143,8 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
   return (
     prev.bin.id === next.bin.id &&
     prev.bin.name === next.bin.name &&
+    prev.bin.area_id === next.bin.area_id &&
+    prev.bin.area_name === next.bin.area_name &&
     prev.bin.items.length === next.bin.items.length &&
     prev.bin.items.every((item, i) => item === next.bin.items[i]) &&
     prev.bin.icon === next.bin.icon &&

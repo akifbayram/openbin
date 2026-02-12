@@ -27,12 +27,23 @@ export interface LocationMember {
   joined_at: string;
 }
 
+export interface Area {
+  [key: string]: unknown;
+  id: string;
+  location_id: string;
+  name: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Bin {
   [key: string]: unknown;  // ElectricSQL Row compatibility
   id: string;
   location_id: string;
   name: string;
-  location: string;
+  area_id: string | null;
+  area_name: string;
   items: string[];
   notes: string;
   tags: string[];

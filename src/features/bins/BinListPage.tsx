@@ -25,8 +25,10 @@ import { BinCard } from './BinCard';
 import { BinCreateDialog } from './BinCreateDialog';
 import { BinFilterDialog } from './BinFilterDialog';
 import { BulkTagDialog } from './BulkTagDialog';
+import { BulkAreaDialog } from './BulkAreaDialog';
 import { getColorPreset } from '@/lib/colorPalette';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
+import { useAreaList } from '@/features/areas/useAreas';
 import { useTheme } from '@/lib/theme';
 import type { Bin } from '@/types';
 
@@ -34,8 +36,9 @@ const sortLabels: Record<SortOption, string> = {
   updated: 'Recently Updated',
   created: 'Recently Created',
   name: 'Name',
+  area: 'Area',
 };
-const sortOrder: SortOption[] = ['updated', 'created', 'name'];
+const sortOrder: SortOption[] = ['updated', 'created', 'name', 'area'];
 
 export function BinListPage() {
   const location = useLocation();
@@ -44,11 +47,16 @@ export function BinListPage() {
     return state?.search || '';
   });
 
-  // Update search when navigating from Tags page
+  // Update search/filters when navigating from Tags/Areas pages
   useEffect(() => {
-    const state = location.state as { search?: string } | null;
+    const state = location.state as { search?: string; areaFilter?: string } | null;
     if (state?.search) {
       setSearch(state.search);
+    }
+    if (state?.areaFilter) {
+      setFilters((f) => ({ ...f, areas: [state.areaFilter!] }));
+    }
+    if (state?.search || state?.areaFilter) {
       // Clear the navigation state so it doesn't persist on refresh
       window.history.replaceState({}, '');
     }
@@ -61,11 +69,13 @@ export function BinListPage() {
   const [filters, setFilters] = useState<BinFilters>(EMPTY_FILTERS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
+  const [bulkAreaOpen, setBulkAreaOpen] = useState(false);
   const { activeLocationId } = useAuth();
   const { bins, isLoading } = useBinList(debouncedSearch, sort, filters);
   const allTags = useAllTags();
   const activeCount = countActiveFilters(filters);
   const { tagColors } = useTagColorsContext();
+  const { areas } = useAreaList(activeLocationId);
   const { theme } = useTheme();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -191,6 +201,15 @@ export function BinListPage() {
           <Button
             variant="ghost"
             size="sm"
+            className="h-8 px-3 rounded-[var(--radius-full)]"
+            onClick={() => setBulkAreaOpen(true)}
+          >
+            <MapPin className="h-3.5 w-3.5 mr-1.5" />
+            Move
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-8 px-3 rounded-[var(--radius-full)] text-[var(--destructive)]"
             onClick={bulkDelete}
           >
@@ -247,6 +266,21 @@ export function BinListPage() {
               {filters.tagMode === 'all' ? 'All tags' : 'Any tag'}
             </Badge>
           )}
+          {filters.areas.map((areaKey) => {
+            const areaName = areaKey === '__unassigned__' ? 'Unassigned' : areas.find((a) => a.id === areaKey)?.name ?? areaKey;
+            return (
+              <Badge key={`area-${areaKey}`} variant="outline" className="gap-1 pr-1.5 py-1 shrink-0">
+                {areaName}
+                <button
+                  onClick={() => setFilters((f) => ({ ...f, areas: f.areas.filter((a) => a !== areaKey) }))}
+                  aria-label={`Remove area filter ${areaName}`}
+                  className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </Badge>
+            );
+          })}
           {filters.colors.map((key) => {
             const preset = getColorPreset(key);
             return (
@@ -369,6 +403,12 @@ export function BinListPage() {
       <BulkTagDialog
         open={bulkTagOpen}
         onOpenChange={setBulkTagOpen}
+        binIds={[...selectedIds]}
+        onDone={clearSelection}
+      />
+      <BulkAreaDialog
+        open={bulkAreaOpen}
+        onOpenChange={setBulkAreaOpen}
         binIds={[...selectedIds]}
         onDone={clearSelection}
       />
