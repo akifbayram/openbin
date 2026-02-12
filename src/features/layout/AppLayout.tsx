@@ -81,7 +81,7 @@ export function AppLayout() {
       <Sidebar preference={preference} onSetThemePreference={setThemePreference} />
       {/* pb: nav-height(52) + bottom-offset(20) + safe-area + breathing(16) ≈ 88+safe */}
       <main id="main-content" className="lg:ml-[260px] pt-[var(--safe-top)] pb-[calc(88px+var(--safe-bottom))] lg:pb-8">
-        <div className="mx-auto w-full max-w-2xl">
+        <div className="mx-auto w-full max-w-7xl">
           {/* PWA install banner */}
           {installPrompt && !dismissed && (
             <div className="mx-5 mt-4 glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">

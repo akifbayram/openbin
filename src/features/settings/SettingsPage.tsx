@@ -183,7 +183,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-6 pb-2">
+    <div className="flex flex-col gap-4 px-5 pt-6 pb-2 max-w-2xl mx-auto">
       <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
         Settings
       </h1>

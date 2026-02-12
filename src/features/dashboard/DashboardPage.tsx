@@ -149,7 +149,7 @@ export function DashboardPage() {
       {recentlyScanned.length > 0 && (
         <div className="flex flex-col gap-3">
           <SectionHeader title="Recently Scanned" />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {recentlyScanned.map((bin) => (
               <BinCard key={bin.id} bin={bin} />
             ))}
@@ -164,7 +164,7 @@ export function DashboardPage() {
             title="Recently Updated"
             action={{ label: 'All Bins', onClick: () => navigate('/bins') }}
           />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {recentlyUpdated.map((bin) => (
               <BinCard key={bin.id} bin={bin} />
             ))}

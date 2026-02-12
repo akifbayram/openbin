@@ -213,7 +213,7 @@ export function BinListPage() {
         </div>
       ) : /* Bin grid */
       isLoading ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-3">
               <Skeleton className="h-5 w-3/4" />
@@ -241,7 +241,7 @@ export function BinListPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {bins.map((bin) => (
             <BinCard
               key={bin.id}

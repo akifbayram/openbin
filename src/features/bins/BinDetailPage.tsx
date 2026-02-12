@@ -178,7 +178,7 @@ export function BinDetailPage() {
   const hasTags = bin.tags.length > 0;
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-4 pb-2">
+    <div className="flex flex-col gap-4 px-5 pt-4 pb-2 max-w-3xl mx-auto">
       {/* Top bar */}
       <div className="flex items-center gap-2">
         <Button
