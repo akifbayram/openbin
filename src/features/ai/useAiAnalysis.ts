@@ -14,6 +14,15 @@ function mapErrorMessage(err: unknown): string {
   return 'Failed to analyze photo';
 }
 
+export async function analyzeImageFile(file: File): Promise<AiSuggestions> {
+  const formData = new FormData();
+  formData.append('photo', file);
+  return apiFetch<AiSuggestions>('/api/ai/analyze-image', {
+    method: 'POST',
+    body: formData,
+  });
+}
+
 export function useAiAnalysis() {
   const [suggestions, setSuggestions] = useState<AiSuggestions | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,10 +27,17 @@ export function AppLayout() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
-  // If the user already has locations, they completed onboarding on another device —
-  // mark it done locally so the overlay never shows on this device.
+  // If the user already has locations before onboarding even started (e.g. completed on
+  // another device), mark it done locally so the overlay never shows. Only check once —
+  // the first time locations finish loading — to avoid a race condition where
+  // createLocation's notifyLocationsChanged() refetch resolves before advanceWithLocation
+  // updates the step from 0 to 1, which would incorrectly auto-complete the onboarding.
+  const didAutoCompleteCheck = useRef(false);
   useEffect(() => {
-    if (!locationsLoading && locations.length > 0 && onboarding.isOnboarding) {
+    if (didAutoCompleteCheck.current) return;
+    if (locationsLoading) return;
+    didAutoCompleteCheck.current = true;
+    if (locations.length > 0 && onboarding.isOnboarding && onboarding.step === 0) {
       onboarding.complete();
     }
   }, [locationsLoading, locations.length, onboarding]);
@@ -107,7 +114,7 @@ export function AppLayout() {
         </div>
       </main>
       <BottomNav />
-      {onboarding.isOnboarding && !locationsLoading && locations.length === 0 && <OnboardingOverlay {...onboarding} />}
+      {onboarding.isOnboarding && !locationsLoading && (locations.length === 0 || onboarding.step > 0) && <OnboardingOverlay {...onboarding} />}
     </div>
     </TagColorsProvider>
   );

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
+import multer from 'multer';
 import { query } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { analyzeImage, testConnection, AiAnalysisError } from '../lib/aiProviders.js';
@@ -8,6 +9,14 @@ import type { AiProviderConfig } from '../lib/aiProviders.js';
 
 const router = Router();
 const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    cb(null, allowed.includes(file.mimetype));
+  },
+});
 
 router.use(authenticate);
 
@@ -117,6 +126,45 @@ router.delete('/settings', async (req, res) => {
   } catch (err) {
     console.error('Delete AI settings error:', err);
     res.status(500).json({ error: 'Failed to delete AI settings' });
+  }
+});
+
+// POST /api/ai/analyze-image — analyze a raw uploaded image (no stored photo required)
+router.post('/analyze-image', memoryUpload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: 'photo file is required (JPEG, PNG, WebP, or GIF, max 5MB)' });
+      return;
+    }
+
+    // Load user's AI settings
+    const settingsResult = await query(
+      'SELECT provider, api_key, model, endpoint_url FROM user_ai_settings WHERE user_id = $1',
+      [req.user!.id]
+    );
+    if (settingsResult.rows.length === 0) {
+      res.status(400).json({ error: 'AI not configured. Set up your AI provider first.' });
+      return;
+    }
+
+    const settings = settingsResult.rows[0];
+    const config: AiProviderConfig = {
+      provider: settings.provider,
+      apiKey: settings.api_key,
+      model: settings.model,
+      endpointUrl: settings.endpoint_url,
+    };
+
+    const imageBase64 = req.file.buffer.toString('base64');
+    const suggestions = await analyzeImage(config, imageBase64, req.file.mimetype);
+    res.json(suggestions);
+  } catch (err) {
+    if (err instanceof AiAnalysisError) {
+      res.status(aiErrorToStatus(err.code)).json({ error: err.message, code: err.code });
+      return;
+    }
+    console.error('AI analyze-image error:', err);
+    res.status(500).json({ error: 'Failed to analyze image' });
   }
 });
 
