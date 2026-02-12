@@ -22,10 +22,18 @@ export function AppLayout() {
   const online = useOnlineStatus();
   const { settings } = useAppSettings();
   const { activeLocationId, setActiveLocationId } = useAuth();
-  const { locations } = useLocationList();
+  const { locations, isLoading: locationsLoading } = useLocationList();
   const onboarding = useOnboarding();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
+
+  // If the user already has locations, they completed onboarding on another device —
+  // mark it done locally so the overlay never shows on this device.
+  useEffect(() => {
+    if (!locationsLoading && locations.length > 0 && onboarding.isOnboarding) {
+      onboarding.complete();
+    }
+  }, [locationsLoading, locations.length, onboarding]);
 
   // Auto-select first location when none is active or active location no longer exists
   useEffect(() => {
@@ -99,7 +107,7 @@ export function AppLayout() {
         </div>
       </main>
       <BottomNav />
-      {onboarding.isOnboarding && <OnboardingOverlay {...onboarding} />}
+      {onboarding.isOnboarding && !locationsLoading && locations.length === 0 && <OnboardingOverlay {...onboarding} />}
     </div>
     </TagColorsProvider>
   );
