@@ -4,6 +4,7 @@ import {
   Plus,
   PackageOpen,
   ArrowUpDown,
+  SlidersHorizontal,
   Trash2,
   Tag,
   X,
@@ -19,10 +20,14 @@ import { useToast } from '@/components/ui/toast';
 import { haptic } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
-import { useBinList, deleteBin, restoreBin, type SortOption } from './useBins';
+import { useBinList, useAllTags, deleteBin, restoreBin, countActiveFilters, EMPTY_FILTERS, type SortOption, type BinFilters } from './useBins';
 import { BinCard } from './BinCard';
 import { BinCreateDialog } from './BinCreateDialog';
+import { BinFilterDialog } from './BinFilterDialog';
 import { BulkTagDialog } from './BulkTagDialog';
+import { getColorPreset } from '@/lib/colorPalette';
+import { useTagColorsContext } from '@/features/tags/TagColorsContext';
+import { useTheme } from '@/lib/theme';
 import type { Bin } from '@/types';
 
 const sortLabels: Record<SortOption, string> = {
@@ -52,10 +57,16 @@ export function BinListPage() {
   const debouncedSearch = useDebounce(search, 250);
   const [sort, setSort] = useState<SortOption>('updated');
   const [createOpen, setCreateOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<BinFilters>(EMPTY_FILTERS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
   const { activeLocationId } = useAuth();
-  const { bins, isLoading } = useBinList(debouncedSearch, sort);
+  const { bins, isLoading } = useBinList(debouncedSearch, sort, filters);
+  const allTags = useAllTags();
+  const activeCount = countActiveFilters(filters);
+  const { tagColors } = useTagColorsContext();
+  const { theme } = useTheme();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -137,6 +148,20 @@ export function BinListPage() {
           </div>
           <Button
             variant="secondary"
+            size="icon"
+            onClick={() => setFilterOpen(true)}
+            className="shrink-0 h-10 w-10 rounded-full relative"
+            aria-label="Filter bins"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {activeCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 rounded-full bg-[var(--accent)] text-[10px] font-bold text-white flex items-center justify-center px-1">
+                {activeCount}
+              </span>
+            )}
+          </Button>
+          <Button
+            variant="secondary"
             size="sm"
             onClick={cycleSort}
             className="shrink-0 rounded-[var(--radius-full)] gap-1.5 h-10 px-3.5"
@@ -184,15 +209,92 @@ export function BinListPage() {
         </div>
       )}
 
-      {/* Active filter indicator */}
-      {search && (
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1 pr-1.5 py-1">
-            "{search}"
-            <button onClick={() => setSearch('')} aria-label="Clear search" className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]">
-              <X className="h-2.5 w-2.5" />
+      {/* Active filter indicators */}
+      {(search || activeCount > 0) && (
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+          {search && (
+            <Badge variant="outline" className="gap-1 pr-1.5 py-1 shrink-0">
+              &quot;{search}&quot;
+              <button onClick={() => setSearch('')} aria-label="Clear search" className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]">
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </Badge>
+          )}
+          {filters.tags.map((tag) => {
+            const colorKey = tagColors.get(tag);
+            const preset = colorKey ? getColorPreset(colorKey) : undefined;
+            const style: React.CSSProperties | undefined = preset
+              ? {
+                  backgroundColor: theme === 'dark' ? preset.bgDark : preset.bg,
+                  color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
+                }
+              : undefined;
+            return (
+              <Badge key={`tag-${tag}`} variant="outline" className="gap-1 pr-1.5 py-1 shrink-0" style={style}>
+                {tag}
+                <button
+                  onClick={() => setFilters((f) => ({ ...f, tags: f.tags.filter((t) => t !== tag) }))}
+                  aria-label={`Remove tag filter ${tag}`}
+                  className="ml-1 p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </Badge>
+            );
+          })}
+          {filters.tags.length >= 2 && (
+            <Badge variant="outline" className="py-1 shrink-0 text-[var(--text-tertiary)]">
+              {filters.tagMode === 'all' ? 'All tags' : 'Any tag'}
+            </Badge>
+          )}
+          {filters.colors.map((key) => {
+            const preset = getColorPreset(key);
+            return (
+              <Badge key={`color-${key}`} variant="outline" className="gap-1.5 pr-1.5 py-1 shrink-0">
+                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: preset?.dot }} />
+                {preset?.label ?? key}
+                <button
+                  onClick={() => setFilters((f) => ({ ...f, colors: f.colors.filter((c) => c !== key) }))}
+                  aria-label={`Remove color filter ${preset?.label ?? key}`}
+                  className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </Badge>
+            );
+          })}
+          {filters.hasItems && (
+            <Badge variant="outline" className="gap-1 pr-1.5 py-1 shrink-0">
+              Has items
+              <button
+                onClick={() => setFilters((f) => ({ ...f, hasItems: false }))}
+                aria-label="Remove has items filter"
+                className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </Badge>
+          )}
+          {filters.hasNotes && (
+            <Badge variant="outline" className="gap-1 pr-1.5 py-1 shrink-0">
+              Has notes
+              <button
+                onClick={() => setFilters((f) => ({ ...f, hasNotes: false }))}
+                aria-label="Remove has notes filter"
+                className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </Badge>
+          )}
+          {(activeCount > 1 || (activeCount > 0 && search)) && (
+            <button
+              onClick={() => { setSearch(''); setFilters(EMPTY_FILTERS); }}
+              className="text-[12px] text-[var(--accent)] font-medium shrink-0 ml-1"
+            >
+              Clear all
             </button>
-          </Badge>
+          )}
         </div>
       )}
 
@@ -227,13 +329,13 @@ export function BinListPage() {
           <PackageOpen className="h-16 w-16 opacity-40" />
           <div className="text-center space-y-1.5">
             <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
-              {search ? 'No bins match your search' : 'No bins yet'}
+              {search || activeCount > 0 ? 'No bins match your filters' : 'No bins yet'}
             </p>
-            {!search && (
+            {!search && activeCount === 0 && (
               <p className="text-[13px]">Create your first bin to get started</p>
             )}
           </div>
-          {!search && (
+          {!search && activeCount === 0 && (
             <Button onClick={() => setCreateOpen(true)} variant="outline" className="rounded-[var(--radius-full)] mt-1">
               <Plus className="h-4 w-4 mr-2" />
               Create Bin
@@ -257,6 +359,13 @@ export function BinListPage() {
       )}
 
       <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <BinFilterDialog
+        open={filterOpen}
+        onOpenChange={setFilterOpen}
+        filters={filters}
+        onFiltersChange={setFilters}
+        availableTags={allTags}
+      />
       <BulkTagDialog
         open={bulkTagOpen}
         onOpenChange={setBulkTagOpen}

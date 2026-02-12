@@ -12,7 +12,28 @@ export function notifyBinsChanged() {
 
 export type SortOption = 'updated' | 'created' | 'name';
 
-export function useBinList(searchQuery?: string, sort: SortOption = 'updated') {
+export interface BinFilters {
+  tags: string[];
+  tagMode: 'any' | 'all';
+  colors: string[];
+  hasItems: boolean;
+  hasNotes: boolean;
+}
+
+export const EMPTY_FILTERS: BinFilters = {
+  tags: [], tagMode: 'any', colors: [], hasItems: false, hasNotes: false,
+};
+
+export function countActiveFilters(f: BinFilters): number {
+  let n = 0;
+  if (f.tags.length) n++;
+  if (f.colors.length) n++;
+  if (f.hasItems) n++;
+  if (f.hasNotes) n++;
+  return n;
+}
+
+export function useBinList(searchQuery?: string, sort: SortOption = 'updated', filters?: BinFilters) {
   const { activeLocationId, token } = useAuth();
   const [rawBins, setRawBins] = useState<Bin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,6 +86,29 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated') {
       );
     }
 
+    if (filters) {
+      if (filters.tags.length > 0) {
+        const selectedTags = filters.tags;
+        filtered = filtered.filter((bin) => {
+          const binTags = Array.isArray(bin.tags) ? bin.tags : [];
+          if (filters.tagMode === 'all') {
+            return selectedTags.every((t) => binTags.includes(t));
+          }
+          return selectedTags.some((t) => binTags.includes(t));
+        });
+      }
+      if (filters.colors.length > 0) {
+        const colorSet = new Set(filters.colors);
+        filtered = filtered.filter((bin) => colorSet.has(bin.color));
+      }
+      if (filters.hasItems) {
+        filtered = filtered.filter((bin) => Array.isArray(bin.items) && bin.items.length > 0);
+      }
+      if (filters.hasNotes) {
+        filtered = filtered.filter((bin) => typeof bin.notes === 'string' && bin.notes.trim().length > 0);
+      }
+    }
+
     if (sort === 'name') {
       filtered.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sort === 'created') {
@@ -74,7 +118,7 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated') {
     }
 
     return filtered;
-  }, [rawBins, searchQuery, sort]);
+  }, [rawBins, searchQuery, sort, filters]);
 
   const refresh = useCallback(() => setRefreshCounter((c) => c + 1), []);
 
