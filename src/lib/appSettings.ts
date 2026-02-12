@@ -5,10 +5,10 @@ export interface AppSettings {
   appSubtitle: string;
 }
 
-const STORAGE_KEY = 'qrbin-app-name';
+const STORAGE_KEY = 'sanduk-app-name';
 
 const DEFAULTS: AppSettings = {
-  appName: 'QR Bin',
+  appName: 'Sanduk',
   appSubtitle: 'Inventory',
 };
 

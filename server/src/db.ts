@@ -1,7 +1,7 @@
 import pg from 'pg';
 
 const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/qrbin',
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/sanduk',
 });
 
 export async function query<T extends pg.QueryResultRow>(

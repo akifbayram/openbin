@@ -333,7 +333,7 @@ export function SettingsPage() {
                 id="app-name"
                 value={settings.appName}
                 onChange={(e) => updateSettings({ appName: e.target.value })}
-                placeholder="QR Bin"
+                placeholder="Sanduk"
               />
             </div>
             <div className="space-y-1.5">

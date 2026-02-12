@@ -6,7 +6,7 @@ interface ScanEntry {
 const MAX_ENTRIES = 20;
 
 function storageKey(userId: string) {
-  return `qrbin-scan-history-${userId}`;
+  return `sanduk-scan-history-${userId}`;
 }
 
 export function recordScan(userId: string, binId: string) {

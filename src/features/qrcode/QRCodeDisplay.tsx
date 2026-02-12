@@ -27,7 +27,7 @@ export function QRCodeDisplay({ binId, size = 200 }: QRCodeDisplayProps) {
     if (!dataUrl) return;
     const a = document.createElement('a');
     a.href = dataUrl;
-    a.download = `qr-bin-${binId}.png`;
+    a.download = `sanduk-${binId}.png`;
     a.click();
   }
 

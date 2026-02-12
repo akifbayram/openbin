@@ -7,7 +7,7 @@ function getSystemTheme(): Theme {
 }
 
 function getStoredTheme(): Theme | null {
-  const stored = localStorage.getItem('qrbin-theme');
+  const stored = localStorage.getItem('sanduk-theme');
   if (stored === 'light' || stored === 'dark') return stored;
   return null;
 }
@@ -30,7 +30,7 @@ function setTheme(theme: Theme) {
   const root = document.documentElement;
   root.classList.remove('light', 'dark');
   root.classList.add(theme);
-  localStorage.setItem('qrbin-theme', theme);
+  localStorage.setItem('sanduk-theme', theme);
   listeners.forEach((l) => l());
 }
 

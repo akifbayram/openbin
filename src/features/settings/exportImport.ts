@@ -25,7 +25,7 @@ export function downloadExport(data: ExportData): void {
   const date = new Date().toISOString().slice(0, 10);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `qr-bin-backup-${date}.json`;
+  a.download = `sanduk-backup-${date}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

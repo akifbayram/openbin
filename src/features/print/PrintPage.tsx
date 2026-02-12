@@ -11,7 +11,7 @@ import { LabelSheet } from './LabelSheet';
 import { LABEL_FORMATS, getLabelFormat, DEFAULT_LABEL_FORMAT } from './labelFormats';
 import type { Bin } from '@/types';
 
-const FORMAT_STORAGE_KEY = 'qrbin-label-format';
+const FORMAT_STORAGE_KEY = 'sanduk-label-format';
 
 export function PrintPage() {
   const [searchParams] = useSearchParams();

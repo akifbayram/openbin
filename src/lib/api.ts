@@ -17,7 +17,7 @@ export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {}
 ): Promise<T> {
-  const token = localStorage.getItem('qrbin-token');
+  const token = localStorage.getItem('sanduk-token');
   const headers: Record<string, string> = {};
 
   if (token) {

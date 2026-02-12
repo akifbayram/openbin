@@ -29,14 +29,14 @@ export function useAuth(): AuthContextValue {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
-    token: localStorage.getItem('qrbin-token'),
-    activeLocationId: localStorage.getItem('qrbin-active-location'),
+    token: localStorage.getItem('sanduk-token'),
+    activeLocationId: localStorage.getItem('sanduk-active-location'),
     loading: true,
   });
 
   // Validate token on mount
   useEffect(() => {
-    const token = localStorage.getItem('qrbin-token');
+    const token = localStorage.getItem('sanduk-token');
     if (!token) {
       setState((s) => ({ ...s, loading: false }));
       return;
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState((s) => ({ ...s, user, token, loading: false }));
       })
       .catch(() => {
-        localStorage.removeItem('qrbin-token');
+        localStorage.removeItem('sanduk-token');
         setState((s) => ({ ...s, user: null, token: null, loading: false }));
       });
   }, []);
@@ -57,9 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: { username, password },
     });
-    localStorage.setItem('qrbin-token', data.token);
+    localStorage.setItem('sanduk-token', data.token);
     if (data.activeLocationId) {
-      localStorage.setItem('qrbin-active-location', data.activeLocationId);
+      localStorage.setItem('sanduk-active-location', data.activeLocationId);
     }
     setState((s) => ({
       ...s,
@@ -74,9 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: { username, password, displayName },
     });
-    localStorage.setItem('qrbin-token', data.token);
+    localStorage.setItem('sanduk-token', data.token);
     if (data.activeLocationId) {
-      localStorage.setItem('qrbin-active-location', data.activeLocationId);
+      localStorage.setItem('sanduk-active-location', data.activeLocationId);
     }
     setState((s) => ({
       ...s,
@@ -87,16 +87,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('qrbin-token');
-    localStorage.removeItem('qrbin-active-location');
+    localStorage.removeItem('sanduk-token');
+    localStorage.removeItem('sanduk-active-location');
     setState({ user: null, token: null, activeLocationId: null, loading: false });
   }, []);
 
   const setActiveLocationId = useCallback((id: string | null) => {
     if (id) {
-      localStorage.setItem('qrbin-active-location', id);
+      localStorage.setItem('sanduk-active-location', id);
     } else {
-      localStorage.removeItem('qrbin-active-location');
+      localStorage.removeItem('sanduk-active-location');
     }
     setState((s) => ({ ...s, activeLocationId: id }));
   }, []);
@@ -110,8 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await apiFetch('/api/auth/account', { method: 'DELETE', body: { password } });
     // Clean up user-specific localStorage keys
     if (userId) {
-      localStorage.removeItem(`qrbin-onboarding-${userId}`);
-      localStorage.removeItem(`qrbin-first-scan-done-${userId}`);
+      localStorage.removeItem(`sanduk-onboarding-${userId}`);
+      localStorage.removeItem(`sanduk-first-scan-done-${userId}`);
     }
     logout();
   }, [state.user?.id, logout]);

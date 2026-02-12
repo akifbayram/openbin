@@ -144,7 +144,7 @@ router.get('/locations/:id/export', requireLocationMember(), async (req, res) =>
       bins: exportBins,
     };
 
-    res.setHeader('Content-Disposition', `attachment; filename="qrbin-export-${locationId}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="sanduk-export-${locationId}.json"`);
     res.json(exportData);
   } catch (err) {
     console.error('Export error:', err);

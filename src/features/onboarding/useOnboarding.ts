@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
 
-const STORAGE_PREFIX = 'qrbin-onboarding-';
+const STORAGE_PREFIX = 'sanduk-onboarding-';
 
 interface OnboardingData {
   completed: boolean;
@@ -54,10 +54,10 @@ export function useOnboarding() {
 
 /** Check if user has completed their first scan */
 export function isFirstScanDone(userId: string): boolean {
-  return localStorage.getItem(`qrbin-first-scan-done-${userId}`) === '1';
+  return localStorage.getItem(`sanduk-first-scan-done-${userId}`) === '1';
 }
 
 /** Mark first scan as done */
 export function markFirstScanDone(userId: string) {
-  localStorage.setItem(`qrbin-first-scan-done-${userId}`, '1');
+  localStorage.setItem(`sanduk-first-scan-done-${userId}`, '1');
 }
