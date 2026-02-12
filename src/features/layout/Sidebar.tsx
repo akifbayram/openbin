@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Sun, Moon, LogOut, Tags, Settings } from 'lucide-react';
+import { Sun, Moon, LogOut, Tags, ClipboardList, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { navItems } from '@/lib/navItems';
 import { useAppSettings } from '@/lib/appSettings';
@@ -68,6 +68,22 @@ export function Sidebar({ theme, onToggleTheme }: SidebarProps) {
         >
           <Tags className="h-5 w-5" />
           Tags
+        </button>
+
+        {/* Items — desktop sidebar only */}
+        <button
+          onClick={() => navigate('/items')}
+          aria-label="Items"
+          aria-current={location.pathname === '/items' ? 'page' : undefined}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium transition-all duration-200 w-full text-left',
+            location.pathname === '/items'
+              ? 'glass-card text-[var(--text-primary)]'
+              : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
+          )}
+        >
+          <ClipboardList className="h-5 w-5" />
+          Items
         </button>
       </div>
 

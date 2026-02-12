@@ -45,6 +45,10 @@ const DashboardPage = React.lazy(() =>
   import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage }))
 );
 
+const ItemsPage = React.lazy(() =>
+  import('@/features/items/ItemsPage').then((m) => ({ default: m.ItemsPage }))
+);
+
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
@@ -213,6 +217,14 @@ export default function App() {
                   element={
                     <Suspense fallback={<LoadingFallback />}>
                       <TagsPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/items"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <ItemsPage />
                     </Suspense>
                   }
                 />
