@@ -9,9 +9,15 @@ interface LabelSheetProps {
   bins: Bin[];
   format?: LabelFormat;
   showColorSwatch?: boolean;
+  iconSize?: string;
+  showQrCode?: boolean;
+  showBinName?: boolean;
+  showIcon?: boolean;
+  showLocation?: boolean;
+  showBinCode?: boolean;
 }
 
-export function LabelSheet({ bins, format, showColorSwatch }: LabelSheetProps) {
+export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode, showBinName, showIcon, showLocation, showBinCode }: LabelSheetProps) {
   const labelFormat = format ?? getLabelFormat(DEFAULT_LABEL_FORMAT);
   const qrPixelSize = Math.round(parseFloat(labelFormat.qrSize) * 150);
   const [qrMap, setQrMap] = useState<Map<string, string>>(new Map());
@@ -66,6 +72,12 @@ export function LabelSheet({ bins, format, showColorSwatch }: LabelSheetProps) {
           qrDataUrl={qrMap.get(bin.id) ?? ''}
           format={labelFormat}
           showColorSwatch={showColorSwatch}
+          iconSize={iconSize}
+          showQrCode={showQrCode}
+          showBinName={showBinName}
+          showIcon={showIcon}
+          showLocation={showLocation}
+          showBinCode={showBinCode}
         />
       ))}
     </div>

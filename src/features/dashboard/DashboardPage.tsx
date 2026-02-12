@@ -103,14 +103,25 @@ export function DashboardPage() {
         <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
           Dashboard
         </h1>
-        <Button
-          onClick={() => setCreateOpen(true)}
-          size="icon"
-          className="h-10 w-10 rounded-full"
-          aria-label="Create bin"
-        >
-          <Plus className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => navigate('/scan')}
+            size="icon"
+            variant="ghost"
+            className="h-10 w-10 rounded-full"
+            aria-label="Scan QR code"
+          >
+            <ScanLine className="h-5 w-5" />
+          </Button>
+          <Button
+            onClick={() => setCreateOpen(true)}
+            size="icon"
+            className="h-10 w-10 rounded-full"
+            aria-label="Create bin"
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -135,15 +146,6 @@ export function DashboardPage() {
           <StatCard label="Total Items" value={totalItems} />
         </div>
       )}
-
-      {/* Quick Scan */}
-      <Button
-        onClick={() => navigate('/scan')}
-        className="w-full rounded-[var(--radius-full)] h-12 text-[15px] font-semibold gap-2"
-      >
-        <ScanLine className="h-5 w-5" />
-        Quick Scan
-      </Button>
 
       {/* Recently Scanned */}
       {recentlyScanned.length > 0 && (

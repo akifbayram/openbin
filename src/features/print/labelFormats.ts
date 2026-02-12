@@ -13,6 +13,11 @@ export interface LabelFormat {
   pageMarginBottom: string;
   pageMarginLeft: string;
   pageMarginRight: string;
+  orientation?: 'landscape' | 'portrait';
+}
+
+export function getOrientation(fmt: LabelFormat): 'landscape' | 'portrait' {
+  return fmt.orientation ?? 'landscape';
 }
 
 export const LABEL_FORMATS: LabelFormat[] = [
@@ -26,7 +31,7 @@ export const LABEL_FORMATS: LabelFormat[] = [
     padding: '2pt 4pt',
     nameFontSize: '9pt',
     contentFontSize: '7pt',
-    codeFontSize: '6pt',
+    codeFontSize: '8pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
     pageMarginLeft: '0.1875in',
@@ -42,7 +47,7 @@ export const LABEL_FORMATS: LabelFormat[] = [
     padding: '6pt 8pt',
     nameFontSize: '12pt',
     contentFontSize: '9pt',
-    codeFontSize: '8pt',
+    codeFontSize: '10pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
     pageMarginLeft: '0.15625in',
@@ -58,7 +63,7 @@ export const LABEL_FORMATS: LabelFormat[] = [
     padding: '1pt 2pt',
     nameFontSize: '6pt',
     contentFontSize: '5pt',
-    codeFontSize: '4.5pt',
+    codeFontSize: '5.5pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
     pageMarginLeft: '0.3125in',
@@ -74,7 +79,7 @@ export const LABEL_FORMATS: LabelFormat[] = [
     padding: '2pt 4pt',
     nameFontSize: '9pt',
     contentFontSize: '7pt',
-    codeFontSize: '6pt',
+    codeFontSize: '8pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
     pageMarginLeft: '0.5in',
@@ -84,6 +89,28 @@ export const LABEL_FORMATS: LabelFormat[] = [
 
 export const DEFAULT_LABEL_FORMAT = 'avery-5160';
 
+const PRESETS_STORAGE_KEY = 'sanduk-label-presets';
+
+export function getSavedPresets(): LabelFormat[] {
+  try {
+    const raw = localStorage.getItem(PRESETS_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return [];
+}
+
+export function savePreset(preset: LabelFormat): void {
+  const presets = getSavedPresets();
+  presets.push(preset);
+  localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets));
+}
+
+export function deletePreset(key: string): void {
+  const presets = getSavedPresets().filter((p) => p.key !== key);
+  localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets));
+}
+
 export function getLabelFormat(key: string): LabelFormat {
-  return LABEL_FORMATS.find((f) => f.key === key) ?? LABEL_FORMATS[0];
+  const all = [...LABEL_FORMATS, ...getSavedPresets()];
+  return all.find((f) => f.key === key) ?? LABEL_FORMATS[0];
 }
