@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, Pencil, Trash2, Printer, Save, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Pencil, Trash2, Printer, Save, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +19,10 @@ import { useBin, updateBin, deleteBin, restoreBin, useAllTags } from './useBins'
 import { resolveIcon } from '@/lib/iconMap';
 import { getColorPreset } from '@/lib/colorPalette';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
+import { usePhotos, getPhotoUrl } from '@/features/photos/usePhotos';
+import { useAiSettings } from '@/features/ai/useAiSettings';
+import { useAiAnalysis } from '@/features/ai/useAiAnalysis';
+import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/theme';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
@@ -48,6 +52,12 @@ export function BinDetailPage() {
   const [quickAddValue, setQuickAddValue] = useState('');
   const [quickAddSaving, setQuickAddSaving] = useState(false);
   const [qrExpanded, setQrExpanded] = useState(false);
+  const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
+
+  // AI analysis
+  const { photos } = usePhotos(id);
+  const { settings: aiSettings } = useAiSettings();
+  const { suggestions, isAnalyzing, error: aiError, analyze, clearSuggestions } = useAiAnalysis();
 
   if (isLoading || bin === undefined) {
     return (
@@ -141,6 +151,27 @@ export function BinDetailPage() {
     }
   }
 
+  function handleAnalyzeClick() {
+    if (photos.length === 1) {
+      analyze(photos[0].id);
+    } else if (photos.length > 1) {
+      setPhotoPickerOpen(true);
+    }
+  }
+
+  async function handleApplySuggestions(changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string }>) {
+    if (!id || Object.keys(changes).length === 0) return;
+    try {
+      await updateBin(id, changes);
+      clearSuggestions();
+      showToast({ message: 'Applied AI suggestions' });
+    } catch {
+      showToast({ message: 'Failed to apply suggestions' });
+    }
+  }
+
+  const showAiButton = !!aiSettings && photos.length > 0 && !editing;
+
   const hasNotes = !!bin.notes;
   const hasTags = bin.tags.length > 0;
 
@@ -160,6 +191,22 @@ export function BinDetailPage() {
         <div className="flex-1" />
         {!editing && (
           <div className="flex gap-1.5">
+            {showAiButton && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleAnalyzeClick}
+                disabled={isAnalyzing}
+                aria-label="Analyze with AI"
+                className="rounded-full h-9 w-9"
+              >
+                {isAnalyzing ? (
+                  <Loader2 className="h-[18px] w-[18px] animate-spin" />
+                ) : (
+                  <Sparkles className="h-[18px] w-[18px]" />
+                )}
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -265,6 +312,31 @@ export function BinDetailPage() {
               )}
             </div>
           </div>
+
+          {/* AI error */}
+          {aiError && (
+            <Card className="border-t-2 border-t-[var(--destructive)]">
+              <CardContent>
+                <p className="text-[14px] text-[var(--destructive)]">{aiError}</p>
+                <Button variant="ghost" size="sm" onClick={clearSuggestions} className="mt-2 rounded-[var(--radius-full)]">
+                  Dismiss
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* AI suggestions */}
+          {suggestions && (
+            <AiSuggestionsPanel
+              suggestions={suggestions}
+              currentName={bin.name}
+              currentItems={bin.items}
+              currentTags={bin.tags}
+              currentNotes={bin.notes}
+              onApply={handleApplySuggestions}
+              onDismiss={clearSuggestions}
+            />
+          )}
 
           {/* Items card — always visible */}
           <Card>
@@ -423,6 +495,37 @@ export function BinDetailPage() {
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Photo picker for AI analysis */}
+      <Dialog open={photoPickerOpen} onOpenChange={setPhotoPickerOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choose a photo to analyze</DialogTitle>
+            <DialogDescription>
+              Select which photo the AI should analyze for bin suggestions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {photos.map((photo) => (
+              <button
+                key={photo.id}
+                type="button"
+                onClick={() => {
+                  setPhotoPickerOpen(false);
+                  analyze(photo.id);
+                }}
+                className="block w-full aspect-square rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-input)] hover:ring-2 hover:ring-[var(--accent)] transition-all"
+              >
+                <img
+                  src={getPhotoUrl(photo.id)}
+                  alt={photo.filename}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

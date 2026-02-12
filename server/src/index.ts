@@ -7,6 +7,7 @@ import photosRoutes from './routes/photos.js';
 import shapesRoutes from './routes/shapes.js';
 import exportRoutes from './routes/export.js';
 import tagColorsRoutes from './routes/tagColors.js';
+import aiRoutes from './routes/ai.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '4000', 10);
@@ -22,6 +23,7 @@ app.use('/api/photos', photosRoutes);
 app.use('/api/shapes', shapesRoutes);
 app.use('/api/tag-colors', tagColorsRoutes);
 app.use('/api', exportRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

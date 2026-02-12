@@ -126,3 +126,20 @@ export interface ExportDataV2 {
 }
 
 export type ExportData = ExportDataV1 | ExportDataV2;
+
+export type AiProvider = 'openai' | 'anthropic' | 'openai-compatible';
+
+export interface AiSettings {
+  id: string;
+  provider: AiProvider;
+  apiKey: string;
+  model: string;
+  endpointUrl: string | null;
+}
+
+export interface AiSuggestions {
+  name: string;
+  items: string[];
+  tags: string[];
+  notes: string;
+}

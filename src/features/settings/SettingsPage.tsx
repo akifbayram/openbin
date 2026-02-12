@@ -30,6 +30,7 @@ import {
   importData,
   ImportError,
 } from './exportImport';
+import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -356,6 +357,9 @@ export function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Image Analysis */}
+      <AiSettingsSection />
 
       {/* Data */}
       <Card>
