@@ -47,8 +47,8 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
 
   const content = (
     <>
-      <Label>Photos</Label>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2.5">
+      {variant !== 'inline' && <Label>Photos</Label>}
+      <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2${variant !== 'inline' ? ' mt-2.5' : ''}`}>
         {photos.map((photo) => (
           <div key={photo.id} className="relative group">
             <button

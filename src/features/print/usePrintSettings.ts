@@ -149,6 +149,7 @@ export function usePrintSettings() {
 
   function update(partial: Partial<PrintSettings>) {
     const next = { ...latestRef.current, ...partial };
+    latestRef.current = next;
     setSettings(next);
     debouncedSave(next);
   }

@@ -97,7 +97,7 @@ export function BinDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
         <p className="text-[17px] font-semibold text-[var(--text-secondary)]">Bin not found</p>
-        <Button variant="outline" onClick={() => navigate('/')} className="rounded-[var(--radius-full)]">
+        <Button variant="outline" onClick={() => navigate('/bins')} className="rounded-[var(--radius-full)]">
           <ChevronLeft className="h-4 w-4 mr-1" />
           Back to bins
         </Button>
@@ -192,14 +192,34 @@ export function BinDetailPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/bins')}
           className="rounded-[var(--radius-full)] gap-0.5 pl-1.5 pr-3 text-[var(--accent)]"
         >
           <ChevronLeft className="h-5 w-5" />
           <span className="text-[15px]">Bins</span>
         </Button>
         <div className="flex-1" />
-        {!editing && (
+        {editing ? (
+          <div className="flex gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setEditing(false)}
+              className="rounded-[var(--radius-full)]"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={saveEdit}
+              disabled={!editName.trim()}
+              className="rounded-[var(--radius-full)]"
+            >
+              <Save className="h-4 w-4 mr-1.5" />
+              Save
+            </Button>
+          </div>
+        ) : (
           <div className="flex gap-1.5">
             {showAiButton && (
               <Button
@@ -333,16 +353,6 @@ export function BinDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Save / Cancel */}
-          <div className="flex gap-2.5 justify-end pt-1">
-            <Button variant="ghost" onClick={() => setEditing(false)} className="rounded-[var(--radius-full)]">
-              Cancel
-            </Button>
-            <Button onClick={saveEdit} disabled={!editName.trim()} className="rounded-[var(--radius-full)]">
-              <Save className="h-4 w-4 mr-1.5" />
-              Save
-            </Button>
-          </div>
         </>
       ) : (
         <>
