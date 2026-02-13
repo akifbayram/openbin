@@ -15,6 +15,16 @@ const BCRYPT_ROUNDS = 12;
 const AVATAR_STORAGE_PATH = path.join(process.env.PHOTO_STORAGE_PATH || './uploads', 'avatars');
 
 const AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MIME_TO_EXT: Record<string, string> = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
+
+function isStrongPassword(password: string): boolean {
+  return password.length >= 8 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password);
+}
+
+function isPathSafe(filePath: string, baseDir: string): boolean {
+  const resolved = path.resolve(filePath);
+  return resolved.startsWith(path.resolve(baseDir) + path.sep) || resolved === path.resolve(baseDir);
+}
 
 const avatarStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -22,7 +32,7 @@ const avatarStorage = multer.diskStorage({
     cb(null, AVATAR_STORAGE_PATH);
   },
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
+    const ext = MIME_TO_EXT[file.mimetype] || '.jpg';
     cb(null, `${uuidv4()}${ext}`);
   },
 });
@@ -48,8 +58,8 @@ router.post('/register', async (req, res) => {
       res.status(400).json({ error: 'Username must be 3-50 characters (alphanumeric and underscores only)' });
       return;
     }
-    if (!password || password.length < 8) {
-      res.status(400).json({ error: 'Password must be at least 8 characters' });
+    if (!password || !isStrongPassword(password)) {
+      res.status(400).json({ error: 'Password must be at least 8 characters with uppercase, lowercase, and a number' });
       return;
     }
 
@@ -240,8 +250,8 @@ router.put('/password', authenticate, async (req, res) => {
       res.status(400).json({ error: 'Current password and new password are required' });
       return;
     }
-    if (newPassword.length < 8) {
-      res.status(400).json({ error: 'New password must be at least 8 characters' });
+    if (!isStrongPassword(newPassword)) {
+      res.status(400).json({ error: 'Password must be at least 8 characters with uppercase, lowercase, and a number' });
       return;
     }
 
@@ -312,13 +322,18 @@ router.delete('/avatar', authenticate, async (req, res) => {
 });
 
 // GET /api/auth/avatar/:userId — serve avatar file
-router.get('/avatar/:userId', async (req, res) => {
+router.get('/avatar/:userId', authenticate, async (req, res) => {
   try {
     const result = await query('SELECT avatar_path FROM users WHERE id = $1', [req.params.userId]);
     const avatarPath = result.rows[0]?.avatar_path;
 
     if (!avatarPath) {
       res.status(404).json({ error: 'No avatar found' });
+      return;
+    }
+
+    if (!isPathSafe(avatarPath, AVATAR_STORAGE_PATH)) {
+      res.status(400).json({ error: 'Invalid avatar path' });
       return;
     }
 

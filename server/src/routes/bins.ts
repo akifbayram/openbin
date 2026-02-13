@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
@@ -14,12 +15,13 @@ const SHORT_CODE_CHARSET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 function generateShortCode(): string {
   let code = '';
   for (let i = 0; i < 6; i++) {
-    code += SHORT_CODE_CHARSET[Math.floor(Math.random() * SHORT_CODE_CHARSET.length)];
+    code += SHORT_CODE_CHARSET[crypto.randomInt(SHORT_CODE_CHARSET.length)];
   }
   return code;
 }
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MIME_TO_EXT: Record<string, string> = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' };
 
 const storage = multer.diskStorage({
   destination: (req, _file, cb) => {
@@ -29,7 +31,7 @@ const storage = multer.diskStorage({
     cb(null, dir);
   },
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
+    const ext = MIME_TO_EXT[file.mimetype] || '.jpg';
     cb(null, `${uuidv4()}${ext}`);
   },
 });
@@ -81,6 +83,22 @@ router.post('/', async (req, res) => {
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       res.status(400).json({ error: 'Bin name is required' });
+      return;
+    }
+    if (name.trim().length > 255) {
+      res.status(400).json({ error: 'Bin name must be 255 characters or less' });
+      return;
+    }
+    if (items && Array.isArray(items) && items.length > 500) {
+      res.status(400).json({ error: 'Too many items (max 500)' });
+      return;
+    }
+    if (tags && Array.isArray(tags) && tags.length > 50) {
+      res.status(400).json({ error: 'Too many tags (max 50)' });
+      return;
+    }
+    if (notes && typeof notes === 'string' && notes.length > 10000) {
+      res.status(400).json({ error: 'Notes too long (max 10000 characters)' });
       return;
     }
 
@@ -245,6 +263,23 @@ router.put('/:id', async (req, res) => {
     }
 
     const { name, areaId, items, notes, tags, icon, color } = req.body;
+
+    if (name !== undefined && typeof name === 'string' && name.trim().length > 255) {
+      res.status(400).json({ error: 'Bin name must be 255 characters or less' });
+      return;
+    }
+    if (items !== undefined && Array.isArray(items) && items.length > 500) {
+      res.status(400).json({ error: 'Too many items (max 500)' });
+      return;
+    }
+    if (tags !== undefined && Array.isArray(tags) && tags.length > 50) {
+      res.status(400).json({ error: 'Too many tags (max 50)' });
+      return;
+    }
+    if (notes !== undefined && typeof notes === 'string' && notes.length > 10000) {
+      res.status(400).json({ error: 'Notes too long (max 10000 characters)' });
+      return;
+    }
 
     const setClauses: string[] = ['updated_at = now()'];
     const params: unknown[] = [];

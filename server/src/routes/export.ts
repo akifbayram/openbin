@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -155,7 +156,7 @@ router.get('/locations/:id/export', requireLocationMember(), async (req, res) =>
 });
 
 // POST /api/locations/:id/import — import bins + photos
-router.post('/locations/:id/import', requireLocationMember(), async (req, res) => {
+router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLocationMember(), async (req, res) => {
   try {
     const locationId = req.params.id;
     const { bins, mode } = req.body as { bins: ExportBin[]; mode: 'merge' | 'replace' };
@@ -261,14 +262,22 @@ router.post('/locations/:id/import', requireLocationMember(), async (req, res) =
         // Import photos
         if (bin.photos && Array.isArray(bin.photos)) {
           for (const photo of bin.photos) {
-            const photoId = photo.id || uuidv4();
-            const ext = path.extname(photo.filename) || '.jpg';
-            const filename = `${photoId}${ext}`;
-            const storagePath = path.join(binId, filename);
+            const buffer = Buffer.from(photo.data, 'base64');
+            if (buffer.length > 10 * 1024 * 1024) continue; // Skip oversized photos
+
+            const photoId = uuidv4(); // Always generate new ID
+            const photoExt = path.extname(photo.filename || '').toLowerCase();
+            const ALLOWED_PHOTO_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
+            const safeExt = ALLOWED_PHOTO_EXTS.includes(photoExt) ? photoExt : '.jpg';
+            const safeFilename = `${photoId}${safeExt}`;
+            const storagePath = path.join(binId, safeFilename);
+
+            // Validate no path traversal
+            if (storagePath.includes('..')) continue;
+
             const dir = path.join(PHOTO_STORAGE_PATH, binId);
 
             fs.mkdirSync(dir, { recursive: true });
-            const buffer = Buffer.from(photo.data, 'base64');
             fs.writeFileSync(path.join(PHOTO_STORAGE_PATH, storagePath), buffer);
 
             await client.query(
@@ -429,14 +438,22 @@ router.post('/import/legacy', async (req, res) => {
 
         // Import photos
         for (const photo of bin.photos) {
-          const photoId = photo.id || uuidv4();
-          const ext = path.extname(photo.filename) || '.jpg';
-          const filename = `${photoId}${ext}`;
-          const storagePath = path.join(binId, filename);
+          const buffer = Buffer.from(photo.data, 'base64');
+          if (buffer.length > 10 * 1024 * 1024) continue; // Skip oversized photos
+
+          const photoId = uuidv4(); // Always generate new ID
+          const photoExt = path.extname(photo.filename || '').toLowerCase();
+          const ALLOWED_PHOTO_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
+          const safeExt = ALLOWED_PHOTO_EXTS.includes(photoExt) ? photoExt : '.jpg';
+          const safeFilename = `${photoId}${safeExt}`;
+          const storagePath = path.join(binId, safeFilename);
+
+          // Validate no path traversal
+          if (storagePath.includes('..')) continue;
+
           const dir = path.join(PHOTO_STORAGE_PATH, binId);
 
           fs.mkdirSync(dir, { recursive: true });
-          const buffer = Buffer.from(photo.data, 'base64');
           fs.writeFileSync(path.join(PHOTO_STORAGE_PATH, storagePath), buffer);
 
           await client.query(

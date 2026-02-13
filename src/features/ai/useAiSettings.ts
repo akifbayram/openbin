@@ -7,6 +7,15 @@ export function useAiSettings() {
   const { token } = useAuth();
   const [settings, setSettings] = useState<AiSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    function handleChange() {
+      setRefreshKey((k) => k + 1);
+    }
+    window.addEventListener('ai-settings-changed', handleChange);
+    return () => window.removeEventListener('ai-settings-changed', handleChange);
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -35,9 +44,13 @@ export function useAiSettings() {
       });
 
     return () => { cancelled = true; };
-  }, [token]);
+  }, [token, refreshKey]);
 
   return { settings, isLoading, setSettings };
+}
+
+export function notifyAiSettingsChanged() {
+  window.dispatchEvent(new Event('ai-settings-changed'));
 }
 
 export async function saveAiSettings(opts: {
@@ -46,14 +59,17 @@ export async function saveAiSettings(opts: {
   model: string;
   endpointUrl?: string;
 }): Promise<AiSettings> {
-  return apiFetch<AiSettings>('/api/ai/settings', {
+  const result = await apiFetch<AiSettings>('/api/ai/settings', {
     method: 'PUT',
     body: opts,
   });
+  notifyAiSettingsChanged();
+  return result;
 }
 
 export async function deleteAiSettings(): Promise<void> {
   await apiFetch('/api/ai/settings', { method: 'DELETE' });
+  notifyAiSettingsChanged();
 }
 
 export async function testAiConnection(opts: {

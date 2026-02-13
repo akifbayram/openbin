@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: sanduk
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     command: >
       postgres
         -c wal_level=logical
@@ -23,8 +23,8 @@ services:
   electric:
     image: electricsql/electric:latest
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/sanduk
-      ELECTRIC_INSECURE: "true"
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/sanduk
+      ELECTRIC_INSECURE: "${ELECTRIC_INSECURE:-false}"
     ports:
       - "3000:3000"
     depends_on:
@@ -36,8 +36,12 @@ services:
       context: ./server
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/sanduk
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: sanduk
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       ELECTRIC_URL: http://electric:3000
       PHOTO_STORAGE_PATH: /data/photos
       PORT: "4000"

@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.js';
 import locationsRoutes from './routes/locations.js';
 import areasRoutes from './routes/areas.js';
@@ -13,11 +14,49 @@ import aiRoutes from './routes/ai.js';
 const app = express();
 const PORT = parseInt(process.env.PORT || '4000', 10);
 
-app.use(cors());
-app.use(express.json({ limit: '100mb' }));
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+}));
+app.use(express.json({ limit: '1mb' }));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts, please try again later' },
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many registration attempts, please try again later' },
+});
+
+const joinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts, please try again later' },
+});
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many AI requests, please try again later' },
+});
 
 // Routes
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', registerLimiter);
 app.use('/api/auth', authRoutes);
+app.use('/api/locations/join', joinLimiter);
 app.use('/api/locations', locationsRoutes);
 app.use('/api/locations', areasRoutes);
 app.use('/api/bins', binsRoutes);
@@ -25,7 +64,7 @@ app.use('/api/photos', photosRoutes);
 app.use('/api/shapes', shapesRoutes);
 app.use('/api/tag-colors', tagColorsRoutes);
 app.use('/api', exportRoutes);
-app.use('/api/ai', aiRoutes);
+app.use('/api/ai', aiLimiter, aiRoutes);
 
 // Error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

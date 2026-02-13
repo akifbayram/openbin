@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { query } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const router = Router();
 const ELECTRIC_URL = process.env.ELECTRIC_URL || 'http://localhost:3000';
 
@@ -94,6 +96,11 @@ router.get('/bins', async (req, res) => {
       return;
     }
 
+    if (!UUID_REGEX.test(locationId)) {
+      res.status(400).json({ error: 'Invalid location ID format' });
+      return;
+    }
+
     if (!await verifyLocationMembership(locationId, req.user!.id)) {
       res.status(403).json({ error: 'Not a member of this location' });
       return;
@@ -118,6 +125,11 @@ router.get('/photos', async (req, res) => {
       return;
     }
 
+    if (!UUID_REGEX.test(locationId)) {
+      res.status(400).json({ error: 'Invalid location ID format' });
+      return;
+    }
+
     if (!await verifyLocationMembership(locationId, req.user!.id)) {
       res.status(403).json({ error: 'Not a member of this location' });
       return;
@@ -126,6 +138,11 @@ router.get('/photos', async (req, res) => {
     // Get all bin IDs for this location to filter photos
     const binsResult = await query('SELECT id FROM bins WHERE location_id = $1', [locationId]);
     const binIds = binsResult.rows.map(r => r.id);
+
+    if (!binIds.every(id => UUID_REGEX.test(id))) {
+      res.status(500).json({ error: 'Invalid data format' });
+      return;
+    }
 
     if (binIds.length === 0) {
       const shapePath = `/v1/shape?table=photos&where=bin_id='00000000-0000-0000-0000-000000000000'`;
@@ -156,6 +173,11 @@ router.get('/locations', async (req, res) => {
 
     const locationIds = memberships.rows.map(r => r.location_id);
 
+    if (!locationIds.every(id => UUID_REGEX.test(id))) {
+      res.status(500).json({ error: 'Invalid data format' });
+      return;
+    }
+
     if (locationIds.length === 0) {
       const shapePath = `/v1/shape?table=locations&where=id='00000000-0000-0000-0000-000000000000'`;
       await proxyToElectric(shapePath, req, res);
@@ -182,6 +204,11 @@ router.get('/tag-colors', async (req, res) => {
       return;
     }
 
+    if (!UUID_REGEX.test(locationId)) {
+      res.status(400).json({ error: 'Invalid location ID format' });
+      return;
+    }
+
     if (!await verifyLocationMembership(locationId, req.user!.id)) {
       res.status(403).json({ error: 'Not a member of this location' });
       return;
@@ -203,6 +230,11 @@ router.get('/location-members', async (req, res) => {
     const locationId = req.query.location_id as string;
     if (!locationId) {
       res.status(400).json({ error: 'location_id query parameter is required' });
+      return;
+    }
+
+    if (!UUID_REGEX.test(locationId)) {
+      res.status(400).json({ error: 'Invalid location ID format' });
       return;
     }
 

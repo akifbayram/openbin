@@ -7,6 +7,14 @@ import { authenticate } from '../middleware/auth.js';
 const router = Router();
 const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
 
+function safePath(base: string, relativePath: string): string | null {
+  const resolved = path.resolve(base, relativePath);
+  if (!resolved.startsWith(path.resolve(base) + path.sep) && resolved !== path.resolve(base)) {
+    return null;
+  }
+  return resolved;
+}
+
 router.use(authenticate);
 
 /** Verify user has access to a photo via photo -> bin -> location chain */
@@ -69,7 +77,11 @@ router.get('/:id/file', async (req, res) => {
       return;
     }
 
-    const filePath = path.join(PHOTO_STORAGE_PATH, access.storagePath);
+    const filePath = safePath(PHOTO_STORAGE_PATH, access.storagePath);
+    if (!filePath) {
+      res.status(400).json({ error: 'Invalid file path' });
+      return;
+    }
 
     if (!fs.existsSync(filePath)) {
       res.status(404).json({ error: 'Photo file not found on disk' });
@@ -101,7 +113,11 @@ router.delete('/:id', async (req, res) => {
 
     await query('DELETE FROM photos WHERE id = $1', [id]);
 
-    const filePath = path.join(PHOTO_STORAGE_PATH, access.storagePath);
+    const filePath = safePath(PHOTO_STORAGE_PATH, access.storagePath);
+    if (!filePath) {
+      res.status(400).json({ error: 'Invalid file path' });
+      return;
+    }
     try {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);

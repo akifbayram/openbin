@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import multer from 'multer';
 import { query } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
@@ -8,6 +9,43 @@ import { analyzeImage, analyzeImages, testConnection, AiAnalysisError } from '..
 import type { AiProviderConfig, ImageInput } from '../lib/aiProviders.js';
 
 const router = Router();
+
+const AI_ENCRYPTION_KEY = process.env.AI_ENCRYPTION_KEY;
+
+function getDerivedKey(): Buffer | null {
+  if (!AI_ENCRYPTION_KEY) return null;
+  return crypto.createHash('sha256').update(AI_ENCRYPTION_KEY).digest();
+}
+
+function encryptApiKey(plaintext: string): string {
+  const key = getDerivedKey();
+  if (!key) return plaintext;
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return `enc:${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`;
+}
+
+function decryptApiKey(stored: string): string {
+  if (!stored.startsWith('enc:')) return stored;
+  const key = getDerivedKey();
+  if (!key) return stored;
+  const parts = stored.split(':');
+  if (parts.length !== 4) return stored;
+  const [, ivHex, authTagHex, encryptedHex] = parts;
+  try {
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
+    const encrypted = Buffer.from(encryptedHex, 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(authTag);
+    return decipher.update(encrypted) + decipher.final('utf8');
+  } catch {
+    console.warn('Failed to decrypt API key, treating as plaintext');
+    return stored;
+  }
+}
 const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
 const memoryUpload = multer({
   storage: multer.memoryStorage(),
@@ -54,7 +92,7 @@ router.get('/settings', async (req, res) => {
     res.json({
       id: row.id,
       provider: row.provider,
-      apiKey: maskApiKey(row.api_key),
+      apiKey: maskApiKey(decryptApiKey(row.api_key)),
       model: row.model,
       endpointUrl: row.endpoint_url,
     });
@@ -88,12 +126,14 @@ router.put('/settings', async (req, res) => {
         [req.user!.id]
       );
       if (existing.rows.length > 0) {
-        finalApiKey = existing.rows[0].api_key;
+        finalApiKey = decryptApiKey(existing.rows[0].api_key);
       } else {
         res.status(400).json({ error: 'No existing key to preserve. Please provide a full API key.' });
         return;
       }
     }
+
+    const encryptedKey = encryptApiKey(finalApiKey);
 
     const result = await query(
       `INSERT INTO user_ai_settings (user_id, provider, api_key, model, endpoint_url)
@@ -101,14 +141,14 @@ router.put('/settings', async (req, res) => {
        ON CONFLICT (user_id) DO UPDATE SET
          provider = $2, api_key = $3, model = $4, endpoint_url = $5, updated_at = now()
        RETURNING id, provider, api_key, model, endpoint_url`,
-      [req.user!.id, provider, finalApiKey, model, endpointUrl || null]
+      [req.user!.id, provider, encryptedKey, model, endpointUrl || null]
     );
 
     const row = result.rows[0];
     res.json({
       id: row.id,
       provider: row.provider,
-      apiKey: maskApiKey(row.api_key),
+      apiKey: maskApiKey(decryptApiKey(row.api_key)),
       model: row.model,
       endpointUrl: row.endpoint_url,
     });
@@ -159,7 +199,7 @@ router.post('/analyze-image', memoryUpload.fields([
     const settings = settingsResult.rows[0];
     const config: AiProviderConfig = {
       provider: settings.provider,
-      apiKey: settings.api_key,
+      apiKey: decryptApiKey(settings.api_key),
       model: settings.model,
       endpointUrl: settings.endpoint_url,
     };
@@ -211,7 +251,7 @@ router.post('/analyze', async (req, res) => {
     const settings = settingsResult.rows[0];
     const config: AiProviderConfig = {
       provider: settings.provider,
-      apiKey: settings.api_key,
+      apiKey: decryptApiKey(settings.api_key),
       model: settings.model,
       endpointUrl: settings.endpoint_url,
     };
@@ -277,7 +317,7 @@ router.post('/test', async (req, res) => {
         [req.user!.id]
       );
       if (existing.rows.length > 0) {
-        finalApiKey = existing.rows[0].api_key;
+        finalApiKey = decryptApiKey(existing.rows[0].api_key);
       } else {
         res.status(400).json({ error: 'No saved key found. Please enter your API key.' });
         return;

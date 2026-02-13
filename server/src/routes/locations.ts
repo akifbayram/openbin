@@ -9,7 +9,7 @@ const router = Router();
 router.use(authenticate);
 
 function generateInviteCode(): string {
-  return crypto.randomBytes(4).toString('hex');
+  return crypto.randomBytes(16).toString('hex');
 }
 
 // GET /api/locations — list user's locations
