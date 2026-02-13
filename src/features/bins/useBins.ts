@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { Bin } from '@/types';
+import type { Bin, ListResponse } from '@/types';
 
 const BINS_CHANGED_EVENT = 'bins-changed';
 
@@ -19,6 +19,7 @@ export interface BinFilters {
   areas: string[];
   hasItems: boolean;
   hasNotes: boolean;
+  needsOrganizing?: boolean;
 }
 
 export const EMPTY_FILTERS: BinFilters = {
@@ -51,9 +52,9 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
     let cancelled = false;
     setIsLoading(true);
 
-    apiFetch<Bin[]>(`/api/bins?location_id=${encodeURIComponent(activeLocationId)}`)
+    apiFetch<ListResponse<Bin>>(`/api/bins?location_id=${encodeURIComponent(activeLocationId)}`)
       .then((data) => {
-        if (!cancelled) setRawBins(data);
+        if (!cancelled) setRawBins(data.results);
       })
       .catch(() => {
         if (!cancelled) setRawBins([]);
@@ -114,6 +115,14 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
       }
       if (filters.hasNotes) {
         filtered = filtered.filter((bin) => typeof bin.notes === 'string' && bin.notes.trim().length > 0);
+      }
+      if (filters.needsOrganizing) {
+        filtered = filtered.filter(
+          (bin) =>
+            (!Array.isArray(bin.tags) || bin.tags.length === 0) &&
+            !bin.area_id &&
+            (!Array.isArray(bin.items) || bin.items.length === 0)
+        );
       }
     }
 
@@ -262,4 +271,57 @@ export function useAllTags(): string[] {
 
 export async function lookupBinByCode(shortCode: string): Promise<Bin> {
   return apiFetch<Bin>(`/api/bins/lookup/${encodeURIComponent(shortCode)}`);
+}
+
+export function useTrashBins() {
+  const { activeLocationId, token } = useAuth();
+  const [bins, setBins] = useState<Bin[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
+  useEffect(() => {
+    if (!token || !activeLocationId) {
+      setBins([]);
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoading(true);
+
+    apiFetch<ListResponse<Bin>>(`/api/bins/trash?location_id=${encodeURIComponent(activeLocationId)}`)
+      .then((data) => {
+        if (!cancelled) setBins(data.results);
+      })
+      .catch(() => {
+        if (!cancelled) setBins([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [token, activeLocationId, refreshCounter]);
+
+  // Listen for bins-changed events
+  useEffect(() => {
+    const handler = () => setRefreshCounter((c) => c + 1);
+    window.addEventListener(BINS_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(BINS_CHANGED_EVENT, handler);
+  }, []);
+
+  const refresh = useCallback(() => setRefreshCounter((c) => c + 1), []);
+
+  return { bins, isLoading, refresh };
+}
+
+export async function restoreBinFromTrash(binId: string): Promise<Bin> {
+  const bin = await apiFetch<Bin>(`/api/bins/${binId}/restore`, { method: 'POST' });
+  notifyBinsChanged();
+  return bin;
+}
+
+export async function permanentDeleteBin(binId: string): Promise<void> {
+  await apiFetch(`/api/bins/${binId}/permanent`, { method: 'DELETE' });
+  notifyBinsChanged();
 }

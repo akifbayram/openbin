@@ -10,6 +10,7 @@ import {
   X,
   CheckCircle2,
   MapPin,
+  Bookmark,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,8 @@ import { getColorPreset } from '@/lib/colorPalette';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useTheme } from '@/lib/theme';
+import { getSavedViews, saveView, deleteView, type SavedView } from '@/lib/savedViews';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import type { Bin } from '@/types';
 
 const sortLabels: Record<SortOption, string> = {
@@ -47,16 +50,19 @@ export function BinListPage() {
     return state?.search || '';
   });
 
-  // Update search/filters when navigating from Tags/Areas pages
+  // Update search/filters when navigating from Tags/Areas/Dashboard pages
   useEffect(() => {
-    const state = location.state as { search?: string; areaFilter?: string } | null;
+    const state = location.state as { search?: string; areaFilter?: string; needsOrganizing?: boolean } | null;
     if (state?.search) {
       setSearch(state.search);
     }
     if (state?.areaFilter) {
       setFilters((f) => ({ ...f, areas: [state.areaFilter!] }));
     }
-    if (state?.search || state?.areaFilter) {
+    if (state?.needsOrganizing) {
+      setFilters((f) => ({ ...f, needsOrganizing: true }));
+    }
+    if (state?.search || state?.areaFilter || state?.needsOrganizing) {
       // Clear the navigation state so it doesn't persist on refresh
       window.history.replaceState({}, '');
     }
@@ -70,7 +76,10 @@ export function BinListPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
   const [bulkAreaOpen, setBulkAreaOpen] = useState(false);
-  const { activeLocationId } = useAuth();
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const [saveViewOpen, setSaveViewOpen] = useState(false);
+  const [viewName, setViewName] = useState('');
+  const { activeLocationId, user } = useAuth();
   const { bins, isLoading } = useBinList(debouncedSearch, sort, filters);
   const allTags = useAllTags();
   const activeCount = countActiveFilters(filters);
@@ -79,6 +88,40 @@ export function BinListPage() {
   const { theme } = useTheme();
   const { showToast } = useToast();
   const navigate = useNavigate();
+
+  // Load saved views
+  useEffect(() => {
+    if (user?.id) {
+      setSavedViews(getSavedViews(user.id));
+    }
+  }, [user?.id]);
+
+  const hasActiveFiltersOrSearch = search.trim() !== '' || countActiveFilters(filters) > 0;
+
+  function handleSaveView() {
+    if (!user?.id || !viewName.trim()) return;
+    saveView(user.id, {
+      name: viewName.trim(),
+      searchQuery: search,
+      sort,
+      filters,
+    });
+    setSavedViews(getSavedViews(user.id));
+    setViewName('');
+    setSaveViewOpen(false);
+  }
+
+  function handleDeleteView(viewId: string) {
+    if (!user?.id) return;
+    deleteView(user.id, viewId);
+    setSavedViews(getSavedViews(user.id));
+  }
+
+  function applyView(view: SavedView) {
+    setSearch(view.searchQuery);
+    setSort(view.sort);
+    setFilters(view.filters);
+  }
 
   const selectable = selectedIds.size > 0;
 
@@ -179,6 +222,40 @@ export function BinListPage() {
             <ArrowUpDown className="h-3.5 w-3.5" />
             <span className="text-[13px] truncate">{sortLabels[sort]}</span>
           </Button>
+          {hasActiveFiltersOrSearch && (
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={() => { setViewName(''); setSaveViewOpen(true); }}
+              className="shrink-0 h-10 w-10 rounded-full"
+              aria-label="Save current view"
+            >
+              <Bookmark className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Saved view chips */}
+      {savedViews.length > 0 && activeLocationId && (
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-5 px-5">
+          {savedViews.map((view) => (
+            <button
+              key={view.id}
+              onClick={() => applyView(view)}
+              className="shrink-0 flex items-center gap-1.5 rounded-[var(--radius-full)] px-3 py-1.5 text-[13px] font-medium glass-card hover:ring-1 hover:ring-[var(--accent)] transition-all"
+            >
+              <Bookmark className="h-3 w-3 text-[var(--accent)]" />
+              {view.name}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDeleteView(view.id); }}
+                className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
+                aria-label={`Remove saved view ${view.name}`}
+              >
+                <X className="h-3 w-3 text-[var(--text-tertiary)]" />
+              </button>
+            </button>
+          ))}
         </div>
       )}
 
@@ -229,7 +306,7 @@ export function BinListPage() {
       )}
 
       {/* Active filter indicators */}
-      {(search || activeCount > 0) && (
+      {(search || activeCount > 0 || filters.needsOrganizing) && (
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
           {search && (
             <Badge variant="outline" className="gap-1 pr-1.5 py-1 shrink-0">
@@ -321,9 +398,21 @@ export function BinListPage() {
               </button>
             </Badge>
           )}
-          {(activeCount > 1 || (activeCount > 0 && search)) && (
+          {filters.needsOrganizing && (
+            <Badge variant="outline" className="gap-1 pr-1.5 py-1 shrink-0">
+              Needs organizing
+              <button
+                onClick={() => setFilters((f) => ({ ...f, needsOrganizing: false }))}
+                aria-label="Remove needs organizing filter"
+                className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </Badge>
+          )}
+          {(activeCount > 1 || (activeCount > 0 && search) || filters.needsOrganizing) && (
             <button
-              onClick={() => { setSearch(''); setFilters(EMPTY_FILTERS); }}
+              onClick={() => { setSearch(''); setFilters({ ...EMPTY_FILTERS, needsOrganizing: false }); }}
               className="text-[12px] text-[var(--accent)] font-medium shrink-0 ml-1"
             >
               Clear all
@@ -412,6 +501,31 @@ export function BinListPage() {
         binIds={[...selectedIds]}
         onDone={clearSelection}
       />
+
+      {/* Save View Dialog */}
+      <Dialog open={saveViewOpen} onOpenChange={setSaveViewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save View</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={viewName}
+            onChange={(e) => setViewName(e.target.value)}
+            placeholder="View name..."
+            className="rounded-[var(--radius-full)] h-10 text-[15px]"
+            autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveView(); }}
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setSaveViewOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveView} disabled={!viewName.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

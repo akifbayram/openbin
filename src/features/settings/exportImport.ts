@@ -32,6 +32,42 @@ export function downloadExport(data: ExportData): void {
   URL.revokeObjectURL(url);
 }
 
+export async function exportZip(locationId: string): Promise<void> {
+  const token = localStorage.getItem('sanduk-token');
+  const resp = await fetch(`/api/locations/${encodeURIComponent(locationId)}/export/zip`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!resp.ok) throw new Error('ZIP export failed');
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0, 10);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `sanduk-export-${date}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export async function exportCsv(locationId: string): Promise<void> {
+  const token = localStorage.getItem('sanduk-token');
+  const resp = await fetch(`/api/locations/${encodeURIComponent(locationId)}/export/csv`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!resp.ok) throw new Error('CSV export failed');
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0, 10);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `sanduk-bins-${date}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function isISODate(s: unknown): boolean {
   return typeof s === 'string' && !isNaN(Date.parse(s));
 }

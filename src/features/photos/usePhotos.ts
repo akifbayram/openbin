@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { Photo } from '@/types';
+import type { Photo, ListResponse } from '@/types';
 
 const PHOTOS_CHANGED_EVENT = 'photos-changed';
 
@@ -26,11 +26,11 @@ export function usePhotos(binId: string | undefined) {
     let cancelled = false;
     setIsLoading(true);
 
-    apiFetch<Photo[]>(`/api/photos?bin_id=${encodeURIComponent(binId)}`)
+    apiFetch<ListResponse<Photo>>(`/api/photos?bin_id=${encodeURIComponent(binId)}`)
       .then((data) => {
         if (!cancelled) {
           // Sort by created_at ascending
-          const sorted = [...data].sort((a, b) => a.created_at.localeCompare(b.created_at));
+          const sorted = [...data.results].sort((a, b) => a.created_at.localeCompare(b.created_at));
           setPhotos(sorted);
         }
       })

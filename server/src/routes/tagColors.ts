@@ -19,12 +19,12 @@ router.get('/', async (req, res) => {
   try {
     const locationId = req.query.location_id as string;
     if (!locationId) {
-      res.status(400).json({ error: 'location_id query parameter is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'location_id query parameter is required' });
       return;
     }
 
     if (!await verifyLocationMembership(locationId, req.user!.id)) {
-      res.status(403).json({ error: 'Not a member of this location' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
       return;
     }
 
@@ -33,10 +33,10 @@ router.get('/', async (req, res) => {
       [locationId]
     );
 
-    res.json(result.rows);
+    res.json({ results: result.rows, count: result.rows.length });
   } catch (err) {
     console.error('List tag colors error:', err);
-    res.status(500).json({ error: 'Failed to list tag colors' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to list tag colors' });
   }
 });
 
@@ -46,12 +46,12 @@ router.put('/', async (req, res) => {
     const { locationId, tag, color } = req.body;
 
     if (!locationId || !tag) {
-      res.status(400).json({ error: 'locationId and tag are required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'locationId and tag are required' });
       return;
     }
 
     if (!await verifyLocationMembership(locationId, req.user!.id)) {
-      res.status(403).json({ error: 'Not a member of this location' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
       return;
     }
 
@@ -76,7 +76,7 @@ router.put('/', async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Upsert tag color error:', err);
-    res.status(500).json({ error: 'Failed to upsert tag color' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to upsert tag color' });
   }
 });
 
@@ -87,12 +87,12 @@ router.delete('/:tag', async (req, res) => {
     const locationId = req.query.location_id as string;
 
     if (!locationId) {
-      res.status(400).json({ error: 'location_id query parameter is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'location_id query parameter is required' });
       return;
     }
 
     if (!await verifyLocationMembership(locationId, req.user!.id)) {
-      res.status(403).json({ error: 'Not a member of this location' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
       return;
     }
 
@@ -104,7 +104,7 @@ router.delete('/:tag', async (req, res) => {
     res.json({ deleted: true });
   } catch (err) {
     console.error('Delete tag color error:', err);
-    res.status(500).json({ error: 'Failed to delete tag color' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to delete tag color' });
   }
 });
 

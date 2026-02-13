@@ -23,6 +23,17 @@ export function useDashboard() {
     [bins]
   );
 
+  const needsOrganizing = useMemo(
+    () =>
+      bins.filter(
+        (b) =>
+          (!Array.isArray(b.tags) || b.tags.length === 0) &&
+          !b.area_id &&
+          (!Array.isArray(b.items) || b.items.length === 0)
+      ).length,
+    [bins]
+  );
+
   const totalAreas = areas.length;
 
   const areaStats = useMemo(() => {
@@ -62,5 +73,5 @@ export function useDashboard() {
       .slice(0, 5);
   }, [bins, user]);
 
-  return { totalBins, totalItems, totalAreas, areaStats, recentlyUpdated, recentlyScanned, isLoading };
+  return { totalBins, totalItems, totalAreas, needsOrganizing, areaStats, recentlyUpdated, recentlyScanned, isLoading };
 }

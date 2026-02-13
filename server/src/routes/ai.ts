@@ -98,7 +98,7 @@ router.get('/settings', async (req, res) => {
     });
   } catch (err) {
     console.error('Get AI settings error:', err);
-    res.status(500).json({ error: 'Failed to get AI settings' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to get AI settings' });
   }
 });
 
@@ -108,13 +108,13 @@ router.put('/settings', async (req, res) => {
     const { provider, apiKey, model, endpointUrl } = req.body;
 
     if (!provider || !apiKey || !model) {
-      res.status(400).json({ error: 'provider, apiKey, and model are required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'provider, apiKey, and model are required' });
       return;
     }
 
     const validProviders = ['openai', 'anthropic', 'openai-compatible'];
     if (!validProviders.includes(provider)) {
-      res.status(400).json({ error: 'Invalid provider' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Invalid provider' });
       return;
     }
 
@@ -128,7 +128,7 @@ router.put('/settings', async (req, res) => {
       if (existing.rows.length > 0) {
         finalApiKey = decryptApiKey(existing.rows[0].api_key);
       } else {
-        res.status(400).json({ error: 'No existing key to preserve. Please provide a full API key.' });
+        res.status(422).json({ error: 'VALIDATION_ERROR', message: 'No existing key to preserve. Please provide a full API key.' });
         return;
       }
     }
@@ -154,7 +154,7 @@ router.put('/settings', async (req, res) => {
     });
   } catch (err) {
     console.error('Upsert AI settings error:', err);
-    res.status(500).json({ error: 'Failed to save AI settings' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to save AI settings' });
   }
 });
 
@@ -165,7 +165,7 @@ router.delete('/settings', async (req, res) => {
     res.json({ deleted: true });
   } catch (err) {
     console.error('Delete AI settings error:', err);
-    res.status(500).json({ error: 'Failed to delete AI settings' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to delete AI settings' });
   }
 });
 
@@ -182,7 +182,7 @@ router.post('/analyze-image', memoryUpload.fields([
     ].slice(0, 5);
 
     if (allFiles.length === 0) {
-      res.status(400).json({ error: 'photo file is required (JPEG, PNG, WebP, or GIF, max 5MB)' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photo file is required (JPEG, PNG, WebP, or GIF, max 5MB)' });
       return;
     }
 
@@ -192,7 +192,7 @@ router.post('/analyze-image', memoryUpload.fields([
       [req.user!.id]
     );
     if (settingsResult.rows.length === 0) {
-      res.status(400).json({ error: 'AI not configured. Set up your AI provider first.' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'AI not configured. Set up your AI provider first.' });
       return;
     }
 
@@ -217,7 +217,7 @@ router.post('/analyze-image', memoryUpload.fields([
       return;
     }
     console.error('AI analyze-image error:', err);
-    res.status(500).json({ error: 'Failed to analyze image' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to analyze image' });
   }
 });
 
@@ -234,7 +234,7 @@ router.post('/analyze', async (req, res) => {
     }
 
     if (ids.length === 0) {
-      res.status(400).json({ error: 'photoId or photoIds is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photoId or photoIds is required' });
       return;
     }
 
@@ -244,7 +244,7 @@ router.post('/analyze', async (req, res) => {
       [req.user!.id]
     );
     if (settingsResult.rows.length === 0) {
-      res.status(400).json({ error: 'AI not configured. Go to Settings to set up your AI provider.' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'AI not configured. Go to Settings to set up your AI provider.' });
       return;
     }
 
@@ -268,7 +268,7 @@ router.post('/analyze', async (req, res) => {
       );
 
       if (photoResult.rows.length === 0) {
-        res.status(404).json({ error: 'Photo not found or access denied' });
+        res.status(404).json({ error: 'NOT_FOUND', message: 'Photo not found or access denied' });
         return;
       }
 
@@ -276,7 +276,7 @@ router.post('/analyze', async (req, res) => {
       const filePath = path.join(PHOTO_STORAGE_PATH, storage_path);
 
       if (!fs.existsSync(filePath)) {
-        res.status(404).json({ error: 'Photo file not found on disk' });
+        res.status(404).json({ error: 'NOT_FOUND', message: 'Photo file not found on disk' });
         return;
       }
 
@@ -295,7 +295,7 @@ router.post('/analyze', async (req, res) => {
       return;
     }
     console.error('AI analyze error:', err);
-    res.status(500).json({ error: 'Failed to analyze photo' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to analyze photo' });
   }
 });
 
@@ -305,7 +305,7 @@ router.post('/test', async (req, res) => {
     const { provider, apiKey, model, endpointUrl } = req.body;
 
     if (!provider || !apiKey || !model) {
-      res.status(400).json({ error: 'provider, apiKey, and model are required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'provider, apiKey, and model are required' });
       return;
     }
 
@@ -319,7 +319,7 @@ router.post('/test', async (req, res) => {
       if (existing.rows.length > 0) {
         finalApiKey = decryptApiKey(existing.rows[0].api_key);
       } else {
-        res.status(400).json({ error: 'No saved key found. Please enter your API key.' });
+        res.status(422).json({ error: 'VALIDATION_ERROR', message: 'No saved key found. Please enter your API key.' });
         return;
       }
     }
@@ -339,7 +339,7 @@ router.post('/test', async (req, res) => {
       return;
     }
     console.error('AI test error:', err);
-    res.status(500).json({ error: 'Connection test failed' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Connection test failed' });
   }
 });
 

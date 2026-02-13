@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ScanLine, MapPin, ChevronRight, Plus } from 'lucide-react';
+import { ScanLine, MapPin, ChevronRight, Plus, Inbox } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -64,7 +64,7 @@ function SectionHeader({
 export function DashboardPage() {
   const navigate = useNavigate();
   const { activeLocationId } = useAuth();
-  const { totalBins, totalItems, totalAreas, recentlyScanned, recentlyUpdated, isLoading } =
+  const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, recentlyUpdated, isLoading } =
     useDashboard();
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -152,6 +152,27 @@ export function DashboardPage() {
             />
           )}
         </div>
+      )}
+
+      {/* Needs Organizing */}
+      {!isLoading && needsOrganizing > 0 && (
+        <button
+          onClick={() => navigate('/bins', { state: { needsOrganizing: true } })}
+          className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <Inbox className="h-[18px] w-[18px] text-amber-500" />
+            </div>
+            <div className="text-left">
+              <p className="text-[15px] font-semibold text-[var(--text-primary)]">
+                {needsOrganizing} bin{needsOrganizing !== 1 ? 's' : ''} need{needsOrganizing === 1 ? 's' : ''} organizing
+              </p>
+              <p className="text-[12px] text-[var(--text-tertiary)]">No tags, area, or items</p>
+            </div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)]" />
+        </button>
       )}
 
       {/* Recently Scanned */}

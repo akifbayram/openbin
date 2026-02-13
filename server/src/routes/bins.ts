@@ -6,6 +6,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
+import { logActivity, computeChanges } from '../lib/activityLog.js';
 
 const router = Router();
 const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
@@ -50,12 +51,12 @@ const upload = multer({
 
 router.use(authenticate);
 
-/** Verify user is a member of the location that owns a bin */
+/** Verify user is a member of the location that owns a non-deleted bin */
 async function verifyBinAccess(binId: string, userId: string): Promise<{ locationId: string } | null> {
   const result = await query(
     `SELECT b.location_id FROM bins b
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-     WHERE b.id = $1`,
+     WHERE b.id = $1 AND b.deleted_at IS NULL`,
     [binId, userId]
   );
   if (result.rows.length === 0) return null;
@@ -71,39 +72,41 @@ async function verifyLocationMembership(locationId: string, userId: string): Pro
   return result.rows.length > 0;
 }
 
+const BIN_SELECT_COLS = `b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_by, b.created_at, b.updated_at`;
+
 // POST /api/bins — create bin
 router.post('/', async (req, res) => {
   try {
     const { locationId, name, areaId, items, notes, tags, icon, color, id, shortCode } = req.body;
 
     if (!locationId) {
-      res.status(400).json({ error: 'locationId is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'locationId is required' });
       return;
     }
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      res.status(400).json({ error: 'Bin name is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Bin name is required' });
       return;
     }
     if (name.trim().length > 255) {
-      res.status(400).json({ error: 'Bin name must be 255 characters or less' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Bin name must be 255 characters or less' });
       return;
     }
     if (items && Array.isArray(items) && items.length > 500) {
-      res.status(400).json({ error: 'Too many items (max 500)' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Too many items (max 500)' });
       return;
     }
     if (tags && Array.isArray(tags) && tags.length > 50) {
-      res.status(400).json({ error: 'Too many tags (max 50)' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Too many tags (max 50)' });
       return;
     }
     if (notes && typeof notes === 'string' && notes.length > 10000) {
-      res.status(400).json({ error: 'Notes too long (max 10000 characters)' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Notes too long (max 10000 characters)' });
       return;
     }
 
     if (!await verifyLocationMembership(locationId, req.user!.id)) {
-      res.status(403).json({ error: 'Not a member of this location' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
       return;
     }
 
@@ -148,6 +151,17 @@ router.post('/', async (req, res) => {
         } else {
           bin.area_name = '';
         }
+
+        logActivity({
+          locationId,
+          userId: req.user!.id,
+          userName: req.user!.username,
+          action: 'create',
+          entityType: 'bin',
+          entityId: bin.id,
+          entityName: bin.name,
+        });
+
         res.status(201).json(bin);
         return;
       } catch (err: unknown) {
@@ -159,39 +173,68 @@ router.post('/', async (req, res) => {
       }
     }
 
-    res.status(500).json({ error: 'Failed to generate unique short code' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to generate unique short code' });
   } catch (err) {
     console.error('Create bin error:', err);
-    res.status(500).json({ error: 'Failed to create bin' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to create bin' });
   }
 });
 
-// GET /api/bins — list all bins for a location
+// GET /api/bins — list all (non-deleted) bins for a location
 router.get('/', async (req, res) => {
   try {
     const locationId = req.query.location_id as string | undefined;
 
     if (!locationId) {
-      res.status(400).json({ error: 'location_id query parameter is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'location_id query parameter is required' });
       return;
     }
 
     if (!await verifyLocationMembership(locationId, req.user!.id)) {
-      res.status(403).json({ error: 'Not a member of this location' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
       return;
     }
 
     const result = await query(
-      `SELECT b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_by, b.created_at, b.updated_at
+      `SELECT ${BIN_SELECT_COLS}
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-       WHERE b.location_id = $1 ORDER BY b.updated_at DESC`,
+       WHERE b.location_id = $1 AND b.deleted_at IS NULL ORDER BY b.updated_at DESC`,
       [locationId]
     );
 
-    res.json(result.rows);
+    res.json({ results: result.rows, count: result.rows.length });
   } catch (err) {
     console.error('List bins error:', err);
-    res.status(500).json({ error: 'Failed to list bins' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to list bins' });
+  }
+});
+
+// GET /api/bins/trash — list soft-deleted bins for a location
+router.get('/trash', async (req, res) => {
+  try {
+    const locationId = req.query.location_id as string | undefined;
+
+    if (!locationId) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'location_id query parameter is required' });
+      return;
+    }
+
+    if (!await verifyLocationMembership(locationId, req.user!.id)) {
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
+      return;
+    }
+
+    const result = await query(
+      `SELECT ${BIN_SELECT_COLS}, b.deleted_at
+       FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+       WHERE b.location_id = $1 AND b.deleted_at IS NOT NULL ORDER BY b.deleted_at DESC`,
+      [locationId]
+    );
+
+    res.json({ results: result.rows, count: result.rows.length });
+  } catch (err) {
+    console.error('List trash error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to list trash' });
   }
 });
 
@@ -201,23 +244,23 @@ router.get('/lookup/:shortCode', async (req, res) => {
     const code = req.params.shortCode.toUpperCase();
 
     const result = await query(
-      `SELECT b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_by, b.created_at, b.updated_at
+      `SELECT ${BIN_SELECT_COLS}
        FROM bins b
        LEFT JOIN areas a ON a.id = b.area_id
        JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-       WHERE UPPER(b.short_code) = $1`,
+       WHERE UPPER(b.short_code) = $1 AND b.deleted_at IS NULL`,
       [code, req.user!.id]
     );
 
     if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Bin not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
       return;
     }
 
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Lookup bin error:', err);
-    res.status(500).json({ error: 'Failed to lookup bin' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to lookup bin' });
   }
 });
 
@@ -228,26 +271,26 @@ router.get('/:id', async (req, res) => {
 
     const access = await verifyBinAccess(id, req.user!.id);
     if (!access) {
-      res.status(404).json({ error: 'Bin not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
       return;
     }
 
     const result = await query(
-      `SELECT b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_by, b.created_at, b.updated_at
+      `SELECT ${BIN_SELECT_COLS}
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-       WHERE b.id = $1`,
+       WHERE b.id = $1 AND b.deleted_at IS NULL`,
       [id]
     );
 
     if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Bin not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
       return;
     }
 
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Get bin error:', err);
-    res.status(500).json({ error: 'Failed to get bin' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to get bin' });
   }
 });
 
@@ -258,28 +301,35 @@ router.put('/:id', async (req, res) => {
 
     const access = await verifyBinAccess(id, req.user!.id);
     if (!access) {
-      res.status(404).json({ error: 'Bin not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
       return;
     }
 
     const { name, areaId, items, notes, tags, icon, color } = req.body;
 
     if (name !== undefined && typeof name === 'string' && name.trim().length > 255) {
-      res.status(400).json({ error: 'Bin name must be 255 characters or less' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Bin name must be 255 characters or less' });
       return;
     }
     if (items !== undefined && Array.isArray(items) && items.length > 500) {
-      res.status(400).json({ error: 'Too many items (max 500)' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Too many items (max 500)' });
       return;
     }
     if (tags !== undefined && Array.isArray(tags) && tags.length > 50) {
-      res.status(400).json({ error: 'Too many tags (max 50)' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Too many tags (max 50)' });
       return;
     }
     if (notes !== undefined && typeof notes === 'string' && notes.length > 10000) {
-      res.status(400).json({ error: 'Notes too long (max 10000 characters)' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Notes too long (max 10000 characters)' });
       return;
     }
+
+    // Fetch old state for activity log diff
+    const oldResult = await query(
+      'SELECT name, area_id, items, notes, tags, icon, color FROM bins WHERE id = $1',
+      [id]
+    );
+    const oldBin = oldResult.rows[0];
 
     const setClauses: string[] = ['updated_at = now()'];
     const params: unknown[] = [];
@@ -317,58 +367,170 @@ router.put('/:id', async (req, res) => {
     params.push(id);
 
     const result = await query(
-      `UPDATE bins SET ${setClauses.join(', ')} WHERE id = $${paramIdx}
+      `UPDATE bins SET ${setClauses.join(', ')} WHERE id = $${paramIdx} AND deleted_at IS NULL
        RETURNING id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`,
       params
     );
 
-    if (result.rows.length > 0) {
-      const bin = result.rows[0];
-      if (bin.area_id) {
-        const areaResult = await query('SELECT name FROM areas WHERE id = $1', [bin.area_id]);
-        bin.area_name = areaResult.rows[0]?.name ?? '';
-      } else {
-        bin.area_name = '';
-      }
-    }
-
     if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Bin not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
       return;
     }
 
-    res.json(result.rows[0]);
+    const bin = result.rows[0];
+    if (bin.area_id) {
+      const areaResult = await query('SELECT name FROM areas WHERE id = $1', [bin.area_id]);
+      bin.area_name = areaResult.rows[0]?.name ?? '';
+    } else {
+      bin.area_name = '';
+    }
+
+    if (oldBin) {
+      const newObj: Record<string, unknown> = {};
+      if (name !== undefined) newObj.name = name;
+      if (areaId !== undefined) newObj.area_id = areaId || null;
+      if (items !== undefined) newObj.items = items;
+      if (notes !== undefined) newObj.notes = notes;
+      if (tags !== undefined) newObj.tags = tags;
+      if (icon !== undefined) newObj.icon = icon;
+      if (color !== undefined) newObj.color = color;
+
+      const changes = computeChanges(oldBin, newObj, Object.keys(newObj));
+      logActivity({
+        locationId: access.locationId,
+        userId: req.user!.id,
+        userName: req.user!.username,
+        action: 'update',
+        entityType: 'bin',
+        entityId: id,
+        entityName: bin.name,
+        changes,
+      });
+    }
+
+    res.json(bin);
   } catch (err) {
     console.error('Update bin error:', err);
-    res.status(500).json({ error: 'Failed to update bin' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to update bin' });
   }
 });
 
-// DELETE /api/bins/:id — delete bin, return deleted bin for undo
+// DELETE /api/bins/:id — soft-delete bin
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
     const access = await verifyBinAccess(id, req.user!.id);
     if (!access) {
-      res.status(404).json({ error: 'Bin not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
       return;
     }
 
-    // Fetch bin before deleting for undo
+    // Fetch bin before soft-deleting for response
     const binResult = await query(
-      `SELECT b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_by, b.created_at, b.updated_at
+      `SELECT ${BIN_SELECT_COLS}
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-       WHERE b.id = $1`,
+       WHERE b.id = $1 AND b.deleted_at IS NULL`,
       [id]
     );
 
     if (binResult.rows.length === 0) {
-      res.status(404).json({ error: 'Bin not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
       return;
     }
 
     const bin = binResult.rows[0];
+
+    // Soft delete
+    await query('UPDATE bins SET deleted_at = now(), updated_at = now() WHERE id = $1', [id]);
+
+    logActivity({
+      locationId: access.locationId,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      action: 'delete',
+      entityType: 'bin',
+      entityId: id,
+      entityName: bin.name,
+    });
+
+    res.json(bin);
+  } catch (err) {
+    console.error('Delete bin error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to delete bin' });
+  }
+});
+
+// POST /api/bins/:id/restore — restore a soft-deleted bin
+router.post('/:id/restore', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check access but for deleted bins
+    const accessResult = await query(
+      `SELECT b.location_id FROM bins b
+       JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
+       WHERE b.id = $1 AND b.deleted_at IS NOT NULL`,
+      [id, req.user!.id]
+    );
+
+    if (accessResult.rows.length === 0) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Deleted bin not found' });
+      return;
+    }
+
+    const locationId = accessResult.rows[0].location_id;
+
+    const result = await query(
+      `UPDATE bins SET deleted_at = NULL, updated_at = now() WHERE id = $1
+       RETURNING id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`,
+      [id]
+    );
+
+    const bin = result.rows[0];
+    if (bin.area_id) {
+      const areaResult = await query('SELECT name FROM areas WHERE id = $1', [bin.area_id]);
+      bin.area_name = areaResult.rows[0]?.name ?? '';
+    } else {
+      bin.area_name = '';
+    }
+
+    logActivity({
+      locationId,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      action: 'restore',
+      entityType: 'bin',
+      entityId: id,
+      entityName: bin.name,
+    });
+
+    res.json(bin);
+  } catch (err) {
+    console.error('Restore bin error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to restore bin' });
+  }
+});
+
+// DELETE /api/bins/:id/permanent — permanently delete a soft-deleted bin
+router.delete('/:id/permanent', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Only allow permanent delete of already soft-deleted bins
+    const accessResult = await query(
+      `SELECT b.location_id, b.name FROM bins b
+       JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
+       WHERE b.id = $1 AND b.deleted_at IS NOT NULL`,
+      [id, req.user!.id]
+    );
+
+    if (accessResult.rows.length === 0) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Deleted bin not found' });
+      return;
+    }
+
+    const { location_id: locationId, name: binName } = accessResult.rows[0];
 
     // Get photos to delete from disk
     const photosResult = await query(
@@ -376,7 +538,7 @@ router.delete('/:id', async (req, res) => {
       [id]
     );
 
-    // Delete bin (cascades to photos in DB)
+    // Hard delete (cascades to photos in DB)
     await query('DELETE FROM bins WHERE id = $1', [id]);
 
     // Clean up photo files from disk
@@ -401,10 +563,20 @@ router.delete('/:id', async (req, res) => {
       // Ignore directory cleanup errors
     }
 
-    res.json(bin);
+    logActivity({
+      locationId,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      action: 'permanent_delete',
+      entityType: 'bin',
+      entityId: id,
+      entityName: binName,
+    });
+
+    res.json({ message: 'Bin permanently deleted' });
   } catch (err) {
-    console.error('Delete bin error:', err);
-    res.status(500).json({ error: 'Failed to delete bin' });
+    console.error('Permanent delete bin error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to permanently delete bin' });
   }
 });
 
@@ -415,14 +587,14 @@ router.post('/:id/photos', upload.single('photo'), async (req, res) => {
     const file = req.file;
 
     if (!file) {
-      res.status(400).json({ error: 'No photo uploaded' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'No photo uploaded' });
       return;
     }
 
     const access = await verifyBinAccess(binId, req.user!.id);
     if (!access) {
       fs.unlinkSync(file.path);
-      res.status(404).json({ error: 'Bin not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
       return;
     }
 
@@ -438,10 +610,23 @@ router.post('/:id/photos', upload.single('photo'), async (req, res) => {
     await query('UPDATE bins SET updated_at = now() WHERE id = $1', [binId]);
 
     const photo = result.rows[0];
+
+    // Get bin name for activity log
+    const binResult = await query('SELECT name FROM bins WHERE id = $1', [binId]);
+    logActivity({
+      locationId: access.locationId,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      action: 'add_photo',
+      entityType: 'bin',
+      entityId: binId,
+      entityName: binResult.rows[0]?.name,
+    });
+
     res.status(201).json({ id: photo.id });
   } catch (err) {
     console.error('Upload photo error:', err);
-    res.status(500).json({ error: 'Failed to upload photo' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to upload photo' });
   }
 });
 
@@ -452,13 +637,13 @@ router.put('/:id/add-tags', async (req, res) => {
     const { tags } = req.body;
 
     if (!tags || !Array.isArray(tags)) {
-      res.status(400).json({ error: 'tags array is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'tags array is required' });
       return;
     }
 
     const access = await verifyBinAccess(id, req.user!.id);
     if (!access) {
-      res.status(404).json({ error: 'Bin not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
       return;
     }
 
@@ -467,20 +652,20 @@ router.put('/:id/add-tags', async (req, res) => {
       `UPDATE bins SET
          tags = (SELECT ARRAY(SELECT DISTINCT unnest(tags || $1::text[]))),
          updated_at = now()
-       WHERE id = $2
+       WHERE id = $2 AND deleted_at IS NULL
        RETURNING id, tags`,
       [tags, id]
     );
 
     if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Bin not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
       return;
     }
 
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Add tags error:', err);
-    res.status(500).json({ error: 'Failed to add tags' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to add tags' });
   }
 });
 

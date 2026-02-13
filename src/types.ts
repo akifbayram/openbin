@@ -25,6 +25,21 @@ export interface LocationMember {
   user_id: string;
   role: 'owner' | 'member';
   joined_at: string;
+  display_name?: string;
+}
+
+export interface ActivityLogEntry {
+  id: string;
+  location_id: string;
+  user_id: string | null;
+  user_name: string;
+  display_name: string;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  entity_name: string | null;
+  changes: Record<string, { old: unknown; new: unknown }> | null;
+  created_at: string;
 }
 
 export interface Area {
@@ -53,6 +68,13 @@ export interface Bin {
   created_by: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
+}
+
+/** Generic list response envelope from API */
+export interface ListResponse<T> {
+  results: T[];
+  count: number;
 }
 
 export interface Photo {

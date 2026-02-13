@@ -55,17 +55,17 @@ router.post('/register', async (req, res) => {
     const { username, password, displayName } = req.body;
 
     if (!username || !USERNAME_REGEX.test(username)) {
-      res.status(400).json({ error: 'Username must be 3-50 characters (alphanumeric and underscores only)' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Username must be 3-50 characters (alphanumeric and underscores only)' });
       return;
     }
     if (!password || !isStrongPassword(password)) {
-      res.status(400).json({ error: 'Password must be at least 8 characters with uppercase, lowercase, and a number' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Password must be at least 8 characters with uppercase, lowercase, and a number' });
       return;
     }
 
     const existing = await query('SELECT id FROM users WHERE username = $1', [username.toLowerCase()]);
     if (existing.rows.length > 0) {
-      res.status(409).json({ error: 'Username already taken' });
+      res.status(409).json({ error: 'CONFLICT', message: 'Username already taken' });
       return;
     }
 
@@ -91,7 +91,7 @@ router.post('/register', async (req, res) => {
     });
   } catch (err) {
     console.error('Register error:', err);
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Registration failed' });
   }
 });
 
@@ -101,7 +101,7 @@ router.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      res.status(400).json({ error: 'Username and password required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Username and password required' });
       return;
     }
 
@@ -111,14 +111,14 @@ router.post('/login', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      res.status(401).json({ error: 'Invalid username or password' });
+      res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid username or password' });
       return;
     }
 
     const user = result.rows[0];
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
-      res.status(401).json({ error: 'Invalid username or password' });
+      res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid username or password' });
       return;
     }
 
@@ -146,7 +146,7 @@ router.post('/login', async (req, res) => {
     });
   } catch (err) {
     console.error('Login error:', err);
-    res.status(500).json({ error: 'Login failed' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Login failed' });
   }
 });
 
@@ -159,7 +159,7 @@ router.get('/me', authenticate, async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'User not found' });
       return;
     }
 
@@ -175,7 +175,7 @@ router.get('/me', authenticate, async (req, res) => {
     });
   } catch (err) {
     console.error('Me error:', err);
-    res.status(500).json({ error: 'Failed to fetch profile' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to fetch profile' });
   }
 });
 
@@ -187,14 +187,14 @@ router.put('/profile', authenticate, async (req, res) => {
     if (displayName !== undefined) {
       const trimmed = String(displayName).trim();
       if (trimmed.length < 1 || trimmed.length > 100) {
-        res.status(400).json({ error: 'Display name must be 1-100 characters' });
+        res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Display name must be 1-100 characters' });
         return;
       }
     }
 
     if (email !== undefined && email !== null && email !== '') {
       if (!EMAIL_REGEX.test(email) || email.length > 255) {
-        res.status(400).json({ error: 'Invalid email address' });
+        res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Invalid email address' });
         return;
       }
     }
@@ -213,7 +213,7 @@ router.put('/profile', authenticate, async (req, res) => {
     }
 
     if (updates.length === 0) {
-      res.status(400).json({ error: 'No fields to update' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'No fields to update' });
       return;
     }
 
@@ -237,7 +237,7 @@ router.put('/profile', authenticate, async (req, res) => {
     });
   } catch (err) {
     console.error('Update profile error:', err);
-    res.status(500).json({ error: 'Failed to update profile' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to update profile' });
   }
 });
 
@@ -247,23 +247,23 @@ router.put('/password', authenticate, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
-      res.status(400).json({ error: 'Current password and new password are required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Current password and new password are required' });
       return;
     }
     if (!isStrongPassword(newPassword)) {
-      res.status(400).json({ error: 'Password must be at least 8 characters with uppercase, lowercase, and a number' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Password must be at least 8 characters with uppercase, lowercase, and a number' });
       return;
     }
 
     const result = await query('SELECT password_hash FROM users WHERE id = $1', [req.user!.id]);
     if (result.rows.length === 0) {
-      res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'User not found' });
       return;
     }
 
     const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
     if (!valid) {
-      res.status(401).json({ error: 'Current password is incorrect' });
+      res.status(401).json({ error: 'UNAUTHORIZED', message: 'Current password is incorrect' });
       return;
     }
 
@@ -273,7 +273,7 @@ router.put('/password', authenticate, async (req, res) => {
     res.json({ message: 'Password updated successfully' });
   } catch (err) {
     console.error('Change password error:', err);
-    res.status(500).json({ error: 'Failed to change password' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to change password' });
   }
 });
 
@@ -281,7 +281,7 @@ router.put('/password', authenticate, async (req, res) => {
 router.post('/avatar', authenticate, avatarUpload.single('avatar'), async (req, res) => {
   try {
     if (!req.file) {
-      res.status(400).json({ error: 'No file uploaded' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'No file uploaded' });
       return;
     }
 
@@ -298,7 +298,7 @@ router.post('/avatar', authenticate, avatarUpload.single('avatar'), async (req, 
     res.json({ avatarUrl: `/api/auth/avatar/${req.user!.id}` });
   } catch (err) {
     console.error('Upload avatar error:', err);
-    res.status(500).json({ error: 'Failed to upload avatar' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to upload avatar' });
   }
 });
 
@@ -317,7 +317,7 @@ router.delete('/avatar', authenticate, async (req, res) => {
     res.json({ message: 'Avatar removed' });
   } catch (err) {
     console.error('Remove avatar error:', err);
-    res.status(500).json({ error: 'Failed to remove avatar' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to remove avatar' });
   }
 });
 
@@ -328,17 +328,17 @@ router.get('/avatar/:userId', authenticate, async (req, res) => {
     const avatarPath = result.rows[0]?.avatar_path;
 
     if (!avatarPath) {
-      res.status(404).json({ error: 'No avatar found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'No avatar found' });
       return;
     }
 
     if (!isPathSafe(avatarPath, AVATAR_STORAGE_PATH)) {
-      res.status(400).json({ error: 'Invalid avatar path' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Invalid avatar path' });
       return;
     }
 
     if (!fs.existsSync(avatarPath)) {
-      res.status(404).json({ error: 'Avatar file not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Avatar file not found' });
       return;
     }
 
@@ -349,7 +349,7 @@ router.get('/avatar/:userId', authenticate, async (req, res) => {
     fs.createReadStream(avatarPath).pipe(res);
   } catch (err) {
     console.error('Serve avatar error:', err);
-    res.status(500).json({ error: 'Failed to serve avatar' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to serve avatar' });
   }
 });
 
@@ -358,7 +358,7 @@ router.delete('/account', authenticate, async (req, res) => {
   try {
     const { password } = req.body;
     if (!password) {
-      res.status(400).json({ error: 'Password is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Password is required' });
       return;
     }
 
@@ -367,13 +367,13 @@ router.delete('/account', authenticate, async (req, res) => {
     // Verify password
     const userResult = await query('SELECT password_hash, avatar_path FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) {
-      res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'User not found' });
       return;
     }
 
     const valid = await bcrypt.compare(password, userResult.rows[0].password_hash);
     if (!valid) {
-      res.status(401).json({ error: 'Incorrect password' });
+      res.status(401).json({ error: 'UNAUTHORIZED', message: 'Incorrect password' });
       return;
     }
 
@@ -423,7 +423,7 @@ router.delete('/account', authenticate, async (req, res) => {
     res.json({ message: 'Account deleted' });
   } catch (err) {
     console.error('Delete account error:', err);
-    res.status(500).json({ error: 'Failed to delete account' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to delete account' });
   }
 });
 

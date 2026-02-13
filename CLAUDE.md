@@ -32,11 +32,12 @@ Client (React + TypeScript)
 src/
   components/ui/    # Reusable primitives (button, card, dialog, input, toast, etc.)
   features/         # Feature modules — each owns its pages, hooks, and helpers
+    activity/       # ActivityPage, useActivity (location activity log with pagination)
     ai/             # AiSettingsSection, AiSuggestionsPanel, useAiSettings, useAiAnalysis
     auth/           # LoginPage, RegisterPage, AuthGuard
     areas/          # AreaPicker, useAreas (CRUD areas within locations)
-    bins/           # BinListPage, BinDetailPage, useBins, BinCard, TagInput, IconPicker, ColorPicker
-    dashboard/      # DashboardPage (dashboard with stats, quick scan, recent bins), useDashboard
+    bins/           # BinListPage, BinDetailPage, TrashPage, useBins, BinCard, TagInput, IconPicker, ColorPicker
+    dashboard/      # DashboardPage (dashboard with stats, quick scan, recent bins, needs organizing), useDashboard, scanHistory
     items/          # ItemsPage (cross-bin item index)
     locations/      # LocationSelector, LocationMembersDialog, useLocations (no dedicated page — managed in Settings)
     onboarding/     # OnboardingOverlay, ScanSuccessOverlay, useOnboarding
@@ -47,7 +48,7 @@ src/
     print/          # PrintPage, LabelSheet, LabelCell, labelFormats
     settings/       # SettingsPage (includes full location CRUD: create, join, rename, delete, members), exportImport
     layout/         # AppLayout, Sidebar, BottomNav
-  lib/              # Shared utilities (utils.ts, theme.ts, api.ts, auth.tsx, qr.ts, navItems.ts, constants.ts, iconMap.ts, colorPalette.ts, appSettings.ts, useDebounce.ts, useOnlineStatus.ts)
+  lib/              # Shared utilities (utils.ts, theme.ts, api.ts, auth.tsx, qr.ts, navItems.ts, constants.ts, iconMap.ts, colorPalette.ts, appSettings.ts, useDebounce.ts, useOnlineStatus.ts, savedViews.ts)
   types.ts          # All shared interfaces
 server/
   src/              # Express API server
@@ -55,9 +56,9 @@ server/
     db.ts           # pg Pool singleton
     migrate.ts      # SQL migration runner
     middleware/      # auth.ts (JWT), locationAccess.ts (location membership)
-    routes/         # auth, locations, bins, photos, shapes, export, tagColors, ai
-    lib/            # aiProviders.ts
-  migrations/       # SQL migration files (001_initial.sql, 002_user_ai_settings.sql)
+    routes/         # auth, locations, bins, photos, shapes, export, tagColors, ai, activity, printSettings
+    lib/            # aiProviders.ts, activityLog.ts
+  migrations/       # SQL migration files (001_initial.sql, 002_user_ai_settings.sql, 005_soft_deletes_activity_log.sql)
   Dockerfile        # Multi-stage build
 docker-compose.yml  # Postgres, API, nginx
 nginx.conf          # Reverse proxy config
@@ -71,13 +72,16 @@ nginx.conf          # Reverse proxy config
 - **Data hooks return `{ data, isLoading }`** — e.g. `useBinList()` returns `{ bins, isLoading }`, `useBin(id)` returns `{ bin, isLoading }`, `usePhotos(binId)` returns `{ photos, isLoading, refresh }`, `useLocationList()` returns `{ locations, isLoading, refresh }`, `useLocationMembers(locationId)` returns `{ members, isLoading }`.
 - **`apiFetch<T>(path, options)`** in `lib/api.ts` — wraps fetch with JWT from localStorage, auto JSON stringify, FormData support. Throws `ApiError` on failure.
 - **`useAuth()`** in `lib/auth.tsx` — provides `user`, `token`, `activeLocationId`, plus `login()`, `register()`, `logout()`, `setActiveLocationId()`, `updateUser()`, `deleteAccount(password)`.
-- **Undo-delete pattern**: server returns deleted bin snapshot on DELETE, pass to `restoreBin(bin)` in the toast undo callback.
+- **Soft deletes**: `Bin` has `deleted_at?: string | null`. `DELETE /api/bins/:id` sets `deleted_at = NOW()` (soft delete). `useTrashBins()` fetches soft-deleted bins. `restoreBinFromTrash(binId)` POSTs to `/api/bins/:id/restore`. `permanentDeleteBin(binId)` DELETEs `/api/bins/:id/permanent`. All bin queries filter `WHERE deleted_at IS NULL`. Trash auto-purges after 30 days.
+- **Activity log**: `activity_log` table tracks mutations (bin CRUD, area CRUD, photo add/delete, member join/leave). `useActivityLog(options?)` hook with pagination. `logActivity()` in `server/src/lib/activityLog.ts` is fire-and-forget. `computeChanges()` diffs old/new for update entries. Auto-prunes entries older than 90 days.
+- **API response envelopes**: All list endpoints return `{ results: T[], count: number }` (`ListResponse<T>` type). Error responses use `{ error: "SEMANTIC_CODE", message: "Human readable" }` with codes: `VALIDATION_ERROR` (422), `NOT_FOUND` (404), `FORBIDDEN` (403), `CONFLICT` (409), `INTERNAL_ERROR` (500).
+- **Saved views**: `savedViews.ts` in `lib/` — `getSavedViews()`, `saveView()`, `deleteView()`, `renameView()`. Stores filter/sort/search state in `localStorage('sanduk-saved-views-{userId}')`, max 10 per user.
 - **Snake_case field names** on DB-backed interfaces (`Bin`, `Photo`, `Location`, `LocationMember`, `Area`) to match PostgreSQL columns. Export types remain camelCase.
 - **Areas**: `Area` interface `{ id, location_id, name, created_by, created_at, updated_at }`. Areas are named zones within a Location (e.g., "Garage", "Kitchen"). `Bin` has `area_id: string | null` (nullable — bins can be unassigned) and `area_name: string` (denormalized via LEFT JOIN). `useAreaList(locationId)` → `{ areas, isLoading }`. `createArea(locationId, name)`, `updateArea(locationId, areaId, name)`, `deleteArea(locationId, areaId)` for mutations. Area deletion sets bins' `area_id` to NULL. `AreaPicker` component provides dropdown with inline "Create new area..." option. `AreasPage` at `/areas` provides full CRUD: list with bin counts, inline rename, delete with confirmation, create dialog. Navigates to `/bins` with `{ state: { areaFilter: areaId } }` when an area is clicked.
 - **`[key: string]: unknown` index signatures** on DB interfaces for type compatibility.
 - **CSS**: use `var(--token)` design tokens, not raw colors. Glass effects via utility classes `glass-card`, `glass-nav`, `glass-heavy`.
 - **Responsive**: mobile-first. Bottom nav on mobile (`lg:hidden`), sidebar on desktop (`hidden lg:flex`). Breakpoint is `lg` (1024px).
-- **Lazy loading**: Dashboard, Scanner, Print, Settings, Auth, Profile, Tags, Items, and Areas pages are `React.lazy` with `<Suspense>`.
+- **Lazy loading**: Dashboard, Scanner, Print, Settings, Auth, Profile, Tags, Items, Areas, Trash, and Activity pages are `React.lazy` with `<Suspense>`.
 - **`cn()` helper** (clsx + tailwind-merge) for conditional class composition.
 - **`addBin()` accepts an options object** (`AddBinOptions`): `{ name, locationId, items?, notes?, tags?, areaId?, icon?, color? }`. `locationId` is required. `short_code` is auto-generated by the server.
 - **Short codes**: `Bin` has a `short_code` field — a 6-character alphanumeric code (charset excludes ambiguous chars like 0/O, 1/l) auto-generated on creation using `crypto.randomInt()`. Unique constraint in DB; server retries on collision. Used for manual bin lookup via `GET /api/bins/lookup/:shortCode`. `lookupBinByCode(code)` in `useBins.ts` wraps the API call. QR scanner page includes a manual lookup input.
@@ -94,18 +98,20 @@ nginx.conf          # Reverse proxy config
 - **Tag colors**: `TagColor` type with `{ tag, color, location_id }`. `useTagColorsContext()` from `TagColorsContext` provides a `Map<string, string>` mapping tag names to color preset keys. `setTagColor()` and `removeTagColor()` in `useTagColors.ts` for mutations. Colors use the same `colorPalette.ts` presets as bin colors.
 - **TagInput dropdown**: On focus, shows all available (unselected) suggestions as pill-shaped badges with tag colors. Filters as user types. Dropdown stays open when selecting tags so users can pick multiple. Items render as rounded badges (matching the selected tag appearance) rather than a traditional list dropdown. Input refocuses automatically after tag selection. Selected tags show the remove (X) button to the left of the tag name.
 - **BinCard tags**: Tags row is single-line (`overflow-hidden`, no wrapping) to keep cards compact on the list page.
-- **useBins.ts exports**: hooks (`useBinList`, `useBin`, `useAllTags`), plain functions (`addBin`, `updateBin`, `deleteBin`, `restoreBin`, `lookupBinByCode`, `notifyBinsChanged`), types/constants (`SortOption`, `BinFilters`, `EMPTY_FILTERS`, `countActiveFilters`). `SortOption` includes `'area'` — sorts by area name then bin name, unassigned last.
+- **useBins.ts exports**: hooks (`useBinList`, `useBin`, `useAllTags`, `useTrashBins`), plain functions (`addBin`, `updateBin`, `deleteBin`, `restoreBin`, `lookupBinByCode`, `notifyBinsChanged`, `restoreBinFromTrash`, `permanentDeleteBin`), types/constants (`SortOption`, `BinFilters`, `EMPTY_FILTERS`, `countActiveFilters`). `SortOption` includes `'area'` — sorts by area name then bin name, unassigned last. `BinFilters` includes `needsOrganizing?: boolean` for filtering bins missing tags, area, and items.
 
 ## Server API Routes
 
 - **Auth**: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, `PUT /api/auth/profile`, `PUT /api/auth/password`, `POST /api/auth/avatar`, `DELETE /api/auth/avatar`, `GET /api/auth/avatar/:userId`, `DELETE /api/auth/account`
 - **Locations**: `GET /api/locations`, `POST /api/locations`, `PUT /api/locations/:id`, `DELETE /api/locations/:id`, `GET /api/locations/:id/members`, `POST /api/locations/join`, `DELETE /api/locations/:id/members/:userId`, `POST /api/locations/:id/regenerate-invite`
 - **Areas**: `GET /api/locations/:locationId/areas`, `POST /api/locations/:locationId/areas`, `PUT /api/locations/:locationId/areas/:areaId`, `DELETE /api/locations/:locationId/areas/:areaId`
-- **Bins**: `POST /api/bins`, `GET /api/bins`, `GET /api/bins/lookup/:shortCode`, `GET /api/bins/:id`, `PUT /api/bins/:id`, `DELETE /api/bins/:id`, `PUT /api/bins/:id/add-tags`, `POST /api/bins/:id/photos`
+- **Bins**: `POST /api/bins`, `GET /api/bins`, `GET /api/bins/trash?location_id=X`, `GET /api/bins/lookup/:shortCode`, `GET /api/bins/:id`, `PUT /api/bins/:id`, `DELETE /api/bins/:id` (soft delete), `POST /api/bins/:id/restore`, `DELETE /api/bins/:id/permanent`, `PUT /api/bins/:id/add-tags`, `POST /api/bins/:id/photos`
 - **Photos**: `GET /api/photos?bin_id=X`, `GET /api/photos/:id/file`, `DELETE /api/photos/:id`
 - **Tag Colors**: `GET /api/tag-colors?location_id=X`, `PUT /api/tag-colors`, `DELETE /api/tag-colors/:tag?location_id=X`
+- **Activity**: `GET /api/locations/:id/activity?limit=50&offset=0&entity_type=X&entity_id=X`
 - **AI**: `GET /api/ai/settings`, `PUT /api/ai/settings`, `DELETE /api/ai/settings`, `POST /api/ai/analyze` (by photoId), `POST /api/ai/analyze-image` (raw file upload via FormData), `POST /api/ai/test`
-- **Export/Import**: `GET /api/locations/:id/export`, `POST /api/locations/:id/import`, `POST /api/import/legacy`
+- **Export/Import**: `GET /api/locations/:id/export` (JSON), `GET /api/locations/:id/export/zip` (ZIP with photos), `GET /api/locations/:id/export/csv` (spreadsheet), `POST /api/locations/:id/import`, `POST /api/import/legacy`
+- **Print Settings**: `GET /api/print-settings`, `PUT /api/print-settings`
 
 ## Security
 
@@ -136,7 +142,9 @@ nginx.conf          # Reverse proxy config
 - **BrowserRouter** — path-based URLs (e.g. `/bin/:id`). QR scanner regex handles both old hash (`#/bin/`) and new path (`/bin/`) URLs.
 - **PWA caching**: `vite-plugin-pwa` uses `generateSW` mode. After changing precached assets, users may need a refresh to get the new service worker.
 - **Auth tokens**: JWT stored in `localStorage('sanduk-token')`, active location in `localStorage('sanduk-active-location')`. Tokens expire after 7 days.
-- **Dashboard** (`/` route): `DashboardPage` shows total bins/items/areas stat cards, Quick Scan button, area breakdown (clickable chips navigating to filtered bins), recently scanned bins, and recently updated bins. Has a `+` button in the header to create bins directly (uses `BinCreateDialog`). `useDashboard()` hook provides stats, `areaStats`, and recent bin lists.
+- **Dashboard** (`/` route): `DashboardPage` shows total bins/items/areas stat cards, Quick Scan button, area breakdown (clickable chips navigating to filtered bins), "Needs Organizing" section (bins missing tags, area, and items), recently scanned bins, and recently updated bins. Has a `+` button in the header to create bins directly (uses `BinCreateDialog`). `useDashboard()` hook provides stats, `areaStats`, `needsOrganizing`, and recent bin lists.
+- **Trash page** (`/trash`): Shows soft-deleted bins with restore and permanent delete options. Accessible from sidebar (desktop) and Settings > Data section (mobile).
+- **Activity page** (`/activity`): Shows activity log grouped by date (Today, Yesterday, date) with action icons, diff display, and load-more pagination. Accessible from sidebar (desktop) and Settings > Data section (mobile).
 - **Profile page** (`/profile`) is not in `navItems` — accessed from the account card on Settings or the user info area in the Sidebar.
 - **Onboarding**: `useOnboarding()` in `features/onboarding/useOnboarding.ts` manages guided setup for new users. State persisted in `localStorage('sanduk-onboarding-{userId}')`. `OnboardingOverlay` renders in `AppLayout` when `isOnboarding && locations.length === 0`. 2 steps: name location → create bin. Step 1 includes photo upload (held in client memory, uploaded after bin creation), inline AI provider configuration (collapsible, hidden when already configured), and AI-powered photo analysis via `POST /api/ai/analyze-image` that auto-fills bin name, items, and tags. Photo upload is non-blocking (bin creation succeeds even if upload fails). First successful scan triggers `ScanSuccessOverlay` with celebratory animation (tracked via `localStorage('sanduk-first-scan-done-{userId}')`). CSS animations defined in `index.css` (`onboarding-step-enter`, `scan-*` classes). Registration no longer auto-creates a default location — onboarding handles location creation.
 - **AI button always visible**: The Sparkles (AI analyze) button is always shown when a photo is available, regardless of whether AI is configured. In **onboarding**, clicking it without AI configured auto-expands the inline AI setup section and shows a helper message. In **BinDetailPage**, clicking it without AI configured opens a guidance dialog explaining supported providers and linking to Settings. This ensures discoverability — users always see the AI capability and are guided to set it up on demand.

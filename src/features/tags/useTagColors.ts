@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { TagColor } from '@/types';
+import type { TagColor, ListResponse } from '@/types';
 
 const TAG_COLORS_CHANGED_EVENT = 'tag-colors-changed';
 
@@ -25,9 +25,9 @@ export function useTagColors() {
     let cancelled = false;
     setIsLoading(true);
 
-    apiFetch<TagColor[]>(`/api/tag-colors?location_id=${encodeURIComponent(activeLocationId)}`)
+    apiFetch<ListResponse<TagColor>>(`/api/tag-colors?location_id=${encodeURIComponent(activeLocationId)}`)
       .then((data) => {
-        if (!cancelled) setRawTagColors(data);
+        if (!cancelled) setRawTagColors(data.results);
       })
       .catch(() => {
         if (!cancelled) setRawTagColors([]);

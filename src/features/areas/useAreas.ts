@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
 import { notifyBinsChanged } from '@/features/bins/useBins';
-import type { Area } from '@/types';
+import type { Area, ListResponse } from '@/types';
 
 const AREAS_CHANGED_EVENT = 'areas-changed';
 
@@ -24,9 +24,9 @@ export function useAreaList(locationId: string | null | undefined) {
     let cancelled = false;
     setIsLoading(true);
 
-    apiFetch<Area[]>(`/api/locations/${encodeURIComponent(locationId)}/areas`)
+    apiFetch<ListResponse<Area>>(`/api/locations/${encodeURIComponent(locationId)}/areas`)
       .then((data) => {
-        if (!cancelled) setAreas(data);
+        if (!cancelled) setAreas(data.results);
       })
       .catch(() => {
         if (!cancelled) setAreas([]);

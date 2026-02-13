@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { Location, LocationMember } from '@/types';
+import type { Location, LocationMember, ListResponse } from '@/types';
 
 const LOCATIONS_CHANGED_EVENT = 'locations-changed';
 
@@ -26,9 +26,9 @@ export function useLocationList() {
     let cancelled = false;
     setIsLoading(true);
 
-    apiFetch<Location[]>('/api/locations')
+    apiFetch<ListResponse<Location>>('/api/locations')
       .then((data) => {
-        if (!cancelled) setLocations(data);
+        if (!cancelled) setLocations(data.results);
       })
       .catch(() => {
         if (!cancelled) setLocations([]);
@@ -68,9 +68,9 @@ export function useLocationMembers(locationId: string | null) {
     let cancelled = false;
     setIsLoading(true);
 
-    apiFetch<LocationMember[]>(`/api/locations/${locationId}/members`)
+    apiFetch<ListResponse<LocationMember>>(`/api/locations/${locationId}/members`)
       .then((data) => {
-        if (!cancelled) setMembers(data);
+        if (!cancelled) setMembers(data.results);
       })
       .catch(() => {
         if (!cancelled) setMembers([]);

@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, Tags, ClipboardList, Settings } from 'lucide-react';
+import { LogOut, Tags, ClipboardList, Clock, Trash2, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { navItems } from '@/lib/navItems';
 import { useAppSettings } from '@/lib/appSettings';
@@ -79,6 +79,38 @@ export function Sidebar() {
         >
           <ClipboardList className="h-5 w-5" />
           Items
+        </button>
+
+        {/* Activity — desktop sidebar only */}
+        <button
+          onClick={() => navigate('/activity')}
+          aria-label="Activity"
+          aria-current={location.pathname === '/activity' ? 'page' : undefined}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium transition-all duration-200 w-full text-left',
+            location.pathname === '/activity'
+              ? 'glass-card text-[var(--text-primary)]'
+              : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
+          )}
+        >
+          <Clock className="h-5 w-5" />
+          Activity
+        </button>
+
+        {/* Trash — desktop sidebar only */}
+        <button
+          onClick={() => navigate('/trash')}
+          aria-label="Trash"
+          aria-current={location.pathname === '/trash' ? 'page' : undefined}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium transition-all duration-200 w-full text-left',
+            location.pathname === '/trash'
+              ? 'glass-card text-[var(--text-primary)]'
+              : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
+          )}
+        >
+          <Trash2 className="h-5 w-5" />
+          Trash
         </button>
       </div>
 

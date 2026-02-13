@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, Monitor, Download, Upload, AlertTriangle, RotateCcw, LogOut, MapPin, Plus, LogIn, Users, Crown, ChevronRight, Trash2, Pencil } from 'lucide-react';
+import { Sun, Moon, Monitor, Download, Upload, AlertTriangle, RotateCcw, LogOut, MapPin, Plus, LogIn, Users, Crown, ChevronRight, Trash2, Pencil, Clock, FileArchive, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,8 @@ import type { ExportData } from '@/types';
 import {
   exportAllData,
   downloadExport,
+  exportZip,
+  exportCsv,
   parseImportFile,
   importData,
   ImportError,
@@ -43,6 +45,8 @@ export function SettingsPage() {
   const [confirmReplace, setConfirmReplace] = useState(false);
   const [pendingData, setPendingData] = useState<ExportData | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [exportingZip, setExportingZip] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
 
   // Locations state
   const { locations, isLoading: locationsLoading } = useLocationList();
@@ -153,6 +157,38 @@ export function SettingsPage() {
       showToast({ message: 'Export failed' });
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleExportZip() {
+    if (!activeLocationId) {
+      showToast({ message: 'Select a location first' });
+      return;
+    }
+    setExportingZip(true);
+    try {
+      await exportZip(activeLocationId);
+      showToast({ message: 'ZIP backup exported successfully' });
+    } catch {
+      showToast({ message: 'ZIP export failed' });
+    } finally {
+      setExportingZip(false);
+    }
+  }
+
+  async function handleExportCsv() {
+    if (!activeLocationId) {
+      showToast({ message: 'Select a location first' });
+      return;
+    }
+    setExportingCsv(true);
+    try {
+      await exportCsv(activeLocationId);
+      showToast({ message: 'CSV exported successfully' });
+    } catch {
+      showToast({ message: 'CSV export failed' });
+    } finally {
+      setExportingCsv(false);
     }
   }
 
@@ -448,12 +484,46 @@ export function SettingsPage() {
           <div className="flex flex-col gap-2 mt-3">
             <Button
               variant="outline"
+              onClick={() => navigate('/activity')}
+              className="justify-start rounded-[var(--radius-sm)] h-11"
+            >
+              <Clock className="h-4 w-4 mr-2.5" />
+              Activity Log
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/trash')}
+              className="justify-start rounded-[var(--radius-sm)] h-11"
+            >
+              <Trash2 className="h-4 w-4 mr-2.5" />
+              Trash
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportZip}
+              disabled={exportingZip || !activeLocationId}
+              className="justify-start rounded-[var(--radius-sm)] h-11"
+            >
+              <FileArchive className="h-4 w-4 mr-2.5" />
+              {exportingZip ? 'Exporting...' : 'Export Backup (ZIP)'}
+            </Button>
+            <Button
+              variant="outline"
               onClick={handleExport}
               disabled={exporting || !activeLocationId}
               className="justify-start rounded-[var(--radius-sm)] h-11"
             >
               <Download className="h-4 w-4 mr-2.5" />
-              {exporting ? 'Exporting...' : 'Export Backup'}
+              {exporting ? 'Exporting...' : 'Export Backup (JSON)'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportCsv}
+              disabled={exportingCsv || !activeLocationId}
+              className="justify-start rounded-[var(--radius-sm)] h-11"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2.5" />
+              {exportingCsv ? 'Exporting...' : 'Export Spreadsheet (CSV)'}
             </Button>
             <Button
               variant="outline"

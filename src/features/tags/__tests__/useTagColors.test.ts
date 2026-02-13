@@ -33,7 +33,7 @@ describe('useTagColors', () => {
       { id: 'tc-1', location_id: 'loc-1', tag: 'electronics', color: 'blue', created_at: '', updated_at: '' },
       { id: 'tc-2', location_id: 'loc-1', tag: 'tools', color: 'red', created_at: '', updated_at: '' },
     ];
-    mockApiFetch.mockResolvedValue(rawColors);
+    mockApiFetch.mockResolvedValue({ results: rawColors, count: rawColors.length });
 
     const { result } = renderHook(() => useTagColors());
 
@@ -69,7 +69,7 @@ describe('useTagColors', () => {
       { id: 'tc-1', location_id: 'loc-1', tag: 'electronics', color: 'blue', created_at: '', updated_at: '' },
       { id: 'tc-2', location_id: 'loc-1', tag: 'tools', color: 'red', created_at: '', updated_at: '' },
     ];
-    mockApiFetch.mockResolvedValue(rawColors);
+    mockApiFetch.mockResolvedValue({ results: rawColors, count: rawColors.length });
 
     const { result } = renderHook(() => useTagColors());
 
@@ -98,7 +98,7 @@ describe('useTagColors', () => {
       { id: 'tc-1', location_id: 'loc-1', tag: 'tools', color: 'blue', created_at: '', updated_at: '' },
       { id: 'tc-2', location_id: 'loc-1', tag: 'food', color: 'green', created_at: '', updated_at: '' },
     ];
-    mockApiFetch.mockResolvedValueOnce(initial).mockResolvedValueOnce(updated);
+    mockApiFetch.mockResolvedValueOnce({ results: initial, count: initial.length }).mockResolvedValueOnce({ results: updated, count: updated.length });
 
     const { result } = renderHook(() => useTagColors());
 

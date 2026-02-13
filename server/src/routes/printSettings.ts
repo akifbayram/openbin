@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
     res.json(result.rows[0].settings);
   } catch (err) {
     console.error('Get print settings error:', err);
-    res.status(500).json({ error: 'Failed to get print settings' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to get print settings' });
   }
 });
 
@@ -32,7 +32,7 @@ router.put('/', async (req, res) => {
     const settings = req.body;
 
     if (typeof settings !== 'object' || settings === null || Array.isArray(settings)) {
-      res.status(400).json({ error: 'Body must be a JSON object' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Body must be a JSON object' });
       return;
     }
 
@@ -47,7 +47,7 @@ router.put('/', async (req, res) => {
     res.json(result.rows[0].settings);
   } catch (err) {
     console.error('Save print settings error:', err);
-    res.status(500).json({ error: 'Failed to save print settings' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to save print settings' });
   }
 });
 

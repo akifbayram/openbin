@@ -11,6 +11,7 @@ import exportRoutes from './routes/export.js';
 import tagColorsRoutes from './routes/tagColors.js';
 import aiRoutes from './routes/ai.js';
 import printSettingsRoutes from './routes/printSettings.js';
+import activityRoutes from './routes/activity.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '4000', 10);
@@ -26,7 +27,7 @@ const authLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many attempts, please try again later' },
+  message: { error: 'RATE_LIMITED', message: 'Too many attempts, please try again later' },
 });
 
 const registerLimiter = rateLimit({
@@ -34,7 +35,7 @@ const registerLimiter = rateLimit({
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many registration attempts, please try again later' },
+  message: { error: 'RATE_LIMITED', message: 'Too many registration attempts, please try again later' },
 });
 
 const joinLimiter = rateLimit({
@@ -42,7 +43,7 @@ const joinLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many attempts, please try again later' },
+  message: { error: 'RATE_LIMITED', message: 'Too many attempts, please try again later' },
 });
 
 const aiLimiter = rateLimit({
@@ -50,7 +51,7 @@ const aiLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many AI requests, please try again later' },
+  message: { error: 'RATE_LIMITED', message: 'Too many AI requests, please try again later' },
 });
 
 // Routes
@@ -60,6 +61,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/locations/join', joinLimiter);
 app.use('/api/locations', locationsRoutes);
 app.use('/api/locations', areasRoutes);
+app.use('/api/locations', activityRoutes);
 app.use('/api/bins', binsRoutes);
 app.use('/api/photos', photosRoutes);
 app.use('/api/shapes', shapesRoutes);
@@ -71,7 +73,7 @@ app.use('/api/ai', aiLimiter, aiRoutes);
 // Error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
 });
 
 app.listen(PORT, () => {

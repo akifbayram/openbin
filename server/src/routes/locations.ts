@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { query } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { isLocationOwner } from '../middleware/locationAccess.js';
+import { logActivity } from '../lib/activityLog.js';
 
 const router = Router();
 
@@ -25,8 +26,7 @@ router.get('/', async (req, res) => {
       [req.user!.id]
     );
 
-    // Return snake_case to match Location interface (ElectricSQL convention)
-    res.json(result.rows.map(row => ({
+    const locations = result.rows.map(row => ({
       id: row.id,
       name: row.name,
       created_by: row.created_by,
@@ -35,10 +35,11 @@ router.get('/', async (req, res) => {
       member_count: row.member_count,
       created_at: row.created_at,
       updated_at: row.updated_at,
-    })));
+    }));
+    res.json({ results: locations, count: locations.length });
   } catch (err) {
     console.error('List locations error:', err);
-    res.status(500).json({ error: 'Failed to list locations' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to list locations' });
   }
 });
 
@@ -47,7 +48,7 @@ router.post('/', async (req, res) => {
   try {
     const { name } = req.body;
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      res.status(400).json({ error: 'Location name is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Location name is required' });
       return;
     }
 
@@ -77,7 +78,7 @@ router.post('/', async (req, res) => {
     });
   } catch (err) {
     console.error('Create location error:', err);
-    res.status(500).json({ error: 'Failed to create location' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to create location' });
   }
 });
 
@@ -88,36 +89,56 @@ router.put('/:id', async (req, res) => {
     const { name } = req.body;
 
     if (!await isLocationOwner(id, req.user!.id)) {
-      res.status(403).json({ error: 'Only the owner can update this location' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Only the owner can update this location' });
       return;
     }
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      res.status(400).json({ error: 'Location name is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Location name is required' });
       return;
     }
 
+    // Get old name for activity log
+    const oldResult = await query('SELECT name FROM locations WHERE id = $1', [id]);
+    const oldName = oldResult.rows[0]?.name;
+
     const result = await query(
-      'UPDATE locations SET name = $1, updated_at = now() WHERE id = $2 RETURNING id, name, invite_code, created_at, updated_at',
+      `UPDATE locations SET name = $1, updated_at = now() WHERE id = $2
+       RETURNING id, name, created_by, invite_code, created_at, updated_at`,
       [name.trim(), id]
     );
 
     if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Location not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Location not found' });
       return;
     }
 
     const location = result.rows[0];
+
+    if (oldName && oldName !== name.trim()) {
+      logActivity({
+        locationId: id,
+        userId: req.user!.id,
+        userName: req.user!.username,
+        action: 'update',
+        entityType: 'location',
+        entityId: id,
+        entityName: location.name,
+        changes: { name: { old: oldName, new: name.trim() } },
+      });
+    }
+
     res.json({
       id: location.id,
       name: location.name,
-      inviteCode: location.invite_code,
-      createdAt: location.created_at,
-      updatedAt: location.updated_at,
+      created_by: location.created_by,
+      invite_code: location.invite_code,
+      created_at: location.created_at,
+      updated_at: location.updated_at,
     });
   } catch (err) {
     console.error('Update location error:', err);
-    res.status(500).json({ error: 'Failed to update location' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to update location' });
   }
 });
 
@@ -127,21 +148,21 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
 
     if (!await isLocationOwner(id, req.user!.id)) {
-      res.status(403).json({ error: 'Only the owner can delete this location' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Only the owner can delete this location' });
       return;
     }
 
-    const result = await query('DELETE FROM locations WHERE id = $1 RETURNING id', [id]);
+    const result = await query('DELETE FROM locations WHERE id = $1 RETURNING id, name', [id]);
 
     if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Location not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Location not found' });
       return;
     }
 
     res.json({ message: 'Location deleted' });
   } catch (err) {
     console.error('Delete location error:', err);
-    res.status(500).json({ error: 'Failed to delete location' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to delete location' });
   }
 });
 
@@ -151,7 +172,7 @@ router.post('/join', async (req, res) => {
     const { inviteCode } = req.body;
 
     if (!inviteCode || typeof inviteCode !== 'string') {
-      res.status(400).json({ error: 'Invite code is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Invite code is required' });
       return;
     }
 
@@ -161,7 +182,7 @@ router.post('/join', async (req, res) => {
     );
 
     if (locationResult.rows.length === 0) {
-      res.status(404).json({ error: 'Invalid invite code' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Invalid invite code' });
       return;
     }
 
@@ -174,7 +195,7 @@ router.post('/join', async (req, res) => {
     );
 
     if (existing.rows.length > 0) {
-      res.status(409).json({ error: 'Already a member of this location' });
+      res.status(409).json({ error: 'CONFLICT', message: 'Already a member of this location' });
       return;
     }
 
@@ -182,6 +203,15 @@ router.post('/join', async (req, res) => {
       'INSERT INTO location_members (location_id, user_id, role) VALUES ($1, $2, $3)',
       [location.id, req.user!.id, 'member']
     );
+
+    logActivity({
+      locationId: location.id,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      action: 'join',
+      entityType: 'member',
+      entityName: req.user!.username,
+    });
 
     res.status(201).json({
       id: location.id,
@@ -194,7 +224,7 @@ router.post('/join', async (req, res) => {
     });
   } catch (err) {
     console.error('Join location error:', err);
-    res.status(500).json({ error: 'Failed to join location' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to join location' });
   }
 });
 
@@ -210,22 +240,24 @@ router.get('/:id/members', async (req, res) => {
     );
 
     if (check.rows.length === 0) {
-      res.status(403).json({ error: 'Not a member of this location' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
       return;
     }
 
     const result = await query(
-      `SELECT lm.id, lm.location_id, lm.user_id, lm.role, lm.joined_at
+      `SELECT lm.id, lm.location_id, lm.user_id, lm.role, lm.joined_at,
+              COALESCE(u.display_name, u.username) AS display_name
        FROM location_members lm
+       LEFT JOIN users u ON u.id = lm.user_id
        WHERE lm.location_id = $1
        ORDER BY lm.joined_at ASC`,
       [locationId]
     );
 
-    res.json(result.rows);
+    res.json({ results: result.rows, count: result.rows.length });
   } catch (err) {
     console.error('List members error:', err);
-    res.status(500).json({ error: 'Failed to list members' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to list members' });
   }
 });
 
@@ -242,7 +274,7 @@ router.delete('/:id/members/:userId', async (req, res) => {
     );
 
     if (membership.rows.length === 0) {
-      res.status(403).json({ error: 'Not a member of this location' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
       return;
     }
 
@@ -250,15 +282,19 @@ router.delete('/:id/members/:userId', async (req, res) => {
 
     // Members can only remove themselves; owners can remove anyone
     if (!isOwner && requesterId !== userId) {
-      res.status(403).json({ error: 'Only owners can remove other members' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Only owners can remove other members' });
       return;
     }
 
     // Prevent owner from removing themselves (must delete location instead)
     if (isOwner && requesterId === userId) {
-      res.status(400).json({ error: 'Owner cannot leave. Delete the location or transfer ownership.' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Owner cannot leave. Delete the location or transfer ownership.' });
       return;
     }
+
+    // Get username for activity log
+    const userResult = await query('SELECT username FROM users WHERE id = $1', [userId]);
+    const removedUsername = userResult.rows[0]?.username ?? 'unknown';
 
     const result = await query(
       'DELETE FROM location_members WHERE location_id = $1 AND user_id = $2 RETURNING id',
@@ -266,14 +302,24 @@ router.delete('/:id/members/:userId', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Member not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Member not found' });
       return;
     }
+
+    const action = requesterId === userId ? 'leave' : 'remove_member';
+    logActivity({
+      locationId: id,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      action,
+      entityType: 'member',
+      entityName: removedUsername,
+    });
 
     res.json({ message: 'Member removed' });
   } catch (err) {
     console.error('Remove member error:', err);
-    res.status(500).json({ error: 'Failed to remove member' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to remove member' });
   }
 });
 
@@ -283,7 +329,7 @@ router.post('/:id/regenerate-invite', async (req, res) => {
     const { id } = req.params;
 
     if (!await isLocationOwner(id, req.user!.id)) {
-      res.status(403).json({ error: 'Only the owner can regenerate invite codes' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Only the owner can regenerate invite codes' });
       return;
     }
 
@@ -294,14 +340,14 @@ router.post('/:id/regenerate-invite', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Location not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Location not found' });
       return;
     }
 
     res.json({ inviteCode: result.rows[0].invite_code });
   } catch (err) {
     console.error('Regenerate invite error:', err);
-    res.status(500).json({ error: 'Failed to regenerate invite code' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to regenerate invite code' });
   }
 });
 

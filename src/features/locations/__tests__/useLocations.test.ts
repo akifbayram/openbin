@@ -40,7 +40,7 @@ describe('useLocationList', () => {
     const locations = [
       { id: 'loc-1', name: 'Home', created_by: 'u1', invite_code: 'abc', created_at: '', updated_at: '' },
     ];
-    mockApiFetch.mockResolvedValue(locations);
+    mockApiFetch.mockResolvedValue({ results: locations, count: locations.length });
 
     const { result } = renderHook(() => useLocationList());
 
@@ -77,7 +77,7 @@ describe('useLocationList', () => {
       { id: 'loc-1', name: 'Home', created_by: 'u1', invite_code: 'abc', created_at: '', updated_at: '' },
       { id: 'loc-2', name: 'Office', created_by: 'u1', invite_code: 'def', created_at: '', updated_at: '' },
     ];
-    mockApiFetch.mockResolvedValueOnce(initial).mockResolvedValueOnce(updated);
+    mockApiFetch.mockResolvedValueOnce({ results: initial, count: initial.length }).mockResolvedValueOnce({ results: updated, count: updated.length });
 
     const { result } = renderHook(() => useLocationList());
 
@@ -97,7 +97,7 @@ describe('useLocationMembers', () => {
     const members = [
       { id: 'm1', location_id: 'loc-1', user_id: 'u1', role: 'owner' as const, joined_at: '' },
     ];
-    mockApiFetch.mockResolvedValue(members);
+    mockApiFetch.mockResolvedValue({ results: members, count: members.length });
 
     const { result } = renderHook(() => useLocationMembers('loc-1'));
 

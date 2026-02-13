@@ -138,7 +138,7 @@ describe('useBinList', () => {
 
   it('fetches bins with correct location_id query param', async () => {
     const bins = [makeBin()];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const { result } = renderHook(() => useBinList());
 
@@ -163,7 +163,7 @@ describe('useBinList', () => {
   // -- search ---------------------------------------------------------------
   it('search: filters by name (case-insensitive)', async () => {
     const bins = [makeBin({ id: '1', name: 'Kitchen Drawer' }), makeBin({ id: '2', name: 'Garage Shelf' })];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const { result } = renderHook(() => useBinList('kitchen'));
 
@@ -179,7 +179,7 @@ describe('useBinList', () => {
       makeBin({ id: '1', name: 'Bin A', area_name: 'Garage' }),
       makeBin({ id: '2', name: 'Bin B', area_name: 'Basement' }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const { result } = renderHook(() => useBinList('garage'));
 
@@ -195,7 +195,7 @@ describe('useBinList', () => {
       makeBin({ id: '1', name: 'Bin A', items: ['Hammer', 'Nails'] }),
       makeBin({ id: '2', name: 'Bin B', items: ['Screws'] }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const { result } = renderHook(() => useBinList('hammer'));
 
@@ -211,7 +211,7 @@ describe('useBinList', () => {
       makeBin({ id: '1', name: 'Bin A', notes: 'Contains fragile items' }),
       makeBin({ id: '2', name: 'Bin B', notes: '' }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const { result } = renderHook(() => useBinList('fragile'));
 
@@ -227,7 +227,7 @@ describe('useBinList', () => {
       makeBin({ id: '1', name: 'Bin A', tags: ['electronics', 'cables'] }),
       makeBin({ id: '2', name: 'Bin B', tags: ['tools'] }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const { result } = renderHook(() => useBinList('electronics'));
 
@@ -243,7 +243,7 @@ describe('useBinList', () => {
       makeBin({ id: '1', name: 'Bin A', short_code: 'XY7Z9K' }),
       makeBin({ id: '2', name: 'Bin B', short_code: 'AB3CD4' }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const { result } = renderHook(() => useBinList('xy7z'));
 
@@ -261,7 +261,7 @@ describe('useBinList', () => {
       makeBin({ id: '2', tags: ['tools'] }),
       makeBin({ id: '3', tags: [] }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const filters: BinFilters = { ...EMPTY_FILTERS, tags: ['cables', 'tools'], tagMode: 'any' };
     const { result } = renderHook(() => useBinList(undefined, 'updated', filters));
@@ -280,7 +280,7 @@ describe('useBinList', () => {
       makeBin({ id: '1', tags: ['electronics', 'cables'] }),
       makeBin({ id: '2', tags: ['electronics'] }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const filters: BinFilters = { ...EMPTY_FILTERS, tags: ['electronics', 'cables'], tagMode: 'all' };
     const { result } = renderHook(() => useBinList(undefined, 'updated', filters));
@@ -298,7 +298,7 @@ describe('useBinList', () => {
       makeBin({ id: '2', color: 'red' }),
       makeBin({ id: '3', color: '' }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const filters: BinFilters = { ...EMPTY_FILTERS, colors: ['blue', 'red'] };
     const { result } = renderHook(() => useBinList(undefined, 'updated', filters));
@@ -318,7 +318,7 @@ describe('useBinList', () => {
       makeBin({ id: '2', area_id: 'area-2' }),
       makeBin({ id: '3', area_id: null }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const filters: BinFilters = { ...EMPTY_FILTERS, areas: ['area-1'] };
     const { result } = renderHook(() => useBinList(undefined, 'updated', filters));
@@ -335,7 +335,7 @@ describe('useBinList', () => {
       makeBin({ id: '1', area_id: 'area-1' }),
       makeBin({ id: '2', area_id: null }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const filters: BinFilters = { ...EMPTY_FILTERS, areas: ['__unassigned__'] };
     const { result } = renderHook(() => useBinList(undefined, 'updated', filters));
@@ -352,7 +352,7 @@ describe('useBinList', () => {
       makeBin({ id: '1', items: ['Hammer'] }),
       makeBin({ id: '2', items: [] }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const filters: BinFilters = { ...EMPTY_FILTERS, hasItems: true };
     const { result } = renderHook(() => useBinList(undefined, 'updated', filters));
@@ -370,7 +370,7 @@ describe('useBinList', () => {
       makeBin({ id: '2', notes: '' }),
       makeBin({ id: '3', notes: '   ' }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const filters: BinFilters = { ...EMPTY_FILTERS, hasNotes: true };
     const { result } = renderHook(() => useBinList(undefined, 'updated', filters));
@@ -389,7 +389,7 @@ describe('useBinList', () => {
       makeBin({ id: '2', name: 'Alpha' }),
       makeBin({ id: '3', name: 'Bravo' }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const { result } = renderHook(() => useBinList(undefined, 'name'));
 
@@ -405,7 +405,7 @@ describe('useBinList', () => {
       makeBin({ id: '2', name: 'New', created_at: '2024-06-01T00:00:00Z' }),
       makeBin({ id: '3', name: 'Mid', created_at: '2024-03-01T00:00:00Z' }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const { result } = renderHook(() => useBinList(undefined, 'created'));
 
@@ -421,7 +421,7 @@ describe('useBinList', () => {
       makeBin({ id: '2', name: 'New', updated_at: '2024-06-01T00:00:00Z' }),
       makeBin({ id: '3', name: 'Mid', updated_at: '2024-03-01T00:00:00Z' }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const { result } = renderHook(() => useBinList());
 
@@ -438,7 +438,7 @@ describe('useBinList', () => {
       makeBin({ id: '3', name: 'M Bin', area_name: 'Basement', area_id: 'a2' }),
       makeBin({ id: '4', name: 'B Bin', area_name: 'Garage', area_id: 'a1' }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const { result } = renderHook(() => useBinList(undefined, 'area'));
 
@@ -455,7 +455,7 @@ describe('useBinList', () => {
 
   // -- event refresh --------------------------------------------------------
   it('event refresh: bins-changed event triggers refetch', async () => {
-    mockApiFetch.mockResolvedValue([makeBin({ id: '1', name: 'Original' })]);
+    mockApiFetch.mockResolvedValue({ results: [makeBin({ id: '1', name: 'Original' })], count: 1 });
 
     const { result } = renderHook(() => useBinList());
 
@@ -465,10 +465,10 @@ describe('useBinList', () => {
     expect(result.current.bins).toHaveLength(1);
     expect(mockApiFetch).toHaveBeenCalledTimes(1);
 
-    mockApiFetch.mockResolvedValue([
+    mockApiFetch.mockResolvedValue({ results: [
       makeBin({ id: '1', name: 'Original' }),
       makeBin({ id: '2', name: 'New Bin' }),
-    ]);
+    ], count: 2 });
 
     act(() => {
       window.dispatchEvent(new Event('bins-changed'));
@@ -554,7 +554,7 @@ describe('useAllTags', () => {
       makeBin({ id: '2', tags: ['gamma', 'alpha'] }),
       makeBin({ id: '3', tags: [] }),
     ];
-    mockApiFetch.mockResolvedValue(bins);
+    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
     const { result } = renderHook(() => useAllTags());
 

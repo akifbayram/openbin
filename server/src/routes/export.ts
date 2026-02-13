@@ -3,6 +3,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import archiver from 'archiver';
 import { query, pool } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
@@ -83,17 +84,17 @@ router.get('/locations/:id/export', requireLocationMember(), async (req, res) =>
     // Get location name
     const locationResult = await query('SELECT name FROM locations WHERE id = $1', [locationId]);
     if (locationResult.rows.length === 0) {
-      res.status(404).json({ error: 'Location not found' });
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Location not found' });
       return;
     }
 
     const locationName = locationResult.rows[0].name;
 
-    // Get all bins for this location (JOIN areas for backward-compat export)
+    // Get all non-deleted bins for this location (JOIN areas for backward-compat export)
     const binsResult = await query(
       `SELECT b.id, b.name, COALESCE(a.name, '') AS location, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_at, b.updated_at
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-       WHERE b.location_id = $1 ORDER BY b.updated_at DESC`,
+       WHERE b.location_id = $1 AND b.deleted_at IS NULL ORDER BY b.updated_at DESC`,
       [locationId]
     );
 
@@ -151,7 +152,165 @@ router.get('/locations/:id/export', requireLocationMember(), async (req, res) =>
     res.json(exportData);
   } catch (err) {
     console.error('Export error:', err);
-    res.status(500).json({ error: 'Failed to export data' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to export data' });
+  }
+});
+
+// GET /api/locations/:id/export/zip — export as ZIP with structured directories
+router.get('/locations/:id/export/zip', requireLocationMember(), async (req, res) => {
+  try {
+    const locationId = req.params.id;
+
+    const locationResult = await query('SELECT name FROM locations WHERE id = $1', [locationId]);
+    if (locationResult.rows.length === 0) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Location not found' });
+      return;
+    }
+
+    const locationName = locationResult.rows[0].name;
+
+    const binsResult = await query(
+      `SELECT b.id, b.name, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_at, b.updated_at
+       FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+       WHERE b.location_id = $1 AND b.deleted_at IS NULL ORDER BY b.updated_at DESC`,
+      [locationId]
+    );
+
+    // Build manifest and bins JSON (without photo data)
+    const bins = [];
+    const photosToInclude: Array<{ binId: string; photoId: string; filename: string; storagePath: string }> = [];
+
+    for (const bin of binsResult.rows) {
+      const photosResult = await query(
+        'SELECT id, filename, mime_type, storage_path FROM photos WHERE bin_id = $1',
+        [bin.id]
+      );
+
+      const photoRefs = [];
+      for (const photo of photosResult.rows) {
+        const ext = path.extname(photo.filename || '.jpg').toLowerCase();
+        const zipFilename = `${photo.id}${ext}`;
+        photoRefs.push({
+          id: photo.id,
+          filename: photo.filename,
+          mimeType: photo.mime_type,
+          zipPath: `photos/${zipFilename}`,
+        });
+        photosToInclude.push({
+          binId: bin.id,
+          photoId: photo.id,
+          filename: zipFilename,
+          storagePath: photo.storage_path,
+        });
+      }
+
+      bins.push({
+        id: bin.id,
+        name: bin.name,
+        location: bin.area_name,
+        items: bin.items,
+        notes: bin.notes,
+        tags: bin.tags,
+        icon: bin.icon,
+        color: bin.color,
+        shortCode: bin.short_code,
+        createdAt: bin.created_at.toISOString(),
+        updatedAt: bin.updated_at.toISOString(),
+        photos: photoRefs,
+      });
+    }
+
+    const manifest = {
+      version: 3,
+      format: 'sanduk-zip',
+      exportedAt: new Date().toISOString(),
+      locationName,
+      binCount: bins.length,
+      photoCount: photosToInclude.length,
+    };
+
+    // Stream ZIP response
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="sanduk-export-${new Date().toISOString().slice(0, 10)}.zip"`);
+
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.pipe(res);
+
+    archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' });
+    archive.append(JSON.stringify(bins, null, 2), { name: 'bins.json' });
+
+    // Add photo files
+    for (const photo of photosToInclude) {
+      const filePath = path.join(PHOTO_STORAGE_PATH, photo.storagePath);
+      try {
+        if (fs.existsSync(filePath)) {
+          archive.file(filePath, { name: `photos/${photo.filename}` });
+        }
+      } catch {
+        // Skip unreadable photos
+      }
+    }
+
+    await archive.finalize();
+  } catch (err) {
+    console.error('ZIP export error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to export ZIP' });
+    }
+  }
+});
+
+// GET /api/locations/:id/export/csv — export bins as CSV
+router.get('/locations/:id/export/csv', requireLocationMember(), async (req, res) => {
+  try {
+    const locationId = req.params.id;
+
+    const locationResult = await query('SELECT name FROM locations WHERE id = $1', [locationId]);
+    if (locationResult.rows.length === 0) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Location not found' });
+      return;
+    }
+
+    const binsResult = await query(
+      `SELECT b.name, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_at, b.updated_at
+       FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+       WHERE b.location_id = $1 AND b.deleted_at IS NULL ORDER BY b.name ASC`,
+      [locationId]
+    );
+
+    function csvEscape(val: string): string {
+      if (val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r')) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    }
+
+    const header = 'Name,Area,Items,Tags,Notes,Icon,Color,Short Code,Created,Updated';
+    const rows = binsResult.rows.map((bin) => {
+      const items = Array.isArray(bin.items) ? bin.items.join('; ') : '';
+      const tags = Array.isArray(bin.tags) ? bin.tags.join('; ') : '';
+      return [
+        csvEscape(bin.name),
+        csvEscape(bin.area_name),
+        csvEscape(items),
+        csvEscape(tags),
+        csvEscape(bin.notes || ''),
+        csvEscape(bin.icon || ''),
+        csvEscape(bin.color || ''),
+        csvEscape(bin.short_code || ''),
+        bin.created_at.toISOString(),
+        bin.updated_at.toISOString(),
+      ].join(',');
+    });
+
+    const csv = [header, ...rows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="sanduk-bins-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send(csv);
+  } catch (err) {
+    console.error('CSV export error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to export CSV' });
   }
 });
 
@@ -162,7 +321,7 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
     const { bins, mode } = req.body as { bins: ExportBin[]; mode: 'merge' | 'replace' };
 
     if (!bins || !Array.isArray(bins)) {
-      res.status(400).json({ error: 'bins array is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'bins array is required' });
       return;
     }
 
@@ -308,7 +467,7 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
     }
   } catch (err) {
     console.error('Import error:', err);
-    res.status(500).json({ error: 'Failed to import data' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to import data' });
   }
 });
 
@@ -318,12 +477,12 @@ router.post('/import/legacy', async (req, res) => {
     const { locationId, data } = req.body;
 
     if (!locationId) {
-      res.status(400).json({ error: 'locationId is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'locationId is required' });
       return;
     }
 
     if (!data) {
-      res.status(400).json({ error: 'data is required' });
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'data is required' });
       return;
     }
 
@@ -334,7 +493,7 @@ router.post('/import/legacy', async (req, res) => {
     );
 
     if (memberResult.rows.length === 0) {
-      res.status(403).json({ error: 'Not a member of this location' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
       return;
     }
 
@@ -480,7 +639,7 @@ router.post('/import/legacy', async (req, res) => {
     }
   } catch (err) {
     console.error('Legacy import error:', err);
-    res.status(500).json({ error: 'Failed to import legacy data' });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to import legacy data' });
   }
 });
 
