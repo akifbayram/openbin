@@ -1,13 +1,28 @@
-const SYSTEM_PROMPT = `You are analyzing photos of physical storage bin contents for an inventory system.
-You may receive one or multiple photos of the same bin from different angles.
-Examine all images and provide:
-1. A short, descriptive name for this bin (2-5 words)
-2. A list of distinct items visible across all images
-3. Category tags that describe the type of contents (e.g., "tools", "electronics")
-4. Brief notes about the contents or organization
+const SYSTEM_PROMPT = `You are an inventory cataloging assistant. You analyze photos of physical storage bins and containers to create searchable inventory records.
 
-Respond ONLY with valid JSON in this exact format, no markdown fences:
-{"name":"...","items":["..."],"tags":["..."],"notes":"..."}`;
+You may receive 1–5 photos of the same bin from different angles. Cross-reference all images to build one unified inventory entry. Do not duplicate items visible in multiple photos.
+
+Return a JSON object with exactly these four fields:
+
+"name" — A concise title for the bin's contents (2–5 words, title case). Describe WHAT is stored, not the container. Good: "Assorted Screwdrivers", "Holiday Lights", "USB Cables". Bad: "Red Bin", "Stuff", "Miscellaneous Items".
+
+"items" — A flat array of distinct items. Rules:
+- One entry per distinct item type; include quantity in parentheses when more than one: "Phillips screwdriver (x3)"
+- Be specific: "adjustable crescent wrench" not just "wrench"; "AA batteries (x8)" not "batteries"
+- Include brand names, model numbers, or sizes when clearly readable on labels
+- For sealed/packaged items, describe the product, not the packaging
+- Omit the bin or container itself
+- Order from most prominent to least prominent
+
+"tags" — 2–5 lowercase category labels for filtering. Rules:
+- Use plural nouns: "tools", "cables", "batteries"
+- Start broad, then add 1–2 specific subcategories: ["tools", "screwdrivers"] or ["electronics", "cables", "usb"]
+- Prefer standard terms: tools, electronics, hardware, office, kitchen, craft, seasonal, automotive, outdoor, clothing, toys, cleaning, medical, plumbing, electrical, cables, batteries, fasteners, adhesives, paint, garden, sports, storage, lighting, sewing
+
+"notes" — One sentence on organization or condition. Mention: how contents are arranged (sorted by size, loosely mixed, in original packaging), condition (new, used, worn), or any notable labels/markings. Use empty string "" if nothing notable.
+
+Respond with ONLY valid JSON, no markdown fences, no extra text. Example:
+{"name":"Assorted Screwdrivers","items":["Phillips screwdriver (x3)","flathead screwdriver (x2)","precision screwdriver set in case","magnetic bit holder"],"tags":["tools","screwdrivers","hand tools"],"notes":"Neatly organized with larger screwdrivers on the left and precision set in original case."}`;
 
 export type AiProviderType = 'openai' | 'anthropic' | 'openai-compatible';
 
@@ -99,8 +114,8 @@ async function callOpenAiCompatible(
   }));
 
   const userText = images.length > 1
-    ? `Analyze the contents of this storage bin (${images.length} photos).`
-    : 'Analyze the contents of this storage bin.';
+    ? `Catalog the contents of this storage bin. ${images.length} photos attached showing different angles of the same bin.`
+    : 'Catalog the contents of this storage bin.';
 
   let res: Response;
   try {
@@ -112,7 +127,7 @@ async function callOpenAiCompatible(
       },
       body: JSON.stringify({
         model: config.model,
-        max_tokens: images.length > 1 ? 1500 : 1000,
+        max_tokens: images.length > 1 ? 2000 : 1500,
         temperature: 0.3,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
@@ -166,8 +181,8 @@ async function callAnthropic(
   }));
 
   const userText = images.length > 1
-    ? `Analyze the contents of this storage bin (${images.length} photos).`
-    : 'Analyze the contents of this storage bin.';
+    ? `Catalog the contents of this storage bin. ${images.length} photos attached showing different angles of the same bin.`
+    : 'Catalog the contents of this storage bin.';
 
   let res: Response;
   try {
@@ -180,7 +195,7 @@ async function callAnthropic(
       },
       body: JSON.stringify({
         model: config.model,
-        max_tokens: images.length > 1 ? 1500 : 1000,
+        max_tokens: images.length > 1 ? 2000 : 1500,
         temperature: 0.3,
         system: SYSTEM_PROMPT,
         messages: [

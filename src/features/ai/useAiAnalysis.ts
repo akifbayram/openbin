@@ -4,7 +4,7 @@ import type { AiSuggestions } from '@/types';
 
 export const MAX_AI_PHOTOS = 5;
 
-function mapErrorMessage(err: unknown): string {
+export function mapErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     switch (err.status) {
       case 422: return 'Check your API key and model name';
