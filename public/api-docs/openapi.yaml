@@ -1,0 +1,2364 @@
+openapi: 3.0.3
+info:
+  title: Sanduk API
+  version: 1.0.0
+  description: |
+    REST API for Sanduk — a multi-user PWA for organizing physical storage bins with QR codes.
+
+    **Authentication**: Most endpoints require a JWT Bearer token obtained via `POST /auth/login`.
+    Include it in the `Authorization: Bearer <token>` header.
+
+    **Response envelopes**: All list endpoints return `{ results: T[], count: number }`.
+    Error responses use `{ error: "CODE", message: "Human readable" }`.
+
+servers:
+  - url: /api
+    description: API base path (proxied via nginx)
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+    description: Registration, login, profile, avatar, account management
+  - name: Locations
+    description: Location CRUD, membership, and invite codes
+  - name: Areas
+    description: Named zones within a location
+  - name: Bins
+    description: Bin CRUD, soft deletes, QR lookup, photo upload, tag management
+  - name: Photos
+    description: Photo retrieval and deletion
+  - name: TagColors
+    description: Per-location tag color assignments
+  - name: PrintSettings
+    description: Per-user print label settings
+  - name: Export
+    description: Export and import location data
+  - name: AI
+    description: AI provider settings and image analysis
+  - name: Activity
+    description: Location activity log
+  - name: Shapes
+    description: Electric SQL shape proxy endpoints
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from POST /auth/login. Expires after 7 days.
+
+  schemas:
+    # ── Error ──────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          enum:
+            - VALIDATION_ERROR
+            - NOT_FOUND
+            - FORBIDDEN
+            - CONFLICT
+            - RATE_LIMITED
+            - INTERNAL_ERROR
+        message:
+          type: string
+      example:
+        error: NOT_FOUND
+        message: Bin not found
+
+    # ── Auth ───────────────────────────────────────────────
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+        activeLocationId:
+          type: string
+          format: uuid
+          nullable: true
+
+    RegisterRequest:
+      type: object
+      required: [username, password, displayName]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        password:
+          type: string
+          minLength: 8
+          description: Must contain uppercase, lowercase, and digit
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+          description: Must contain uppercase, lowercase, and digit
+
+    DeleteAccountRequest:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+
+    # ── Location ───────────────────────────────────────────
+    Location:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        invite_code:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    LocationWithMeta:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        invite_code:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        member_count:
+          type: integer
+        role:
+          type: string
+          enum: [owner, member]
+
+    LocationMember:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [owner, member]
+        joined_at:
+          type: string
+          format: date-time
+        display_name:
+          type: string
+
+    CreateLocationRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+
+    JoinLocationRequest:
+      type: object
+      required: [inviteCode]
+      properties:
+        inviteCode:
+          type: string
+
+    # ── Area ───────────────────────────────────────────────
+    Area:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateAreaRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+
+    # ── Bin ────────────────────────────────────────────────
+    Bin:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        area_id:
+          type: string
+          format: uuid
+          nullable: true
+        area_name:
+          type: string
+        items:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        icon:
+          type: string
+          description: PascalCase lucide icon name, empty string for default
+        color:
+          type: string
+          description: Color preset key, empty string for no color
+        short_code:
+          type: string
+          description: 6-character alphanumeric code for QR lookup
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateBinRequest:
+      type: object
+      required: [name, locationId]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        locationId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: string
+          maxItems: 500
+        notes:
+          type: string
+          maxLength: 10000
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 50
+        areaId:
+          type: string
+          format: uuid
+        icon:
+          type: string
+        color:
+          type: string
+
+    UpdateBinRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        areaId:
+          type: string
+          format: uuid
+          nullable: true
+        items:
+          type: array
+          items:
+            type: string
+          maxItems: 500
+        notes:
+          type: string
+          maxLength: 10000
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 50
+        icon:
+          type: string
+        color:
+          type: string
+
+    AddTagsRequest:
+      type: object
+      required: [tags]
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 50
+
+    # ── Photo ──────────────────────────────────────────────
+    Photo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bin_id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        mime_type:
+          type: string
+        size:
+          type: integer
+        storage_path:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    # ── Tag Color ──────────────────────────────────────────
+    TagColor:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        tag:
+          type: string
+        color:
+          type: string
+          description: Color preset key from colorPalette
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TagColorRequest:
+      type: object
+      required: [locationId, tag, color]
+      properties:
+        locationId:
+          type: string
+          format: uuid
+        tag:
+          type: string
+        color:
+          type: string
+
+    # ── Activity ───────────────────────────────────────────
+    ActivityLogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        user_name:
+          type: string
+        display_name:
+          type: string
+        action:
+          type: string
+          description: "e.g. bin_created, bin_updated, photo_added"
+        entity_type:
+          type: string
+          description: "e.g. bin, photo, area, member"
+        entity_id:
+          type: string
+          format: uuid
+          nullable: true
+        entity_name:
+          type: string
+          nullable: true
+        changes:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: object
+            properties:
+              old: {}
+              new: {}
+        created_at:
+          type: string
+          format: date-time
+
+    # ── AI ─────────────────────────────────────────────────
+    AiSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum: [openai, anthropic, openai-compatible]
+        apiKey:
+          type: string
+          description: Masked when returned from GET
+        model:
+          type: string
+        endpointUrl:
+          type: string
+          nullable: true
+
+    AiSettingsRequest:
+      type: object
+      required: [provider, apiKey, model]
+      properties:
+        provider:
+          type: string
+          enum: [openai, anthropic, openai-compatible]
+        apiKey:
+          type: string
+        model:
+          type: string
+        endpointUrl:
+          type: string
+          description: Required when provider is openai-compatible
+
+    AiSuggestions:
+      type: object
+      properties:
+        name:
+          type: string
+        items:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+
+    AiAnalyzeRequest:
+      type: object
+      properties:
+        photoId:
+          type: string
+          format: uuid
+          description: Single photo to analyze
+        photoIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 5
+          description: Multiple photos to analyze (max 5)
+
+    AiTestRequest:
+      type: object
+      required: [provider, apiKey, model]
+      properties:
+        provider:
+          type: string
+          enum: [openai, anthropic, openai-compatible]
+        apiKey:
+          type: string
+        model:
+          type: string
+        endpointUrl:
+          type: string
+
+    # ── Print Settings ─────────────────────────────────────
+    PrintSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        settings:
+          type: object
+          description: Arbitrary JSON object with label format and custom dimensions
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # ── Export ─────────────────────────────────────────────
+    ExportDataV2:
+      type: object
+      properties:
+        version:
+          type: integer
+          enum: [2]
+        exportedAt:
+          type: string
+          format: date-time
+        locationName:
+          type: string
+        bins:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              location:
+                type: string
+                description: Area name for backward compatibility
+              items:
+                type: array
+                items:
+                  type: string
+              notes:
+                type: string
+              tags:
+                type: array
+                items:
+                  type: string
+              icon:
+                type: string
+              color:
+                type: string
+              shortCode:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
+              updatedAt:
+                type: string
+                format: date-time
+              photos:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    filename:
+                      type: string
+                    mimeType:
+                      type: string
+                    data:
+                      type: string
+                      format: byte
+
+    ImportRequest:
+      type: object
+      required: [version, bins]
+      properties:
+        version:
+          type: integer
+          enum: [1, 2]
+        exportedAt:
+          type: string
+          format: date-time
+        locationName:
+          type: string
+        bins:
+          type: array
+          items:
+            type: object
+        photos:
+          type: array
+          items:
+            type: object
+        mode:
+          type: string
+          enum: [merge, replace]
+          description: Import mode — merge adds to existing, replace clears first
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: FORBIDDEN
+            message: Authentication required
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: FORBIDDEN
+            message: Not a member of this location
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: NOT_FOUND
+            message: Resource not found
+    ValidationError:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: VALIDATION_ERROR
+            message: Name is required
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: RATE_LIMITED
+            message: Too many attempts, please try again later
+
+paths:
+  # ════════════════════════════════════════════════════════
+  # Auth
+  # ════════════════════════════════════════════════════════
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: Creates a new user account. Rate limited to 3 per hour.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '409':
+          description: Username already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: CONFLICT
+                message: Username already taken
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with username and password
+      description: Returns JWT token and user info. Rate limited to 5 per 15 minutes.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: FORBIDDEN
+                message: Invalid username or password
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      responses:
+        '200':
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/profile:
+    put:
+      tags: [Auth]
+      summary: Update display name and/or email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/password:
+    put:
+      tags: [Auth]
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password updated
+        '401':
+          description: Current password incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/avatar:
+    post:
+      tags: [Auth]
+      summary: Upload avatar image
+      description: Accepts JPEG, PNG, or WebP up to 2MB.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatarUrl:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Auth]
+      summary: Remove avatar
+      responses:
+        '200':
+          description: Avatar removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Avatar removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/avatar/{userId}:
+    get:
+      tags: [Auth]
+      summary: Serve avatar file
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Avatar image file
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /auth/account:
+    delete:
+      tags: [Auth]
+      summary: Permanently delete account
+      description: |
+        Deletes the user, their avatar, and any locations where they are the sole member
+        (cascading bins, photos, tag colors). Shared locations are preserved.
+        Requires password confirmation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteAccountRequest'
+      responses:
+        '200':
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Account deleted
+        '401':
+          description: Password incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ════════════════════════════════════════════════════════
+  # Locations
+  # ════════════════════════════════════════════════════════
+  /locations:
+    get:
+      tags: [Locations]
+      summary: List user's locations
+      description: Returns locations the current user is a member of, with member count and role.
+      responses:
+        '200':
+          description: List of locations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LocationWithMeta'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Locations]
+      summary: Create a new location
+      description: Creates a location and adds the current user as owner.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLocationRequest'
+      responses:
+        '201':
+          description: Location created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /locations/join:
+    post:
+      tags: [Locations]
+      summary: Join a location via invite code
+      description: Rate limited to 10 per 15 minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinLocationRequest'
+      responses:
+        '200':
+          description: Joined successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Invalid invite code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: NOT_FOUND
+                message: Invalid invite code
+        '409':
+          description: Already a member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: CONFLICT
+                message: Already a member of this location
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /locations/{id}:
+    put:
+      tags: [Locations]
+      summary: Rename a location
+      description: Owner only.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+      responses:
+        '200':
+          description: Location renamed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Locations]
+      summary: Delete a location
+      description: Owner only. Cascades to bins, photos, areas, tag colors, and activity log.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Location deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Location deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /locations/{id}/members:
+    get:
+      tags: [Locations]
+      summary: List location members
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LocationMember'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /locations/{id}/members/{userId}:
+    delete:
+      tags: [Locations]
+      summary: Remove a member from location
+      description: Owner can remove anyone. Members can only remove themselves (leave).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Member removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Member removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /locations/{id}/regenerate-invite:
+    post:
+      tags: [Locations]
+      summary: Regenerate invite code
+      description: Owner only. Invalidates the previous invite code.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: New invite code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invite_code:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ════════════════════════════════════════════════════════
+  # Areas
+  # ════════════════════════════════════════════════════════
+  /locations/{locationId}/areas:
+    get:
+      tags: [Areas]
+      summary: List areas for a location
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of areas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Area'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Areas]
+      summary: Create an area
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAreaRequest'
+      responses:
+        '201':
+          description: Area created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Area'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /locations/{locationId}/areas/{areaId}:
+    put:
+      tags: [Areas]
+      summary: Rename an area
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: areaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAreaRequest'
+      responses:
+        '200':
+          description: Area renamed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Area'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Areas]
+      summary: Delete an area
+      description: Sets bins in this area to unassigned (area_id = NULL).
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: areaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Area deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Area deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ════════════════════════════════════════════════════════
+  # Bins
+  # ════════════════════════════════════════════════════════
+  /bins:
+    post:
+      tags: [Bins]
+      summary: Create a bin
+      description: |
+        Creates a new bin with an auto-generated 6-character short code.
+        The short code uses a charset excluding ambiguous characters (0/O, 1/l/I).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBinRequest'
+      responses:
+        '201':
+          description: Bin created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Bins]
+      summary: List bins for a location
+      description: Returns non-deleted bins. Requires location_id query parameter.
+      parameters:
+        - name: location_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of bins
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Bin'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /bins/trash:
+    get:
+      tags: [Bins]
+      summary: List soft-deleted bins
+      description: Returns bins with non-null deleted_at. Auto-purges after 30 days.
+      parameters:
+        - name: location_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of trashed bins
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Bin'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /bins/lookup/{shortCode}:
+    get:
+      tags: [Bins]
+      summary: Look up a bin by short code
+      description: Used for manual QR code entry. Returns the bin matching the 6-character code.
+      parameters:
+        - name: shortCode
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 6
+            maxLength: 6
+      responses:
+        '200':
+          description: Bin found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bins/{id}:
+    get:
+      tags: [Bins]
+      summary: Get a single bin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Bin details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Bins]
+      summary: Update a bin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBinRequest'
+      responses:
+        '200':
+          description: Bin updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Bins]
+      summary: Soft-delete a bin
+      description: Sets deleted_at timestamp. Bin can be restored from trash.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Bin soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Bin deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bins/{id}/restore:
+    post:
+      tags: [Bins]
+      summary: Restore a soft-deleted bin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Bin restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bins/{id}/permanent:
+    delete:
+      tags: [Bins]
+      summary: Permanently delete a bin
+      description: Only works on soft-deleted bins. Removes the bin and its photos from storage.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Bin permanently deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Bin permanently deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bins/{id}/photos:
+    post:
+      tags: [Bins]
+      summary: Upload a photo to a bin
+      description: Accepts JPEG, PNG, or WebP up to 5MB.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Photo uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /bins/{id}/add-tags:
+    put:
+      tags: [Bins]
+      summary: Add tags to a bin
+      description: Merges new tags with existing ones (does not replace).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddTagsRequest'
+      responses:
+        '200':
+          description: Tags added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # ════════════════════════════════════════════════════════
+  # Photos
+  # ════════════════════════════════════════════════════════
+  /photos:
+    get:
+      tags: [Photos]
+      summary: List photos for a bin
+      parameters:
+        - name: bin_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of photos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Photo'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /photos/{id}/file:
+    get:
+      tags: [Photos]
+      summary: Serve a photo file
+      description: Returns the binary image file with appropriate content-type and caching headers.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: token
+          in: query
+          required: false
+          schema:
+            type: string
+          description: JWT token (alternative to Authorization header)
+      responses:
+        '200':
+          description: Photo file
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /photos/{id}:
+    delete:
+      tags: [Photos]
+      summary: Delete a photo
+      description: Removes the photo record and deletes the file from storage.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Photo deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Photo deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ════════════════════════════════════════════════════════
+  # Tag Colors
+  # ════════════════════════════════════════════════════════
+  /tag-colors:
+    get:
+      tags: [TagColors]
+      summary: List tag colors for a location
+      parameters:
+        - name: location_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of tag colors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TagColor'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      tags: [TagColors]
+      summary: Upsert a tag color
+      description: Creates or updates the color for a tag in a location.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagColorRequest'
+      responses:
+        '200':
+          description: Tag color saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagColor'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /tag-colors/{tag}:
+    delete:
+      tags: [TagColors]
+      summary: Delete a tag color
+      parameters:
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: location_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tag color removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Tag color removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ════════════════════════════════════════════════════════
+  # Print Settings
+  # ════════════════════════════════════════════════════════
+  /print-settings:
+    get:
+      tags: [PrintSettings]
+      summary: Get print label settings
+      description: Returns the current user's saved label format and custom dimensions.
+      responses:
+        '200':
+          description: Print settings (or empty object if none saved)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [PrintSettings]
+      summary: Save print label settings
+      description: Stores label format and custom dimension overrides per user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [settings]
+              properties:
+                settings:
+                  type: object
+                  description: Arbitrary JSON with label format, custom dimensions, etc.
+      responses:
+        '200':
+          description: Settings saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ════════════════════════════════════════════════════════
+  # Export / Import
+  # ════════════════════════════════════════════════════════
+  /locations/{id}/export:
+    get:
+      tags: [Export]
+      summary: Export location as JSON
+      description: Returns V2 format JSON with base64-encoded photos embedded in each bin.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: JSON export
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportDataV2'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /locations/{id}/export/zip:
+    get:
+      tags: [Export]
+      summary: Export location as ZIP
+      description: Returns a ZIP file containing a JSON manifest and a photos directory.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: ZIP file download
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /locations/{id}/export/csv:
+    get:
+      tags: [Export]
+      summary: Export location as CSV
+      description: |
+        Returns a CSV spreadsheet with columns: name, area, items (semicolon-separated),
+        tags (semicolon-separated), notes, icon, color, short_code.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /locations/{id}/import:
+    post:
+      tags: [Export]
+      summary: Import bins and photos
+      description: |
+        Imports V1 or V2 format data. Supports merge (add to existing) or replace (clear first) modes.
+        50MB body limit. Creates areas from location strings on import.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportRequest'
+      responses:
+        '200':
+          description: Import summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imported:
+                    type: integer
+                    description: Number of bins imported
+                  photos:
+                    type: integer
+                    description: Number of photos imported
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /import/legacy:
+    post:
+      tags: [Export]
+      summary: Import legacy V1 format
+      description: |
+        Imports data from the old V1 export format (freeform contents string).
+        Handles homeName field mapping. 50MB body limit.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportRequest'
+      responses:
+        '200':
+          description: Import summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imported:
+                    type: integer
+                  photos:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # ════════════════════════════════════════════════════════
+  # AI
+  # ════════════════════════════════════════════════════════
+  /ai/settings:
+    get:
+      tags: [AI]
+      summary: Get AI provider settings
+      description: Returns the user's configured AI provider. API key is masked in the response.
+      responses:
+        '200':
+          description: AI settings (or null if not configured)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [AI]
+      summary: Save AI provider settings
+      description: |
+        Stores AI provider configuration. API key is encrypted at rest when AI_ENCRYPTION_KEY is set.
+        Rate limited to 30 per hour.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiSettingsRequest'
+      responses:
+        '200':
+          description: Settings saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [AI]
+      summary: Delete AI provider settings
+      responses:
+        '200':
+          description: Settings removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: AI settings deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /ai/analyze:
+    post:
+      tags: [AI]
+      summary: Analyze stored photo(s) with AI
+      description: |
+        Sends one or more stored photos to the configured AI provider for analysis.
+        Returns suggested bin name, items, tags, and notes. Max 5 photos.
+        Rate limited to 30 per hour.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiAnalyzeRequest'
+      responses:
+        '200':
+          description: AI suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiSuggestions'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Photo not found or AI not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ai/analyze-image:
+    post:
+      tags: [AI]
+      summary: Analyze uploaded image(s) with AI
+      description: |
+        Directly uploads image(s) for AI analysis without storing them first.
+        Used during onboarding. Accepts up to 5 images, 5MB each.
+        Rate limited to 30 per hour.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  maxItems: 5
+      responses:
+        '200':
+          description: AI suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiSuggestions'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: AI not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ai/test:
+    post:
+      tags: [AI]
+      summary: Test AI provider connection
+      description: Validates that the provided AI credentials work by making a test API call.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiTestRequest'
+      responses:
+        '200':
+          description: Connection successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Connection failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ════════════════════════════════════════════════════════
+  # Activity
+  # ════════════════════════════════════════════════════════
+  /locations/{locationId}/activity:
+    get:
+      tags: [Activity]
+      summary: Get location activity log
+      description: |
+        Returns paginated activity log entries. Auto-prunes entries older than 90 days.
+        Supports filtering by entity type and ID.
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+          description: Filter by entity type (e.g. bin, photo, area, member)
+        - name: entity_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by specific entity ID
+      responses:
+        '200':
+          description: Activity log entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ActivityLogEntry'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ════════════════════════════════════════════════════════
+  # Shapes (Electric SQL)
+  # ════════════════════════════════════════════════════════
+  /shapes/noop:
+    get:
+      tags: [Shapes]
+      summary: No-op shape endpoint
+      description: Returns an empty response. Used as a placeholder shape.
+      responses:
+        '200':
+          description: Empty response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /shapes/bins:
+    get:
+      tags: [Shapes]
+      summary: Proxy bins shape
+      description: Proxies to Electric SQL for real-time bin sync. UUID validation on location_id.
+      parameters:
+        - name: location_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Shape data stream
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /shapes/photos:
+    get:
+      tags: [Shapes]
+      summary: Proxy photos shape
+      description: Proxies to Electric SQL for real-time photo sync for all bins in a location.
+      parameters:
+        - name: location_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Shape data stream
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /shapes/locations:
+    get:
+      tags: [Shapes]
+      summary: Proxy locations shape
+      description: Proxies to Electric SQL for real-time location sync for the current user.
+      responses:
+        '200':
+          description: Shape data stream
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /shapes/tag-colors:
+    get:
+      tags: [Shapes]
+      summary: Proxy tag-colors shape
+      parameters:
+        - name: location_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Shape data stream
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /shapes/location-members:
+    get:
+      tags: [Shapes]
+      summary: Proxy location-members shape
+      parameters:
+        - name: location_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Shape data stream
+        '401':
+          $ref: '#/components/responses/Unauthorized'

@@ -63,6 +63,8 @@ server/
 docker-compose.yml  # Postgres, API, nginx
 nginx.conf          # Reverse proxy config
 .env.example        # Environment variables template
+server/openapi.yaml # OpenAPI 3.0 spec (source of truth)
+public/api-docs/    # Swagger UI + spec copy (served at /api-docs/)
 ```
 
 ## Code Conventions
@@ -166,6 +168,12 @@ cd server && npx tsc --noEmit  # Zero type errors
 docker compose up -d
 docker compose ps   # All 3 services healthy
 ```
+
+## API Documentation
+
+- **OpenAPI spec**: `server/openapi.yaml` is the source of truth. A copy lives at `public/api-docs/openapi.yaml` for serving.
+- **Swagger UI**: Available at `/api-docs/` when running via nginx. Loads from CDN (no npm dependency).
+- **Convention**: Update `server/openapi.yaml` when endpoints change, then copy to `public/api-docs/openapi.yaml`.
 
 ## Testing
 
