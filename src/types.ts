@@ -9,7 +9,6 @@ export interface User {
 }
 
 export interface Location {
-  [key: string]: unknown;  // ElectricSQL Row compatibility
   id: string;
   name: string;
   created_by: string;
@@ -21,7 +20,6 @@ export interface Location {
 }
 
 export interface LocationMember {
-  [key: string]: unknown;  // ElectricSQL Row compatibility
   id: string;
   location_id: string;
   user_id: string;
@@ -45,7 +43,6 @@ export interface ActivityLogEntry {
 }
 
 export interface Area {
-  [key: string]: unknown;
   id: string;
   location_id: string;
   name: string;
@@ -55,7 +52,6 @@ export interface Area {
 }
 
 export interface Bin {
-  [key: string]: unknown;  // ElectricSQL Row compatibility
   id: string;
   location_id: string;
   name: string;
@@ -80,7 +76,6 @@ export interface ListResponse<T> {
 }
 
 export interface Photo {
-  [key: string]: unknown;  // ElectricSQL Row compatibility
   id: string;
   bin_id: string;
   filename: string;
@@ -92,7 +87,6 @@ export interface Photo {
 }
 
 export interface TagColor {
-  [key: string]: unknown;  // ElectricSQL Row compatibility
   id: string;
   location_id: string;
   tag: string;

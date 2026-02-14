@@ -125,7 +125,7 @@ router.delete('/:id', async (req, res) => {
       }
     }
 
-    await query('UPDATE bins SET updated_at = now() WHERE id = $1', [access.binId]);
+    await query(`UPDATE bins SET updated_at = datetime('now') WHERE id = $1`, [access.binId]);
 
     // Get bin name for activity log
     const binResult = await query('SELECT name FROM bins WHERE id = $1', [access.binId]);

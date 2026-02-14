@@ -50,10 +50,6 @@ export default defineConfig({
         target: 'http://localhost:4000',
         changeOrigin: true,
       },
-      '/v1/shape': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
     },
   },
   build: {
@@ -68,9 +64,6 @@ export default defineConfig({
           }
           if (id.includes('node_modules/qrcode')) {
             return 'vendor-qrcode';
-          }
-          if (id.includes('node_modules/@electric-sql')) {
-            return 'vendor-electric';
           }
         },
       },

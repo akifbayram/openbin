@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import multer from 'multer';
-import { query } from '../db.js';
+import { query, generateUuid } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { analyzeImage, analyzeImages, testConnection, AiAnalysisError } from '../lib/aiProviders.js';
 import type { AiProviderConfig, ImageInput } from '../lib/aiProviders.js';
@@ -142,13 +142,14 @@ router.put('/settings', async (req, res) => {
     const encryptedKey = encryptApiKey(finalApiKey);
     const finalCustomPrompt = (customPrompt && typeof customPrompt === 'string' && customPrompt.trim()) ? customPrompt.trim() : null;
 
+    const newId = generateUuid();
     const result = await query(
-      `INSERT INTO user_ai_settings (user_id, provider, api_key, model, endpoint_url, custom_prompt)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (user_id) DO UPDATE SET
-         provider = $2, api_key = $3, model = $4, endpoint_url = $5, custom_prompt = $6, updated_at = now()
+         provider = $3, api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, updated_at = datetime('now')
        RETURNING id, provider, api_key, model, endpoint_url, custom_prompt`,
-      [req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt]
+      [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt]
     );
 
     const row = result.rows[0];
@@ -222,7 +223,7 @@ router.post('/analyze-image', memoryUpload.fields([
     let existingTags: string[] | undefined;
     if (locationId) {
       const tagsResult = await query(
-        `SELECT DISTINCT unnest(tags) AS tag FROM bins WHERE location_id = $1 AND deleted_at IS NULL`,
+        `SELECT DISTINCT je.value AS tag FROM bins, json_each(bins.tags) je WHERE bins.location_id = $1 AND bins.deleted_at IS NULL`,
         [locationId]
       );
       existingTags = tagsResult.rows.map((r) => r.tag as string).sort();
@@ -312,7 +313,7 @@ router.post('/analyze', async (req, res) => {
     let existingTags: string[] | undefined;
     if (locationId) {
       const tagsResult = await query(
-        `SELECT DISTINCT unnest(tags) AS tag FROM bins WHERE location_id = $1 AND deleted_at IS NULL`,
+        `SELECT DISTINCT je.value AS tag FROM bins, json_each(bins.tags) je WHERE bins.location_id = $1 AND bins.deleted_at IS NULL`,
         [locationId]
       );
       existingTags = tagsResult.rows.map((r) => r.tag as string).sort();

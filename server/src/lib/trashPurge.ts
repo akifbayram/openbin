@@ -16,7 +16,7 @@ export async function purgeExpiredTrash(locationId: string): Promise<void> {
        JOIN locations l ON l.id = b.location_id
        WHERE b.location_id = $1
          AND b.deleted_at IS NOT NULL
-         AND b.deleted_at < NOW() - make_interval(days => l.trash_retention_days)`,
+         AND b.deleted_at < datetime('now', '-' || l.trash_retention_days || ' days')`,
       [locationId]
     );
 
@@ -24,17 +24,23 @@ export async function purgeExpiredTrash(locationId: string): Promise<void> {
 
     const binIds = expired.rows.map((r) => r.id as string);
 
-    // Batch query photos for disk cleanup
-    const photos = await query(
-      'SELECT storage_path FROM photos WHERE bin_id = ANY($1)',
-      [binIds]
-    );
+    // Query photos for disk cleanup — use individual queries per bin
+    const allPhotos: { storage_path: string }[] = [];
+    for (const binId of binIds) {
+      const photos = await query<{ storage_path: string }>(
+        'SELECT storage_path FROM photos WHERE bin_id = $1',
+        [binId]
+      );
+      allPhotos.push(...photos.rows);
+    }
 
     // Hard delete bins (CASCADE deletes photo rows)
-    await query('DELETE FROM bins WHERE id = ANY($1)', [binIds]);
+    for (const binId of binIds) {
+      await query('DELETE FROM bins WHERE id = $1', [binId]);
+    }
 
     // Clean up photo files from disk
-    for (const photo of photos.rows) {
+    for (const photo of allPhotos) {
       try {
         const filePath = path.join(PHOTO_STORAGE_PATH, photo.storage_path);
         if (fs.existsSync(filePath)) {

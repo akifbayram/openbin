@@ -1,59 +1,16 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: sanduk
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
-    command: >
-      postgres
-        -c wal_level=logical
-        -c max_replication_slots=10
-        -c max_wal_senders=10
-    ports:
-      - "5432:5432"
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  electric:
-    image: electricsql/electric:latest
-    environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/sanduk
-      ELECTRIC_INSECURE: "${ELECTRIC_INSECURE:-false}"
-    ports:
-      - "3000:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
   api:
     build:
       context: ./server
       dockerfile: Dockerfile
     environment:
-      PGHOST: postgres
-      PGPORT: "5432"
-      PGUSER: postgres
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-      PGDATABASE: sanduk
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      ELECTRIC_URL: http://electric:3000
+      DATABASE_PATH: /data/sanduk.db
       PHOTO_STORAGE_PATH: /data/photos
       PORT: "4000"
     ports:
       - "4000:4000"
     volumes:
-      - photo_data:/data/photos
-    depends_on:
-      postgres:
-        condition: service_healthy
-      electric:
-        condition: service_started
+      - api_data:/data
 
   nginx:
     image: nginx:alpine
@@ -66,5 +23,4 @@ services:
       - api
 
 volumes:
-  pg_data:
-  photo_data:
+  api_data:

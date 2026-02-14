@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db.js';
+import { query, generateUuid } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -65,12 +65,13 @@ router.put('/', async (req, res) => {
       return;
     }
 
+    const newId = generateUuid();
     const result = await query(
-      `INSERT INTO tag_colors (location_id, tag, color)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (location_id, tag) DO UPDATE SET color = $3, updated_at = now()
+      `INSERT INTO tag_colors (id, location_id, tag, color)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (location_id, tag) DO UPDATE SET color = $4, updated_at = datetime('now')
        RETURNING id, location_id, tag, color, created_at, updated_at`,
-      [locationId, tag, color]
+      [newId, locationId, tag, color]
     );
 
     res.json(result.rows[0]);

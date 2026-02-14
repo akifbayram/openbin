@@ -1,1 +1,0 @@
-ALTER TABLE locations ALTER COLUMN invite_code TYPE VARCHAR(32);

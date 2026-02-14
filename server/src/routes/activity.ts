@@ -31,7 +31,7 @@ router.get('/:locationId/activity', requireLocationMember('locationId'), async (
 
     // Get total count
     const countResult = await query(
-      `SELECT COUNT(*)::int AS count FROM activity_log al ${whereClause}`,
+      `SELECT COUNT(*) AS count FROM activity_log al ${whereClause}`,
       params
     );
     const count = countResult.rows[0].count;

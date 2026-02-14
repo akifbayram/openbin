@@ -11,8 +11,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@electric-sql/client": "^1.5.1",
-    "@electric-sql/react": "^1.0.30",
     "clsx": "^2.1.1",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.563.0",

@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import archiver from 'archiver';
-import { query, pool } from '../db.js';
+import { query, querySync, getDb, generateUuid } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 
@@ -135,8 +135,8 @@ router.get('/locations/:id/export', requireLocationMember(), async (req, res) =>
         icon: bin.icon,
         color: bin.color,
         shortCode: bin.short_code,
-        createdAt: bin.created_at.toISOString(),
-        updatedAt: bin.updated_at.toISOString(),
+        createdAt: bin.created_at,
+        updatedAt: bin.updated_at,
         photos: exportPhotos,
       });
     }
@@ -214,8 +214,8 @@ router.get('/locations/:id/export/zip', requireLocationMember(), async (req, res
         icon: bin.icon,
         color: bin.color,
         shortCode: bin.short_code,
-        createdAt: bin.created_at.toISOString(),
-        updatedAt: bin.updated_at.toISOString(),
+        createdAt: bin.created_at,
+        updatedAt: bin.updated_at,
         photos: photoRefs,
       });
     }
@@ -298,8 +298,8 @@ router.get('/locations/:id/export/csv', requireLocationMember(), async (req, res
         csvEscape(bin.icon || ''),
         csvEscape(bin.color || ''),
         csvEscape(bin.short_code || ''),
-        bin.created_at.toISOString(),
-        bin.updated_at.toISOString(),
+        bin.created_at,
+        bin.updated_at,
       ].join(',');
     });
 
@@ -326,19 +326,17 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
     }
 
     const importMode = mode || 'merge';
+    const userId = req.user!.id;
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
+    const doImport = getDb().transaction(() => {
       if (importMode === 'replace') {
         // Get existing photos to clean up files
-        const existingPhotos = await client.query(
+        const existingPhotos = querySync<{ storage_path: string }>(
           'SELECT storage_path FROM photos WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1)',
           [locationId]
         );
         // Delete existing bins (cascade deletes photos in DB)
-        await client.query('DELETE FROM bins WHERE location_id = $1', [locationId]);
+        querySync('DELETE FROM bins WHERE location_id = $1', [locationId]);
         // Clean up photo files
         for (const photo of existingPhotos.rows) {
           try {
@@ -355,30 +353,30 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
       for (const bin of bins) {
         if (importMode === 'merge') {
           // Check if bin already exists
-          const existing = await client.query('SELECT id FROM bins WHERE id = $1', [bin.id]);
+          const existing = querySync('SELECT id FROM bins WHERE id = $1', [bin.id]);
           if (existing.rows.length > 0) {
             binsSkipped++;
             continue;
           }
         }
 
-        const binId = bin.id || uuidv4();
+        const binId = bin.id || generateUuid();
 
         // Resolve area from location string
         let areaId: string | null = null;
         const locationStr = (bin.location || '').trim();
         if (locationStr) {
           // Insert or find existing area
-          await client.query(
-            'INSERT INTO areas (location_id, name, created_by) VALUES ($1, $2, $3) ON CONFLICT (location_id, name) DO NOTHING',
-            [locationId, locationStr, req.user!.id]
-          );
-          const areaResult = await client.query(
-            'SELECT id FROM areas WHERE location_id = $1 AND name = $2',
-            [locationId, locationStr]
-          );
-          if (areaResult.rows.length > 0) {
-            areaId = areaResult.rows[0].id;
+          const areaCheck = querySync('SELECT id FROM areas WHERE location_id = $1 AND name = $2', [locationId, locationStr]);
+          if (areaCheck.rows.length > 0) {
+            areaId = areaCheck.rows[0].id as string;
+          } else {
+            const newAreaId = generateUuid();
+            querySync(
+              'INSERT INTO areas (id, location_id, name, created_by) VALUES ($1, $2, $3, $4)',
+              [newAreaId, locationId, locationStr, userId]
+            );
+            areaId = newAreaId;
           }
         }
 
@@ -387,7 +385,7 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
         for (let attempt = 0; attempt <= 10; attempt++) {
           const code = attempt === 0 && bin.shortCode ? bin.shortCode : generateShortCode();
           try {
-            await client.query(
+            querySync(
               `INSERT INTO bins (id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
               [
@@ -401,16 +399,16 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
                 bin.icon || '',
                 bin.color || '',
                 code,
-                req.user!.id,
-                bin.createdAt ? new Date(bin.createdAt) : new Date(),
-                bin.updatedAt ? new Date(bin.updatedAt) : new Date(),
+                userId,
+                bin.createdAt || new Date().toISOString(),
+                bin.updatedAt || new Date().toISOString(),
               ]
             );
             shortCodeInserted = true;
             break;
           } catch (err: unknown) {
-            const pgErr = err as { code?: string; constraint?: string };
-            if (pgErr.code === '23505' && pgErr.constraint === 'bins_short_code_key' && attempt < 10) {
+            const sqliteErr = err as { code?: string };
+            if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && attempt < 10) {
               continue;
             }
             throw err;
@@ -439,10 +437,10 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
             fs.mkdirSync(dir, { recursive: true });
             fs.writeFileSync(path.join(PHOTO_STORAGE_PATH, storagePath), buffer);
 
-            await client.query(
+            querySync(
               `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by)
                VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-              [photoId, binId, photo.filename, photo.mimeType, buffer.length, storagePath, req.user!.id]
+              [photoId, binId, photo.filename, photo.mimeType, buffer.length, storagePath, userId]
             );
             photosImported++;
           }
@@ -451,20 +449,17 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
         binsImported++;
       }
 
-      await client.query('COMMIT');
+      return { binsImported, binsSkipped, photosImported };
+    });
 
-      res.json({
-        binsImported,
-        binsSkipped,
-        photosImported,
-        photosSkipped: 0,
-      });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
-    }
+    const result = doImport();
+
+    res.json({
+      binsImported: result.binsImported,
+      binsSkipped: result.binsSkipped,
+      photosImported: result.photosImported,
+      photosSkipped: 0,
+    });
   } catch (err) {
     console.error('Import error:', err);
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to import data' });
@@ -499,6 +494,7 @@ router.post('/import/legacy', async (req, res) => {
 
     // Normalize legacy data to V2 format
     const legacyBins: LegacyBinV1[] = data.bins || [];
+    const userId = req.user!.id;
 
     const normalizedBins: ExportBin[] = legacyBins.map(bin => {
       // Convert V1 contents string to items array if needed
@@ -529,33 +525,30 @@ router.post('/import/legacy', async (req, res) => {
       };
     });
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
+    const doImport = getDb().transaction(() => {
       let imported = 0;
 
       for (const bin of normalizedBins) {
         const binId = bin.id;
 
         // Skip if already exists
-        const existing = await client.query('SELECT id FROM bins WHERE id = $1', [binId]);
+        const existing = querySync('SELECT id FROM bins WHERE id = $1', [binId]);
         if (existing.rows.length > 0) continue;
 
         // Resolve area from location string
         let legacyAreaId: string | null = null;
         const legacyLocation = (bin.location || '').trim();
         if (legacyLocation) {
-          await client.query(
-            'INSERT INTO areas (location_id, name, created_by) VALUES ($1, $2, $3) ON CONFLICT (location_id, name) DO NOTHING',
-            [locationId, legacyLocation, req.user!.id]
-          );
-          const areaResult = await client.query(
-            'SELECT id FROM areas WHERE location_id = $1 AND name = $2',
-            [locationId, legacyLocation]
-          );
-          if (areaResult.rows.length > 0) {
-            legacyAreaId = areaResult.rows[0].id;
+          const areaCheck = querySync('SELECT id FROM areas WHERE location_id = $1 AND name = $2', [locationId, legacyLocation]);
+          if (areaCheck.rows.length > 0) {
+            legacyAreaId = areaCheck.rows[0].id as string;
+          } else {
+            const newAreaId = generateUuid();
+            querySync(
+              'INSERT INTO areas (id, location_id, name, created_by) VALUES ($1, $2, $3, $4)',
+              [newAreaId, locationId, legacyLocation, userId]
+            );
+            legacyAreaId = newAreaId;
           }
         }
 
@@ -564,7 +557,7 @@ router.post('/import/legacy', async (req, res) => {
         for (let attempt = 0; attempt <= 10; attempt++) {
           const code = generateShortCode();
           try {
-            await client.query(
+            querySync(
               `INSERT INTO bins (id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
               [
@@ -578,16 +571,16 @@ router.post('/import/legacy', async (req, res) => {
                 bin.icon,
                 bin.color,
                 code,
-                req.user!.id,
-                new Date(bin.createdAt),
-                new Date(bin.updatedAt),
+                userId,
+                bin.createdAt,
+                bin.updatedAt,
               ]
             );
             legacyCodeInserted = true;
             break;
           } catch (err: unknown) {
-            const pgErr = err as { code?: string; constraint?: string };
-            if (pgErr.code === '23505' && pgErr.constraint === 'bins_short_code_key' && attempt < 10) {
+            const sqliteErr = err as { code?: string };
+            if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && attempt < 10) {
               continue;
             }
             throw err;
@@ -615,28 +608,25 @@ router.post('/import/legacy', async (req, res) => {
           fs.mkdirSync(dir, { recursive: true });
           fs.writeFileSync(path.join(PHOTO_STORAGE_PATH, storagePath), buffer);
 
-          await client.query(
+          querySync(
             `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by)
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [photoId, binId, photo.filename, photo.mimeType, buffer.length, storagePath, req.user!.id]
+            [photoId, binId, photo.filename, photo.mimeType, buffer.length, storagePath, userId]
           );
         }
 
         imported++;
       }
 
-      await client.query('COMMIT');
+      return imported;
+    });
 
-      res.json({
-        message: 'Legacy import complete',
-        imported,
-      });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
-    }
+    const imported = doImport();
+
+    res.json({
+      message: 'Legacy import complete',
+      imported,
+    });
   } catch (err) {
     console.error('Legacy import error:', err);
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to import legacy data' });

@@ -172,7 +172,7 @@ export function LocationsPage() {
         <div className="space-y-3">
           {locations.map((loc) => {
             const isActive = loc.id === activeLocationId;
-            const isOwner = loc.created_by === user?.id || (loc as Record<string, unknown>).role === 'owner';
+            const isOwner = loc.created_by === user?.id || (loc as unknown as Record<string, unknown>).role === 'owner';
             return (
               <Card
                 key={loc.id}

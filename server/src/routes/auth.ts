@@ -4,7 +4,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { query } from '../db.js';
+import { query, generateUuid } from '../db.js';
 import { authenticate, signToken } from '../middleware/auth.js';
 
 const router = Router();
@@ -70,9 +70,10 @@ router.post('/register', async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const userId = generateUuid();
     const result = await query(
-      'INSERT INTO users (username, password_hash, display_name) VALUES ($1, $2, $3) RETURNING id, username, display_name, created_at',
-      [username.toLowerCase(), passwordHash, displayName || username]
+      'INSERT INTO users (id, username, password_hash, display_name) VALUES ($1, $2, $3, $4) RETURNING id, username, display_name, created_at',
+      [userId, username.toLowerCase(), passwordHash, displayName || username]
     );
 
     const user = result.rows[0];
@@ -217,7 +218,7 @@ router.put('/profile', authenticate, async (req, res) => {
       return;
     }
 
-    updates.push(`updated_at = now()`);
+    updates.push(`updated_at = datetime('now')`);
     values.push(req.user!.id);
 
     const result = await query(
@@ -268,7 +269,7 @@ router.put('/password', authenticate, async (req, res) => {
     }
 
     const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-    await query('UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2', [newHash, req.user!.id]);
+    await query(`UPDATE users SET password_hash = $1, updated_at = datetime('now') WHERE id = $2`, [newHash, req.user!.id]);
 
     res.json({ message: 'Password updated successfully' });
   } catch (err) {
@@ -293,7 +294,7 @@ router.post('/avatar', authenticate, avatarUpload.single('avatar'), async (req, 
     }
 
     const storagePath = req.file.path;
-    await query('UPDATE users SET avatar_path = $1, updated_at = now() WHERE id = $2', [storagePath, req.user!.id]);
+    await query(`UPDATE users SET avatar_path = $1, updated_at = datetime('now') WHERE id = $2`, [storagePath, req.user!.id]);
 
     res.json({ avatarUrl: `/api/auth/avatar/${req.user!.id}` });
   } catch (err) {
@@ -312,7 +313,7 @@ router.delete('/avatar', authenticate, async (req, res) => {
       try { fs.unlinkSync(avatarPath); } catch { /* ignore */ }
     }
 
-    await query('UPDATE users SET avatar_path = NULL, updated_at = now() WHERE id = $1', [req.user!.id]);
+    await query(`UPDATE users SET avatar_path = NULL, updated_at = datetime('now') WHERE id = $1`, [req.user!.id]);
 
     res.json({ message: 'Avatar removed' });
   } catch (err) {
@@ -388,8 +389,8 @@ router.delete('/account', authenticate, async (req, res) => {
     const PHOTO_STORAGE = process.env.PHOTO_STORAGE_PATH || './uploads';
 
     for (const location of locationsResult.rows) {
-      const countResult = await query('SELECT COUNT(*) FROM location_members WHERE location_id = $1', [location.id]);
-      const memberCount = parseInt(countResult.rows[0].count, 10);
+      const countResult = await query('SELECT COUNT(*) AS count FROM location_members WHERE location_id = $1', [location.id]);
+      const memberCount = parseInt(countResult.rows[0].count as string, 10);
 
       if (memberCount === 1) {
         // Sole member — delete photo files for all bins in this location

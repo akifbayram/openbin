@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db.js';
+import { query, generateUuid } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 import { logActivity } from '../lib/activityLog.js';
@@ -35,10 +35,10 @@ router.post('/:locationId/areas', requireLocationMember('locationId'), async (re
     }
 
     const result = await query(
-      `INSERT INTO areas (location_id, name, created_by)
-       VALUES ($1, $2, $3)
+      `INSERT INTO areas (id, location_id, name, created_by)
+       VALUES ($1, $2, $3, $4)
        RETURNING id, location_id, name, created_by, created_at, updated_at`,
-      [locationId, name.trim(), req.user!.id]
+      [generateUuid(), locationId, name.trim(), req.user!.id]
     );
 
     const area = result.rows[0];
@@ -55,8 +55,8 @@ router.post('/:locationId/areas', requireLocationMember('locationId'), async (re
 
     res.status(201).json(area);
   } catch (err: unknown) {
-    const pgErr = err as { code?: string; constraint?: string };
-    if (pgErr.code === '23505') {
+    const sqliteErr = err as { code?: string };
+    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') {
       res.status(409).json({ error: 'CONFLICT', message: 'An area with this name already exists' });
       return;
     }
@@ -81,7 +81,7 @@ router.put('/:locationId/areas/:areaId', requireLocationMember('locationId'), as
     const oldName = oldResult.rows[0]?.name;
 
     const result = await query(
-      `UPDATE areas SET name = $1, updated_at = now()
+      `UPDATE areas SET name = $1, updated_at = datetime('now')
        WHERE id = $2 AND location_id = $3
        RETURNING id, location_id, name, created_by, created_at, updated_at`,
       [name.trim(), areaId, locationId]
@@ -109,8 +109,8 @@ router.put('/:locationId/areas/:areaId', requireLocationMember('locationId'), as
 
     res.json(area);
   } catch (err: unknown) {
-    const pgErr = err as { code?: string; constraint?: string };
-    if (pgErr.code === '23505') {
+    const sqliteErr = err as { code?: string };
+    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') {
       res.status(409).json({ error: 'CONFLICT', message: 'An area with this name already exists' });
       return;
     }

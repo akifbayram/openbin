@@ -4,7 +4,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { query } from '../db.js';
+import { query, generateUuid } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { logActivity, computeChanges } from '../lib/activityLog.js';
 import { purgeExpiredTrash } from '../lib/trashPurge.js';
@@ -117,33 +117,15 @@ router.post('/', async (req, res) => {
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const code = attempt === 0 ? sc : generateShortCode();
-      const params: unknown[] = [
-        locationId,
-        name.trim(),
-        areaId || null,
-        items || [],
-        notes || '',
-        tags || [],
-        icon || '',
-        color || '',
-        req.user!.id,
-        code,
-      ];
-
-      let sql: string;
-      if (id) {
-        sql = `INSERT INTO bins (id, location_id, name, area_id, items, notes, tags, icon, color, created_by, short_code)
-               VALUES ($11, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-               RETURNING id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`;
-        params.push(id);
-      } else {
-        sql = `INSERT INTO bins (location_id, name, area_id, items, notes, tags, icon, color, created_by, short_code)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-               RETURNING id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`;
-      }
+      const binId = id || generateUuid();
 
       try {
-        const result = await query(sql, params);
+        const result = await query(
+          `INSERT INTO bins (id, location_id, name, area_id, items, notes, tags, icon, color, created_by, short_code)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           RETURNING id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`,
+          [binId, locationId, name.trim(), areaId || null, items || [], notes || '', tags || [], icon || '', color || '', req.user!.id, code]
+        );
         const bin = result.rows[0];
         // Fetch area_name if area_id is set
         if (bin.area_id) {
@@ -166,8 +148,8 @@ router.post('/', async (req, res) => {
         res.status(201).json(bin);
         return;
       } catch (err: unknown) {
-        const pgErr = err as { code?: string; constraint?: string };
-        if (pgErr.code === '23505' && pgErr.constraint === 'bins_short_code_key' && attempt < maxRetries) {
+        const sqliteErr = err as { code?: string };
+        if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && attempt < maxRetries) {
           continue; // retry with new code
         }
         throw err;
@@ -335,7 +317,7 @@ router.put('/:id', async (req, res) => {
     );
     const oldBin = oldResult.rows[0];
 
-    const setClauses: string[] = ['updated_at = now()'];
+    const setClauses: string[] = ["updated_at = datetime('now')"];
     const params: unknown[] = [];
     let paramIdx = 1;
 
@@ -446,7 +428,7 @@ router.delete('/:id', async (req, res) => {
     const bin = binResult.rows[0];
 
     // Soft delete
-    await query('UPDATE bins SET deleted_at = now(), updated_at = now() WHERE id = $1', [id]);
+    await query("UPDATE bins SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = $1", [id]);
 
     logActivity({
       locationId: access.locationId,
@@ -486,7 +468,7 @@ router.post('/:id/restore', async (req, res) => {
     const locationId = accessResult.rows[0].location_id;
 
     const result = await query(
-      `UPDATE bins SET deleted_at = NULL, updated_at = now() WHERE id = $1
+      `UPDATE bins SET deleted_at = NULL, updated_at = datetime('now') WHERE id = $1
        RETURNING id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`,
       [id]
     );
@@ -603,15 +585,16 @@ router.post('/:id/photos', upload.single('photo'), async (req, res) => {
     }
 
     const storagePath = path.join(binId, file.filename);
+    const photoId = generateUuid();
 
     const result = await query(
-      `INSERT INTO photos (bin_id, filename, mime_type, size, storage_path, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, bin_id, filename, mime_type, size, storage_path, created_by, created_at`,
-      [binId, file.originalname, file.mimetype, file.size, storagePath, req.user!.id]
+      [photoId, binId, file.originalname, file.mimetype, file.size, storagePath, req.user!.id]
     );
 
-    await query('UPDATE bins SET updated_at = now() WHERE id = $1', [binId]);
+    await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [binId]);
 
     const photo = result.rows[0];
 
@@ -651,14 +634,25 @@ router.put('/:id/add-tags', async (req, res) => {
       return;
     }
 
-    // Merge tags using array_cat + array_distinct via unnest
+    // Fetch existing tags, merge in JS, then update
+    const existing = await query<{ tags: string[] }>(
+      'SELECT tags FROM bins WHERE id = $1 AND deleted_at IS NULL',
+      [id]
+    );
+
+    if (existing.rows.length === 0) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
+      return;
+    }
+
+    const currentTags: string[] = existing.rows[0].tags || [];
+    const mergedTags = [...new Set([...currentTags, ...tags])];
+
     const result = await query(
-      `UPDATE bins SET
-         tags = (SELECT ARRAY(SELECT DISTINCT unnest(tags || $1::text[]))),
-         updated_at = now()
+      `UPDATE bins SET tags = $1, updated_at = datetime('now')
        WHERE id = $2 AND deleted_at IS NULL
        RETURNING id, tags`,
-      [tags, id]
+      [mergedTags, id]
     );
 
     if (result.rows.length === 0) {

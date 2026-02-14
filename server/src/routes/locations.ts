@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import crypto from 'crypto';
-import { query } from '../db.js';
+import { query, generateUuid } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { isLocationOwner } from '../middleware/locationAccess.js';
 import { logActivity, computeChanges } from '../lib/activityLog.js';
@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
     const result = await query(
       `SELECT l.id, l.name, l.created_by, l.invite_code, l.activity_retention_days, l.trash_retention_days, l.created_at, l.updated_at,
               lm.role,
-              (SELECT COUNT(*)::int FROM location_members WHERE location_id = l.id) AS member_count
+              (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count
        FROM locations l
        JOIN location_members lm ON lm.location_id = l.id AND lm.user_id = $1
        ORDER BY l.updated_at DESC`,
@@ -55,17 +55,18 @@ router.post('/', async (req, res) => {
     }
 
     const inviteCode = generateInviteCode();
+    const locationId = generateUuid();
     const locationResult = await query(
-      'INSERT INTO locations (name, created_by, invite_code) VALUES ($1, $2, $3) RETURNING id, name, invite_code, activity_retention_days, trash_retention_days, created_at, updated_at',
-      [name.trim(), req.user!.id, inviteCode]
+      'INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4) RETURNING id, name, invite_code, activity_retention_days, trash_retention_days, created_at, updated_at',
+      [locationId, name.trim(), req.user!.id, inviteCode]
     );
 
     const location = locationResult.rows[0];
 
     // Auto-add creator as owner
     await query(
-      'INSERT INTO location_members (location_id, user_id, role) VALUES ($1, $2, $3)',
-      [location.id, req.user!.id, 'owner']
+      'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
+      [generateUuid(), location.id, req.user!.id, 'owner']
     );
 
     res.status(201).json({
@@ -132,7 +133,7 @@ router.put('/:id', async (req, res) => {
     }
     const oldLoc = oldResult.rows[0];
 
-    const setClauses: string[] = ['updated_at = now()'];
+    const setClauses: string[] = [`updated_at = datetime('now')`];
     const params: unknown[] = [];
     let paramIdx = 1;
 
@@ -252,8 +253,8 @@ router.post('/join', async (req, res) => {
     }
 
     await query(
-      'INSERT INTO location_members (location_id, user_id, role) VALUES ($1, $2, $3)',
-      [location.id, req.user!.id, 'member']
+      'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
+      [generateUuid(), location.id, req.user!.id, 'member']
     );
 
     logActivity({
@@ -389,7 +390,7 @@ router.post('/:id/regenerate-invite', async (req, res) => {
 
     const newCode = generateInviteCode();
     const result = await query(
-      'UPDATE locations SET invite_code = $1, updated_at = now() WHERE id = $2 RETURNING invite_code',
+      `UPDATE locations SET invite_code = $1, updated_at = datetime('now') WHERE id = $2 RETURNING invite_code`,
       [newCode, id]
     );
 

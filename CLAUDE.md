@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Multi-user web app for organizing physical storage bins. Users register accounts, create/join locations, and share bins with location members. Users create named bins, attach QR codes, scan them to look up contents, and print label sheets. Photos can be attached to bins for visual reference. Data persists in PostgreSQL via Express API. Export/import provides JSON backup. Designed with an iOS 26 Liquid Glass aesthetic for a native-app feel on mobile.
+Multi-user web app for organizing physical storage bins. Users register accounts, create/join locations, and share bins with location members. Users create named bins, attach QR codes, scan them to look up contents, and print label sheets. Photos can be attached to bins for visual reference. Data persists in SQLite via Express API. Export/import provides JSON backup. Designed with an iOS 26 Liquid Glass aesthetic for a native-app feel on mobile.
 
 **Core flows**: Register/login -> Create/join a location -> Create bin -> Print QR label -> Stick on container -> Scan to find contents. Attach photos, search/filter by name/tag/content, bulk-select via long-press for batch tag/area/delete operations.
 
@@ -10,16 +10,16 @@ Multi-user web app for organizing physical storage bins. Users register accounts
 
 ```
 Client (React + TypeScript)
-  └── All data: apiFetch() → Express API → Postgres
+  └── All data: apiFetch() → Express API → SQLite
 ```
 
-**Docker Compose services**: `postgres` (16-alpine), `api` (Express), `nginx` (serves frontend + proxies API)
+**Docker Compose services**: `api` (Express + SQLite), `nginx` (serves frontend + proxies API)
 
 ## Stack
 
 - **Runtime**: React 18 + TypeScript 5 (strict) + Vite 5
 - **Styling**: Tailwind CSS 4 with CSS custom properties (iOS 26 Liquid Glass design system)
-- **Server**: Express 4, PostgreSQL 16, JWT auth (bcrypt + jsonwebtoken), express-rate-limit
+- **Server**: Express 4, SQLite (better-sqlite3), JWT auth (bcrypt + jsonwebtoken), express-rate-limit
 - **Routing**: react-router-dom 6 (BrowserRouter), lazy-loaded routes
 - **QR**: `qrcode` (generation), `html5-qrcode` (scanning)
 - **PWA**: vite-plugin-pwa
@@ -53,14 +53,14 @@ src/
 server/
   src/              # Express API server
     index.ts        # App entry, route mounting
-    db.ts           # pg Pool singleton
+    db.ts           # SQLite wrapper (better-sqlite3) with pg-compatible query() interface
     migrate.ts      # SQL migration runner
     middleware/      # auth.ts (JWT), locationAccess.ts (location membership)
-    routes/         # auth, locations, bins, photos, shapes, export, tagColors, ai, activity, printSettings
-    lib/            # aiProviders.ts, activityLog.ts
-  migrations/       # SQL migration files (001_initial.sql, 002_user_ai_settings.sql, 005_soft_deletes_activity_log.sql)
+    routes/         # auth, locations, bins, photos, export, tagColors, ai, activity, printSettings
+    lib/            # aiProviders.ts, activityLog.ts, trashPurge.ts
+  migrations/       # SQL migration files (001_init.sql)
   Dockerfile        # Multi-stage build
-docker-compose.yml  # Postgres, API, nginx
+docker-compose.yml  # API, nginx
 nginx.conf          # Reverse proxy config
 .env.example        # Environment variables template
 server/openapi.yaml # OpenAPI 3.0 spec (source of truth)
@@ -74,13 +74,12 @@ public/api-docs/    # Swagger UI + spec copy (served at /api-docs/)
 - **Data hooks return `{ data, isLoading }`** — e.g. `useBinList()` returns `{ bins, isLoading }`, `useBin(id)` returns `{ bin, isLoading }`, `usePhotos(binId)` returns `{ photos, isLoading, refresh }`, `useLocationList()` returns `{ locations, isLoading, refresh }`, `useLocationMembers(locationId)` returns `{ members, isLoading }`.
 - **`apiFetch<T>(path, options)`** in `lib/api.ts` — wraps fetch with JWT from localStorage, auto JSON stringify, FormData support. Throws `ApiError` on failure.
 - **`useAuth()`** in `lib/auth.tsx` — provides `user`, `token`, `activeLocationId`, plus `login()`, `register()`, `logout()`, `setActiveLocationId()`, `updateUser()`, `deleteAccount(password)`.
-- **Soft deletes**: `Bin` has `deleted_at?: string | null`. `DELETE /api/bins/:id` sets `deleted_at = NOW()` (soft delete). `useTrashBins()` fetches soft-deleted bins. `restoreBinFromTrash(binId)` POSTs to `/api/bins/:id/restore`. `permanentDeleteBin(binId)` DELETEs `/api/bins/:id/permanent`. All bin queries filter `WHERE deleted_at IS NULL`. Trash auto-purges after 30 days.
-- **Activity log**: `activity_log` table tracks mutations (bin CRUD, area CRUD, photo add/delete, member join/leave). `useActivityLog(options?)` hook with pagination. `logActivity()` in `server/src/lib/activityLog.ts` is fire-and-forget. `computeChanges()` diffs old/new for update entries. Auto-prunes entries older than 90 days.
+- **Soft deletes**: `Bin` has `deleted_at?: string | null`. `DELETE /api/bins/:id` sets `deleted_at = datetime('now')` (soft delete). `useTrashBins()` fetches soft-deleted bins. `restoreBinFromTrash(binId)` POSTs to `/api/bins/:id/restore`. `permanentDeleteBin(binId)` DELETEs `/api/bins/:id/permanent`. All bin queries filter `WHERE deleted_at IS NULL`. Trash auto-purges based on location's `trash_retention_days`.
+- **Activity log**: `activity_log` table tracks mutations (bin CRUD, area CRUD, photo add/delete, member join/leave). `useActivityLog(options?)` hook with pagination. `logActivity()` in `server/src/lib/activityLog.ts` is fire-and-forget. `computeChanges()` diffs old/new for update entries. Auto-prunes entries past location's `activity_retention_days`.
 - **API response envelopes**: All list endpoints return `{ results: T[], count: number }` (`ListResponse<T>` type). Error responses use `{ error: "SEMANTIC_CODE", message: "Human readable" }` with codes: `VALIDATION_ERROR` (422), `NOT_FOUND` (404), `FORBIDDEN` (403), `CONFLICT` (409), `INTERNAL_ERROR` (500).
 - **Saved views**: `savedViews.ts` in `lib/` — `getSavedViews()`, `saveView()`, `deleteView()`, `renameView()`. Stores filter/sort/search state in `localStorage('sanduk-saved-views-{userId}')`, max 10 per user.
-- **Snake_case field names** on DB-backed interfaces (`Bin`, `Photo`, `Location`, `LocationMember`, `Area`) to match PostgreSQL columns. Export types remain camelCase.
+- **Snake_case field names** on DB-backed interfaces (`Bin`, `Photo`, `Location`, `LocationMember`, `Area`) to match SQLite columns. Export types remain camelCase.
 - **Areas**: `Area` interface `{ id, location_id, name, created_by, created_at, updated_at }`. Areas are named zones within a Location (e.g., "Garage", "Kitchen"). `Bin` has `area_id: string | null` (nullable — bins can be unassigned) and `area_name: string` (denormalized via LEFT JOIN). `useAreaList(locationId)` → `{ areas, isLoading }`. `createArea(locationId, name)`, `updateArea(locationId, areaId, name)`, `deleteArea(locationId, areaId)` for mutations. Area deletion sets bins' `area_id` to NULL. `AreaPicker` component provides dropdown with inline "Create new area..." option. `AreasPage` at `/areas` provides full CRUD: list with bin counts, inline rename, delete with confirmation, create dialog. Navigates to `/bins` with `{ state: { areaFilter: areaId } }` when an area is clicked.
-- **`[key: string]: unknown` index signatures** on DB interfaces for type compatibility.
 - **CSS**: use `var(--token)` design tokens, not raw colors. Glass effects via utility classes `glass-card`, `glass-nav`, `glass-heavy`.
 - **Responsive**: mobile-first. Bottom nav on mobile (`lg:hidden`), sidebar on desktop (`hidden lg:flex`). Breakpoint is `lg` (1024px).
 - **Lazy loading**: Dashboard, Scanner, Print, Settings, Auth, Profile, Tags, Items, Areas, Trash, and Activity pages are `React.lazy` with `<Suspense>`.
@@ -117,27 +116,25 @@ public/api-docs/    # Swagger UI + spec copy (served at /api-docs/)
 
 ## Security
 
-- **JWT secret**: `JWT_SECRET` env var is required — server crashes on startup if unset (no fallback).
+- **JWT secret**: Auto-generated and persisted to `/data/.jwt_secret` if `JWT_SECRET` env var is unset. Survives restarts via Docker volume.
 - **JWT lifetime**: Tokens expire after 7 days.
 - **CORS**: Restricted to `CORS_ORIGIN` env var (defaults to `http://localhost:3000`). Only `GET`, `POST`, `PUT`, `DELETE` methods allowed.
 - **Rate limiting** (`express-rate-limit`): Login 5/15min, register 3/hr, join 10/15min, AI endpoints 30/hr per IP.
 - **JSON body limit**: Default 1mb; import routes explicitly allow 50mb.
 - **Nginx security headers**: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(self)`.
 - **Path traversal guards**: All file-serving endpoints (photos, avatars) validate that resolved paths stay within the storage directory.
-- **UUID validation in Electric shapes**: All `locationId` and `binId` values interpolated into Electric SQL shape URLs are validated against a UUID regex before use.
 - **Import validation**: Photo imports enforce 10MB size limit per photo, whitelist file extensions (`.jpg`, `.jpeg`, `.png`, `.webp`), generate new UUID filenames, and reject paths containing `..`.
 - **Invite code entropy**: 128-bit (`crypto.randomBytes(16)`).
 - **AI API key encryption**: Keys encrypted at rest with AES-256-GCM when `AI_ENCRYPTION_KEY` env var is set. Stored as `enc:iv:authTag:ciphertext` in DB. Graceful fallback to plaintext if env var is unset.
 - **Avatar endpoint**: `GET /api/auth/avatar/:userId` requires authentication.
-- **Docker**: Container runs as non-root `node` user. No fallback defaults for `POSTGRES_PASSWORD` or `JWT_SECRET` — env vars are required (`${VAR:?error}`).
-- **Electric SQL**: `ELECTRIC_INSECURE` defaults to `false` (configurable via env var).
+- **Docker**: Container runs as non-root `node` user. JWT secret auto-generated and persisted to volume.
 
 ## Gotchas
 
 - **No shadcn CLI** — do not run `npx shadcn` commands. All UI components are custom.
 - **Theme**: stored in `localStorage('sanduk-theme')`, applied via `<html class="dark|light">` before first paint (inline script in `index.html`). The `useTheme()` hook in `lib/theme.ts` is the single source of truth at runtime.
-- **ISO date strings**: API returns dates as ISO strings. All date fields on Bin/Photo/Location are `string`, not `Date`.
-- **Export backward compatibility**: `ExportBinV2` has optional `location?`, `icon?`, `color?`, `shortCode?` fields. Export writes area name into the `location` string field. On import, non-empty `location` strings are looked up or created as Areas via `INSERT ... ON CONFLICT DO NOTHING`. Old backups import cleanly. Import also handles legacy `homeName` field (maps to `locationName`).
+- **ISO date strings**: API returns dates as ISO strings (SQLite stores as TEXT). All date fields on Bin/Photo/Location are `string`, not `Date`.
+- **Export backward compatibility**: `ExportBinV2` has optional `location?`, `icon?`, `color?`, `shortCode?` fields. Export writes area name into the `location` string field. On import, non-empty `location` strings are looked up or created as Areas. Old backups import cleanly. Import also handles legacy `homeName` field (maps to `locationName`).
 - **Print label formats**: `labelFormats.ts` defines `LabelFormat` configs (Avery 5160, 5163, 5167, generic 2"x1"). Selected format persisted in `localStorage('sanduk-label-format')`. Labels show bin name, location, short code, and optional color swatch (full-width bar above bin name, `print-color-adjust: exact` for printing). "Customize dimensions" toggle on any preset reveals editable dimension fields (width, height, columns, QR size, margins); overrides persisted in `localStorage('sanduk-label-custom')`. Select Bins and Label Format sections are collapsible with summary text when collapsed. Area filter chips in the bin selector let users quickly select all bins from a specific area for batch printing.
 - **`html5-qrcode` is ~330KB gzipped** — always dynamic-import the scanner page; never import statically.
 - **Photos served via API**: `getPhotoUrl(id)` returns `/api/photos/${id}/file?token=...` with JWT appended as query parameter. No Blob/ObjectURL management needed.
@@ -152,6 +149,11 @@ public/api-docs/    # Swagger UI + spec copy (served at /api-docs/)
 - **AI button always visible**: The Sparkles (AI analyze) button is always shown when a photo is available, regardless of whether AI is configured. In **onboarding**, clicking it without AI configured auto-expands the inline AI setup section and shows a helper message. In **BinDetailPage**, clicking it without AI configured opens a guidance dialog explaining supported providers and linking to Settings. This ensures discoverability — users always see the AI capability and are guided to set it up on demand.
 - **Account deletion**: `DELETE /api/auth/account` requires password confirmation. Deletes user, their avatar, and any locations where they are the sole member (cascading bins, photos, tag colors). Shared locations are preserved (membership row removed via CASCADE). `created_by` columns on bins/photos/locations use `ON DELETE SET NULL`. Client-side `deleteAccount(password)` on auth context cleans up user-specific localStorage keys and logs out.
 - **DB foreign keys**: `bins.created_by`, `photos.created_by`, and `locations.created_by` are nullable with `ON DELETE SET NULL` referencing `users(id)` — allows user deletion without orphaning shared data.
+- **SQLite db.ts wrapper**: `query(text, params)` converts PostgreSQL `$1, $2` placeholders to SQLite `?`, auto-serializes arrays to JSON strings, auto-deserializes JSON columns (`items`, `tags`, `changes`, `settings`). `querySync()` provides synchronous variant for transaction blocks. `generateUuid()` wraps `crypto.randomUUID()` — all INSERT statements must explicitly provide an `id` column.
+- **SQLite transactions**: Import routes use `getDb().transaction()` with `querySync()` instead of pg pool `BEGIN/COMMIT/ROLLBACK`.
+- **SQLite arrays**: PostgreSQL `TEXT[]` columns are stored as JSON text (`'["a","b"]'`). The db wrapper auto-serializes/deserializes. SQL queries use `json_each()` instead of `unnest()`.
+- **SQLite error codes**: Unique constraint violations throw `SQLITE_CONSTRAINT_UNIQUE` (not PostgreSQL `23505`).
+- **SQLite date functions**: Use `datetime('now')` instead of PostgreSQL `now()`. Interval math uses `datetime('now', '-N days')` instead of `make_interval()`.
 
 ## Verification
 
@@ -166,7 +168,7 @@ cd server && npx tsc --noEmit  # Zero type errors
 
 # Docker stack
 docker compose up -d
-docker compose ps   # All 3 services healthy
+docker compose ps   # 2 services: api, nginx
 ```
 
 ## API Documentation
@@ -184,15 +186,8 @@ docker compose ps   # All 3 services healthy
 
 ## Docker Deployment
 
-1. Copy `.env.example` to `.env` and set required values:
-   - `POSTGRES_PASSWORD` — generate with `openssl rand -base64 32`
-   - `JWT_SECRET` — generate with `openssl rand -base64 32`
-   - `CORS_ORIGIN` — your frontend URL (default: `http://localhost`)
-   - `AI_ENCRYPTION_KEY` (optional) — generate with `openssl rand -base64 32` to encrypt AI API keys at rest
-   - `ELECTRIC_INSECURE` (optional) — set to `true` only for development
-2. Build frontend: `npx vite build`
-3. Start stack: `docker compose up -d`
-4. API runs migrations automatically on startup. Container runs as non-root `node` user.
-5. Access at `http://localhost`
+1. Build frontend: `npx vite build`
+2. Start stack: `docker compose up -d`
+3. Access at `http://localhost`
 
-**Note**: `POSTGRES_PASSWORD` and `JWT_SECRET` are required — docker compose will fail if they are unset.
+No configuration required. The database is a single SQLite file on the Docker volume. JWT secrets are auto-generated and persisted. Optional `.env` overrides: `CORS_ORIGIN`, `AI_ENCRYPTION_KEY`.

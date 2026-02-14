@@ -1,114 +1,65 @@
 # Sanduk
 
-> *The word sandik (or sandık) primarily refers to a chest or box originating from Ottoman Turkish, which adopted it from the Persian sonduq, and ultimately from the Arabic ṣandūq.*
-
-Multi-user PWA for organizing physical storage bins with QR codes. Create an account, join a shared location, print QR labels, and scan them to instantly look up contents. Data persists in PostgreSQL via Express API. Installable and offline-capable.
-
-> **Work in Progress** — This project is under active development. Features may be incomplete, and breaking changes can occur.
+Self-hosted inventory system for organizing physical storage bins with QR codes. Print labels, stick them on containers, and scan to instantly look up contents. Multi-user with shared locations.
 
 ## Features
 
-### Current
-
-- **Accounts + shared locations** — Register/login, create or join a location, and share bins with members
-- **Bin management** — Create, edit, and delete bins with names, items, notes, tags, icons, and colors
-- **QR code generation** — Unique QR code per bin for quick identification
-- **QR scanning** — Camera-based scanner to look up bin contents instantly
-- **Photo attachments** — Attach photos to bins for visual reference
-- **AI-powered photo analysis** — Analyze bin photos with OpenAI, Anthropic, or compatible providers to auto-fill name, items, and tags
-- **Dashboard** — Stats overview with total bins/items, quick scan, recently scanned and updated bins
-- **Items view** — Searchable cross-bin item index, sortable by name or bin
-- **Tag color management** — Assign colors to tags per location
-- **Label printing** — Print label sheets (Avery 5160/5163/5167 + generic 2"x1") with customizable dimensions
-- **Search and filter** — Search bins by name, items, or tags; filter by tags, colors, and content
-- **Bulk operations** — Long-press to select multiple bins for batch delete or tagging
-- **Guided onboarding** — Step-by-step setup for new users (create location, create first bin)
-- **User profiles** — Avatar, display name, email management
-- **Export/Import** — JSON backup with photos for data portability
-- **Offline-first PWA** — Installable and usable without a network
-
-### Planned
-
-- Nested bins and sub-containers
-- Barcode scanning support (UPC/EAN)
-- QR-encoded sharing between devices
-- Optional cloud sync controls
-- Drag-and-drop bin reordering
-- Custom label templates
-- Accessibility audit and improvements
-
-## Architecture
-
-```
-Client (React + TypeScript)
-  └── apiFetch() → Express API → Postgres
-```
-
-Docker Compose services: PostgreSQL, API (Express), and Nginx (serves the frontend + proxies API).
+- **QR labels** — Generate and print label sheets (Avery 5160/5163/5167 + custom sizes)
+- **Scan to find** — Camera-based QR scanner or manual short code lookup
+- **Shared locations** — Multi-user with invite codes and per-location areas
+- **Photo attachments** — Attach photos; optionally use AI (OpenAI, Anthropic, or compatible) to auto-fill bin details
+- **Search & filter** — By name, items, tags, areas, colors; saved views for quick access
+- **Bulk operations** — Long-press multi-select for batch tagging, moving, or deleting
+- **Dashboard** — Stats, area breakdown, recently scanned/updated bins, needs-organizing queue
+- **Export/Import** — JSON or ZIP backup with photos, CSV export
+- **PWA** — Installable, offline-capable
 
 ## Tech Stack
 
-| Category | Technology |
-|----------|-----------|
-| Framework | React 18 + TypeScript 5 (strict) |
-| Build | Vite 5 |
-| Styling | Tailwind CSS 4 with CSS custom properties |
-| Database | PostgreSQL 16 |
-| Server | Express 4 (JWT auth) |
-| AI Integration | OpenAI, Anthropic, OpenAI-compatible (per-user config) |
-| Routing | react-router-dom 6 (BrowserRouter) |
-| QR Generation | qrcode |
-| QR Scanning | html5-qrcode |
-| PWA | vite-plugin-pwa |
-| Icons | lucide-react |
-| Testing | Vitest + Testing Library + happy-dom |
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, TypeScript, Vite 5, Tailwind CSS 4 |
+| Backend | Express 4, SQLite (better-sqlite3), JWT auth |
+| QR | `qrcode` + `html5-qrcode` |
+| AI | OpenAI, Anthropic, or any OpenAI-compatible provider (per-user config) |
+| Infra | Docker Compose (API + Nginx) |
 
-## Installation and Setup
+## Quick Start
 
-**Prerequisites:** Node.js 18+, Docker
-
-### Local development
+**Prerequisites:** Docker, Node.js 18+
 
 ```bash
-# Clone the repository
-git clone https://github.com/akifbayram/qrcode.git
-cd qrcode
+git clone https://github.com/akifbayram/sanduk.git
+cd sanduk
 
-# Configure env
-cp .env.example .env
-
-# Start backend services (Postgres + API)
+npm install && npm run build
 docker compose up -d
-
-# Install frontend deps and start dev server
-npm install
-npm run dev
 ```
 
-The app will be available at `http://localhost:5173`.
+Open `http://localhost`. Register an account, create a location, and start adding bins.
 
-### Build for production
+No configuration needed — the database is a single file on the Docker volume and JWT secrets are auto-generated and persisted.
+
+### Local Development
 
 ```bash
-npm run build
-
-docker compose up -d --build
+cd server && npm run dev   # API server at http://localhost:4000
+npm run dev                 # Frontend dev server at http://localhost:5173
 ```
 
-Nginx serves the built frontend at `http://localhost` and proxies API requests to the Express server.
+## Configuration
 
-## Usage
+Optional. Create a `.env` file to override defaults:
 
-1. **Create an account** — Register and log in
-2. **Dashboard** — Landing page shows stats, quick scan, and recent bins
-3. **Create/join a location** — Invite or join members to share bins
-4. **Create a bin** — Add name, items, tags, icon, and color
-5. **Attach photos** — Add photos for visual reference; use AI analysis to auto-fill details
-6. **Print labels** — Go to Print, select bins, and print label sheets (multiple Avery formats)
-7. **Stick labels** — Attach printed QR labels to your physical storage containers
-8. **Scan to find** — Open Scan, point your camera at a label to jump to that bin's details
-9. **Backup data** — Settings > Export Backup to save a JSON file with all bins and photos
+| Variable | Description |
+|----------|-------------|
+| `CORS_ORIGIN` | Allowed CORS origin (default: `http://localhost:3000`) |
+| `AI_ENCRYPTION_KEY` | Encrypts AI API keys at rest with AES-256-GCM |
+
+## API Documentation
+
+OpenAPI spec at `server/openapi.yaml`. Swagger UI available at `/api-docs/` when running via Nginx.
 
 ## License
 
-MIT
+[MIT](LICENSE)
