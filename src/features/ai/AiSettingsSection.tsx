@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { useAiSettings, saveAiSettings, deleteAiSettings, testAiConnection } from './useAiSettings';
 import { DEFAULT_AI_PROMPT } from './defaultPrompt';
+import { DEFAULT_COMMAND_PROMPT } from './defaultCommandPrompt';
 import type { AiProvider } from '@/types';
 
 const PROVIDER_OPTIONS: { value: AiProvider; label: string }[] = [
@@ -44,7 +45,9 @@ export function AiSettingsSection() {
   const [model, setModel] = useState('');
   const [endpointUrl, setEndpointUrl] = useState('');
   const [customPrompt, setCustomPrompt] = useState('');
+  const [commandPrompt, setCommandPrompt] = useState('');
   const [promptExpanded, setPromptExpanded] = useState(false);
+  const [commandPromptExpanded, setCommandPromptExpanded] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -59,7 +62,9 @@ export function AiSettingsSection() {
       setModel(settings.model);
       setEndpointUrl(settings.endpointUrl || '');
       setCustomPrompt(settings.customPrompt || '');
+      setCommandPrompt(settings.commandPrompt || '');
       if (settings.customPrompt) setPromptExpanded(true);
+      if (settings.commandPrompt) setCommandPromptExpanded(true);
     }
   }, [settings]);
 
@@ -102,6 +107,7 @@ export function AiSettingsSection() {
         model,
         endpointUrl: endpointUrl || undefined,
         customPrompt: customPrompt.trim() || null,
+        commandPrompt: commandPrompt.trim() || null,
       });
       setSettings(saved);
       showToast({ message: 'AI settings saved' });
@@ -121,7 +127,9 @@ export function AiSettingsSection() {
       setModel('');
       setEndpointUrl('');
       setCustomPrompt('');
+      setCommandPrompt('');
       setPromptExpanded(false);
+      setCommandPromptExpanded(false);
       setTestResult(null);
       showToast({ message: 'AI settings removed' });
     } catch {
@@ -134,9 +142,9 @@ export function AiSettingsSection() {
   return (
     <Card>
       <CardContent>
-        <Label>AI Image Analysis</Label>
+        <Label>AI Analysis</Label>
         <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
-          Analyze bin photos with AI to suggest names, items, tags, and notes.
+          Analyze bin photos and run natural language commands with AI.
         </p>
 
         <div className="flex flex-col gap-4 mt-4">
@@ -205,47 +213,95 @@ export function AiSettingsSection() {
             </div>
           )}
 
-          {/* Custom Prompt */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setPromptExpanded(!promptExpanded)}
-              className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-            >
-              <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', promptExpanded && 'rotate-90')} />
-              Custom Prompt
-              {customPrompt.trim() && (
-                <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-[var(--radius-full)] bg-[var(--accent)] text-[var(--text-on-accent)]">
-                  customized
-                </span>
-              )}
-            </button>
-            {promptExpanded && (
-              <div className="mt-2 space-y-2">
-                <Textarea
-                  value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
-                  placeholder={DEFAULT_AI_PROMPT}
-                  className="font-mono text-[13px] min-h-[200px] resize-y"
-                  maxLength={10000}
-                />
-                <div className="flex items-center justify-between">
-                  <p className="text-[12px] text-[var(--text-tertiary)]">
-                    Use <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--bg-input)]">{'{available_tags}'}</code> to inject existing tags at runtime. Leave empty for the default prompt.
-                  </p>
-                  {customPrompt.trim() && (
-                    <button
-                      type="button"
-                      onClick={() => setCustomPrompt('')}
-                      className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                      Reset
-                    </button>
-                  )}
+          {/* Custom Prompts */}
+          <div className="space-y-2">
+            <p className="text-[13px] text-[var(--text-secondary)] font-medium">Custom Prompts</p>
+
+            {/* Image Analysis Prompt */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setPromptExpanded(!promptExpanded)}
+                className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', promptExpanded && 'rotate-90')} />
+                Image Analysis
+                {customPrompt.trim() && (
+                  <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-[var(--radius-full)] bg-[var(--accent)] text-[var(--text-on-accent)]">
+                    customized
+                  </span>
+                )}
+              </button>
+              {promptExpanded && (
+                <div className="mt-2 space-y-2">
+                  <Textarea
+                    value={customPrompt}
+                    onChange={(e) => setCustomPrompt(e.target.value)}
+                    placeholder={DEFAULT_AI_PROMPT}
+                    className="font-mono text-[13px] min-h-[200px] resize-y"
+                    maxLength={10000}
+                  />
+                  <div className="flex items-center justify-between">
+                    <p className="text-[12px] text-[var(--text-tertiary)]">
+                      Use <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--bg-input)]">{'{available_tags}'}</code> to inject existing tags at runtime. Leave empty for the default prompt.
+                    </p>
+                    {customPrompt.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomPrompt('')}
+                        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Reset
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+
+            {/* AI Command Prompt */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setCommandPromptExpanded(!commandPromptExpanded)}
+                className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', commandPromptExpanded && 'rotate-90')} />
+                AI Command
+                {commandPrompt.trim() && (
+                  <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-[var(--radius-full)] bg-[var(--accent)] text-[var(--text-on-accent)]">
+                    customized
+                  </span>
+                )}
+              </button>
+              {commandPromptExpanded && (
+                <div className="mt-2 space-y-2">
+                  <Textarea
+                    value={commandPrompt}
+                    onChange={(e) => setCommandPrompt(e.target.value)}
+                    placeholder={DEFAULT_COMMAND_PROMPT}
+                    className="font-mono text-[13px] min-h-[200px] resize-y"
+                    maxLength={10000}
+                  />
+                  <div className="flex items-center justify-between">
+                    <p className="text-[12px] text-[var(--text-tertiary)]">
+                      Customize how natural language commands are interpreted. Leave empty for the default prompt.
+                    </p>
+                    {commandPrompt.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => setCommandPrompt('')}
+                        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Test result */}

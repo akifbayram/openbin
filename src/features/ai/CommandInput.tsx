@@ -1,0 +1,415 @@
+import { useState, useCallback } from 'react';
+import {
+  Sparkles, Loader2, ChevronLeft, Check, Plus, Minus, Package, Trash2,
+  Tag, MapPin, FileText, Palette, Image as ImageIcon,
+} from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/toast';
+import { useAuth } from '@/lib/auth';
+import { useAiSettings } from './useAiSettings';
+import { useCommand, type CommandAction } from './useCommand';
+import { addBin, updateBin, deleteBin, restoreBin, notifyBinsChanged } from '@/features/bins/useBins';
+import { useAreaList, createArea } from '@/features/areas/useAreas';
+import { apiFetch } from '@/lib/api';
+import type { Bin } from '@/types';
+
+interface CommandInputProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+type State = 'idle' | 'parsing' | 'preview' | 'executing';
+
+function getActionIcon(action: CommandAction) {
+  switch (action.type) {
+    case 'add_items': return Plus;
+    case 'remove_items': return Minus;
+    case 'modify_item': return FileText;
+    case 'create_bin': return Package;
+    case 'delete_bin': return Trash2;
+    case 'add_tags': return Tag;
+    case 'remove_tags': return Tag;
+    case 'modify_tag': return Tag;
+    case 'set_area': return MapPin;
+    case 'set_notes': return FileText;
+    case 'set_icon': return ImageIcon;
+    case 'set_color': return Palette;
+  }
+}
+
+function describeAction(action: CommandAction): string {
+  switch (action.type) {
+    case 'add_items':
+      return `Add ${action.items.join(', ')} to "${action.bin_name}"`;
+    case 'remove_items':
+      return `Remove ${action.items.join(', ')} from "${action.bin_name}"`;
+    case 'modify_item':
+      return `Rename "${action.old_item}" to "${action.new_item}" in "${action.bin_name}"`;
+    case 'create_bin': {
+      let desc = `Create bin "${action.name}"`;
+      if (action.area_name) desc += ` in ${action.area_name}`;
+      if (action.items?.length) desc += ` with ${action.items.length} item${action.items.length !== 1 ? 's' : ''}`;
+      return desc;
+    }
+    case 'delete_bin':
+      return `Delete "${action.bin_name}"`;
+    case 'add_tags':
+      return `Add tag${action.tags.length !== 1 ? 's' : ''} ${action.tags.join(', ')} to "${action.bin_name}"`;
+    case 'remove_tags':
+      return `Remove tag${action.tags.length !== 1 ? 's' : ''} ${action.tags.join(', ')} from "${action.bin_name}"`;
+    case 'modify_tag':
+      return `Rename tag "${action.old_tag}" to "${action.new_tag}" on "${action.bin_name}"`;
+    case 'set_area':
+      return `Move "${action.bin_name}" to area "${action.area_name}"`;
+    case 'set_notes':
+      if (action.mode === 'clear') return `Clear notes on "${action.bin_name}"`;
+      if (action.mode === 'append') return `Append to notes on "${action.bin_name}"`;
+      return `Set notes on "${action.bin_name}"`;
+    case 'set_icon':
+      return `Set icon on "${action.bin_name}" to ${action.icon}`;
+    case 'set_color':
+      return `Set color on "${action.bin_name}" to ${action.color}`;
+  }
+}
+
+export function CommandInput({ open, onOpenChange }: CommandInputProps) {
+  const { activeLocationId } = useAuth();
+  const { settings } = useAiSettings();
+  const { showToast } = useToast();
+  const { areas } = useAreaList(activeLocationId);
+  const { actions, interpretation, isParsing, error, parse, clearCommand } = useCommand();
+  const [text, setText] = useState('');
+  const [checkedActions, setCheckedActions] = useState<Map<number, boolean>>(new Map());
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [showAiGuide, setShowAiGuide] = useState(false);
+
+  const state: State = isExecuting ? 'executing' : isParsing ? 'parsing' : actions ? 'preview' : 'idle';
+
+  const aiConfigured = settings !== null;
+
+  async function handleParse() {
+    if (!text.trim() || !activeLocationId) return;
+    if (!aiConfigured) {
+      setShowAiGuide(true);
+      return;
+    }
+    const result = await parse({ text: text.trim(), locationId: activeLocationId });
+    if (result?.actions) {
+      const initial = new Map<number, boolean>();
+      result.actions.forEach((_, i) => initial.set(i, true));
+      setCheckedActions(initial);
+    }
+  }
+
+  function handleBack() {
+    clearCommand();
+    setCheckedActions(new Map());
+  }
+
+  function toggleAction(index: number) {
+    setCheckedActions((prev) => {
+      const next = new Map(prev);
+      next.set(index, !(prev.get(index) ?? true));
+      return next;
+    });
+  }
+
+  const selectedCount = actions
+    ? actions.filter((_, i) => checkedActions.get(i) !== false).length
+    : 0;
+
+  const executeActions = useCallback(async () => {
+    if (!actions || !activeLocationId) return;
+
+    const selected = actions.filter((_, i) => checkedActions.get(i) !== false);
+    if (selected.length === 0) return;
+
+    setIsExecuting(true);
+    let completed = 0;
+
+    for (const action of selected) {
+      try {
+        switch (action.type) {
+          case 'add_items': {
+            const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
+            const newItems = [...(bin.items || []), ...action.items];
+            await updateBin(action.bin_id, { items: newItems });
+            break;
+          }
+          case 'remove_items': {
+            const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
+            const remaining = (bin.items || []).filter(
+              (item) => !action.items.some((r) => r.toLowerCase() === item.toLowerCase())
+            );
+            await updateBin(action.bin_id, { items: remaining });
+            break;
+          }
+          case 'modify_item': {
+            const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
+            const modified = (bin.items || []).map((item) =>
+              item.toLowerCase() === action.old_item.toLowerCase() ? action.new_item : item
+            );
+            await updateBin(action.bin_id, { items: modified });
+            break;
+          }
+          case 'create_bin': {
+            let areaId: string | null = null;
+            if (action.area_name) {
+              const existing = areas.find(
+                (a) => a.name.toLowerCase() === action.area_name!.toLowerCase()
+              );
+              if (existing) {
+                areaId = existing.id;
+              } else {
+                const newArea = await createArea(activeLocationId, action.area_name);
+                areaId = newArea.id;
+              }
+            }
+            await addBin({
+              name: action.name,
+              locationId: activeLocationId,
+              items: action.items,
+              tags: action.tags,
+              notes: action.notes,
+              areaId,
+              icon: action.icon,
+              color: action.color,
+            });
+            break;
+          }
+          case 'delete_bin': {
+            const deleted = await deleteBin(action.bin_id);
+            showToast({
+              message: `Deleted "${action.bin_name}"`,
+              action: {
+                label: 'Undo',
+                onClick: () => restoreBin(deleted),
+              },
+            });
+            break;
+          }
+          case 'add_tags': {
+            const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
+            const merged = [...new Set([...(bin.tags || []), ...action.tags])];
+            await updateBin(action.bin_id, { tags: merged });
+            break;
+          }
+          case 'remove_tags': {
+            const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
+            const filtered = (bin.tags || []).filter(
+              (t) => !action.tags.some((r) => r.toLowerCase() === t.toLowerCase())
+            );
+            await updateBin(action.bin_id, { tags: filtered });
+            break;
+          }
+          case 'modify_tag': {
+            const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
+            const renamed = (bin.tags || []).map((t) =>
+              t.toLowerCase() === action.old_tag.toLowerCase() ? action.new_tag : t
+            );
+            await updateBin(action.bin_id, { tags: renamed });
+            break;
+          }
+          case 'set_area': {
+            let areaId = action.area_id;
+            if (!areaId && action.area_name) {
+              const existing = areas.find(
+                (a) => a.name.toLowerCase() === action.area_name.toLowerCase()
+              );
+              if (existing) {
+                areaId = existing.id;
+              } else {
+                const newArea = await createArea(activeLocationId, action.area_name);
+                areaId = newArea.id;
+              }
+            }
+            await updateBin(action.bin_id, { areaId });
+            break;
+          }
+          case 'set_notes': {
+            if (action.mode === 'clear') {
+              await updateBin(action.bin_id, { notes: '' });
+            } else if (action.mode === 'append') {
+              const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
+              const appended = bin.notes ? `${bin.notes}\n${action.notes}` : action.notes;
+              await updateBin(action.bin_id, { notes: appended });
+            } else {
+              await updateBin(action.bin_id, { notes: action.notes });
+            }
+            break;
+          }
+          case 'set_icon':
+            await updateBin(action.bin_id, { icon: action.icon });
+            break;
+          case 'set_color':
+            await updateBin(action.bin_id, { color: action.color });
+            break;
+        }
+        completed++;
+      } catch (err) {
+        console.error(`Failed to execute action ${action.type}:`, err);
+      }
+    }
+
+    setIsExecuting(false);
+    notifyBinsChanged();
+
+    if (completed === selected.length) {
+      showToast({ message: `${completed} action${completed !== 1 ? 's' : ''} completed` });
+    } else {
+      showToast({ message: `${completed} of ${selected.length} actions completed` });
+    }
+
+    // Reset and close
+    setText('');
+    clearCommand();
+    setCheckedActions(new Map());
+    onOpenChange(false);
+  }, [actions, checkedActions, activeLocationId, areas, clearCommand, onOpenChange, showToast]);
+
+  function handleClose(v: boolean) {
+    if (!v) {
+      setText('');
+      clearCommand();
+      setCheckedActions(new Map());
+    }
+    onOpenChange(v);
+  }
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>AI Command</DialogTitle>
+          </DialogHeader>
+
+          {state === 'preview' && actions ? (
+            <div className="space-y-4">
+              {interpretation && (
+                <p className="text-[13px] text-[var(--text-secondary)] italic">
+                  {interpretation}
+                </p>
+              )}
+
+              {actions.length === 0 ? (
+                <p className="text-[14px] text-[var(--text-tertiary)] py-4 text-center">
+                  No actions could be determined from your command. Try being more specific.
+                </p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {actions.map((action, i) => {
+                    const checked = checkedActions.get(i) !== false;
+                    const Icon = getActionIcon(action);
+                    return (
+                      <li key={i}>
+                        <button
+                          type="button"
+                          onClick={() => toggleAction(i)}
+                          className="flex items-start gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 hover:bg-[var(--bg-active)] transition-colors cursor-pointer w-full text-left"
+                        >
+                          <span
+                            className={`shrink-0 mt-0.5 h-4.5 w-4.5 rounded border flex items-center justify-center transition-colors ${
+                              checked
+                                ? 'bg-[var(--accent)] border-[var(--accent)]'
+                                : 'border-[var(--border-primary)] bg-transparent'
+                            }`}
+                          >
+                            {checked && <Check className="h-3 w-3 text-white" />}
+                          </span>
+                          <Icon className={`h-4 w-4 shrink-0 mt-0.5 ${checked ? 'text-[var(--text-secondary)]' : 'text-[var(--text-tertiary)]'}`} />
+                          <span className={`text-[14px] leading-snug ${checked ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] line-through'}`}>
+                            {describeAction(action)}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleBack}
+                  className="rounded-[var(--radius-full)]"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-0.5" />
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={executeActions}
+                  disabled={selectedCount === 0}
+                  className="flex-1 rounded-[var(--radius-full)]"
+                >
+                  Execute {selectedCount} Action{selectedCount !== 1 ? 's' : ''}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="What would you like to do?"
+                rows={3}
+                className="min-h-[80px] bg-[var(--bg-elevated)]"
+                disabled={state === 'parsing' || state === 'executing'}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    handleParse();
+                  }
+                }}
+              />
+              <p className="text-[12px] text-[var(--text-tertiary)] leading-relaxed">
+                e.g. "Add screwdriver to the tools bin" or "Move batteries from kitchen to garage"
+              </p>
+              {error && (
+                <p className="text-[13px] text-[var(--destructive)]">{error}</p>
+              )}
+              <Button
+                type="button"
+                onClick={handleParse}
+                disabled={!text.trim() || state === 'parsing' || state === 'executing'}
+                className="w-full rounded-[var(--radius-full)]"
+              >
+                {state === 'parsing' ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : state === 'executing' ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-1.5" />
+                )}
+                {state === 'parsing' ? 'Understanding...' : state === 'executing' ? 'Executing...' : 'Run Command'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* AI not configured guidance */}
+      <Dialog open={showAiGuide} onOpenChange={setShowAiGuide}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>AI Not Configured</DialogTitle>
+          </DialogHeader>
+          <p className="text-[14px] text-[var(--text-secondary)] leading-relaxed">
+            To use AI commands, configure an AI provider in Settings. Supported providers include OpenAI, Anthropic, and OpenAI-compatible APIs.
+          </p>
+          <div className="flex justify-end mt-4">
+            <Button onClick={() => setShowAiGuide(false)} className="rounded-[var(--radius-full)]">
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

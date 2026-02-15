@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ScanLine, MapPin, ChevronRight, Plus, Inbox, ImagePlus } from 'lucide-react';
+import { ScanLine, MapPin, ChevronRight, Plus, Inbox, ImagePlus, MessageSquare } from 'lucide-react';
+
+const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -67,6 +69,7 @@ export function DashboardPage() {
   const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, recentlyUpdated, isLoading } =
     useDashboard();
   const [createOpen, setCreateOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
 
@@ -151,6 +154,13 @@ export function DashboardPage() {
                 >
                   <ImagePlus className="h-4 w-4 text-[var(--text-secondary)]" />
                   Add from Photos
+                </button>
+                <button
+                  onClick={() => { setAddMenuOpen(false); setCommandOpen(true); }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                >
+                  <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />
+                  AI Command
                 </button>
               </div>
             )}
@@ -237,6 +247,9 @@ export function DashboardPage() {
       )}
 
       <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <Suspense fallback={null}>
+        {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
+      </Suspense>
     </div>
   );
 }

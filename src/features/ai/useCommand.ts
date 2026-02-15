@@ -1,0 +1,79 @@
+import { useState, useCallback } from 'react';
+import { apiFetch, ApiError } from '@/lib/api';
+
+export type CommandAction =
+  | { type: 'add_items'; bin_id: string; bin_name: string; items: string[] }
+  | { type: 'remove_items'; bin_id: string; bin_name: string; items: string[] }
+  | { type: 'modify_item'; bin_id: string; bin_name: string; old_item: string; new_item: string }
+  | { type: 'create_bin'; name: string; area_name?: string; tags?: string[]; items?: string[]; color?: string; icon?: string; notes?: string }
+  | { type: 'delete_bin'; bin_id: string; bin_name: string }
+  | { type: 'add_tags'; bin_id: string; bin_name: string; tags: string[] }
+  | { type: 'remove_tags'; bin_id: string; bin_name: string; tags: string[] }
+  | { type: 'modify_tag'; bin_id: string; bin_name: string; old_tag: string; new_tag: string }
+  | { type: 'set_area'; bin_id: string; bin_name: string; area_id: string | null; area_name: string }
+  | { type: 'set_notes'; bin_id: string; bin_name: string; notes: string; mode: 'set' | 'append' | 'clear' }
+  | { type: 'set_icon'; bin_id: string; bin_name: string; icon: string }
+  | { type: 'set_color'; bin_id: string; bin_name: string; color: string };
+
+export interface CommandResult {
+  actions: CommandAction[];
+  interpretation: string;
+}
+
+export function mapCommandErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    switch (err.status) {
+      case 422: return 'Check your API key and model name';
+      case 429: return 'Rate limited — try again in a moment';
+      case 502: return 'AI provider error — check your settings';
+      default: return err.message;
+    }
+  }
+  return 'Failed to parse command';
+}
+
+export async function parseCommandText(options: {
+  text: string;
+  locationId: string;
+}): Promise<CommandResult> {
+  return apiFetch<CommandResult>('/api/ai/command', {
+    method: 'POST',
+    body: {
+      text: options.text,
+      locationId: options.locationId,
+    },
+  });
+}
+
+export function useCommand() {
+  const [actions, setActions] = useState<CommandAction[] | null>(null);
+  const [interpretation, setInterpretation] = useState<string | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const parse = useCallback(async (options: { text: string; locationId: string }) => {
+    setIsParsing(true);
+    setError(null);
+    setActions(null);
+    setInterpretation(null);
+    try {
+      const result = await parseCommandText(options);
+      setActions(result.actions);
+      setInterpretation(result.interpretation);
+      return result;
+    } catch (err) {
+      setError(mapCommandErrorMessage(err));
+      return null;
+    } finally {
+      setIsParsing(false);
+    }
+  }, []);
+
+  const clearCommand = useCallback(() => {
+    setActions(null);
+    setInterpretation(null);
+    setError(null);
+  }, []);
+
+  return { actions, interpretation, isParsing, error, parse, clearCommand };
+}

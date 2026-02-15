@@ -165,6 +165,7 @@ export interface AiSettings {
   model: string;
   endpointUrl: string | null;
   customPrompt: string | null;
+  commandPrompt: string | null;
 }
 
 export interface AiSuggestions {

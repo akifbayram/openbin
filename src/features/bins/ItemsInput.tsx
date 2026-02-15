@@ -1,14 +1,21 @@
 import { useState } from 'react';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Mic } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { DictationInput } from '@/features/ai/DictationInput';
 
 interface ItemsInputProps {
   items: string[];
   onChange: (items: string[]) => void;
+  showDictation?: boolean;
+  aiConfigured?: boolean;
+  onAiSetupNeeded?: () => void;
+  binName?: string;
+  locationId?: string;
 }
 
-export function ItemsInput({ items, onChange }: ItemsInputProps) {
+export function ItemsInput({ items, onChange, showDictation, aiConfigured, onAiSetupNeeded, binName, locationId }: ItemsInputProps) {
   const [input, setInput] = useState('');
+  const [dictationOpen, setDictationOpen] = useState(false);
 
   function addItem() {
     if (input.trim()) {
@@ -28,6 +35,10 @@ export function ItemsInput({ items, onChange }: ItemsInputProps) {
 
   function removeItem(index: number) {
     onChange(items.filter((_, i) => i !== index));
+  }
+
+  function handleDictationConfirm(newItems: string[]) {
+    onChange([...items, ...newItems]);
   }
 
   return (
@@ -59,6 +70,16 @@ export function ItemsInput({ items, onChange }: ItemsInputProps) {
           placeholder={items.length === 0 ? 'Add items...' : 'Add another item...'}
           className="h-7 bg-transparent p-0 text-base focus-visible:ring-0"
         />
+        {showDictation && (
+          <button
+            type="button"
+            onClick={() => setDictationOpen(!dictationOpen)}
+            className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+            aria-label="Dictate items"
+          >
+            <Mic className="h-4 w-4" />
+          </button>
+        )}
         <button
           type="button"
           onClick={addItem}
@@ -69,6 +90,19 @@ export function ItemsInput({ items, onChange }: ItemsInputProps) {
           <Plus className="h-4 w-4" />
         </button>
       </div>
+      {dictationOpen && showDictation && (
+        <div className="mt-2">
+          <DictationInput
+            onItemsConfirmed={handleDictationConfirm}
+            onClose={() => setDictationOpen(false)}
+            binName={binName}
+            existingItems={items}
+            locationId={locationId}
+            aiConfigured={aiConfigured ?? false}
+            onAiSetupNeeded={onAiSetupNeeded ?? (() => {})}
+          />
+        </div>
+      )}
     </div>
   );
 }

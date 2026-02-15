@@ -81,7 +81,7 @@ function mapHttpStatus(status: number): AiErrorCode {
   return 'PROVIDER_ERROR';
 }
 
-function stripCodeFences(text: string): string {
+export function stripCodeFences(text: string): string {
   let s = text.trim();
   if (s.startsWith('```json')) s = s.slice(7);
   else if (s.startsWith('```')) s = s.slice(3);

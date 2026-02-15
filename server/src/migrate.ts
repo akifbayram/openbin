@@ -18,6 +18,17 @@ function migrate() {
     console.log(`Completed: ${file}`);
   }
 
+  // Programmatic migrations for columns added after initial schema
+  const addColumnIfMissing = (table: string, column: string, type: string) => {
+    const cols = db.pragma(`table_info(${table})`) as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === column)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+      console.log(`Added column ${table}.${column}`);
+    }
+  };
+
+  addColumnIfMissing('user_ai_settings', 'command_prompt', 'TEXT');
+
   console.log('All migrations complete');
 }
 

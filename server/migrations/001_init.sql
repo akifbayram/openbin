@@ -85,7 +85,8 @@ CREATE TABLE IF NOT EXISTS user_ai_settings (
   api_key       TEXT NOT NULL,
   model         TEXT NOT NULL,
   endpoint_url  TEXT,
-  custom_prompt TEXT,
+  custom_prompt  TEXT,
+  command_prompt TEXT,
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );

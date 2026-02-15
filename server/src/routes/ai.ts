@@ -7,6 +7,10 @@ import { query, generateUuid } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { analyzeImage, analyzeImages, testConnection, AiAnalysisError } from '../lib/aiProviders.js';
 import type { AiProviderConfig, ImageInput } from '../lib/aiProviders.js';
+import { structureText } from '../lib/structureText.js';
+import type { StructureTextRequest } from '../lib/structureText.js';
+import { parseCommand } from '../lib/commandParser.js';
+import type { CommandRequest } from '../lib/commandParser.js';
 
 const router = Router();
 
@@ -79,7 +83,7 @@ function aiErrorToStatus(code: string): number {
 router.get('/settings', async (req, res) => {
   try {
     const result = await query(
-      'SELECT id, provider, api_key, model, endpoint_url, custom_prompt FROM user_ai_settings WHERE user_id = $1',
+      'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt FROM user_ai_settings WHERE user_id = $1',
       [req.user!.id]
     );
 
@@ -96,6 +100,7 @@ router.get('/settings', async (req, res) => {
       model: row.model,
       endpointUrl: row.endpoint_url,
       customPrompt: row.custom_prompt || null,
+      commandPrompt: row.command_prompt || null,
     });
   } catch (err) {
     console.error('Get AI settings error:', err);
@@ -106,7 +111,7 @@ router.get('/settings', async (req, res) => {
 // PUT /api/ai/settings — upsert AI config
 router.put('/settings', async (req, res) => {
   try {
-    const { provider, apiKey, model, endpointUrl, customPrompt } = req.body;
+    const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt } = req.body;
 
     if (!provider || !apiKey || !model) {
       res.status(422).json({ error: 'VALIDATION_ERROR', message: 'provider, apiKey, and model are required' });
@@ -121,6 +126,11 @@ router.put('/settings', async (req, res) => {
 
     if (customPrompt && typeof customPrompt === 'string' && customPrompt.length > 10000) {
       res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Custom prompt must be 10000 characters or less' });
+      return;
+    }
+
+    if (commandPrompt && typeof commandPrompt === 'string' && commandPrompt.length > 10000) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Command prompt must be 10000 characters or less' });
       return;
     }
 
@@ -141,15 +151,16 @@ router.put('/settings', async (req, res) => {
 
     const encryptedKey = encryptApiKey(finalApiKey);
     const finalCustomPrompt = (customPrompt && typeof customPrompt === 'string' && customPrompt.trim()) ? customPrompt.trim() : null;
+    const finalCommandPrompt = (commandPrompt && typeof commandPrompt === 'string' && commandPrompt.trim()) ? commandPrompt.trim() : null;
 
     const newId = generateUuid();
     const result = await query(
-      `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT (user_id) DO UPDATE SET
-         provider = $3, api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, updated_at = datetime('now')
-       RETURNING id, provider, api_key, model, endpoint_url, custom_prompt`,
-      [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt]
+         provider = $3, api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, updated_at = datetime('now')
+       RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt`,
+      [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt]
     );
 
     const row = result.rows[0];
@@ -160,6 +171,7 @@ router.put('/settings', async (req, res) => {
       model: row.model,
       endpointUrl: row.endpoint_url,
       customPrompt: row.custom_prompt || null,
+      commandPrompt: row.command_prompt || null,
     });
   } catch (err) {
     console.error('Upsert AI settings error:', err);
@@ -328,6 +340,166 @@ router.post('/analyze', async (req, res) => {
     }
     console.error('AI analyze error:', err);
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to analyze photo' });
+  }
+});
+
+// POST /api/ai/structure-text — structure dictated/typed text into items
+router.post('/structure-text', async (req, res) => {
+  try {
+    const { text, mode, context, locationId } = req.body;
+
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'text is required' });
+      return;
+    }
+
+    if (text.length > 5000) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'text must be 5000 characters or less' });
+      return;
+    }
+
+    // Load user's AI settings
+    const settingsResult = await query(
+      'SELECT provider, api_key, model, endpoint_url FROM user_ai_settings WHERE user_id = $1',
+      [req.user!.id]
+    );
+    if (settingsResult.rows.length === 0) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'AI not configured. Set up your AI provider first.' });
+      return;
+    }
+
+    const settings = settingsResult.rows[0];
+    const config: AiProviderConfig = {
+      provider: settings.provider,
+      apiKey: decryptApiKey(settings.api_key),
+      model: settings.model,
+      endpointUrl: settings.endpoint_url,
+    };
+
+    const request: StructureTextRequest = {
+      text: text.trim(),
+      mode: mode === 'items' ? 'items' : 'items',
+      context: context ? {
+        binName: context.binName || undefined,
+        existingItems: Array.isArray(context.existingItems) ? context.existingItems : undefined,
+      } : undefined,
+    };
+
+    const result = await structureText(config, request);
+    res.json(result);
+  } catch (err) {
+    if (err instanceof AiAnalysisError) {
+      res.status(aiErrorToStatus(err.code)).json({ error: err.message, code: err.code });
+      return;
+    }
+    console.error('AI structure-text error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to structure text' });
+  }
+});
+
+// POST /api/ai/command — parse natural language command into structured actions
+router.post('/command', async (req, res) => {
+  try {
+    const { text, locationId } = req.body;
+
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'text is required' });
+      return;
+    }
+
+    if (text.length > 5000) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'text must be 5000 characters or less' });
+      return;
+    }
+
+    if (!locationId || typeof locationId !== 'string') {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'locationId is required' });
+      return;
+    }
+
+    // Verify location membership
+    const memberCheck = await query(
+      'SELECT 1 FROM location_members WHERE location_id = $1 AND user_id = $2',
+      [locationId, req.user!.id]
+    );
+    if (memberCheck.rows.length === 0) {
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
+      return;
+    }
+
+    // Load user's AI settings
+    const settingsResult = await query(
+      'SELECT provider, api_key, model, endpoint_url, command_prompt FROM user_ai_settings WHERE user_id = $1',
+      [req.user!.id]
+    );
+    if (settingsResult.rows.length === 0) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'AI not configured. Set up your AI provider first.' });
+      return;
+    }
+
+    const settings = settingsResult.rows[0];
+    const config: AiProviderConfig = {
+      provider: settings.provider,
+      apiKey: decryptApiKey(settings.api_key),
+      model: settings.model,
+      endpointUrl: settings.endpoint_url,
+    };
+
+    // Fetch bins for context
+    const binsResult = await query(
+      `SELECT b.id, b.name, b.items, b.tags, b.area_id, COALESCE(a.name, '') AS area_name, b.notes, b.icon, b.color, b.short_code
+       FROM bins b
+       LEFT JOIN areas a ON a.id = b.area_id
+       WHERE b.location_id = $1 AND b.deleted_at IS NULL`,
+      [locationId]
+    );
+
+    // Fetch areas for context
+    const areasResult = await query(
+      'SELECT id, name FROM areas WHERE location_id = $1',
+      [locationId]
+    );
+
+    const bins = binsResult.rows.map((r) => ({
+      id: r.id as string,
+      name: r.name as string,
+      items: r.items as string[],
+      tags: r.tags as string[],
+      area_id: r.area_id as string | null,
+      area_name: r.area_name as string,
+      notes: typeof r.notes === 'string' && r.notes.length > 200 ? r.notes.slice(0, 200) + '...' : (r.notes as string || ''),
+      icon: r.icon as string,
+      color: r.color as string,
+      short_code: r.short_code as string,
+    }));
+
+    const areas = areasResult.rows.map((r) => ({
+      id: r.id as string,
+      name: r.name as string,
+    }));
+
+    // Import color and icon lists inline to avoid circular deps
+    const availableColors = ['red', 'orange', 'amber', 'lime', 'green', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'purple', 'rose', 'pink', 'gray'];
+    const availableIcons = [
+      'Package', 'Box', 'Archive', 'Wrench', 'Shirt', 'Book', 'Utensils', 'Laptop', 'Camera', 'Music',
+      'Heart', 'Star', 'Home', 'Car', 'Bike', 'Plane', 'Briefcase', 'ShoppingBag', 'Gift', 'Lightbulb',
+      'Scissors', 'Hammer', 'Paintbrush', 'Leaf', 'Apple', 'Coffee', 'Wine', 'Baby', 'Dog', 'Cat',
+    ];
+
+    const request: CommandRequest = {
+      text: text.trim(),
+      context: { bins, areas, availableColors, availableIcons },
+    };
+
+    const result = await parseCommand(config, request, settings.command_prompt || undefined);
+    res.json(result);
+  } catch (err) {
+    if (err instanceof AiAnalysisError) {
+      res.status(aiErrorToStatus(err.code)).json({ error: err.message, code: err.code });
+      return;
+    }
+    console.error('AI command error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to parse command' });
   }
 });
 

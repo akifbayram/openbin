@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Package, X, Ban, Camera, Sparkles, Loader2, ChevronRight, Eye, EyeOff, Check } from 'lucide-react';
+import { MapPin, Package, X, Ban, Camera, Sparkles, Loader2, ChevronRight, Eye, EyeOff, Check, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { addPhoto } from '@/features/photos/usePhotos';
 import { compressImage } from '@/features/photos/compressImage';
 import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
 import { useAiSettings, saveAiSettings, testAiConnection } from '@/features/ai/useAiSettings';
+import { DictationInput } from '@/features/ai/DictationInput';
 import { COLOR_PALETTE } from '@/lib/colorPalette';
 import type { AiProvider } from '@/types';
 
@@ -51,6 +52,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
   const [binItems, setBinItems] = useState<string[]>([]);
   const [itemInput, setItemInput] = useState('');
   const itemInputRef = useRef<HTMLInputElement>(null);
+  const [dictationOpen, setDictationOpen] = useState(false);
   // Photo state
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
@@ -413,7 +415,24 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
 
                 {/* Items input */}
                 <div className="text-left">
-                  <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Items</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[13px] text-[var(--text-tertiary)]">Items</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!aiConfigured) {
+                          setAiExpanded(true);
+                          setAnalyzeError('Set up an AI provider below to use dictation');
+                          return;
+                        }
+                        setDictationOpen(!dictationOpen);
+                      }}
+                      className="flex items-center gap-1 text-[12px] text-[var(--accent)] hover:opacity-80 transition-opacity"
+                    >
+                      <Mic className="h-3.5 w-3.5" />
+                      Dictate
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-1.5 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2 focus-within:ring-2 focus-within:ring-[var(--accent)]">
                     {binItems.map((item, i) => (
                       <Badge key={i} variant="secondary" className="gap-1 pl-1.5">
@@ -444,6 +463,22 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
                       className="h-6 min-w-[80px] flex-1 bg-transparent p-0 text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none"
                     />
                   </div>
+                  {dictationOpen && (
+                    <div className="mt-2">
+                      <DictationInput
+                        onItemsConfirmed={(newItems) => setBinItems([...binItems, ...newItems])}
+                        onClose={() => setDictationOpen(false)}
+                        binName={binName}
+                        existingItems={binItems}
+                        locationId={locationId}
+                        aiConfigured={aiConfigured}
+                        onAiSetupNeeded={() => {
+                          setAiExpanded(true);
+                          setAnalyzeError('Set up an AI provider below to use dictation');
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Color picker */}

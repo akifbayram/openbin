@@ -282,7 +282,15 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
             </div>
             <div className="space-y-2">
               <Label>Items</Label>
-              <ItemsInput items={items} onChange={setItems} />
+              <ItemsInput
+                items={items}
+                onChange={setItems}
+                showDictation
+                aiConfigured={!!aiSettings}
+                onAiSetupNeeded={() => setAiSetupOpen(true)}
+                binName={name}
+                locationId={activeLocationId ?? undefined}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="bin-notes">Notes</Label>

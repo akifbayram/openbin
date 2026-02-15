@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import {
   Search,
   Plus,
@@ -12,7 +12,10 @@ import {
   MapPin,
   Bookmark,
   ImagePlus,
+  MessageSquare,
 } from 'lucide-react';
+
+const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -89,6 +92,7 @@ export function BinListPage() {
   const { theme } = useTheme();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const [commandOpen, setCommandOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
 
@@ -215,6 +219,13 @@ export function BinListPage() {
                 >
                   <ImagePlus className="h-4 w-4 text-[var(--text-secondary)]" />
                   Add from Photos
+                </button>
+                <button
+                  onClick={() => { setAddMenuOpen(false); setCommandOpen(true); }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                >
+                  <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />
+                  AI Command
                 </button>
               </div>
             )}
@@ -561,6 +572,10 @@ export function BinListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Suspense fallback={null}>
+        {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
+      </Suspense>
     </div>
   );
 }

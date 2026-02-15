@@ -544,7 +544,12 @@ components:
           type: string
           nullable: true
           maxLength: 10000
-          description: "Custom system prompt for AI analysis. Use {available_tags} placeholder to inject existing tags. Null uses the default prompt."
+          description: "Custom system prompt for AI image analysis. Use {available_tags} placeholder to inject existing tags. Null uses the default prompt."
+        commandPrompt:
+          type: string
+          nullable: true
+          maxLength: 10000
+          description: "Custom system prompt for AI natural language commands. Null uses the default prompt."
 
     AiSettingsRequest:
       type: object
@@ -564,7 +569,12 @@ components:
           type: string
           nullable: true
           maxLength: 10000
-          description: "Custom system prompt for AI analysis. Use {available_tags} placeholder to inject existing tags. Null uses the default prompt."
+          description: "Custom system prompt for AI image analysis. Use {available_tags} placeholder to inject existing tags. Null uses the default prompt."
+        commandPrompt:
+          type: string
+          nullable: true
+          maxLength: 10000
+          description: "Custom system prompt for AI natural language commands. Null uses the default prompt."
 
     AiSuggestions:
       type: object
@@ -2248,6 +2258,131 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /ai/structure-text:
+    post:
+      tags: [AI]
+      summary: Structure dictated text into items
+      description: |
+        Sends raw dictated or typed text to the user's configured AI provider,
+        which extracts and normalizes it into a clean list of inventory items.
+        Handles filler words, quantity normalization, and deduplication.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  maxLength: 5000
+                  description: Raw dictated or typed text describing items
+                mode:
+                  type: string
+                  enum: [items]
+                  default: items
+                  description: Structuring mode (only 'items' supported currently)
+                context:
+                  type: object
+                  properties:
+                    binName:
+                      type: string
+                      description: Name of the bin for context
+                    existingItems:
+                      type: array
+                      items:
+                        type: string
+                      description: Items already in the bin (excluded from results)
+                locationId:
+                  type: string
+                  description: Location ID (unused currently, reserved for future use)
+      responses:
+        '200':
+          description: Structured items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: string
+                    description: Extracted and normalized item list
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Validation error or AI not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ai/command:
+    post:
+      tags: [AI]
+      summary: Parse natural language command into structured actions
+      description: |
+        Sends a freeform natural language command to the user's configured AI provider,
+        which parses it into one or more structured inventory actions (add/remove items,
+        create/delete bins, modify tags, set areas, etc.). The client previews and
+        executes the returned actions using existing mutation endpoints.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text, locationId]
+              properties:
+                text:
+                  type: string
+                  maxLength: 5000
+                  description: Natural language command
+                locationId:
+                  type: string
+                  description: Location ID to scope the command context
+      responses:
+        '200':
+          description: Parsed command actions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum: [add_items, remove_items, modify_item, create_bin, delete_bin, add_tags, remove_tags, modify_tag, set_area, set_notes, set_icon, set_color]
+                      required: [type]
+                    description: Structured actions parsed from the command
+                  interpretation:
+                    type: string
+                    description: Human-readable summary of what the AI understood
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Not a member of the location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error or AI not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   # ════════════════════════════════════════════════════════
   # Activity

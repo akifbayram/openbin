@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, Pencil, Trash2, Printer, Save, Plus, Sparkles, Loader2, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Pencil, Trash2, Printer, Save, Plus, Sparkles, Loader2, Settings, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,6 +23,7 @@ import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { usePhotos } from '@/features/photos/usePhotos';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useAiAnalysis } from '@/features/ai/useAiAnalysis';
+import { DictationInput } from '@/features/ai/DictationInput';
 import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/theme';
@@ -57,6 +58,7 @@ export function BinDetailPage() {
   const [qrExpanded, setQrExpanded] = useState(false);
   const [photosExpanded, setPhotosExpanded] = useState(false);
   const [aiSetupOpen, setAiSetupOpen] = useState(false);
+  const [dictationOpen, setDictationOpen] = useState(false);
 
   // AI analysis
   const { photos } = usePhotos(id);
@@ -328,7 +330,15 @@ export function BinDetailPage() {
           <Card>
             <CardContent className="space-y-2 py-5">
               <Label>Items</Label>
-              <ItemsInput items={editItems} onChange={setEditItems} />
+              <ItemsInput
+                items={editItems}
+                onChange={setEditItems}
+                showDictation
+                aiConfigured={!!aiSettings}
+                onAiSetupNeeded={() => setAiSetupOpen(true)}
+                binName={editName}
+                locationId={activeLocationId ?? undefined}
+              />
             </CardContent>
           </Card>
 
@@ -458,6 +468,15 @@ export function BinDetailPage() {
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => setDictationOpen(!dictationOpen)}
+                  aria-label="Dictate items"
+                  className="rounded-full h-10 w-10 shrink-0"
+                >
+                  <Mic className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={handleQuickAdd}
                   disabled={!quickAddValue.trim() || quickAddSaving}
                   aria-label="Add item"
@@ -466,6 +485,27 @@ export function BinDetailPage() {
                   <Plus className="h-5 w-5" />
                 </Button>
               </div>
+              {dictationOpen && (
+                <div className="mt-3">
+                  <DictationInput
+                    onItemsConfirmed={async (newItems) => {
+                      if (!id || !bin) return;
+                      try {
+                        await updateBin(id, { items: [...bin.items, ...newItems] });
+                        showToast({ message: `Added ${newItems.length} item${newItems.length !== 1 ? 's' : ''}` });
+                      } catch {
+                        showToast({ message: 'Failed to add items' });
+                      }
+                    }}
+                    onClose={() => setDictationOpen(false)}
+                    binName={bin.name}
+                    existingItems={bin.items}
+                    locationId={activeLocationId ?? undefined}
+                    aiConfigured={!!aiSettings}
+                    onAiSetupNeeded={() => setAiSetupOpen(true)}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
 
