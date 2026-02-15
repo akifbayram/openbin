@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { useAiSettings, saveAiSettings, deleteAiSettings, testAiConnection } from './useAiSettings';
 import { DEFAULT_AI_PROMPT } from './defaultPrompt';
 import { DEFAULT_COMMAND_PROMPT } from './defaultCommandPrompt';
+import { DEFAULT_QUERY_PROMPT } from './defaultQueryPrompt';
 import type { AiProvider } from '@/types';
 
 const PROVIDER_OPTIONS: { value: AiProvider; label: string }[] = [
@@ -46,8 +47,10 @@ export function AiSettingsSection() {
   const [endpointUrl, setEndpointUrl] = useState('');
   const [customPrompt, setCustomPrompt] = useState('');
   const [commandPrompt, setCommandPrompt] = useState('');
+  const [queryPrompt, setQueryPrompt] = useState('');
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [commandPromptExpanded, setCommandPromptExpanded] = useState(false);
+  const [queryPromptExpanded, setQueryPromptExpanded] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -64,8 +67,10 @@ export function AiSettingsSection() {
       setEndpointUrl(settings.endpointUrl || '');
       setCustomPrompt(settings.customPrompt || '');
       setCommandPrompt(settings.commandPrompt || '');
+      setQueryPrompt(settings.queryPrompt || '');
       if (settings.customPrompt) setPromptExpanded(true);
       if (settings.commandPrompt) setCommandPromptExpanded(true);
+      if (settings.queryPrompt) setQueryPromptExpanded(true);
     }
   }, [settings]);
 
@@ -110,6 +115,7 @@ export function AiSettingsSection() {
         endpointUrl: endpointUrl || undefined,
         customPrompt: customPrompt.trim() || null,
         commandPrompt: commandPrompt.trim() || null,
+        queryPrompt: queryPrompt.trim() || null,
       });
       setSettings(saved);
       showToast({ message: 'AI settings saved' });
@@ -130,8 +136,10 @@ export function AiSettingsSection() {
       setEndpointUrl('');
       setCustomPrompt('');
       setCommandPrompt('');
+      setQueryPrompt('');
       setPromptExpanded(false);
       setCommandPromptExpanded(false);
+      setQueryPromptExpanded(false);
       setTestResult(null);
       showToast({ message: 'AI settings removed' });
     } catch {
@@ -306,6 +314,49 @@ export function AiSettingsSection() {
                       <button
                         type="button"
                         onClick={() => setCommandPrompt('')}
+                        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Reset to Default
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Inventory Query Prompt */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setQueryPromptExpanded(!queryPromptExpanded)}
+                className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', queryPromptExpanded && 'rotate-90')} />
+                Inventory Queries
+                {queryPrompt.trim() && (
+                  <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-[var(--radius-full)] bg-[var(--accent)] text-[var(--text-on-accent)]">
+                    customized
+                  </span>
+                )}
+              </button>
+              {queryPromptExpanded && (
+                <div className="mt-2 space-y-2">
+                  <Textarea
+                    value={queryPrompt}
+                    onChange={(e) => setQueryPrompt(e.target.value)}
+                    placeholder={DEFAULT_QUERY_PROMPT}
+                    className="font-mono text-[13px] min-h-[200px] resize-y"
+                    maxLength={10000}
+                  />
+                  <div className="flex items-center justify-between">
+                    <p className="text-[12px] text-[var(--text-tertiary)]">
+                      Customize how inventory queries like &apos;where are my batteries?&apos; are answered. Leave empty for default.
+                    </p>
+                    {queryPrompt.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => setQueryPrompt('')}
                         className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
                       >
                         <RotateCcw className="h-3 w-3" />

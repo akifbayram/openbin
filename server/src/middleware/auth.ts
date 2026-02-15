@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import jwt from 'jsonwebtoken';
+import { query } from '../db.js';
 
 function resolveJwtSecret(): string {
   if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
@@ -30,6 +31,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthUser;
+      authMethod?: 'jwt' | 'api_key';
     }
   }
 }
@@ -49,9 +51,38 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     res.status(401).json({ error: 'No token provided' });
     return;
   }
+
+  // API key path
+  if (token.startsWith('sk_sanduk_')) {
+    const keyHash = crypto.createHash('sha256').update(token).digest('hex');
+    query(
+      `SELECT ak.id AS key_id, u.id, u.username
+       FROM api_keys ak
+       JOIN users u ON u.id = ak.user_id
+       WHERE ak.key_hash = $1 AND ak.revoked_at IS NULL`,
+      [keyHash]
+    ).then((result) => {
+      if (result.rows.length === 0) {
+        res.status(401).json({ error: 'Invalid API key' });
+        return;
+      }
+      const row = result.rows[0] as { key_id: string; id: string; username: string };
+      req.user = { id: row.id, username: row.username };
+      req.authMethod = 'api_key';
+      // Fire-and-forget: update last_used_at
+      query("UPDATE api_keys SET last_used_at = datetime('now') WHERE id = $1", [row.key_id]).catch(() => {});
+      next();
+    }).catch(() => {
+      res.status(401).json({ error: 'Authentication failed' });
+    });
+    return;
+  }
+
+  // JWT path
   try {
     const payload = jwt.verify(token, JWT_SECRET) as AuthUser;
     req.user = { id: payload.id, username: payload.username };
+    req.authMethod = 'jwt';
     next();
   } catch {
     res.status(401).json({ error: 'Invalid token' });

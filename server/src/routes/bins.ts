@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import crypto from 'crypto';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
@@ -8,19 +7,10 @@ import { query, generateUuid } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { logActivity, computeChanges } from '../lib/activityLog.js';
 import { purgeExpiredTrash } from '../lib/trashPurge.js';
+import { generateShortCode } from '../lib/shortCode.js';
 
 const router = Router();
 const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
-
-const SHORT_CODE_CHARSET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
-
-function generateShortCode(): string {
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += SHORT_CODE_CHARSET[crypto.randomInt(SHORT_CODE_CHARSET.length)];
-  }
-  return code;
-}
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MIME_TO_EXT: Record<string, string> = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' };
@@ -164,6 +154,7 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/bins — list all (non-deleted) bins for a location
+// Optional query params: q, tag, area_id, sort, sort_dir, needs_organizing
 router.get('/', async (req, res) => {
   try {
     const locationId = req.query.location_id as string | undefined;
@@ -178,11 +169,61 @@ router.get('/', async (req, res) => {
       return;
     }
 
+    const q = req.query.q as string | undefined;
+    const tag = req.query.tag as string | undefined;
+    const areaId = req.query.area_id as string | undefined;
+    const needsOrganizing = req.query.needs_organizing as string | undefined;
+    const sort = req.query.sort as string | undefined;
+    const sortDir = req.query.sort_dir as string | undefined;
+
+    const whereClauses: string[] = ['b.location_id = $1', 'b.deleted_at IS NULL'];
+    const params: unknown[] = [locationId];
+    let paramIdx = 2;
+
+    if (q && q.trim()) {
+      const searchTerm = `%${q.trim()}%`;
+      whereClauses.push(
+        `(b.name LIKE $${paramIdx} OR b.notes LIKE $${paramIdx} OR b.short_code LIKE $${paramIdx} OR COALESCE(a.name, '') LIKE $${paramIdx} OR EXISTS (SELECT 1 FROM json_each(b.items) WHERE value LIKE $${paramIdx}) OR EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value LIKE $${paramIdx}))`
+      );
+      params.push(searchTerm);
+      paramIdx++;
+    }
+
+    if (tag && tag.trim()) {
+      whereClauses.push(`EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value = $${paramIdx})`);
+      params.push(tag.trim());
+      paramIdx++;
+    }
+
+    if (areaId) {
+      if (areaId === '__unassigned__') {
+        whereClauses.push('b.area_id IS NULL');
+      } else {
+        whereClauses.push(`b.area_id = $${paramIdx}`);
+        params.push(areaId);
+        paramIdx++;
+      }
+    }
+
+    if (needsOrganizing === 'true') {
+      whereClauses.push(`(b.tags = '[]' OR b.tags = '') AND b.area_id IS NULL AND (b.items = '[]' OR b.items = '')`);
+    }
+
+    const validSorts: Record<string, string> = {
+      name: 'b.name',
+      created_at: 'b.created_at',
+      updated_at: 'b.updated_at',
+      area: 'CASE WHEN a.name IS NULL OR a.name = \'\' THEN 1 ELSE 0 END, a.name, b.name',
+    };
+    const dir = sortDir === 'asc' ? 'ASC' : 'DESC';
+    const orderBy = validSorts[sort || ''] || 'b.updated_at';
+    const orderClause = sort === 'area' ? `${orderBy} ${dir}` : `${orderBy} ${dir}`;
+
     const result = await query(
       `SELECT ${BIN_SELECT_COLS}
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-       WHERE b.location_id = $1 AND b.deleted_at IS NULL ORDER BY b.updated_at DESC`,
-      [locationId]
+       WHERE ${whereClauses.join(' AND ')} ORDER BY ${orderClause}`,
+      params
     );
 
     res.json({ results: result.rows, count: result.rows.length });

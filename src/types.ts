@@ -166,6 +166,16 @@ export interface AiSettings {
   endpointUrl: string | null;
   customPrompt: string | null;
   commandPrompt: string | null;
+  queryPrompt: string | null;
+}
+
+export interface ApiKey {
+  id: string;
+  key_prefix: string;
+  name: string;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
 }
 
 export interface AiSuggestions {

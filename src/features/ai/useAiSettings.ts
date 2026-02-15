@@ -55,6 +55,7 @@ export async function saveAiSettings(opts: {
   endpointUrl?: string;
   customPrompt?: string | null;
   commandPrompt?: string | null;
+  queryPrompt?: string | null;
 }): Promise<AiSettings> {
   const result = await apiFetch<AiSettings>('/api/ai/settings', {
     method: 'PUT',

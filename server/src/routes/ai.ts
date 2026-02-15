@@ -12,13 +12,17 @@ import { structureText } from '../lib/structureText.js';
 import type { StructureTextRequest } from '../lib/structureText.js';
 import { parseCommand } from '../lib/commandParser.js';
 import type { CommandRequest } from '../lib/commandParser.js';
+import { queryInventory } from '../lib/inventoryQuery.js';
+import type { InventoryContext } from '../lib/inventoryQuery.js';
+import { executeActions } from '../lib/commandExecutor.js';
 
 const router = Router();
 
 // Rate-limit only endpoints that call external AI providers (not settings CRUD)
+// API key requests get a higher limit for headless/smart-home integrations
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 30,
+  max: ((req: import('express').Request) => (req as any).authMethod === 'api_key' ? 1000 : 30) as unknown as number,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'RATE_LIMITED', message: 'Too many AI requests, please try again later' },
@@ -89,11 +93,87 @@ function aiErrorToStatus(code: string): number {
   }
 }
 
+/** Shared: available colors and icons for command/execute context */
+const AVAILABLE_COLORS = ['red', 'orange', 'amber', 'lime', 'green', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'purple', 'rose', 'pink', 'gray'];
+const AVAILABLE_ICONS = [
+  'Package', 'Box', 'Archive', 'Wrench', 'Shirt', 'Book', 'Utensils', 'Laptop', 'Camera', 'Music',
+  'Heart', 'Star', 'Home', 'Car', 'Bike', 'Plane', 'Briefcase', 'ShoppingBag', 'Gift', 'Lightbulb',
+  'Scissors', 'Hammer', 'Paintbrush', 'Leaf', 'Apple', 'Coffee', 'Wine', 'Baby', 'Dog', 'Cat',
+];
+
+/** Shared: build command/execute context from a location's bins and areas */
+async function buildCommandContext(locationId: string): Promise<CommandRequest['context']> {
+  const binsResult = await query(
+    `SELECT b.id, b.name, b.items, b.tags, b.area_id, COALESCE(a.name, '') AS area_name, b.notes, b.icon, b.color, b.short_code
+     FROM bins b
+     LEFT JOIN areas a ON a.id = b.area_id
+     WHERE b.location_id = $1 AND b.deleted_at IS NULL`,
+    [locationId]
+  );
+
+  const areasResult = await query(
+    'SELECT id, name FROM areas WHERE location_id = $1',
+    [locationId]
+  );
+
+  const bins = binsResult.rows.map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+    items: r.items as string[],
+    tags: r.tags as string[],
+    area_id: r.area_id as string | null,
+    area_name: r.area_name as string,
+    notes: typeof r.notes === 'string' && r.notes.length > 200 ? r.notes.slice(0, 200) + '...' : (r.notes as string || ''),
+    icon: r.icon as string,
+    color: r.color as string,
+    short_code: r.short_code as string,
+  }));
+
+  const areas = areasResult.rows.map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+  }));
+
+  return { bins, areas, availableColors: AVAILABLE_COLORS, availableIcons: AVAILABLE_ICONS };
+}
+
+/** Shared: build inventory context for query endpoint */
+async function buildInventoryContext(locationId: string): Promise<InventoryContext> {
+  const binsResult = await query(
+    `SELECT b.id, b.name, b.items, b.tags, COALESCE(a.name, '') AS area_name, b.notes, b.short_code
+     FROM bins b
+     LEFT JOIN areas a ON a.id = b.area_id
+     WHERE b.location_id = $1 AND b.deleted_at IS NULL`,
+    [locationId]
+  );
+
+  const areasResult = await query(
+    'SELECT id, name FROM areas WHERE location_id = $1',
+    [locationId]
+  );
+
+  return {
+    bins: binsResult.rows.map((r) => ({
+      id: r.id as string,
+      name: r.name as string,
+      items: r.items as string[],
+      tags: r.tags as string[],
+      area_name: r.area_name as string,
+      notes: typeof r.notes === 'string' && r.notes.length > 200 ? r.notes.slice(0, 200) + '...' : (r.notes as string || ''),
+      short_code: r.short_code as string,
+    })),
+    areas: areasResult.rows.map((r) => ({
+      id: r.id as string,
+      name: r.name as string,
+    })),
+  };
+}
+
 // GET /api/ai/settings — get user's AI config
 router.get('/settings', async (req, res) => {
   try {
     const result = await query(
-      'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt FROM user_ai_settings WHERE user_id = $1',
+      'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt FROM user_ai_settings WHERE user_id = $1',
       [req.user!.id]
     );
 
@@ -111,6 +191,7 @@ router.get('/settings', async (req, res) => {
       endpointUrl: row.endpoint_url,
       customPrompt: row.custom_prompt || null,
       commandPrompt: row.command_prompt || null,
+      queryPrompt: row.query_prompt || null,
     });
   } catch (err) {
     console.error('Get AI settings error:', err);
@@ -121,7 +202,7 @@ router.get('/settings', async (req, res) => {
 // PUT /api/ai/settings — upsert AI config
 router.put('/settings', async (req, res) => {
   try {
-    const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt } = req.body;
+    const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt } = req.body;
 
     if (!provider || !apiKey || !model) {
       res.status(422).json({ error: 'VALIDATION_ERROR', message: 'provider, apiKey, and model are required' });
@@ -144,6 +225,11 @@ router.put('/settings', async (req, res) => {
       return;
     }
 
+    if (queryPrompt && typeof queryPrompt === 'string' && queryPrompt.length > 10000) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Query prompt must be 10000 characters or less' });
+      return;
+    }
+
     // If apiKey starts with ****, preserve the existing key
     let finalApiKey = apiKey;
     if (apiKey.startsWith('****')) {
@@ -162,15 +248,16 @@ router.put('/settings', async (req, res) => {
     const encryptedKey = encryptApiKey(finalApiKey);
     const finalCustomPrompt = (customPrompt && typeof customPrompt === 'string' && customPrompt.trim()) ? customPrompt.trim() : null;
     const finalCommandPrompt = (commandPrompt && typeof commandPrompt === 'string' && commandPrompt.trim()) ? commandPrompt.trim() : null;
+    const finalQueryPrompt = (queryPrompt && typeof queryPrompt === 'string' && queryPrompt.trim()) ? queryPrompt.trim() : null;
 
     const newId = generateUuid();
     const result = await query(
-      `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT (user_id) DO UPDATE SET
-         provider = $3, api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, updated_at = datetime('now')
-       RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt`,
-      [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt]
+         provider = $3, api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, updated_at = datetime('now')
+       RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt`,
+      [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt]
     );
 
     const row = result.rows[0];
@@ -182,6 +269,7 @@ router.put('/settings', async (req, res) => {
       endpointUrl: row.endpoint_url,
       customPrompt: row.custom_prompt || null,
       commandPrompt: row.command_prompt || null,
+      queryPrompt: row.query_prompt || null,
     });
   } catch (err) {
     console.error('Upsert AI settings error:', err);
@@ -455,50 +543,11 @@ router.post('/command', aiLimiter, async (req, res) => {
       endpointUrl: settings.endpoint_url,
     };
 
-    // Fetch bins for context
-    const binsResult = await query(
-      `SELECT b.id, b.name, b.items, b.tags, b.area_id, COALESCE(a.name, '') AS area_name, b.notes, b.icon, b.color, b.short_code
-       FROM bins b
-       LEFT JOIN areas a ON a.id = b.area_id
-       WHERE b.location_id = $1 AND b.deleted_at IS NULL`,
-      [locationId]
-    );
-
-    // Fetch areas for context
-    const areasResult = await query(
-      'SELECT id, name FROM areas WHERE location_id = $1',
-      [locationId]
-    );
-
-    const bins = binsResult.rows.map((r) => ({
-      id: r.id as string,
-      name: r.name as string,
-      items: r.items as string[],
-      tags: r.tags as string[],
-      area_id: r.area_id as string | null,
-      area_name: r.area_name as string,
-      notes: typeof r.notes === 'string' && r.notes.length > 200 ? r.notes.slice(0, 200) + '...' : (r.notes as string || ''),
-      icon: r.icon as string,
-      color: r.color as string,
-      short_code: r.short_code as string,
-    }));
-
-    const areas = areasResult.rows.map((r) => ({
-      id: r.id as string,
-      name: r.name as string,
-    }));
-
-    // Import color and icon lists inline to avoid circular deps
-    const availableColors = ['red', 'orange', 'amber', 'lime', 'green', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'purple', 'rose', 'pink', 'gray'];
-    const availableIcons = [
-      'Package', 'Box', 'Archive', 'Wrench', 'Shirt', 'Book', 'Utensils', 'Laptop', 'Camera', 'Music',
-      'Heart', 'Star', 'Home', 'Car', 'Bike', 'Plane', 'Briefcase', 'ShoppingBag', 'Gift', 'Lightbulb',
-      'Scissors', 'Hammer', 'Paintbrush', 'Leaf', 'Apple', 'Coffee', 'Wine', 'Baby', 'Dog', 'Cat',
-    ];
+    const context = await buildCommandContext(locationId);
 
     const request: CommandRequest = {
       text: text.trim(),
-      context: { bins, areas, availableColors, availableIcons },
+      context,
     };
 
     const result = await parseCommand(config, request, settings.command_prompt || undefined);
@@ -510,6 +559,150 @@ router.post('/command', aiLimiter, async (req, res) => {
     }
     console.error('AI command error:', err);
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to parse command' });
+  }
+});
+
+// POST /api/ai/query — query inventory with natural language (read-only AI endpoint)
+router.post('/query', aiLimiter, async (req, res) => {
+  try {
+    const { question, locationId } = req.body;
+
+    if (!question || typeof question !== 'string' || !question.trim()) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'question is required' });
+      return;
+    }
+
+    if (question.length > 5000) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'question must be 5000 characters or less' });
+      return;
+    }
+
+    if (!locationId || typeof locationId !== 'string') {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'locationId is required' });
+      return;
+    }
+
+    // Verify location membership
+    const memberCheck = await query(
+      'SELECT 1 FROM location_members WHERE location_id = $1 AND user_id = $2',
+      [locationId, req.user!.id]
+    );
+    if (memberCheck.rows.length === 0) {
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
+      return;
+    }
+
+    // Load user's AI settings
+    const settingsResult = await query(
+      'SELECT provider, api_key, model, endpoint_url, query_prompt FROM user_ai_settings WHERE user_id = $1',
+      [req.user!.id]
+    );
+    if (settingsResult.rows.length === 0) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'AI not configured. Set up your AI provider first.' });
+      return;
+    }
+
+    const settings = settingsResult.rows[0];
+    const config: AiProviderConfig = {
+      provider: settings.provider,
+      apiKey: decryptApiKey(settings.api_key),
+      model: settings.model,
+      endpointUrl: settings.endpoint_url,
+    };
+
+    const context = await buildInventoryContext(locationId);
+    const result = await queryInventory(config, question.trim(), context, settings.query_prompt || undefined);
+    res.json(result);
+  } catch (err) {
+    if (err instanceof AiAnalysisError) {
+      res.status(aiErrorToStatus(err.code)).json({ error: err.message, code: err.code });
+      return;
+    }
+    console.error('AI query error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to query inventory' });
+  }
+});
+
+// POST /api/ai/execute — parse and execute a natural language command server-side
+router.post('/execute', aiLimiter, async (req, res) => {
+  try {
+    const { text, locationId } = req.body;
+
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'text is required' });
+      return;
+    }
+
+    if (text.length > 5000) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'text must be 5000 characters or less' });
+      return;
+    }
+
+    if (!locationId || typeof locationId !== 'string') {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'locationId is required' });
+      return;
+    }
+
+    // Verify location membership
+    const memberCheck = await query(
+      'SELECT 1 FROM location_members WHERE location_id = $1 AND user_id = $2',
+      [locationId, req.user!.id]
+    );
+    if (memberCheck.rows.length === 0) {
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
+      return;
+    }
+
+    // Load user's AI settings
+    const settingsResult = await query(
+      'SELECT provider, api_key, model, endpoint_url, command_prompt FROM user_ai_settings WHERE user_id = $1',
+      [req.user!.id]
+    );
+    if (settingsResult.rows.length === 0) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'AI not configured. Set up your AI provider first.' });
+      return;
+    }
+
+    const settings = settingsResult.rows[0];
+    const config: AiProviderConfig = {
+      provider: settings.provider,
+      apiKey: decryptApiKey(settings.api_key),
+      model: settings.model,
+      endpointUrl: settings.endpoint_url,
+    };
+
+    // Parse command
+    const context = await buildCommandContext(locationId);
+    const request: CommandRequest = {
+      text: text.trim(),
+      context,
+    };
+    const parsed = await parseCommand(config, request, settings.command_prompt || undefined);
+
+    if (parsed.actions.length === 0) {
+      res.json({
+        executed: [],
+        interpretation: parsed.interpretation,
+        errors: [],
+      });
+      return;
+    }
+
+    // Execute actions
+    const result = await executeActions(parsed.actions, locationId, req.user!.id, req.user!.username);
+
+    res.json({
+      executed: result.executed,
+      interpretation: parsed.interpretation,
+      errors: result.errors,
+    });
+  } catch (err) {
+    if (err instanceof AiAnalysisError) {
+      res.status(aiErrorToStatus(err.code)).json({ error: err.message, code: err.code });
+      return;
+    }
+    console.error('AI execute error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to execute command' });
   }
 });
 

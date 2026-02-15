@@ -11,6 +11,7 @@ import tagColorsRoutes from './routes/tagColors.js';
 import aiRoutes from './routes/ai.js';
 import printSettingsRoutes from './routes/printSettings.js';
 import activityRoutes from './routes/activity.js';
+import apiKeysRoutes from './routes/apiKeys.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '4000', 10);
@@ -59,6 +60,7 @@ app.use('/api/tag-colors', tagColorsRoutes);
 app.use('/api/print-settings', printSettingsRoutes);
 app.use('/api', exportRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/api-keys', apiKeysRoutes);
 
 // Error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

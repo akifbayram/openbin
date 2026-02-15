@@ -5,8 +5,11 @@ info:
   description: |
     REST API for Sanduk — a multi-user web app for organizing physical storage bins with QR codes.
 
-    **Authentication**: Most endpoints require a JWT Bearer token obtained via `POST /auth/login`.
-    Include it in the `Authorization: Bearer <token>` header.
+    **Authentication**: Most endpoints require authentication via either:
+    - **JWT Bearer token** obtained via `POST /auth/login` (expires after 7 days)
+    - **API key** created via `POST /api-keys` (long-lived, format: `sk_sanduk_...`)
+
+    Include either in the `Authorization: Bearer <token>` header.
 
     **Response envelopes**: All list endpoints return `{ results: T[], count: number }`.
     Error responses use `{ error: "CODE", message: "Human readable" }`.
@@ -39,6 +42,8 @@ tags:
     description: AI provider settings and image analysis
   - name: Activity
     description: Location activity log
+  - name: ApiKeys
+    description: API key management for headless access
   - name: Shapes
     description: Electric SQL shape proxy endpoints
 
@@ -550,6 +555,11 @@ components:
           nullable: true
           maxLength: 10000
           description: "Custom system prompt for AI natural language commands. Null uses the default prompt."
+        queryPrompt:
+          type: string
+          nullable: true
+          maxLength: 10000
+          description: "Custom system prompt for AI inventory queries. Null uses the default prompt."
 
     AiSettingsRequest:
       type: object
@@ -575,6 +585,11 @@ components:
           nullable: true
           maxLength: 10000
           description: "Custom system prompt for AI natural language commands. Null uses the default prompt."
+        queryPrompt:
+          type: string
+          nullable: true
+          maxLength: 10000
+          description: "Custom system prompt for AI inventory queries. Null uses the default prompt."
 
     AiSuggestions:
       type: object
@@ -620,6 +635,103 @@ components:
           type: string
         endpointUrl:
           type: string
+
+    # ── API Keys ──────────────────────────────────────────
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key_prefix:
+          type: string
+          description: First 18 characters of the key for identification
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ApiKeyCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+          description: "Full API key — shown only once at creation time"
+        keyPrefix:
+          type: string
+        name:
+          type: string
+
+    # ── Query & Execute ───────────────────────────────────
+    QueryResult:
+      type: object
+      properties:
+        answer:
+          type: string
+          description: Natural language answer to the question
+        matches:
+          type: array
+          items:
+            type: object
+            properties:
+              bin_id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              area_name:
+                type: string
+              items:
+                type: array
+                items:
+                  type: string
+              tags:
+                type: array
+                items:
+                  type: string
+              relevance:
+                type: string
+
+    ExecuteResult:
+      type: object
+      properties:
+        executed:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              success:
+                type: boolean
+              details:
+                type: string
+              bin_id:
+                type: string
+                format: uuid
+              bin_name:
+                type: string
+              error:
+                type: string
+        interpretation:
+          type: string
+          description: Human-readable summary of what the AI understood
+        errors:
+          type: array
+          items:
+            type: string
 
     # ── Print Settings ─────────────────────────────────────
     PrintSettings:
@@ -1427,7 +1539,9 @@ paths:
     get:
       tags: [Bins]
       summary: List bins for a location
-      description: Returns non-deleted bins. Requires location_id query parameter.
+      description: |
+        Returns non-deleted bins. Supports server-side search, filtering, and sorting.
+        All filter parameters are optional and composable.
       parameters:
         - name: location_id
           in: query
@@ -1435,6 +1549,39 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search across bin name, items, notes, tags, short code, and area name
+        - name: tag
+          in: query
+          schema:
+            type: string
+          description: Filter by exact tag match
+        - name: area_id
+          in: query
+          schema:
+            type: string
+          description: "Filter by area. Use '__unassigned__' for bins with no area"
+        - name: needs_organizing
+          in: query
+          schema:
+            type: string
+            enum: ['true']
+          description: Filter bins missing tags, area, and items
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, created_at, updated_at, area]
+            default: updated_at
+        - name: sort_dir
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
       responses:
         '200':
           description: List of bins
@@ -2383,6 +2530,171 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '429':
           $ref: '#/components/responses/RateLimited'
+
+  # ════════════════════════════════════════════════════════
+  # AI Query & Execute
+  # ════════════════════════════════════════════════════════
+  /ai/query:
+    post:
+      tags: [AI]
+      summary: Query inventory with natural language
+      description: |
+        Read-only AI endpoint that answers natural language questions about inventory.
+        Returns a natural language answer plus structured matches with bin details.
+        Ideal for smart home integrations ("where are my batteries?").
+        Rate limited: 30/hr for JWT, 1000/hr for API keys.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question, locationId]
+              properties:
+                question:
+                  type: string
+                  maxLength: 5000
+                  description: Natural language question about inventory
+                locationId:
+                  type: string
+                  format: uuid
+                  description: Location to search within
+      responses:
+        '200':
+          description: Query result with answer and matching bins
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ai/execute:
+    post:
+      tags: [AI]
+      summary: Parse and execute a natural language command
+      description: |
+        Headless fire-and-forget endpoint: parses a natural language command via AI,
+        then executes all resulting actions server-side in a single transaction.
+        Unlike /ai/command (which returns actions for client-side preview), this
+        endpoint performs the mutations directly. Ideal for smart home integrations.
+        Rate limited: 30/hr for JWT, 1000/hr for API keys.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text, locationId]
+              properties:
+                text:
+                  type: string
+                  maxLength: 5000
+                  description: Natural language command
+                locationId:
+                  type: string
+                  format: uuid
+                  description: Location to execute the command in
+      responses:
+        '200':
+          description: Execution results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  # ════════════════════════════════════════════════════════
+  # API Keys
+  # ════════════════════════════════════════════════════════
+  /api-keys:
+    get:
+      tags: [ApiKeys]
+      summary: List API keys
+      description: Returns the user's active (non-revoked) API keys. Full key is never returned.
+      responses:
+        '200':
+          description: List of API keys
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiKey'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [ApiKeys]
+      summary: Create an API key
+      description: |
+        Creates a new API key. The full key is returned only in this response — it cannot be retrieved later.
+        Maximum 10 active keys per user. Keys use the format `sk_sanduk_<64 hex chars>`.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                  description: A label to identify this key
+      responses:
+        '201':
+          description: API key created (full key shown only once)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyCreateResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api-keys/{id}:
+    delete:
+      tags: [ApiKeys]
+      summary: Revoke an API key
+      description: Soft-revokes an API key by setting revoked_at. The key stops working immediately.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Key revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ════════════════════════════════════════════════════════
   # Activity

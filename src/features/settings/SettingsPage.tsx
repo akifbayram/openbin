@@ -34,6 +34,7 @@ import {
   ImportError,
 } from './exportImport';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
+import { ApiKeysSection } from './ApiKeysSection';
 import { useDashboardSettings, DASHBOARD_LIMITS } from '@/lib/dashboardSettings';
 
 export function SettingsPage() {
@@ -553,6 +554,9 @@ export function SettingsPage() {
 
       {/* AI Image Analysis */}
       <AiSettingsSection />
+
+      {/* API Keys */}
+      <ApiKeysSection />
 
       {/* Data */}
       <Card>
