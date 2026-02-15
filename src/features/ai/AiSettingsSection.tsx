@@ -8,63 +8,34 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { useAiSettings, saveAiSettings, deleteAiSettings, testAiConnection } from './useAiSettings';
+import { useAiProviderSetup } from './useAiProviderSetup';
+import { AI_PROVIDERS, MODEL_HINTS, KEY_PLACEHOLDERS } from './aiConstants';
 import { DEFAULT_AI_PROMPT } from './defaultPrompt';
 import { DEFAULT_COMMAND_PROMPT } from './defaultCommandPrompt';
 import { DEFAULT_QUERY_PROMPT } from './defaultQueryPrompt';
-import type { AiProvider } from '@/types';
-
-const PROVIDER_OPTIONS: { value: AiProvider; label: string }[] = [
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic' },
-  { value: 'openai-compatible', label: 'Self-Hosted' },
-];
-
-const DEFAULT_MODELS: Record<AiProvider, string> = {
-  openai: 'gpt-4o',
-  anthropic: 'claude-sonnet-4-5-20250929',
-  'openai-compatible': '',
-};
-
-const MODEL_HINTS: Record<AiProvider, string> = {
-  openai: 'e.g., gpt-4o, gpt-4o-mini',
-  anthropic: 'e.g., claude-sonnet-4-5-20250929, claude-haiku-4-5-20251001',
-  'openai-compatible': 'e.g., llava, llama3.2-vision',
-};
-
-const KEY_PLACEHOLDERS: Record<AiProvider, string> = {
-  openai: 'sk-...',
-  anthropic: 'sk-ant-...',
-  'openai-compatible': 'API key (if required)',
-};
 
 export function AiSettingsSection() {
   const { settings, isLoading, setSettings } = useAiSettings();
   const { showToast } = useToast();
 
-  const [provider, setProvider] = useState<AiProvider>('openai');
-  const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('');
-  const [endpointUrl, setEndpointUrl] = useState('');
+  const setup = useAiProviderSetup();
+
   const [customPrompt, setCustomPrompt] = useState('');
   const [commandPrompt, setCommandPrompt] = useState('');
   const [queryPrompt, setQueryPrompt] = useState('');
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [commandPromptExpanded, setCommandPromptExpanded] = useState(false);
   const [queryPromptExpanded, setQueryPromptExpanded] = useState(false);
-  const [showKey, setShowKey] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
   const [testError, setTestError] = useState('');
   const [touched, setTouched] = useState(false);
 
   // Populate form from loaded settings
   useEffect(() => {
     if (settings) {
-      setProvider(settings.provider);
-      setApiKey(settings.apiKey);
-      setModel(settings.model);
-      setEndpointUrl(settings.endpointUrl || '');
+      setup.setProvider(settings.provider);
+      setup.setApiKey(settings.apiKey);
+      setup.setModel(settings.model);
+      setup.setEndpointUrl(settings.endpointUrl || '');
       setCustomPrompt(settings.customPrompt || '');
       setCommandPrompt(settings.commandPrompt || '');
       setQueryPrompt(settings.queryPrompt || '');
@@ -72,47 +43,34 @@ export function AiSettingsSection() {
       if (settings.commandPrompt) setCommandPromptExpanded(true);
       if (settings.queryPrompt) setQueryPromptExpanded(true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
 
-  function handleProviderChange(p: AiProvider) {
-    setProvider(p);
-    // Pre-fill model if switching providers and field is empty or was a default
-    const currentDefault = DEFAULT_MODELS[provider];
-    if (!model || model === currentDefault) {
-      setModel(DEFAULT_MODELS[p]);
-    }
-    setTestResult(null);
-  }
-
   async function handleTest() {
-    setTesting(true);
-    setTestResult(null);
+    setup.setTestResult(null);
     setTestError('');
     try {
       await testAiConnection({
-        provider,
-        apiKey,
-        model,
-        endpointUrl: endpointUrl || undefined,
+        provider: setup.provider,
+        apiKey: setup.apiKey,
+        model: setup.model,
+        endpointUrl: setup.endpointUrl || undefined,
       });
-      setTestResult('success');
+      setup.setTestResult('success');
     } catch (err) {
-      setTestResult('error');
+      setup.setTestResult('error');
       const base = err instanceof Error ? err.message : 'Connection failed';
-      setTestError(model ? `${base} (model: ${model})` : base);
-    } finally {
-      setTesting(false);
+      setTestError(setup.model ? `${base} (model: ${setup.model})` : base);
     }
   }
 
   async function handleSave() {
-    setSaving(true);
     try {
       const saved = await saveAiSettings({
-        provider,
-        apiKey,
-        model,
-        endpointUrl: endpointUrl || undefined,
+        provider: setup.provider,
+        apiKey: setup.apiKey,
+        model: setup.model,
+        endpointUrl: setup.endpointUrl || undefined,
         customPrompt: customPrompt.trim() || null,
         commandPrompt: commandPrompt.trim() || null,
         queryPrompt: queryPrompt.trim() || null,
@@ -121,8 +79,6 @@ export function AiSettingsSection() {
       showToast({ message: 'AI settings saved' });
     } catch (err) {
       showToast({ message: err instanceof Error ? err.message : 'Failed to save' });
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -130,17 +86,17 @@ export function AiSettingsSection() {
     try {
       await deleteAiSettings();
       setSettings(null);
-      setProvider('openai');
-      setApiKey('');
-      setModel('');
-      setEndpointUrl('');
+      setup.setProvider('openai');
+      setup.setApiKey('');
+      setup.setModel('');
+      setup.setEndpointUrl('');
       setCustomPrompt('');
       setCommandPrompt('');
       setQueryPrompt('');
       setPromptExpanded(false);
       setCommandPromptExpanded(false);
       setQueryPromptExpanded(false);
-      setTestResult(null);
+      setup.setTestResult(null);
       showToast({ message: 'AI settings removed' });
     } catch {
       showToast({ message: 'Failed to remove settings' });
@@ -166,13 +122,13 @@ export function AiSettingsSection() {
         <div className="flex flex-col gap-4 mt-4">
           {/* Provider selector */}
           <div className="flex gap-1.5 bg-[var(--bg-input)] rounded-[var(--radius-full)] p-1">
-            {PROVIDER_OPTIONS.map((opt) => (
+            {AI_PROVIDERS.map((opt) => (
               <button
-                key={opt.value}
+                key={opt.key}
                 type="button"
-                onClick={() => handleProviderChange(opt.value)}
+                onClick={() => setup.handleProviderChange(opt.key)}
                 className={`flex-1 text-[13px] font-medium py-1.5 px-3 rounded-[var(--radius-full)] transition-colors ${
-                  provider === opt.value
+                  setup.provider === opt.key
                     ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
@@ -188,18 +144,18 @@ export function AiSettingsSection() {
             <div className="relative">
               <Input
                 id="ai-api-key"
-                type={showKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={(e) => { setApiKey(e.target.value); setTestResult(null); setTouched(true); }}
-                placeholder={KEY_PLACEHOLDERS[provider]}
+                type={setup.showKey ? 'text' : 'password'}
+                value={setup.apiKey}
+                onChange={(e) => { setup.setApiKey(e.target.value); setup.setTestResult(null); setTouched(true); }}
+                placeholder={KEY_PLACEHOLDERS[setup.provider]}
                 className="pr-10"
               />
               <button
                 type="button"
-                onClick={() => setShowKey(!showKey)}
+                onClick={() => setup.setShowKey(!setup.showKey)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
               >
-                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {setup.showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>
@@ -209,27 +165,27 @@ export function AiSettingsSection() {
             <label htmlFor="ai-model" className="text-[13px] text-[var(--text-secondary)]">Model</label>
             <Input
               id="ai-model"
-              value={model}
-              onChange={(e) => { setModel(e.target.value); setTestResult(null); setTouched(true); }}
-              placeholder={MODEL_HINTS[provider]}
+              value={setup.model}
+              onChange={(e) => { setup.setModel(e.target.value); setup.setTestResult(null); setTouched(true); }}
+              placeholder={MODEL_HINTS[setup.provider]}
             />
           </div>
 
           {/* Endpoint URL — only for openai-compatible */}
-          {provider === 'openai-compatible' && (
+          {setup.provider === 'openai-compatible' && (
             <div className="space-y-1.5">
               <label htmlFor="ai-endpoint" className="text-[13px] text-[var(--text-secondary)]">Endpoint URL</label>
               <Input
                 id="ai-endpoint"
-                value={endpointUrl}
-                onChange={(e) => { setEndpointUrl(e.target.value); setTestResult(null); }}
+                value={setup.endpointUrl}
+                onChange={(e) => { setup.setEndpointUrl(e.target.value); setup.setTestResult(null); }}
                 placeholder="http://localhost:11434/v1"
               />
             </div>
           )}
 
           {/* Required fields hint */}
-          {touched && !apiKey && !model && (
+          {touched && !setup.apiKey && !setup.model && (
             <p className="text-[12px] text-[var(--text-tertiary)]">
               API key and model are required.
             </p>
@@ -370,10 +326,10 @@ export function AiSettingsSection() {
           </div>
 
           {/* Test result */}
-          {testResult === 'success' && (
-            <p className="text-[13px] text-green-600 dark:text-green-400">Connected to {model} successfully</p>
+          {setup.testResult === 'success' && (
+            <p className="text-[13px] text-green-600 dark:text-green-400">Connected to {setup.model} successfully</p>
           )}
-          {testResult === 'error' && (
+          {setup.testResult === 'error' && (
             <p className="text-[13px] text-[var(--destructive)]">{testError}</p>
           )}
 
@@ -382,18 +338,18 @@ export function AiSettingsSection() {
             <Button
               variant="outline"
               onClick={handleTest}
-              disabled={testing || !apiKey || !model}
+              disabled={setup.testing || !setup.apiKey || !setup.model}
               className="rounded-[var(--radius-full)]"
             >
-              {testing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+              {setup.testing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
               Test Connection
             </Button>
             <Button
               onClick={handleSave}
-              disabled={saving || !apiKey || !model}
+              disabled={setup.saving || !setup.apiKey || !setup.model}
               className="rounded-[var(--radius-full)]"
             >
-              {saving ? 'Saving...' : 'Save'}
+              {setup.saving ? 'Saving...' : 'Save'}
             </Button>
             {settings && (
               <Button

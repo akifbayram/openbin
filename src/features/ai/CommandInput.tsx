@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import {
-  Sparkles, Loader2, ChevronLeft, ChevronRight, Check, Plus, Minus, Package, Trash2,
-  Tag, MapPin, FileText, Palette, Image as ImageIcon, Eye, EyeOff,
+  Sparkles, Loader2, ChevronLeft, Check, Plus, Minus, Package, Trash2,
+  Tag, MapPin, FileText, Palette, Image as ImageIcon,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,24 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
-import { useAiSettings, saveAiSettings, testAiConnection } from './useAiSettings';
+import { useAiSettings } from './useAiSettings';
 import { useCommand, type CommandAction } from './useCommand';
+import { useAiProviderSetup } from './useAiProviderSetup';
+import { InlineAiSetup, AiConfiguredIndicator } from './InlineAiSetup';
 import { addBin, updateBin, deleteBin, restoreBin, notifyBinsChanged } from '@/features/bins/useBins';
 import { useAreaList, createArea } from '@/features/areas/useAreas';
 import { apiFetch } from '@/lib/api';
-import type { Bin, AiProvider } from '@/types';
-
-const AI_PROVIDERS: { key: AiProvider; label: string }[] = [
-  { key: 'openai', label: 'OpenAI' },
-  { key: 'anthropic', label: 'Anthropic' },
-  { key: 'openai-compatible', label: 'Self-Hosted' },
-];
-
-const DEFAULT_MODELS: Record<AiProvider, string> = {
-  openai: 'gpt-4o-mini',
-  anthropic: 'claude-sonnet-4-5-20250929',
-  'openai-compatible': '',
-};
+import type { Bin } from '@/types';
 
 interface CommandInputProps {
   open: boolean;
@@ -102,21 +92,13 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [executingProgress, setExecutingProgress] = useState({ current: 0, total: 0 });
 
-  // Inline AI setup state
+  // Inline AI setup
   const [aiExpanded, setAiExpanded] = useState(false);
-  const [aiProvider, setAiProvider] = useState<AiProvider>('openai');
-  const [aiApiKey, setAiApiKey] = useState('');
-  const [aiModel, setAiModel] = useState(DEFAULT_MODELS.openai);
-  const [aiEndpointUrl, setAiEndpointUrl] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [aiTesting, setAiTesting] = useState(false);
-  const [aiSaving, setAiSaving] = useState(false);
-  const [aiConfigured, setAiConfigured] = useState(false);
-  const [aiTestResult, setAiTestResult] = useState<'success' | 'error' | null>(null);
+  const setup = useAiProviderSetup({ onSaveSuccess: () => setAiExpanded(false) });
 
   const state: State = isExecuting ? 'executing' : isParsing ? 'parsing' : actions ? 'preview' : 'idle';
 
-  const isAiReady = settings !== null || aiConfigured;
+  const isAiReady = settings !== null || setup.configured;
 
   async function handleParse() {
     if (!text.trim() || !activeLocationId) return;
@@ -129,45 +111,6 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
       const initial = new Map<number, boolean>();
       result.actions.forEach((_, i) => initial.set(i, true));
       setCheckedActions(initial);
-    }
-  }
-
-  async function handleTestAi() {
-    if (!aiApiKey || !aiModel) return;
-    setAiTesting(true);
-    setAiTestResult(null);
-    try {
-      await testAiConnection({
-        provider: aiProvider,
-        apiKey: aiApiKey,
-        model: aiModel,
-        endpointUrl: aiProvider === 'openai-compatible' ? aiEndpointUrl : undefined,
-      });
-      setAiTestResult('success');
-    } catch {
-      setAiTestResult('error');
-    } finally {
-      setAiTesting(false);
-    }
-  }
-
-  async function handleSaveAi() {
-    if (!aiApiKey || !aiModel) return;
-    setAiSaving(true);
-    try {
-      await saveAiSettings({
-        provider: aiProvider,
-        apiKey: aiApiKey,
-        model: aiModel,
-        endpointUrl: aiProvider === 'openai-compatible' ? aiEndpointUrl : undefined,
-      });
-      setAiConfigured(true);
-      setAiExpanded(false);
-      showToast({ message: 'AI settings saved' });
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to save AI settings' });
-    } finally {
-      setAiSaving(false);
     }
   }
 
@@ -488,111 +431,16 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
 
             {/* Inline AI setup section */}
             {!aiSettingsLoading && !isAiReady && (
-              <div className="text-left">
-                <button
-                  type="button"
-                  onClick={() => setAiExpanded(!aiExpanded)}
-                  className="flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-                >
-                  <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', aiExpanded && 'rotate-90')} />
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Set up AI provider to get started
-                </button>
-                {aiExpanded && (
-                  <div className="mt-2 space-y-2.5 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-3">
-                    {/* Provider pills */}
-                    <div className="flex gap-1.5">
-                      {AI_PROVIDERS.map((p) => (
-                        <button
-                          key={p.key}
-                          type="button"
-                          onClick={() => {
-                            setAiProvider(p.key);
-                            setAiModel(DEFAULT_MODELS[p.key]);
-                            setAiTestResult(null);
-                          }}
-                          className={cn(
-                            'px-2.5 py-1 rounded-full text-[12px] transition-colors',
-                            aiProvider === p.key
-                              ? 'bg-[var(--accent)] text-white'
-                              : 'bg-[var(--bg-active)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                          )}
-                        >
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-                    {/* API key */}
-                    <div className="relative">
-                      <input
-                        type={showApiKey ? 'text' : 'password'}
-                        value={aiApiKey}
-                        onChange={(e) => { setAiApiKey(e.target.value); setAiTestResult(null); }}
-                        placeholder="API key"
-                        className="w-full h-8 rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border-primary)] px-2.5 pr-8 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowApiKey(!showApiKey)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-                      >
-                        {showApiKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                      </button>
-                    </div>
-                    {/* Model */}
-                    <input
-                      type="text"
-                      value={aiModel}
-                      onChange={(e) => { setAiModel(e.target.value); setAiTestResult(null); }}
-                      placeholder="Model name"
-                      className="w-full h-8 rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border-primary)] px-2.5 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                    />
-                    {/* Endpoint URL (openai-compatible only) */}
-                    {aiProvider === 'openai-compatible' && (
-                      <input
-                        type="text"
-                        value={aiEndpointUrl}
-                        onChange={(e) => setAiEndpointUrl(e.target.value)}
-                        placeholder="Endpoint URL"
-                        className="w-full h-8 rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border-primary)] px-2.5 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                      />
-                    )}
-                    {/* Test result */}
-                    {aiTestResult && (
-                      <p className={cn('text-[12px]', aiTestResult === 'success' ? 'text-green-500' : 'text-red-500')}>
-                        {aiTestResult === 'success' ? 'Connection successful' : 'Connection failed — check settings'}
-                      </p>
-                    )}
-                    {/* Test + Save buttons */}
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleTestAi}
-                        disabled={!aiApiKey || !aiModel || aiTesting}
-                        className="flex-1 h-7 rounded-[var(--radius-sm)] bg-[var(--bg-active)] text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 transition-colors"
-                      >
-                        {aiTesting ? 'Testing...' : 'Test'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveAi}
-                        disabled={!aiApiKey || !aiModel || aiSaving}
-                        className="flex-1 h-7 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[12px] text-white disabled:opacity-40 transition-colors"
-                      >
-                        {aiSaving ? 'Saving...' : 'Save'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <InlineAiSetup
+                expanded={aiExpanded}
+                onExpandedChange={setAiExpanded}
+                setup={setup}
+              />
             )}
 
             {/* AI configured indicator (after inline setup) */}
-            {!aiSettingsLoading && !settings && aiConfigured && (
-              <div className="flex items-center gap-1.5 text-[12px] text-[var(--accent)]">
-                <Check className="h-3.5 w-3.5" />
-                <span>AI configured</span>
-              </div>
+            {!aiSettingsLoading && !settings && setup.configured && (
+              <AiConfiguredIndicator />
             )}
 
             <Button

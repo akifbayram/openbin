@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Package, X, Ban, Camera, Sparkles, Loader2, ChevronRight, Eye, EyeOff, Check, ChevronLeft } from 'lucide-react';
+import { MapPin, Package, X, Ban, Camera, Sparkles, Loader2, ChevronLeft, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,23 +11,13 @@ import { addBin } from '@/features/bins/useBins';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { compressImage } from '@/features/photos/compressImage';
 import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
-import { useAiSettings, saveAiSettings, testAiConnection } from '@/features/ai/useAiSettings';
+import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
+import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
+import { InlineAiSetup, AiConfiguredIndicator } from '@/features/ai/InlineAiSetup';
 import { COLOR_PALETTE } from '@/lib/colorPalette';
-import type { AiProvider } from '@/types';
 
 const STEPS = ['Location', 'Bin'] as const;
-const AI_PROVIDERS: { key: AiProvider; label: string }[] = [
-  { key: 'openai', label: 'OpenAI' },
-  { key: 'anthropic', label: 'Anthropic' },
-  { key: 'openai-compatible', label: 'Self-Hosted' },
-];
-
-const DEFAULT_MODELS: Record<AiProvider, string> = {
-  openai: 'gpt-4o-mini',
-  anthropic: 'claude-sonnet-4-5-20250929',
-  'openai-compatible': '',
-};
 
 export interface OnboardingActions {
   step: number;
@@ -64,17 +54,10 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
   // AI analysis state
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  // Inline AI settings state
+  // Inline AI setup
   const [aiExpanded, setAiExpanded] = useState(false);
-  const [aiProvider, setAiProvider] = useState<AiProvider>('openai');
-  const [aiApiKey, setAiApiKey] = useState('');
-  const [aiModel, setAiModel] = useState(DEFAULT_MODELS.openai);
-  const [aiEndpointUrl, setAiEndpointUrl] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [aiTesting, setAiTesting] = useState(false);
-  const [aiSaving, setAiSaving] = useState(false);
-  const [aiConfigured, setAiConfigured] = useState(false);
-  const [aiTestResult, setAiTestResult] = useState<'success' | 'error' | null>(null);
+  const setup = useAiProviderSetup({ onSaveSuccess: () => setAiExpanded(false) });
+  const aiConfigured = setup.configured || (existingAiSettings !== null && !aiSettingsLoading);
   // Loading
   const [loading, setLoading] = useState(false);
   // Success animation after first bin creation
@@ -85,13 +68,6 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
   useEffect(() => {
     setAnimKey((k) => k + 1);
   }, [step]);
-
-  // Track if AI settings already exist
-  useEffect(() => {
-    if (!aiSettingsLoading && existingAiSettings) {
-      setAiConfigured(true);
-    }
-  }, [existingAiSettings, aiSettingsLoading]);
 
   // Lock body scroll
   useEffect(() => {
@@ -152,45 +128,6 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
       setAnalyzeError(err instanceof Error ? err.message : 'Failed to analyze photos');
     } finally {
       setAnalyzing(false);
-    }
-  }
-
-  async function handleTestAi() {
-    if (!aiApiKey || !aiModel) return;
-    setAiTesting(true);
-    setAiTestResult(null);
-    try {
-      await testAiConnection({
-        provider: aiProvider,
-        apiKey: aiApiKey,
-        model: aiModel,
-        endpointUrl: aiProvider === 'openai-compatible' ? aiEndpointUrl : undefined,
-      });
-      setAiTestResult('success');
-    } catch {
-      setAiTestResult('error');
-    } finally {
-      setAiTesting(false);
-    }
-  }
-
-  async function handleSaveAi() {
-    if (!aiApiKey || !aiModel) return;
-    setAiSaving(true);
-    try {
-      await saveAiSettings({
-        provider: aiProvider,
-        apiKey: aiApiKey,
-        model: aiModel,
-        endpointUrl: aiProvider === 'openai-compatible' ? aiEndpointUrl : undefined,
-      });
-      setAiConfigured(true);
-      setAiExpanded(false);
-      showToast({ message: 'AI settings saved' });
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to save AI settings' });
-    } finally {
-      setAiSaving(false);
     }
   }
 
@@ -726,111 +663,18 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
                 {!aiSettingsLoading && (
                   <div className="text-left">
                     {aiConfigured ? (
-                      <div className="flex items-center gap-1.5 text-[12px] text-[var(--accent)]">
-                        <Check className="h-3.5 w-3.5" />
-                        <span>AI configured</span>
+                      <AiConfiguredIndicator>
                         {photos.length > 0 && (
                           <span className="text-[var(--text-tertiary)]">— tap <Sparkles className="h-3 w-3 inline" /> to analyze</span>
                         )}
-                      </div>
+                      </AiConfiguredIndicator>
                     ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setAiExpanded(!aiExpanded)}
-                          className="flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-                        >
-                          <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', aiExpanded && 'rotate-90')} />
-                          <Sparkles className="h-3.5 w-3.5" />
-                          Set up AI Analysis
-                        </button>
-                        {aiExpanded && (
-                          <div className="mt-2 space-y-2.5 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-3">
-                            {/* Provider pills */}
-                            <div className="flex gap-1.5">
-                              {AI_PROVIDERS.map((p) => (
-                                <button
-                                  key={p.key}
-                                  type="button"
-                                  onClick={() => {
-                                    setAiProvider(p.key);
-                                    setAiModel(DEFAULT_MODELS[p.key]);
-                                    setAiTestResult(null);
-                                  }}
-                                  className={cn(
-                                    'px-2.5 py-1 rounded-full text-[12px] transition-colors',
-                                    aiProvider === p.key
-                                      ? 'bg-[var(--accent)] text-white'
-                                      : 'bg-[var(--bg-active)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                                  )}
-                                >
-                                  {p.label}
-                                </button>
-                              ))}
-                            </div>
-                            {/* API key */}
-                            <div className="relative">
-                              <input
-                                type={showApiKey ? 'text' : 'password'}
-                                value={aiApiKey}
-                                onChange={(e) => { setAiApiKey(e.target.value); setAiTestResult(null); }}
-                                placeholder="API key"
-                                className="w-full h-8 rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border-primary)] px-2.5 pr-8 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowApiKey(!showApiKey)}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-                              >
-                                {showApiKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                              </button>
-                            </div>
-                            {/* Model */}
-                            <input
-                              type="text"
-                              value={aiModel}
-                              onChange={(e) => { setAiModel(e.target.value); setAiTestResult(null); }}
-                              placeholder="Model name"
-                              className="w-full h-8 rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border-primary)] px-2.5 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                            />
-                            {/* Endpoint URL (openai-compatible only) */}
-                            {aiProvider === 'openai-compatible' && (
-                              <input
-                                type="text"
-                                value={aiEndpointUrl}
-                                onChange={(e) => setAiEndpointUrl(e.target.value)}
-                                placeholder="Endpoint URL"
-                                className="w-full h-8 rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border-primary)] px-2.5 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                              />
-                            )}
-                            {/* Test result */}
-                            {aiTestResult && (
-                              <p className={cn('text-[12px]', aiTestResult === 'success' ? 'text-green-500' : 'text-red-500')}>
-                                {aiTestResult === 'success' ? 'Connected successfully' : 'Connection failed — check your API key and model'}
-                              </p>
-                            )}
-                            {/* Test + Save buttons */}
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={handleTestAi}
-                                disabled={!aiApiKey || !aiModel || aiTesting}
-                                className="flex-1 h-7 rounded-[var(--radius-sm)] bg-[var(--bg-active)] text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 transition-colors"
-                              >
-                                {aiTesting ? 'Testing...' : 'Test'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleSaveAi}
-                                disabled={!aiApiKey || !aiModel || aiSaving}
-                                className="flex-1 h-7 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[12px] text-white disabled:opacity-40 transition-colors"
-                              >
-                                {aiSaving ? 'Saving...' : 'Save'}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </>
+                      <InlineAiSetup
+                        expanded={aiExpanded}
+                        onExpandedChange={setAiExpanded}
+                        setup={setup}
+                        label="Set up AI Analysis"
+                      />
                     )}
                   </div>
                 )}
