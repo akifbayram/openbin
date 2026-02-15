@@ -207,6 +207,52 @@ async function callAnthropic(
   }
 }
 
+async function callGemini(
+  config: AiProviderConfig,
+  question: string,
+  context: InventoryContext,
+  customPrompt?: string
+): Promise<QueryResult> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': config.apiKey,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: buildSystemPrompt(customPrompt) }] },
+        contents: [{ role: 'user', parts: [{ text: buildUserMessage(question, context) }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 2000 },
+      }),
+    });
+  } catch (err) {
+    throw new AiAnalysisError('NETWORK_ERROR', `Failed to connect: ${(err as Error).message}`);
+  }
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new AiAnalysisError(mapHttpStatus(res.status), `Provider returned ${res.status}: ${body.slice(0, 200)}`);
+  }
+
+  const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!content) {
+    throw new AiAnalysisError('INVALID_RESPONSE', 'No text content in Gemini response');
+  }
+
+  const validBinIds = new Set(context.bins.map((b) => b.id));
+  try {
+    const parsed = JSON.parse(stripCodeFences(content));
+    return validateQueryResult(parsed, validBinIds);
+  } catch {
+    throw new AiAnalysisError('INVALID_RESPONSE', `Failed to parse response as JSON: ${content.slice(0, 200)}`);
+  }
+}
+
 export async function queryInventory(
   config: AiProviderConfig,
   question: string,
@@ -215,6 +261,9 @@ export async function queryInventory(
 ): Promise<QueryResult> {
   if (config.provider === 'anthropic') {
     return callAnthropic(config, question, context, customPrompt);
+  }
+  if (config.provider === 'gemini') {
+    return callGemini(config, question, context, customPrompt);
   }
   return callOpenAiCompatible(config, question, context, customPrompt);
 }

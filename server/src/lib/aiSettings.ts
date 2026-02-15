@@ -14,12 +14,13 @@ export interface UserAiSettings {
   custom_prompt: string | null;
   command_prompt: string | null;
   query_prompt: string | null;
+  structure_prompt: string | null;
 }
 
 /** Load and decrypt a user's AI settings. Throws NoAiSettingsError if none exist. */
 export async function getUserAiSettings(userId: string): Promise<UserAiSettings> {
   const result = await query(
-    'SELECT provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt FROM user_ai_settings WHERE user_id = $1',
+    'SELECT provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt FROM user_ai_settings WHERE user_id = $1 AND is_active = 1',
     [userId]
   );
   if (result.rows.length === 0) {
@@ -36,6 +37,7 @@ export async function getUserAiSettings(userId: string): Promise<UserAiSettings>
     custom_prompt: row.custom_prompt || null,
     command_prompt: row.command_prompt || null,
     query_prompt: row.query_prompt || null,
+    structure_prompt: row.structure_prompt || null,
   };
 }
 

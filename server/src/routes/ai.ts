@@ -46,7 +46,7 @@ router.use(authenticate);
 // GET /api/ai/settings — get user's AI config
 router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
   const result = await query(
-    'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt FROM user_ai_settings WHERE user_id = $1',
+    'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, is_active FROM user_ai_settings WHERE user_id = $1',
     [req.user!.id]
   );
 
@@ -55,29 +55,42 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
     return;
   }
 
-  const row = result.rows[0];
+  const activeRow = result.rows.find((r: any) => r.is_active === 1) || result.rows[0];
+
+  // Build providerConfigs from all rows
+  const providerConfigs: Record<string, { apiKey: string; model: string; endpointUrl: string | null }> = {};
+  for (const r of result.rows) {
+    providerConfigs[r.provider] = {
+      apiKey: maskApiKey(decryptApiKey(r.api_key)),
+      model: r.model,
+      endpointUrl: r.endpoint_url || null,
+    };
+  }
+
   res.json({
-    id: row.id,
-    provider: row.provider,
-    apiKey: maskApiKey(decryptApiKey(row.api_key)),
-    model: row.model,
-    endpointUrl: row.endpoint_url,
-    customPrompt: row.custom_prompt || null,
-    commandPrompt: row.command_prompt || null,
-    queryPrompt: row.query_prompt || null,
+    id: activeRow.id,
+    provider: activeRow.provider,
+    apiKey: maskApiKey(decryptApiKey(activeRow.api_key)),
+    model: activeRow.model,
+    endpointUrl: activeRow.endpoint_url,
+    customPrompt: activeRow.custom_prompt || null,
+    commandPrompt: activeRow.command_prompt || null,
+    queryPrompt: activeRow.query_prompt || null,
+    structurePrompt: activeRow.structure_prompt || null,
+    providerConfigs,
   });
 }));
 
 // PUT /api/ai/settings — upsert AI config
 router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
-  const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt } = req.body;
+  const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt } = req.body;
 
   if (!provider || !apiKey || !model) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'provider, apiKey, and model are required' });
     return;
   }
 
-  const validProviders = ['openai', 'anthropic', 'openai-compatible'];
+  const validProviders = ['openai', 'anthropic', 'gemini', 'openai-compatible'];
   if (!validProviders.includes(provider)) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Invalid provider' });
     return;
@@ -98,21 +111,48 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
     return;
   }
 
-  const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id);
+  if (structurePrompt && typeof structurePrompt === 'string' && structurePrompt.length > 10000) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Structure prompt must be 10000 characters or less' });
+    return;
+  }
+
+  const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id, provider);
   const encryptedKey = encryptApiKey(finalApiKey);
   const finalCustomPrompt = (customPrompt && typeof customPrompt === 'string' && customPrompt.trim()) ? customPrompt.trim() : null;
   const finalCommandPrompt = (commandPrompt && typeof commandPrompt === 'string' && commandPrompt.trim()) ? commandPrompt.trim() : null;
   const finalQueryPrompt = (queryPrompt && typeof queryPrompt === 'string' && queryPrompt.trim()) ? queryPrompt.trim() : null;
+  const finalStructurePrompt = (structurePrompt && typeof structurePrompt === 'string' && structurePrompt.trim()) ? structurePrompt.trim() : null;
 
+  // Deactivate all other rows for this user
+  await query(
+    'UPDATE user_ai_settings SET is_active = 0, updated_at = datetime(\'now\') WHERE user_id = $1',
+    [req.user!.id]
+  );
+
+  // Upsert the row for this (user, provider) and set it active
   const newId = generateUuid();
   const result = await query(
-    `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     ON CONFLICT (user_id) DO UPDATE SET
-       provider = $3, api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, updated_at = datetime('now')
-     RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt`,
-    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt]
+    `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, is_active)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1)
+     ON CONFLICT (user_id, provider) DO UPDATE SET
+       api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, is_active = 1, updated_at = datetime('now')
+     RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt`,
+    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt]
   );
+
+  // Fetch all rows to build providerConfigs
+  const allRows = await query(
+    'SELECT provider, api_key, model, endpoint_url FROM user_ai_settings WHERE user_id = $1',
+    [req.user!.id]
+  );
+  const providerConfigs: Record<string, { apiKey: string; model: string; endpointUrl: string | null }> = {};
+  for (const r of allRows.rows) {
+    providerConfigs[r.provider] = {
+      apiKey: maskApiKey(decryptApiKey(r.api_key)),
+      model: r.model,
+      endpointUrl: r.endpoint_url || null,
+    };
+  }
 
   const row = result.rows[0];
   res.json({
@@ -124,6 +164,8 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
     customPrompt: row.custom_prompt || null,
     commandPrompt: row.command_prompt || null,
     queryPrompt: row.query_prompt || null,
+    structurePrompt: row.structure_prompt || null,
+    providerConfigs,
   });
 }));
 
@@ -221,7 +263,7 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
 router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { mode, context } = req.body;
-  const { config } = await getUserAiSettings(req.user!.id);
+  const { config, structure_prompt } = await getUserAiSettings(req.user!.id);
 
   const request: StructureTextRequest = {
     text,
@@ -232,7 +274,7 @@ router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async
     } : undefined,
   };
 
-  const result = await structureText(config, request);
+  const result = await structureText(config, request, structure_prompt || undefined);
   res.json(result);
 }));
 
@@ -295,7 +337,7 @@ router.post('/test', aiLimiter, aiRouteHandler('test connection', async (req, re
     return;
   }
 
-  const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id);
+  const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id, provider);
   await testConnection({
     provider,
     apiKey: finalApiKey,

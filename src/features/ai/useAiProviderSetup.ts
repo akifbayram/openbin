@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { saveAiSettings, testAiConnection } from './useAiSettings';
 import { DEFAULT_MODELS } from './aiConstants';
-import type { AiProvider } from '@/types';
+import type { AiProvider, AiSettings } from '@/types';
 
 export interface AiProviderSetup {
   provider: AiProvider;
@@ -28,6 +28,7 @@ export interface AiProviderSetup {
 
 interface UseAiProviderSetupOptions {
   onSaveSuccess?: () => void;
+  providerConfigs?: AiSettings['providerConfigs'];
 }
 
 export function useAiProviderSetup(opts?: UseAiProviderSetupOptions): AiProviderSetup {
@@ -45,9 +46,15 @@ export function useAiProviderSetup(opts?: UseAiProviderSetupOptions): AiProvider
 
   function handleProviderChange(p: AiProvider) {
     setProvider(p);
-    const currentDefault = DEFAULT_MODELS[provider];
-    if (!model || model === currentDefault) {
+    const saved = opts?.providerConfigs?.[p];
+    if (saved) {
+      setApiKey(saved.apiKey);
+      setModel(saved.model);
+      setEndpointUrl(saved.endpointUrl || '');
+    } else {
+      setApiKey('');
       setModel(DEFAULT_MODELS[p]);
+      setEndpointUrl('');
     }
     setTestResult(null);
   }

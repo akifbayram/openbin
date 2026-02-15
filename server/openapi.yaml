@@ -539,7 +539,7 @@ components:
           format: uuid
         provider:
           type: string
-          enum: [openai, anthropic, openai-compatible]
+          enum: [openai, anthropic, gemini, openai-compatible]
         apiKey:
           type: string
           description: Masked when returned from GET
@@ -563,6 +563,24 @@ components:
           nullable: true
           maxLength: 10000
           description: "Custom system prompt for AI inventory queries. Null uses the default prompt."
+        structurePrompt:
+          type: string
+          nullable: true
+          maxLength: 10000
+          description: "Custom system prompt for AI item extraction from text/voice. Null uses the default prompt."
+        providerConfigs:
+          type: object
+          description: "Per-provider saved credentials (apiKey is masked). Keys are provider names."
+          additionalProperties:
+            type: object
+            properties:
+              apiKey:
+                type: string
+              model:
+                type: string
+              endpointUrl:
+                type: string
+                nullable: true
 
     AiSettingsRequest:
       type: object
@@ -570,7 +588,7 @@ components:
       properties:
         provider:
           type: string
-          enum: [openai, anthropic, openai-compatible]
+          enum: [openai, anthropic, gemini, openai-compatible]
         apiKey:
           type: string
         model:
@@ -593,6 +611,11 @@ components:
           nullable: true
           maxLength: 10000
           description: "Custom system prompt for AI inventory queries. Null uses the default prompt."
+        structurePrompt:
+          type: string
+          nullable: true
+          maxLength: 10000
+          description: "Custom system prompt for AI item extraction from text/voice. Null uses the default prompt."
 
     AiSuggestions:
       type: object
@@ -631,7 +654,7 @@ components:
       properties:
         provider:
           type: string
-          enum: [openai, anthropic, openai-compatible]
+          enum: [openai, anthropic, gemini, openai-compatible]
         apiKey:
           type: string
         model:

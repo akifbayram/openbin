@@ -29,6 +29,7 @@ function migrate() {
 
   addColumnIfMissing('user_ai_settings', 'command_prompt', 'TEXT');
   addColumnIfMissing('user_ai_settings', 'query_prompt', 'TEXT');
+  addColumnIfMissing('user_ai_settings', 'structure_prompt', 'TEXT');
 
   console.log('All migrations complete');
 }

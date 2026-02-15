@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Sparkles, Loader2, Check, ChevronLeft } from 'lucide-react';
+import { X, Sparkles, Loader2, Check, ChevronLeft, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
@@ -152,7 +152,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
     ? structuredItems.filter((_, i) => checkedItems.get(i) !== false).length
     : 0;
 
-  const showSparkles = showAi || !!onAiSetupNeeded;
+  const showSparkles = showAi;
 
   return (
     <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 focus-within:ring-2 focus-within:ring-[var(--accent)] transition-all duration-200">
@@ -185,6 +185,16 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
             placeholder={items.length === 0 ? 'Add items...' : 'Add another item...'}
             className="h-7 bg-transparent p-0 text-base focus-visible:ring-0"
           />
+          {input.trim() && (
+            <button
+              type="button"
+              onClick={addItem}
+              className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+              aria-label="Add item"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          )}
           {showSparkles && (
             <button
               type="button"

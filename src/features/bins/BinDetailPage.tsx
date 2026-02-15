@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Check, Pin } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Check, Pin, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,6 +28,7 @@ import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/theme';
+import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import type { Bin } from '@/types';
@@ -45,6 +46,7 @@ export function BinDetailPage() {
   const { theme } = useTheme();
   const { activeLocationId } = useAuth();
   const { tagColors } = useTagColorsContext();
+  const { aiEnabled } = useAiEnabled();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editAreaId, setEditAreaId] = useState<string | null>(null);
@@ -185,7 +187,7 @@ export function BinDetailPage() {
     }
   }
 
-  const showAiButton = photos.length > 0 && !editing;
+  const showAiButton = aiEnabled && photos.length > 0 && !editing;
 
   const hasNotes = !!bin.notes;
   const hasTags = bin.tags.length > 0;
@@ -353,8 +355,8 @@ export function BinDetailPage() {
               <ItemsInput
                 items={editItems}
                 onChange={setEditItems}
-                showAi
-                aiConfigured={!!aiSettings}
+                showAi={aiEnabled}
+                aiConfigured={aiEnabled && !!aiSettings}
                 onAiSetupNeeded={() => navigate('/settings#ai-settings')}
                 binName={editName}
                 locationId={activeLocationId ?? undefined}
@@ -487,44 +489,57 @@ export function BinDetailPage() {
                       disabled={quickAddSaving}
                       className="h-7 bg-transparent p-0 text-base focus-visible:ring-0"
                     />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!aiSettings) {
-                          navigate('/settings#ai-settings');
-                          return;
-                        }
-                        quickAddClearStructured();
-                        if (quickAddValue.trim()) {
-                          const text = quickAddValue.trim();
-                          setQuickAddExpandedText(text);
-                          setQuickAddValue('');
-                          setQuickAddState('processing');
-                          quickAddStructure({
-                            text,
-                            mode: 'items',
-                            context: { binName: bin.name, existingItems: bin.items },
-                            locationId: activeLocationId ?? undefined,
-                          }).then((items) => {
-                            if (items) {
-                              const initial = new Map<number, boolean>();
-                              items.forEach((_, i) => initial.set(i, true));
-                              setQuickAddChecked(initial);
-                              setQuickAddState('preview');
-                            } else {
-                              setQuickAddState('expanded');
-                            }
-                          });
-                        } else {
-                          setQuickAddExpandedText('');
-                          setQuickAddState('expanded');
-                        }
-                      }}
-                      className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
-                      aria-label="AI extract items"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                    </button>
+                    {quickAddValue.trim() && (
+                      <button
+                        type="button"
+                        onClick={handleQuickAdd}
+                        disabled={quickAddSaving}
+                        className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors disabled:opacity-50"
+                        aria-label="Add item"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    )}
+                    {aiEnabled && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!aiSettings) {
+                            navigate('/settings#ai-settings');
+                            return;
+                          }
+                          quickAddClearStructured();
+                          if (quickAddValue.trim()) {
+                            const text = quickAddValue.trim();
+                            setQuickAddExpandedText(text);
+                            setQuickAddValue('');
+                            setQuickAddState('processing');
+                            quickAddStructure({
+                              text,
+                              mode: 'items',
+                              context: { binName: bin.name, existingItems: bin.items },
+                              locationId: activeLocationId ?? undefined,
+                            }).then((items) => {
+                              if (items) {
+                                const initial = new Map<number, boolean>();
+                                items.forEach((_, i) => initial.set(i, true));
+                                setQuickAddChecked(initial);
+                                setQuickAddState('preview');
+                              } else {
+                                setQuickAddState('expanded');
+                              }
+                            });
+                          } else {
+                            setQuickAddExpandedText('');
+                            setQuickAddState('expanded');
+                          }
+                        }}
+                        className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+                        aria-label="AI extract items"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 )}
 

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
+import { useAiEnabled } from '@/lib/aiToggle';
 import { useDashboard } from './useDashboard';
 import { BinCard } from '@/features/bins/BinCard';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
@@ -68,6 +69,7 @@ function SectionHeader({
 export function DashboardPage() {
   const navigate = useNavigate();
   const { activeLocationId } = useAuth();
+  const { aiEnabled } = useAiEnabled();
   const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, recentlyUpdated, pinnedBins, isLoading } =
     useDashboard();
   const [search, setSearch] = useState('');
@@ -158,20 +160,24 @@ export function DashboardPage() {
                   <Plus className="h-4 w-4 text-[var(--text-secondary)]" />
                   New Bin
                 </button>
-                <button
-                  onClick={() => { setAddMenuOpen(false); navigate('/bulk-add'); }}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                >
-                  <ImagePlus className="h-4 w-4 text-[var(--text-secondary)]" />
-                  Add from Photos
-                </button>
-                <button
-                  onClick={() => { setAddMenuOpen(false); setCommandOpen(true); }}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                >
-                  <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />
-                  Ask AI
-                </button>
+                {aiEnabled && (
+                  <button
+                    onClick={() => { setAddMenuOpen(false); navigate('/bulk-add'); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  >
+                    <ImagePlus className="h-4 w-4 text-[var(--text-secondary)]" />
+                    Add from Photos
+                  </button>
+                )}
+                {aiEnabled && (
+                  <button
+                    onClick={() => { setAddMenuOpen(false); setCommandOpen(true); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  >
+                    <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />
+                    Ask AI
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -280,9 +286,11 @@ export function DashboardPage() {
       )}
 
       <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <Suspense fallback={null}>
-        {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
-      </Suspense>
+      {aiEnabled && (
+        <Suspense fallback={null}>
+          {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -157,7 +157,7 @@ export interface ExportDataV2 {
 
 export type ExportData = ExportDataV1 | ExportDataV2;
 
-export type AiProvider = 'openai' | 'anthropic' | 'openai-compatible';
+export type AiProvider = 'openai' | 'anthropic' | 'gemini' | 'openai-compatible';
 
 export interface AiSettings {
   id: string;
@@ -168,6 +168,12 @@ export interface AiSettings {
   customPrompt: string | null;
   commandPrompt: string | null;
   queryPrompt: string | null;
+  structurePrompt: string | null;
+  providerConfigs?: Partial<Record<AiProvider, {
+    apiKey: string;
+    model: string;
+    endpointUrl: string | null;
+  }>>;
 }
 
 export interface ApiKey {

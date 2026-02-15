@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { useTheme } from '@/lib/theme';
+import { useAiEnabled } from '@/lib/aiToggle';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { useBinList } from '@/features/bins/useBins';
@@ -33,6 +34,7 @@ import {
   importData,
   ImportError,
 } from './exportImport';
+import { Switch } from '@/components/ui/switch';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { ApiKeysSection } from './ApiKeysSection';
 import { useDashboardSettings, DASHBOARD_LIMITS } from '@/lib/dashboardSettings';
@@ -40,6 +42,7 @@ import { useDashboardSettings, DASHBOARD_LIMITS } from '@/lib/dashboardSettings'
 export function SettingsPage() {
   const navigate = useNavigate();
   const { preference, setThemePreference } = useTheme();
+  const { aiEnabled, setAiEnabled } = useAiEnabled();
   const { settings, updateSettings, resetSettings } = useAppSettings();
   const { user, activeLocationId, setActiveLocationId, logout, deleteAccount } = useAuth();
   const { showToast } = useToast();
@@ -552,11 +555,26 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* AI Features */}
+      <Card>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <Label htmlFor="ai-toggle">AI Features</Label>
+              <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
+                Photo analysis, item extraction, and AI commands
+              </p>
+            </div>
+            <Switch id="ai-toggle" checked={aiEnabled} onCheckedChange={setAiEnabled} />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* AI Image Analysis */}
-      <AiSettingsSection />
+      {aiEnabled && <AiSettingsSection />}
 
       {/* API Keys */}
-      <ApiKeysSection />
+      {aiEnabled && <ApiKeysSection />}
 
       {/* Data */}
       <Card>

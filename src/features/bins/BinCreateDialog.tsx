@@ -20,6 +20,7 @@ import { ColorPicker } from './ColorPicker';
 import { addBin, useAllTags } from './useBins';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAuth } from '@/lib/auth';
+import { useAiEnabled } from '@/lib/aiToggle';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
 import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
@@ -38,6 +39,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
   const { activeLocationId } = useAuth();
   const allTags = useAllTags();
   const { settings: aiSettings } = useAiSettings();
+  const { aiEnabled } = useAiEnabled();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -243,21 +245,23 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
                       </button>
                     )}
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleAnalyze}
-                    disabled={analyzing}
-                    className="gap-1.5"
-                  >
-                    {analyzing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4 text-[var(--accent)]" />
-                    )}
-                    {analyzing ? 'Analyzing...' : `Analyze with AI${photos.length > 1 ? ` (${photos.length})` : ''}`}
-                  </Button>
+                  {aiEnabled && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleAnalyze}
+                      disabled={analyzing}
+                      className="gap-1.5"
+                    >
+                      {analyzing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4 text-[var(--accent)]" />
+                      )}
+                      {analyzing ? 'Analyzing...' : `Analyze with AI${photos.length > 1 ? ` (${photos.length})` : ''}`}
+                    </Button>
+                  )}
                 </div>
               )}
               {analyzeError && (
@@ -285,8 +289,8 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
               <ItemsInput
                 items={items}
                 onChange={setItems}
-                showAi
-                aiConfigured={!!aiSettings}
+                showAi={aiEnabled}
+                aiConfigured={aiEnabled && !!aiSettings}
                 onAiSetupNeeded={() => setAiSetupOpen(true)}
                 binName={name}
                 locationId={activeLocationId ?? undefined}
@@ -308,7 +312,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
             </div>
 
             {/* AI Suggestions */}
-            {suggestions && (
+            {aiEnabled && suggestions && (
               <div ref={suggestionsRef}>
                 <AiSuggestionsPanel
                   suggestions={suggestions}

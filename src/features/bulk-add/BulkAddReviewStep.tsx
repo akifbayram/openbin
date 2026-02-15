@@ -13,6 +13,7 @@ import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useAllTags } from '@/features/bins/useBins';
 import { useAuth } from '@/lib/auth';
+import { useAiEnabled } from '@/lib/aiToggle';
 import { analyzeImageFile, mapErrorMessage } from '@/features/ai/useAiAnalysis';
 import { compressImage } from '@/features/photos/compressImage';
 import type { BulkAddPhoto, BulkAddAction } from './useBulkAdd';
@@ -26,6 +27,7 @@ interface BulkAddReviewStepProps {
 export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddReviewStepProps) {
   const { activeLocationId } = useAuth();
   const { settings: aiSettings } = useAiSettings();
+  const { aiEnabled } = useAiEnabled();
   const allTags = useAllTags();
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const autoAnalyzedRef = useRef<Set<string>>(new Set());
@@ -39,7 +41,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
 
   // Auto-analyze on first visit to each photo
   useEffect(() => {
-    if (photo.status === 'pending' && aiSettings && !autoAnalyzedRef.current.has(photo.id)) {
+    if (photo.status === 'pending' && aiEnabled && aiSettings && !autoAnalyzedRef.current.has(photo.id)) {
       autoAnalyzedRef.current.add(photo.id);
       triggerAnalyze(photo);
     }
@@ -150,7 +152,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
       )}
 
       {/* AI Controls */}
-      {photo.status !== 'analyzing' && (
+      {aiEnabled && photo.status !== 'analyzing' && (
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -175,7 +177,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
       )}
 
       {/* Inline AI Setup */}
-      {aiSetupExpanded && !aiSettings && <AiSettingsSection />}
+      {aiEnabled && aiSetupExpanded && !aiSettings && <AiSettingsSection />}
 
       {/* Form Fields */}
       <div className="space-y-4">

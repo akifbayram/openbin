@@ -44,12 +44,17 @@ export function maskApiKey(key: string): string {
 }
 
 /** If the API key is masked (starts with ****), load the real key from the DB. */
-export async function resolveMaskedApiKey(apiKey: string, userId: string): Promise<string> {
+export async function resolveMaskedApiKey(apiKey: string, userId: string, provider?: string): Promise<string> {
   if (!apiKey.startsWith('****')) return apiKey;
-  const existing = await query(
-    'SELECT api_key FROM user_ai_settings WHERE user_id = $1',
-    [userId]
-  );
+  const existing = provider
+    ? await query(
+        'SELECT api_key FROM user_ai_settings WHERE user_id = $1 AND provider = $2',
+        [userId, provider]
+      )
+    : await query(
+        'SELECT api_key FROM user_ai_settings WHERE user_id = $1 AND is_active = 1',
+        [userId]
+      );
   if (existing.rows.length === 0) {
     throw new ValidationError('No saved key found. Please enter your API key.');
   }

@@ -37,6 +37,7 @@ import { getColorPreset } from '@/lib/colorPalette';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useTheme } from '@/lib/theme';
+import { useAiEnabled } from '@/lib/aiToggle';
 import { getSavedViews, saveView, deleteView, type SavedView } from '@/lib/savedViews';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import type { Bin } from '@/types';
@@ -95,6 +96,7 @@ export function BinListPage() {
   const { theme } = useTheme();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const { aiEnabled } = useAiEnabled();
   const [commandOpen, setCommandOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
@@ -221,20 +223,24 @@ export function BinListPage() {
                   <Plus className="h-4 w-4 text-[var(--text-secondary)]" />
                   New Bin
                 </button>
-                <button
-                  onClick={() => { setAddMenuOpen(false); navigate('/bulk-add'); }}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                >
-                  <ImagePlus className="h-4 w-4 text-[var(--text-secondary)]" />
-                  Add from Photos
-                </button>
-                <button
-                  onClick={() => { setAddMenuOpen(false); setCommandOpen(true); }}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                >
-                  <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />
-                  Ask AI
-                </button>
+                {aiEnabled && (
+                  <button
+                    onClick={() => { setAddMenuOpen(false); navigate('/bulk-add'); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  >
+                    <ImagePlus className="h-4 w-4 text-[var(--text-secondary)]" />
+                    Add from Photos
+                  </button>
+                )}
+                {aiEnabled && (
+                  <button
+                    onClick={() => { setAddMenuOpen(false); setCommandOpen(true); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  >
+                    <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />
+                    Ask AI
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -517,7 +523,7 @@ export function BinListPage() {
           )}
 
           {/* Bin grid */}
-          {isLoading ? (
+          {isLoading && bins.length === 0 ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-3">
@@ -610,9 +616,11 @@ export function BinListPage() {
         </DialogContent>
       </Dialog>
 
-      <Suspense fallback={null}>
-        {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
-      </Suspense>
+      {aiEnabled && (
+        <Suspense fallback={null}>
+          {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
+        </Suspense>
+      )}
     </div>
   );
 }

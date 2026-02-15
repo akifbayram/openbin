@@ -32,8 +32,8 @@ Rules:
 Respond with ONLY valid JSON, no markdown fences, no extra text. Example:
 {"items":["Winter jacket","Socks (x3)","Old t-shirts (x5)","Scarf","Wool gloves (x2)"]}`;
 
-function buildPrompt(request: StructureTextRequest): string {
-  let prompt = ITEMS_SYSTEM_PROMPT;
+function buildPrompt(request: StructureTextRequest, customPrompt?: string): string {
+  let prompt = customPrompt || ITEMS_SYSTEM_PROMPT;
 
   if (request.context?.binName) {
     prompt += `\n\nBin name: "${request.context.binName}" — use this for context about what type of items to expect.`;
@@ -68,7 +68,8 @@ function validateItems(raw: unknown): StructureTextResult {
 
 async function callOpenAiCompatible(
   config: AiProviderConfig,
-  request: StructureTextRequest
+  request: StructureTextRequest,
+  customPrompt?: string
 ): Promise<StructureTextResult> {
   const baseUrl = config.endpointUrl || 'https://api.openai.com/v1';
   const url = `${baseUrl.replace(/\/+$/, '')}/chat/completions`;
@@ -86,7 +87,7 @@ async function callOpenAiCompatible(
         max_tokens: 800,
         temperature: 0.2,
         messages: [
-          { role: 'system', content: buildPrompt(request) },
+          { role: 'system', content: buildPrompt(request, customPrompt) },
           { role: 'user', content: request.text },
         ],
       }),
@@ -116,7 +117,8 @@ async function callOpenAiCompatible(
 
 async function callAnthropic(
   config: AiProviderConfig,
-  request: StructureTextRequest
+  request: StructureTextRequest,
+  customPrompt?: string
 ): Promise<StructureTextResult> {
   const baseUrl = config.endpointUrl || 'https://api.anthropic.com';
   const url = `${baseUrl.replace(/\/+$/, '')}/v1/messages`;
@@ -134,7 +136,7 @@ async function callAnthropic(
         model: config.model,
         max_tokens: 800,
         temperature: 0.2,
-        system: buildPrompt(request),
+        system: buildPrompt(request, customPrompt),
         messages: [
           { role: 'user', content: request.text },
         ],
@@ -164,12 +166,60 @@ async function callAnthropic(
   }
 }
 
+async function callGemini(
+  config: AiProviderConfig,
+  request: StructureTextRequest,
+  customPrompt?: string
+): Promise<StructureTextResult> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': config.apiKey,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: buildPrompt(request, customPrompt) }] },
+        contents: [{ role: 'user', parts: [{ text: request.text }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 800 },
+      }),
+    });
+  } catch (err) {
+    throw new AiAnalysisError('NETWORK_ERROR', `Failed to connect: ${(err as Error).message}`);
+  }
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new AiAnalysisError(mapHttpStatus(res.status), `Provider returned ${res.status}: ${body.slice(0, 200)}`);
+  }
+
+  const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!content) {
+    throw new AiAnalysisError('INVALID_RESPONSE', 'No text content in Gemini response');
+  }
+
+  try {
+    const parsed = JSON.parse(stripCodeFences(content));
+    return validateItems(parsed);
+  } catch {
+    throw new AiAnalysisError('INVALID_RESPONSE', `Failed to parse response as JSON: ${content.slice(0, 200)}`);
+  }
+}
+
 export async function structureText(
   config: AiProviderConfig,
-  request: StructureTextRequest
+  request: StructureTextRequest,
+  customPrompt?: string
 ): Promise<StructureTextResult> {
   if (config.provider === 'anthropic') {
-    return callAnthropic(config, request);
+    return callAnthropic(config, request, customPrompt);
   }
-  return callOpenAiCompatible(config, request);
+  if (config.provider === 'gemini') {
+    return callGemini(config, request, customPrompt);
+  }
+  return callOpenAiCompatible(config, request, customPrompt);
 }
