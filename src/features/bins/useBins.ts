@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Bin, ListResponse } from '@/types';
@@ -154,20 +154,29 @@ export function useBin(id: string | undefined) {
   const [bin, setBin] = useState<Bin | null | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshCounter, setRefreshCounter] = useState(0);
+  const loadedIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!id || !token) {
       setBin(undefined);
       setIsLoading(false);
+      loadedIdRef.current = undefined;
       return;
     }
 
     let cancelled = false;
-    setIsLoading(true);
+    // Only show loading skeleton on first load for this bin ID.
+    // On background refreshes (e.g. after item delete), keep showing current data.
+    if (loadedIdRef.current !== id) {
+      setIsLoading(true);
+    }
 
     apiFetch<Bin>(`/api/bins/${id}`)
       .then((data) => {
-        if (!cancelled) setBin(data);
+        if (!cancelled) {
+          setBin(data);
+          loadedIdRef.current = id;
+        }
       })
       .catch(() => {
         if (!cancelled) setBin(null);

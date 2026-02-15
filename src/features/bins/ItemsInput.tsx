@@ -49,9 +49,28 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
   }, [state]);
 
   function addItem() {
-    if (input.trim()) {
-      onChange([...items, input.trim()]);
-      setInput('');
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    // Comma-separated entry: split if commas present
+    if (trimmed.includes(',')) {
+      const newItems = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+      if (newItems.length > 0) {
+        onChange([...items, ...newItems]);
+      }
+    } else {
+      onChange([...items, trimmed]);
+    }
+    setInput('');
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData('text');
+    if (text.includes('\n')) {
+      e.preventDefault();
+      const newItems = text.split('\n').map((s) => s.trim()).filter(Boolean);
+      if (newItems.length > 0) {
+        onChange([...items, ...newItems]);
+      }
     }
   }
 
@@ -182,6 +201,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleInputKeyDown}
+            onPaste={handlePaste}
             placeholder={items.length === 0 ? 'Add items...' : 'Add another item...'}
             className="h-7 bg-transparent p-0 text-base focus-visible:ring-0"
           />

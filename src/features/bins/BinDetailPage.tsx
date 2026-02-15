@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/toast';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
 import { TagInput } from './TagInput';
 import { ItemsInput } from './ItemsInput';
+import { ItemList } from './ItemList';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { useBin, updateBin, deleteBin, restoreBin, useAllTags } from './useBins';
@@ -157,10 +158,37 @@ export function BinDetailPage() {
     if (!value || !id || !bin) return;
     setQuickAddSaving(true);
     try {
-      await updateBin(id, { items: [...bin.items, value] });
+      // Comma-separated entry: split if commas present
+      if (value.includes(',')) {
+        const newItems = value.split(',').map((s) => s.trim()).filter(Boolean);
+        if (newItems.length > 0) {
+          await updateBin(id, { items: [...bin.items, ...newItems] });
+          showToast({ message: `Added ${newItems.length} items` });
+        }
+      } else {
+        await updateBin(id, { items: [...bin.items, value] });
+      }
       setQuickAddValue('');
     } catch {
       showToast({ message: 'Failed to add item' });
+    } finally {
+      setQuickAddSaving(false);
+    }
+  }
+
+  async function handleQuickAddPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData('text');
+    if (!text.includes('\n') || !id || !bin) return;
+    e.preventDefault();
+    const newItems = text.split('\n').map((s) => s.trim()).filter(Boolean);
+    if (newItems.length === 0) return;
+    setQuickAddSaving(true);
+    try {
+      await updateBin(id, { items: [...bin.items, ...newItems] });
+      showToast({ message: `Added ${newItems.length} items` });
+      setQuickAddValue('');
+    } catch {
+      showToast({ message: 'Failed to add items' });
     } finally {
       setQuickAddSaving(false);
     }
@@ -459,19 +487,7 @@ export function BinDetailPage() {
           {/* Items card — always visible */}
           <Card>
             <CardContent>
-              <Label>Items</Label>
-              {bin.items.length > 0 ? (
-                <ul className="mt-2 space-y-1">
-                  {bin.items.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-[15px] text-[var(--text-primary)] leading-relaxed">
-                      <span className="text-[var(--text-tertiary)] mt-0.5">•</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-2 text-[15px] text-[var(--text-tertiary)] italic">No items yet</p>
-              )}
+              <ItemList items={bin.items} binId={bin.id} />
               {/* Quick-add row */}
               <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
                 {quickAddState === 'input' && (
@@ -485,6 +501,7 @@ export function BinDetailPage() {
                           handleQuickAdd();
                         }
                       }}
+                      onPaste={handleQuickAddPaste}
                       placeholder="Add item..."
                       disabled={quickAddSaving}
                       className="h-7 bg-transparent p-0 text-base focus-visible:ring-0"
