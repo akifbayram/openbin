@@ -10,7 +10,7 @@ export function notifyBinsChanged() {
   window.dispatchEvent(new Event(BINS_CHANGED_EVENT));
 }
 
-export type SortOption = 'updated' | 'created' | 'name' | 'area';
+export type SortOption = 'updated' | 'created' | 'name';
 
 export interface BinFilters {
   tags: string[];
@@ -130,13 +130,6 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
       filtered.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sort === 'created') {
       filtered.sort((a, b) => b.created_at.localeCompare(a.created_at));
-    } else if (sort === 'area') {
-      filtered.sort((a, b) => {
-        const aArea = a.area_name || '\uffff'; // Unassigned sorts last
-        const bArea = b.area_name || '\uffff';
-        const cmp = aArea.localeCompare(bArea);
-        return cmp !== 0 ? cmp : a.name.localeCompare(b.name);
-      });
     } else {
       filtered.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
     }

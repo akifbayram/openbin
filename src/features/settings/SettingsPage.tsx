@@ -524,6 +524,27 @@ export function SettingsPage() {
           <Label>Dashboard</Label>
           <div className="flex flex-col gap-3 mt-3">
             <div className="space-y-1.5">
+              <label className="text-[13px] text-[var(--text-secondary)]">Visible sections</label>
+              <div className="flex flex-col gap-2">
+                {([
+                  { key: 'showStats' as const, label: 'Stats' },
+                  { key: 'showNeedsOrganizing' as const, label: 'Needs Organizing' },
+                  { key: 'showSavedViews' as const, label: 'Saved Views' },
+                  { key: 'showPinnedBins' as const, label: 'Pinned Bins' },
+                  { key: 'showRecentlyScanned' as const, label: 'Recently Scanned' },
+                  { key: 'showRecentlyUpdated' as const, label: 'Recently Updated' },
+                ]).map(({ key, label }) => (
+                  <div key={key} className="flex items-center justify-between py-1">
+                    <span className="text-[14px] text-[var(--text-primary)]">{label}</span>
+                    <Switch
+                      checked={dashSettings[key]}
+                      onCheckedChange={(checked) => updateDashSettings({ [key]: checked })}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
               <label htmlFor="recent-bins" className="text-[13px] text-[var(--text-secondary)]">Recent bins shown</label>
               <Input
                 id="recent-bins"

@@ -431,28 +431,6 @@ describe('useBinList', () => {
     expect(result.current.bins.map((b) => b.name)).toEqual(['New', 'Mid', 'Old']);
   });
 
-  it('sort area: alphabetical by area_name then name, unassigned last', async () => {
-    const bins = [
-      makeBin({ id: '1', name: 'Z Bin', area_name: 'Garage', area_id: 'a1' }),
-      makeBin({ id: '2', name: 'A Bin', area_name: '', area_id: null }),
-      makeBin({ id: '3', name: 'M Bin', area_name: 'Basement', area_id: 'a2' }),
-      makeBin({ id: '4', name: 'B Bin', area_name: 'Garage', area_id: 'a1' }),
-    ];
-    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
-
-    const { result } = renderHook(() => useBinList(undefined, 'area'));
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-    expect(result.current.bins.map((b) => b.name)).toEqual([
-      'M Bin',    // Basement
-      'B Bin',    // Garage (B < Z)
-      'Z Bin',    // Garage
-      'A Bin',    // unassigned (last)
-    ]);
-  });
-
   // -- event refresh --------------------------------------------------------
   it('event refresh: bins-changed event triggers refetch', async () => {
     mockApiFetch.mockResolvedValue({ results: [makeBin({ id: '1', name: 'Original' })], count: 1 });

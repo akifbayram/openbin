@@ -10,6 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
 import { useAiEnabled } from '@/lib/aiToggle';
+import { getSavedViews, deleteView, type SavedView } from '@/lib/savedViews';
+import { SavedViewChips } from '@/components/SavedViewChips';
+import { useDashboardSettings } from '@/lib/dashboardSettings';
 import { useDashboard } from './useDashboard';
 import { BinCard } from '@/features/bins/BinCard';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
@@ -68,16 +71,24 @@ function SectionHeader({
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { activeLocationId } = useAuth();
+  const { activeLocationId, user } = useAuth();
   const { aiEnabled } = useAiEnabled();
   const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, recentlyUpdated, pinnedBins, isLoading } =
     useDashboard();
+  const { settings: dashSettings } = useDashboardSettings();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [createOpen, setCreateOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+
+  useEffect(() => {
+    if (user?.id) {
+      setSavedViews(getSavedViews(user.id));
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (debouncedSearch.trim()) {
@@ -196,7 +207,7 @@ export function DashboardPage() {
       </div>
 
       {/* Stats */}
-      {isLoading ? (
+      {dashSettings.showStats && (isLoading ? (
         <div className="flex gap-3">
           <div className="flex-1 glass-card rounded-[var(--radius-lg)] p-4">
             <Skeleton className="h-7 w-12 mb-1" />
@@ -223,10 +234,10 @@ export function DashboardPage() {
             />
           )}
         </div>
-      )}
+      ))}
 
       {/* Needs Organizing */}
-      {!isLoading && needsOrganizing > 0 && (
+      {dashSettings.showNeedsOrganizing && !isLoading && needsOrganizing > 0 && (
         <button
           onClick={() => navigate('/bins', { state: { needsOrganizing: true } })}
           className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center justify-between"
@@ -246,8 +257,21 @@ export function DashboardPage() {
         </button>
       )}
 
+      {/* Saved Views */}
+      {dashSettings.showSavedViews && !isLoading && (
+        <SavedViewChips
+          views={savedViews}
+          onApply={(view) => navigate('/bins', { state: { savedView: view } })}
+          onDelete={(viewId) => {
+            if (!user?.id) return;
+            deleteView(user.id, viewId);
+            setSavedViews(getSavedViews(user.id));
+          }}
+        />
+      )}
+
       {/* Pinned Bins */}
-      {pinnedBins.length > 0 && (
+      {dashSettings.showPinnedBins && pinnedBins.length > 0 && (
         <div className="flex flex-col gap-3">
           <SectionHeader title="Pinned" />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -259,7 +283,7 @@ export function DashboardPage() {
       )}
 
       {/* Recently Scanned */}
-      {recentlyScanned.length > 0 && (
+      {dashSettings.showRecentlyScanned && recentlyScanned.length > 0 && (
         <div className="flex flex-col gap-3">
           <SectionHeader title="Recently Scanned" />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -271,7 +295,7 @@ export function DashboardPage() {
       )}
 
       {/* Recently Updated */}
-      {!isLoading && recentlyUpdated.length > 0 && (
+      {dashSettings.showRecentlyUpdated && !isLoading && recentlyUpdated.length > 0 && (
         <div className="flex flex-col gap-3">
           <SectionHeader
             title="Recently Updated"

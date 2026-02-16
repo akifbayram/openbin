@@ -3,15 +3,16 @@ import {
   Search,
   Plus,
   PackageOpen,
-  Pin,
+
   ArrowUpDown,
   SlidersHorizontal,
   Trash2,
   Tag,
   X,
+  Check,
   CheckCircle2,
   MapPin,
-  Bookmark,
+
   ImagePlus,
   MessageSquare,
 } from 'lucide-react';
@@ -23,11 +24,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
-import { haptic } from '@/lib/utils';
+import { cn, haptic } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
 import { useBinList, useAllTags, deleteBin, restoreBin, countActiveFilters, EMPTY_FILTERS, type SortOption, type BinFilters } from './useBins';
-import { usePinnedBins, pinBin, unpinBin } from '@/features/pins/usePins';
+
 import { BinCard } from './BinCard';
 import { BinCreateDialog } from './BinCreateDialog';
 import { BinFilterDialog } from './BinFilterDialog';
@@ -38,17 +39,14 @@ import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useTheme } from '@/lib/theme';
 import { useAiEnabled } from '@/lib/aiToggle';
-import { getSavedViews, saveView, deleteView, type SavedView } from '@/lib/savedViews';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import type { SavedView } from '@/lib/savedViews';
 import type { Bin } from '@/types';
 
 const sortLabels: Record<SortOption, string> = {
   updated: 'Recently Updated',
   created: 'Recently Created',
   name: 'Name',
-  area: 'Area',
 };
-const sortOrder: SortOption[] = ['updated', 'created', 'name', 'area'];
 
 export function BinListPage() {
   const location = useLocation();
@@ -59,7 +57,15 @@ export function BinListPage() {
 
   // Update search/filters when navigating from Tags/Areas/Dashboard pages
   useEffect(() => {
-    const state = location.state as { search?: string; areaFilter?: string; needsOrganizing?: boolean } | null;
+    const state = location.state as { search?: string; areaFilter?: string; needsOrganizing?: boolean; savedView?: SavedView } | null;
+    if (state?.savedView) {
+      const view = state.savedView;
+      setSearch(view.searchQuery);
+      setSort(view.sort);
+      setFilters(view.filters);
+      window.history.replaceState({}, '');
+      return;
+    }
     if (state?.search) {
       setSearch(state.search);
     }
@@ -83,12 +89,8 @@ export function BinListPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
   const [bulkAreaOpen, setBulkAreaOpen] = useState(false);
-  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
-  const [saveViewOpen, setSaveViewOpen] = useState(false);
-  const [viewName, setViewName] = useState('');
-  const { activeLocationId, user } = useAuth();
+  const { activeLocationId } = useAuth();
   const { bins, isLoading } = useBinList(debouncedSearch, sort, filters);
-  const { pinnedBins } = usePinnedBins();
   const allTags = useAllTags();
   const activeCount = countActiveFilters(filters);
   const { tagColors } = useTagColorsContext();
@@ -100,6 +102,8 @@ export function BinListPage() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
 
   // Close add menu on click outside
   useEffect(() => {
@@ -113,57 +117,23 @@ export function BinListPage() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [addMenuOpen]);
 
-  // Load saved views
+  // Close sort menu on click outside
   useEffect(() => {
-    if (user?.id) {
-      setSavedViews(getSavedViews(user.id));
+    if (!sortMenuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+        setSortMenuOpen(false);
+      }
     }
-  }, [user?.id]);
-
-  const hasActiveFiltersOrSearch = search.trim() !== '' || countActiveFilters(filters) > 0;
-
-  function handleSaveView() {
-    if (!user?.id || !viewName.trim()) return;
-    saveView(user.id, {
-      name: viewName.trim(),
-      searchQuery: search,
-      sort,
-      filters,
-    });
-    setSavedViews(getSavedViews(user.id));
-    setViewName('');
-    setSaveViewOpen(false);
-  }
-
-  function handleDeleteView(viewId: string) {
-    if (!user?.id) return;
-    deleteView(user.id, viewId);
-    setSavedViews(getSavedViews(user.id));
-  }
-
-  function applyView(view: SavedView) {
-    setSearch(view.searchQuery);
-    setSort(view.sort);
-    setFilters(view.filters);
-  }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [sortMenuOpen]);
 
   const selectable = selectedIds.size > 0;
 
   const handleTagClick = useCallback((tag: string) => {
     setSearch(tag);
   }, []);
-
-  const handlePinToggle = useCallback(async (id: string, pinned: boolean) => {
-    if (pinned) await pinBin(id);
-    else await unpinBin(id);
-  }, []);
-
-  function cycleSort() {
-    setSort((prev) => {
-      const idx = sortOrder.indexOf(prev);
-      return sortOrder[(idx + 1) % sortOrder.length];
-    });
-  }
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -273,49 +243,34 @@ export function BinListPage() {
               </span>
             )}
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={cycleSort}
-            className="shrink-0 rounded-[var(--radius-full)] gap-1.5 h-10 px-3.5"
-          >
-            <ArrowUpDown className="h-3.5 w-3.5" />
-            <span className="text-[13px] truncate">{sortLabels[sort]}</span>
-          </Button>
-          {hasActiveFiltersOrSearch && (
+          <div ref={sortMenuRef} className="relative">
             <Button
               variant="secondary"
               size="icon"
-              onClick={() => { setViewName(''); setSaveViewOpen(true); }}
-              className="shrink-0 h-10 w-10 rounded-full"
-              aria-label="Save current view"
+              onClick={() => setSortMenuOpen(!sortMenuOpen)}
+              className="shrink-0 h-10 w-10 rounded-full relative"
+              aria-label={`Sort by ${sortLabels[sort]}`}
             >
-              <Bookmark className="h-4 w-4" />
+              <ArrowUpDown className="h-4 w-4" />
+              {sort !== 'updated' && (
+                <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[var(--accent)]" />
+              )}
             </Button>
-          )}
-        </div>
-      )}
-
-      {/* Saved view chips */}
-      {savedViews.length > 0 && activeLocationId && (
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-5 px-5">
-          {savedViews.map((view) => (
-            <button
-              key={view.id}
-              onClick={() => applyView(view)}
-              className="shrink-0 flex items-center gap-1.5 rounded-[var(--radius-full)] px-3 py-1.5 text-[13px] font-medium glass-card hover:ring-1 hover:ring-[var(--accent)] transition-all"
-            >
-              <Bookmark className="h-3 w-3 text-[var(--accent)]" />
-              {view.name}
-              <button
-                onClick={(e) => { e.stopPropagation(); handleDeleteView(view.id); }}
-                className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
-                aria-label={`Remove saved view ${view.name}`}
-              >
-                <X className="h-3 w-3 text-[var(--text-tertiary)]" />
-              </button>
-            </button>
-          ))}
+            {sortMenuOpen && (
+              <div className="absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-lg overflow-hidden z-20">
+                {(Object.keys(sortLabels) as SortOption[]).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => { setSort(key); setSortMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  >
+                    <Check className={cn('h-4 w-4', sort === key ? 'text-[var(--accent)]' : 'invisible')} />
+                    {sortLabels[key]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -498,30 +453,6 @@ export function BinListPage() {
         </div>
       ) : (
         <>
-          {/* Pinned bins row */}
-          {pinnedBins.length > 0 && !selectable && (
-            <div className="flex flex-col gap-2">
-              <h2 className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Pinned</h2>
-              <div className="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-1">
-                {pinnedBins.map((pin) => (
-                  <button
-                    key={pin.id}
-                    onClick={() => navigate(`/bin/${pin.id}`)}
-                    className="shrink-0 glass-card rounded-[var(--radius-lg)] px-3.5 py-2.5 flex items-center gap-2.5 max-w-[200px] active:scale-[0.98] transition-all"
-                  >
-                    <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" fill="currentColor" />
-                    <div className="min-w-0 text-left">
-                      <p className="text-[14px] font-medium text-[var(--text-primary)] truncate">{pin.name}</p>
-                      {pin.items.length > 0 && (
-                        <p className="text-[12px] text-[var(--text-tertiary)]">{pin.items.length} item{pin.items.length !== 1 ? 's' : ''}</p>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Bin grid */}
           {isLoading && bins.length === 0 ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -562,7 +493,7 @@ export function BinListPage() {
                   selected={selectedIds.has(bin.id)}
                   onSelect={toggleSelect}
                   searchQuery={debouncedSearch}
-                  onPinToggle={handlePinToggle}
+
                 />
               ))}
             </div>
@@ -590,31 +521,6 @@ export function BinListPage() {
         binIds={[...selectedIds]}
         onDone={clearSelection}
       />
-
-      {/* Save View Dialog */}
-      <Dialog open={saveViewOpen} onOpenChange={setSaveViewOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Save View</DialogTitle>
-          </DialogHeader>
-          <Input
-            value={viewName}
-            onChange={(e) => setViewName(e.target.value)}
-            placeholder="View name..."
-            className="rounded-[var(--radius-full)] h-10 text-[15px]"
-            autoFocus
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveView(); }}
-          />
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setSaveViewOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveView} disabled={!viewName.trim()}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {aiEnabled && (
         <Suspense fallback={null}>

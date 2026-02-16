@@ -3,6 +3,12 @@ import { useState, useCallback } from 'react';
 export interface DashboardSettings {
   recentBinsCount: number;
   scanHistoryMax: number;
+  showStats: boolean;
+  showNeedsOrganizing: boolean;
+  showSavedViews: boolean;
+  showPinnedBins: boolean;
+  showRecentlyScanned: boolean;
+  showRecentlyUpdated: boolean;
 }
 
 export const DASHBOARD_LIMITS = {
@@ -15,6 +21,12 @@ const STORAGE_KEY = 'sanduk-dashboard-settings';
 const DEFAULTS: DashboardSettings = {
   recentBinsCount: 5,
   scanHistoryMax: 20,
+  showStats: true,
+  showNeedsOrganizing: true,
+  showSavedViews: true,
+  showPinnedBins: true,
+  showRecentlyScanned: true,
+  showRecentlyUpdated: true,
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -37,6 +49,12 @@ function loadSettings(): DashboardSettings {
           DASHBOARD_LIMITS.scanHistoryMax.min,
           DASHBOARD_LIMITS.scanHistoryMax.max,
         ),
+        showStats: typeof parsed.showStats === 'boolean' ? parsed.showStats : true,
+        showNeedsOrganizing: typeof parsed.showNeedsOrganizing === 'boolean' ? parsed.showNeedsOrganizing : true,
+        showSavedViews: typeof parsed.showSavedViews === 'boolean' ? parsed.showSavedViews : true,
+        showPinnedBins: typeof parsed.showPinnedBins === 'boolean' ? parsed.showPinnedBins : true,
+        showRecentlyScanned: typeof parsed.showRecentlyScanned === 'boolean' ? parsed.showRecentlyScanned : true,
+        showRecentlyUpdated: typeof parsed.showRecentlyUpdated === 'boolean' ? parsed.showRecentlyUpdated : true,
       };
     }
   } catch { /* ignore */ }
@@ -64,6 +82,12 @@ export function useDashboardSettings() {
           DASHBOARD_LIMITS.scanHistoryMax.min,
           DASHBOARD_LIMITS.scanHistoryMax.max,
         ),
+        showStats: patch.showStats ?? prev.showStats,
+        showNeedsOrganizing: patch.showNeedsOrganizing ?? prev.showNeedsOrganizing,
+        showSavedViews: patch.showSavedViews ?? prev.showSavedViews,
+        showPinnedBins: patch.showPinnedBins ?? prev.showPinnedBins,
+        showRecentlyScanned: patch.showRecentlyScanned ?? prev.showRecentlyScanned,
+        showRecentlyUpdated: patch.showRecentlyUpdated ?? prev.showRecentlyUpdated,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
