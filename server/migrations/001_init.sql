@@ -45,7 +45,6 @@ CREATE TABLE IF NOT EXISTS bins (
   location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
   name          TEXT NOT NULL,
   area_id       TEXT REFERENCES areas(id) ON DELETE SET NULL,
-  items         TEXT NOT NULL DEFAULT '[]',
   notes         TEXT NOT NULL DEFAULT '',
   tags          TEXT NOT NULL DEFAULT '[]',
   icon          TEXT NOT NULL DEFAULT '',
@@ -56,6 +55,16 @@ CREATE TABLE IF NOT EXISTS bins (
   updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
   deleted_at    TEXT
 );
+
+CREATE TABLE IF NOT EXISTS bin_items (
+  id         TEXT PRIMARY KEY,
+  bin_id     TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  position   INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_bin_items_bin_id ON bin_items(bin_id, position);
 
 CREATE TABLE IF NOT EXISTS photos (
   id            TEXT PRIMARY KEY,
@@ -79,17 +88,19 @@ CREATE TABLE IF NOT EXISTS tag_colors (
 );
 
 CREATE TABLE IF NOT EXISTS user_ai_settings (
-  id            TEXT PRIMARY KEY,
-  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  provider      TEXT NOT NULL CHECK (provider IN ('openai', 'anthropic', 'gemini', 'openai-compatible')),
-  api_key       TEXT NOT NULL,
-  model         TEXT NOT NULL,
-  endpoint_url  TEXT,
-  custom_prompt  TEXT,
-  command_prompt TEXT,
-  is_active     INTEGER NOT NULL DEFAULT 0,
-  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  id              TEXT PRIMARY KEY,
+  user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider        TEXT NOT NULL CHECK (provider IN ('openai', 'anthropic', 'gemini', 'openai-compatible')),
+  api_key         TEXT NOT NULL,
+  model           TEXT NOT NULL,
+  endpoint_url    TEXT,
+  custom_prompt   TEXT,
+  command_prompt  TEXT,
+  query_prompt    TEXT,
+  structure_prompt TEXT,
+  is_active       INTEGER NOT NULL DEFAULT 0,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(user_id, provider)
 );
 CREATE INDEX IF NOT EXISTS idx_user_ai_settings_user ON user_ai_settings(user_id);
@@ -117,6 +128,27 @@ CREATE TABLE IF NOT EXISTS activity_log (
 );
 CREATE INDEX IF NOT EXISTS idx_activity_log_location ON activity_log(location_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, entity_id);
+
+CREATE TABLE IF NOT EXISTS api_keys (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  key_hash TEXT NOT NULL UNIQUE,
+  key_prefix TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  last_used_at TEXT,
+  revoked_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id);
+
+CREATE TABLE IF NOT EXISTS pinned_bins (
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  bin_id     TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE,
+  position   INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, bin_id)
+);
+CREATE INDEX IF NOT EXISTS idx_pinned_bins_user ON pinned_bins(user_id, position);
 
 CREATE INDEX IF NOT EXISTS idx_bins_location_id ON bins(location_id);
 CREATE INDEX IF NOT EXISTS idx_bins_location_updated ON bins(location_id, updated_at DESC);

@@ -73,7 +73,7 @@ export function BinDetailPage() {
 
   if (isLoading || bin === undefined) {
     return (
-      <div className="flex flex-col gap-4 px-5 pt-4 pb-2">
+      <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-4 pb-2">
         <Skeleton className="h-8 w-20" />
         {/* Title + location skeleton */}
         <div className="space-y-1.5">
@@ -221,7 +221,7 @@ export function BinDetailPage() {
   const hasTags = bin.tags.length > 0;
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-4 pb-2 max-w-3xl mx-auto">
+    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-4 pb-2 max-w-3xl mx-auto">
       {/* Top bar */}
       <div className="flex items-center gap-2">
         <Button

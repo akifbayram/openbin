@@ -111,7 +111,7 @@ export function BulkAddPage() {
   const currentStepIndex = stepIndex(state.step);
 
   return (
-    <div className="max-w-2xl mx-auto px-5 pt-6 pb-8">
+    <div className="max-w-2xl mx-auto px-5 pt-2 lg:pt-6 pb-8">
       {/* Back navigation */}
       {state.step === 'upload' && (
         <Button

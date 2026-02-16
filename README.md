@@ -7,10 +7,10 @@ Self-hosted inventory system for organizing physical storage bins with QR codes.
 - **QR labels** — Generate and print label sheets (Avery 5160/5163/5167 + custom sizes)
 - **Scan to find** — Camera-based QR scanner or manual short code lookup
 - **Shared locations** — Multi-user with invite codes and per-location areas
-- **Photo attachments** — Attach photos; optionally use AI (OpenAI, Anthropic, or compatible) to auto-fill bin details
+- **Photo attachments** — Attach photos; optionally use AI to auto-fill bin details
 - **Search & filter** — By name, items, tags, areas, colors; saved views for quick access
 - **Bulk operations** — Long-press multi-select for batch tagging, moving, or deleting
-- **Dashboard** — Stats, area breakdown, recently scanned/updated bins, needs-organizing queue
+- **Dashboard** — Stats, saved searches, pinned bins, recently scanned/updated bins, needs-organizing queue
 - **Export/Import** — JSON or ZIP backup with photos, CSV export
 - **PWA** — Installable, add to home screen
 
@@ -21,7 +21,7 @@ Self-hosted inventory system for organizing physical storage bins with QR codes.
 | Frontend | React 18, TypeScript, Vite 5, Tailwind CSS 4 |
 | Backend | Express 4, SQLite (better-sqlite3), JWT auth |
 | QR | `qrcode` + `html5-qrcode` |
-| AI | OpenAI, Anthropic, or any OpenAI-compatible provider (per-user config) |
+| AI | Self-Hosted, OpenAI, Anthropic, Gemini, or any OpenAI-compatible provider (per-user config) |
 | Infra | Docker Compose (API + Nginx) |
 
 ## Quick Start

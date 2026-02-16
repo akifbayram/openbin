@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Pin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +33,11 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
     ? (theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)')
     : undefined;
 
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+
   function handleClick() {
+    if (didLongPress.current) return;
     if (selectable) {
       onSelect?.(bin.id);
     } else {
@@ -48,11 +52,31 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
     }
   }
 
+  const handleTouchStart = useCallback(() => {
+    didLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+      handleLongPress();
+    }, 500);
+  }, [selectable, onSelect, bin.id]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter') {
-      if (e.shiftKey && selectable) {
-        onSelect?.(bin.id);
-      } else if (e.shiftKey) {
+      if (e.shiftKey) {
         onSelect?.(bin.id);
       } else {
         handleClick();
@@ -66,13 +90,16 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
       role="button"
       aria-selected={selectable ? selected : undefined}
       className={cn(
-        'group glass-card rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
+        'group glass-card rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none',
         selected && 'ring-2 ring-[var(--accent)]',
         selectable && !selected && 'active:bg-[var(--bg-active)]'
       )}
       style={colorBg ? { backgroundColor: colorBg } : undefined}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
       onContextMenu={(e) => {
         e.preventDefault();
         handleLongPress();

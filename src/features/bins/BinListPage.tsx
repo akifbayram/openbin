@@ -168,7 +168,7 @@ export function BinListPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-6 pb-2">
+    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
