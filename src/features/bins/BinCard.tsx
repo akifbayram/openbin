@@ -174,7 +174,7 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
               'shrink-0 mt-0.5 p-1 rounded-full transition-all',
               bin.is_pinned
                 ? 'text-[var(--accent)]'
-                : 'text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100'
+                : 'text-[var(--text-tertiary)] dark:text-[var(--text-secondary)] opacity-0 group-hover:opacity-100'
             )}
             aria-label={bin.is_pinned ? 'Unpin bin' : 'Pin bin'}
           >

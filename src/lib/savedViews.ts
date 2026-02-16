@@ -1,4 +1,7 @@
+import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from './api';
 import type { SortOption, BinFilters } from '@/features/bins/useBins';
+import type { ListResponse } from '@/types';
 
 export interface SavedView {
   id: string;
@@ -9,49 +12,75 @@ export interface SavedView {
   createdAt: string;
 }
 
-const MAX_VIEWS = 10;
-const STORAGE_KEY_PREFIX = 'sanduk-saved-views-';
-
-function getStorageKey(userId: string): string {
-  return `${STORAGE_KEY_PREFIX}${userId}`;
+interface ServerSavedView {
+  id: string;
+  name: string;
+  search_query: string;
+  sort: string;
+  filters: string | BinFilters;
+  created_at: string;
 }
 
-export function getSavedViews(userId: string): SavedView[] {
-  try {
-    const raw = localStorage.getItem(getStorageKey(userId));
-    if (!raw) return [];
-    return JSON.parse(raw) as SavedView[];
-  } catch {
-    return [];
-  }
-}
-
-export function saveView(userId: string, view: Omit<SavedView, 'id' | 'createdAt'>): SavedView {
-  const views = getSavedViews(userId);
-  const newView: SavedView = {
-    ...view,
-    id: crypto.randomUUID(),
-    createdAt: new Date().toISOString(),
+function toClient(sv: ServerSavedView): SavedView {
+  return {
+    id: sv.id,
+    name: sv.name,
+    searchQuery: sv.search_query,
+    sort: sv.sort as SortOption,
+    filters: typeof sv.filters === 'string' ? JSON.parse(sv.filters) : sv.filters,
+    createdAt: sv.created_at,
   };
-  views.push(newView);
-  // Enforce max limit — drop oldest if over
-  while (views.length > MAX_VIEWS) {
-    views.shift();
-  }
-  localStorage.setItem(getStorageKey(userId), JSON.stringify(views));
-  return newView;
 }
 
-export function deleteView(userId: string, viewId: string): void {
-  const views = getSavedViews(userId).filter((v) => v.id !== viewId);
-  localStorage.setItem(getStorageKey(userId), JSON.stringify(views));
+const SAVED_VIEWS_EVENT = 'saved-views-changed';
+
+function notifySavedViewsChanged() {
+  window.dispatchEvent(new Event(SAVED_VIEWS_EVENT));
 }
 
-export function renameView(userId: string, viewId: string, newName: string): void {
-  const views = getSavedViews(userId);
-  const view = views.find((v) => v.id === viewId);
-  if (view) {
-    view.name = newName;
-    localStorage.setItem(getStorageKey(userId), JSON.stringify(views));
-  }
+export function useSavedViews() {
+  const [views, setViews] = useState<SavedView[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refresh = useCallback(() => {
+    apiFetch<ListResponse<ServerSavedView>>('/api/saved-views')
+      .then((data) => {
+        setViews(data.results.map(toClient));
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    refresh();
+
+    window.addEventListener(SAVED_VIEWS_EVENT, refresh);
+    return () => window.removeEventListener(SAVED_VIEWS_EVENT, refresh);
+  }, [refresh]);
+
+  return { views, isLoading, refresh };
+}
+
+export async function saveView(view: { name: string; searchQuery: string; sort: SortOption; filters: BinFilters }): Promise<SavedView> {
+  const sv = await apiFetch<ServerSavedView>('/api/saved-views', {
+    method: 'POST',
+    body: {
+      name: view.name,
+      search_query: view.searchQuery,
+      sort: view.sort,
+      filters: view.filters,
+    },
+  });
+  notifySavedViewsChanged();
+  return toClient(sv);
+}
+
+export async function deleteView(viewId: string): Promise<void> {
+  await apiFetch(`/api/saved-views/${viewId}`, { method: 'DELETE' });
+  notifySavedViewsChanged();
+}
+
+export async function renameView(viewId: string, newName: string): Promise<void> {
+  await apiFetch(`/api/saved-views/${viewId}`, { method: 'PUT', body: { name: newName } });
+  notifySavedViewsChanged();
 }

@@ -12,7 +12,7 @@ import { useAuth } from '@/lib/auth';
 import { lookupBinByCode } from '@/features/bins/useBins';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 import { ScanSuccessOverlay } from '@/features/onboarding/ScanSuccessOverlay';
-import { isFirstScanDone, markFirstScanDone } from '@/features/onboarding/useOnboarding';
+import { useOnboarding } from '@/features/onboarding/useOnboarding';
 import { recordScan } from '@/features/dashboard/scanHistory';
 
 const BIN_URL_REGEX = /(?:#\/bin\/|\/bin\/)([a-f0-9-]{36})/i;
@@ -20,6 +20,7 @@ const BIN_URL_REGEX = /(?:#\/bin\/|\/bin\/)([a-f0-9-]{36})/i;
 export function QRScannerPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { firstScanDone, markFirstScanDone } = useOnboarding();
   const [error, setError] = useState<string>('');
   const [scanning, setScanning] = useState(true);
   const [unknownId, setUnknownId] = useState<string | null>(null);
@@ -37,7 +38,7 @@ export function QRScannerPage() {
     try {
       const bin = await lookupBinByCode(code);
       haptic();
-      if (user) recordScan(user.id, bin.id);
+      recordScan(bin.id);
       navigate(`/bin/${bin.id}`);
     } catch {
       setManualError('No bin found with that code');
@@ -55,10 +56,9 @@ export function QRScannerPage() {
         setScanning(false);
         try {
           await apiFetch(`/api/bins/${binId}`);
-          const userId = user?.id ?? '';
-          if (userId) recordScan(userId, binId);
-          if (userId && !isFirstScanDone(userId)) {
-            markFirstScanDone(userId);
+          recordScan(binId);
+          if (!firstScanDone) {
+            markFirstScanDone();
             setSuccessBinId(binId);
           } else {
             navigate(`/bin/${binId}`);
@@ -71,7 +71,7 @@ export function QRScannerPage() {
         setError(decodedText);
       }
     },
-    [navigate, user]
+    [navigate, user, firstScanDone, markFirstScanDone]
   );
 
   function handleRetry() {

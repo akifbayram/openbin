@@ -12,7 +12,7 @@ import {
   Check,
   CheckCircle2,
   MapPin,
-
+  Bookmark,
   ImagePlus,
   MessageSquare,
 } from 'lucide-react';
@@ -28,6 +28,7 @@ import { cn, haptic } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
 import { useBinList, useAllTags, deleteBin, restoreBin, countActiveFilters, EMPTY_FILTERS, type SortOption, type BinFilters } from './useBins';
+import { pinBin, unpinBin } from '@/features/pins/usePins';
 
 import { BinCard } from './BinCard';
 import { BinCreateDialog } from './BinCreateDialog';
@@ -37,8 +38,10 @@ import { BulkAreaDialog } from './BulkAreaDialog';
 import { getColorPreset } from '@/lib/colorPalette';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import { useAreaList } from '@/features/areas/useAreas';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useTheme } from '@/lib/theme';
 import { useAiEnabled } from '@/lib/aiToggle';
+import { saveView } from '@/lib/savedViews';
 import type { SavedView } from '@/lib/savedViews';
 import type { Bin } from '@/types';
 
@@ -104,6 +107,8 @@ export function BinListPage() {
   const addMenuRef = useRef<HTMLDivElement>(null);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
+  const [saveViewOpen, setSaveViewOpen] = useState(false);
+  const [viewName, setViewName] = useState('');
 
   // Close add menu on click outside
   useEffect(() => {
@@ -133,6 +138,11 @@ export function BinListPage() {
 
   const handleTagClick = useCallback((tag: string) => {
     setSearch(tag);
+  }, []);
+
+  const handlePinToggle = useCallback(async (id: string, pinned: boolean) => {
+    if (pinned) await pinBin(id);
+    else await unpinBin(id);
   }, []);
 
   const toggleSelect = useCallback((id: string) => {
@@ -165,6 +175,13 @@ export function BinListPage() {
         },
       },
     });
+  }
+
+  async function handleSaveView() {
+    if (!viewName.trim()) return;
+    await saveView({ name: viewName.trim(), searchQuery: search, sort, filters });
+    setSaveViewOpen(false);
+    showToast({ message: 'View saved' });
   }
 
   return (
@@ -271,6 +288,17 @@ export function BinListPage() {
               </div>
             )}
           </div>
+          {(search || activeCount > 0) && (
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={() => { setViewName(''); setSaveViewOpen(true); }}
+              className="shrink-0 h-10 w-10 rounded-full"
+              aria-label="Save current view"
+            >
+              <Bookmark className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       )}
 
@@ -493,7 +521,7 @@ export function BinListPage() {
                   selected={selectedIds.has(bin.id)}
                   onSelect={toggleSelect}
                   searchQuery={debouncedSearch}
-
+                  onPinToggle={handlePinToggle}
                 />
               ))}
             </div>
@@ -521,6 +549,24 @@ export function BinListPage() {
         binIds={[...selectedIds]}
         onDone={clearSelection}
       />
+
+      <Dialog open={saveViewOpen} onOpenChange={setSaveViewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Search</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={viewName}
+            onChange={(e) => setViewName(e.target.value)}
+            placeholder="View name..."
+            onKeyDown={(e) => { if (e.key === 'Enter' && viewName.trim()) handleSaveView(); }}
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setSaveViewOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveView} disabled={!viewName.trim()}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {aiEnabled && (
         <Suspense fallback={null}>

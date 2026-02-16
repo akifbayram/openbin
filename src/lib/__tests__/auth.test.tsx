@@ -269,12 +269,10 @@ describe('useAuth', () => {
   });
 
   describe('deleteAccount', () => {
-    it('calls API, cleans up localStorage keys, and calls logout', async () => {
+    it('calls API and calls logout', async () => {
       const user = makeUser({ id: 'user-42' });
       localStorage.setItem('sanduk-token', 'my-token');
       localStorage.setItem('sanduk-active-location', 'loc-1');
-      localStorage.setItem('sanduk-onboarding-user-42', 'done');
-      localStorage.setItem('sanduk-first-scan-done-user-42', 'true');
 
       // First call: /me on mount, second call: DELETE /api/auth/account
       mockApiFetch
@@ -295,8 +293,6 @@ describe('useAuth', () => {
         method: 'DELETE',
         body: { password: 'mypassword' },
       });
-      expect(localStorage.getItem('sanduk-onboarding-user-42')).toBeNull();
-      expect(localStorage.getItem('sanduk-first-scan-done-user-42')).toBeNull();
       expect(localStorage.getItem('sanduk-token')).toBeNull();
       expect(localStorage.getItem('sanduk-active-location')).toBeNull();
       expect(result.current.user).toBeNull();

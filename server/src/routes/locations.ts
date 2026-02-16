@@ -17,7 +17,7 @@ function generateInviteCode(): string {
 router.get('/', async (req, res) => {
   try {
     const result = await query(
-      `SELECT l.id, l.name, l.created_by, l.invite_code, l.activity_retention_days, l.trash_retention_days, l.created_at, l.updated_at,
+      `SELECT l.id, l.name, l.created_by, l.invite_code, l.activity_retention_days, l.trash_retention_days, l.app_name, l.created_at, l.updated_at,
               lm.role,
               (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count
        FROM locations l
@@ -33,6 +33,7 @@ router.get('/', async (req, res) => {
       invite_code: row.invite_code,
       activity_retention_days: row.activity_retention_days,
       trash_retention_days: row.trash_retention_days,
+      app_name: row.app_name,
       role: row.role,
       member_count: row.member_count,
       created_at: row.created_at,
@@ -57,7 +58,7 @@ router.post('/', async (req, res) => {
     const inviteCode = generateInviteCode();
     const locationId = generateUuid();
     const locationResult = await query(
-      'INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4) RETURNING id, name, invite_code, activity_retention_days, trash_retention_days, created_at, updated_at',
+      'INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4) RETURNING id, name, invite_code, activity_retention_days, trash_retention_days, app_name, created_at, updated_at',
       [locationId, name.trim(), req.user!.id, inviteCode]
     );
 
@@ -76,6 +77,7 @@ router.post('/', async (req, res) => {
       invite_code: location.invite_code,
       activity_retention_days: location.activity_retention_days,
       trash_retention_days: location.trash_retention_days,
+      app_name: location.app_name,
       role: 'owner',
       member_count: 1,
       created_at: location.created_at,
@@ -91,7 +93,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, activity_retention_days, trash_retention_days } = req.body;
+    const { name, activity_retention_days, trash_retention_days, app_name } = req.body;
 
     if (!await isLocationOwner(id, req.user!.id)) {
       res.status(403).json({ error: 'FORBIDDEN', message: 'Only the owner can update this location' });
@@ -99,7 +101,7 @@ router.put('/:id', async (req, res) => {
     }
 
     // At least one field must be provided
-    if (name === undefined && activity_retention_days === undefined && trash_retention_days === undefined) {
+    if (name === undefined && activity_retention_days === undefined && trash_retention_days === undefined && app_name === undefined) {
       res.status(422).json({ error: 'VALIDATION_ERROR', message: 'At least one field must be provided' });
       return;
     }
@@ -125,8 +127,13 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    if (app_name !== undefined && (typeof app_name !== 'string' || app_name.trim().length === 0)) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'App name cannot be empty' });
+      return;
+    }
+
     // Get old state for activity log
-    const oldResult = await query('SELECT name, activity_retention_days, trash_retention_days FROM locations WHERE id = $1', [id]);
+    const oldResult = await query('SELECT name, activity_retention_days, trash_retention_days, app_name FROM locations WHERE id = $1', [id]);
     if (oldResult.rows.length === 0) {
       res.status(404).json({ error: 'NOT_FOUND', message: 'Location not found' });
       return;
@@ -149,12 +156,16 @@ router.put('/:id', async (req, res) => {
       setClauses.push(`trash_retention_days = $${paramIdx++}`);
       params.push(Number(trash_retention_days));
     }
+    if (app_name !== undefined) {
+      setClauses.push(`app_name = $${paramIdx++}`);
+      params.push(app_name.trim());
+    }
 
     params.push(id);
 
     const result = await query(
       `UPDATE locations SET ${setClauses.join(', ')} WHERE id = $${paramIdx}
-       RETURNING id, name, created_by, invite_code, activity_retention_days, trash_retention_days, created_at, updated_at`,
+       RETURNING id, name, created_by, invite_code, activity_retention_days, trash_retention_days, app_name, created_at, updated_at`,
       params
     );
 
@@ -165,6 +176,7 @@ router.put('/:id', async (req, res) => {
     if (name !== undefined) newObj.name = name.trim();
     if (activity_retention_days !== undefined) newObj.activity_retention_days = Number(activity_retention_days);
     if (trash_retention_days !== undefined) newObj.trash_retention_days = Number(trash_retention_days);
+    if (app_name !== undefined) newObj.app_name = app_name.trim();
     const changes = computeChanges(oldLoc, newObj, Object.keys(newObj));
     if (changes) {
       logActivity({
@@ -186,6 +198,7 @@ router.put('/:id', async (req, res) => {
       invite_code: location.invite_code,
       activity_retention_days: location.activity_retention_days,
       trash_retention_days: location.trash_retention_days,
+      app_name: location.app_name,
       created_at: location.created_at,
       updated_at: location.updated_at,
     });
@@ -230,7 +243,7 @@ router.post('/join', async (req, res) => {
     }
 
     const locationResult = await query(
-      'SELECT id, name, created_by, activity_retention_days, trash_retention_days, created_at, updated_at FROM locations WHERE invite_code = $1',
+      'SELECT id, name, created_by, activity_retention_days, trash_retention_days, app_name, created_at, updated_at FROM locations WHERE invite_code = $1',
       [inviteCode.trim()]
     );
 
@@ -273,6 +286,7 @@ router.post('/join', async (req, res) => {
       invite_code: '',
       activity_retention_days: location.activity_retention_days,
       trash_retention_days: location.trash_retention_days,
+      app_name: location.app_name,
       role: 'member',
       created_at: location.created_at,
       updated_at: location.updated_at,

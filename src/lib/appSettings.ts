@@ -1,47 +1,35 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
+import { useAuth } from '@/lib/auth';
+import { useLocationList, updateLocation } from '@/features/locations/useLocations';
 
 export interface AppSettings {
   appName: string;
 }
 
-const STORAGE_KEY = 'sanduk-app-name';
-
-const DEFAULTS: AppSettings = {
-  appName: 'Sanduk',
-};
-
-function loadSettings(): AppSettings {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return {
-        appName: parsed.appName || DEFAULTS.appName,
-      };
-    }
-  } catch { /* ignore */ }
-  return { ...DEFAULTS };
-}
-
 export function useAppSettings() {
-  const [settings, setSettings] = useState<AppSettings>(loadSettings);
+  const { activeLocationId } = useAuth();
+  const { locations, isLoading } = useLocationList();
+
+  const activeLocation = locations.find((l) => l.id === activeLocationId);
+  const settings: AppSettings = {
+    appName: activeLocation?.app_name ?? 'Sanduk',
+  };
 
   useEffect(() => {
     document.title = settings.appName;
   }, [settings.appName]);
 
   const updateSettings = useCallback((patch: Partial<AppSettings>) => {
-    setSettings((prev) => {
-      const next = { ...prev, ...patch };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
+    if (activeLocationId && patch.appName !== undefined) {
+      updateLocation(activeLocationId, { app_name: patch.appName || 'Sanduk' });
+    }
+  }, [activeLocationId]);
 
   const resetSettings = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setSettings({ ...DEFAULTS });
-  }, []);
+    if (activeLocationId) {
+      updateLocation(activeLocationId, { app_name: 'Sanduk' });
+    }
+  }, [activeLocationId]);
 
-  return { settings, updateSettings, resetSettings };
+  return { settings, updateSettings, resetSettings, isLoading };
 }

@@ -1,4 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useUserPreferences, DEFAULT_PREFERENCES } from './userPreferences';
+import type { UserPreferences } from './userPreferences';
 
 export interface DashboardSettings {
   recentBinsCount: number;
@@ -16,88 +18,76 @@ export const DASHBOARD_LIMITS = {
   scanHistoryMax: { min: 5, max: 100 },
 } as const;
 
-const STORAGE_KEY = 'sanduk-dashboard-settings';
-
-const DEFAULTS: DashboardSettings = {
-  recentBinsCount: 5,
-  scanHistoryMax: 20,
-  showStats: true,
-  showNeedsOrganizing: true,
-  showSavedViews: true,
-  showPinnedBins: true,
-  showRecentlyScanned: true,
-  showRecentlyUpdated: true,
-};
-
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.round(value)));
 }
 
-function loadSettings(): DashboardSettings {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return {
-        recentBinsCount: clamp(
-          parsed.recentBinsCount ?? DEFAULTS.recentBinsCount,
-          DASHBOARD_LIMITS.recentBinsCount.min,
-          DASHBOARD_LIMITS.recentBinsCount.max,
-        ),
-        scanHistoryMax: clamp(
-          parsed.scanHistoryMax ?? DEFAULTS.scanHistoryMax,
-          DASHBOARD_LIMITS.scanHistoryMax.min,
-          DASHBOARD_LIMITS.scanHistoryMax.max,
-        ),
-        showStats: typeof parsed.showStats === 'boolean' ? parsed.showStats : true,
-        showNeedsOrganizing: typeof parsed.showNeedsOrganizing === 'boolean' ? parsed.showNeedsOrganizing : true,
-        showSavedViews: typeof parsed.showSavedViews === 'boolean' ? parsed.showSavedViews : true,
-        showPinnedBins: typeof parsed.showPinnedBins === 'boolean' ? parsed.showPinnedBins : true,
-        showRecentlyScanned: typeof parsed.showRecentlyScanned === 'boolean' ? parsed.showRecentlyScanned : true,
-        showRecentlyUpdated: typeof parsed.showRecentlyUpdated === 'boolean' ? parsed.showRecentlyUpdated : true,
-      };
-    }
-  } catch { /* ignore */ }
+const DEFAULTS: DashboardSettings = {
+  recentBinsCount: DEFAULT_PREFERENCES.dashboard_recent_bins_count,
+  scanHistoryMax: DEFAULT_PREFERENCES.dashboard_scan_history_max,
+  showStats: DEFAULT_PREFERENCES.dashboard_show_stats,
+  showNeedsOrganizing: DEFAULT_PREFERENCES.dashboard_show_needs_organizing,
+  showSavedViews: DEFAULT_PREFERENCES.dashboard_show_saved_views,
+  showPinnedBins: DEFAULT_PREFERENCES.dashboard_show_pinned_bins,
+  showRecentlyScanned: DEFAULT_PREFERENCES.dashboard_show_recently_scanned,
+  showRecentlyUpdated: DEFAULT_PREFERENCES.dashboard_show_recently_updated,
+};
+
+export function getDashboardSettings(): DashboardSettings {
   return { ...DEFAULTS };
 }
 
-/** Read dashboard settings synchronously (for non-React contexts) */
-export function getDashboardSettings(): DashboardSettings {
-  return loadSettings();
-}
-
 export function useDashboardSettings() {
-  const [settings, setSettings] = useState<DashboardSettings>(loadSettings);
+  const { preferences, isLoading, updatePreferences } = useUserPreferences();
+
+  const settings: DashboardSettings = {
+    recentBinsCount: clamp(
+      preferences.dashboard_recent_bins_count,
+      DASHBOARD_LIMITS.recentBinsCount.min,
+      DASHBOARD_LIMITS.recentBinsCount.max,
+    ),
+    scanHistoryMax: clamp(
+      preferences.dashboard_scan_history_max,
+      DASHBOARD_LIMITS.scanHistoryMax.min,
+      DASHBOARD_LIMITS.scanHistoryMax.max,
+    ),
+    showStats: preferences.dashboard_show_stats,
+    showNeedsOrganizing: preferences.dashboard_show_needs_organizing,
+    showSavedViews: preferences.dashboard_show_saved_views,
+    showPinnedBins: preferences.dashboard_show_pinned_bins,
+    showRecentlyScanned: preferences.dashboard_show_recently_scanned,
+    showRecentlyUpdated: preferences.dashboard_show_recently_updated,
+  };
 
   const updateSettings = useCallback((patch: Partial<DashboardSettings>) => {
-    setSettings((prev) => {
-      const next: DashboardSettings = {
-        recentBinsCount: clamp(
-          patch.recentBinsCount ?? prev.recentBinsCount,
-          DASHBOARD_LIMITS.recentBinsCount.min,
-          DASHBOARD_LIMITS.recentBinsCount.max,
-        ),
-        scanHistoryMax: clamp(
-          patch.scanHistoryMax ?? prev.scanHistoryMax,
-          DASHBOARD_LIMITS.scanHistoryMax.min,
-          DASHBOARD_LIMITS.scanHistoryMax.max,
-        ),
-        showStats: patch.showStats ?? prev.showStats,
-        showNeedsOrganizing: patch.showNeedsOrganizing ?? prev.showNeedsOrganizing,
-        showSavedViews: patch.showSavedViews ?? prev.showSavedViews,
-        showPinnedBins: patch.showPinnedBins ?? prev.showPinnedBins,
-        showRecentlyScanned: patch.showRecentlyScanned ?? prev.showRecentlyScanned,
-        showRecentlyUpdated: patch.showRecentlyUpdated ?? prev.showRecentlyUpdated,
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
+    const dbPatch: Partial<UserPreferences> = {};
+    if (patch.recentBinsCount !== undefined) {
+      dbPatch.dashboard_recent_bins_count = clamp(patch.recentBinsCount, DASHBOARD_LIMITS.recentBinsCount.min, DASHBOARD_LIMITS.recentBinsCount.max);
+    }
+    if (patch.scanHistoryMax !== undefined) {
+      dbPatch.dashboard_scan_history_max = clamp(patch.scanHistoryMax, DASHBOARD_LIMITS.scanHistoryMax.min, DASHBOARD_LIMITS.scanHistoryMax.max);
+    }
+    if (patch.showStats !== undefined) dbPatch.dashboard_show_stats = patch.showStats;
+    if (patch.showNeedsOrganizing !== undefined) dbPatch.dashboard_show_needs_organizing = patch.showNeedsOrganizing;
+    if (patch.showSavedViews !== undefined) dbPatch.dashboard_show_saved_views = patch.showSavedViews;
+    if (patch.showPinnedBins !== undefined) dbPatch.dashboard_show_pinned_bins = patch.showPinnedBins;
+    if (patch.showRecentlyScanned !== undefined) dbPatch.dashboard_show_recently_scanned = patch.showRecentlyScanned;
+    if (patch.showRecentlyUpdated !== undefined) dbPatch.dashboard_show_recently_updated = patch.showRecentlyUpdated;
+    updatePreferences(dbPatch);
+  }, [updatePreferences]);
 
   const resetSettings = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setSettings({ ...DEFAULTS });
-  }, []);
+    updatePreferences({
+      dashboard_recent_bins_count: DEFAULT_PREFERENCES.dashboard_recent_bins_count,
+      dashboard_scan_history_max: DEFAULT_PREFERENCES.dashboard_scan_history_max,
+      dashboard_show_stats: DEFAULT_PREFERENCES.dashboard_show_stats,
+      dashboard_show_needs_organizing: DEFAULT_PREFERENCES.dashboard_show_needs_organizing,
+      dashboard_show_saved_views: DEFAULT_PREFERENCES.dashboard_show_saved_views,
+      dashboard_show_pinned_bins: DEFAULT_PREFERENCES.dashboard_show_pinned_bins,
+      dashboard_show_recently_scanned: DEFAULT_PREFERENCES.dashboard_show_recently_scanned,
+      dashboard_show_recently_updated: DEFAULT_PREFERENCES.dashboard_show_recently_updated,
+    });
+  }, [updatePreferences]);
 
-  return { settings, updateSettings, resetSettings };
+  return { settings, isLoading, updateSettings, resetSettings };
 }

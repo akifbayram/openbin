@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS locations (
   invite_code             TEXT UNIQUE NOT NULL,
   activity_retention_days INTEGER NOT NULL DEFAULT 90 CHECK (activity_retention_days BETWEEN 7 AND 365),
   trash_retention_days    INTEGER NOT NULL DEFAULT 30 CHECK (trash_retention_days BETWEEN 7 AND 365),
+  app_name                TEXT NOT NULL DEFAULT 'Sanduk',
   created_at              TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at              TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -149,6 +150,35 @@ CREATE TABLE IF NOT EXISTS pinned_bins (
   PRIMARY KEY (user_id, bin_id)
 );
 CREATE INDEX IF NOT EXISTS idx_pinned_bins_user ON pinned_bins(user_id, position);
+
+CREATE TABLE IF NOT EXISTS user_preferences (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  settings   TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user ON user_preferences(user_id);
+
+CREATE TABLE IF NOT EXISTS saved_views (
+  id            TEXT PRIMARY KEY,
+  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name          TEXT NOT NULL,
+  search_query  TEXT NOT NULL DEFAULT '',
+  sort          TEXT NOT NULL DEFAULT 'updated',
+  filters       TEXT NOT NULL DEFAULT '{}',
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_saved_views_user ON saved_views(user_id);
+
+CREATE TABLE IF NOT EXISTS scan_history (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  bin_id     TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE,
+  scanned_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_scan_history_user ON scan_history(user_id, scanned_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_scan_history_user_bin ON scan_history(user_id, bin_id);
 
 CREATE INDEX IF NOT EXISTS idx_bins_location_id ON bins(location_id);
 CREATE INDEX IF NOT EXISTS idx_bins_location_updated ON bins(location_id, updated_at DESC);

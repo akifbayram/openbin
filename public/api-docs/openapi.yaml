@@ -44,6 +44,12 @@ tags:
     description: Location activity log
   - name: ApiKeys
     description: API key management for headless access
+  - name: UserPreferences
+    description: Per-user application preferences
+  - name: SavedViews
+    description: Per-user saved bin list filter/sort views
+  - name: ScanHistory
+    description: Per-user QR scan history
   - name: Shapes
     description: Electric SQL shape proxy endpoints
 
@@ -193,6 +199,10 @@ components:
           maximum: 365
           default: 30
           description: Days to keep soft-deleted bins before auto-purging
+        app_name:
+          type: string
+          default: Sanduk
+          description: Custom display name for this location's app instance
         created_at:
           type: string
           format: date-time
@@ -224,6 +234,9 @@ components:
           minimum: 7
           maximum: 365
           default: 30
+        app_name:
+          type: string
+          default: Sanduk
         created_at:
           type: string
           format: date-time
@@ -788,6 +801,60 @@ components:
           type: string
           format: date-time
 
+    # ── User Preferences ──────────────────────────────────
+    UserPreferences:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        settings:
+          type: object
+          description: Arbitrary JSON object with user preference key-value pairs
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # ── Saved Views ──────────────────────────────────────
+    SavedView:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        search_query:
+          type: string
+        sort:
+          type: string
+        filters:
+          type: object
+          description: JSON object with filter criteria
+        created_at:
+          type: string
+          format: date-time
+
+    # ── Scan History ─────────────────────────────────────
+    ScanHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bin_id:
+          type: string
+          format: uuid
+        scanned_at:
+          type: string
+          format: date-time
+
     # ── Export ─────────────────────────────────────────────
     ExportDataV2:
       type: object
@@ -1250,7 +1317,7 @@ paths:
     put:
       tags: [Locations]
       summary: Update a location
-      description: Owner only. Can update name, activity retention, and trash retention.
+      description: Owner only. Can update name, activity retention, trash retention, and app name.
       parameters:
         - name: id
           in: path
@@ -1278,6 +1345,9 @@ paths:
                   minimum: 7
                   maximum: 365
                   description: Days to keep soft-deleted bins
+                app_name:
+                  type: string
+                  description: Custom display name for this location's app instance
       responses:
         '200':
           description: Location updated
@@ -2381,6 +2451,231 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PrintSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ════════════════════════════════════════════════════════
+  # User Preferences
+  # ════════════════════════════════════════════════════════
+  /user-preferences:
+    get:
+      tags: [UserPreferences]
+      summary: Get user preferences
+      description: Returns the current user's application preferences as a JSON object, or null if none saved.
+      responses:
+        '200':
+          description: User preferences (or null if none saved)
+          content:
+            application/json:
+              schema:
+                nullable: true
+                type: object
+                description: Arbitrary JSON preferences object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [UserPreferences]
+      summary: Save user preferences
+      description: Stores application preferences per user. Creates or updates.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Arbitrary JSON object with user preference key-value pairs
+      responses:
+        '200':
+          description: Preferences saved
+          content:
+            application/json:
+              schema:
+                type: object
+                description: The saved preferences object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # ════════════════════════════════════════════════════════
+  # Saved Views
+  # ════════════════════════════════════════════════════════
+  /saved-views:
+    get:
+      tags: [SavedViews]
+      summary: List saved views
+      description: Returns all saved bin list views for the current user (max 10).
+      responses:
+        '200':
+          description: List of saved views
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SavedView'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [SavedViews]
+      summary: Create a saved view
+      description: Creates a new saved view. Maximum 10 per user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                searchQuery:
+                  type: string
+                sort:
+                  type: string
+                filters:
+                  type: object
+      responses:
+        '201':
+          description: Saved view created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedView'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /saved-views/{id}:
+    put:
+      tags: [SavedViews]
+      summary: Rename a saved view
+      description: Updates the name of a saved view. Must be owned by the current user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Saved view updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedView'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [SavedViews]
+      summary: Delete a saved view
+      description: Deletes a saved view. Must be owned by the current user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Saved view deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ════════════════════════════════════════════════════════
+  # Scan History
+  # ════════════════════════════════════════════════════════
+  /scan-history:
+    get:
+      tags: [ScanHistory]
+      summary: Get scan history
+      description: Returns the current user's recent QR scan history, ordered by most recent first.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Maximum number of entries to return
+      responses:
+        '200':
+          description: List of scan history entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScanHistoryEntry'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [ScanHistory]
+      summary: Record a scan
+      description: Records or updates a bin scan. If the bin was previously scanned, updates the timestamp. Automatically trims history to 100 entries.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [binId]
+              properties:
+                binId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Scan recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [ScanHistory]
+      summary: Clear scan history
+      description: Deletes all scan history entries for the current user.
+      responses:
+        '204':
+          description: Scan history cleared
         '401':
           $ref: '#/components/responses/Unauthorized'
 

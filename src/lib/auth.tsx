@@ -105,15 +105,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteAccount = useCallback(async (password: string) => {
-    const userId = state.user?.id;
     await apiFetch('/api/auth/account', { method: 'DELETE', body: { password } });
-    // Clean up user-specific localStorage keys
-    if (userId) {
-      localStorage.removeItem(`sanduk-onboarding-${userId}`);
-      localStorage.removeItem(`sanduk-first-scan-done-${userId}`);
-    }
     logout();
-  }, [state.user?.id, logout]);
+  }, [logout]);
 
   return (
     <AuthContext.Provider

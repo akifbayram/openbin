@@ -33,12 +33,12 @@ export function AppLayout() {
   const didAutoCompleteCheck = useRef(false);
   useEffect(() => {
     if (didAutoCompleteCheck.current) return;
-    if (locationsLoading) return;
+    if (locationsLoading || onboarding.isLoading) return;
     didAutoCompleteCheck.current = true;
     if (locations.length > 0 && onboarding.isOnboarding && onboarding.step === 0) {
       onboarding.complete();
     }
-  }, [locationsLoading, locations.length, onboarding]);
+  }, [locationsLoading, locations.length, onboarding, onboarding.isLoading]);
 
   // Auto-select first location when none is active or active location no longer exists
   useEffect(() => {
@@ -107,7 +107,14 @@ export function AppLayout() {
         </div>
       </main>
       <BottomNav />
-      {onboarding.isOnboarding && !locationsLoading && (locations.length === 0 || onboarding.step > 0) && <OnboardingOverlay {...onboarding} />}
+      {onboarding.isOnboarding && !onboarding.isLoading && !locationsLoading && (locations.length === 0 || onboarding.step > 0) && (
+        <OnboardingOverlay
+          step={onboarding.step}
+          locationId={onboarding.locationId ?? undefined}
+          advanceWithLocation={onboarding.advanceWithLocation}
+          complete={onboarding.complete}
+        />
+      )}
     </div>
     </TagColorsProvider>
   );

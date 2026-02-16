@@ -4,7 +4,7 @@ import { useBinList } from '@/features/bins/useBins';
 import { usePinnedBins } from '@/features/pins/usePins';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
-import { getScanHistory } from './scanHistory';
+import { useScanHistory } from './scanHistory';
 import type { Bin } from '@/types';
 
 export interface AreaStat {
@@ -14,11 +14,12 @@ export interface AreaStat {
 }
 
 export function useDashboard() {
-  const { user, activeLocationId } = useAuth();
+  const { activeLocationId } = useAuth();
   const { bins, isLoading } = useBinList();
   const { pinnedBins } = usePinnedBins();
   const { areas } = useAreaList(activeLocationId);
   const { settings: dashSettings } = useDashboardSettings();
+  const { history: scanHistory } = useScanHistory(dashSettings.recentBinsCount);
 
   const totalBins = bins.length;
 
@@ -68,14 +69,12 @@ export function useDashboard() {
   );
 
   const recentlyScanned = useMemo(() => {
-    if (!user) return [] as Bin[];
-    const history = getScanHistory(user.id);
     const binMap = new Map(bins.map((b) => [b.id, b]));
-    return history
+    return scanHistory
       .map((e) => binMap.get(e.binId))
       .filter((b): b is Bin => b != null)
       .slice(0, dashSettings.recentBinsCount);
-  }, [bins, user, dashSettings.recentBinsCount]);
+  }, [bins, scanHistory, dashSettings.recentBinsCount]);
 
   return { totalBins, totalItems, totalAreas, needsOrganizing, areaStats, recentlyUpdated, recentlyScanned, pinnedBins, isLoading };
 }

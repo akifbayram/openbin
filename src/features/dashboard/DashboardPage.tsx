@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
 import { useAiEnabled } from '@/lib/aiToggle';
-import { getSavedViews, deleteView, type SavedView } from '@/lib/savedViews';
+import { useSavedViews, deleteView } from '@/lib/savedViews';
 import { SavedViewChips } from '@/components/SavedViewChips';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
 import { useDashboard } from './useDashboard';
@@ -71,24 +71,18 @@ function SectionHeader({
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { activeLocationId, user } = useAuth();
+  const { activeLocationId } = useAuth();
   const { aiEnabled } = useAiEnabled();
   const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, recentlyUpdated, pinnedBins, isLoading } =
     useDashboard();
   const { settings: dashSettings } = useDashboardSettings();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
+  const { views: savedViews } = useSavedViews();
   const [createOpen, setCreateOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
-  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
-
-  useEffect(() => {
-    if (user?.id) {
-      setSavedViews(getSavedViews(user.id));
-    }
-  }, [user?.id]);
 
   useEffect(() => {
     if (debouncedSearch.trim()) {
@@ -263,9 +257,7 @@ export function DashboardPage() {
           views={savedViews}
           onApply={(view) => navigate('/bins', { state: { savedView: view } })}
           onDelete={(viewId) => {
-            if (!user?.id) return;
-            deleteView(user.id, viewId);
-            setSavedViews(getSavedViews(user.id));
+            deleteView(viewId).catch(() => {});
           }}
         />
       )}

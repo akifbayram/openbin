@@ -15,6 +15,7 @@ export interface Location {
   invite_code: string;
   activity_retention_days: number;
   trash_retention_days: number;
+  app_name: string;
   created_at: string;
   updated_at: string;
 }
