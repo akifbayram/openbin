@@ -29,9 +29,9 @@ export const LABEL_FORMATS: LabelFormat[] = [
     cellHeight: '1in',
     qrSize: '0.75in',
     padding: '2pt 4pt',
-    nameFontSize: '9pt',
-    contentFontSize: '7pt',
-    codeFontSize: '8pt',
+    nameFontSize: '8pt',
+    contentFontSize: '6.5pt',
+    codeFontSize: '14pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
     pageMarginLeft: '0.1875in',
@@ -45,9 +45,9 @@ export const LABEL_FORMATS: LabelFormat[] = [
     cellHeight: '2in',
     qrSize: '1.5in',
     padding: '6pt 8pt',
-    nameFontSize: '12pt',
-    contentFontSize: '9pt',
-    codeFontSize: '10pt',
+    nameFontSize: '11pt',
+    contentFontSize: '8pt',
+    codeFontSize: '18pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
     pageMarginLeft: '0.15625in',
@@ -61,9 +61,9 @@ export const LABEL_FORMATS: LabelFormat[] = [
     cellHeight: '0.5in',
     qrSize: '0.35in',
     padding: '1pt 2pt',
-    nameFontSize: '6pt',
-    contentFontSize: '5pt',
-    codeFontSize: '5.5pt',
+    nameFontSize: '5.5pt',
+    contentFontSize: '4.5pt',
+    codeFontSize: '8pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
     pageMarginLeft: '0.3125in',
@@ -77,9 +77,9 @@ export const LABEL_FORMATS: LabelFormat[] = [
     cellHeight: '1in',
     qrSize: '0.75in',
     padding: '2pt 4pt',
-    nameFontSize: '9pt',
-    contentFontSize: '7pt',
-    codeFontSize: '8pt',
+    nameFontSize: '8pt',
+    contentFontSize: '6.5pt',
+    codeFontSize: '14pt',
     pageMarginTop: '0.5in',
     pageMarginBottom: '0.5in',
     pageMarginLeft: '0.5in',
@@ -103,4 +103,11 @@ export function computeRowsPerPage(format: LabelFormat): number {
 
 export function computeLabelsPerPage(format: LabelFormat): number {
   return computeRowsPerPage(format) * format.columns;
+}
+
+export function computePageSize(format: LabelFormat): { width: number; height: number } {
+  const rows = computeRowsPerPage(format);
+  const width = parseFloat(format.pageMarginLeft) + format.columns * parseFloat(format.cellWidth) + parseFloat(format.pageMarginRight);
+  const height = parseFloat(format.pageMarginTop) + rows * parseFloat(format.cellHeight) + parseFloat(format.pageMarginBottom);
+  return { width, height };
 }

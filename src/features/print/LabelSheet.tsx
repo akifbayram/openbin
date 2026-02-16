@@ -3,7 +3,7 @@ import { batchGenerateQRDataURLs } from '@/lib/qr';
 import type { Bin } from '@/types';
 import { LabelCell } from './LabelCell';
 import type { LabelFormat } from './labelFormats';
-import { getLabelFormat, DEFAULT_LABEL_FORMAT, computeLabelsPerPage } from './labelFormats';
+import { getLabelFormat, DEFAULT_LABEL_FORMAT, computeLabelsPerPage, computePageSize } from './labelFormats';
 
 interface LabelSheetProps {
   bins: Bin[];
@@ -59,15 +59,18 @@ export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode
     pages.push(bins.slice(i, i + perPage));
   }
 
+  const { width: pageWidth, height: pageHeight } = computePageSize(labelFormat);
+
   return (
     <>
+      <style>{`@media print { @page { size: ${pageWidth}in ${pageHeight}in; margin: 0; } }`}</style>
       {pages.map((pageBins, pageIdx) => (
         <div
           key={pageIdx}
           className="label-page"
           style={{
-            width: '8.5in',
-            height: '11in',
+            width: `${pageWidth}in`,
+            height: `${pageHeight}in`,
             boxSizing: 'border-box',
             paddingTop: labelFormat.pageMarginTop,
             paddingBottom: labelFormat.pageMarginBottom,

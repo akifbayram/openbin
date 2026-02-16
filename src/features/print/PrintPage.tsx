@@ -194,8 +194,8 @@ export function PrintPage() {
   const scaledFormat = customState.customizing ? applyAutoScale(baseFormat, mergedFormat) : mergedFormat;
   const labelFormat = applyFontScale(scaledFormat, labelOptions.fontScale);
   const iconSize = customState.customizing
-    ? `${(8 * computeScaleFactor(baseFormat, mergedFormat)).toFixed(2).replace(/\.?0+$/, '')}pt`
-    : '8pt';
+    ? `${(11 * computeScaleFactor(baseFormat, mergedFormat)).toFixed(2).replace(/\.?0+$/, '')}pt`
+    : '11pt';
   const effectiveOrientation = customState.overrides.orientation ?? getOrientation(baseFormat);
   const selectedBins: Bin[] = allBins.filter((b) => selectedIds.has(b.id));
 
