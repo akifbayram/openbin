@@ -117,6 +117,15 @@ body {
   display: none;
 }
 
+.label-page {
+  overflow: hidden;
+  background: white;
+}
+
+.label-page + .label-page {
+  border-top: 1px dashed #ccc;
+}
+
 .label-sheet {
   display: grid;
   gap: 0;
@@ -167,6 +176,14 @@ body {
 
   .print-show {
     display: block !important;
+  }
+
+  .label-page {
+    page-break-inside: avoid;
+  }
+
+  .label-page + .label-page {
+    border-top: none;
   }
 }
 

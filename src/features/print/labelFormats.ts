@@ -93,3 +93,14 @@ export function getLabelFormat(key: string, customPresets?: LabelFormat[]): Labe
   const all = [...LABEL_FORMATS, ...(customPresets ?? [])];
   return all.find((f) => f.key === key) ?? LABEL_FORMATS[0];
 }
+
+const PAGE_HEIGHT_INCHES = 11; // US Letter
+
+export function computeRowsPerPage(format: LabelFormat): number {
+  const available = PAGE_HEIGHT_INCHES - parseFloat(format.pageMarginTop) - parseFloat(format.pageMarginBottom);
+  return Math.max(1, Math.floor(available / parseFloat(format.cellHeight)));
+}
+
+export function computeLabelsPerPage(format: LabelFormat): number {
+  return computeRowsPerPage(format) * format.columns;
+}

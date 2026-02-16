@@ -3,7 +3,7 @@ import { batchGenerateQRDataURLs } from '@/lib/qr';
 import type { Bin } from '@/types';
 import { LabelCell } from './LabelCell';
 import type { LabelFormat } from './labelFormats';
-import { getLabelFormat, DEFAULT_LABEL_FORMAT } from './labelFormats';
+import { getLabelFormat, DEFAULT_LABEL_FORMAT, computeLabelsPerPage } from './labelFormats';
 
 interface LabelSheetProps {
   bins: Bin[];
@@ -53,33 +53,54 @@ export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode
     );
   }
 
+  const perPage = computeLabelsPerPage(labelFormat);
+  const pages: Bin[][] = [];
+  for (let i = 0; i < bins.length; i += perPage) {
+    pages.push(bins.slice(i, i + perPage));
+  }
+
   return (
-    <div
-      className="label-sheet"
-      style={{
-        gridTemplateColumns: `repeat(${labelFormat.columns}, ${labelFormat.cellWidth})`,
-        gridAutoRows: labelFormat.cellHeight,
-        paddingTop: labelFormat.pageMarginTop,
-        paddingBottom: labelFormat.pageMarginBottom,
-        paddingLeft: labelFormat.pageMarginLeft,
-        paddingRight: labelFormat.pageMarginRight,
-      }}
-    >
-      {bins.map((bin) => (
-        <LabelCell
-          key={bin.id}
-          bin={bin}
-          qrDataUrl={qrMap.get(bin.id) ?? ''}
-          format={labelFormat}
-          showColorSwatch={showColorSwatch}
-          iconSize={iconSize}
-          showQrCode={showQrCode}
-          showBinName={showBinName}
-          showIcon={showIcon}
-          showLocation={showLocation}
-          showBinCode={showBinCode}
-        />
+    <>
+      {pages.map((pageBins, pageIdx) => (
+        <div
+          key={pageIdx}
+          className="label-page"
+          style={{
+            width: '8.5in',
+            height: '11in',
+            boxSizing: 'border-box',
+            paddingTop: labelFormat.pageMarginTop,
+            paddingBottom: labelFormat.pageMarginBottom,
+            paddingLeft: labelFormat.pageMarginLeft,
+            paddingRight: labelFormat.pageMarginRight,
+            breakAfter: pageIdx < pages.length - 1 ? 'page' : undefined,
+          }}
+        >
+          <div
+            className="label-sheet"
+            style={{
+              gridTemplateColumns: `repeat(${labelFormat.columns}, ${labelFormat.cellWidth})`,
+              gridAutoRows: labelFormat.cellHeight,
+            }}
+          >
+            {pageBins.map((bin) => (
+              <LabelCell
+                key={bin.id}
+                bin={bin}
+                qrDataUrl={qrMap.get(bin.id) ?? ''}
+                format={labelFormat}
+                showColorSwatch={showColorSwatch}
+                iconSize={iconSize}
+                showQrCode={showQrCode}
+                showBinName={showBinName}
+                showIcon={showIcon}
+                showLocation={showLocation}
+                showBinCode={showBinCode}
+              />
+            ))}
+          </div>
+        </div>
       ))}
-    </div>
+    </>
   );
 }

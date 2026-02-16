@@ -11,7 +11,7 @@ import { useBinList } from '@/features/bins/useBins';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAuth } from '@/lib/auth';
 import { LabelSheet } from './LabelSheet';
-import { LABEL_FORMATS, getLabelFormat, DEFAULT_LABEL_FORMAT, getOrientation } from './labelFormats';
+import { LABEL_FORMATS, getLabelFormat, DEFAULT_LABEL_FORMAT, getOrientation, computeLabelsPerPage } from './labelFormats';
 import { usePrintSettings } from './usePrintSettings';
 import type { LabelFormat } from './labelFormats';
 import type { LabelOptions, CustomState } from './usePrintSettings';
@@ -381,7 +381,7 @@ export function PrintPage() {
                       <div className="min-w-0">
                         <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
                         <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
-                          {fmt.columns > 1 ? `${fmt.columns}×${fmt.key === 'avery-5167' ? '20' : fmt.key === 'avery-5160' ? '10' : '5'} per page` : 'single label'}
+                          {fmt.columns > 1 ? `${computeLabelsPerPage(fmt)} per page` : 'single label'}
                         </span>
                       </div>
                     </button>
