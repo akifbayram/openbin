@@ -77,44 +77,46 @@ function executeSingleAction(
 ): ActionResult {
   switch (action.type) {
     case 'add_items': {
-      const bin = querySync('SELECT id, name, items FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+      const bin = querySync('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
       if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
-      const current: string[] = bin.rows[0].items || [];
-      const merged = [...current, ...action.items];
-      querySync("UPDATE bins SET items = $1, updated_at = datetime('now') WHERE id = $2", [merged, action.bin_id]);
+      const maxResult = querySync<{ max_pos: number | null }>('SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1', [action.bin_id]);
+      let nextPos = (maxResult.rows[0]?.max_pos ?? -1) + 1;
+      for (const itemName of action.items) {
+        querySync('INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)', [generateUuid(), action.bin_id, itemName, nextPos++]);
+      }
+      querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
       pendingActivities.push({
         locationId, userId, userName,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
-        changes: { items: { old: current, new: merged } },
+        changes: { items_added: { old: null, new: action.items } },
       });
       return { type: 'add_items', success: true, details: `Added ${action.items.length} item(s) to ${action.bin_name}`, bin_id: action.bin_id, bin_name: action.bin_name };
     }
 
     case 'remove_items': {
-      const bin = querySync('SELECT id, name, items FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+      const bin = querySync('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
       if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
-      const current: string[] = bin.rows[0].items || [];
-      const removeSet = new Set(action.items.map((i) => i.toLowerCase()));
-      const filtered = current.filter((i) => !removeSet.has(i.toLowerCase()));
-      querySync("UPDATE bins SET items = $1, updated_at = datetime('now') WHERE id = $2", [filtered, action.bin_id]);
+      for (const itemName of action.items) {
+        querySync('DELETE FROM bin_items WHERE bin_id = $1 AND LOWER(name) = LOWER($2)', [action.bin_id, itemName]);
+      }
+      querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
       pendingActivities.push({
         locationId, userId, userName,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
-        changes: { items: { old: current, new: filtered } },
+        changes: { items_removed: { old: action.items, new: null } },
       });
       return { type: 'remove_items', success: true, details: `Removed ${action.items.length} item(s) from ${action.bin_name}`, bin_id: action.bin_id, bin_name: action.bin_name };
     }
 
     case 'modify_item': {
-      const bin = querySync('SELECT id, name, items FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+      const bin = querySync('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
       if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
-      const current: string[] = bin.rows[0].items || [];
-      const modified = current.map((i) => i.toLowerCase() === action.old_item.toLowerCase() ? action.new_item : i);
-      querySync("UPDATE bins SET items = $1, updated_at = datetime('now') WHERE id = $2", [modified, action.bin_id]);
+      querySync("UPDATE bin_items SET name = $1, updated_at = datetime('now') WHERE bin_id = $2 AND LOWER(name) = LOWER($3)", [action.new_item, action.bin_id, action.old_item]);
+      querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
       pendingActivities.push({
         locationId, userId, userName,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
-        changes: { items: { old: current, new: modified } },
+        changes: { items_renamed: { old: action.old_item, new: action.new_item } },
       });
       return { type: 'modify_item', success: true, details: `Renamed "${action.old_item}" to "${action.new_item}" in ${action.bin_name}`, bin_id: action.bin_id, bin_name: action.bin_name };
     }
@@ -153,9 +155,9 @@ function executeSingleAction(
         const code = attempt === 0 ? shortCode : generateShortCode();
         try {
           querySync(
-            `INSERT INTO bins (id, location_id, name, area_id, items, notes, tags, icon, color, created_by, short_code)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-            [binId, locationId, action.name, areaId, action.items || [], action.notes || '', action.tags || [], action.icon || '', action.color || '', userId, code]
+            `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, created_by, short_code)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            [binId, locationId, action.name, areaId, action.notes || '', action.tags || [], action.icon || '', action.color || '', userId, code]
           );
           shortCode = code;
           break;
@@ -164,6 +166,12 @@ function executeSingleAction(
           if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && attempt < maxRetries) continue;
           throw err;
         }
+      }
+
+      // Insert items into bin_items
+      const createItems: string[] = action.items || [];
+      for (let i = 0; i < createItems.length; i++) {
+        querySync('INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)', [generateUuid(), binId, createItems[i], i]);
       }
 
       pendingActivities.push({
@@ -255,10 +263,17 @@ function executeSingleAction(
       }
 
       querySync("UPDATE bins SET area_id = $1, updated_at = datetime('now') WHERE id = $2", [areaId, action.bin_id]);
+      // Resolve old area name for activity log
+      const oldAreaId = bin.rows[0].area_id as string | null;
+      let oldAreaName = '';
+      if (oldAreaId) {
+        const oldArea = querySync<{ name: string }>('SELECT name FROM areas WHERE id = $1', [oldAreaId]);
+        oldAreaName = oldArea.rows[0]?.name ?? '';
+      }
       pendingActivities.push({
         locationId, userId, userName,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
-        changes: { area_id: { old: bin.rows[0].area_id, new: areaId } },
+        changes: { area: { old: oldAreaName || null, new: action.area_name || null } },
       });
       return { type: 'set_area', success: true, details: `Set area of ${action.bin_name} to "${action.area_name}"`, bin_id: action.bin_id, bin_name: action.bin_name };
     }

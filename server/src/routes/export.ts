@@ -92,7 +92,7 @@ router.get('/locations/:id/export', requireLocationMember(), async (req, res) =>
 
     // Get all non-deleted bins for this location (JOIN areas for backward-compat export)
     const binsResult = await query(
-      `SELECT b.id, b.name, COALESCE(a.name, '') AS location, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_at, b.updated_at
+      `SELECT b.id, b.name, COALESCE(a.name, '') AS location, COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name)) FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_at, b.updated_at
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
        WHERE b.location_id = $1 AND b.deleted_at IS NULL ORDER BY b.updated_at DESC`,
       [locationId]
@@ -129,7 +129,7 @@ router.get('/locations/:id/export', requireLocationMember(), async (req, res) =>
         id: bin.id,
         name: bin.name,
         location: bin.location,
-        items: bin.items,
+        items: Array.isArray(bin.items) ? bin.items.map((i: string | { name: string }) => typeof i === 'string' ? i : i.name) : [],
         notes: bin.notes,
         tags: bin.tags,
         icon: bin.icon,
@@ -170,7 +170,7 @@ router.get('/locations/:id/export/zip', requireLocationMember(), async (req, res
     const locationName = locationResult.rows[0].name;
 
     const binsResult = await query(
-      `SELECT b.id, b.name, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_at, b.updated_at
+      `SELECT b.id, b.name, COALESCE(a.name, '') AS area_name, COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name)) FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_at, b.updated_at
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
        WHERE b.location_id = $1 AND b.deleted_at IS NULL ORDER BY b.updated_at DESC`,
       [locationId]
@@ -208,7 +208,7 @@ router.get('/locations/:id/export/zip', requireLocationMember(), async (req, res
         id: bin.id,
         name: bin.name,
         location: bin.area_name,
-        items: bin.items,
+        items: Array.isArray(bin.items) ? bin.items.map((i: string | { name: string }) => typeof i === 'string' ? i : i.name) : [],
         notes: bin.notes,
         tags: bin.tags,
         icon: bin.icon,
@@ -272,7 +272,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), async (req, res
     }
 
     const binsResult = await query(
-      `SELECT b.name, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_at, b.updated_at
+      `SELECT b.name, COALESCE(a.name, '') AS area_name, COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name)) FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_at, b.updated_at
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
        WHERE b.location_id = $1 AND b.deleted_at IS NULL ORDER BY b.name ASC`,
       [locationId]
@@ -287,7 +287,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), async (req, res
 
     const header = 'Name,Area,Items,Tags,Notes,Icon,Color,Short Code,Created,Updated';
     const rows = binsResult.rows.map((bin) => {
-      const items = Array.isArray(bin.items) ? bin.items.join('; ') : '';
+      const items = Array.isArray(bin.items) ? bin.items.map((i: string | { name: string }) => typeof i === 'string' ? i : i.name).join('; ') : '';
       const tags = Array.isArray(bin.tags) ? bin.tags.join('; ') : '';
       return [
         csvEscape(bin.name),
@@ -386,14 +386,13 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
           const code = attempt === 0 && bin.shortCode ? bin.shortCode : generateShortCode();
           try {
             querySync(
-              `INSERT INTO bins (id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+              `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, short_code, created_by, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
               [
                 binId,
                 locationId,
                 bin.name,
                 areaId,
-                bin.items || [],
                 bin.notes || '',
                 bin.tags || [],
                 bin.icon || '',
@@ -415,6 +414,15 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
           }
         }
         if (!shortCodeInserted) throw new Error('Failed to generate unique short code');
+
+        // Insert items into bin_items
+        const importItems: string[] = bin.items || [];
+        for (let i = 0; i < importItems.length; i++) {
+          querySync(
+            'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
+            [generateUuid(), binId, importItems[i], i]
+          );
+        }
 
         // Import photos
         if (bin.photos && Array.isArray(bin.photos)) {
@@ -558,14 +566,13 @@ router.post('/import/legacy', async (req, res) => {
           const code = generateShortCode();
           try {
             querySync(
-              `INSERT INTO bins (id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+              `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, short_code, created_by, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
               [
                 binId,
                 locationId,
                 bin.name,
                 legacyAreaId,
-                bin.items,
                 bin.notes,
                 bin.tags,
                 bin.icon,
@@ -587,6 +594,15 @@ router.post('/import/legacy', async (req, res) => {
           }
         }
         if (!legacyCodeInserted) throw new Error('Failed to generate unique short code');
+
+        // Insert items into bin_items
+        const legacyItems: string[] = bin.items || [];
+        for (let i = 0; i < legacyItems.length; i++) {
+          querySync(
+            'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
+            [generateUuid(), binId, legacyItems[i], i]
+          );
+        }
 
         // Import photos
         for (const photo of bin.photos) {

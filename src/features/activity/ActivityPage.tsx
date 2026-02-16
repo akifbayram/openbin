@@ -157,11 +157,46 @@ export function ActivityPage() {
                       </p>
                       {entry.changes && (
                         <div className="mt-1 text-[12px] text-[var(--text-tertiary)]">
-                          {Object.entries(entry.changes).map(([field, diff]) => (
-                            <p key={field}>
-                              {field}: <span className="line-through">{String(diff.old ?? '')}</span> → {String(diff.new ?? '')}
-                            </p>
-                          ))}
+                          {Object.entries(entry.changes).map(([field, diff]) => {
+                            if (field === 'items_added' && Array.isArray(diff.new)) {
+                              return <p key={field}>added: {(diff.new as string[]).join(', ')}</p>;
+                            }
+                            if (field === 'items_removed' && Array.isArray(diff.old)) {
+                              return <p key={field}>removed: {(diff.old as string[]).join(', ')}</p>;
+                            }
+                            if (field === 'items_renamed') {
+                              return <p key={field}>renamed: <span className="line-through">{String(diff.old ?? '')}</span> → {String(diff.new ?? '')}</p>;
+                            }
+                            // Legacy items field — compute readable diff from arrays
+                            if (field === 'items' && Array.isArray(diff.old) && Array.isArray(diff.new)) {
+                              const oldItems = diff.old as string[];
+                              const newItems = diff.new as string[];
+                              const added = newItems.filter((i) => !oldItems.includes(i));
+                              const removed = oldItems.filter((i) => !newItems.includes(i));
+                              if (added.length === 0 && removed.length === 0) {
+                                return <p key={field}>reordered items</p>;
+                              }
+                              return (
+                                <div key={field}>
+                                  {added.length > 0 && <p>added: {added.join(', ')}</p>}
+                                  {removed.length > 0 && <p>removed: {removed.join(', ')}</p>}
+                                </div>
+                              );
+                            }
+                            // Hide raw area_id UUIDs from legacy records
+                            if (field === 'area_id') {
+                              return null;
+                            }
+                            // Readable labels for known fields
+                            const label = field === 'area' ? 'area'
+                              : field === 'name' ? 'name'
+                              : field;
+                            return (
+                              <p key={field}>
+                                {label}: <span className="line-through">{String(diff.old ?? 'none')}</span> → {String(diff.new ?? 'none')}
+                              </p>
+                            );
+                          })}
                         </div>
                       )}
                       <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">

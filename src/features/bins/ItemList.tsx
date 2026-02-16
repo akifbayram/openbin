@@ -1,13 +1,14 @@
 import { useState, useRef, useCallback } from 'react';
 import { X, ArrowUpDown } from 'lucide-react';
-import { updateBin } from './useBins';
+import { removeItemFromBin, renameItem, reorderItems } from './useBins';
 import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import type { BinItem } from '@/types';
 
 interface ItemListProps {
-  items: string[];
+  items: BinItem[];
   binId: string;
 }
 
@@ -145,47 +146,46 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
 }
 
 export function ItemList({ items, binId }: ItemListProps) {
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('manual');
   const { showToast } = useToast();
-  const prevItemsRef = useRef(items);
-  prevItemsRef.current = items;
 
-  const persistItems = useCallback(async (newItems: string[]) => {
-    try {
-      await updateBin(binId, { items: newItems });
-    } catch {
-      showToast({ message: 'Failed to update items' });
-    }
-  }, [binId, showToast]);
-
-  function handleSort(mode: SortMode) {
+  const handleSort = useCallback(async (mode: SortMode) => {
     setSortMode(mode);
     if (mode === 'az' || mode === 'za') {
       const sorted = [...items].sort((a, b) =>
         mode === 'az'
-          ? a.localeCompare(b, undefined, { sensitivity: 'base' })
-          : b.localeCompare(a, undefined, { sensitivity: 'base' })
+          ? a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+          : b.name.localeCompare(a.name, undefined, { sensitivity: 'base' })
       );
-      persistItems(sorted);
+      try {
+        await reorderItems(binId, sorted.map((i) => i.id));
+      } catch {
+        showToast({ message: 'Failed to sort items' });
+      }
     }
-  }
+  }, [items, binId, showToast]);
 
   function cycleSortMode() {
     const next: SortMode = sortMode === 'manual' ? 'az' : sortMode === 'az' ? 'za' : 'manual';
     handleSort(next);
   }
 
-  function handleSaveEdit(index: number, value: string) {
-    setEditingIndex(null);
-    const newItems = [...items];
-    newItems[index] = value;
-    persistItems(newItems);
+  async function handleSaveEdit(itemId: string, value: string) {
+    setEditingId(null);
+    try {
+      await renameItem(binId, itemId, value);
+    } catch {
+      showToast({ message: 'Failed to rename item' });
+    }
   }
 
-  function handleDelete(index: number) {
-    const newItems = items.filter((_, i) => i !== index);
-    persistItems(newItems);
+  async function handleDelete(itemId: string) {
+    try {
+      await removeItemFromBin(binId, itemId);
+    } catch {
+      showToast({ message: 'Failed to delete item' });
+    }
   }
 
   const sortLabel = sortMode === 'az' ? 'A–Z' : sortMode === 'za' ? 'Z–A' : 'Sort';
@@ -210,15 +210,15 @@ export function ItemList({ items, binId }: ItemListProps) {
         <p className="text-[15px] text-[var(--text-tertiary)] italic">No items yet</p>
       ) : (
         <div className="space-y-0.5">
-          {items.map((item, i) => (
+          {items.map((item) => (
             <ItemRow
-              key={`${i}-${item}`}
-              text={item}
-              isEditing={editingIndex === i}
-              onStartEdit={() => setEditingIndex(i)}
-              onSave={(value) => handleSaveEdit(i, value)}
-              onCancel={() => setEditingIndex(null)}
-              onDelete={() => handleDelete(i)}
+              key={item.id}
+              text={item.name}
+              isEditing={editingId === item.id}
+              onStartEdit={() => setEditingId(item.id)}
+              onSave={(value) => handleSaveEdit(item.id, value)}
+              onCancel={() => setEditingId(null)}
+              onDelete={() => handleDelete(item.id)}
             />
           ))}
         </div>

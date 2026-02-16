@@ -16,7 +16,7 @@ import { ItemsInput } from './ItemsInput';
 import { ItemList } from './ItemList';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
-import { useBin, updateBin, deleteBin, restoreBin, useAllTags } from './useBins';
+import { useBin, updateBin, deleteBin, restoreBin, useAllTags, addItemsToBin } from './useBins';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { resolveIcon } from '@/lib/iconMap';
 import { getColorPreset } from '@/lib/colorPalette';
@@ -117,7 +117,7 @@ export function BinDetailPage() {
     if (!bin) return;
     setEditName(bin.name);
     setEditAreaId(bin.area_id);
-    setEditItems([...bin.items]);
+    setEditItems(bin.items.map((i) => i.name));
     setEditNotes(bin.notes);
     setEditTags([...bin.tags]);
     setEditIcon(bin.icon);
@@ -162,11 +162,11 @@ export function BinDetailPage() {
       if (value.includes(',')) {
         const newItems = value.split(',').map((s) => s.trim()).filter(Boolean);
         if (newItems.length > 0) {
-          await updateBin(id, { items: [...bin.items, ...newItems] });
+          await addItemsToBin(id, newItems);
           showToast({ message: `Added ${newItems.length} items` });
         }
       } else {
-        await updateBin(id, { items: [...bin.items, value] });
+        await addItemsToBin(id, [value]);
       }
       setQuickAddValue('');
     } catch {
@@ -184,7 +184,7 @@ export function BinDetailPage() {
     if (newItems.length === 0) return;
     setQuickAddSaving(true);
     try {
-      await updateBin(id, { items: [...bin.items, ...newItems] });
+      await addItemsToBin(id, newItems);
       showToast({ message: `Added ${newItems.length} items` });
       setQuickAddValue('');
     } catch {
@@ -534,7 +534,7 @@ export function BinDetailPage() {
                             quickAddStructure({
                               text,
                               mode: 'items',
-                              context: { binName: bin.name, existingItems: bin.items },
+                              context: { binName: bin.name, existingItems: bin.items.map((i) => i.name) },
                               locationId: activeLocationId ?? undefined,
                             }).then((items) => {
                               if (items) {
@@ -573,7 +573,7 @@ export function BinDetailPage() {
                           quickAddStructure({
                             text: quickAddExpandedText.trim(),
                             mode: 'items',
-                            context: { binName: bin.name, existingItems: bin.items },
+                            context: { binName: bin.name, existingItems: bin.items.map((i) => i.name) },
                             locationId: activeLocationId ?? undefined,
                           }).then((items) => {
                             if (items) {
@@ -623,7 +623,7 @@ export function BinDetailPage() {
                           quickAddStructure({
                             text: quickAddExpandedText.trim(),
                             mode: 'items',
-                            context: { binName: bin.name, existingItems: bin.items },
+                            context: { binName: bin.name, existingItems: bin.items.map((i) => i.name) },
                             locationId: activeLocationId ?? undefined,
                           }).then((items) => {
                             if (items) {
@@ -702,7 +702,7 @@ export function BinDetailPage() {
                           const selected = quickAddStructured.filter((_, i) => quickAddChecked.get(i) !== false);
                           if (selected.length === 0) return;
                           try {
-                            await updateBin(id, { items: [...bin.items, ...selected] });
+                            await addItemsToBin(id, selected);
                             showToast({ message: `Added ${selected.length} item${selected.length !== 1 ? 's' : ''}` });
                           } catch {
                             showToast({ message: 'Failed to add items' });

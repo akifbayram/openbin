@@ -13,7 +13,7 @@ import { useAiSettings } from './useAiSettings';
 import { useCommand, type CommandAction } from './useCommand';
 import { useAiProviderSetup } from './useAiProviderSetup';
 import { InlineAiSetup, AiConfiguredIndicator } from './InlineAiSetup';
-import { addBin, updateBin, deleteBin, restoreBin, notifyBinsChanged } from '@/features/bins/useBins';
+import { addBin, updateBin, deleteBin, restoreBin, notifyBinsChanged, addItemsToBin } from '@/features/bins/useBins';
 import { useAreaList, createArea } from '@/features/areas/useAreas';
 import { apiFetch } from '@/lib/api';
 import type { Bin } from '@/types';
@@ -147,23 +147,21 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
       try {
         switch (action.type) {
           case 'add_items': {
-            const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
-            const newItems = [...(bin.items || []), ...action.items];
-            await updateBin(action.bin_id, { items: newItems });
+            await addItemsToBin(action.bin_id, action.items);
             break;
           }
           case 'remove_items': {
             const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
             const remaining = (bin.items || []).filter(
-              (item) => !action.items.some((r) => r.toLowerCase() === item.toLowerCase())
+              (item) => !action.items.some((r) => r.toLowerCase() === item.name.toLowerCase())
             );
-            await updateBin(action.bin_id, { items: remaining });
+            await updateBin(action.bin_id, { items: remaining.map((i) => i.name) });
             break;
           }
           case 'modify_item': {
             const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
             const modified = (bin.items || []).map((item) =>
-              item.toLowerCase() === action.old_item.toLowerCase() ? action.new_item : item
+              item.name.toLowerCase() === action.old_item.toLowerCase() ? action.new_item : item.name
             );
             await updateBin(action.bin_id, { items: modified });
             break;

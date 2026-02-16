@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { Bin, ListResponse } from '@/types';
+import type { Bin, BinItem, ListResponse } from '@/types';
 
 const BINS_CHANGED_EVENT = 'bins-changed';
 
@@ -82,7 +82,7 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
         (bin) =>
           bin.name.toLowerCase().includes(q) ||
           (bin.area_name ?? '').toLowerCase().includes(q) ||
-          (Array.isArray(bin.items) ? bin.items : []).some((item: string) => item.toLowerCase().includes(q)) ||
+          (Array.isArray(bin.items) ? bin.items : []).some((item) => item.name.toLowerCase().includes(q)) ||
           bin.notes.toLowerCase().includes(q) ||
           (Array.isArray(bin.tags) ? bin.tags : []).some((tag: string) => tag.toLowerCase().includes(q)) ||
           (bin.short_code && bin.short_code.toLowerCase().includes(q))
@@ -222,11 +222,41 @@ export async function addBin(options: AddBinOptions): Promise<string> {
 
 export async function updateBin(
   id: string,
-  changes: Partial<Pick<Bin, 'name' | 'items' | 'notes' | 'tags' | 'icon' | 'color'>> & { areaId?: string | null }
+  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color'>> & { areaId?: string | null; items?: string[] }
 ): Promise<void> {
   await apiFetch(`/api/bins/${id}`, {
     method: 'PUT',
     body: changes,
+  });
+  notifyBinsChanged();
+}
+
+export async function addItemsToBin(binId: string, items: string[]): Promise<BinItem[]> {
+  const result = await apiFetch<{ items: BinItem[] }>(`/api/bins/${binId}/items`, {
+    method: 'POST',
+    body: { items },
+  });
+  notifyBinsChanged();
+  return result.items;
+}
+
+export async function removeItemFromBin(binId: string, itemId: string): Promise<void> {
+  await apiFetch(`/api/bins/${binId}/items/${itemId}`, { method: 'DELETE' });
+  notifyBinsChanged();
+}
+
+export async function renameItem(binId: string, itemId: string, name: string): Promise<void> {
+  await apiFetch(`/api/bins/${binId}/items/${itemId}`, {
+    method: 'PUT',
+    body: { name },
+  });
+  notifyBinsChanged();
+}
+
+export async function reorderItems(binId: string, itemIds: string[]): Promise<void> {
+  await apiFetch(`/api/bins/${binId}/items/reorder`, {
+    method: 'PUT',
+    body: { item_ids: itemIds },
   });
   notifyBinsChanged();
 }
@@ -247,7 +277,7 @@ export async function restoreBin(bin: Bin): Promise<void> {
       locationId: bin.location_id,
       name: bin.name,
       areaId: bin.area_id,
-      items: bin.items,
+      items: bin.items.map((i) => i.name),
       notes: bin.notes,
       tags: bin.tags,
       icon: bin.icon,

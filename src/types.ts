@@ -51,13 +51,18 @@ export interface Area {
   updated_at: string;
 }
 
+export interface BinItem {
+  id: string;
+  name: string;
+}
+
 export interface Bin {
   id: string;
   location_id: string;
   name: string;
   area_id: string | null;
   area_name: string;
-  items: string[];
+  items: BinItem[];
   notes: string;
   tags: string[];
   icon: string;

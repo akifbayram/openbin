@@ -63,7 +63,7 @@ async function verifyLocationMembership(locationId: string, userId: string): Pro
   return result.rows.length > 0;
 }
 
-const BIN_SELECT_COLS = `b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, b.items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_by, b.created_at, b.updated_at`;
+const BIN_SELECT_COLS = `b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name)) FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items, b.notes, b.tags, b.icon, b.color, b.short_code, b.created_by, b.created_at, b.updated_at`;
 
 // POST /api/bins — create bin
 router.post('/', async (req, res) => {
@@ -110,20 +110,29 @@ router.post('/', async (req, res) => {
       const binId = id || generateUuid();
 
       try {
+        await query(
+          `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, created_by, short_code)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [binId, locationId, name.trim(), areaId || null, notes || '', tags || [], icon || '', color || '', req.user!.id, code]
+        );
+
+        // Insert items into bin_items
+        const itemsArr: unknown[] = Array.isArray(items) ? items : [];
+        for (let i = 0; i < itemsArr.length; i++) {
+          const itemName = typeof itemsArr[i] === 'string' ? itemsArr[i] : (itemsArr[i] as { name: string })?.name;
+          if (!itemName) continue;
+          await query(
+            'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
+            [generateUuid(), binId, itemName, i]
+          );
+        }
+
+        // Re-fetch with BIN_SELECT_COLS
         const result = await query(
-          `INSERT INTO bins (id, location_id, name, area_id, items, notes, tags, icon, color, created_by, short_code)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-           RETURNING id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`,
-          [binId, locationId, name.trim(), areaId || null, items || [], notes || '', tags || [], icon || '', color || '', req.user!.id, code]
+          `SELECT ${BIN_SELECT_COLS} FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE b.id = $1`,
+          [binId]
         );
         const bin = result.rows[0];
-        // Fetch area_name if area_id is set
-        if (bin.area_id) {
-          const areaResult = await query('SELECT name FROM areas WHERE id = $1', [bin.area_id]);
-          bin.area_name = areaResult.rows[0]?.name ?? '';
-        } else {
-          bin.area_name = '';
-        }
 
         logActivity({
           locationId,
@@ -183,7 +192,7 @@ router.get('/', async (req, res) => {
     if (q && q.trim()) {
       const searchTerm = `%${q.trim()}%`;
       whereClauses.push(
-        `(b.name LIKE $${paramIdx} OR b.notes LIKE $${paramIdx} OR b.short_code LIKE $${paramIdx} OR COALESCE(a.name, '') LIKE $${paramIdx} OR EXISTS (SELECT 1 FROM json_each(b.items) WHERE value LIKE $${paramIdx}) OR EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value LIKE $${paramIdx}))`
+        `(b.name LIKE $${paramIdx} OR b.notes LIKE $${paramIdx} OR b.short_code LIKE $${paramIdx} OR COALESCE(a.name, '') LIKE $${paramIdx} OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND bi.name LIKE $${paramIdx}) OR EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value LIKE $${paramIdx}))`
       );
       params.push(searchTerm);
       paramIdx++;
@@ -206,7 +215,7 @@ router.get('/', async (req, res) => {
     }
 
     if (needsOrganizing === 'true') {
-      whereClauses.push(`(b.tags = '[]' OR b.tags = '') AND b.area_id IS NULL AND (b.items = '[]' OR b.items = '')`);
+      whereClauses.push(`(b.tags = '[]' OR b.tags = '') AND b.area_id IS NULL AND NOT EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id)`);
     }
 
     const validSorts: Record<string, string> = {
@@ -407,7 +416,7 @@ router.put('/:id', async (req, res) => {
 
     // Fetch old state for activity log diff
     const oldResult = await query(
-      'SELECT name, area_id, items, notes, tags, icon, color FROM bins WHERE id = $1',
+      'SELECT name, area_id, notes, tags, icon, color FROM bins WHERE id = $1',
       [id]
     );
     const oldBin = oldResult.rows[0];
@@ -423,10 +432,6 @@ router.put('/:id', async (req, res) => {
     if (areaId !== undefined) {
       setClauses.push(`area_id = $${paramIdx++}`);
       params.push(areaId || null);
-    }
-    if (items !== undefined) {
-      setClauses.push(`items = $${paramIdx++}`);
-      params.push(items);
     }
     if (notes !== undefined) {
       setClauses.push(`notes = $${paramIdx++}`);
@@ -447,10 +452,50 @@ router.put('/:id', async (req, res) => {
 
     params.push(id);
 
-    const result = await query(
-      `UPDATE bins SET ${setClauses.join(', ')} WHERE id = $${paramIdx} AND deleted_at IS NULL
-       RETURNING id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`,
+    await query(
+      `UPDATE bins SET ${setClauses.join(', ')} WHERE id = $${paramIdx} AND deleted_at IS NULL`,
       params
+    );
+
+    // Handle items separately — full replacement
+    let itemChanges: Record<string, { old: unknown; new: unknown }> | undefined;
+    if (items !== undefined && Array.isArray(items)) {
+      const oldItemsResult = await query<{ name: string }>(
+        'SELECT name FROM bin_items WHERE bin_id = $1 ORDER BY position',
+        [id]
+      );
+      const oldItemNames = oldItemsResult.rows.map((r) => r.name);
+
+      // Delete all existing items and re-insert
+      await query('DELETE FROM bin_items WHERE bin_id = $1', [id]);
+      for (let i = 0; i < items.length; i++) {
+        const itemName = typeof items[i] === 'string' ? items[i] : (items[i] as { name: string }).name;
+        if (!itemName) continue;
+        await query(
+          'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
+          [generateUuid(), id, itemName, i]
+        );
+      }
+
+      const newItemNames = items.map((item: string | { name: string }) =>
+        typeof item === 'string' ? item : item.name
+      );
+      const added = newItemNames.filter((n: string) => !oldItemNames.includes(n));
+      const removed = oldItemNames.filter((n) => !newItemNames.includes(n));
+      if (added.length > 0 || removed.length > 0) {
+        itemChanges = {};
+        if (added.length > 0) itemChanges.items_added = { old: null, new: added };
+        if (removed.length > 0) itemChanges.items_removed = { old: removed, new: null };
+      }
+    }
+
+    // Re-fetch with BIN_SELECT_COLS
+    const result = await query(
+      `SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
+       FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+       LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
+       WHERE b.id = $1 AND b.deleted_at IS NULL`,
+      [id, req.user!.id]
     );
 
     if (result.rows.length === 0) {
@@ -459,34 +504,44 @@ router.put('/:id', async (req, res) => {
     }
 
     const bin = result.rows[0];
-    if (bin.area_id) {
-      const areaResult = await query('SELECT name FROM areas WHERE id = $1', [bin.area_id]);
-      bin.area_name = areaResult.rows[0]?.name ?? '';
-    } else {
-      bin.area_name = '';
-    }
 
     if (oldBin) {
       const newObj: Record<string, unknown> = {};
       if (name !== undefined) newObj.name = name;
       if (areaId !== undefined) newObj.area_id = areaId || null;
-      if (items !== undefined) newObj.items = items;
       if (notes !== undefined) newObj.notes = notes;
       if (tags !== undefined) newObj.tags = tags;
       if (icon !== undefined) newObj.icon = icon;
       if (color !== undefined) newObj.color = color;
 
-      const changes = computeChanges(oldBin, newObj, Object.keys(newObj));
-      logActivity({
-        locationId: access.locationId,
-        userId: req.user!.id,
-        userName: req.user!.username,
-        action: 'update',
-        entityType: 'bin',
-        entityId: id,
-        entityName: bin.name,
-        changes,
-      });
+      const binFieldChanges = computeChanges(oldBin, newObj, Object.keys(newObj));
+
+      // Replace area_id UUIDs with readable area names
+      if (binFieldChanges?.area_id) {
+        const oldAreaName = oldBin.area_id
+          ? ((await query<{ name: string }>('SELECT name FROM areas WHERE id = $1', [oldBin.area_id])).rows[0]?.name ?? '')
+          : '';
+        const newAreaId = newObj.area_id as string | null;
+        const newAreaName = newAreaId
+          ? ((await query<{ name: string }>('SELECT name FROM areas WHERE id = $1', [newAreaId])).rows[0]?.name ?? '')
+          : '';
+        delete binFieldChanges.area_id;
+        binFieldChanges.area = { old: oldAreaName || null, new: newAreaName || null };
+      }
+
+      const allChanges = { ...binFieldChanges, ...itemChanges };
+      if (Object.keys(allChanges).length > 0) {
+        logActivity({
+          locationId: access.locationId,
+          userId: req.user!.id,
+          userName: req.user!.username,
+          action: 'update',
+          entityType: 'bin',
+          entityId: id,
+          entityName: bin.name,
+          changes: allChanges,
+        });
+      }
     }
 
     res.json(bin);
@@ -562,19 +617,16 @@ router.post('/:id/restore', async (req, res) => {
 
     const locationId = accessResult.rows[0].location_id;
 
-    const result = await query(
-      `UPDATE bins SET deleted_at = NULL, updated_at = datetime('now') WHERE id = $1
-       RETURNING id, location_id, name, area_id, items, notes, tags, icon, color, short_code, created_by, created_at, updated_at`,
+    await query(
+      `UPDATE bins SET deleted_at = NULL, updated_at = datetime('now') WHERE id = $1`,
       [id]
     );
 
+    const result = await query(
+      `SELECT ${BIN_SELECT_COLS} FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE b.id = $1`,
+      [id]
+    );
     const bin = result.rows[0];
-    if (bin.area_id) {
-      const areaResult = await query('SELECT name FROM areas WHERE id = $1', [bin.area_id]);
-      bin.area_name = areaResult.rows[0]?.name ?? '';
-    } else {
-      bin.area_name = '';
-    }
 
     logActivity({
       locationId,
@@ -815,6 +867,191 @@ router.put('/:id/add-tags', async (req, res) => {
   } catch (err) {
     console.error('Add tags error:', err);
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to add tags' });
+  }
+});
+
+// POST /api/bins/:id/items — add items to a bin
+router.post('/:id/items', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { items } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'items array is required' });
+      return;
+    }
+
+    const access = await verifyBinAccess(id, req.user!.id);
+    if (!access) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
+      return;
+    }
+
+    // Get max position
+    const maxResult = await query<{ max_pos: number | null }>(
+      'SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1',
+      [id]
+    );
+    let nextPos = (maxResult.rows[0]?.max_pos ?? -1) + 1;
+
+    const newItems: Array<{ id: string; name: string }> = [];
+    for (const item of items) {
+      const name = typeof item === 'string' ? item : (item as { name: string }).name;
+      if (!name || !name.trim()) continue;
+      const itemId = generateUuid();
+      await query(
+        'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
+        [itemId, id, name.trim(), nextPos++]
+      );
+      newItems.push({ id: itemId, name: name.trim() });
+    }
+
+    await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
+
+    // Get bin name for activity log
+    const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
+    logActivity({
+      locationId: access.locationId,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      action: 'update',
+      entityType: 'bin',
+      entityId: id,
+      entityName: binResult.rows[0]?.name,
+      changes: { items_added: { old: null, new: newItems.map((i) => i.name) } },
+    });
+
+    res.status(201).json({ items: newItems });
+  } catch (err) {
+    console.error('Add items error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to add items' });
+  }
+});
+
+// DELETE /api/bins/:id/items/:itemId — remove single item
+router.delete('/:id/items/:itemId', async (req, res) => {
+  try {
+    const { id, itemId } = req.params;
+
+    const access = await verifyBinAccess(id, req.user!.id);
+    if (!access) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
+      return;
+    }
+
+    // Get item name before deleting
+    const itemResult = await query<{ name: string }>(
+      'SELECT name FROM bin_items WHERE id = $1 AND bin_id = $2',
+      [itemId, id]
+    );
+    if (itemResult.rows.length === 0) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Item not found' });
+      return;
+    }
+
+    const itemName = itemResult.rows[0].name;
+    await query('DELETE FROM bin_items WHERE id = $1 AND bin_id = $2', [itemId, id]);
+    await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
+
+    const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
+    logActivity({
+      locationId: access.locationId,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      action: 'update',
+      entityType: 'bin',
+      entityId: id,
+      entityName: binResult.rows[0]?.name,
+      changes: { items_removed: { old: [itemName], new: null } },
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete item error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to delete item' });
+  }
+});
+
+// PUT /api/bins/:id/items/reorder — reorder items
+router.put('/:id/items/reorder', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { item_ids } = req.body;
+
+    if (!Array.isArray(item_ids) || item_ids.length === 0) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'item_ids array is required' });
+      return;
+    }
+
+    const access = await verifyBinAccess(id, req.user!.id);
+    if (!access) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
+      return;
+    }
+
+    for (let i = 0; i < item_ids.length; i++) {
+      await query(
+        'UPDATE bin_items SET position = $1 WHERE id = $2 AND bin_id = $3',
+        [i, item_ids[i], id]
+      );
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Reorder items error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to reorder items' });
+  }
+});
+
+// PUT /api/bins/:id/items/:itemId — rename item
+router.put('/:id/items/:itemId', async (req, res) => {
+  try {
+    const { id, itemId } = req.params;
+    const { name } = req.body;
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'name is required' });
+      return;
+    }
+
+    const access = await verifyBinAccess(id, req.user!.id);
+    if (!access) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Bin not found' });
+      return;
+    }
+
+    const itemResult = await query<{ name: string }>(
+      'SELECT name FROM bin_items WHERE id = $1 AND bin_id = $2',
+      [itemId, id]
+    );
+    if (itemResult.rows.length === 0) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Item not found' });
+      return;
+    }
+
+    const oldName = itemResult.rows[0].name;
+    await query(
+      "UPDATE bin_items SET name = $1, updated_at = datetime('now') WHERE id = $2 AND bin_id = $3",
+      [name.trim(), itemId, id]
+    );
+    await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
+
+    const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
+    logActivity({
+      locationId: access.locationId,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      action: 'update',
+      entityType: 'bin',
+      entityId: id,
+      entityName: binResult.rows[0]?.name,
+      changes: { items_renamed: { old: oldName, new: name.trim() } },
+    });
+
+    res.json({ id: itemId, name: name.trim() });
+  } catch (err) {
+    console.error('Rename item error:', err);
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to rename item' });
   }
 });
 

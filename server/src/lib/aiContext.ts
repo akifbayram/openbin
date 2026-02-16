@@ -13,7 +13,7 @@ export const AVAILABLE_ICONS = [
 async function fetchLocationBinsAndAreas(locationId: string) {
   const [binsResult, areasResult] = await Promise.all([
     query(
-      `SELECT b.id, b.name, b.items, b.tags, b.area_id, COALESCE(a.name, '') AS area_name, b.notes, b.icon, b.color, b.short_code
+      `SELECT b.id, b.name, COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name)) FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items, b.tags, b.area_id, COALESCE(a.name, '') AS area_name, b.notes, b.icon, b.color, b.short_code
        FROM bins b
        LEFT JOIN areas a ON a.id = b.area_id
        WHERE b.location_id = $1 AND b.deleted_at IS NULL`,
@@ -39,7 +39,7 @@ export async function buildCommandContext(locationId: string): Promise<CommandRe
   const bins = binsResult.rows.map((r) => ({
     id: r.id as string,
     name: r.name as string,
-    items: r.items as string[],
+    items: (r.items as Array<{ id: string; name: string }>).map((i) => i.name),
     tags: r.tags as string[],
     area_id: r.area_id as string | null,
     area_name: r.area_name as string,
@@ -65,7 +65,7 @@ export async function buildInventoryContext(locationId: string): Promise<Invento
     bins: binsResult.rows.map((r) => ({
       id: r.id as string,
       name: r.name as string,
-      items: r.items as string[],
+      items: (r.items as Array<{ id: string; name: string }>).map((i) => i.name),
       tags: r.tags as string[],
       area_name: r.area_name as string,
       notes: truncateNotes(r.notes),

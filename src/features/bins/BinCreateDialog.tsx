@@ -317,7 +317,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
                 <AiSuggestionsPanel
                   suggestions={suggestions}
                   currentName={name}
-                  currentItems={items}
+                  currentItems={items.map((name, i) => ({ id: String(i), name }))}
                   currentTags={tags}
                   currentNotes={notes}
                   onApply={handleApplySuggestions}

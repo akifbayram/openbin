@@ -3,12 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import type { AiSuggestions } from '@/types';
+import type { AiSuggestions, BinItem } from '@/types';
 
 interface AiSuggestionsPanelProps {
   suggestions: AiSuggestions;
   currentName: string;
-  currentItems: string[];
+  currentItems: BinItem[];
   currentTags: string[];
   currentNotes: string;
   onApply: (changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string }>) => void;

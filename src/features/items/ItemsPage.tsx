@@ -35,7 +35,7 @@ export function ItemsPage() {
       if (Array.isArray(bin.items)) {
         for (const item of bin.items) {
           entries.push({
-            name: item,
+            name: item.name,
             binId: bin.id,
             binName: bin.name,
             binIcon: bin.icon,

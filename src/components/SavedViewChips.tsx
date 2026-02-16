@@ -13,7 +13,7 @@ export function SavedViewChips({ views, onApply, onDelete }: SavedViewChipsProps
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
-        Saved
+        Saved Searches
       </h2>
       <div className="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-5 px-5 pt-1 pb-3">
         {views.map((view) => (
