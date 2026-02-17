@@ -1,10 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
+import { authLimiter, registerLimiter, joinLimiter } from './lib/rateLimiters.js';
 import authRoutes from './routes/auth.js';
 import locationsRoutes from './routes/locations.js';
 import areasRoutes from './routes/areas.js';
 import binsRoutes from './routes/bins.js';
+import binItemsRoutes from './routes/binItems.js';
 import photosRoutes from './routes/photos.js';
 import exportRoutes from './routes/export.js';
 import tagColorsRoutes from './routes/tagColors.js';
@@ -15,6 +16,7 @@ import savedViewsRoutes from './routes/savedViews.js';
 import scanHistoryRoutes from './routes/scanHistory.js';
 import activityRoutes from './routes/activity.js';
 import apiKeysRoutes from './routes/apiKeys.js';
+import { HttpError } from './lib/httpErrors.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '4000', 10);
@@ -25,30 +27,6 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'RATE_LIMITED', message: 'Too many attempts, please try again later' },
-});
-
-const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 3,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'RATE_LIMITED', message: 'Too many registration attempts, please try again later' },
-});
-
-const joinLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'RATE_LIMITED', message: 'Too many attempts, please try again later' },
-});
-
 // Routes
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', registerLimiter);
@@ -58,6 +36,7 @@ app.use('/api/locations', locationsRoutes);
 app.use('/api/locations', areasRoutes);
 app.use('/api/locations', activityRoutes);
 app.use('/api/bins', binsRoutes);
+app.use('/api/bins', binItemsRoutes);
 app.use('/api/photos', photosRoutes);
 app.use('/api/tag-colors', tagColorsRoutes);
 app.use('/api/print-settings', printSettingsRoutes);
@@ -68,8 +47,12 @@ app.use('/api', exportRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/api-keys', apiKeysRoutes);
 
-// Error handler
+// Global error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  if (err instanceof HttpError) {
+    res.status(err.statusCode).json({ error: err.code, message: err.message });
+    return;
+  }
   console.error(err.stack);
   res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
 });

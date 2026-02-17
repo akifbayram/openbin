@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { apiFetch, ApiError } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { mapAiError } from './aiErrors';
 
 export type CommandAction =
   | { type: 'add_items'; bin_id: string; bin_name: string; items: string[] }
@@ -20,16 +21,9 @@ export interface CommandResult {
   interpretation: string;
 }
 
+/** @deprecated Use mapAiError from aiErrors.ts instead */
 export function mapCommandErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) {
-    switch (err.status) {
-      case 422: return 'Invalid API key or model — check Settings > AI';
-      case 429: return 'AI provider rate limited — wait a moment and try again';
-      case 502: return 'Your AI provider returned an error — verify your settings';
-      default: return err.message;
-    }
-  }
-  return 'Couldn\'t understand that command — try rephrasing';
+  return mapAiError(err, 'Couldn\'t understand that command — try rephrasing');
 }
 
 export async function parseCommandText(options: {
@@ -62,7 +56,7 @@ export function useCommand() {
       setInterpretation(result.interpretation);
       return result;
     } catch (err) {
-      setError(mapCommandErrorMessage(err));
+      setError(mapAiError(err, 'Couldn\'t understand that command — try rephrasing'));
       return null;
     } finally {
       setIsParsing(false);

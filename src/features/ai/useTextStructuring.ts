@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { apiFetch, ApiError } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { mapAiError } from './aiErrors';
 
 interface StructureTextOptions {
   text: string;
@@ -15,16 +16,9 @@ interface StructureTextResult {
   items: string[];
 }
 
+/** @deprecated Use mapAiError from aiErrors.ts instead */
 export function mapStructureErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) {
-    switch (err.status) {
-      case 422: return 'Invalid API key or model — check Settings > AI';
-      case 429: return 'AI provider rate limited — wait a moment and try again';
-      case 502: return 'Your AI provider returned an error — verify your settings';
-      default: return err.message;
-    }
-  }
-  return 'Couldn\'t extract items — try describing them differently';
+  return mapAiError(err, 'Couldn\'t extract items — try describing them differently');
 }
 
 export async function structureTextItems(options: StructureTextOptions): Promise<string[]> {
@@ -54,7 +48,7 @@ export function useTextStructuring() {
       setStructuredItems(items);
       return items;
     } catch (err) {
-      setError(mapStructureErrorMessage(err));
+      setError(mapAiError(err, 'Couldn\'t extract items — try describing them differently'));
       return null;
     } finally {
       setIsStructuring(false);

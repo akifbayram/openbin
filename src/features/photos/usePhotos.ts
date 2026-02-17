@@ -1,63 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { Photo, ListResponse } from '@/types';
-
-const PHOTOS_CHANGED_EVENT = 'photos-changed';
+import { Events, notify } from '@/lib/eventBus';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
+import { useListData } from '@/lib/useListData';
+import type { Photo } from '@/types';
 
 /** Notify all usePhotos instances to refetch */
-export function notifyPhotosChanged() {
-  window.dispatchEvent(new Event(PHOTOS_CHANGED_EVENT));
-}
+export const notifyPhotosChanged = () => notify(Events.PHOTOS);
+
+const sortByCreatedAsc = (results: Photo[]) =>
+  [...results].sort((a, b) => a.created_at.localeCompare(b.created_at));
 
 export function usePhotos(binId: string | undefined) {
   const { token } = useAuth();
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshCounter, setRefreshCounter] = useState(0);
-
-  useEffect(() => {
-    if (!binId || !token) {
-      setPhotos([]);
-      setIsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
-
-    apiFetch<ListResponse<Photo>>(`/api/photos?bin_id=${encodeURIComponent(binId)}`)
-      .then((data) => {
-        if (!cancelled) {
-          // Sort by created_at ascending
-          const sorted = [...data.results].sort((a, b) => a.created_at.localeCompare(b.created_at));
-          setPhotos(sorted);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setPhotos([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [binId, token, refreshCounter]);
-
-  // Listen for photos-changed events
-  useEffect(() => {
-    const handler = () => setRefreshCounter((c) => c + 1);
-    window.addEventListener(PHOTOS_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(PHOTOS_CHANGED_EVENT, handler);
-  }, []);
-
-  const refresh = useCallback(() => setRefreshCounter((c) => c + 1), []);
-
+  const { data: photos, isLoading, refresh } = useListData<Photo>(
+    binId && token ? `/api/photos?bin_id=${encodeURIComponent(binId)}` : null,
+    [Events.PHOTOS],
+    sortByCreatedAsc,
+  );
   return { photos, isLoading, refresh };
 }
 
 export function getPhotoUrl(photoId: string): string {
-  const token = localStorage.getItem('openbin-token');
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
   return `/api/photos/${photoId}/file${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 }
 

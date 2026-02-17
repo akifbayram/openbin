@@ -1,19 +1,13 @@
 import { useState, useCallback } from 'react';
-import { apiFetch, ApiError } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { mapAiError } from './aiErrors';
 import type { AiSuggestions } from '@/types';
 
 export const MAX_AI_PHOTOS = 5;
 
+/** @deprecated Use mapAiError from aiErrors.ts instead */
 export function mapErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) {
-    switch (err.status) {
-      case 422: return 'Invalid API key or model — check Settings > AI';
-      case 429: return 'AI provider rate limited — wait a moment and try again';
-      case 502: return 'Your AI provider returned an error — verify your settings';
-      default: return err.message;
-    }
-  }
-  return 'Couldn\'t analyze the photo — try again';
+  return mapAiError(err, 'Couldn\'t analyze the photo — try again');
 }
 
 export async function analyzeImageFile(file: File, locationId?: string): Promise<AiSuggestions> {
@@ -54,7 +48,7 @@ export function useAiAnalysis() {
       });
       setSuggestions(result);
     } catch (err) {
-      setError(mapErrorMessage(err));
+      setError(mapAiError(err, 'Couldn\'t analyze the photo — try again'));
     } finally {
       setIsAnalyzing(false);
     }
@@ -71,7 +65,7 @@ export function useAiAnalysis() {
       });
       setSuggestions(result);
     } catch (err) {
-      setError(mapErrorMessage(err));
+      setError(mapAiError(err, 'Couldn\'t analyze the photo — try again'));
     } finally {
       setIsAnalyzing(false);
     }

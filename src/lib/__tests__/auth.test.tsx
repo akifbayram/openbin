@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 vi.mock('@/lib/api', () => ({
   apiFetch: vi.fn(),
@@ -50,8 +51,8 @@ describe('useAuth', () => {
 
   describe('initial state', () => {
     it('reads token and activeLocationId from localStorage', () => {
-      localStorage.setItem('openbin-token', 'stored-token');
-      localStorage.setItem('openbin-active-location', 'loc-1');
+      localStorage.setItem(STORAGE_KEYS.TOKEN, 'stored-token');
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'loc-1');
       mockApiFetch.mockResolvedValue(makeUser());
 
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -64,7 +65,7 @@ describe('useAuth', () => {
   describe('token validation on mount', () => {
     it('sets user when token is valid', async () => {
       const user = makeUser();
-      localStorage.setItem('openbin-token', 'valid-token');
+      localStorage.setItem(STORAGE_KEYS.TOKEN, 'valid-token');
       mockApiFetch.mockResolvedValue(user);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -79,7 +80,7 @@ describe('useAuth', () => {
     });
 
     it('clears token from localStorage when apiFetch rejects', async () => {
-      localStorage.setItem('openbin-token', 'invalid-token');
+      localStorage.setItem(STORAGE_KEYS.TOKEN, 'invalid-token');
       mockApiFetch.mockRejectedValue(new Error('Unauthorized'));
 
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -90,7 +91,7 @@ describe('useAuth', () => {
 
       expect(result.current.user).toBeNull();
       expect(result.current.token).toBeNull();
-      expect(localStorage.getItem('openbin-token')).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEYS.TOKEN)).toBeNull();
     });
 
     it('sets loading to false immediately when no token', async () => {
@@ -128,22 +129,22 @@ describe('useAuth', () => {
         method: 'POST',
         body: { username: 'testuser', password: 'password' },
       });
-      expect(localStorage.getItem('openbin-token')).toBe('new-token');
-      expect(localStorage.getItem('openbin-active-location')).toBe('loc-1');
+      expect(localStorage.getItem(STORAGE_KEYS.TOKEN)).toBe('new-token');
+      expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBe('loc-1');
       expect(result.current.user).toEqual(user);
       expect(result.current.token).toBe('new-token');
       expect(result.current.activeLocationId).toBe('loc-1');
     });
 
     it('keeps existing activeLocationId when response has none', async () => {
-      localStorage.setItem('openbin-active-location', 'existing-loc');
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'existing-loc');
       const user = makeUser();
       // First call is /api/auth/me on mount, second is login
       mockApiFetch
         .mockResolvedValueOnce(user) // /me
         .mockResolvedValueOnce({ token: 'new-token', user }); // login (no activeLocationId)
 
-      localStorage.setItem('openbin-token', 'old-token');
+      localStorage.setItem(STORAGE_KEYS.TOKEN, 'old-token');
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -161,7 +162,7 @@ describe('useAuth', () => {
 
   describe('register', () => {
     it('calls API, stores token, clears active-location, and sets user', async () => {
-      localStorage.setItem('openbin-active-location', 'stale-loc');
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'stale-loc');
       const user = makeUser();
       mockApiFetch.mockResolvedValue({
         token: 'reg-token',
@@ -182,8 +183,8 @@ describe('useAuth', () => {
         method: 'POST',
         body: { username: 'newuser', password: 'password', displayName: 'New User' },
       });
-      expect(localStorage.getItem('openbin-token')).toBe('reg-token');
-      expect(localStorage.getItem('openbin-active-location')).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEYS.TOKEN)).toBe('reg-token');
+      expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBeNull();
       expect(result.current.user).toEqual(user);
       expect(result.current.token).toBe('reg-token');
       expect(result.current.activeLocationId).toBeNull();
@@ -192,8 +193,8 @@ describe('useAuth', () => {
 
   describe('logout', () => {
     it('removes token and active-location from localStorage and clears state', async () => {
-      localStorage.setItem('openbin-token', 'my-token');
-      localStorage.setItem('openbin-active-location', 'loc-1');
+      localStorage.setItem(STORAGE_KEYS.TOKEN, 'my-token');
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'loc-1');
       mockApiFetch.mockResolvedValue(makeUser());
 
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -206,8 +207,8 @@ describe('useAuth', () => {
         result.current.logout();
       });
 
-      expect(localStorage.getItem('openbin-token')).toBeNull();
-      expect(localStorage.getItem('openbin-active-location')).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEYS.TOKEN)).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBeNull();
       expect(result.current.user).toBeNull();
       expect(result.current.token).toBeNull();
       expect(result.current.activeLocationId).toBeNull();
@@ -227,12 +228,12 @@ describe('useAuth', () => {
         result.current.setActiveLocationId('loc-2');
       });
 
-      expect(localStorage.getItem('openbin-active-location')).toBe('loc-2');
+      expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBe('loc-2');
       expect(result.current.activeLocationId).toBe('loc-2');
     });
 
     it('removes from localStorage when set to null', async () => {
-      localStorage.setItem('openbin-active-location', 'loc-1');
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'loc-1');
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -244,7 +245,7 @@ describe('useAuth', () => {
         result.current.setActiveLocationId(null);
       });
 
-      expect(localStorage.getItem('openbin-active-location')).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBeNull();
       expect(result.current.activeLocationId).toBeNull();
     });
   });
@@ -271,8 +272,8 @@ describe('useAuth', () => {
   describe('deleteAccount', () => {
     it('calls API and calls logout', async () => {
       const user = makeUser({ id: 'user-42' });
-      localStorage.setItem('openbin-token', 'my-token');
-      localStorage.setItem('openbin-active-location', 'loc-1');
+      localStorage.setItem(STORAGE_KEYS.TOKEN, 'my-token');
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'loc-1');
 
       // First call: /me on mount, second call: DELETE /api/auth/account
       mockApiFetch
@@ -293,8 +294,8 @@ describe('useAuth', () => {
         method: 'DELETE',
         body: { password: 'mypassword' },
       });
-      expect(localStorage.getItem('openbin-token')).toBeNull();
-      expect(localStorage.getItem('openbin-active-location')).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEYS.TOKEN)).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBeNull();
       expect(result.current.user).toBeNull();
       expect(result.current.token).toBeNull();
     });

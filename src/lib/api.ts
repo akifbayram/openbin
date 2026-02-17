@@ -1,3 +1,5 @@
+import { STORAGE_KEYS } from './storageKeys';
+
 const API_BASE = '';
 
 export class ApiError extends Error {
@@ -17,7 +19,7 @@ export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {}
 ): Promise<T> {
-  const token = localStorage.getItem('openbin-token');
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
   const headers: Record<string, string> = {};
 
   if (token) {
@@ -64,6 +66,6 @@ export async function apiFetch<T>(
 
 /** Build an authenticated avatar URL (appends JWT as query param for <img> tags). */
 export function getAvatarUrl(avatarPath: string): string {
-  const token = localStorage.getItem('openbin-token');
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
   return `${avatarPath}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 }

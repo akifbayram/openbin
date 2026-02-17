@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 vi.mock('@/lib/api', () => ({
   apiFetch: vi.fn(),
@@ -52,7 +53,7 @@ describe('deletePhoto', () => {
 
 describe('getPhotoUrl', () => {
   it('includes token query param when token exists in localStorage', () => {
-    localStorage.setItem('openbin-token', 'my-jwt-token');
+    localStorage.setItem(STORAGE_KEYS.TOKEN, 'my-jwt-token');
 
     expect(getPhotoUrl('photo-123')).toBe(
       `/api/photos/photo-123/file?token=${encodeURIComponent('my-jwt-token')}`,

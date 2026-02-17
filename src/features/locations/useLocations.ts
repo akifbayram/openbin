@@ -1,93 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { Location, LocationMember, ListResponse } from '@/types';
+import { Events, notify } from '@/lib/eventBus';
+import { useListData } from '@/lib/useListData';
+import type { Location, LocationMember } from '@/types';
 
-const LOCATIONS_CHANGED_EVENT = 'locations-changed';
-
-/** Notify all useLocationList instances to refetch */
 function notifyLocationsChanged() {
-  window.dispatchEvent(new Event(LOCATIONS_CHANGED_EVENT));
+  notify(Events.LOCATIONS);
 }
 
 export function useLocationList() {
   const { token } = useAuth();
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshCounter, setRefreshCounter] = useState(0);
-
-  useEffect(() => {
-    if (!token) {
-      setLocations([]);
-      setIsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
-
-    apiFetch<ListResponse<Location>>('/api/locations')
-      .then((data) => {
-        if (!cancelled) setLocations(data.results);
-      })
-      .catch(() => {
-        if (!cancelled) setLocations([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [token, refreshCounter]);
-
-  // Listen for locations-changed events from create/join/delete actions
-  useEffect(() => {
-    const handler = () => setRefreshCounter((c) => c + 1);
-    window.addEventListener(LOCATIONS_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(LOCATIONS_CHANGED_EVENT, handler);
-  }, []);
-
-  const refresh = useCallback(() => setRefreshCounter((c) => c + 1), []);
-
+  const { data: locations, isLoading, refresh } = useListData<Location>(
+    token ? '/api/locations' : null,
+    [Events.LOCATIONS],
+  );
   return { locations, isLoading, refresh };
 }
 
 export function useLocationMembers(locationId: string | null) {
   const { token } = useAuth();
-  const [members, setMembers] = useState<LocationMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshCounter, setRefreshCounter] = useState(0);
-
-  useEffect(() => {
-    if (!locationId || !token) {
-      setMembers([]);
-      setIsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
-
-    apiFetch<ListResponse<LocationMember>>(`/api/locations/${locationId}/members`)
-      .then((data) => {
-        if (!cancelled) setMembers(data.results);
-      })
-      .catch(() => {
-        if (!cancelled) setMembers([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [locationId, token, refreshCounter]);
-
-  useEffect(() => {
-    const handler = () => setRefreshCounter((c) => c + 1);
-    window.addEventListener(LOCATIONS_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(LOCATIONS_CHANGED_EVENT, handler);
-  }, []);
-
+  const { data: members, isLoading } = useListData<LocationMember>(
+    locationId && token ? `/api/locations/${locationId}/members` : null,
+    [Events.LOCATIONS],
+  );
   return { members, isLoading };
 }
 

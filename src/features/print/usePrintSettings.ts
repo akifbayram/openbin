@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 import type { LabelFormat } from './labelFormats';
 
 export interface LabelOptions {
@@ -49,10 +50,10 @@ export async function savePrintSettings(settings: PrintSettings): Promise<void> 
 }
 
 function migrateFromLocalStorage(): PrintSettings | null {
-  const formatKey = localStorage.getItem('openbin-label-format');
-  const optionsRaw = localStorage.getItem('openbin-label-options');
-  const customRaw = localStorage.getItem('openbin-label-custom');
-  const presetsRaw = localStorage.getItem('openbin-label-presets');
+  const formatKey = localStorage.getItem(STORAGE_KEYS.LABEL_FORMAT);
+  const optionsRaw = localStorage.getItem(STORAGE_KEYS.LABEL_OPTIONS);
+  const customRaw = localStorage.getItem(STORAGE_KEYS.LABEL_CUSTOM);
+  const presetsRaw = localStorage.getItem(STORAGE_KEYS.LABEL_PRESETS);
 
   if (!formatKey && !optionsRaw && !customRaw && !presetsRaw) return null;
 
@@ -80,10 +81,10 @@ function migrateFromLocalStorage(): PrintSettings | null {
 }
 
 function clearLocalStorage(): void {
-  localStorage.removeItem('openbin-label-format');
-  localStorage.removeItem('openbin-label-options');
-  localStorage.removeItem('openbin-label-custom');
-  localStorage.removeItem('openbin-label-presets');
+  localStorage.removeItem(STORAGE_KEYS.LABEL_FORMAT);
+  localStorage.removeItem(STORAGE_KEYS.LABEL_OPTIONS);
+  localStorage.removeItem(STORAGE_KEYS.LABEL_CUSTOM);
+  localStorage.removeItem(STORAGE_KEYS.LABEL_PRESETS);
 }
 
 export function usePrintSettings() {

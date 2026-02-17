@@ -1,0 +1,71 @@
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
+const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
+
+const PHOTO_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+};
+
+const AVATAR_STORAGE_PATH = path.join(PHOTO_STORAGE_PATH, 'avatars');
+
+/** Multer storage for bin photos (stored in per-bin subdirectories). */
+export const binPhotoStorage = multer.diskStorage({
+  destination: (req, _file, cb) => {
+    const binId = req.params.id;
+    const dir = path.join(PHOTO_STORAGE_PATH, binId);
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = MIME_TO_EXT[file.mimetype] || '.jpg';
+    cb(null, `${uuidv4()}${ext}`);
+  },
+});
+
+/** Multer config for bin photo uploads (max 5 MB, JPEG/PNG/WebP/GIF). */
+export const binPhotoUpload = multer({
+  storage: binPhotoStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (PHOTO_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPEG, PNG, WebP, and GIF images are allowed'));
+    }
+  },
+});
+
+/** Multer storage for user avatars. */
+export const avatarStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    fs.mkdirSync(AVATAR_STORAGE_PATH, { recursive: true });
+    cb(null, AVATAR_STORAGE_PATH);
+  },
+  filename: (_req, file, cb) => {
+    const ext = MIME_TO_EXT[file.mimetype] || '.jpg';
+    cb(null, `${uuidv4()}${ext}`);
+  },
+});
+
+/** Multer config for avatar uploads (max 2 MB, JPEG/PNG/WebP). */
+export const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (AVATAR_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPEG, PNG, and WebP images are allowed'));
+    }
+  },
+});
+
+export { PHOTO_STORAGE_PATH, AVATAR_STORAGE_PATH };

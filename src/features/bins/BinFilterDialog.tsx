@@ -3,9 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { COLOR_PALETTE, getColorPreset } from '@/lib/colorPalette';
-import { useTagColorsContext } from '@/features/tags/TagColorsContext';
-import { useTheme } from '@/lib/theme';
+import { COLOR_PALETTE } from '@/lib/colorPalette';
+import { useTagStyle } from '@/features/tags/useTagStyle';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAuth } from '@/lib/auth';
 import type { BinFilters } from './useBins';
@@ -27,8 +26,7 @@ export function BinFilterDialog({
   availableTags,
 }: BinFilterDialogProps) {
   const [draft, setDraft] = useState<BinFilters>(filters);
-  const { tagColors } = useTagColorsContext();
-  const { theme } = useTheme();
+  const getTagStyle = useTagStyle();
   const { activeLocationId } = useAuth();
   const { areas } = useAreaList(activeLocationId);
 
@@ -107,15 +105,7 @@ export function BinFilterDialog({
               <div className="flex flex-wrap gap-1.5">
                 {availableTags.map((tag) => {
                   const selected = draft.tags.includes(tag);
-                  const colorKey = tagColors.get(tag);
-                  const preset = colorKey ? getColorPreset(colorKey) : undefined;
-
-                  const style: React.CSSProperties = preset
-                    ? {
-                        backgroundColor: theme === 'dark' ? preset.bgDark : preset.bg,
-                        color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
-                      }
-                    : {};
+                  const tagStyle = getTagStyle(tag);
 
                   return (
                     <button
@@ -124,7 +114,7 @@ export function BinFilterDialog({
                       onClick={() => toggleTag(tag)}
                       className={cn(
                         'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
-                        preset
+                        tagStyle
                           ? selected
                             ? 'ring-2 ring-[var(--accent)] ring-offset-1'
                             : 'opacity-60 hover:opacity-80'
@@ -132,7 +122,7 @@ export function BinFilterDialog({
                             ? 'bg-[var(--accent)] text-white'
                             : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
                       )}
-                      style={preset ? style : undefined}
+                      style={tagStyle}
                     >
                       {tag}
                     </button>

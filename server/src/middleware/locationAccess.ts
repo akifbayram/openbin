@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { query } from '../db.js';
+import { verifyLocationMembership, isLocationOwner } from '../lib/binAccess.js';
 
 /**
  * Middleware factory to verify user is member of a location.
@@ -19,12 +19,7 @@ export function requireLocationMember(paramName = 'id') {
       return;
     }
 
-    const result = await query(
-      'SELECT id FROM location_members WHERE location_id = $1 AND user_id = $2',
-      [locationId, userId]
-    );
-
-    if (result.rows.length === 0) {
+    if (!await verifyLocationMembership(locationId as string, userId)) {
       res.status(403).json({ error: 'Not a member of this location' });
       return;
     }
@@ -33,11 +28,4 @@ export function requireLocationMember(paramName = 'id') {
   };
 }
 
-/** Check if a user is the owner of a location */
-export async function isLocationOwner(locationId: string, userId: string): Promise<boolean> {
-  const result = await query(
-    'SELECT id FROM location_members WHERE location_id = $1 AND user_id = $2 AND role = $3',
-    [locationId, userId, 'owner']
-  );
-  return result.rows.length > 0;
-}
+export { isLocationOwner };

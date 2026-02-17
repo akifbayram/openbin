@@ -1,49 +1,22 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { TagColor, ListResponse } from '@/types';
-
-const TAG_COLORS_CHANGED_EVENT = 'tag-colors-changed';
+import { Events, notify } from '@/lib/eventBus';
+import { useListData } from '@/lib/useListData';
+import type { TagColor } from '@/types';
 
 function notifyTagColorsChanged() {
-  window.dispatchEvent(new Event(TAG_COLORS_CHANGED_EVENT));
+  notify(Events.TAG_COLORS);
 }
 
 export function useTagColors() {
   const { activeLocationId, token } = useAuth();
-  const [rawTagColors, setRawTagColors] = useState<TagColor[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshCounter, setRefreshCounter] = useState(0);
-
-  useEffect(() => {
-    if (!token || !activeLocationId) {
-      setRawTagColors([]);
-      setIsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
-
-    apiFetch<ListResponse<TagColor>>(`/api/tag-colors?location_id=${encodeURIComponent(activeLocationId)}`)
-      .then((data) => {
-        if (!cancelled) setRawTagColors(data.results);
-      })
-      .catch(() => {
-        if (!cancelled) setRawTagColors([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [token, activeLocationId, refreshCounter]);
-
-  useEffect(() => {
-    const handler = () => setRefreshCounter((c) => c + 1);
-    window.addEventListener(TAG_COLORS_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(TAG_COLORS_CHANGED_EVENT, handler);
-  }, []);
+  const { data: rawTagColors, isLoading } = useListData<TagColor>(
+    token && activeLocationId
+      ? `/api/tag-colors?location_id=${encodeURIComponent(activeLocationId)}`
+      : null,
+    [Events.TAG_COLORS],
+  );
 
   const tagColors = useMemo(() => {
     const map = new Map<string, string>();

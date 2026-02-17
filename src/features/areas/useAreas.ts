@@ -1,49 +1,16 @@
-import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
+import { Events, notify } from '@/lib/eventBus';
+import { useListData } from '@/lib/useListData';
 import { notifyBinsChanged } from '@/features/bins/useBins';
-import type { Area, ListResponse } from '@/types';
+import type { Area } from '@/types';
 
-const AREAS_CHANGED_EVENT = 'areas-changed';
-
-export function notifyAreasChanged() {
-  window.dispatchEvent(new Event(AREAS_CHANGED_EVENT));
-}
+export const notifyAreasChanged = () => notify(Events.AREAS);
 
 export function useAreaList(locationId: string | null | undefined) {
-  const [areas, setAreas] = useState<Area[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshCounter, setRefreshCounter] = useState(0);
-
-  useEffect(() => {
-    if (!locationId) {
-      setAreas([]);
-      setIsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
-
-    apiFetch<ListResponse<Area>>(`/api/locations/${encodeURIComponent(locationId)}/areas`)
-      .then((data) => {
-        if (!cancelled) setAreas(data.results);
-      })
-      .catch(() => {
-        if (!cancelled) setAreas([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [locationId, refreshCounter]);
-
-  useEffect(() => {
-    const handler = () => setRefreshCounter((c) => c + 1);
-    window.addEventListener(AREAS_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(AREAS_CHANGED_EVENT, handler);
-  }, []);
-
+  const { data: areas, isLoading } = useListData<Area>(
+    locationId ? `/api/locations/${encodeURIComponent(locationId)}/areas` : null,
+    [Events.AREAS],
+  );
   return { areas, isLoading };
 }
 

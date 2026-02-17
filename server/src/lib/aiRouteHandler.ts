@@ -1,17 +1,22 @@
-import type { Request, Response, RequestHandler } from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { AiAnalysisError } from './aiCaller.js';
 import { NoAiSettingsError, aiErrorToStatus } from './aiSettings.js';
 import { ValidationError } from './crypto.js';
+import { HttpError } from './httpErrors.js';
 
 /** Wrap an async AI route handler with standard error handling. */
 export function aiRouteHandler(
   action: string,
   fn: (req: Request, res: Response) => Promise<void>
 ): RequestHandler {
-  return async (req: Request, res: Response) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       await fn(req, res);
     } catch (err) {
+      if (err instanceof HttpError) {
+        next(err);
+        return;
+      }
       if (err instanceof AiAnalysisError) {
         res.status(aiErrorToStatus(err.code)).json({ error: err.message, code: err.code });
         return;

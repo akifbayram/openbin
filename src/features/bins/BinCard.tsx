@@ -1,14 +1,14 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Pin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
 import { cn, haptic } from '@/lib/utils';
 import { resolveIcon } from '@/lib/iconMap';
+import { useLongPress } from '@/lib/useLongPress';
 import { getColorPreset } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
-import { useTagColorsContext } from '@/features/tags/TagColorsContext';
-import { getColorPreset as getTagColorPreset } from '@/lib/colorPalette';
+import { useTagStyle } from '@/features/tags/useTagStyle';
 import type { Bin } from '@/types';
 
 interface BinCardProps {
@@ -24,7 +24,7 @@ interface BinCardProps {
 export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable, selected, onSelect, searchQuery = '', onPinToggle }: BinCardProps) {
   const navigate = useNavigate();
   const { theme } = useTheme();
-  const { tagColors } = useTagColorsContext();
+  const getTagStyle = useTagStyle();
   const BinIcon = resolveIcon(bin.icon);
   const colorPreset = getColorPreset(bin.color);
   const colorBg = colorPreset ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg) : undefined;
@@ -33,8 +33,14 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
     ? (theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)')
     : undefined;
 
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const didLongPress = useRef(false);
+  const handleLongPress = useCallback(() => {
+    if (!selectable) {
+      haptic();
+      onSelect?.(bin.id);
+    }
+  }, [selectable, onSelect, bin.id]);
+
+  const { onTouchStart, onTouchEnd, onTouchMove, onContextMenu, didLongPress } = useLongPress(handleLongPress);
 
   function handleClick() {
     if (didLongPress.current) return;
@@ -44,35 +50,6 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
       navigate(`/bin/${bin.id}`);
     }
   }
-
-  function handleLongPress() {
-    if (!selectable) {
-      haptic();
-      onSelect?.(bin.id);
-    }
-  }
-
-  const handleTouchStart = useCallback(() => {
-    didLongPress.current = false;
-    longPressTimer.current = setTimeout(() => {
-      didLongPress.current = true;
-      handleLongPress();
-    }, 500);
-  }, [selectable, onSelect, bin.id]);
-
-  const handleTouchEnd = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }, []);
-
-  const handleTouchMove = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }, []);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter') {
@@ -97,13 +74,10 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
       style={colorBg ? { backgroundColor: colorBg } : undefined}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchMove={handleTouchMove}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        handleLongPress();
-      }}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onTouchMove={onTouchMove}
+      onContextMenu={onContextMenu}
     >
       <div className="flex items-start gap-3">
         {selectable ? (
@@ -138,20 +112,12 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
           {bin.tags.length > 0 && (
             <div className="flex gap-1.5 mt-2 overflow-hidden">
               {bin.tags.map((tag) => {
-                const tagColorKey = tagColors.get(tag);
-                const tagPreset = tagColorKey ? getTagColorPreset(tagColorKey) : undefined;
-                const tagStyle = tagPreset
-                  ? {
-                      backgroundColor: theme === 'dark' ? tagPreset.bgDark : tagPreset.bg,
-                      color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
-                    }
-                  : undefined;
                 return (
                   <Badge
                     key={tag}
                     variant="secondary"
                     className="cursor-pointer text-[11px] hover:bg-[var(--bg-active)] transition-colors"
-                    style={tagStyle}
+                    style={getTagStyle(tag)}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (!selectable) onTagClick?.(tag);

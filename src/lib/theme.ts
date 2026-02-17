@@ -1,9 +1,10 @@
 import { useSyncExternalStore } from 'react';
+import { STORAGE_KEYS } from './storageKeys';
 
 export type ThemePreference = 'light' | 'dark' | 'auto';
 export type ResolvedTheme = 'light' | 'dark';
 
-const STORAGE_KEY = 'openbin-theme';
+const STORAGE_KEY = STORAGE_KEYS.THEME;
 const mq = window.matchMedia('(prefers-color-scheme: dark)');
 
 function resolveFromSystem(): ResolvedTheme {

@@ -1,4 +1,5 @@
 import { apiFetch } from '@/lib/api';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 import type { ExportData, ExportDataV2 } from '@/types';
 
 export const MAX_IMPORT_SIZE = 100 * 1024 * 1024;
@@ -33,7 +34,7 @@ export function downloadExport(data: ExportData): void {
 }
 
 export async function exportZip(locationId: string): Promise<void> {
-  const token = localStorage.getItem('openbin-token');
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
   const resp = await fetch(`/api/locations/${encodeURIComponent(locationId)}/export/zip`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -51,7 +52,7 @@ export async function exportZip(locationId: string): Promise<void> {
 }
 
 export async function exportCsv(locationId: string): Promise<void> {
-  const token = localStorage.getItem('openbin-token');
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
   const resp = await fetch(`/api/locations/${encodeURIComponent(locationId)}/export/csv`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });

@@ -1,14 +1,12 @@
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { Bin, BinItem, ListResponse } from '@/types';
-
-const BINS_CHANGED_EVENT = 'bins-changed';
+import { Events, notify, useRefreshOn } from '@/lib/eventBus';
+import { useListData } from '@/lib/useListData';
+import type { Bin, BinItem } from '@/types';
 
 /** Notify all useBinList / useBin instances to refetch */
-export function notifyBinsChanged() {
-  window.dispatchEvent(new Event(BINS_CHANGED_EVENT));
-}
+export const notifyBinsChanged = () => notify(Events.BINS);
 
 export type SortOption = 'updated' | 'created' | 'name';
 
@@ -38,40 +36,12 @@ export function countActiveFilters(f: BinFilters): number {
 
 export function useBinList(searchQuery?: string, sort: SortOption = 'updated', filters?: BinFilters) {
   const { activeLocationId, token } = useAuth();
-  const [rawBins, setRawBins] = useState<Bin[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshCounter, setRefreshCounter] = useState(0);
-
-  useEffect(() => {
-    if (!token || !activeLocationId) {
-      setRawBins([]);
-      setIsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
-
-    apiFetch<ListResponse<Bin>>(`/api/bins?location_id=${encodeURIComponent(activeLocationId)}`)
-      .then((data) => {
-        if (!cancelled) setRawBins(data.results);
-      })
-      .catch(() => {
-        if (!cancelled) setRawBins([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [token, activeLocationId, refreshCounter]);
-
-  // Listen for bins-changed events
-  useEffect(() => {
-    const handler = () => setRefreshCounter((c) => c + 1);
-    window.addEventListener(BINS_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(BINS_CHANGED_EVENT, handler);
-  }, []);
+  const { data: rawBins, isLoading, refresh } = useListData<Bin>(
+    token && activeLocationId
+      ? `/api/bins?location_id=${encodeURIComponent(activeLocationId)}`
+      : null,
+    [Events.BINS],
+  );
 
   const bins = useMemo(() => {
     let filtered = [...rawBins];
@@ -137,8 +107,6 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
     return filtered;
   }, [rawBins, searchQuery, sort, filters]);
 
-  const refresh = useCallback(() => setRefreshCounter((c) => c + 1), []);
-
   return { bins, isLoading, refresh };
 }
 
@@ -146,7 +114,7 @@ export function useBin(id: string | undefined) {
   const { token } = useAuth();
   const [bin, setBin] = useState<Bin | null | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
-  const [refreshCounter, setRefreshCounter] = useState(0);
+  const refreshCounter = useRefreshOn(Events.BINS);
   const loadedIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -180,13 +148,6 @@ export function useBin(id: string | undefined) {
 
     return () => { cancelled = true; };
   }, [id, token, refreshCounter]);
-
-  // Listen for bins-changed events
-  useEffect(() => {
-    const handler = () => setRefreshCounter((c) => c + 1);
-    window.addEventListener(BINS_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(BINS_CHANGED_EVENT, handler);
-  }, []);
 
   return { bin: bin ?? undefined, isLoading };
 }
@@ -307,43 +268,12 @@ export async function lookupBinByCode(shortCode: string): Promise<Bin> {
 
 export function useTrashBins() {
   const { activeLocationId, token } = useAuth();
-  const [bins, setBins] = useState<Bin[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshCounter, setRefreshCounter] = useState(0);
-
-  useEffect(() => {
-    if (!token || !activeLocationId) {
-      setBins([]);
-      setIsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
-
-    apiFetch<ListResponse<Bin>>(`/api/bins/trash?location_id=${encodeURIComponent(activeLocationId)}`)
-      .then((data) => {
-        if (!cancelled) setBins(data.results);
-      })
-      .catch(() => {
-        if (!cancelled) setBins([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [token, activeLocationId, refreshCounter]);
-
-  // Listen for bins-changed events
-  useEffect(() => {
-    const handler = () => setRefreshCounter((c) => c + 1);
-    window.addEventListener(BINS_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(BINS_CHANGED_EVENT, handler);
-  }, []);
-
-  const refresh = useCallback(() => setRefreshCounter((c) => c + 1), []);
-
+  const { data: bins, isLoading, refresh } = useListData<Bin>(
+    token && activeLocationId
+      ? `/api/bins/trash?location_id=${encodeURIComponent(activeLocationId)}`
+      : null,
+    [Events.BINS],
+  );
   return { bins, isLoading, refresh };
 }
 

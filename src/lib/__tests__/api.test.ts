@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { apiFetch, ApiError } from '@/lib/api';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 function mockFetchResponse(overrides: Partial<Response> = {}, body?: string) {
   const res = {
@@ -28,7 +29,7 @@ describe('apiFetch', () => {
   });
 
   it('includes Authorization header when token exists in localStorage', async () => {
-    localStorage.setItem('openbin-token', 'my-jwt');
+    localStorage.setItem(STORAGE_KEYS.TOKEN, 'my-jwt');
     fetchSpy.mockResolvedValue(mockFetchResponse({}, '{"ok":true}'));
 
     await apiFetch('/api/test');
@@ -71,7 +72,7 @@ describe('apiFetch', () => {
   });
 
   it('merges custom headers without clobbering auto-set headers', async () => {
-    localStorage.setItem('openbin-token', 'tk');
+    localStorage.setItem(STORAGE_KEYS.TOKEN, 'tk');
     fetchSpy.mockResolvedValue(mockFetchResponse({}, '{"ok":true}'));
 
     await apiFetch('/api/test', {

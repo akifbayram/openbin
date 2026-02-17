@@ -1,20 +1,14 @@
 import { Router } from 'express';
 import fs from 'fs';
-import path from 'path';
 import { query } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { logActivity } from '../lib/activityLog.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { ValidationError, NotFoundError, ForbiddenError } from '../lib/httpErrors.js';
+import { safePath } from '../lib/pathSafety.js';
+import { PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
 
 const router = Router();
-const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
-
-function safePath(base: string, relativePath: string): string | null {
-  const resolved = path.resolve(base, relativePath);
-  if (!resolved.startsWith(path.resolve(base) + path.sep) && resolved !== path.resolve(base)) {
-    return null;
-  }
-  return resolved;
-}
 
 router.use(authenticate);
 
@@ -32,118 +26,97 @@ async function verifyPhotoAccess(photoId: string, userId: string): Promise<{ bin
 }
 
 // GET /api/photos — list photos for a bin
-router.get('/', async (req, res) => {
-  try {
-    const binId = req.query.bin_id as string | undefined;
+router.get('/', asyncHandler(async (req, res) => {
+  const binId = req.query.bin_id as string | undefined;
 
-    if (!binId) {
-      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'bin_id query parameter is required' });
-      return;
-    }
-
-    // Verify user has access to the bin's location
-    const accessResult = await query(
-      `SELECT b.location_id FROM bins b
-       JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-       WHERE b.id = $1`,
-      [binId, req.user!.id]
-    );
-
-    if (accessResult.rows.length === 0) {
-      res.status(403).json({ error: 'FORBIDDEN', message: 'Access denied' });
-      return;
-    }
-
-    const result = await query(
-      `SELECT id, bin_id, filename, mime_type, size, storage_path, created_by, created_at
-       FROM photos WHERE bin_id = $1 ORDER BY created_at ASC`,
-      [binId]
-    );
-
-    res.json({ results: result.rows, count: result.rows.length });
-  } catch (err) {
-    console.error('List photos error:', err);
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to list photos' });
+  if (!binId) {
+    throw new ValidationError('bin_id query parameter is required');
   }
-});
+
+  // Verify user has access to the bin's location
+  const accessResult = await query(
+    `SELECT b.location_id FROM bins b
+     JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
+     WHERE b.id = $1`,
+    [binId, req.user!.id]
+  );
+
+  if (accessResult.rows.length === 0) {
+    throw new ForbiddenError('Access denied');
+  }
+
+  const result = await query(
+    `SELECT id, bin_id, filename, mime_type, size, storage_path, created_by, created_at
+     FROM photos WHERE bin_id = $1 ORDER BY created_at ASC`,
+    [binId]
+  );
+
+  res.json({ results: result.rows, count: result.rows.length });
+}));
 
 // GET /api/photos/:id/file — serve photo file
-router.get('/:id/file', async (req, res) => {
-  try {
-    const { id } = req.params;
+router.get('/:id/file', asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-    const access = await verifyPhotoAccess(id, req.user!.id);
-    if (!access) {
-      res.status(404).json({ error: 'NOT_FOUND', message: 'Photo not found' });
-      return;
-    }
-
-    const filePath = safePath(PHOTO_STORAGE_PATH, access.storagePath);
-    if (!filePath) {
-      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Invalid file path' });
-      return;
-    }
-
-    if (!fs.existsSync(filePath)) {
-      res.status(404).json({ error: 'NOT_FOUND', message: 'Photo file not found on disk' });
-      return;
-    }
-
-    const photoResult = await query('SELECT mime_type FROM photos WHERE id = $1', [id]);
-    const mimeType = photoResult.rows[0]?.mime_type || 'application/octet-stream';
-
-    res.setHeader('Content-Type', mimeType);
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    fs.createReadStream(filePath).pipe(res);
-  } catch (err) {
-    console.error('Serve photo error:', err);
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to serve photo' });
+  const access = await verifyPhotoAccess(id, req.user!.id);
+  if (!access) {
+    throw new NotFoundError('Photo not found');
   }
-});
+
+  const filePath = safePath(PHOTO_STORAGE_PATH, access.storagePath);
+  if (!filePath) {
+    throw new ValidationError('Invalid file path');
+  }
+
+  if (!fs.existsSync(filePath)) {
+    throw new NotFoundError('Photo file not found on disk');
+  }
+
+  const photoResult = await query('SELECT mime_type FROM photos WHERE id = $1', [id]);
+  const mimeType = photoResult.rows[0]?.mime_type || 'application/octet-stream';
+
+  res.setHeader('Content-Type', mimeType);
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  fs.createReadStream(filePath).pipe(res);
+}));
 
 // DELETE /api/photos/:id — delete photo
-router.delete('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
+router.delete('/:id', asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-    const access = await verifyPhotoAccess(id, req.user!.id);
-    if (!access) {
-      res.status(404).json({ error: 'NOT_FOUND', message: 'Photo not found' });
-      return;
-    }
-
-    await query('DELETE FROM photos WHERE id = $1', [id]);
-
-    const filePath = safePath(PHOTO_STORAGE_PATH, access.storagePath);
-    if (filePath) {
-      try {
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      } catch {
-        // Ignore file cleanup errors
-      }
-    }
-
-    await query(`UPDATE bins SET updated_at = datetime('now') WHERE id = $1`, [access.binId]);
-
-    // Get bin name for activity log
-    const binResult = await query('SELECT name FROM bins WHERE id = $1', [access.binId]);
-    logActivity({
-      locationId: access.locationId,
-      userId: req.user!.id,
-      userName: req.user!.username,
-      action: 'delete_photo',
-      entityType: 'bin',
-      entityId: access.binId,
-      entityName: binResult.rows[0]?.name,
-    });
-
-    res.json({ message: 'Photo deleted' });
-  } catch (err) {
-    console.error('Delete photo error:', err);
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to delete photo' });
+  const access = await verifyPhotoAccess(id, req.user!.id);
+  if (!access) {
+    throw new NotFoundError('Photo not found');
   }
-});
+
+  await query('DELETE FROM photos WHERE id = $1', [id]);
+
+  const filePath = safePath(PHOTO_STORAGE_PATH, access.storagePath);
+  if (filePath) {
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch {
+      // Ignore file cleanup errors
+    }
+  }
+
+  await query(`UPDATE bins SET updated_at = datetime('now') WHERE id = $1`, [access.binId]);
+
+  // Get bin name for activity log
+  const binResult = await query('SELECT name FROM bins WHERE id = $1', [access.binId]);
+  logActivity({
+    locationId: access.locationId,
+    userId: req.user!.id,
+    userName: req.user!.username,
+    action: 'delete_photo',
+    entityType: 'bin',
+    entityId: access.binId,
+    entityName: binResult.rows[0]?.name,
+  });
+
+  res.json({ message: 'Photo deleted' });
+}));
 
 export default router;

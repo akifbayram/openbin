@@ -1,10 +1,9 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { useTagColorsContext } from '@/features/tags/TagColorsContext';
-import { getColorPreset } from '@/lib/colorPalette';
-import { useTheme } from '@/lib/theme';
+import { useTagStyle } from '@/features/tags/useTagStyle';
+import { useClickOutside } from '@/lib/useClickOutside';
 
 interface TagInputProps {
   tags: string[];
@@ -19,8 +18,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { tagColors } = useTagColorsContext();
-  const { theme } = useTheme();
+  const getTagStyle = useTagStyle();
 
   const filtered = useMemo(() => {
     const available = suggestions.filter((s) => !tags.includes(s));
@@ -82,28 +80,11 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
   }, [highlightIndex]);
 
   // Close suggestions on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  const closeSuggestions = useCallback(() => setShowSuggestions(false), []);
+  useClickOutside(containerRef, closeSuggestions);
 
   function removeTag(tag: string) {
     onChange(tags.filter((t) => t !== tag));
-  }
-
-  function getTagStyle(tag: string): React.CSSProperties | undefined {
-    const colorKey = tagColors.get(tag);
-    const preset = colorKey ? getColorPreset(colorKey) : undefined;
-    if (!preset) return undefined;
-    return {
-      backgroundColor: theme === 'dark' ? preset.bgDark : preset.bg,
-      color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
-    };
   }
 
   return (
@@ -141,13 +122,11 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
           className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-[var(--radius-lg)] bg-[var(--bg-elevated)] shadow-lg border border-[var(--border)] p-2 flex flex-wrap gap-1.5"
         >
           {filtered.map((tag, i) => {
-            const colorKey = tagColors.get(tag);
-            const preset = colorKey ? getColorPreset(colorKey) : undefined;
+            const baseStyle = getTagStyle(tag);
             const isHighlighted = i === highlightIndex;
-            const style: React.CSSProperties = preset
+            const style: React.CSSProperties = baseStyle
               ? {
-                  backgroundColor: theme === 'dark' ? preset.bgDark : preset.bg,
-                  color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
+                  ...baseStyle,
                   ...(isHighlighted ? { outline: '2px solid var(--accent)', outlineOffset: '1px' } : {}),
                 }
               : {
@@ -164,7 +143,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
                   addTag(tag);
                 }}
                 className={`inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-0.5 text-[12px] font-medium transition-colors cursor-pointer ${
-                  !preset && !isHighlighted
+                  !baseStyle && !isHighlighted
                     ? 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
                     : ''
                 }`}

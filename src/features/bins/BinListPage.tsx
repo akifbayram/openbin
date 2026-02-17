@@ -1,16 +1,9 @@
-import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import {
   Search,
   Plus,
   PackageOpen,
-
-  ArrowUpDown,
   SlidersHorizontal,
-  Trash2,
-  Tag,
-  X,
-  Check,
-  CheckCircle2,
   MapPin,
   Bookmark,
   Sparkles,
@@ -20,10 +13,9 @@ const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) =>
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
-import { cn, haptic } from '@/lib/utils';
+import { haptic } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
 import { useBinList, useAllTags, deleteBin, restoreBin, countActiveFilters, EMPTY_FILTERS, type SortOption, type BinFilters } from './useBins';
@@ -34,21 +26,14 @@ import { BinCreateDialog } from './BinCreateDialog';
 import { BinFilterDialog } from './BinFilterDialog';
 import { BulkTagDialog } from './BulkTagDialog';
 import { BulkAreaDialog } from './BulkAreaDialog';
-import { getColorPreset } from '@/lib/colorPalette';
-import { useTagColorsContext } from '@/features/tags/TagColorsContext';
+import { FilterBadgesBar } from './FilterBadgesBar';
+import { BulkActionBar } from './BulkActionBar';
+import { SortMenu } from './SortMenu';
+import { SaveViewDialog } from './SaveViewDialog';
 import { useAreaList } from '@/features/areas/useAreas';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useTheme } from '@/lib/theme';
 import { useAiEnabled } from '@/lib/aiToggle';
-import { saveView } from '@/lib/savedViews';
 import type { SavedView } from '@/lib/savedViews';
 import type { Bin } from '@/types';
-
-const sortLabels: Record<SortOption, string> = {
-  updated: 'Recently Updated',
-  created: 'Recently Created',
-  name: 'Name',
-};
 
 export function BinListPage() {
   const location = useLocation();
@@ -95,29 +80,12 @@ export function BinListPage() {
   const { bins, isLoading } = useBinList(debouncedSearch, sort, filters);
   const allTags = useAllTags();
   const activeCount = countActiveFilters(filters);
-  const { tagColors } = useTagColorsContext();
   const { areas } = useAreaList(activeLocationId);
-  const { theme } = useTheme();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const { aiEnabled } = useAiEnabled();
   const [commandOpen, setCommandOpen] = useState(false);
-  const [sortMenuOpen, setSortMenuOpen] = useState(false);
-  const sortMenuRef = useRef<HTMLDivElement>(null);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
-  const [viewName, setViewName] = useState('');
-
-  // Close sort menu on click outside
-  useEffect(() => {
-    if (!sortMenuOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
-        setSortMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [sortMenuOpen]);
 
   const selectable = selectedIds.size > 0;
 
@@ -160,13 +128,6 @@ export function BinListPage() {
         },
       },
     });
-  }
-
-  async function handleSaveView() {
-    if (!viewName.trim()) return;
-    await saveView({ name: viewName.trim(), searchQuery: search, sort, filters });
-    setSaveViewOpen(false);
-    showToast({ message: 'View saved' });
   }
 
   return (
@@ -227,39 +188,12 @@ export function BinListPage() {
               </span>
             )}
           </Button>
-          <div ref={sortMenuRef} className="relative">
-            <Button
-              variant="secondary"
-              size="icon"
-              onClick={() => setSortMenuOpen(!sortMenuOpen)}
-              className="shrink-0 h-10 w-10 rounded-full relative"
-              aria-label={`Sort by ${sortLabels[sort]}`}
-            >
-              <ArrowUpDown className="h-4 w-4" />
-              {sort !== 'updated' && (
-                <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[var(--accent)]" />
-              )}
-            </Button>
-            {sortMenuOpen && (
-              <div className="absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-lg overflow-hidden z-20">
-                {(Object.keys(sortLabels) as SortOption[]).map((key) => (
-                  <button
-                    key={key}
-                    onClick={() => { setSort(key); setSortMenuOpen(false); }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                  >
-                    <Check className={cn('h-4 w-4', sort === key ? 'text-[var(--accent)]' : 'invisible')} />
-                    {sortLabels[key]}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <SortMenu sort={sort} onSortChange={setSort} />
           {(search || activeCount > 0) && (
             <Button
               variant="secondary"
               size="icon"
-              onClick={() => { setViewName(''); setSaveViewOpen(true); }}
+              onClick={() => setSaveViewOpen(true)}
               className="shrink-0 h-10 w-10 rounded-full"
               aria-label="Save current view"
             >
@@ -271,165 +205,24 @@ export function BinListPage() {
 
       {/* Bulk action bar */}
       {selectable && (
-        <div className="glass-card rounded-[var(--radius-full)] flex items-center gap-2 px-4 py-2.5">
-          <CheckCircle2 className="h-4 w-4 text-[var(--accent)]" />
-          <span className="text-[13px] font-medium text-[var(--text-secondary)] flex-1">
-            {selectedIds.size} selected
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-3 rounded-[var(--radius-full)]"
-            onClick={() => setBulkTagOpen(true)}
-          >
-            <Tag className="h-3.5 w-3.5 mr-1.5" />
-            Tag
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-3 rounded-[var(--radius-full)]"
-            onClick={() => setBulkAreaOpen(true)}
-          >
-            <MapPin className="h-3.5 w-3.5 mr-1.5" />
-            Move
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-3 rounded-[var(--radius-full)] text-[var(--destructive)]"
-            onClick={bulkDelete}
-          >
-            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-            Delete
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full"
-            onClick={clearSelection}
-            aria-label="Clear selection"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          onTag={() => setBulkTagOpen(true)}
+          onMove={() => setBulkAreaOpen(true)}
+          onDelete={bulkDelete}
+          onClear={clearSelection}
+        />
       )}
 
       {/* Active filter indicators */}
-      {(search || activeCount > 0 || filters.needsOrganizing) && (
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-          {search && (
-            <Badge variant="outline" className="gap-1 pr-1.5 py-1 shrink-0">
-              &quot;{search}&quot;
-              <button onClick={() => setSearch('')} aria-label="Clear search" className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]">
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </Badge>
-          )}
-          {filters.tags.map((tag) => {
-            const colorKey = tagColors.get(tag);
-            const preset = colorKey ? getColorPreset(colorKey) : undefined;
-            const style: React.CSSProperties | undefined = preset
-              ? {
-                  backgroundColor: theme === 'dark' ? preset.bgDark : preset.bg,
-                  color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
-                }
-              : undefined;
-            return (
-              <Badge key={`tag-${tag}`} variant="outline" className="gap-1 pr-1.5 py-1 shrink-0" style={style}>
-                {tag}
-                <button
-                  onClick={() => setFilters((f) => ({ ...f, tags: f.tags.filter((t) => t !== tag) }))}
-                  aria-label={`Remove tag filter ${tag}`}
-                  className="ml-1 p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </Badge>
-            );
-          })}
-          {filters.tags.length >= 2 && (
-            <Badge variant="outline" className="py-1 shrink-0 text-[var(--text-tertiary)]">
-              {filters.tagMode === 'all' ? 'All tags' : 'Any tag'}
-            </Badge>
-          )}
-          {filters.areas.map((areaKey) => {
-            const areaName = areaKey === '__unassigned__' ? 'Unassigned' : areas.find((a) => a.id === areaKey)?.name ?? areaKey;
-            return (
-              <Badge key={`area-${areaKey}`} variant="outline" className="gap-1 pr-1.5 py-1 shrink-0">
-                {areaName}
-                <button
-                  onClick={() => setFilters((f) => ({ ...f, areas: f.areas.filter((a) => a !== areaKey) }))}
-                  aria-label={`Remove area filter ${areaName}`}
-                  className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </Badge>
-            );
-          })}
-          {filters.colors.map((key) => {
-            const preset = getColorPreset(key);
-            return (
-              <Badge key={`color-${key}`} variant="outline" className="gap-1.5 pr-1.5 py-1 shrink-0">
-                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: preset?.dot }} />
-                {preset?.label ?? key}
-                <button
-                  onClick={() => setFilters((f) => ({ ...f, colors: f.colors.filter((c) => c !== key) }))}
-                  aria-label={`Remove color filter ${preset?.label ?? key}`}
-                  className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </Badge>
-            );
-          })}
-          {filters.hasItems && (
-            <Badge variant="outline" className="gap-1 pr-1.5 py-1 shrink-0">
-              Has items
-              <button
-                onClick={() => setFilters((f) => ({ ...f, hasItems: false }))}
-                aria-label="Remove has items filter"
-                className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </Badge>
-          )}
-          {filters.hasNotes && (
-            <Badge variant="outline" className="gap-1 pr-1.5 py-1 shrink-0">
-              Has notes
-              <button
-                onClick={() => setFilters((f) => ({ ...f, hasNotes: false }))}
-                aria-label="Remove has notes filter"
-                className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </Badge>
-          )}
-          {filters.needsOrganizing && (
-            <Badge variant="outline" className="gap-1 pr-1.5 py-1 shrink-0">
-              Needs organizing
-              <button
-                onClick={() => setFilters((f) => ({ ...f, needsOrganizing: false }))}
-                aria-label="Remove needs organizing filter"
-                className="ml-1 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </Badge>
-          )}
-          {(activeCount > 1 || (activeCount > 0 && search) || filters.needsOrganizing) && (
-            <button
-              onClick={() => { setSearch(''); setFilters({ ...EMPTY_FILTERS, needsOrganizing: false }); }}
-              className="text-[12px] text-[var(--accent)] font-medium shrink-0 ml-1"
-            >
-              Clear all
-            </button>
-          )}
-        </div>
-      )}
+      <FilterBadgesBar
+        search={search}
+        onSearchClear={() => setSearch('')}
+        filters={filters}
+        onFiltersChange={setFilters}
+        activeCount={activeCount}
+        areas={areas}
+      />
 
       {/* No location selected prompt */}
       {!activeLocationId ? (
@@ -517,23 +310,13 @@ export function BinListPage() {
         onDone={clearSelection}
       />
 
-      <Dialog open={saveViewOpen} onOpenChange={setSaveViewOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Save Search</DialogTitle>
-          </DialogHeader>
-          <Input
-            value={viewName}
-            onChange={(e) => setViewName(e.target.value)}
-            placeholder="View name..."
-            onKeyDown={(e) => { if (e.key === 'Enter' && viewName.trim()) handleSaveView(); }}
-          />
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setSaveViewOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveView} disabled={!viewName.trim()}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SaveViewDialog
+        open={saveViewOpen}
+        onOpenChange={setSaveViewOpen}
+        searchQuery={search}
+        sort={sort}
+        filters={filters}
+      />
 
       {aiEnabled && (
         <Suspense fallback={null}>
