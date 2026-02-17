@@ -26,13 +26,11 @@ Self-hosted inventory system for organizing physical storage bins with QR codes.
 
 ## Quick Start
 
-**Prerequisites:** Docker, Node.js 18+
+**Prerequisites:** Docker
 
 ```bash
 git clone https://github.com/akifbayram/openbin.git
 cd openbin
-
-npm install && npm run build
 docker compose up -d
 ```
 
@@ -41,6 +39,13 @@ Open `http://localhost`. Register an account, create a location, and start addin
 No configuration needed — the database is a single file on the Docker volume and JWT secrets are auto-generated and persisted.
 
 ### Local Development
+
+**Prerequisites:** Node.js 20+
+
+```bash
+npm install                 # Install frontend dependencies
+cd server && npm install    # Install server dependencies
+```
 
 ```bash
 cd server && npm run dev   # API server at http://localhost:4000
