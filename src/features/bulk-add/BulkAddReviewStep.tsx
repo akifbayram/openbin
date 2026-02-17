@@ -27,7 +27,7 @@ interface BulkAddReviewStepProps {
 export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddReviewStepProps) {
   const { activeLocationId } = useAuth();
   const { settings: aiSettings } = useAiSettings();
-  const { aiEnabled } = useAiEnabled();
+  const { aiEnabled, setAiEnabled } = useAiEnabled();
   const allTags = useAllTags();
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const autoAnalyzedRef = useRef<Set<string>>(new Set());
@@ -177,7 +177,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
       )}
 
       {/* Inline AI Setup */}
-      {aiEnabled && aiSetupExpanded && !aiSettings && <AiSettingsSection />}
+      {aiEnabled && aiSetupExpanded && !aiSettings && <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />}
 
       {/* Form Fields */}
       <div className="space-y-4">

@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Sparkles, Loader2, ChevronLeft, Check, Plus, Minus, Package, Trash2,
-  Tag, MapPin, FileText, Palette, Image as ImageIcon,
+  Tag, MapPin, FileText, Palette, Image as ImageIcon, ChevronRight, Search, ImagePlus,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -13,9 +14,11 @@ import { useAiSettings } from './useAiSettings';
 import { useCommand, type CommandAction } from './useCommand';
 import { useAiProviderSetup } from './useAiProviderSetup';
 import { InlineAiSetup, AiConfiguredIndicator } from './InlineAiSetup';
+import { PhotoBulkAdd } from './PhotoBulkAdd';
 import { addBin, updateBin, deleteBin, restoreBin, notifyBinsChanged, addItemsToBin } from '@/features/bins/useBins';
 import { useAreaList, createArea } from '@/features/areas/useAreas';
 import { apiFetch } from '@/lib/api';
+import { queryInventoryText, mapCommandErrorMessage, type QueryResult } from './useInventoryQuery';
 import type { Bin } from '@/types';
 
 interface CommandInputProps {
@@ -23,7 +26,7 @@ interface CommandInputProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type State = 'idle' | 'parsing' | 'preview' | 'executing';
+type State = 'idle' | 'parsing' | 'preview' | 'executing' | 'querying' | 'query-result';
 
 function isDestructiveAction(action: CommandAction): boolean {
   return action.type === 'delete_bin' || action.type === 'remove_items' || action.type === 'remove_tags';
@@ -83,6 +86,7 @@ function describeAction(action: CommandAction): string {
 
 export function CommandInput({ open, onOpenChange }: CommandInputProps) {
   const { activeLocationId } = useAuth();
+  const navigate = useNavigate();
   const { settings, isLoading: aiSettingsLoading } = useAiSettings();
   const { showToast } = useToast();
   const { areas } = useAreaList(activeLocationId);
@@ -91,12 +95,17 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
   const [checkedActions, setCheckedActions] = useState<Map<number, boolean>>(new Map());
   const [isExecuting, setIsExecuting] = useState(false);
   const [executingProgress, setExecutingProgress] = useState({ current: 0, total: 0 });
+  const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
+  const [isQuerying, setIsQuerying] = useState(false);
+  const [photoMode, setPhotoMode] = useState(false);
+  const [initialFiles, setInitialFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Inline AI setup
   const [aiExpanded, setAiExpanded] = useState(false);
   const setup = useAiProviderSetup({ onSaveSuccess: () => setAiExpanded(false) });
 
-  const state: State = isExecuting ? 'executing' : isParsing ? 'parsing' : actions ? 'preview' : 'idle';
+  const state: State = isExecuting ? 'executing' : isParsing ? 'parsing' : isQuerying ? 'querying' : queryResult ? 'query-result' : actions ? 'preview' : 'idle';
 
   const isAiReady = settings !== null || setup.configured;
 
@@ -108,15 +117,31 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
     }
     const result = await parse({ text: text.trim(), locationId: activeLocationId });
     if (result?.actions) {
-      const initial = new Map<number, boolean>();
-      result.actions.forEach((_, i) => initial.set(i, true));
-      setCheckedActions(initial);
+      if (result.actions.length === 0) {
+        // No actions — fall back to inventory query
+        clearCommand();
+        setIsQuerying(true);
+        try {
+          const qr = await queryInventoryText({ question: text.trim(), locationId: activeLocationId });
+          setQueryResult(qr);
+        } catch (err) {
+          setQueryResult(null);
+          showToast({ message: mapCommandErrorMessage(err) });
+        } finally {
+          setIsQuerying(false);
+        }
+      } else {
+        const initial = new Map<number, boolean>();
+        result.actions.forEach((_, i) => initial.set(i, true));
+        setCheckedActions(initial);
+      }
     }
   }
 
   function handleBack() {
     clearCommand();
     setCheckedActions(new Map());
+    setQueryResult(null);
   }
 
   function toggleAction(index: number) {
@@ -287,8 +312,24 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
       setText('');
       clearCommand();
       setCheckedActions(new Map());
+      setQueryResult(null);
+      setPhotoMode(false);
+      setInitialFiles([]);
     }
     onOpenChange(v);
+  }
+
+  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setInitialFiles(Array.from(files));
+    setPhotoMode(true);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function handleBinClick(binId: string) {
+    handleClose(false);
+    navigate(`/bin/${binId}`);
   }
 
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
@@ -298,10 +339,68 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ask AI</DialogTitle>
+          <DialogTitle>{photoMode ? 'Add from Photos' : 'Ask AI'}</DialogTitle>
         </DialogHeader>
 
-        {state === 'preview' && actions ? (
+        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
+
+        {photoMode ? (
+          <PhotoBulkAdd
+            initialFiles={initialFiles}
+            onClose={() => handleClose(false)}
+            onBack={() => { setPhotoMode(false); setInitialFiles([]); }}
+          />
+        ) : state === 'querying' ? (
+          <div className="flex flex-col items-center justify-center py-8 gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-[var(--accent)]" />
+            <p className="text-[14px] text-[var(--text-secondary)]">Searching your inventory...</p>
+          </div>
+        ) : state === 'query-result' && queryResult ? (
+          <div className="space-y-4">
+            <p className="text-[14px] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">
+              {queryResult.answer}
+            </p>
+
+            {queryResult.matches.length > 0 && (
+              <div className="space-y-2">
+                {queryResult.matches.map((match) => (
+                  <button
+                    key={match.bin_id}
+                    type="button"
+                    onClick={() => handleBinClick(match.bin_id)}
+                    className="glass-card w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-[var(--bg-active)] transition-colors cursor-pointer rounded-[var(--radius-sm)]"
+                  >
+                    <Search className="h-4 w-4 shrink-0 text-[var(--accent)]" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-medium text-[var(--text-primary)] truncate">{match.name}</p>
+                      {match.area_name && (
+                        <p className="text-[12px] text-[var(--text-tertiary)]">{match.area_name}</p>
+                      )}
+                      {match.items.length > 0 && (
+                        <p className="text-[12px] text-[var(--text-secondary)] truncate">{match.items.join(', ')}</p>
+                      )}
+                      {match.relevance && (
+                        <p className="text-[11px] text-[var(--text-tertiary)] italic mt-0.5">{match.relevance}</p>
+                      )}
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="rounded-[var(--radius-full)]"
+            >
+              <ChevronLeft className="h-4 w-4 mr-0.5" />
+              Back
+            </Button>
+          </div>
+        ) : state === 'preview' && actions ? (
           <div className="space-y-4">
             {interpretation && (
               <p className="text-[13px] text-[var(--text-secondary)] italic">
@@ -393,20 +492,31 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            <Textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="What would you like to do?"
-              rows={3}
-              className="min-h-[80px] bg-[var(--bg-elevated)]"
-              disabled={state === 'parsing' || state === 'executing'}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                  e.preventDefault();
-                  handleParse();
-                }
-              }}
-            />
+            <div className="relative">
+              <Textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="What would you like to do?"
+                rows={3}
+                className="min-h-[80px] bg-[var(--bg-elevated)] pr-12"
+                disabled={state === 'parsing' || state === 'executing'}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    handleParse();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute right-2.5 bottom-2.5 p-1.5 rounded-full text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+                title="Upload photos to auto-create bins with AI"
+                aria-label="Upload photos"
+              >
+                <ImagePlus className="h-5 w-5" />
+              </button>
+            </div>
 
             {/* Examples and keyboard shortcut */}
             <div className="space-y-2">
@@ -416,6 +526,8 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
                   <p><span className="text-[var(--text-secondary)]">Add/remove items</span> — "Add screwdriver to the tools bin" or "Remove batteries from kitchen box"</p>
                   <p><span className="text-[var(--text-secondary)]">Organize</span> — "Move batteries from kitchen to garage" or "Tag tools bin as hardware"</p>
                   <p><span className="text-[var(--text-secondary)]">Manage bins</span> — "Create a bin called Holiday Decorations in the attic" or "Delete the empty box bin"</p>
+                  <p><span className="text-[var(--text-secondary)]">Find things</span> — "Where is the glass cleaner?" or "Which bins have batteries?"</p>
+                  <p><span className="text-[var(--text-secondary)]">Upload photos</span> — Snap a photo of a bin and AI will create it for you</p>
                 </div>
               </div>
               <p className="text-[11px] text-[var(--text-tertiary)]">

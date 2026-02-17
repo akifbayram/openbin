@@ -1,5 +1,6 @@
-import { AiAnalysisError, stripCodeFences } from './aiProviders.js';
-import type { AiProviderConfig } from './aiProviders.js';
+import { callAiProvider } from './aiCaller.js';
+import type { AiProviderConfig } from './aiCaller.js';
+import { DEFAULT_COMMAND_PROMPT } from './defaultPrompts.js';
 
 export interface BinSummary {
   id: string;
@@ -47,21 +48,6 @@ export interface CommandResult {
   actions: CommandAction[];
   interpretation: string;
 }
-
-export const DEFAULT_COMMAND_PROMPT = `You are an inventory management assistant. The user will give you a natural language command about their storage bins. Parse it into one or more structured actions.
-
-Rules:
-- Use EXACT bin_id values from the provided inventory context. Never invent bin IDs.
-- For item removal, use the exact item string from the bin's items list when possible.
-- Fuzzy match bin names: "garden bin" should match a bin named "Garden Tools" or "Garden".
-- Compound commands: "move X from A to B" = remove_items from A + add_items to B.
-- "Rename item X to Y in bin Z" = modify_item with old_item=X, new_item=Y.
-- For set_area, use the existing area_id if the area exists. Set area_id to null if a new area needs to be created.
-- For set_color, use one of the available color keys.
-- For set_icon, use one of the available icon names (PascalCase).
-- For create_bin, only include fields that the user explicitly mentioned.
-- Capitalize item names properly.
-- If the command is ambiguous or references a bin that doesn't exist, return an empty actions array with an interpretation explaining the issue.`;
 
 function buildSystemPrompt(request: CommandRequest, customPrompt?: string): string {
   const basePrompt = customPrompt || DEFAULT_COMMAND_PROMPT;
@@ -252,170 +238,19 @@ function validateCommandResult(raw: unknown, binIds: Set<string>): CommandResult
   return { actions, interpretation };
 }
 
-function mapHttpStatus(status: number): 'INVALID_KEY' | 'RATE_LIMITED' | 'MODEL_NOT_FOUND' | 'PROVIDER_ERROR' {
-  if (status === 401 || status === 403) return 'INVALID_KEY';
-  if (status === 429) return 'RATE_LIMITED';
-  if (status === 404) return 'MODEL_NOT_FOUND';
-  return 'PROVIDER_ERROR';
-}
-
-async function callOpenAiCompatible(
-  config: AiProviderConfig,
-  request: CommandRequest,
-  customPrompt?: string
-): Promise<CommandResult> {
-  const baseUrl = config.endpointUrl || 'https://api.openai.com/v1';
-  const url = `${baseUrl.replace(/\/+$/, '')}/chat/completions`;
-
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        max_tokens: 2000,
-        temperature: 0.2,
-        messages: [
-          { role: 'system', content: buildSystemPrompt(request, customPrompt) },
-          { role: 'user', content: buildUserMessage(request) },
-        ],
-      }),
-    });
-  } catch (err) {
-    throw new AiAnalysisError('NETWORK_ERROR', `Failed to connect: ${(err as Error).message}`);
-  }
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new AiAnalysisError(mapHttpStatus(res.status), `Provider returned ${res.status}: ${body.slice(0, 200)}`);
-  }
-
-  const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new AiAnalysisError('INVALID_RESPONSE', 'No content in provider response');
-  }
-
-  const binIds = new Set(request.context.bins.map((b) => b.id));
-  try {
-    const parsed = JSON.parse(stripCodeFences(content));
-    return validateCommandResult(parsed, binIds);
-  } catch {
-    throw new AiAnalysisError('INVALID_RESPONSE', `Failed to parse response as JSON: ${content.slice(0, 200)}`);
-  }
-}
-
-async function callAnthropic(
-  config: AiProviderConfig,
-  request: CommandRequest,
-  customPrompt?: string
-): Promise<CommandResult> {
-  const baseUrl = config.endpointUrl || 'https://api.anthropic.com';
-  const url = `${baseUrl.replace(/\/+$/, '')}/v1/messages`;
-
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': config.apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: config.model,
-        max_tokens: 2000,
-        temperature: 0.2,
-        system: buildSystemPrompt(request, customPrompt),
-        messages: [
-          { role: 'user', content: buildUserMessage(request) },
-        ],
-      }),
-    });
-  } catch (err) {
-    throw new AiAnalysisError('NETWORK_ERROR', `Failed to connect: ${(err as Error).message}`);
-  }
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new AiAnalysisError(mapHttpStatus(res.status), `Provider returned ${res.status}: ${body.slice(0, 200)}`);
-  }
-
-  const data = await res.json() as { content?: Array<{ type: string; text?: string }> };
-  const textBlock = data.content?.find((b) => b.type === 'text');
-  const content = textBlock?.text;
-  if (!content) {
-    throw new AiAnalysisError('INVALID_RESPONSE', 'No text content in Anthropic response');
-  }
-
-  const binIds = new Set(request.context.bins.map((b) => b.id));
-  try {
-    const parsed = JSON.parse(stripCodeFences(content));
-    return validateCommandResult(parsed, binIds);
-  } catch {
-    throw new AiAnalysisError('INVALID_RESPONSE', `Failed to parse response as JSON: ${content.slice(0, 200)}`);
-  }
-}
-
-async function callGemini(
-  config: AiProviderConfig,
-  request: CommandRequest,
-  customPrompt?: string
-): Promise<CommandResult> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent`;
-
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': config.apiKey,
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: buildSystemPrompt(request, customPrompt) }] },
-        contents: [{ role: 'user', parts: [{ text: buildUserMessage(request) }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 2000 },
-      }),
-    });
-  } catch (err) {
-    throw new AiAnalysisError('NETWORK_ERROR', `Failed to connect: ${(err as Error).message}`);
-  }
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new AiAnalysisError(mapHttpStatus(res.status), `Provider returned ${res.status}: ${body.slice(0, 200)}`);
-  }
-
-  const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!content) {
-    throw new AiAnalysisError('INVALID_RESPONSE', 'No text content in Gemini response');
-  }
-
-  const binIds = new Set(request.context.bins.map((b) => b.id));
-  try {
-    const parsed = JSON.parse(stripCodeFences(content));
-    return validateCommandResult(parsed, binIds);
-  } catch {
-    throw new AiAnalysisError('INVALID_RESPONSE', `Failed to parse response as JSON: ${content.slice(0, 200)}`);
-  }
-}
-
 export async function parseCommand(
   config: AiProviderConfig,
   request: CommandRequest,
   customPrompt?: string
 ): Promise<CommandResult> {
-  if (config.provider === 'anthropic') {
-    return callAnthropic(config, request, customPrompt);
-  }
-  if (config.provider === 'gemini') {
-    return callGemini(config, request, customPrompt);
-  }
-  return callOpenAiCompatible(config, request, customPrompt);
+  const binIds = new Set(request.context.bins.map((b) => b.id));
+
+  return callAiProvider({
+    config,
+    systemPrompt: buildSystemPrompt(request, customPrompt),
+    userContent: buildUserMessage(request),
+    temperature: 0.2,
+    maxTokens: 2000,
+    validate: (raw) => validateCommandResult(raw, binIds),
+  });
 }

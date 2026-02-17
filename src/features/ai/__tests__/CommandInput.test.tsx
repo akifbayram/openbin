@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
+const mockNavigate = vi.fn();
+
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => mockNavigate,
+}));
+
 vi.mock('@/lib/api', () => {
   class ApiError extends Error {
     status: number;
@@ -36,6 +42,16 @@ vi.mock('@/features/bins/useBins', () => ({
   deleteBin: vi.fn(),
   restoreBin: vi.fn(),
   notifyBinsChanged: vi.fn(),
+  addItemsToBin: vi.fn(),
+}));
+
+vi.mock('../PhotoBulkAdd', () => ({
+  PhotoBulkAdd: ({ onClose, onBack }: { onClose: () => void; onBack: () => void }) => (
+    <div data-testid="photo-bulk-add">
+      <button onClick={onBack}>photo-back</button>
+      <button onClick={onClose}>photo-close</button>
+    </div>
+  ),
 }));
 
 import { apiFetch } from '@/lib/api';
@@ -127,20 +143,124 @@ describe('CommandInput', () => {
     });
   });
 
-  it('shows empty actions message when no actions returned', async () => {
-    mockApiFetch.mockResolvedValue({
-      actions: [],
-      interpretation: 'Could not understand the command',
-    });
+  it('falls back to inventory query when command returns zero actions', async () => {
+    // First call: command returns 0 actions. Second call: query returns result.
+    mockApiFetch
+      .mockResolvedValueOnce({
+        actions: [],
+        interpretation: '',
+      })
+      .mockResolvedValueOnce({
+        answer: 'Glass cleaner is in the Kitchen bin.',
+        matches: [
+          {
+            bin_id: 'b-kitchen',
+            name: 'Kitchen Supplies',
+            area_name: 'Kitchen',
+            items: ['glass cleaner', 'sponges'],
+            tags: [],
+            relevance: 'Contains glass cleaner',
+          },
+        ],
+      });
 
     render(<CommandInput {...defaultProps} />);
 
     const textarea = screen.getByPlaceholderText('What would you like to do?');
-    fireEvent.change(textarea, { target: { value: 'asdfgh' } });
+    fireEvent.change(textarea, { target: { value: 'where is glass cleaner?' } });
     fireEvent.click(screen.getByText('Send'));
 
     await waitFor(() => {
-      expect(screen.getByText(/No matching bins found/)).toBeDefined();
+      expect(screen.getByText('Glass cleaner is in the Kitchen bin.')).toBeDefined();
     });
+
+    expect(screen.getByText('Kitchen Supplies')).toBeDefined();
+    expect(screen.getByText('glass cleaner, sponges')).toBeDefined();
+    expect(screen.getByText('Contains glass cleaner')).toBeDefined();
+    // No Execute button in query-result state
+    expect(screen.queryByText(/Execute/)).toBeNull();
+  });
+
+  it('navigates to bin on match click', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce({ actions: [], interpretation: '' })
+      .mockResolvedValueOnce({
+        answer: 'Found it in Kitchen.',
+        matches: [
+          {
+            bin_id: 'b-kitchen',
+            name: 'Kitchen Supplies',
+            area_name: 'Kitchen',
+            items: ['glass cleaner'],
+            tags: [],
+            relevance: 'Match',
+          },
+        ],
+      });
+
+    const onOpenChange = vi.fn();
+    render(<CommandInput open={true} onOpenChange={onOpenChange} />);
+
+    fireEvent.change(screen.getByPlaceholderText('What would you like to do?'), {
+      target: { value: 'where is glass cleaner?' },
+    });
+    fireEvent.click(screen.getByText('Send'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Kitchen Supplies')).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByText('Kitchen Supplies'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/bin/b-kitchen');
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('back from query result returns to idle', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce({ actions: [], interpretation: '' })
+      .mockResolvedValueOnce({
+        answer: 'Found it.',
+        matches: [],
+      });
+
+    render(<CommandInput {...defaultProps} />);
+
+    fireEvent.change(screen.getByPlaceholderText('What would you like to do?'), {
+      target: { value: 'where is the tape?' },
+    });
+    fireEvent.click(screen.getByText('Send'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Found it.')).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByText('Back'));
+
+    expect(screen.getByPlaceholderText('What would you like to do?')).toBeDefined();
+  });
+
+  it('shows answer even with zero matches', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce({ actions: [], interpretation: '' })
+      .mockResolvedValueOnce({
+        answer: "I couldn't find any bins containing that item.",
+        matches: [],
+      });
+
+    render(<CommandInput {...defaultProps} />);
+
+    fireEvent.change(screen.getByPlaceholderText('What would you like to do?'), {
+      target: { value: 'where is the unicorn?' },
+    });
+    fireEvent.click(screen.getByText('Send'));
+
+    await waitFor(() => {
+      expect(screen.getByText("I couldn't find any bins containing that item.")).toBeDefined();
+    });
+
+    // Only Back button, no bin cards
+    expect(screen.getByText('Back')).toBeDefined();
+    expect(screen.queryByText(/Execute/)).toBeNull();
   });
 });

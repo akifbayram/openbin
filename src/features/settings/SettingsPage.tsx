@@ -524,7 +524,6 @@ export function SettingsPage() {
           <Label>Dashboard</Label>
           <div className="flex flex-col gap-3 mt-3">
             <div className="space-y-1.5">
-              <label className="text-[13px] text-[var(--text-secondary)]">Visible sections</label>
               <div className="flex flex-col gap-2">
                 {([
                   { key: 'showStats' as const, label: 'Stats' },
@@ -576,23 +575,8 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* AI Features */}
-      <Card>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <Label htmlFor="ai-toggle">AI Features</Label>
-              <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
-                Photo analysis, item extraction, and AI commands
-              </p>
-            </div>
-            <Switch id="ai-toggle" checked={aiEnabled} onCheckedChange={setAiEnabled} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* AI Image Analysis */}
-      {aiEnabled && <AiSettingsSection />}
+      {/* AI Settings */}
+      <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />
 
       {/* API Keys */}
       {aiEnabled && <ApiKeysSection />}

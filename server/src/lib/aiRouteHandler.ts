@@ -1,5 +1,5 @@
 import type { Request, Response, RequestHandler } from 'express';
-import { AiAnalysisError } from './aiProviders.js';
+import { AiAnalysisError } from './aiCaller.js';
 import { NoAiSettingsError, aiErrorToStatus } from './aiSettings.js';
 import { ValidationError } from './crypto.js';
 

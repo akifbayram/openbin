@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ScanLine, MapPin, ChevronRight, Plus, Inbox, ImagePlus, MessageSquare, Search } from 'lucide-react';
+import { ScanLine, MapPin, ChevronRight, Plus, Inbox, Sparkles, Search } from 'lucide-react';
 
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 import { Card, CardContent } from '@/components/ui/card';
@@ -81,26 +81,12 @@ export function DashboardPage() {
   const { views: savedViews } = useSavedViews();
   const [createOpen, setCreateOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const addMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (debouncedSearch.trim()) {
       navigate('/bins', { state: { search: debouncedSearch.trim() } });
     }
   }, [debouncedSearch, navigate]);
-
-  // Close add menu on click outside
-  useEffect(() => {
-    if (!addMenuOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
-        setAddMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [addMenuOpen]);
 
   if (!activeLocationId) {
     return (
@@ -147,45 +133,25 @@ export function DashboardPage() {
           >
             <ScanLine className="h-5 w-5" />
           </Button>
-          <div ref={addMenuRef} className="relative">
+          {aiEnabled && (
             <Button
-              onClick={() => setAddMenuOpen(!addMenuOpen)}
+              onClick={() => setCommandOpen(true)}
               size="icon"
+              variant="ghost"
               className="h-10 w-10 rounded-full"
-              aria-label="Add bin"
+              aria-label="Ask AI"
             >
-              <Plus className="h-5 w-5" />
+              <Sparkles className="h-5 w-5" />
             </Button>
-            {addMenuOpen && (
-              <div className="absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-lg overflow-hidden z-20">
-                <button
-                  onClick={() => { setAddMenuOpen(false); setCreateOpen(true); }}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                >
-                  <Plus className="h-4 w-4 text-[var(--text-secondary)]" />
-                  New Bin
-                </button>
-                {aiEnabled && (
-                  <button
-                    onClick={() => { setAddMenuOpen(false); navigate('/bulk-add'); }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                  >
-                    <ImagePlus className="h-4 w-4 text-[var(--text-secondary)]" />
-                    Add from Photos
-                  </button>
-                )}
-                {aiEnabled && (
-                  <button
-                    onClick={() => { setAddMenuOpen(false); setCommandOpen(true); }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                  >
-                    <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />
-                    Ask AI
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          )}
+          <Button
+            onClick={() => setCreateOpen(true)}
+            size="icon"
+            className="h-10 w-10 rounded-full"
+            aria-label="New bin"
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 

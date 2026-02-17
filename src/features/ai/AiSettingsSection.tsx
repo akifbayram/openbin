@@ -1,22 +1,35 @@
 import { useState, useEffect } from 'react';
-import { Eye, EyeOff, Loader2, ChevronRight, RotateCcw } from 'lucide-react';
+import { Eye, EyeOff, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useAiSettings, saveAiSettings, deleteAiSettings, testAiConnection } from './useAiSettings';
 import { useAiProviderSetup } from './useAiProviderSetup';
 import { AI_PROVIDERS, MODEL_HINTS, KEY_PLACEHOLDERS } from './aiConstants';
-import { DEFAULT_AI_PROMPT } from './defaultPrompt';
-import { DEFAULT_COMMAND_PROMPT } from './defaultCommandPrompt';
-import { DEFAULT_QUERY_PROMPT } from './defaultQueryPrompt';
-import { DEFAULT_STRUCTURE_PROMPT } from './defaultStructurePrompt';
+import { useDefaultPrompts } from './useDefaultPrompts';
 
-export function AiSettingsSection() {
+type PromptTab = 'analysis' | 'command' | 'query' | 'structure';
+
+const PROMPT_TAB_META = [
+  { key: 'analysis', label: 'Photo Analysis', shortLabel: 'Photos' },
+  { key: 'command', label: 'Commands', shortLabel: 'Cmds' },
+  { key: 'query', label: 'Queries', shortLabel: 'Queries' },
+  { key: 'structure', label: 'Extraction', shortLabel: 'Extract' },
+] as const;
+
+interface AiSettingsSectionProps {
+  aiEnabled: boolean;
+  onToggle: (enabled: boolean) => void;
+}
+
+export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProps) {
   const { settings, isLoading, setSettings } = useAiSettings();
+  const { prompts: defaultPrompts } = useDefaultPrompts();
   const { showToast } = useToast();
 
   const setup = useAiProviderSetup({ providerConfigs: settings?.providerConfigs });
@@ -25,10 +38,7 @@ export function AiSettingsSection() {
   const [commandPrompt, setCommandPrompt] = useState('');
   const [queryPrompt, setQueryPrompt] = useState('');
   const [structurePrompt, setStructurePrompt] = useState('');
-  const [promptExpanded, setPromptExpanded] = useState(false);
-  const [commandPromptExpanded, setCommandPromptExpanded] = useState(false);
-  const [queryPromptExpanded, setQueryPromptExpanded] = useState(false);
-  const [structurePromptExpanded, setStructurePromptExpanded] = useState(false);
+  const [activePromptTab, setActivePromptTab] = useState<PromptTab>('analysis');
   const [testError, setTestError] = useState('');
   const [touched, setTouched] = useState(false);
 
@@ -43,10 +53,6 @@ export function AiSettingsSection() {
       setCommandPrompt(settings.commandPrompt || '');
       setQueryPrompt(settings.queryPrompt || '');
       setStructurePrompt(settings.structurePrompt || '');
-      if (settings.customPrompt) setPromptExpanded(true);
-      if (settings.commandPrompt) setCommandPromptExpanded(true);
-      if (settings.queryPrompt) setQueryPromptExpanded(true);
-      if (settings.structurePrompt) setStructurePromptExpanded(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
@@ -100,10 +106,6 @@ export function AiSettingsSection() {
       setCommandPrompt('');
       setQueryPrompt('');
       setStructurePrompt('');
-      setPromptExpanded(false);
-      setCommandPromptExpanded(false);
-      setQueryPromptExpanded(false);
-      setStructurePromptExpanded(false);
       setup.setTestResult(null);
       showToast({ message: 'AI settings removed' });
     } catch {
@@ -116,18 +118,23 @@ export function AiSettingsSection() {
   return (
     <Card id="ai-settings">
       <CardContent>
-        <Label>AI Settings</Label>
-        <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
-          Analyze photos, extract items from text, and run natural language commands.
-        </p>
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <Label htmlFor="ai-toggle">AI Features</Label>
+            <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
+              Photo analysis, item extraction, and AI commands
+            </p>
+          </div>
+          <Switch id="ai-toggle" checked={aiEnabled} onCheckedChange={onToggle} />
+        </div>
 
-        {settings === null && !touched && (
+        {aiEnabled && settings === null && !touched && (
           <p className="text-[13px] text-[var(--text-secondary)] mt-3">
             Connect an AI provider to unlock photo analysis, item extraction from text and voice, and natural language commands for managing your bins.
           </p>
         )}
 
-        <div className="flex flex-col gap-4 mt-4">
+        {aiEnabled && <div className="flex flex-col gap-4 mt-4">
           {/* Provider selector */}
           <div className="flex gap-1.5 bg-[var(--bg-input)] rounded-[var(--radius-full)] p-1">
             {AI_PROVIDERS.map((opt) => (
@@ -200,213 +207,77 @@ export function AiSettingsSection() {
           )}
 
           {/* Custom Prompts */}
-          <div className="space-y-2">
-            <p className="text-[13px] text-[var(--text-secondary)] font-medium">Custom Prompts</p>
-
-            {/* Image Analysis Prompt */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setPromptExpanded(!promptExpanded)}
-                className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', promptExpanded && 'rotate-90')} />
-                Photo Analysis
-                {customPrompt.trim() && (
-                  <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-[var(--radius-full)] bg-[var(--accent)] text-[var(--text-on-accent)]">
-                    customized
-                  </span>
-                )}
-              </button>
-              {promptExpanded && (
-                <div className="mt-2 space-y-2">
-                  <Textarea
-                    value={customPrompt}
-                    onChange={(e) => setCustomPrompt(e.target.value)}
-                    placeholder={DEFAULT_AI_PROMPT}
-                    className="font-mono text-[13px] min-h-[200px] resize-y"
-                    maxLength={10000}
-                  />
-                  <div className="flex items-center justify-between">
-                    <p className="text-[12px] text-[var(--text-tertiary)]">
-                      Use <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--bg-input)]">{'{available_tags}'}</code> to inject existing tags at runtime. Leave empty for the default prompt.
-                    </p>
-                    {customPrompt.trim() ? (
-                      <button
-                        type="button"
-                        onClick={() => setCustomPrompt('')}
-                        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                        Reset to Default
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setCustomPrompt(DEFAULT_AI_PROMPT)}
-                        className="text-[12px] text-[var(--accent)] hover:underline shrink-0 ml-2"
-                      >
-                        Load default to customize
-                      </button>
-                    )}
-                  </div>
+          {(() => {
+            const promptMap = {
+              analysis:  { value: customPrompt,    set: setCustomPrompt },
+              command:   { value: commandPrompt,   set: setCommandPrompt },
+              query:     { value: queryPrompt,     set: setQueryPrompt },
+              structure: { value: structurePrompt, set: setStructurePrompt },
+            };
+            const helpText: Record<PromptTab, React.ReactNode> = {
+              analysis: <>Use <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--bg-input)]">{'{available_tags}'}</code> to inject existing tags. Leave empty for default.</>,
+              command: 'Customize how commands are parsed. Leave empty for default.',
+              query: 'Customize how inventory queries are answered. Leave empty for default.',
+              structure: 'Customize how text is parsed into item lists. Leave empty for default.',
+            };
+            const active = promptMap[activePromptTab];
+            return (
+              <div className="space-y-2">
+                <p className="text-[13px] text-[var(--text-secondary)] font-medium">Custom Prompts</p>
+                <div className="flex gap-1 bg-[var(--bg-input)] rounded-[var(--radius-full)] p-1">
+                  {PROMPT_TAB_META.map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setActivePromptTab(tab.key)}
+                      className={cn(
+                        'relative flex-1 text-[12px] font-medium py-1.5 px-2 rounded-[var(--radius-full)] transition-colors text-center',
+                        activePromptTab === tab.key
+                          ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
+                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                      )}
+                    >
+                      <span className="sm:hidden">{tab.shortLabel}</span>
+                      <span className="hidden sm:inline">{tab.label}</span>
+                      {promptMap[tab.key].value.trim() && (
+                        <span className={cn('absolute top-1/2 -translate-y-1/2 right-1 h-1.5 w-1.5 rounded-full',
+                          activePromptTab === tab.key ? 'bg-[var(--text-on-accent)]' : 'bg-[var(--accent)]'
+                        )} />
+                      )}
+                    </button>
+                  ))}
                 </div>
-              )}
-            </div>
-
-            {/* AI Command Prompt */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setCommandPromptExpanded(!commandPromptExpanded)}
-                className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', commandPromptExpanded && 'rotate-90')} />
-                Commands
-                {commandPrompt.trim() && (
-                  <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-[var(--radius-full)] bg-[var(--accent)] text-[var(--text-on-accent)]">
-                    customized
-                  </span>
-                )}
-              </button>
-              {commandPromptExpanded && (
-                <div className="mt-2 space-y-2">
-                  <Textarea
-                    value={commandPrompt}
-                    onChange={(e) => setCommandPrompt(e.target.value)}
-                    placeholder={DEFAULT_COMMAND_PROMPT}
-                    className="font-mono text-[13px] min-h-[200px] resize-y"
-                    maxLength={10000}
-                  />
-                  <div className="flex items-center justify-between">
-                    <p className="text-[12px] text-[var(--text-tertiary)]">
-                      Customize how commands like &apos;add screwdriver to tools bin&apos; are parsed. Leave empty for default.
-                    </p>
-                    {commandPrompt.trim() ? (
-                      <button
-                        type="button"
-                        onClick={() => setCommandPrompt('')}
-                        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                        Reset to Default
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setCommandPrompt(DEFAULT_COMMAND_PROMPT)}
-                        className="text-[12px] text-[var(--accent)] hover:underline shrink-0 ml-2"
-                      >
-                        Load default to customize
-                      </button>
-                    )}
-                  </div>
+                <Textarea
+                  value={active.value}
+                  onChange={(e) => active.set(e.target.value)}
+                  placeholder={defaultPrompts?.[activePromptTab] ?? ''}
+                  className="font-mono text-[13px] min-h-[200px] resize-y"
+                  maxLength={10000}
+                />
+                <div className="flex items-center justify-between">
+                  <p className="text-[12px] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
+                  {active.value.trim() ? (
+                    <button
+                      type="button"
+                      onClick={() => active.set('')}
+                      className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Reset to Default
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => active.set(defaultPrompts?.[activePromptTab] ?? '')}
+                      className="text-[12px] text-[var(--accent)] hover:underline shrink-0 ml-2"
+                    >
+                      Load default to customize
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-
-            {/* Inventory Query Prompt */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setQueryPromptExpanded(!queryPromptExpanded)}
-                className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', queryPromptExpanded && 'rotate-90')} />
-                Inventory Queries
-                {queryPrompt.trim() && (
-                  <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-[var(--radius-full)] bg-[var(--accent)] text-[var(--text-on-accent)]">
-                    customized
-                  </span>
-                )}
-              </button>
-              {queryPromptExpanded && (
-                <div className="mt-2 space-y-2">
-                  <Textarea
-                    value={queryPrompt}
-                    onChange={(e) => setQueryPrompt(e.target.value)}
-                    placeholder={DEFAULT_QUERY_PROMPT}
-                    className="font-mono text-[13px] min-h-[200px] resize-y"
-                    maxLength={10000}
-                  />
-                  <div className="flex items-center justify-between">
-                    <p className="text-[12px] text-[var(--text-tertiary)]">
-                      Customize how inventory queries like &apos;where are my batteries?&apos; are answered. Leave empty for default.
-                    </p>
-                    {queryPrompt.trim() ? (
-                      <button
-                        type="button"
-                        onClick={() => setQueryPrompt('')}
-                        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                        Reset to Default
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setQueryPrompt(DEFAULT_QUERY_PROMPT)}
-                        className="text-[12px] text-[var(--accent)] hover:underline shrink-0 ml-2"
-                      >
-                        Load default to customize
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Item Extraction Prompt */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setStructurePromptExpanded(!structurePromptExpanded)}
-                className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', structurePromptExpanded && 'rotate-90')} />
-                Item Extraction
-                {structurePrompt.trim() && (
-                  <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-[var(--radius-full)] bg-[var(--accent)] text-[var(--text-on-accent)]">
-                    customized
-                  </span>
-                )}
-              </button>
-              {structurePromptExpanded && (
-                <div className="mt-2 space-y-2">
-                  <Textarea
-                    value={structurePrompt}
-                    onChange={(e) => setStructurePrompt(e.target.value)}
-                    placeholder={DEFAULT_STRUCTURE_PROMPT}
-                    className="font-mono text-[13px] min-h-[200px] resize-y"
-                    maxLength={10000}
-                  />
-                  <div className="flex items-center justify-between">
-                    <p className="text-[12px] text-[var(--text-tertiary)]">
-                      Customize how dictated or typed text is parsed into item lists. Leave empty for default.
-                    </p>
-                    {structurePrompt.trim() ? (
-                      <button
-                        type="button"
-                        onClick={() => setStructurePrompt('')}
-                        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                        Reset to Default
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setStructurePrompt(DEFAULT_STRUCTURE_PROMPT)}
-                        className="text-[12px] text-[var(--accent)] hover:underline shrink-0 ml-2"
-                      >
-                        Load default to customize
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+              </div>
+            );
+          })()}
 
           {/* Test result */}
           {setup.testResult === 'success' && (
@@ -444,7 +315,7 @@ export function AiSettingsSection() {
               </Button>
             )}
           </div>
-        </div>
+        </div>}
       </CardContent>
     </Card>
   );

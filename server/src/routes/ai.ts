@@ -18,8 +18,14 @@ import { encryptApiKey, decryptApiKey, maskApiKey, resolveMaskedApiKey } from '.
 import { getUserAiSettings } from '../lib/aiSettings.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
+import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
 
 const router = Router();
+
+// GET /api/ai/default-prompts — public (no auth), returns default prompt strings
+router.get('/default-prompts', (_req, res) => {
+  res.json(ALL_DEFAULT_PROMPTS);
+});
 
 // Rate-limit only endpoints that call external AI providers (not settings CRUD)
 // API key requests get a higher limit for headless/smart-home integrations

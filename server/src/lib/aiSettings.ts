@@ -1,6 +1,6 @@
 import { query } from '../db.js';
 import { decryptApiKey } from './crypto.js';
-import type { AiProviderConfig } from './aiProviders.js';
+import type { AiProviderConfig } from './aiCaller.js';
 
 export class NoAiSettingsError extends Error {
   constructor() {

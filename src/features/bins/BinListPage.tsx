@@ -13,8 +13,7 @@ import {
   CheckCircle2,
   MapPin,
   Bookmark,
-  ImagePlus,
-  MessageSquare,
+  Sparkles,
 } from 'lucide-react';
 
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
@@ -103,24 +102,10 @@ export function BinListPage() {
   const navigate = useNavigate();
   const { aiEnabled } = useAiEnabled();
   const [commandOpen, setCommandOpen] = useState(false);
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const addMenuRef = useRef<HTMLDivElement>(null);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const [viewName, setViewName] = useState('');
-
-  // Close add menu on click outside
-  useEffect(() => {
-    if (!addMenuOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
-        setAddMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [addMenuOpen]);
 
   // Close sort menu on click outside
   useEffect(() => {
@@ -192,44 +177,26 @@ export function BinListPage() {
           Bins
         </h1>
         {activeLocationId && (
-          <div ref={addMenuRef} className="relative">
+          <div className="flex items-center gap-2">
+            {aiEnabled && (
+              <Button
+                onClick={() => setCommandOpen(true)}
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 rounded-full"
+                aria-label="Ask AI"
+              >
+                <Sparkles className="h-5 w-5" />
+              </Button>
+            )}
             <Button
-              onClick={() => setAddMenuOpen(!addMenuOpen)}
+              onClick={() => setCreateOpen(true)}
               size="icon"
               className="h-10 w-10 rounded-full"
-              aria-label="Add bin"
+              aria-label="New bin"
             >
               <Plus className="h-5 w-5" />
             </Button>
-            {addMenuOpen && (
-              <div className="absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-lg overflow-hidden z-20">
-                <button
-                  onClick={() => { setAddMenuOpen(false); setCreateOpen(true); }}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                >
-                  <Plus className="h-4 w-4 text-[var(--text-secondary)]" />
-                  New Bin
-                </button>
-                {aiEnabled && (
-                  <button
-                    onClick={() => { setAddMenuOpen(false); navigate('/bulk-add'); }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                  >
-                    <ImagePlus className="h-4 w-4 text-[var(--text-secondary)]" />
-                    Add from Photos
-                  </button>
-                )}
-                {aiEnabled && (
-                  <button
-                    onClick={() => { setAddMenuOpen(false); setCommandOpen(true); }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                  >
-                    <MessageSquare className="h-4 w-4 text-[var(--text-secondary)]" />
-                    Ask AI
-                  </button>
-                )}
-              </div>
-            )}
           </div>
         )}
       </div>
