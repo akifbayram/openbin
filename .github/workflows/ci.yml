@@ -47,9 +47,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Pull latest code
-        run: |
-          git config --global --add safe.directory /opt/openbin
-          git -C /opt/openbin pull
+        run: git -C /opt/openbin pull
 
       - name: Deploy with Docker Compose
         run: |
