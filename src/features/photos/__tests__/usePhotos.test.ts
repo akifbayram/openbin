@@ -52,7 +52,7 @@ describe('deletePhoto', () => {
 
 describe('getPhotoUrl', () => {
   it('includes token query param when token exists in localStorage', () => {
-    localStorage.setItem('sanduk-token', 'my-jwt-token');
+    localStorage.setItem('openbin-token', 'my-jwt-token');
 
     expect(getPhotoUrl('photo-123')).toBe(
       `/api/photos/photo-123/file?token=${encodeURIComponent('my-jwt-token')}`,

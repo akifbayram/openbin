@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react';
 export type ThemePreference = 'light' | 'dark' | 'auto';
 export type ResolvedTheme = 'light' | 'dark';
 
-const STORAGE_KEY = 'sanduk-theme';
+const STORAGE_KEY = 'openbin-theme';
 const mq = window.matchMedia('(prefers-color-scheme: dark)');
 
 function resolveFromSystem(): ResolvedTheme {

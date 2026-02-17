@@ -1,4 +1,4 @@
-# Sanduk
+# OpenBin
 
 ## Project Overview
 
@@ -37,7 +37,7 @@ OpenAPI spec at `server/openapi.yaml` (source of truth). Update when endpoints c
 
 ## Gotchas
 
-- **Theme**: `localStorage('sanduk-theme')`, applied via `<html class="dark|light">` before first paint. `useTheme()` in `lib/theme.ts` is runtime source of truth.
+- **Theme**: `localStorage('openbin-theme')`, applied via `<html class="dark|light">` before first paint. `useTheme()` in `lib/theme.ts` is runtime source of truth.
 - **ISO date strings**: All date fields are `string`, not `Date`. SQLite stores as TEXT.
 - **`html5-qrcode`** is ~330KB gzipped — always dynamic-import the scanner page.
 - **Photos served via API**: `getPhotoUrl(id)` → `/api/photos/${id}/file?token=...` with JWT query param.

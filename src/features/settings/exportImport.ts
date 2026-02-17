@@ -25,7 +25,7 @@ export function downloadExport(data: ExportData): void {
   const date = new Date().toISOString().slice(0, 10);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `sanduk-backup-${date}.json`;
+  a.download = `openbin-backup-${date}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -33,7 +33,7 @@ export function downloadExport(data: ExportData): void {
 }
 
 export async function exportZip(locationId: string): Promise<void> {
-  const token = localStorage.getItem('sanduk-token');
+  const token = localStorage.getItem('openbin-token');
   const resp = await fetch(`/api/locations/${encodeURIComponent(locationId)}/export/zip`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -43,7 +43,7 @@ export async function exportZip(locationId: string): Promise<void> {
   const date = new Date().toISOString().slice(0, 10);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `sanduk-export-${date}.zip`;
+  a.download = `openbin-export-${date}.zip`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -51,7 +51,7 @@ export async function exportZip(locationId: string): Promise<void> {
 }
 
 export async function exportCsv(locationId: string): Promise<void> {
-  const token = localStorage.getItem('sanduk-token');
+  const token = localStorage.getItem('openbin-token');
   const resp = await fetch(`/api/locations/${encodeURIComponent(locationId)}/export/csv`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -61,7 +61,7 @@ export async function exportCsv(locationId: string): Promise<void> {
   const date = new Date().toISOString().slice(0, 10);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `sanduk-bins-${date}.csv`;
+  a.download = `openbin-bins-${date}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

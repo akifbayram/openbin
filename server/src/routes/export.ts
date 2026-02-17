@@ -148,7 +148,7 @@ router.get('/locations/:id/export', requireLocationMember(), async (req, res) =>
       bins: exportBins,
     };
 
-    res.setHeader('Content-Disposition', `attachment; filename="sanduk-export-${locationId}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="openbin-export-${locationId}.json"`);
     res.json(exportData);
   } catch (err) {
     console.error('Export error:', err);
@@ -222,7 +222,7 @@ router.get('/locations/:id/export/zip', requireLocationMember(), async (req, res
 
     const manifest = {
       version: 3,
-      format: 'sanduk-zip',
+      format: 'openbin-zip',
       exportedAt: new Date().toISOString(),
       locationName,
       binCount: bins.length,
@@ -231,7 +231,7 @@ router.get('/locations/:id/export/zip', requireLocationMember(), async (req, res
 
     // Stream ZIP response
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="sanduk-export-${new Date().toISOString().slice(0, 10)}.zip"`);
+    res.setHeader('Content-Disposition', `attachment; filename="openbin-export-${new Date().toISOString().slice(0, 10)}.zip"`);
 
     const archive = archiver('zip', { zlib: { level: 6 } });
     archive.pipe(res);
@@ -306,7 +306,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), async (req, res
     const csv = [header, ...rows].join('\n');
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="sanduk-bins-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="openbin-bins-${new Date().toISOString().slice(0, 10)}.csv"`);
     res.send(csv);
   } catch (err) {
     console.error('CSV export error:', err);

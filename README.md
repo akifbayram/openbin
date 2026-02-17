@@ -1,4 +1,4 @@
-# Sanduk
+# OpenBin
 
 Self-hosted inventory system for organizing physical storage bins with QR codes. Print labels, stick them on containers, and scan to instantly look up contents. Multi-user with shared locations.
 
@@ -29,8 +29,8 @@ Self-hosted inventory system for organizing physical storage bins with QR codes.
 **Prerequisites:** Docker, Node.js 18+
 
 ```bash
-git clone https://github.com/akifbayram/sanduk.git
-cd sanduk
+git clone https://github.com/akifbayram/openbin.git
+cd openbin
 
 npm install && npm run build
 docker compose up -d

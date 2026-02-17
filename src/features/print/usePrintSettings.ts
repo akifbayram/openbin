@@ -49,10 +49,10 @@ export async function savePrintSettings(settings: PrintSettings): Promise<void> 
 }
 
 function migrateFromLocalStorage(): PrintSettings | null {
-  const formatKey = localStorage.getItem('sanduk-label-format');
-  const optionsRaw = localStorage.getItem('sanduk-label-options');
-  const customRaw = localStorage.getItem('sanduk-label-custom');
-  const presetsRaw = localStorage.getItem('sanduk-label-presets');
+  const formatKey = localStorage.getItem('openbin-label-format');
+  const optionsRaw = localStorage.getItem('openbin-label-options');
+  const customRaw = localStorage.getItem('openbin-label-custom');
+  const presetsRaw = localStorage.getItem('openbin-label-presets');
 
   if (!formatKey && !optionsRaw && !customRaw && !presetsRaw) return null;
 
@@ -80,10 +80,10 @@ function migrateFromLocalStorage(): PrintSettings | null {
 }
 
 function clearLocalStorage(): void {
-  localStorage.removeItem('sanduk-label-format');
-  localStorage.removeItem('sanduk-label-options');
-  localStorage.removeItem('sanduk-label-custom');
-  localStorage.removeItem('sanduk-label-presets');
+  localStorage.removeItem('openbin-label-format');
+  localStorage.removeItem('openbin-label-options');
+  localStorage.removeItem('openbin-label-custom');
+  localStorage.removeItem('openbin-label-presets');
 }
 
 export function usePrintSettings() {

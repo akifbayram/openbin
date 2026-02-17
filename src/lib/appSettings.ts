@@ -12,7 +12,7 @@ export function useAppSettings() {
 
   const activeLocation = locations.find((l) => l.id === activeLocationId);
   const settings: AppSettings = {
-    appName: activeLocation?.app_name ?? 'Sanduk',
+    appName: activeLocation?.app_name ?? 'OpenBin',
   };
 
   useEffect(() => {
@@ -21,13 +21,13 @@ export function useAppSettings() {
 
   const updateSettings = useCallback((patch: Partial<AppSettings>) => {
     if (activeLocationId && patch.appName !== undefined) {
-      updateLocation(activeLocationId, { app_name: patch.appName || 'Sanduk' });
+      updateLocation(activeLocationId, { app_name: patch.appName || 'OpenBin' });
     }
   }, [activeLocationId]);
 
   const resetSettings = useCallback(() => {
     if (activeLocationId) {
-      updateLocation(activeLocationId, { app_name: 'Sanduk' });
+      updateLocation(activeLocationId, { app_name: 'OpenBin' });
     }
   }, [activeLocationId]);
 

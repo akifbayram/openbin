@@ -57,7 +57,7 @@ export function usePhotos(binId: string | undefined) {
 }
 
 export function getPhotoUrl(photoId: string): string {
-  const token = localStorage.getItem('sanduk-token');
+  const token = localStorage.getItem('openbin-token');
   return `/api/photos/${photoId}/file${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 }
 

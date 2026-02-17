@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
-        name: 'Sanduk',
-        short_name: 'Sanduk',
+        name: 'OpenBin',
+        short_name: 'OpenBin',
         description: 'Label storage bins with QR codes and maintain a searchable digital inventory',
         theme_color: '#1e293b',
         background_color: '#0f172a',

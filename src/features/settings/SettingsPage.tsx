@@ -503,7 +503,7 @@ export function SettingsPage() {
                 id="app-name"
                 value={settings.appName}
                 onChange={(e) => updateSettings({ appName: e.target.value })}
-                placeholder="Sanduk"
+                placeholder="OpenBin"
               />
             </div>
             <Button

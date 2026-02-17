@@ -4,7 +4,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     environment:
-      DATABASE_PATH: /data/sanduk.db
+      DATABASE_PATH: /data/openbin.db
       PHOTO_STORAGE_PATH: /data/photos
       PORT: "4000"
     ports:

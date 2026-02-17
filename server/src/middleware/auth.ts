@@ -53,7 +53,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   }
 
   // API key path
-  if (token.startsWith('sk_sanduk_')) {
+  if (token.startsWith('sk_openbin_')) {
     const keyHash = crypto.createHash('sha256').update(token).digest('hex');
     query(
       `SELECT ak.id AS key_id, u.id, u.username

@@ -19,7 +19,6 @@ vi.mock('@/features/locations/useLocations', () => ({
   updateLocation: vi.fn(),
 }));
 
-import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useLocationList, updateLocation } from '@/features/locations/useLocations';
 import { useAppSettings } from '@/lib/appSettings';
@@ -43,7 +42,7 @@ describe('useAppSettings', () => {
 
   it('returns defaults when no active location', () => {
     const { result } = renderHook(() => useAppSettings());
-    expect(result.current.settings).toEqual({ appName: 'Sanduk' });
+    expect(result.current.settings).toEqual({ appName: 'OpenBin' });
   });
 
   it('reads app_name from active location', () => {
@@ -59,7 +58,7 @@ describe('useAppSettings', () => {
     expect(result.current.settings.appName).toBe('Custom');
   });
 
-  it('falls back to Sanduk when location has no app_name', () => {
+  it('falls back to OpenBin when location has no app_name', () => {
     mockUseLocationList.mockReturnValue({
       locations: [
         { id: 'loc-1', name: 'Home', created_by: 'u1', invite_code: '', activity_retention_days: 90, trash_retention_days: 30, created_at: '', updated_at: '' },
@@ -69,7 +68,7 @@ describe('useAppSettings', () => {
     });
 
     const { result } = renderHook(() => useAppSettings());
-    expect(result.current.settings.appName).toBe('Sanduk');
+    expect(result.current.settings.appName).toBe('OpenBin');
   });
 
   it('updateSettings calls updateLocation', () => {
@@ -82,13 +81,13 @@ describe('useAppSettings', () => {
     expect(mockUpdateLocation).toHaveBeenCalledWith('loc-1', { app_name: 'NewName' });
   });
 
-  it('resetSettings calls updateLocation with Sanduk', () => {
+  it('resetSettings calls updateLocation with OpenBin', () => {
     const { result } = renderHook(() => useAppSettings());
 
     act(() => {
       result.current.resetSettings();
     });
 
-    expect(mockUpdateLocation).toHaveBeenCalledWith('loc-1', { app_name: 'Sanduk' });
+    expect(mockUpdateLocation).toHaveBeenCalledWith('loc-1', { app_name: 'OpenBin' });
   });
 });

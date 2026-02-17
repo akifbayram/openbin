@@ -9,7 +9,7 @@ router.use(authenticate);
 const MAX_KEYS_PER_USER = 10;
 
 function generateApiKey(): string {
-  return 'sk_sanduk_' + crypto.randomBytes(32).toString('hex');
+  return 'sk_openbin_' + crypto.randomBytes(32).toString('hex');
 }
 
 function hashKey(key: string): string {

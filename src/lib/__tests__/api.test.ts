@@ -28,7 +28,7 @@ describe('apiFetch', () => {
   });
 
   it('includes Authorization header when token exists in localStorage', async () => {
-    localStorage.setItem('sanduk-token', 'my-jwt');
+    localStorage.setItem('openbin-token', 'my-jwt');
     fetchSpy.mockResolvedValue(mockFetchResponse({}, '{"ok":true}'));
 
     await apiFetch('/api/test');
@@ -71,7 +71,7 @@ describe('apiFetch', () => {
   });
 
   it('merges custom headers without clobbering auto-set headers', async () => {
-    localStorage.setItem('sanduk-token', 'tk');
+    localStorage.setItem('openbin-token', 'tk');
     fetchSpy.mockResolvedValue(mockFetchResponse({}, '{"ok":true}'));
 
     await apiFetch('/api/test', {

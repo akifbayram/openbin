@@ -1,13 +1,13 @@
 openapi: 3.0.3
 info:
-  title: Sanduk API
+  title: OpenBin API
   version: 1.0.0
   description: |
-    REST API for Sanduk — a multi-user web app for organizing physical storage bins with QR codes.
+    REST API for OpenBin — a multi-user web app for organizing physical storage bins with QR codes.
 
     **Authentication**: Most endpoints require authentication via either:
     - **JWT Bearer token** obtained via `POST /auth/login` (expires after 7 days)
-    - **API key** created via `POST /api-keys` (long-lived, format: `sk_sanduk_...`)
+    - **API key** created via `POST /api-keys` (long-lived, format: `sk_openbin_...`)
 
     Include either in the `Authorization: Bearer <token>` header.
 
@@ -201,7 +201,7 @@ components:
           description: Days to keep soft-deleted bins before auto-purging
         app_name:
           type: string
-          default: Sanduk
+          default: OpenBin
           description: Custom display name for this location's app instance
         created_at:
           type: string
@@ -236,7 +236,7 @@ components:
           default: 30
         app_name:
           type: string
-          default: Sanduk
+          default: OpenBin
         created_at:
           type: string
           format: date-time
@@ -3230,7 +3230,7 @@ paths:
       summary: Create an API key
       description: |
         Creates a new API key. The full key is returned only in this response — it cannot be retrieved later.
-        Maximum 10 active keys per user. Keys use the format `sk_sanduk_<64 hex chars>`.
+        Maximum 10 active keys per user. Keys use the format `sk_openbin_<64 hex chars>`.
       requestBody:
         content:
           application/json:

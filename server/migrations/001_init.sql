@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS locations (
   invite_code             TEXT UNIQUE NOT NULL,
   activity_retention_days INTEGER NOT NULL DEFAULT 90 CHECK (activity_retention_days BETWEEN 7 AND 365),
   trash_retention_days    INTEGER NOT NULL DEFAULT 30 CHECK (trash_retention_days BETWEEN 7 AND 365),
-  app_name                TEXT NOT NULL DEFAULT 'Sanduk',
+  app_name                TEXT NOT NULL DEFAULT 'OpenBin',
   created_at              TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at              TEXT NOT NULL DEFAULT (datetime('now'))
 );

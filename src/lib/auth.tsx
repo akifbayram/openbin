@@ -29,14 +29,14 @@ export function useAuth(): AuthContextValue {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
-    token: localStorage.getItem('sanduk-token'),
-    activeLocationId: localStorage.getItem('sanduk-active-location'),
+    token: localStorage.getItem('openbin-token'),
+    activeLocationId: localStorage.getItem('openbin-active-location'),
     loading: true,
   });
 
   // Validate token on mount
   useEffect(() => {
-    const token = localStorage.getItem('sanduk-token');
+    const token = localStorage.getItem('openbin-token');
     if (!token) {
       setState((s) => ({ ...s, loading: false }));
       return;
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState((s) => ({ ...s, user, token, loading: false }));
       })
       .catch(() => {
-        localStorage.removeItem('sanduk-token');
+        localStorage.removeItem('openbin-token');
         setState((s) => ({ ...s, user: null, token: null, loading: false }));
       });
   }, []);
@@ -57,9 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: { username, password },
     });
-    localStorage.setItem('sanduk-token', data.token);
+    localStorage.setItem('openbin-token', data.token);
     if (data.activeLocationId) {
-      localStorage.setItem('sanduk-active-location', data.activeLocationId);
+      localStorage.setItem('openbin-active-location', data.activeLocationId);
     }
     setState((s) => ({
       ...s,
@@ -74,9 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: { username, password, displayName },
     });
-    localStorage.setItem('sanduk-token', data.token);
+    localStorage.setItem('openbin-token', data.token);
     // New registrations have no locations — clear any stale value from a previous session
-    localStorage.removeItem('sanduk-active-location');
+    localStorage.removeItem('openbin-active-location');
     setState((s) => ({
       ...s,
       user: data.user,
@@ -86,16 +86,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('sanduk-token');
-    localStorage.removeItem('sanduk-active-location');
+    localStorage.removeItem('openbin-token');
+    localStorage.removeItem('openbin-active-location');
     setState({ user: null, token: null, activeLocationId: null, loading: false });
   }, []);
 
   const setActiveLocationId = useCallback((id: string | null) => {
     if (id) {
-      localStorage.setItem('sanduk-active-location', id);
+      localStorage.setItem('openbin-active-location', id);
     } else {
-      localStorage.removeItem('sanduk-active-location');
+      localStorage.removeItem('openbin-active-location');
     }
     setState((s) => ({ ...s, activeLocationId: id }));
   }, []);

@@ -1,4 +1,4 @@
-# Sanduk — Technical Roadmap
+# OpenBin — Technical Roadmap
 
 ## Scope and Principles
 - Target: community-friendly, self-hostable PWA for hobbyists and personal use with offline-first UX, secure multi-user sync, and reliable media storage.

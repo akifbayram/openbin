@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
-const DB_PATH = process.env.DATABASE_PATH || './data/sanduk.db';
+const DB_PATH = process.env.DATABASE_PATH || './data/openbin.db';
 
 // Ensure directory exists
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
