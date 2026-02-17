@@ -1,0 +1,56 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install client dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: npm ci
+        working-directory: server
+
+      - name: Type check (client)
+        run: npx tsc --noEmit
+
+      - name: Type check (server)
+        run: npx tsc --noEmit
+        working-directory: server
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Build client
+        run: npx vite build
+
+      - name: Build server
+        run: npm run build
+        working-directory: server
+
+  deploy:
+    runs-on: self-hosted
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Pull latest code
+        run: git -C /opt/openbin pull
+
+      - name: Deploy with Docker Compose
+        run: |
+          cd /opt/openbin
+          docker compose down --remove-orphans
+          docker compose up -d --build
