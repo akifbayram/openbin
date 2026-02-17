@@ -36,6 +36,8 @@
   --overlay-heavy: rgba(0, 0, 0, 0.7);
   --overlay-button: rgba(0, 0, 0, 0.5);
   --overlay-button-hover: rgba(0, 0, 0, 0.7);
+  --ai-accent: #5e2fe0;
+  --ai-accent-hover: #4f27bf;
   color-scheme: light;
 }
 
@@ -64,6 +66,8 @@
   --overlay-heavy: rgba(0, 0, 0, 0.8);
   --overlay-button: rgba(0, 0, 0, 0.5);
   --overlay-button-hover: rgba(0, 0, 0, 0.7);
+  --ai-accent: #7b52e8;
+  --ai-accent-hover: #9070f0;
   color-scheme: dark;
 }
 

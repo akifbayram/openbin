@@ -257,7 +257,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
                       {analyzing ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Sparkles className="h-4 w-4 text-[var(--accent)]" />
+                        <Sparkles className="h-4 w-4 text-[var(--ai-accent)]" />
                       )}
                       {analyzing ? 'Analyzing...' : `Analyze with AI${photos.length > 1 ? ` (${photos.length})` : ''}`}
                     </Button>

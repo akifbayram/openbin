@@ -160,7 +160,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
             onClick={() => triggerAnalyze(photo)}
             className="gap-1.5"
           >
-            <Sparkles className="h-4 w-4 text-[var(--accent)]" />
+            <Sparkles className="h-4 w-4 text-[var(--ai-accent)]" />
             {photo.analyzeError ? 'Retry Analysis' : photo.name ? 'Re-analyze with AI' : 'Analyze with AI'}
           </Button>
           {!aiSettings && (

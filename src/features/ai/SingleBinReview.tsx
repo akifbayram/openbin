@@ -170,7 +170,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             onClick={triggerAnalyze}
             className="gap-1.5"
           >
-            <Sparkles className="h-4 w-4 text-[var(--accent)]" />
+            <Sparkles className="h-4 w-4 text-[var(--ai-accent)]" />
             {analyzeError ? 'Retry Analysis' : hasAnalyzed ? 'Re-analyze with AI' : 'Analyze with AI'}
           </Button>
           {!aiSettings && (

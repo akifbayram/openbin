@@ -666,6 +666,76 @@ router.delete('/:id/pin', asyncHandler(async (req, res) => {
   res.json({ pinned: false });
 }));
 
+// POST /api/bins/:id/move — move bin to a different location
+router.post('/:id/move', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { locationId: targetLocationId } = req.body;
+
+  if (!targetLocationId) {
+    throw new ValidationError('locationId is required');
+  }
+
+  const access = await verifyBinAccess(id, req.user!.id);
+  if (!access) {
+    throw new NotFoundError('Bin not found');
+  }
+
+  if (access.locationId === targetLocationId) {
+    throw new ValidationError('Bin is already in this location');
+  }
+
+  if (!await verifyLocationMembership(targetLocationId, req.user!.id)) {
+    throw new ForbiddenError('Not a member of target location');
+  }
+
+  // Get location names for activity log
+  const sourceLocResult = await query<{ name: string }>('SELECT name FROM locations WHERE id = $1', [access.locationId]);
+  const targetLocResult = await query<{ name: string }>('SELECT name FROM locations WHERE id = $1', [targetLocationId]);
+  const sourceName = sourceLocResult.rows[0]?.name ?? '';
+  const targetName = targetLocResult.rows[0]?.name ?? '';
+
+  // Move bin: update location, clear area (areas are location-scoped)
+  await query(
+    `UPDATE bins SET location_id = $1, area_id = NULL, updated_at = datetime('now') WHERE id = $2`,
+    [targetLocationId, id]
+  );
+
+  // Re-fetch updated bin
+  const result = await query(
+    `SELECT ${BIN_SELECT_COLS} FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE b.id = $1`,
+    [id]
+  );
+  const bin = result.rows[0];
+
+  const changes = { location: { old: sourceName, new: targetName } };
+
+  // Log in source location
+  logActivity({
+    locationId: access.locationId,
+    userId: req.user!.id,
+    userName: req.user!.username,
+    action: 'move_out',
+    entityType: 'bin',
+    entityId: id,
+    entityName: bin.name,
+    changes,
+  });
+
+  // Log in target location
+  logActivity({
+    locationId: targetLocationId,
+    userId: req.user!.id,
+    userName: req.user!.username,
+    action: 'move_in',
+    entityType: 'bin',
+    entityId: id,
+    entityName: bin.name,
+    changes,
+  });
+
+  res.json(bin);
+}));
+
 // PUT /api/bins/:id/add-tags — add tags to a bin (merge, don't replace)
 router.put('/:id/add-tags', asyncHandler(async (req, res) => {
   const { id } = req.params;

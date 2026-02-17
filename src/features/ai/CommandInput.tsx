@@ -557,7 +557,7 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
               type="button"
               onClick={handleParse}
               disabled={!text.trim() || state === 'parsing' || state === 'executing'}
-              className="w-full rounded-[var(--radius-full)]"
+              className="w-full rounded-[var(--radius-full)] bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
             >
               {state === 'parsing' ? (
                 <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />

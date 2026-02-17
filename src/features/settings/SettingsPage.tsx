@@ -22,8 +22,9 @@ import { useAiEnabled } from '@/lib/aiToggle';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { useBinList } from '@/features/bins/useBins';
-import { useLocationList, createLocation, joinLocation, updateLocation, deleteLocation } from '@/features/locations/useLocations';
+import { useLocationList, updateLocation } from '@/features/locations/useLocations';
 import { LocationMembersDialog } from '@/features/locations/LocationMembersDialog';
+import { LocationCreateDialog, LocationJoinDialog, LocationRenameDialog, LocationDeleteDialog } from '@/features/locations/LocationDialogs';
 import type { ExportData } from '@/types';
 import {
   exportAllData,
@@ -59,20 +60,8 @@ export function SettingsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [membersLocationId, setMembersLocationId] = useState<string | null>(null);
-  const [newName, setNewName] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [joining, setJoining] = useState(false);
-
-  // Rename location state
   const [renameLocationId, setRenameLocationId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
-  const [renaming, setRenaming] = useState(false);
-
-  // Delete location state
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
-  const [deletingLocation, setDeletingLocation] = useState(false);
-  const deleteLocationName = locations.find((h) => h.id === deleteLocationId)?.name ?? '';
 
   // Data retention state
   const [retentionLocationId, setRetentionLocationId] = useState<string | null>(null);
@@ -99,55 +88,6 @@ export function SettingsPage() {
     }
   }, []);
 
-  async function handleCreateLocation(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newName.trim()) return;
-    setCreating(true);
-    try {
-      const location = await createLocation(newName.trim());
-      setActiveLocationId(location.id);
-      setNewName('');
-      setCreateOpen(false);
-      showToast({ message: `Created "${location.name}"` });
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to create location' });
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  async function handleJoinLocation(e: React.FormEvent) {
-    e.preventDefault();
-    if (!inviteCode.trim()) return;
-    setJoining(true);
-    try {
-      const location = await joinLocation(inviteCode.trim());
-      setActiveLocationId(location.id);
-      setInviteCode('');
-      setJoinOpen(false);
-      showToast({ message: `Joined "${location.name}"` });
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to join location' });
-    } finally {
-      setJoining(false);
-    }
-  }
-
-  async function handleRenameLocation(e: React.FormEvent) {
-    e.preventDefault();
-    if (!renameLocationId || !renameValue.trim()) return;
-    setRenaming(true);
-    try {
-      await updateLocation(renameLocationId, { name: renameValue.trim() });
-      setRenameLocationId(null);
-      showToast({ message: 'Location renamed' });
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to rename location' });
-    } finally {
-      setRenaming(false);
-    }
-  }
-
   async function handleSaveRetention() {
     if (!retentionLocationId) return;
     setSavingRetention(true);
@@ -162,24 +102,6 @@ export function SettingsPage() {
       showToast({ message: err instanceof Error ? err.message : 'Failed to save retention settings' });
     } finally {
       setSavingRetention(false);
-    }
-  }
-
-  async function handleDeleteLocation() {
-    if (!deleteLocationId) return;
-    setDeletingLocation(true);
-    try {
-      await deleteLocation(deleteLocationId);
-      if (activeLocationId === deleteLocationId) {
-        const remaining = locations.filter((h) => h.id !== deleteLocationId);
-        setActiveLocationId(remaining.length > 0 ? remaining[0].id : null);
-      }
-      setDeleteLocationId(null);
-      showToast({ message: 'Location deleted' });
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete location' });
-    } finally {
-      setDeletingLocation(false);
     }
   }
 
@@ -437,10 +359,7 @@ export function SettingsPage() {
                             variant="ghost"
                             size="icon"
                             className="rounded-full h-8 w-8"
-                            onClick={() => {
-                              setRenameLocationId(loc.id);
-                              setRenameValue(loc.name);
-                            }}
+                            onClick={() => setRenameLocationId(loc.id)}
                             aria-label="Rename location"
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -768,127 +687,20 @@ export function SettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Location Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create Location</DialogTitle>
-            <DialogDescription>
-              A location is a shared space where members can manage bins together.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreateLocation} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="location-name">Name</Label>
-              <Input
-                id="location-name"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g., My House, Office"
-                autoFocus
-                required
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!newName.trim() || creating}>
-                {creating ? 'Creating...' : 'Create'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Join Location Dialog */}
-      <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Join Location</DialogTitle>
-            <DialogDescription>
-              Enter the invite code shared by a location owner to join.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleJoinLocation} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="invite-code">Invite Code</Label>
-              <Input
-                id="invite-code"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-                placeholder="Enter invite code"
-                autoFocus
-                required
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setJoinOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!inviteCode.trim() || joining}>
-                {joining ? 'Joining...' : 'Join'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Rename Location Dialog */}
-      <Dialog open={!!renameLocationId} onOpenChange={(open) => !open && setRenameLocationId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename Location</DialogTitle>
-            <DialogDescription>
-              Enter a new name for this location.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleRenameLocation} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="rename-location">Name</Label>
-              <Input
-                id="rename-location"
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                autoFocus
-                required
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setRenameLocationId(null)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!renameValue.trim() || renaming}>
-                {renaming ? 'Saving...' : 'Save'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Location Dialog */}
-      <Dialog open={!!deleteLocationId} onOpenChange={(open) => !open && setDeleteLocationId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Location?</DialogTitle>
-            <DialogDescription>
-              This will permanently delete &quot;{deleteLocationName}&quot; and all its bins and photos. This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteLocationId(null)} className="rounded-[var(--radius-full)]">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeleteLocation}
-              disabled={deletingLocation}
-              className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:opacity-90"
-            >
-              {deletingLocation ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LocationCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <LocationJoinDialog open={joinOpen} onOpenChange={setJoinOpen} />
+      <LocationRenameDialog
+        locationId={renameLocationId}
+        currentName={locations.find((l) => l.id === renameLocationId)?.name ?? ''}
+        open={!!renameLocationId}
+        onOpenChange={(open) => !open && setRenameLocationId(null)}
+      />
+      <LocationDeleteDialog
+        locationId={deleteLocationId}
+        locationName={locations.find((l) => l.id === deleteLocationId)?.name ?? ''}
+        open={!!deleteLocationId}
+        onOpenChange={(open) => !open && setDeleteLocationId(null)}
+      />
 
       {/* Members Dialog */}
       {membersLocationId && (

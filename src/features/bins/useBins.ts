@@ -262,6 +262,11 @@ export function useAllTags(): string[] {
   }, [bins]);
 }
 
+export async function moveBin(id: string, locationId: string): Promise<void> {
+  await apiFetch(`/api/bins/${id}/move`, { method: 'POST', body: { locationId } });
+  notifyBinsChanged();
+}
+
 export async function lookupBinByCode(shortCode: string): Promise<Bin> {
   return apiFetch<Bin>(`/api/bins/lookup/${encodeURIComponent(shortCode)}`);
 }

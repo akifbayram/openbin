@@ -1985,6 +1985,49 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /bins/{id}/move:
+    post:
+      tags: [Bins]
+      summary: Move a bin to a different location
+      description: |
+        Moves a bin from its current location to a target location.
+        The user must be a member of both locations.
+        The area assignment is cleared since areas are location-scoped.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locationId]
+              properties:
+                locationId:
+                  type: string
+                  format: uuid
+                  description: Target location ID
+      responses:
+        '200':
+          description: Bin moved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /bins/{id}/permanent:
     delete:
       tags: [Bins]

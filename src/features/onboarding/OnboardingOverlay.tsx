@@ -331,7 +331,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
                         type="button"
                         onClick={handleAnalyzePhoto}
                         disabled={analyzing}
-                        className="flex items-center gap-1.5 text-[13px] text-[var(--accent)] hover:opacity-80 transition-opacity disabled:opacity-50"
+                        className="flex items-center gap-1.5 text-[13px] text-[var(--ai-accent)] hover:opacity-80 transition-opacity disabled:opacity-50"
                       >
                         {analyzing ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -393,7 +393,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
                             setItemAiState('expanded');
                           }
                         }}
-                        className="flex items-center gap-1 text-[12px] text-[var(--accent)] hover:opacity-80 transition-opacity"
+                        className="flex items-center gap-1 text-[12px] text-[var(--ai-accent)] hover:opacity-80 transition-opacity"
                       >
                         <Sparkles className="h-3.5 w-3.5" />
                         AI Extract
@@ -510,7 +510,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
                             });
                           }}
                           disabled={!itemAiText.trim() || itemAiStructuring}
-                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[var(--accent)] text-white text-[12px] disabled:opacity-40 transition-colors"
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[var(--ai-accent)] text-white text-[12px] disabled:opacity-40 transition-colors"
                         >
                           {itemAiStructuring ? (
                             <Loader2 className="h-3 w-3 animate-spin" />

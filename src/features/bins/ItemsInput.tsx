@@ -219,7 +219,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
             <button
               type="button"
               onClick={handleSparklesClick}
-              className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+              className="shrink-0 rounded-full p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
               aria-label="AI extract items"
             >
               <Sparkles className="h-4 w-4" />
@@ -257,7 +257,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
               size="sm"
               onClick={handleExtract}
               disabled={!expandedText.trim() || isStructuring}
-              className="rounded-[var(--radius-full)] gap-1.5"
+              className="rounded-[var(--radius-full)] gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
             >
               {isStructuring ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
