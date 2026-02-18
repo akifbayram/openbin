@@ -64,8 +64,8 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          'flex items-center justify-between w-full h-10 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-input)] px-3 text-[15px] text-left transition-colors',
-          'hover:border-[var(--border-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]',
+          'flex items-center justify-between w-full h-10 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 text-[15px] text-left transition-colors',
+          'hover:border-[var(--border-glass)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]',
           !selectedArea && 'text-[var(--text-tertiary)]'
         )}
       >
@@ -74,7 +74,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-lg overflow-hidden">
+        <div className="absolute z-20 mt-1 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-lg overflow-hidden">
           <div className="max-h-48 overflow-y-auto">
             <button
               type="button"

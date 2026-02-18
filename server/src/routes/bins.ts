@@ -35,6 +35,26 @@ router.post('/', asyncHandler(async (req, res) => {
   if (notes && typeof notes === 'string' && notes.length > 10000) {
     throw new ValidationError('Notes too long (max 10000 characters)');
   }
+  if (items && Array.isArray(items)) {
+    for (const item of items) {
+      if (typeof item === 'string' && item.length > 500) {
+        throw new ValidationError('Item name too long (max 500 characters)');
+      }
+    }
+  }
+  if (tags && Array.isArray(tags)) {
+    for (const tag of tags) {
+      if (typeof tag === 'string' && tag.length > 100) {
+        throw new ValidationError('Tag too long (max 100 characters)');
+      }
+    }
+  }
+  if (icon && typeof icon === 'string' && icon.length > 100) {
+    throw new ValidationError('Icon value too long (max 100 characters)');
+  }
+  if (color && typeof color === 'string' && color.length > 50) {
+    throw new ValidationError('Color value too long (max 50 characters)');
+  }
 
   if (!await verifyLocationMembership(locationId, req.user!.id)) {
     throw new ForbiddenError('Not a member of this location');
@@ -301,6 +321,26 @@ router.put('/:id', asyncHandler(async (req, res) => {
   }
   if (notes !== undefined && typeof notes === 'string' && notes.length > 10000) {
     throw new ValidationError('Notes too long (max 10000 characters)');
+  }
+  if (items !== undefined && Array.isArray(items)) {
+    for (const item of items) {
+      if (typeof item === 'string' && item.length > 500) {
+        throw new ValidationError('Item name too long (max 500 characters)');
+      }
+    }
+  }
+  if (tags !== undefined && Array.isArray(tags)) {
+    for (const tag of tags) {
+      if (typeof tag === 'string' && tag.length > 100) {
+        throw new ValidationError('Tag too long (max 100 characters)');
+      }
+    }
+  }
+  if (icon !== undefined && typeof icon === 'string' && icon.length > 100) {
+    throw new ValidationError('Icon value too long (max 100 characters)');
+  }
+  if (color !== undefined && typeof color === 'string' && color.length > 50) {
+    throw new ValidationError('Color value too long (max 50 characters)');
   }
 
   // Fetch old state for activity log diff
@@ -600,7 +640,7 @@ router.post('/:id/photos', binPhotoUpload.single('photo'), asyncHandler(async (r
     `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id, bin_id, filename, mime_type, size, storage_path, created_by, created_at`,
-    [photoId, binId, file.originalname, file.mimetype, file.size, storagePath, req.user!.id]
+    [photoId, binId, path.basename(file.originalname).slice(0, 255), file.mimetype, file.size, storagePath, req.user!.id]
   );
 
   await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [binId]);

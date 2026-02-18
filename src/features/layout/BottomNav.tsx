@@ -24,14 +24,14 @@ export function BottomNav() {
               aria-label={displayLabel}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex items-center gap-2 px-5 py-2 rounded-[var(--radius-full)] text-[13px] font-medium transition-all duration-200',
+                'flex items-center gap-2 py-2 rounded-[var(--radius-full)] text-[13px] font-medium transition-all duration-200',
                 isActive
-                  ? 'bg-[var(--accent)] text-white shadow-sm'
-                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] px-3.5'
+                  ? 'bg-[var(--accent)] text-white shadow-sm px-4'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] w-11 justify-center'
               )}
             >
-              <Icon className="h-[18px] w-[18px]" />
-              {isActive && <span>{displayLabel}</span>}
+              <Icon className="h-[18px] w-[18px] shrink-0" />
+              {isActive && <span className="whitespace-nowrap">{displayLabel}</span>}
             </button>
           );
         })}

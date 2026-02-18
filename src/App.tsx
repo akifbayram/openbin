@@ -5,8 +5,12 @@ import { ToastProvider, useToast } from '@/components/ui/toast';
 import { AuthProvider } from '@/lib/auth';
 import { AuthGuard } from '@/features/auth/AuthGuard';
 import { AppLayout } from '@/features/layout/AppLayout';
-import { BinListPage } from '@/features/bins/BinListPage';
-import { BinDetailPage } from '@/features/bins/BinDetailPage';
+const BinListPage = React.lazy(() =>
+  import('@/features/bins/BinListPage').then((m) => ({ default: m.BinListPage }))
+);
+const BinDetailPage = React.lazy(() =>
+  import('@/features/bins/BinDetailPage').then((m) => ({ default: m.BinDetailPage }))
+);
 import { Button } from '@/components/ui/button';
 
 const LoginPage = React.lazy(() =>
@@ -190,8 +194,22 @@ export default function App() {
                     </Suspense>
                   }
                 />
-                <Route path="/bins" element={<BinListPage />} />
-                <Route path="/bin/:id" element={<BinDetailPage />} />
+                <Route
+                  path="/bins"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <BinListPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/bin/:id"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <BinDetailPage />
+                    </Suspense>
+                  }
+                />
                 <Route
                   path="/scan"
                   element={

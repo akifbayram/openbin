@@ -14,7 +14,7 @@
   --border-subtle: rgba(0, 0, 0, 0.06);
   --text-primary: #1c1c1e;
   --text-secondary: #3c3c43;
-  --text-tertiary: #8e8e93;
+  --text-tertiary: #6d6d72;
   --text-on-accent: #ffffff;
   --accent: #007aff;
   --accent-hover: #0066d6;
@@ -54,7 +54,7 @@
   --border-subtle: rgba(255, 255, 255, 0.06);
   --text-primary: #f5f5f7;
   --text-secondary: #ebebf0;
-  --text-tertiary: #8e8e93;
+  --text-tertiary: #98989d;
   --text-on-accent: #ffffff;
   --accent: #0a84ff;
   --accent-hover: #409cff;
@@ -330,4 +330,19 @@ body {
 
 .scan-text-fade-delay {
   animation: onboardFadeInUp 0.4s ease-out 0.8s both;
+}
+
+/* ─── Fade-in utility ─── */
+.fade-in-fast { animation: fadeInFast 0.15s ease-out; }
+@keyframes fadeInFast { from { opacity: 0; } to { opacity: 1; } }
+
+/* ─── Reduced Motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-step-enter, .scan-success-enter, .scan-check-scale,
+  .scan-check-draw, .scan-ring-1, .scan-ring-2, .scan-ring-3,
+  .scan-text-fade, .scan-text-fade-delay, .fade-in-fast {
+    animation: none !important;
+  }
+  .scan-check-draw { stroke-dashoffset: 0 !important; }
+  .scan-ring { opacity: 0 !important; }
 }

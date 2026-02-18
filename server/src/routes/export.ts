@@ -231,6 +231,9 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
   if (!bins || !Array.isArray(bins)) {
     throw new ValidationError('bins array is required');
   }
+  if (bins.length > 2000) {
+    throw new ValidationError('Too many bins in import (max 2000)');
+  }
 
   const importMode = mode || 'merge';
   const userId = req.user!.id;

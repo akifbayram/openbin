@@ -6,6 +6,7 @@ import { useSheetDismiss, getSheetPanelStyle, getSheetBackdropStyle } from '@/li
 interface DialogContextValue {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  titleId?: string;
 }
 
 const DialogContext = React.createContext<DialogContextValue>({
@@ -48,6 +49,32 @@ function DialogContent({
 }) {
   const { open, onOpenChange } = React.useContext(DialogContext);
   const contentRef = React.useRef<HTMLDivElement>(null);
+  const titleId = React.useId();
+
+  const [visible, setVisible] = React.useState(false);
+  const [animating, setAnimating] = React.useState<'enter' | 'exit' | null>(null);
+
+  const prefersReducedMotion = React.useRef(false);
+  React.useEffect(() => {
+    prefersReducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
+
+  React.useEffect(() => {
+    if (open) {
+      setVisible(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setAnimating('enter'));
+      });
+    } else if (visible) {
+      setAnimating('exit');
+      const duration = prefersReducedMotion.current ? 0 : 200;
+      const timer = setTimeout(() => {
+        setVisible(false);
+        setAnimating(null);
+      }, duration);
+      return () => clearTimeout(timer);
+    }
+  }, [open, visible]);
 
   const [isMobile, setIsMobile] = React.useState(false);
   React.useEffect(() => {
@@ -74,13 +101,13 @@ function DialogContent({
   }, [panelRef]);
 
   React.useEffect(() => {
-    if (open) {
+    if (visible) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
     return () => { document.body.style.overflow = ''; };
-  }, [open]);
+  }, [visible]);
 
   // Escape key to close
   React.useEffect(() => {
@@ -124,55 +151,69 @@ function DialogContent({
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!visible) return null;
+
+  const isEntered = animating === 'enter';
+  const isExiting = animating === 'exit';
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
-      <div
-        className="fixed inset-0 bg-[var(--overlay-backdrop)] backdrop-blur-sm"
-        style={getSheetBackdropStyle(translateY, isDragging, isDismissing)}
-        onClick={() => onOpenChange(false)}
-      />
-      <div
-        ref={mergedRef}
-        role="dialog"
-        aria-modal="true"
-        className={cn(
-          'relative z-[60] w-full sm:max-w-md glass-heavy',
-          'rounded-t-[var(--radius-xl)] sm:rounded-[var(--radius-xl)]',
-          'mx-0 sm:mx-4 max-h-[85vh] overflow-hidden flex flex-col',
-          className
-        )}
-        style={getSheetPanelStyle(translateY, isDragging, isDismissing)}
-        {...handlers}
-      >
-        <button
-          aria-label="Close"
-          className="absolute right-5 top-5 z-10 rounded-full p-1.5 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors hidden sm:flex items-center justify-center"
+    <DialogContext.Provider value={{ open, onOpenChange, titleId }}>
+      <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+        <div
+          className="fixed inset-0 bg-[var(--overlay-backdrop)] backdrop-blur-sm transition-opacity duration-200"
+          style={{
+            ...getSheetBackdropStyle(translateY, isDragging, isDismissing),
+            opacity: isEntered ? 1 : isExiting ? 0 : 0,
+          }}
           onClick={() => onOpenChange(false)}
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-        {/* Drag handle — outside scroll container so it's always grabbable */}
+        />
         <div
-          ref={handleRef}
+          ref={mergedRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
           className={cn(
-            'sm:hidden flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing',
+            'relative z-[60] w-full sm:max-w-md glass-heavy',
+            'rounded-t-[var(--radius-xl)] sm:rounded-[var(--radius-xl)]',
+            'mx-0 sm:mx-4 max-h-[85vh] overflow-hidden flex flex-col',
+            'transition-all duration-200',
+            className
           )}
+          style={{
+            ...getSheetPanelStyle(translateY, isDragging, isDismissing),
+            opacity: isEntered ? 1 : isExiting ? 0 : 0,
+            transform: `${getSheetPanelStyle(translateY, isDragging, isDismissing)?.transform ?? ''} translateY(${isEntered ? '0px' : '8px'})`.trim(),
+          }}
+          {...handlers}
         >
+          <button
+            aria-label="Close"
+            className="absolute right-5 top-5 z-10 rounded-full p-1.5 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors hidden sm:flex items-center justify-center"
+            onClick={() => onOpenChange(false)}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+          {/* Drag handle — outside scroll container so it's always grabbable */}
           <div
-            className="w-9 h-[5px] rounded-full bg-[var(--text-tertiary)] transition-opacity"
-            style={{ opacity: isDragging ? 0.6 : 0.3 }}
-          />
-        </div>
-        <div
-          ref={scrollRef}
-          className="overflow-y-auto min-h-0 px-8 pt-2 sm:pt-7 pb-[calc(24px+var(--safe-bottom))] sm:pb-6"
-        >
-          {children}
+            ref={handleRef}
+            className={cn(
+              'sm:hidden flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing',
+            )}
+          >
+            <div
+              className="w-9 h-[5px] rounded-full bg-[var(--text-tertiary)] transition-opacity"
+              style={{ opacity: isDragging ? 0.6 : 0.3 }}
+            />
+          </div>
+          <div
+            ref={scrollRef}
+            className="overflow-y-auto min-h-0 px-8 pt-2 sm:pt-7 pb-[calc(24px+var(--safe-bottom))] sm:pb-6"
+          >
+            {children}
+          </div>
         </div>
       </div>
-    </div>
+    </DialogContext.Provider>
   );
 }
 
@@ -181,7 +222,8 @@ function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 }
 
 function DialogTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h2 className={cn('text-[20px] font-bold text-[var(--text-primary)]', className)} {...props} />;
+  const { titleId } = React.useContext(DialogContext);
+  return <h2 id={titleId} className={cn('text-[20px] font-bold text-[var(--text-primary)]', className)} {...props} />;
 }
 
 function DialogDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {

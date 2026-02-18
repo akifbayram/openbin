@@ -7,15 +7,13 @@ services:
       DATABASE_PATH: /data/openbin.db
       PHOTO_STORAGE_PATH: /data/photos
       PORT: "4000"
-    ports:
-      - "4000:4000"
     volumes:
       - api_data:/data
 
   nginx:
     build: .
     ports:
-      - "80:80"
+      - "1453:1453"
     depends_on:
       - api
 

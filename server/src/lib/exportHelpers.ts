@@ -3,10 +3,12 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { query, querySync, generateUuid } from '../db.js';
 import { generateShortCode } from './shortCode.js';
+import { isPathSafe } from './pathSafety.js';
 
 const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
 
 const ALLOWED_PHOTO_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export interface ExportBin {
   id: string;
@@ -172,16 +174,20 @@ export function importPhotosSync(binId: string, photos: ExportPhoto[], userId: s
     const safeFilename = `${photoId}${safeExt}`;
     const storagePath = path.join(binId, safeFilename);
 
-    if (storagePath.includes('..')) continue;
+    const fullPath = path.join(PHOTO_STORAGE_PATH, storagePath);
+    if (!isPathSafe(fullPath, PHOTO_STORAGE_PATH)) continue;
 
     const dir = path.join(PHOTO_STORAGE_PATH, binId);
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(PHOTO_STORAGE_PATH, storagePath), buffer);
+    fs.writeFileSync(fullPath, buffer);
+
+    const safeOriginalName = path.basename(photo.filename || 'photo').slice(0, 255);
+    const safeMimeType = ALLOWED_MIME_TYPES.includes(photo.mimeType) ? photo.mimeType : 'image/jpeg';
 
     querySync(
       `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [photoId, binId, photo.filename, photo.mimeType, buffer.length, storagePath, userId]
+      [photoId, binId, safeOriginalName, safeMimeType, buffer.length, storagePath, userId]
     );
     count++;
   }

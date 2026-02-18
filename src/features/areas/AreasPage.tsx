@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useAuth } from '@/lib/auth';
+import { useToast } from '@/components/ui/toast';
+import { ApiError } from '@/lib/api';
 import { useBinList } from '@/features/bins/useBins';
 import { useLocationList } from '@/features/locations/useLocations';
 import { LocationCreateDialog, LocationJoinDialog, LocationRenameDialog, LocationDeleteDialog } from '@/features/locations/LocationDialogs';
@@ -28,6 +30,7 @@ export function AreasPage() {
   const navigate = useNavigate();
   const { user, activeLocationId, setActiveLocationId } = useAuth();
   const { locations, isLoading: locationsLoading } = useLocationList();
+  const { showToast } = useToast();
   const { areas } = useAreaList(activeLocationId);
   const { bins } = useBinList();
 
@@ -99,8 +102,8 @@ export function AreasPage() {
       await createArea(activeLocationId, newAreaName.trim());
       setNewAreaName('');
       setCreateAreaOpen(false);
-    } catch {
-      // Duplicate name — silently fail
+    } catch (err) {
+      showToast({ message: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong' });
     } finally {
       setCreatingArea(false);
     }
@@ -118,8 +121,8 @@ export function AreasPage() {
       await updateArea(activeLocationId, renamingId, renameValue.trim());
       setRenamingId(null);
       setRenameValue('');
-    } catch {
-      // Duplicate name — silently fail
+    } catch (err) {
+      showToast({ message: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong' });
     } finally {
       setRenaming(false);
     }
@@ -131,6 +134,8 @@ export function AreasPage() {
     try {
       await deleteArea(activeLocationId, deleteTarget.id);
       setDeleteTarget(null);
+    } catch {
+      showToast({ message: 'Something went wrong' });
     } finally {
       setDeletingArea(false);
     }

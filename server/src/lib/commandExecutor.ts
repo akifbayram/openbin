@@ -29,12 +29,19 @@ interface PendingActivity {
   changes?: Record<string, { old: unknown; new: unknown }>;
 }
 
+const MAX_ACTIONS = 50;
+const MAX_ITEMS_PER_ACTION = 500;
+
 export async function executeActions(
   actions: CommandAction[],
   locationId: string,
   userId: string,
   userName: string
 ): Promise<ExecuteResult> {
+  if (actions.length > MAX_ACTIONS) {
+    throw new Error(`Too many actions (${actions.length}). Maximum is ${MAX_ACTIONS}.`);
+  }
+
   const executed: ActionResult[] = [];
   const errors: string[] = [];
   const pendingActivities: PendingActivity[] = [];
@@ -77,6 +84,7 @@ function executeSingleAction(
 ): ActionResult {
   switch (action.type) {
     case 'add_items': {
+      if (action.items.length > MAX_ITEMS_PER_ACTION) throw new Error('Too many items per action (max 500)');
       const bin = querySync('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
       if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
       const maxResult = querySync<{ max_pos: number | null }>('SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1', [action.bin_id]);
@@ -170,6 +178,7 @@ function executeSingleAction(
 
       // Insert items into bin_items
       const createItems: string[] = action.items || [];
+      if (createItems.length > MAX_ITEMS_PER_ACTION) throw new Error('Too many items per action (max 500)');
       for (let i = 0; i < createItems.length; i++) {
         querySync('INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)', [generateUuid(), binId, createItems[i], i]);
       }

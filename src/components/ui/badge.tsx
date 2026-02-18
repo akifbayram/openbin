@@ -8,18 +8,31 @@ const badgeVariants = {
   outline: 'border border-[var(--border-glass)] text-[var(--text-secondary)]',
 };
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface BadgeProps extends React.HTMLAttributes<HTMLElement> {
   variant?: keyof typeof badgeVariants;
 }
 
-function Badge({ className, variant = 'default', ...props }: BadgeProps) {
+function Badge({ className, variant = 'default', onClick, ...props }: BadgeProps) {
+  const classes = cn(
+    'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-0.5 text-[12px] font-medium transition-colors',
+    badgeVariants[variant],
+    className
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className={cn(classes, 'border-0 cursor-pointer')}
+        onClick={onClick}
+        {...(props as React.ButtonHTMLAttributes<HTMLButtonElement>)}
+      />
+    );
+  }
+
   return (
     <div
-      className={cn(
-        'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-0.5 text-[12px] font-medium transition-colors',
-        badgeVariants[variant],
-        className
-      )}
+      className={classes}
       {...props}
     />
   );

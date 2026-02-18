@@ -15,8 +15,7 @@ import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 import { ScanSuccessOverlay } from '@/features/onboarding/ScanSuccessOverlay';
 import { useOnboarding } from '@/features/onboarding/useOnboarding';
 import { recordScan } from '@/features/dashboard/scanHistory';
-
-const BIN_URL_REGEX = /(?:#\/bin\/|\/bin\/)([a-f0-9-]{36})/i;
+import { BIN_URL_REGEX } from '@/lib/qr';
 
 export function QRScannerPage() {
   const t = useTerminology();

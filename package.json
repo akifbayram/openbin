@@ -5,10 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "dev:server": "cd server && npm run dev",
+    "dev:all": "npx concurrently -n api,web -c blue,green \"npm run dev:server\" \"npm run dev\"",
+    "build": "tsc && cp server/openapi.yaml public/api-docs/openapi.yaml && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "npx biome check src/",
+    "check": "tsc --noEmit && cd server && npx tsc --noEmit"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -22,6 +26,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.2",
     "@tailwindcss/vite": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -31,6 +36,7 @@
     "@types/react-dom": "^18.3.7",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.7.0",
+    "concurrently": "^9.2.1",
     "happy-dom": "^20.5.1",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",

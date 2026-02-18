@@ -438,13 +438,13 @@ export function PrintPage() {
                   <>
                     <div className="flex items-center gap-1 mt-3 px-1">
                       <span className="text-[12px] text-[var(--text-secondary)] font-medium mr-2">Orientation</span>
-                      <div className="flex rounded-[var(--radius-sm)] border border-[var(--border-default)] overflow-hidden">
+                      <div className="flex rounded-[var(--radius-sm)] border border-[var(--border-subtle)] overflow-hidden">
                         <button
                           className={cn(
                             'flex items-center gap-1.5 px-3 py-1.5 text-[13px] transition-colors',
                             effectiveOrientation === 'landscape'
                               ? 'bg-[var(--accent)] text-white'
-                              : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+                              : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                           )}
                           onClick={() => effectiveOrientation !== 'landscape' && toggleOrientation()}
                         >
@@ -453,10 +453,10 @@ export function PrintPage() {
                         </button>
                         <button
                           className={cn(
-                            'flex items-center gap-1.5 px-3 py-1.5 text-[13px] transition-colors border-l border-[var(--border-default)]',
+                            'flex items-center gap-1.5 px-3 py-1.5 text-[13px] transition-colors border-l border-[var(--border-subtle)]',
                             effectiveOrientation === 'portrait'
                               ? 'bg-[var(--accent)] text-white'
-                              : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+                              : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                           )}
                           onClick={() => effectiveOrientation !== 'portrait' && toggleOrientation()}
                         >
@@ -479,7 +479,7 @@ export function PrintPage() {
                             max={field.max}
                             value={getOverrideValue(field.key)}
                             onChange={(e) => updateOverride(field.key, e.target.value)}
-                            className="h-9 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] px-2.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
+                            className="h-9 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
                           />
                         </div>
                       ))}
@@ -494,7 +494,7 @@ export function PrintPage() {
                           onChange={(e) => setPresetName(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
                           autoFocus
-                          className="h-9 flex-1 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] px-2.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
+                          className="h-9 flex-1 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
                         />
                         <Button size="sm" onClick={handleSavePreset} disabled={!presetName.trim()} className="h-9 px-3">
                           Save
@@ -545,16 +545,16 @@ export function PrintPage() {
               <div className="mt-3 space-y-4">
                 <div className="px-1">
                   <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">Font Size</span>
-                  <div className="flex rounded-[var(--radius-sm)] border border-[var(--border-default)] overflow-hidden">
+                  <div className="flex rounded-[var(--radius-sm)] border border-[var(--border-subtle)] overflow-hidden">
                     {FONT_SCALE_PRESETS.map((preset) => (
                       <button
                         key={preset.value}
                         className={cn(
                           'flex-1 px-3 py-1.5 text-[13px] transition-colors',
-                          preset.value !== FONT_SCALE_PRESETS[0].value && 'border-l border-[var(--border-default)]',
+                          preset.value !== FONT_SCALE_PRESETS[0].value && 'border-l border-[var(--border-subtle)]',
                           labelOptions.fontScale === preset.value
                             ? 'bg-[var(--accent)] text-white'
-                            : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+                            : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                         )}
                         onClick={() => handleUpdateLabelOption('fontScale', preset.value)}
                       >

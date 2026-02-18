@@ -16,13 +16,15 @@ import savedViewsRoutes from './routes/savedViews.js';
 import scanHistoryRoutes from './routes/scanHistory.js';
 import activityRoutes from './routes/activity.js';
 import apiKeysRoutes from './routes/apiKeys.js';
+import { sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { HttpError } from './lib/httpErrors.js';
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = parseInt(process.env.PORT || '4000', 10);
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
 }));
 app.use(express.json({ limit: '1mb' }));
@@ -30,6 +32,7 @@ app.use(express.json({ limit: '1mb' }));
 // Routes
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', registerLimiter);
+app.use('/api/auth/password', sensitiveAuthLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/locations/join', joinLimiter);
 app.use('/api/locations', locationsRoutes);

@@ -31,7 +31,7 @@ router.get('/default-prompts', (_req, res) => {
 // API key requests get a higher limit for headless/smart-home integrations
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: ((req: import('express').Request) => (req as any).authMethod === 'api_key' ? 1000 : 30) as unknown as number,
+  max: (req: import('express').Request) => (req as any).authMethod === 'api_key' ? 1000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'RATE_LIMITED', message: 'Too many AI requests, please try again later' },

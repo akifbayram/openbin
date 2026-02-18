@@ -2,9 +2,11 @@ import { useEffect } from 'react';
 
 interface ScanSuccessOverlayProps {
   onDismiss: () => void;
+  title?: string;
+  subtitle?: string;
 }
 
-export function ScanSuccessOverlay({ onDismiss }: ScanSuccessOverlayProps) {
+export function ScanSuccessOverlay({ onDismiss, title = 'First scan complete!', subtitle = "You're all set" }: ScanSuccessOverlayProps) {
   useEffect(() => {
     const timer = setTimeout(onDismiss, 2800);
     return () => clearTimeout(timer);
@@ -39,10 +41,10 @@ export function ScanSuccessOverlay({ onDismiss }: ScanSuccessOverlayProps) {
 
       {/* Text */}
       <p className="mt-8 text-[22px] font-bold text-[var(--text-primary)] scan-text-fade">
-        First scan complete!
+        {title}
       </p>
       <p className="mt-2 text-[14px] text-[var(--text-tertiary)] scan-text-fade-delay">
-        You're all set
+        {subtitle}
       </p>
     </div>
   );

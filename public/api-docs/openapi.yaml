@@ -50,8 +50,7 @@ tags:
     description: Per-user saved bin list filter/sort views
   - name: ScanHistory
     description: Per-user QR scan history
-  - name: Shapes
-    description: Electric SQL shape proxy endpoints
+
 
 components:
   securitySchemes:
@@ -3428,99 +3427,3 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  # ════════════════════════════════════════════════════════
-  # Shapes (Electric SQL)
-  # ════════════════════════════════════════════════════════
-  /shapes/noop:
-    get:
-      tags: [Shapes]
-      summary: No-op shape endpoint
-      description: Returns an empty response. Used as a placeholder shape.
-      responses:
-        '200':
-          description: Empty response
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /shapes/bins:
-    get:
-      tags: [Shapes]
-      summary: Proxy bins shape
-      description: Proxies to Electric SQL for real-time bin sync. UUID validation on location_id.
-      parameters:
-        - name: location_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Shape data stream
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /shapes/photos:
-    get:
-      tags: [Shapes]
-      summary: Proxy photos shape
-      description: Proxies to Electric SQL for real-time photo sync for all bins in a location.
-      parameters:
-        - name: location_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Shape data stream
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /shapes/locations:
-    get:
-      tags: [Shapes]
-      summary: Proxy locations shape
-      description: Proxies to Electric SQL for real-time location sync for the current user.
-      responses:
-        '200':
-          description: Shape data stream
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /shapes/tag-colors:
-    get:
-      tags: [Shapes]
-      summary: Proxy tag-colors shape
-      parameters:
-        - name: location_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Shape data stream
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /shapes/location-members:
-    get:
-      tags: [Shapes]
-      summary: Proxy location-members shape
-      parameters:
-        - name: location_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Shape data stream
-        '401':
-          $ref: '#/components/responses/Unauthorized'

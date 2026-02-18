@@ -28,6 +28,7 @@ import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useAiAnalysis } from '@/features/ai/useAiAnalysis';
 import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/theme';
 import { useAiEnabled } from '@/lib/aiToggle';
@@ -247,88 +248,100 @@ export function BinDetailPage() {
         ) : (
           <div className="flex gap-1.5">
             {showAiButton && (
-              <Button
-                size="icon"
-                onClick={handleAnalyzeClick}
-                disabled={isAnalyzing}
-                aria-label="Analyze with AI"
-                className="rounded-full h-9 w-9 bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] active:scale-[0.97] transition-all"
-              >
-                {isAnalyzing ? (
-                  <Loader2 className="h-[18px] w-[18px] animate-spin" />
-                ) : (
-                  <Sparkles className="h-[18px] w-[18px]" />
-                )}
-              </Button>
+              <Tooltip content="Analyze with AI">
+                <Button
+                  size="icon"
+                  onClick={handleAnalyzeClick}
+                  disabled={isAnalyzing}
+                  aria-label="Analyze with AI"
+                  className="rounded-full h-9 w-9 bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] active:scale-[0.97] transition-all"
+                >
+                  {isAnalyzing ? (
+                    <Loader2 className="h-[18px] w-[18px] animate-spin" />
+                  ) : (
+                    <Sparkles className="h-[18px] w-[18px]" />
+                  )}
+                </Button>
+              </Tooltip>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={async () => {
-                if (bin.is_pinned) {
-                  await unpinBin(bin.id);
-                  showToast({ message: 'Unpinned' });
-                } else {
-                  await pinBin(bin.id);
-                  showToast({ message: 'Pinned' });
-                }
-              }}
-              aria-label={bin.is_pinned ? `Unpin ${t.bin}` : `Pin ${t.bin}`}
-              className="rounded-full h-9 w-9"
-            >
-              <Pin className="h-[18px] w-[18px]" fill={bin.is_pinned ? 'currentColor' : 'none'} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={startEdit}
-              aria-label={`Edit ${t.bin}`}
-              className="rounded-full h-9 w-9"
-            >
-              <Pencil className="h-[18px] w-[18px]" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(`/print?ids=${id}`)}
-              aria-label="Print label"
-              className="rounded-full h-9 w-9"
-            >
-              <Printer className="h-[18px] w-[18px]" />
-            </Button>
-            {otherLocations.length > 0 && (
+            <Tooltip content={bin.is_pinned ? 'Unpin' : 'Pin'}>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => {
-                  if (otherLocations.length === 1) {
-                    handleMove(otherLocations[0].id);
+                onClick={async () => {
+                  if (bin.is_pinned) {
+                    await unpinBin(bin.id);
+                    showToast({ message: 'Unpinned' });
                   } else {
-                    setMoveTargetId(null);
-                    setMoveOpen(true);
+                    await pinBin(bin.id);
+                    showToast({ message: 'Pinned' });
                   }
                 }}
-                aria-label={`Move ${t.bin}`}
+                aria-label={bin.is_pinned ? `Unpin ${t.bin}` : `Pin ${t.bin}`}
                 className="rounded-full h-9 w-9"
               >
-                <ArrowRightLeft className="h-[18px] w-[18px]" />
+                <Pin className="h-[18px] w-[18px]" fill={bin.is_pinned ? 'currentColor' : 'none'} />
               </Button>
+            </Tooltip>
+            <Tooltip content="Edit">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={startEdit}
+                aria-label={`Edit ${t.bin}`}
+                className="rounded-full h-9 w-9"
+              >
+                <Pencil className="h-[18px] w-[18px]" />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Print label">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(`/print?ids=${id}`)}
+                aria-label="Print label"
+                className="rounded-full h-9 w-9"
+              >
+                <Printer className="h-[18px] w-[18px]" />
+              </Button>
+            </Tooltip>
+            {otherLocations.length > 0 && (
+              <Tooltip content="Move">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    if (otherLocations.length === 1) {
+                      handleMove(otherLocations[0].id);
+                    } else {
+                      setMoveTargetId(null);
+                      setMoveOpen(true);
+                    }
+                  }}
+                  aria-label={`Move ${t.bin}`}
+                  className="rounded-full h-9 w-9"
+                >
+                  <ArrowRightLeft className="h-[18px] w-[18px]" />
+                </Button>
+              </Tooltip>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setDeleteOpen(true)}
-              aria-label={`Delete ${t.bin}`}
-              className="rounded-full h-9 w-9 text-[var(--destructive)]"
-            >
-              <Trash2 className="h-[18px] w-[18px]" />
-            </Button>
+            <Tooltip content="Delete">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setDeleteOpen(true)}
+                aria-label={`Delete ${t.bin}`}
+                className="rounded-full h-9 w-9 text-[var(--destructive)]"
+              >
+                <Trash2 className="h-[18px] w-[18px]" />
+              </Button>
+            </Tooltip>
           </div>
         )}
       </div>
 
       {editing ? (
-        <>
+        <div className="fade-in-fast contents">
           {/* Photos — collapsible, interactive add/delete works in both modes */}
           <Card>
             <CardContent className="!py-0">
@@ -420,9 +433,9 @@ export function BinDetailPage() {
             </CardContent>
           </Card>
 
-        </>
+        </div>
       ) : (
-        <>
+        <div className="fade-in-fast contents">
           {/* Title with location subtitle */}
           <div className="flex items-start gap-2.5">
             {(() => { const Icon = resolveIcon(bin.icon); return <Icon className="h-7 w-7 text-[var(--text-secondary)] shrink-0 mt-0.5" />; })()}
@@ -717,7 +730,7 @@ export function BinDetailPage() {
               )}
             </CardContent>
           </Card>
-        </>
+        </div>
       )}
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

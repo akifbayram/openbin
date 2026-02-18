@@ -48,7 +48,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   }
 
   if (!token) {
-    res.status(401).json({ error: 'No token provided' });
+    res.status(401).json({ error: 'UNAUTHORIZED', message: 'No token provided' });
     return;
   }
 
@@ -63,7 +63,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       [keyHash]
     ).then((result) => {
       if (result.rows.length === 0) {
-        res.status(401).json({ error: 'Invalid API key' });
+        res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid API key' });
         return;
       }
       const row = result.rows[0] as { key_id: string; id: string; username: string };
@@ -73,7 +73,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       query("UPDATE api_keys SET last_used_at = datetime('now') WHERE id = $1", [row.key_id]).catch(() => {});
       next();
     }).catch(() => {
-      res.status(401).json({ error: 'Authentication failed' });
+      res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication failed' });
     });
     return;
   }
@@ -85,7 +85,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     req.authMethod = 'jwt';
     next();
   } catch {
-    res.status(401).json({ error: 'Invalid token' });
+    res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid token' });
   }
 }
 
