@@ -244,6 +244,8 @@ components:
           format: date-time
         member_count:
           type: integer
+        area_count:
+          type: integer
         role:
           type: string
           enum: [owner, member]
