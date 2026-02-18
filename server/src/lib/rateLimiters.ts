@@ -1,6 +1,10 @@
 import rateLimit from 'express-rate-limit';
+import type { RequestHandler } from 'express';
 
-export const authLimiter = rateLimit({
+const noop: RequestHandler = (_req, _res, next) => next();
+const isTest = process.env.NODE_ENV === 'test';
+
+export const authLimiter: RequestHandler = isTest ? noop : rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   standardHeaders: true,
@@ -8,7 +12,7 @@ export const authLimiter = rateLimit({
   message: { error: 'RATE_LIMITED', message: 'Too many attempts, please try again later' },
 });
 
-export const registerLimiter = rateLimit({
+export const registerLimiter: RequestHandler = isTest ? noop : rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 3,
   standardHeaders: true,
@@ -16,7 +20,7 @@ export const registerLimiter = rateLimit({
   message: { error: 'RATE_LIMITED', message: 'Too many registration attempts, please try again later' },
 });
 
-export const joinLimiter = rateLimit({
+export const joinLimiter: RequestHandler = isTest ? noop : rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,
@@ -24,7 +28,7 @@ export const joinLimiter = rateLimit({
   message: { error: 'RATE_LIMITED', message: 'Too many attempts, please try again later' },
 });
 
-export const sensitiveAuthLimiter = rateLimit({
+export const sensitiveAuthLimiter: RequestHandler = isTest ? noop : rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,

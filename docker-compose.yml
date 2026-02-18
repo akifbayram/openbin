@@ -1,5 +1,6 @@
 services:
   api:
+    container_name: openbin-api
     build:
       context: ./server
       dockerfile: Dockerfile
@@ -11,6 +12,7 @@ services:
       - api_data:/data
 
   nginx:
+    container_name: openbin-nginx
     build: .
     ports:
       - "1453:1453"

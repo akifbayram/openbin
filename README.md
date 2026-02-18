@@ -1,12 +1,16 @@
 # OpenBin
 
-Self-hosted inventory system for organizing physical storage bins with QR codes. Print labels, stick them on containers, and scan to instantly look up contents. Snap a photo and let AI catalog the contents. Multi-user with shared locations.
+Self-hosted inventory system for organizing physical storage bins with QR codes. Print labels, scan to find contents, and optionally connect your own AI to do the heavy lifting: snap a photo and it names the bin, lists every item, and tags it for search. Ask "where are the batteries?" and get an answer. 
 
 ## Features
 
 - **Scan to find** — Camera-based QR scanner or manual short code lookup
-- **QR labels** — Generate and print label sheets (Avery 5160/5163/5167 + custom sizes)
-- **Photo attachments** — Attach photos; optionally use AI to auto-fill bin details
+- **QR labels** — Generate and print label sheets
+- **AI photo analysis** — Snap a photo of a bin and AI names it, lists every item, suggests tags, and adds notes
+- **Natural language commands** — "Add screwdriver to the tools bin" or "Move batteries to the garage"
+- **Inventory search** — Ask "Where did I put the holiday lights?" and get matching bins with explanations
+- **BYO API key** — Connects to OpenAI, Anthropic, Gemini, or any OpenAI-compatible endpoint. Customizable prompts. Fully optional
+- **Photo attachments** — Attach up to 5 photos per bin
 - **Shared locations** — Multi-user with invite codes and per-location areas
 - **Dashboard** — Stats, saved searches, pinned bins, recently scanned/updated bins, needs-organizing queue
 - **Search & filter** — By name, items, tags, areas, colors; saved views for quick access

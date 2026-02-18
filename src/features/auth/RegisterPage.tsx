@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, Sun, Moon, Monitor } from 'lucide-react';
+import { UserPlus, Sun, Moon, Monitor, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,12 +25,19 @@ export function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const passwordChecks = useMemo(() => ({
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    digit: /\d/.test(password),
+  }), [password]);
+
   function validate(): string | null {
     if (!USERNAME_REGEX.test(username)) {
       return 'Username must be 3-50 characters (letters, numbers, underscores)';
     }
-    if (password.length < 8) {
-      return 'Password must be at least 8 characters';
+    if (!passwordChecks.length || !passwordChecks.uppercase || !passwordChecks.lowercase || !passwordChecks.digit) {
+      return 'Password must be 8+ characters with uppercase, lowercase, and a number';
     }
     if (password !== confirmPassword) {
       return 'Passwords do not match';
@@ -107,10 +114,31 @@ export function RegisterPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 8 characters"
+                  placeholder="Min 8 chars, mixed case & number"
                   autoComplete="new-password"
                   required
                 />
+                {password.length > 0 && (
+                  <ul className="space-y-1 pt-1.5 text-[13px]">
+                    {([
+                      ['length', 'At least 8 characters'],
+                      ['uppercase', 'Contains an uppercase letter'],
+                      ['lowercase', 'Contains a lowercase letter'],
+                      ['digit', 'Contains a number'],
+                    ] as const).map(([key, label]) => (
+                      <li key={key} className="flex items-center gap-1.5">
+                        {passwordChecks[key] ? (
+                          <Check className="h-3.5 w-3.5 text-[var(--accent)] shrink-0" />
+                        ) : (
+                          <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--border-default)]" />
+                        )}
+                        <span className={passwordChecks[key] ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'}>
+                          {label}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reg-confirm">Confirm Password</Label>
