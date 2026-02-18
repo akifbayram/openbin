@@ -19,6 +19,9 @@ export interface Location {
   term_bin: string;
   term_location: string;
   term_area: string;
+  role?: 'owner' | 'member';
+  member_count?: number;
+  area_count?: number;
   created_at: string;
   updated_at: string;
 }

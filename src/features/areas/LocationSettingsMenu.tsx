@@ -1,0 +1,87 @@
+import { useState, useRef, useEffect } from 'react';
+import { Settings, Pencil, Clock, Trash2, LogOut, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+interface LocationSettingsMenuProps {
+  isOwner: boolean;
+  onRename: () => void;
+  onRetention: () => void;
+  onDelete: () => void;
+  onLeave: () => void;
+}
+
+export function LocationSettingsMenu({ isOwner, onRename, onRetention, onDelete, onLeave }: LocationSettingsMenuProps) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  function handleItem(action: () => void) {
+    setOpen(false);
+    action();
+  }
+
+  if (!isOwner) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onLeave}
+        className="rounded-[var(--radius-full)] h-8 px-3 text-[var(--destructive)]"
+      >
+        <LogOut className="h-3.5 w-3.5 mr-1.5" />
+        Leave
+      </Button>
+    );
+  }
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen(!open)}
+        className="rounded-[var(--radius-full)] h-8 px-3"
+      >
+        <Settings className="h-3.5 w-3.5 mr-1.5" />
+        Settings
+        <ChevronRight className={`h-3.5 w-3.5 ml-1 transition-transform ${open ? 'rotate-90' : ''}`} />
+      </Button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 z-50 min-w-[180px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]">
+          <button
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+            onClick={() => handleItem(onRename)}
+          >
+            <Pencil className="h-4 w-4 text-[var(--text-tertiary)]" />
+            Rename
+          </button>
+          <button
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+            onClick={() => handleItem(onRetention)}
+          >
+            <Clock className="h-4 w-4 text-[var(--text-tertiary)]" />
+            Data Retention
+          </button>
+          <div className="my-1 border-t border-[var(--border-glass)]" />
+          <button
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors"
+            onClick={() => handleItem(onDelete)}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete Location
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

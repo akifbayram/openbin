@@ -21,7 +21,8 @@ router.get('/', asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT l.id, l.name, l.created_by, l.invite_code, l.activity_retention_days, l.trash_retention_days, l.app_name, l.term_bin, l.term_location, l.term_area, l.created_at, l.updated_at,
             lm.role,
-            (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count
+            (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count,
+            (SELECT COUNT(*) FROM areas WHERE location_id = l.id) AS area_count
      FROM locations l
      JOIN location_members lm ON lm.location_id = l.id AND lm.user_id = $1
      ORDER BY l.updated_at DESC`,
@@ -41,6 +42,7 @@ router.get('/', asyncHandler(async (req, res) => {
     term_area: row.term_area,
     role: row.role,
     member_count: row.member_count,
+    area_count: row.area_count,
     created_at: row.created_at,
     updated_at: row.updated_at,
   }));
@@ -82,6 +84,7 @@ router.post('/', asyncHandler(async (req, res) => {
     term_area: location.term_area,
     role: 'owner',
     member_count: 1,
+    area_count: 0,
     created_at: location.created_at,
     updated_at: location.updated_at,
   });
@@ -268,6 +271,16 @@ router.post('/join', asyncHandler(async (req, res) => {
     entityName: req.user!.username,
   });
 
+  // Get area count for the joined location
+  const areaCountResult = await query(
+    'SELECT COUNT(*) AS area_count FROM areas WHERE location_id = $1',
+    [location.id]
+  );
+  const memberCountResult = await query(
+    'SELECT COUNT(*) AS member_count FROM location_members WHERE location_id = $1',
+    [location.id]
+  );
+
   res.status(201).json({
     id: location.id,
     name: location.name,
@@ -280,6 +293,8 @@ router.post('/join', asyncHandler(async (req, res) => {
     term_location: location.term_location,
     term_area: location.term_area,
     role: 'member',
+    member_count: memberCountResult.rows[0]?.member_count ?? 0,
+    area_count: areaCountResult.rows[0]?.area_count ?? 0,
     created_at: location.created_at,
     updated_at: location.updated_at,
   });
