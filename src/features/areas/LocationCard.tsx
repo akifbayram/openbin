@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Crown, Users, Search, Plus, MapPinned } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Check, Crown, Users, Plus, MapPinned } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -50,8 +49,6 @@ export function LocationCard({
   const t = useTerminology();
   const navigate = useNavigate();
   const isOwner = location.role === 'owner';
-  const [areaSearch, setAreaSearch] = useState('');
-
   const areaInfos = useMemo(() => {
     const countMap = new Map<string | null, number>();
     for (const bin of bins) {
@@ -69,12 +66,6 @@ export function LocationCard({
   const unassignedCount = useMemo(() => {
     return bins.filter((b) => !b.area_id).length;
   }, [bins]);
-
-  const filteredAreas = useMemo(() => {
-    if (!areaSearch.trim()) return areaInfos;
-    const q = areaSearch.toLowerCase().trim();
-    return areaInfos.filter((a) => a.name.toLowerCase().includes(q));
-  }, [areaInfos, areaSearch]);
 
   function handleAreaClick(areaId: string) {
     navigate('/bins', { state: { areaFilter: areaId } });
@@ -188,17 +179,6 @@ export function LocationCard({
             {t.Areas}
           </span>
           <div className="flex items-center gap-1.5">
-            {areaInfos.length > 3 && (
-              <div className="relative w-40">
-                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-tertiary)]" />
-                <Input
-                  value={areaSearch}
-                  onChange={(e) => setAreaSearch(e.target.value)}
-                  placeholder={`Search ${t.areas}...`}
-                  className="pl-8 h-7 text-[13px] rounded-[var(--radius-full)]"
-                />
-              </div>
-            )}
             {isOwner && (
               <Button
                 onClick={onCreateArea}
@@ -212,13 +192,13 @@ export function LocationCard({
           </div>
         </div>
 
-        {filteredAreas.length === 0 && unassignedCount === 0 ? (
+        {areaInfos.length === 0 && unassignedCount === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-8 text-[var(--text-tertiary)]">
             <MapPinned className="h-10 w-10 opacity-40" />
             <p className="text-[13px]">
-              {areaSearch ? `No ${t.areas} match your search` : `No ${t.areas} yet`}
+              {`No ${t.areas} yet`}
             </p>
-            {!areaSearch && isOwner && (
+            {isOwner && (
               <Button onClick={onCreateArea} variant="outline" size="sm" className="rounded-[var(--radius-full)]">
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
                 {`Create ${t.Area}`}
@@ -227,7 +207,7 @@ export function LocationCard({
           </div>
         ) : (
           <div className="flex flex-col -mx-4">
-            {filteredAreas.map((area) => (
+            {areaInfos.map((area) => (
               <AreaRow
                 key={area.id}
                 id={area.id}
@@ -239,23 +219,18 @@ export function LocationCard({
                 onDelete={onDeleteArea}
               />
             ))}
-            {unassignedCount > 0 && !areaSearch && (
-              <>
-                {filteredAreas.length > 0 && (
-                  <div className="mx-4 border-t border-[var(--border-glass)]" />
-                )}
-                <button
-                  onClick={handleUnassignedClick}
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-[var(--radius-md)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
-                >
-                  <span className="flex-1 text-[15px] text-[var(--text-tertiary)] italic">
-                    Unassigned
-                  </span>
-                  <span className="text-[13px] text-[var(--text-tertiary)] tabular-nums">
-                    {unassignedCount} {unassignedCount !== 1 ? t.bins : t.bin}
-                  </span>
-                </button>
-              </>
+            {unassignedCount > 0 && (
+              <button
+                onClick={handleUnassignedClick}
+                className="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
+              >
+                <span className="flex-1 text-[15px] text-[var(--text-primary)] font-medium">
+                  Unassigned
+                </span>
+                <span className="text-[13px] text-[var(--text-tertiary)] tabular-nums">
+                  {unassignedCount} {unassignedCount !== 1 ? t.bins : t.bin}
+                </span>
+              </button>
             )}
           </div>
         )}

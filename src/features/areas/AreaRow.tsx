@@ -80,7 +80,7 @@ export function AreaRow({ id, name, binCount, isOwner, onNavigate, onRename, onD
   }
 
   return (
-    <div className="group flex items-center gap-3 px-4 py-2.5 rounded-[var(--radius-md)] hover:bg-[var(--bg-hover)] transition-colors">
+    <div className="group flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--bg-hover)] transition-colors">
       <button
         className="flex-1 min-w-0 text-left cursor-pointer"
         onClick={() => onNavigate(id)}
