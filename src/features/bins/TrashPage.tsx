@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
 import { useLocationList } from '@/features/locations/useLocations';
 import { useTrashBins, restoreBinFromTrash, permanentDeleteBin, notifyBinsChanged } from './useBins';
 import type { Bin } from '@/types';
@@ -28,6 +29,7 @@ export function TrashPage() {
   const { bins, isLoading } = useTrashBins();
   const { showToast } = useToast();
   const { activeLocationId } = useAuth();
+  const t = useTerminology();
   const { locations } = useLocationList();
   const [confirmDelete, setConfirmDelete] = useState<Bin | null>(null);
   const activeLoc = locations.find((l) => l.id === activeLocationId);
@@ -38,7 +40,7 @@ export function TrashPage() {
       await restoreBinFromTrash(bin.id);
       showToast({ message: `"${bin.name}" restored` });
     } catch {
-      showToast({ message: 'Failed to restore bin' });
+      showToast({ message: `Failed to restore ${t.bin}` });
     }
   }
 
@@ -49,7 +51,7 @@ export function TrashPage() {
       notifyBinsChanged();
       showToast({ message: `"${confirmDelete.name}" permanently deleted` });
     } catch {
-      showToast({ message: 'Failed to delete bin' });
+      showToast({ message: `Failed to delete ${t.bin}` });
     } finally {
       setConfirmDelete(null);
     }
@@ -61,7 +63,7 @@ export function TrashPage() {
         Trash
       </h1>
       <p className="text-[13px] text-[var(--text-tertiary)]">
-        Deleted bins are kept for {retentionDays} day{retentionDays !== 1 ? 's' : ''} before being permanently removed.
+        Deleted {t.bins} are kept for {retentionDays} day{retentionDays !== 1 ? 's' : ''} before being permanently removed.
       </p>
 
       {isLoading ? (
@@ -80,7 +82,7 @@ export function TrashPage() {
             <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
               Trash is empty
             </p>
-            <p className="text-[13px]">Deleted bins will appear here</p>
+            <p className="text-[13px]">Deleted {t.bins} will appear here</p>
           </div>
         </div>
       ) : (

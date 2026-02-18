@@ -7,6 +7,7 @@ import { useBinList } from '@/features/bins/useBins';
 import { resolveIcon } from '@/lib/iconMap';
 import { getColorPreset } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
+import { useTerminology } from '@/lib/terminology';
 
 interface ItemEntry {
   name: string;
@@ -17,12 +18,13 @@ interface ItemEntry {
 }
 
 type SortOption = 'alpha' | 'bin';
-const sortLabels: Record<SortOption, string> = {
-  alpha: 'A–Z',
-  bin: 'By Bin',
+const sortLabels: Record<SortOption, (binLabel: string) => string> = {
+  alpha: () => 'A\u2013Z',
+  bin: (binLabel) => `By ${binLabel}`,
 };
 
 export function ItemsPage() {
+  const t = useTerminology();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortOption>('alpha');
   const navigate = useNavigate();
@@ -98,7 +100,7 @@ export function ItemsPage() {
             className="shrink-0 rounded-[var(--radius-full)] gap-1.5 h-10 px-3.5"
           >
             <ArrowUpDown className="h-3.5 w-3.5" />
-            <span className="text-[13px] truncate">{sortLabels[sort]}</span>
+            <span className="text-[13px] truncate">{sortLabels[sort](t.Bin)}</span>
           </Button>
         </div>
       )}
@@ -111,7 +113,7 @@ export function ItemsPage() {
               {search ? 'No items match your search' : 'No items yet'}
             </p>
             {!search && (
-              <p className="text-[13px]">Items added to bins will appear here</p>
+              <p className="text-[13px]">Items added to {t.bins} will appear here</p>
             )}
           </div>
         </div>

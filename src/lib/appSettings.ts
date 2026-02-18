@@ -4,6 +4,9 @@ import { useLocationList, updateLocation } from '@/features/locations/useLocatio
 
 export interface AppSettings {
   appName: string;
+  termBin: string;
+  termLocation: string;
+  termArea: string;
 }
 
 export function useAppSettings() {
@@ -13,6 +16,9 @@ export function useAppSettings() {
   const activeLocation = locations.find((l) => l.id === activeLocationId);
   const settings: AppSettings = {
     appName: activeLocation?.app_name ?? 'OpenBin',
+    termBin: activeLocation?.term_bin ?? '',
+    termLocation: activeLocation?.term_location ?? '',
+    termArea: activeLocation?.term_area ?? '',
   };
 
   useEffect(() => {
@@ -20,14 +26,25 @@ export function useAppSettings() {
   }, [settings.appName]);
 
   const updateSettings = useCallback((patch: Partial<AppSettings>) => {
-    if (activeLocationId && patch.appName !== undefined) {
-      updateLocation(activeLocationId, { app_name: patch.appName || 'OpenBin' });
+    if (!activeLocationId) return;
+    const payload: Record<string, string | number> = {};
+    if (patch.appName !== undefined) payload.app_name = patch.appName || 'OpenBin';
+    if (patch.termBin !== undefined) payload.term_bin = patch.termBin;
+    if (patch.termLocation !== undefined) payload.term_location = patch.termLocation;
+    if (patch.termArea !== undefined) payload.term_area = patch.termArea;
+    if (Object.keys(payload).length > 0) {
+      updateLocation(activeLocationId, payload);
     }
   }, [activeLocationId]);
 
   const resetSettings = useCallback(() => {
     if (activeLocationId) {
-      updateLocation(activeLocationId, { app_name: 'OpenBin' });
+      updateLocation(activeLocationId, {
+        app_name: 'OpenBin',
+        term_bin: '',
+        term_location: '',
+        term_area: '',
+      });
     }
   }, [activeLocationId]);
 

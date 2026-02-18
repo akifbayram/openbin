@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { resolveIcon } from '@/lib/iconMap';
 import { getColorPreset } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
+import { useTerminology } from '@/lib/terminology';
 import type { BulkAddPhoto, BulkAddAction } from './useBulkAdd';
 
 interface BulkAddSummaryStepProps {
@@ -23,6 +24,7 @@ export function BulkAddSummaryStep({
   onCreateAll,
   onRetryFailed,
 }: BulkAddSummaryStepProps) {
+  const t = useTerminology();
   const { theme } = useTheme();
   const [skippedExpanded, setSkippedExpanded] = useState(false);
 
@@ -43,12 +45,12 @@ export function BulkAddSummaryStep({
           {isCreating
             ? `Creating ${createdCount}/${totalToCreate}...`
             : allCreated
-              ? 'All bins created!'
-              : `Create ${createReady.length} Bin${createReady.length !== 1 ? 's' : ''}`}
+              ? `All ${t.bins} created!`
+              : `Create ${createReady.length} ${createReady.length !== 1 ? t.Bins : t.Bin}`}
         </h2>
         {!isCreating && !allCreated && (
           <p className="text-[13px] text-[var(--text-secondary)] mt-0.5">
-            Review your bins before creating them.
+            Review your {t.bins} before creating them.
           </p>
         )}
       </div>
@@ -227,7 +229,7 @@ export function BulkAddSummaryStep({
               ? `Creating...`
               : failed.length > 0
                 ? `Retry Failed (${failed.length})`
-                : `Create ${createReady.length} Bin${createReady.length !== 1 ? 's' : ''}`}
+                : `Create ${createReady.length} ${createReady.length !== 1 ? t.Bins : t.Bin}`}
           </Button>
         )}
       </div>

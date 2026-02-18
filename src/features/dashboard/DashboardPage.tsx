@@ -13,6 +13,7 @@ import { useAiEnabled } from '@/lib/aiToggle';
 import { useSavedViews, deleteView } from '@/lib/savedViews';
 import { SavedViewChips } from '@/components/SavedViewChips';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
+import { useTerminology } from '@/lib/terminology';
 import { useDashboard } from './useDashboard';
 import { BinCard } from '@/features/bins/BinCard';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
@@ -70,6 +71,7 @@ function SectionHeader({
 }
 
 export function DashboardPage() {
+  const t = useTerminology();
   const navigate = useNavigate();
   const { activeLocationId } = useAuth();
   const { aiEnabled } = useAiEnabled();
@@ -98,10 +100,10 @@ export function DashboardPage() {
           <MapPin className="h-16 w-16 opacity-40" />
           <div className="text-center space-y-1.5">
             <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
-              No location selected
+              {`No ${t.location} selected`}
             </p>
             <p className="text-[13px]">
-              Create or join a location to start organizing bins
+              {`Create or join a ${t.location} to start organizing ${t.bins}`}
             </p>
           </div>
           <Button
@@ -110,7 +112,7 @@ export function DashboardPage() {
             className="rounded-[var(--radius-full)] mt-1"
           >
             <MapPin className="h-4 w-4 mr-2" />
-            Manage Locations
+            {`Manage ${t.Locations}`}
           </Button>
         </div>
       </div>
@@ -147,7 +149,7 @@ export function DashboardPage() {
             onClick={() => setCreateOpen(true)}
             size="icon"
             className="h-10 w-10 rounded-full"
-            aria-label="New bin"
+            aria-label={`New ${t.bin}`}
           >
             <Plus className="h-5 w-5" />
           </Button>
@@ -160,7 +162,7 @@ export function DashboardPage() {
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search bins..."
+          placeholder={`Search ${t.bins}...`}
           className="pl-10 rounded-[var(--radius-full)] h-10 text-[15px]"
         />
       </div>
@@ -180,14 +182,14 @@ export function DashboardPage() {
       ) : (
         <div className="flex gap-3">
           <StatCard
-            label="Total Bins"
+            label={`Total ${t.Bins}`}
             value={totalBins}
             onClick={() => navigate('/bins')}
           />
           <StatCard label="Total Items" value={totalItems} />
           {totalAreas > 0 && (
             <StatCard
-              label="Areas"
+              label={t.Areas}
               value={totalAreas}
               onClick={() => navigate('/areas')}
             />
@@ -207,7 +209,7 @@ export function DashboardPage() {
             </div>
             <div className="text-left">
               <p className="text-[15px] font-semibold text-[var(--text-primary)]">
-                {needsOrganizing} bin{needsOrganizing !== 1 ? 's' : ''} need{needsOrganizing === 1 ? 's' : ''} organizing
+                {needsOrganizing} {needsOrganizing !== 1 ? t.bins : t.bin} need{needsOrganizing === 1 ? 's' : ''} organizing
               </p>
               <p className="text-[12px] text-[var(--text-tertiary)]">No tags, area, or items</p>
             </div>
@@ -256,7 +258,7 @@ export function DashboardPage() {
         <div className="flex flex-col gap-3">
           <SectionHeader
             title="Recently Updated"
-            action={{ label: 'All Bins', onClick: () => navigate('/bins') }}
+            action={{ label: `All ${t.Bins}`, onClick: () => navigate('/bins') }}
           />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {recentlyUpdated.map((bin) => (

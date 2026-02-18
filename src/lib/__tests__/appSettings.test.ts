@@ -42,7 +42,7 @@ describe('useAppSettings', () => {
 
   it('returns defaults when no active location', () => {
     const { result } = renderHook(() => useAppSettings());
-    expect(result.current.settings).toEqual({ appName: 'OpenBin' });
+    expect(result.current.settings).toEqual({ appName: 'OpenBin', termBin: '', termLocation: '', termArea: '' });
   });
 
   it('reads app_name from active location', () => {
@@ -88,6 +88,6 @@ describe('useAppSettings', () => {
       result.current.resetSettings();
     });
 
-    expect(mockUpdateLocation).toHaveBeenCalledWith('loc-1', { app_name: 'OpenBin' });
+    expect(mockUpdateLocation).toHaveBeenCalledWith('loc-1', { app_name: 'OpenBin', term_bin: '', term_location: '', term_area: '' });
   });
 });

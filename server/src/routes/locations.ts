@@ -19,7 +19,7 @@ function generateInviteCode(): string {
 // GET /api/locations — list user's locations
 router.get('/', asyncHandler(async (req, res) => {
   const result = await query(
-    `SELECT l.id, l.name, l.created_by, l.invite_code, l.activity_retention_days, l.trash_retention_days, l.app_name, l.created_at, l.updated_at,
+    `SELECT l.id, l.name, l.created_by, l.invite_code, l.activity_retention_days, l.trash_retention_days, l.app_name, l.term_bin, l.term_location, l.term_area, l.created_at, l.updated_at,
             lm.role,
             (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count
      FROM locations l
@@ -36,6 +36,9 @@ router.get('/', asyncHandler(async (req, res) => {
     activity_retention_days: row.activity_retention_days,
     trash_retention_days: row.trash_retention_days,
     app_name: row.app_name,
+    term_bin: row.term_bin,
+    term_location: row.term_location,
+    term_area: row.term_area,
     role: row.role,
     member_count: row.member_count,
     created_at: row.created_at,
@@ -54,7 +57,7 @@ router.post('/', asyncHandler(async (req, res) => {
   const inviteCode = generateInviteCode();
   const locationId = generateUuid();
   const locationResult = await query(
-    'INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4) RETURNING id, name, invite_code, activity_retention_days, trash_retention_days, app_name, created_at, updated_at',
+    'INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4) RETURNING id, name, invite_code, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, created_at, updated_at',
     [locationId, name.trim(), req.user!.id, inviteCode]
   );
 
@@ -74,6 +77,9 @@ router.post('/', asyncHandler(async (req, res) => {
     activity_retention_days: location.activity_retention_days,
     trash_retention_days: location.trash_retention_days,
     app_name: location.app_name,
+    term_bin: location.term_bin,
+    term_location: location.term_location,
+    term_area: location.term_area,
     role: 'owner',
     member_count: 1,
     created_at: location.created_at,
@@ -84,14 +90,14 @@ router.post('/', asyncHandler(async (req, res) => {
 // PUT /api/locations/:id — update location (owner only)
 router.put('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, activity_retention_days, trash_retention_days, app_name } = req.body;
+  const { name, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area } = req.body;
 
   if (!await isLocationOwner(id, req.user!.id)) {
     throw new ForbiddenError('Only the owner can update this location');
   }
 
   // At least one field must be provided
-  if (name === undefined && activity_retention_days === undefined && trash_retention_days === undefined && app_name === undefined) {
+  if (name === undefined && activity_retention_days === undefined && trash_retention_days === undefined && app_name === undefined && term_bin === undefined && term_location === undefined && term_area === undefined) {
     throw new ValidationError('At least one field must be provided');
   }
 
@@ -111,8 +117,15 @@ router.put('/:id', asyncHandler(async (req, res) => {
     throw new ValidationError('App name cannot be empty');
   }
 
+  for (const [field, value] of [['term_bin', term_bin], ['term_location', term_location], ['term_area', term_area]] as const) {
+    if (value !== undefined) {
+      if (typeof value !== 'string') throw new ValidationError(`${field} must be a string`);
+      if (value.length > 61) throw new ValidationError(`${field} must be at most 61 characters`);
+    }
+  }
+
   // Get old state for activity log
-  const oldResult = await query('SELECT name, activity_retention_days, trash_retention_days, app_name FROM locations WHERE id = $1', [id]);
+  const oldResult = await query('SELECT name, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area FROM locations WHERE id = $1', [id]);
   if (oldResult.rows.length === 0) {
     throw new NotFoundError('Location not found');
   }
@@ -138,12 +151,24 @@ router.put('/:id', asyncHandler(async (req, res) => {
     setClauses.push(`app_name = $${paramIdx++}`);
     params.push(app_name.trim());
   }
+  if (term_bin !== undefined) {
+    setClauses.push(`term_bin = $${paramIdx++}`);
+    params.push(term_bin.trim());
+  }
+  if (term_location !== undefined) {
+    setClauses.push(`term_location = $${paramIdx++}`);
+    params.push(term_location.trim());
+  }
+  if (term_area !== undefined) {
+    setClauses.push(`term_area = $${paramIdx++}`);
+    params.push(term_area.trim());
+  }
 
   params.push(id);
 
   const result = await query(
     `UPDATE locations SET ${setClauses.join(', ')} WHERE id = $${paramIdx}
-     RETURNING id, name, created_by, invite_code, activity_retention_days, trash_retention_days, app_name, created_at, updated_at`,
+     RETURNING id, name, created_by, invite_code, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, created_at, updated_at`,
     params
   );
 
@@ -155,6 +180,9 @@ router.put('/:id', asyncHandler(async (req, res) => {
   if (activity_retention_days !== undefined) newObj.activity_retention_days = Number(activity_retention_days);
   if (trash_retention_days !== undefined) newObj.trash_retention_days = Number(trash_retention_days);
   if (app_name !== undefined) newObj.app_name = app_name.trim();
+  if (term_bin !== undefined) newObj.term_bin = term_bin.trim();
+  if (term_location !== undefined) newObj.term_location = term_location.trim();
+  if (term_area !== undefined) newObj.term_area = term_area.trim();
   const changes = computeChanges(oldLoc, newObj, Object.keys(newObj));
   if (changes) {
     logActivity({
@@ -177,6 +205,9 @@ router.put('/:id', asyncHandler(async (req, res) => {
     activity_retention_days: location.activity_retention_days,
     trash_retention_days: location.trash_retention_days,
     app_name: location.app_name,
+    term_bin: location.term_bin,
+    term_location: location.term_location,
+    term_area: location.term_area,
     created_at: location.created_at,
     updated_at: location.updated_at,
   });
@@ -208,7 +239,7 @@ router.post('/join', asyncHandler(async (req, res) => {
   }
 
   const locationResult = await query(
-    'SELECT id, name, created_by, activity_retention_days, trash_retention_days, app_name, created_at, updated_at FROM locations WHERE invite_code = $1',
+    'SELECT id, name, created_by, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, created_at, updated_at FROM locations WHERE invite_code = $1',
     [inviteCode.trim()]
   );
 
@@ -245,6 +276,9 @@ router.post('/join', asyncHandler(async (req, res) => {
     activity_retention_days: location.activity_retention_days,
     trash_retention_days: location.trash_retention_days,
     app_name: location.app_name,
+    term_bin: location.term_bin,
+    term_location: location.term_location,
+    term_area: location.term_area,
     role: 'member',
     created_at: location.created_at,
     updated_at: location.updated_at,

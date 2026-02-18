@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { useBinList } from '@/features/bins/useBins';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
 import { LabelSheet } from './LabelSheet';
 import { LABEL_FORMATS, getLabelFormat, DEFAULT_LABEL_FORMAT, getOrientation, computeLabelsPerPage } from './labelFormats';
 import { usePrintSettings } from './usePrintSettings';
@@ -83,6 +84,7 @@ export function PrintPage() {
   const [searchParams] = useSearchParams();
   const { bins: allBins, isLoading: binsLoading } = useBinList(undefined, 'name');
   const { activeLocationId } = useAuth();
+  const t = useTerminology();
   const { areas } = useAreaList(activeLocationId);
   const { settings, isLoading: settingsLoading, updateFormatKey, updateCustomState, updateLabelOptions, addPreset, removePreset } = usePrintSettings();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -257,7 +259,7 @@ export function PrintPage() {
                 className="flex items-center gap-2 flex-1 min-w-0"
                 onClick={() => setBinsExpanded((v) => !v)}
               >
-                <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Select Bins</Label>
+                <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Select {t.Bins}</Label>
                 <span className="text-[13px] text-[var(--text-tertiary)]">({selectedIds.size} selected)</span>
                 <ChevronDown className={cn(
                   'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
@@ -317,7 +319,7 @@ export function PrintPage() {
                 )}
                 {allBins.length === 0 ? (
                   <p className="text-[13px] text-[var(--text-tertiary)] py-8 text-center">
-                    No bins to print. Create some bins first.
+                    No {t.bins} to print. Create some {t.bins} first.
                   </p>
                 ) : (
                   <div className="space-y-0.5 max-h-80 overflow-y-auto -mx-2">
@@ -566,10 +568,10 @@ export function PrintPage() {
                   <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-1">Visible Elements</span>
                   {([
                     { key: 'showQrCode' as const, label: 'QR Code' },
-                    { key: 'showBinName' as const, label: 'Bin Name' },
-                    { key: 'showIcon' as const, label: 'Bin Icon' },
-                    { key: 'showLocation' as const, label: 'Area' },
-                    { key: 'showBinCode' as const, label: 'Bin Code' },
+                    { key: 'showBinName' as const, label: `${t.Bin} Name` },
+                    { key: 'showIcon' as const, label: `${t.Bin} Icon` },
+                    { key: 'showLocation' as const, label: t.Area },
+                    { key: 'showBinCode' as const, label: `${t.Bin} Code` },
                     { key: 'showColorSwatch' as const, label: 'Color Swatch' },
                   ]).map(({ key, label }) => (
                     <label key={key} className="flex items-center gap-3 px-2 py-1.5 cursor-pointer rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] transition-colors">
@@ -593,7 +595,7 @@ export function PrintPage() {
               className="w-full rounded-[var(--radius-md)] h-12 text-[17px]"
             >
               <Printer className="h-5 w-5 mr-2.5" />
-              Print {selectedBins.length} Label{selectedBins.length !== 1 ? 's' : ''}
+              Print {selectedBins.length} {selectedBins.length !== 1 ? 'Labels' : 'Label'}
             </Button>
 
             <Card>

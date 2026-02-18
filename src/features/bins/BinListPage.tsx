@@ -32,10 +32,12 @@ import { SortMenu } from './SortMenu';
 import { SaveViewDialog } from './SaveViewDialog';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAiEnabled } from '@/lib/aiToggle';
+import { useTerminology } from '@/lib/terminology';
 import type { SavedView } from '@/lib/savedViews';
 import type { Bin } from '@/types';
 
 export function BinListPage() {
+  const t = useTerminology();
   const location = useLocation();
   const [search, setSearch] = useState(() => {
     const state = location.state as { search?: string } | null;
@@ -118,7 +120,7 @@ export function BinListPage() {
     haptic([50, 30, 50]);
     clearSelection();
     showToast({
-      message: `Deleted ${snapshots.length} bin${snapshots.length !== 1 ? 's' : ''}`,
+      message: `Deleted ${snapshots.length} ${snapshots.length !== 1 ? t.bins : t.bin}`,
       action: {
         label: 'Undo',
         onClick: async () => {
@@ -135,7 +137,7 @@ export function BinListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-          Bins
+          {t.Bins}
         </h1>
         {activeLocationId && (
           <div className="flex items-center gap-2">
@@ -153,7 +155,7 @@ export function BinListPage() {
               onClick={() => setCreateOpen(true)}
               size="icon"
               className="h-10 w-10 rounded-full"
-              aria-label="New bin"
+              aria-label={`New ${t.bin}`}
             >
               <Plus className="h-5 w-5" />
             </Button>
@@ -169,7 +171,7 @@ export function BinListPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search bins..."
+              placeholder={`Search ${t.bins}...`}
               className="pl-10 rounded-[var(--radius-full)] h-10 text-[15px]"
             />
           </div>
@@ -178,7 +180,7 @@ export function BinListPage() {
             size="icon"
             onClick={() => setFilterOpen(true)}
             className="shrink-0 h-10 w-10 rounded-full relative"
-            aria-label="Filter bins"
+            aria-label={`Filter ${t.bins}`}
           >
             <SlidersHorizontal className="h-4 w-4" />
             {activeCount > 0 && (
@@ -229,13 +231,13 @@ export function BinListPage() {
           <MapPin className="h-16 w-16 opacity-40" />
           <div className="text-center space-y-1.5">
             <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
-              No location selected
+              {`No ${t.location} selected`}
             </p>
-            <p className="text-[13px]">Create or join a location to start organizing bins</p>
+            <p className="text-[13px]">{`Create or join a ${t.location} to start organizing ${t.bins}`}</p>
           </div>
           <Button onClick={() => navigate('/settings')} variant="outline" className="rounded-[var(--radius-full)] mt-1">
             <MapPin className="h-4 w-4 mr-2" />
-            Manage Locations
+            {`Manage ${t.Locations}`}
           </Button>
         </div>
       ) : (
@@ -256,16 +258,16 @@ export function BinListPage() {
               <PackageOpen className="h-16 w-16 opacity-40" />
               <div className="text-center space-y-1.5">
                 <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
-                  {search || activeCount > 0 ? 'No bins match your filters' : 'No bins yet'}
+                  {search || activeCount > 0 ? `No ${t.bins} match your filters` : `No ${t.bins} yet`}
                 </p>
                 {!search && activeCount === 0 && (
-                  <p className="text-[13px]">Create your first bin to get started</p>
+                  <p className="text-[13px]">{`Create your first ${t.bin} to get started`}</p>
                 )}
               </div>
               {!search && activeCount === 0 && (
                 <Button onClick={() => setCreateOpen(true)} variant="outline" className="rounded-[var(--radius-full)] mt-1">
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Bin
+                  {`Create ${t.Bin}`}
                 </Button>
               )}
             </div>

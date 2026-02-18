@@ -3,6 +3,7 @@ import { Clock, Package, MapPin, Users, Image, RotateCcw, Trash2, Plus, Pencil, 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useActivityLog } from './useActivity';
+import { useTerminology, type Terminology } from '@/lib/terminology';
 import type { ActivityLogEntry } from '@/types';
 
 function getActionIcon(entry: ActivityLogEntry) {
@@ -29,31 +30,31 @@ function getActionColor(action: string): string {
   return 'text-[var(--text-tertiary)]';
 }
 
-function getActionLabel(entry: ActivityLogEntry): string {
+function getActionLabel(entry: ActivityLogEntry, t: Terminology): string {
   const name = entry.entity_name ? `"${entry.entity_name}"` : '';
   const { action, entity_type } = entry;
 
   if (entity_type === 'bin') {
-    if (action === 'create') return `created bin ${name}`;
-    if (action === 'update') return `updated bin ${name}`;
-    if (action === 'delete') return `deleted bin ${name}`;
-    if (action === 'restore') return `restored bin ${name}`;
-    if (action === 'permanent_delete') return `permanently deleted bin ${name}`;
+    if (action === 'create') return `created ${t.bin} ${name}`;
+    if (action === 'update') return `updated ${t.bin} ${name}`;
+    if (action === 'delete') return `deleted ${t.bin} ${name}`;
+    if (action === 'restore') return `restored ${t.bin} ${name}`;
+    if (action === 'permanent_delete') return `permanently deleted ${t.bin} ${name}`;
     if (action === 'add_photo') return `added photo to ${name}`;
     if (action === 'delete_photo') return `removed photo from ${name}`;
   }
   if (entity_type === 'area') {
-    if (action === 'create') return `created area ${name}`;
-    if (action === 'update') return `renamed area to ${name}`;
-    if (action === 'delete') return `deleted area ${name}`;
+    if (action === 'create') return `created ${t.area} ${name}`;
+    if (action === 'update') return `renamed ${t.area} to ${name}`;
+    if (action === 'delete') return `deleted ${t.area} ${name}`;
   }
   if (entity_type === 'member') {
-    if (action === 'join') return `joined the location`;
-    if (action === 'leave') return `left the location`;
+    if (action === 'join') return `joined the ${t.location}`;
+    if (action === 'leave') return `left the ${t.location}`;
     if (action === 'remove_member') return `removed ${name}`;
   }
   if (entity_type === 'location') {
-    if (action === 'update') return `updated location ${name}`;
+    if (action === 'update') return `updated ${t.location} ${name}`;
   }
 
   return `${action} ${entity_type} ${name}`;
@@ -98,6 +99,7 @@ function groupByDate(entries: ActivityLogEntry[]): Map<string, ActivityLogEntry[
 
 export function ActivityPage() {
   const navigate = useNavigate();
+  const t = useTerminology();
   const { entries, isLoading, hasMore, loadMore } = useActivityLog({ limit: 50 });
   const grouped = groupByDate(entries);
 
@@ -126,7 +128,7 @@ export function ActivityPage() {
             <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
               No activity yet
             </p>
-            <p className="text-[13px]">Actions like creating, editing, and deleting bins will appear here</p>
+            <p className="text-[13px]">Actions like creating, editing, and deleting {t.bins} will appear here</p>
           </div>
         </div>
       ) : (
@@ -153,7 +155,7 @@ export function ActivityPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-[14px] text-[var(--text-primary)]">
                         <span className="font-medium">{entry.display_name}</span>{' '}
-                        {getActionLabel(entry)}
+                        {getActionLabel(entry, t)}
                       </p>
                       {entry.changes && (
                         <div className="mt-1 text-[12px] text-[var(--text-tertiary)]">
@@ -188,7 +190,7 @@ export function ActivityPage() {
                               return null;
                             }
                             // Readable labels for known fields
-                            const label = field === 'area' ? 'area'
+                            const label = field === 'area' ? t.area
                               : field === 'name' ? 'name'
                               : field;
                             return (

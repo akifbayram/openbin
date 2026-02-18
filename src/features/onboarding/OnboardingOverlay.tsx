@@ -16,8 +16,9 @@ import { useTextStructuring } from '@/features/ai/useTextStructuring';
 import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
 import { InlineAiSetup, AiConfiguredIndicator } from '@/features/ai/InlineAiSetup';
 import { COLOR_PALETTE } from '@/lib/colorPalette';
+import { useTerminology } from '@/lib/terminology';
 
-const STEPS = ['Location', 'Bin'] as const;
+const STEPS = ['location', 'bin'] as const;
 
 export interface OnboardingActions {
   step: number;
@@ -27,6 +28,7 @@ export interface OnboardingActions {
 }
 
 export function OnboardingOverlay({ step, locationId, advanceWithLocation, complete }: OnboardingActions) {
+  const t = useTerminology();
   const { setActiveLocationId } = useAuth();
   const { showToast } = useToast();
   const { settings: existingAiSettings, isLoading: aiSettingsLoading } = useAiSettings();
@@ -139,7 +141,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
       setActiveLocationId(loc.id);
       advanceWithLocation(loc.id);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to create location' });
+      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.location}` });
     } finally {
       setLoading(false);
     }
@@ -177,7 +179,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
 
       setShowSuccess(true);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to create bin' });
+      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.bin}` });
     } finally {
       setLoading(false);
     }
@@ -188,7 +190,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
     try {
       // Only create a location if one wasn't already created in step 0
       if (!locationId) {
-        const loc = await createLocation('My Location');
+        const loc = await createLocation(`My ${t.Location}`);
         setActiveLocationId(loc.id);
       }
       complete();
@@ -241,10 +243,10 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
                 <MapPin className="h-8 w-8 text-[var(--accent)]" />
               </div>
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                Name your location
+                Name your {t.location}
               </h2>
               <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
-                A location groups your bins — it could be your home, a garage, an office, or any space you want to organize.
+                A {t.location} groups your {t.bins} — it could be your home, a garage, an office, or any space you want to organize.
               </p>
               <Input
                 value={locationName}
@@ -272,10 +274,10 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
                 <Package className="h-8 w-8 text-[var(--accent)]" />
               </div>
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                Create your first bin
+                Create your first {t.bin}
               </h2>
               <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
-                A bin is any container you want to track — a box, drawer, shelf, etc.
+                A {t.bin} is any container you want to track — a box, drawer, shelf, etc.
               </p>
               <div className="w-full space-y-3 mb-4">
                 {/* Photo upload area */}
@@ -350,7 +352,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
                 <Input
                   value={binName}
                   onChange={(e) => setBinName(e.target.value)}
-                  placeholder="Bin name"
+                  placeholder={`${t.Bin} name`}
                   autoFocus
                 />
 
@@ -685,7 +687,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
                 disabled={!binName.trim() || loading}
                 className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
               >
-                {loading ? 'Creating...' : 'Create Bin'}
+                {loading ? 'Creating...' : `Create ${t.Bin}`}
               </Button>
             </div>
           )}
@@ -697,6 +699,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
 }
 
 function BinSuccessOverlay({ onDismiss }: { onDismiss: () => void }) {
+  const { bin: binLabel } = useTerminology();
   useEffect(() => {
     const timer = setTimeout(onDismiss, 2800);
     return () => clearTimeout(timer);
@@ -731,7 +734,7 @@ function BinSuccessOverlay({ onDismiss }: { onDismiss: () => void }) {
 
       {/* Text */}
       <p className="mt-8 text-[22px] font-bold text-[var(--text-primary)] scan-text-fade">
-        First bin created!
+        First {binLabel} created!
       </p>
       <p className="mt-2 text-[14px] text-[var(--text-tertiary)] scan-text-fade-delay">
         You're all set

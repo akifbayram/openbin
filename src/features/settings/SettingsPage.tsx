@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, Monitor, Download, Upload, AlertTriangle, RotateCcw, LogOut, MapPin, Plus, LogIn, Users, Crown, ChevronRight, Trash2, Pencil, Clock, FileArchive, FileSpreadsheet, Settings2 } from 'lucide-react';
+import { Sun, Moon, Monitor, Download, Upload, AlertTriangle, RotateCcw, LogOut, ChevronRight, Trash2, Clock, FileArchive, FileSpreadsheet } from 'lucide-react';
+import { Disclosure } from '@/components/ui/disclosure';
 import { getAvatarUrl } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -20,11 +19,9 @@ import { useToast } from '@/components/ui/toast';
 import { useTheme } from '@/lib/theme';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAppSettings } from '@/lib/appSettings';
+import { useTerminology } from '@/lib/terminology';
 import { useAuth } from '@/lib/auth';
 import { useBinList } from '@/features/bins/useBins';
-import { useLocationList, updateLocation } from '@/features/locations/useLocations';
-import { LocationMembersDialog } from '@/features/locations/LocationMembersDialog';
-import { LocationCreateDialog, LocationJoinDialog, LocationRenameDialog, LocationDeleteDialog } from '@/features/locations/LocationDialogs';
 import type { ExportData } from '@/types';
 import {
   exportAllData,
@@ -45,7 +42,8 @@ export function SettingsPage() {
   const { preference, setThemePreference } = useTheme();
   const { aiEnabled, setAiEnabled } = useAiEnabled();
   const { settings, updateSettings, resetSettings } = useAppSettings();
-  const { user, activeLocationId, setActiveLocationId, logout, deleteAccount } = useAuth();
+  const t = useTerminology();
+  const { user, activeLocationId, logout, deleteAccount } = useAuth();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
@@ -54,20 +52,6 @@ export function SettingsPage() {
   const [exporting, setExporting] = useState(false);
   const [exportingZip, setExportingZip] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
-
-  // Locations state
-  const { locations, isLoading: locationsLoading } = useLocationList();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [joinOpen, setJoinOpen] = useState(false);
-  const [membersLocationId, setMembersLocationId] = useState<string | null>(null);
-  const [renameLocationId, setRenameLocationId] = useState<string | null>(null);
-  const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
-
-  // Data retention state
-  const [retentionLocationId, setRetentionLocationId] = useState<string | null>(null);
-  const [activityRetention, setActivityRetention] = useState(90);
-  const [trashRetention, setTrashRetention] = useState(30);
-  const [savingRetention, setSavingRetention] = useState(false);
 
   // Delete account state
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -87,23 +71,6 @@ export function SettingsPage() {
       }
     }
   }, []);
-
-  async function handleSaveRetention() {
-    if (!retentionLocationId) return;
-    setSavingRetention(true);
-    try {
-      await updateLocation(retentionLocationId, {
-        activity_retention_days: activityRetention,
-        trash_retention_days: trashRetention,
-      });
-      setRetentionLocationId(null);
-      showToast({ message: 'Retention settings saved' });
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to save retention settings' });
-    } finally {
-      setSavingRetention(false);
-    }
-  }
 
   async function handleExport() {
     if (!activeLocationId) {
@@ -267,123 +234,6 @@ export function SettingsPage() {
         </Card>
       )}
 
-      {/* Locations */}
-      <Card>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <Label>Locations</Label>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setJoinOpen(true)}
-                className="rounded-[var(--radius-full)] h-8 px-3"
-              >
-                <LogIn className="h-3.5 w-3.5 mr-1.5" />
-                Join
-              </Button>
-              <Button
-                onClick={() => setCreateOpen(true)}
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                aria-label="Create location"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 mt-3">
-            {locationsLoading ? (
-              <div className="space-y-2">
-                {[1, 2].map((i) => (
-                  <Skeleton key={i} className="h-12 rounded-[var(--radius-sm)]" />
-                ))}
-              </div>
-            ) : locations.length === 0 ? (
-              <p className="text-[13px] text-[var(--text-tertiary)] py-4 text-center">
-                No locations yet. Create one or join with an invite code.
-              </p>
-            ) : (
-              locations.map((loc) => {
-                const isActive = loc.id === activeLocationId;
-                const isOwner = loc.created_by === user?.id;
-                return (
-                  <button
-                    key={loc.id}
-                    className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-left transition-colors hover:bg-[var(--bg-hover)] ${isActive ? 'ring-2 ring-[var(--accent)] bg-[var(--bg-input)]' : ''}`}
-                    onClick={() => setActiveLocationId(loc.id)}
-                  >
-                    <MapPin className="h-5 w-5 text-[var(--text-secondary)] shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
-                          {loc.name}
-                        </span>
-                        {isOwner && (
-                          <Badge variant="secondary" className="text-[11px] gap-1 py-0">
-                            <Crown className="h-3 w-3" />
-                            Owner
-                          </Badge>
-                        )}
-                        {isActive && (
-                          <Badge className="text-[11px] py-0">Active</Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="rounded-[var(--radius-full)] h-8 px-3"
-                        onClick={() => setMembersLocationId(loc.id)}
-                      >
-                        <Users className="h-3.5 w-3.5 mr-1.5" />
-                        Members
-                      </Button>
-                      {isOwner && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full h-8 w-8"
-                            onClick={() => {
-                              setRetentionLocationId(loc.id);
-                              setActivityRetention((loc as { activity_retention_days?: number }).activity_retention_days ?? 90);
-                              setTrashRetention((loc as { trash_retention_days?: number }).trash_retention_days ?? 30);
-                            }}
-                            aria-label="Data retention settings"
-                          >
-                            <Settings2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full h-8 w-8"
-                            onClick={() => setRenameLocationId(loc.id)}
-                            aria-label="Rename location"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full h-8 w-8 text-[var(--destructive)]"
-                            onClick={() => setDeleteLocationId(loc.id)}
-                            aria-label="Delete location"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Appearance */}
       <Card>
         <CardContent>
@@ -425,6 +275,41 @@ export function SettingsPage() {
                 placeholder="OpenBin"
               />
             </div>
+            <Disclosure label="Custom Terminology">
+              <p className="text-[11px] text-[var(--text-tertiary)] mb-2">Rename core concepts to match your workflow.</p>
+              <div className="space-y-2">
+                {([
+                  { key: 'termBin' as const, singular: 'Bin', plural: 'Bins' },
+                  { key: 'termLocation' as const, singular: 'Location', plural: 'Locations' },
+                  { key: 'termArea' as const, singular: 'Area', plural: 'Areas' },
+                ]).map(({ key, singular, plural }) => {
+                  const raw = settings[key];
+                  const parts = raw ? raw.split('|') : ['', ''];
+                  return (
+                    <div key={key} className="grid grid-cols-2 gap-2">
+                      <Input
+                        value={parts[0] || ''}
+                        onChange={(e) => {
+                          const newSingular = e.target.value;
+                          const newPlural = parts[1] || '';
+                          updateSettings({ [key]: newSingular || newPlural ? `${newSingular}|${newPlural}` : '' });
+                        }}
+                        placeholder={`${singular} (singular)`}
+                      />
+                      <Input
+                        value={parts[1] || ''}
+                        onChange={(e) => {
+                          const newSingular = parts[0] || '';
+                          const newPlural = e.target.value;
+                          updateSettings({ [key]: newSingular || newPlural ? `${newSingular}|${newPlural}` : '' });
+                        }}
+                        placeholder={`${plural} (plural)`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </Disclosure>
             <Button
               variant="outline"
               onClick={resetSettings}
@@ -448,7 +333,7 @@ export function SettingsPage() {
                   { key: 'showStats' as const, label: 'Stats' },
                   { key: 'showNeedsOrganizing' as const, label: 'Needs Organizing' },
                   { key: 'showSavedViews' as const, label: 'Saved Views' },
-                  { key: 'showPinnedBins' as const, label: 'Pinned Bins' },
+                  { key: 'showPinnedBins' as const, label: `Pinned ${t.Bins}` },
                   { key: 'showRecentlyScanned' as const, label: 'Recently Scanned' },
                   { key: 'showRecentlyUpdated' as const, label: 'Recently Updated' },
                 ]).map(({ key, label }) => (
@@ -463,7 +348,7 @@ export function SettingsPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="recent-bins" className="text-[13px] text-[var(--text-secondary)]">Recent bins shown</label>
+              <label htmlFor="recent-bins" className="text-[13px] text-[var(--text-secondary)]">Recent {t.bins} shown</label>
               <Input
                 id="recent-bins"
                 type="number"
@@ -590,7 +475,7 @@ export function SettingsPage() {
           <Label>About</Label>
           <div className="mt-3 space-y-2 text-[15px] text-[var(--text-secondary)]">
             <p className="font-semibold text-[var(--text-primary)]">{settings.appName}</p>
-            <p>{binCount} bin{binCount !== 1 ? 's' : ''}</p>
+            <p>{binCount} {binCount !== 1 ? t.bins : t.bin}</p>
           </div>
         </CardContent>
       </Card>
@@ -687,79 +572,6 @@ export function SettingsPage() {
         </DialogContent>
       </Dialog>
 
-      <LocationCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <LocationJoinDialog open={joinOpen} onOpenChange={setJoinOpen} />
-      <LocationRenameDialog
-        locationId={renameLocationId}
-        currentName={locations.find((l) => l.id === renameLocationId)?.name ?? ''}
-        open={!!renameLocationId}
-        onOpenChange={(open) => !open && setRenameLocationId(null)}
-      />
-      <LocationDeleteDialog
-        locationId={deleteLocationId}
-        locationName={locations.find((l) => l.id === deleteLocationId)?.name ?? ''}
-        open={!!deleteLocationId}
-        onOpenChange={(open) => !open && setDeleteLocationId(null)}
-      />
-
-      {/* Members Dialog */}
-      {membersLocationId && (
-        <LocationMembersDialog
-          locationId={membersLocationId}
-          open={!!membersLocationId}
-          onOpenChange={(open) => !open && setMembersLocationId(null)}
-        />
-      )}
-
-      {/* Data Retention Dialog */}
-      <Dialog open={!!retentionLocationId} onOpenChange={(open) => !open && setRetentionLocationId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Data Retention</DialogTitle>
-            <DialogDescription>
-              Configure how long data is kept for this location.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="activity-retention">Activity log retention (days)</Label>
-              <Input
-                id="activity-retention"
-                type="number"
-                min={7}
-                max={365}
-                value={activityRetention}
-                onChange={(e) => setActivityRetention(Number(e.target.value))}
-              />
-              <p className="text-[11px] text-[var(--text-tertiary)]">7–365 days. Entries older than this are automatically pruned.</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="trash-retention">Trash retention (days)</Label>
-              <Input
-                id="trash-retention"
-                type="number"
-                min={7}
-                max={365}
-                value={trashRetention}
-                onChange={(e) => setTrashRetention(Number(e.target.value))}
-              />
-              <p className="text-[11px] text-[var(--text-tertiary)]">7–365 days. Deleted bins are permanently purged after this period.</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setRetentionLocationId(null)} className="rounded-[var(--radius-full)]">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveRetention}
-              disabled={savingRetention || activityRetention < 7 || activityRetention > 365 || trashRetention < 7 || trashRetention > 365}
-              className="rounded-[var(--radius-full)]"
-            >
-              {savingRetention ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

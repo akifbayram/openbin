@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { Disclosure } from '@/components/ui/disclosure';
 import { useAiSettings, saveAiSettings, deleteAiSettings, testAiConnection } from './useAiSettings';
 import { useAiProviderSetup } from './useAiProviderSetup';
 import { AI_PROVIDERS, MODEL_HINTS, KEY_PLACEHOLDERS } from './aiConstants';
@@ -222,60 +223,61 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
             };
             const active = promptMap[activePromptTab];
             return (
-              <div className="space-y-2">
-                <p className="text-[13px] text-[var(--text-secondary)] font-medium">Custom Prompts</p>
-                <div className="flex gap-1 bg-[var(--bg-input)] rounded-[var(--radius-full)] p-1">
-                  {PROMPT_TAB_META.map((tab) => (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      onClick={() => setActivePromptTab(tab.key)}
-                      className={cn(
-                        'relative flex-1 text-[12px] font-medium py-1.5 px-2 rounded-[var(--radius-full)] transition-colors text-center',
-                        activePromptTab === tab.key
-                          ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
-                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                      )}
-                    >
-                      <span className="sm:hidden">{tab.shortLabel}</span>
-                      <span className="hidden sm:inline">{tab.label}</span>
-                      {promptMap[tab.key].value.trim() && (
-                        <span className={cn('absolute top-1/2 -translate-y-1/2 right-1 h-1.5 w-1.5 rounded-full',
-                          activePromptTab === tab.key ? 'bg-[var(--text-on-accent)]' : 'bg-[var(--accent)]'
-                        )} />
-                      )}
-                    </button>
-                  ))}
+              <Disclosure label="Custom Prompts">
+                <div className="space-y-2">
+                  <div className="flex gap-1 bg-[var(--bg-input)] rounded-[var(--radius-full)] p-1">
+                    {PROMPT_TAB_META.map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setActivePromptTab(tab.key)}
+                        className={cn(
+                          'relative flex-1 text-[12px] font-medium py-1.5 px-2 rounded-[var(--radius-full)] transition-colors text-center',
+                          activePromptTab === tab.key
+                            ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
+                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                        )}
+                      >
+                        <span className="sm:hidden">{tab.shortLabel}</span>
+                        <span className="hidden sm:inline">{tab.label}</span>
+                        {promptMap[tab.key].value.trim() && (
+                          <span className={cn('absolute top-1/2 -translate-y-1/2 right-1 h-1.5 w-1.5 rounded-full',
+                            activePromptTab === tab.key ? 'bg-[var(--text-on-accent)]' : 'bg-[var(--accent)]'
+                          )} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <Textarea
+                    value={active.value}
+                    onChange={(e) => active.set(e.target.value)}
+                    placeholder={defaultPrompts?.[activePromptTab] ?? ''}
+                    className="font-mono text-[13px] min-h-[200px] resize-y"
+                    maxLength={10000}
+                  />
+                  <div className="flex items-center justify-between">
+                    <p className="text-[12px] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
+                    {active.value.trim() ? (
+                      <button
+                        type="button"
+                        onClick={() => active.set('')}
+                        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Reset to Default
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => active.set(defaultPrompts?.[activePromptTab] ?? '')}
+                        className="text-[12px] text-[var(--accent)] hover:underline shrink-0 ml-2"
+                      >
+                        Load default to customize
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <Textarea
-                  value={active.value}
-                  onChange={(e) => active.set(e.target.value)}
-                  placeholder={defaultPrompts?.[activePromptTab] ?? ''}
-                  className="font-mono text-[13px] min-h-[200px] resize-y"
-                  maxLength={10000}
-                />
-                <div className="flex items-center justify-between">
-                  <p className="text-[12px] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
-                  {active.value.trim() ? (
-                    <button
-                      type="button"
-                      onClick={() => active.set('')}
-                      className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                      Reset to Default
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => active.set(defaultPrompts?.[activePromptTab] ?? '')}
-                      className="text-[12px] text-[var(--accent)] hover:underline shrink-0 ml-2"
-                    >
-                      Load default to customize
-                    </button>
-                  )}
-                </div>
-              </div>
+              </Disclosure>
             );
           })()}
 

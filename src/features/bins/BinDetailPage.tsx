@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/theme';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import type { Bin } from '@/types';
 
@@ -47,6 +48,7 @@ export function BinDetailPage() {
   const { showToast } = useToast();
   const { theme } = useTheme();
   const { activeLocationId } = useAuth();
+  const t = useTerminology();
   const { tagColors } = useTagColorsContext();
   const { aiEnabled } = useAiEnabled();
   const [editing, setEditing] = useState(false);
@@ -113,10 +115,10 @@ export function BinDetailPage() {
   if (bin === null) {
     return (
       <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-        <p className="text-[17px] font-semibold text-[var(--text-secondary)]">Bin not found</p>
+        <p className="text-[17px] font-semibold text-[var(--text-secondary)]">{t.Bin} not found</p>
         <Button variant="outline" onClick={() => navigate('/bins')} className="rounded-[var(--radius-full)]">
           <ChevronLeft className="h-4 w-4 mr-1" />
-          Back to bins
+          Back to {t.bins}
         </Button>
       </div>
     );
@@ -172,7 +174,7 @@ export function BinDetailPage() {
     setMoveTargetId(null);
     navigate('/bins');
     showToast({
-      message: `Moved to ${targetLoc?.name ?? 'location'}`,
+      message: `Moved to ${targetLoc?.name ?? t.location}`,
       action: {
         label: 'Undo',
         onClick: async () => {
@@ -219,7 +221,7 @@ export function BinDetailPage() {
           className="rounded-[var(--radius-full)] gap-0.5 pl-1.5 pr-3 text-[var(--accent)]"
         >
           <ChevronLeft className="h-5 w-5" />
-          <span className="text-[15px]">Bins</span>
+          <span className="text-[15px]">{t.Bins}</span>
         </Button>
         <div className="flex-1" />
         {editing ? (
@@ -271,7 +273,7 @@ export function BinDetailPage() {
                   showToast({ message: 'Pinned' });
                 }
               }}
-              aria-label={bin.is_pinned ? 'Unpin bin' : 'Pin bin'}
+              aria-label={bin.is_pinned ? `Unpin ${t.bin}` : `Pin ${t.bin}`}
               className="rounded-full h-9 w-9"
             >
               <Pin className="h-[18px] w-[18px]" fill={bin.is_pinned ? 'currentColor' : 'none'} />
@@ -280,7 +282,7 @@ export function BinDetailPage() {
               variant="ghost"
               size="icon"
               onClick={startEdit}
-              aria-label="Edit bin"
+              aria-label={`Edit ${t.bin}`}
               className="rounded-full h-9 w-9"
             >
               <Pencil className="h-[18px] w-[18px]" />
@@ -306,7 +308,7 @@ export function BinDetailPage() {
                     setMoveOpen(true);
                   }
                 }}
-                aria-label="Move bin"
+                aria-label={`Move ${t.bin}`}
                 className="rounded-full h-9 w-9"
               >
                 <ArrowRightLeft className="h-[18px] w-[18px]" />
@@ -316,7 +318,7 @@ export function BinDetailPage() {
               variant="ghost"
               size="icon"
               onClick={() => setDeleteOpen(true)}
-              aria-label="Delete bin"
+              aria-label={`Delete ${t.bin}`}
               className="rounded-full h-9 w-9 text-[var(--destructive)]"
             >
               <Trash2 className="h-[18px] w-[18px]" />
@@ -367,7 +369,7 @@ export function BinDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Area</Label>
+                <Label>{t.Area}</Label>
                 <AreaPicker locationId={activeLocationId ?? undefined} value={editAreaId} onChange={setEditAreaId} />
               </div>
               <div className="space-y-2">
@@ -721,7 +723,7 @@ export function BinDetailPage() {
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete this bin?</DialogTitle>
+            <DialogTitle>Delete this {t.bin}?</DialogTitle>
             <DialogDescription>
               This will delete &apos;{bin.name}&apos; and all its photos. You can undo this action briefly after deletion.
             </DialogDescription>
@@ -746,9 +748,9 @@ export function BinDetailPage() {
       <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Move to another location</DialogTitle>
+            <DialogTitle>Move to another {t.location}</DialogTitle>
             <DialogDescription>
-              Select a location to move the &apos;{bin.name}&apos; bin.
+              Select a {t.location} to move the &apos;{bin.name}&apos; {t.bin}.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-1.5 py-2">
@@ -769,7 +771,7 @@ export function BinDetailPage() {
               ))}
             {otherLocations.length === 0 && (
               <p className="text-[14px] text-[var(--text-tertiary)] text-center py-4">
-                No other locations available
+                No other {t.locations} available
               </p>
             )}
           </div>

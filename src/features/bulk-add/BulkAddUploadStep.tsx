@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
 import type { BulkAddPhoto, BulkAddAction } from './useBulkAdd';
 import { createBulkAddPhoto } from './useBulkAdd';
 
@@ -16,6 +17,7 @@ interface BulkAddUploadStepProps {
 }
 
 export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUploadStepProps) {
+  const t = useTerminology();
   const { activeLocationId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -41,7 +43,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
       <div>
         <h2 className="text-[22px] font-bold text-[var(--text-primary)]">Upload Photos</h2>
         <p className="text-[15px] text-[var(--text-secondary)] mt-1">
-          Add a photo for each bin you want to create.
+          Add a photo for each {t.bin} you want to create.
         </p>
       </div>
 
@@ -62,7 +64,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
         >
           <ImagePlus className="h-10 w-10" />
           <span className="text-[15px] font-medium">Select photos</span>
-          <span className="text-[13px]">One photo per bin, up to {MAX_PHOTOS}</span>
+          <span className="text-[13px]">One photo per {t.bin}, up to {MAX_PHOTOS}</span>
         </button>
       ) : (
         <div className="space-y-4">
@@ -100,14 +102,14 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
           )}
 
           <div className="space-y-2">
-            <Label>Area for all bins (optional)</Label>
+            <Label>{t.Area} for all {t.bins} (optional)</Label>
             <AreaPicker
               locationId={activeLocationId ?? undefined}
               value={sharedAreaId}
               onChange={(areaId) => dispatch({ type: 'SET_SHARED_AREA', areaId })}
             />
             <p className="text-[12px] text-[var(--text-tertiary)]">
-              Applied to all new bins. You can change this per bin during review.
+              Applied to all new {t.bins}. You can change this per {t.bin} during review.
             </p>
           </div>
         </div>

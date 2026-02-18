@@ -36,6 +36,14 @@ vi.mock('@/features/areas/useAreas', () => ({
   createArea: vi.fn(),
 }));
 
+vi.mock('@/lib/terminology', () => ({
+  useTerminology: () => ({
+    bin: 'bin', bins: 'bins', Bin: 'Bin', Bins: 'Bins',
+    location: 'location', locations: 'locations', Location: 'Location', Locations: 'Locations',
+    area: 'area', areas: 'areas', Area: 'Area', Areas: 'Areas',
+  }),
+}));
+
 vi.mock('@/features/bins/useBins', () => ({
   addBin: vi.fn(),
   updateBin: vi.fn(),

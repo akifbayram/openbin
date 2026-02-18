@@ -18,6 +18,7 @@ import { addBin, notifyBinsChanged, useAllTags } from '@/features/bins/useBins';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { compressImage } from '@/features/photos/compressImage';
 import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
 
 interface SingleBinReviewProps {
   files: File[];
@@ -28,6 +29,7 @@ interface SingleBinReviewProps {
 }
 
 export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onClose }: SingleBinReviewProps) {
+  const t = useTerminology();
   const { activeLocationId } = useAuth();
   const { settings: aiSettings } = useAiSettings();
   const { aiEnabled, setAiEnabled } = useAiEnabled();
@@ -114,10 +116,10 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
           .catch(() => {});
       }
       notifyBinsChanged();
-      showToast({ message: 'Created bin with ' + files.length + ' photo' + (files.length !== 1 ? 's' : '') });
+      showToast({ message: `Created ${t.bin} with ${files.length} photo${files.length !== 1 ? 's' : ''}` });
       onClose();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to create bin' });
+      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.bin}` });
       setIsCreating(false);
     }
   }
@@ -208,6 +210,11 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             </div>
 
             <div className="space-y-2">
+              <Label>Items</Label>
+              <ItemsInput items={items} onChange={setItems} />
+            </div>
+
+            <div className="space-y-2">
               <Label>Area</Label>
               <AreaPicker
                 locationId={activeLocationId ?? undefined}
@@ -217,17 +224,12 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             </div>
 
             <div className="space-y-2">
-              <Label>Items</Label>
-              <ItemsInput items={items} onChange={setItems} />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="single-bin-notes">Notes</Label>
               <Textarea
                 id="single-bin-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Notes about this bin..."
+                placeholder={`Notes about this ${t.bin}...`}
                 rows={2}
               />
             </div>
@@ -269,7 +271,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                   Creating...
                 </>
               ) : (
-                'Create Bin'
+                `Create ${t.Bin}`
               )}
             </Button>
           </div>

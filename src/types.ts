@@ -16,6 +16,9 @@ export interface Location {
   activity_retention_days: number;
   trash_retention_days: number;
   app_name: string;
+  term_bin: string;
+  term_location: string;
+  term_area: string;
   created_at: string;
   updated_at: string;
 }

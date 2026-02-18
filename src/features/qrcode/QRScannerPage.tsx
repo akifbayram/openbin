@@ -9,6 +9,7 @@ import { Html5QrcodePlugin } from './Html5QrcodePlugin';
 import { apiFetch } from '@/lib/api';
 import { haptic } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
 import { lookupBinByCode } from '@/features/bins/useBins';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 import { ScanSuccessOverlay } from '@/features/onboarding/ScanSuccessOverlay';
@@ -18,6 +19,7 @@ import { recordScan } from '@/features/dashboard/scanHistory';
 const BIN_URL_REGEX = /(?:#\/bin\/|\/bin\/)([a-f0-9-]{36})/i;
 
 export function QRScannerPage() {
+  const t = useTerminology();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { firstScanDone, markFirstScanDone } = useOnboarding();
@@ -41,7 +43,7 @@ export function QRScannerPage() {
       recordScan(bin.id);
       navigate(`/bin/${bin.id}`);
     } catch {
-      setManualError('No bin found with that code');
+      setManualError(`No ${t.bin} found with that code`);
     } finally {
       setManualLoading(false);
     }
@@ -94,7 +96,7 @@ export function QRScannerPage() {
                 <AlertCircle className="h-7 w-7 text-[var(--destructive)]" />
               </div>
               <div className="space-y-1.5">
-                <p className="text-[17px] font-semibold text-[var(--text-primary)]">Not a Bin QR Code</p>
+                <p className="text-[17px] font-semibold text-[var(--text-primary)]">Not a {t.Bin} QR Code</p>
                 <p className="text-[13px] text-[var(--text-tertiary)] break-all max-w-xs mx-auto leading-relaxed">{error}</p>
               </div>
               <Button variant="outline" onClick={handleRetry} className="rounded-[var(--radius-full)] mt-1">
@@ -112,9 +114,9 @@ export function QRScannerPage() {
                 <ScanLine className="h-7 w-7 text-[var(--accent)]" />
               </div>
               <div className="space-y-1.5">
-                <p className="text-[17px] font-semibold text-[var(--text-primary)]">Bin Not Found</p>
+                <p className="text-[17px] font-semibold text-[var(--text-primary)]">{t.Bin} Not Found</p>
                 <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed">
-                  This QR code points to a bin that doesn't exist yet.
+                  This QR code points to a {t.bin} that doesn't exist yet.
                 </p>
               </div>
               <div className="flex gap-2.5 mt-1">
@@ -124,7 +126,7 @@ export function QRScannerPage() {
                 </Button>
                 <Button onClick={() => setCreateOpen(true)} className="rounded-[var(--radius-full)]">
                   <Plus className="h-4 w-4 mr-1.5" />
-                  Create Bin
+                  Create {t.Bin}
                 </Button>
               </div>
             </div>
@@ -136,7 +138,7 @@ export function QRScannerPage() {
             <Html5QrcodePlugin paused={!scanning} onScanSuccess={handleScan} />
             {scanning && (
               <p className="mt-5 text-center text-[13px] text-[var(--text-tertiary)]">
-                Point your camera at a bin QR code
+                Point your camera at a {t.bin} QR code
               </p>
             )}
             {!scanning && (
@@ -167,7 +169,7 @@ export function QRScannerPage() {
                   handleManualLookup();
                 }
               }}
-              placeholder="Enter bin code"
+              placeholder={`Enter ${t.bin} code`}
               maxLength={6}
               disabled={manualLoading}
               className="flex-1 font-mono uppercase tracking-widest"

@@ -4,6 +4,7 @@ import { Search, Tags as TagsIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
 import { useBinList } from '@/features/bins/useBins';
 import { useTagColorsContext } from './TagColorsContext';
 import { setTagColor } from './useTagColors';
@@ -20,6 +21,7 @@ export function TagsPage() {
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
   const { activeLocationId } = useAuth();
+  const t = useTerminology();
   const { bins } = useBinList();
   const { tagColors } = useTagColorsContext();
   const { theme } = useTheme();
@@ -94,7 +96,7 @@ export function TagsPage() {
               {search ? 'No tags match your search' : 'No tags yet'}
             </p>
             {!search && (
-              <p className="text-[13px]">Tags added to bins will appear here</p>
+              <p className="text-[13px]">Tags added to {t.bins} will appear here</p>
             )}
           </div>
         </div>
@@ -119,7 +121,7 @@ export function TagsPage() {
                 {tag.name}
               </Badge>
               <span className="flex-1 text-[13px] text-[var(--text-tertiary)]">
-                {tag.count} bin{tag.count !== 1 ? 's' : ''}
+                {tag.count} {tag.count !== 1 ? t.bins : t.bin}
               </span>
               <TagColorPicker
                 currentColor={tagColors.get(tag.name) || ''}

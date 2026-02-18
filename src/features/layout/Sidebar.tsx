@@ -2,21 +2,23 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Package, MapPin, ClipboardList, Tags, Printer, ScanLine, Clock, LogOut, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppSettings } from '@/lib/appSettings';
+import { useTerminology } from '@/lib/terminology';
+import type { TermKey } from '@/lib/navItems';
 import { useAuth } from '@/lib/auth';
 import { getAvatarUrl } from '@/lib/api';
 
-const topItems = [
+const topItems: { path: string; label: string; icon: React.ComponentType<{ className?: string }>; termKey?: TermKey }[] = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
-  { path: '/bins', label: 'Bins', icon: Package },
-] as const;
+  { path: '/bins', label: 'Bins', icon: Package, termKey: 'Bins' },
+];
 
-const manageItems = [
-  { path: '/areas', label: 'Areas', icon: MapPin },
+const manageItems: { path: string; label: string; icon: React.ComponentType<{ className?: string }>; termKey?: TermKey }[] = [
+  { path: '/areas', label: 'Locations', icon: MapPin, termKey: 'Locations' },
   { path: '/items', label: 'Items', icon: ClipboardList },
   { path: '/tags', label: 'Tags', icon: Tags },
   { path: '/print', label: 'Print', icon: Printer },
   { path: '/scan', label: 'Scan', icon: ScanLine },
-] as const;
+];
 
 function NavButton({ path, label, icon: Icon, currentPath, navigate }: {
   path: string;
@@ -51,6 +53,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { settings } = useAppSettings();
+  const t = useTerminology();
   const { user, logout } = useAuth();
 
   return (
@@ -66,7 +69,7 @@ export function Sidebar() {
         {/* Top: Home, Bins */}
         <div className="space-y-1">
           {topItems.map((item) => (
-            <NavButton key={item.path} {...item} currentPath={location.pathname} navigate={navigate} />
+            <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate} />
           ))}
         </div>
 
@@ -79,7 +82,7 @@ export function Sidebar() {
             Manage
           </p>
           {manageItems.map((item) => (
-            <NavButton key={item.path} {...item} currentPath={location.pathname} navigate={navigate} />
+            <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate} />
           ))}
         </div>
 

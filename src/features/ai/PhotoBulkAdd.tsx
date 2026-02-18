@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { addBin, notifyBinsChanged } from '@/features/bins/useBins';
 import { addPhoto } from '@/features/photos/usePhotos';
@@ -32,6 +33,7 @@ function initState(files: File[]): BulkAddState {
 }
 
 export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProps) {
+  const t = useTerminology();
   const { activeLocationId } = useAuth();
   const { showToast } = useToast();
   const [state, dispatch] = useReducer(bulkAddReducer, initialFiles, initState);
@@ -112,7 +114,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           dispatch({
             type: 'SET_CREATE_ERROR',
             id: photo.id,
-            error: err instanceof Error ? err.message : 'Failed to create bin',
+            error: err instanceof Error ? err.message : `Failed to create ${t.bin}`,
           });
         }
       }
@@ -122,7 +124,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
 
       if (successCount === toCreate.length) {
         showToast({
-          message: `Created ${successCount} bin${successCount !== 1 ? 's' : ''}`,
+          message: `Created ${successCount} ${successCount !== 1 ? t.bins : t.bin}`,
         });
         onClose();
       }
@@ -194,7 +196,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
               : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           )}
         >
-          Separate bins
+          Separate {t.bins}
         </button>
         <button
           type="button"
@@ -207,7 +209,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
             singleBinDisabled && mode !== 'single-bin' && 'opacity-40 cursor-not-allowed'
           )}
         >
-          Same bin
+          Same {t.bin}
         </button>
       </div>
 
@@ -253,14 +255,14 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       {/* Helper text */}
       <p className="text-[12px] text-[var(--text-tertiary)]">
         {mode === 'per-photo'
-          ? 'Each photo will create a separate bin'
-          : 'All photos will be analyzed together as one bin'}
+          ? `Each photo will create a separate ${t.bin}`
+          : `All photos will be analyzed together as one ${t.bin}`}
       </p>
 
       {/* Shared area picker */}
       <div className="space-y-1.5">
         <Label className="text-[13px]">
-          {mode === 'single-bin' ? 'Area (optional)' : 'Area for all bins (optional)'}
+          {mode === 'single-bin' ? `${t.Area} (optional)` : `${t.Area} for all ${t.bins} (optional)`}
         </Label>
         <AreaPicker
           locationId={activeLocationId ?? undefined}

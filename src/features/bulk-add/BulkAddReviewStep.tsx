@@ -16,6 +16,7 @@ import { useAuth } from '@/lib/auth';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { analyzeImageFile, mapErrorMessage } from '@/features/ai/useAiAnalysis';
 import { compressImage } from '@/features/photos/compressImage';
+import { useTerminology } from '@/lib/terminology';
 import type { BulkAddPhoto, BulkAddAction } from './useBulkAdd';
 
 interface BulkAddReviewStepProps {
@@ -25,6 +26,7 @@ interface BulkAddReviewStepProps {
 }
 
 export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddReviewStepProps) {
+  const t = useTerminology();
   const { activeLocationId } = useAuth();
   const { settings: aiSettings } = useAiSettings();
   const { aiEnabled, setAiEnabled } = useAiEnabled();
@@ -192,22 +194,22 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
             </div>
 
             <div className="space-y-2">
+              <Label>Items</Label>
+              <ItemsInput
+                items={photo.items}
+                onChange={(items) =>
+                  dispatch({ type: 'UPDATE_PHOTO', id: photo.id, changes: { items } })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label>Area</Label>
               <AreaPicker
                 locationId={activeLocationId ?? undefined}
                 value={photo.areaId}
                 onChange={(areaId) =>
                   dispatch({ type: 'UPDATE_PHOTO', id: photo.id, changes: { areaId } })
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Items</Label>
-              <ItemsInput
-                items={photo.items}
-                onChange={(items) =>
-                  dispatch({ type: 'UPDATE_PHOTO', id: photo.id, changes: { items } })
                 }
               />
             </div>
@@ -220,7 +222,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                 onChange={(e) =>
                   dispatch({ type: 'UPDATE_PHOTO', id: photo.id, changes: { notes: e.target.value } })
                 }
-                placeholder="Notes about this bin..."
+                placeholder={`Notes about this ${t.bin}...`}
                 rows={2}
               />
             </div>

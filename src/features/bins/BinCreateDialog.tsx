@@ -21,6 +21,7 @@ import { addBin, useAllTags } from './useBins';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAuth } from '@/lib/auth';
 import { useAiEnabled } from '@/lib/aiToggle';
+import { useTerminology } from '@/lib/terminology';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
 import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
@@ -37,6 +38,7 @@ interface BinCreateDialogProps {
 export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDialogProps) {
   const navigate = useNavigate();
   const { activeLocationId } = useAuth();
+  const t = useTerminology();
   const allTags = useAllTags();
   const { settings: aiSettings } = useAiSettings();
   const { aiEnabled } = useAiEnabled();
@@ -191,8 +193,8 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>New Bin</DialogTitle>
-            <DialogDescription>Add a new storage bin to your inventory.</DialogDescription>
+            <DialogTitle>New {t.Bin}</DialogTitle>
+            <DialogDescription>Add a new storage {t.bin} to your inventory.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Photo upload */}
@@ -281,10 +283,6 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
               />
             </div>
             <div className="space-y-2">
-              <Label>Area</Label>
-              <AreaPicker locationId={activeLocationId ?? undefined} value={areaId} onChange={setAreaId} />
-            </div>
-            <div className="space-y-2">
               <Label>Items</Label>
               <ItemsInput
                 items={items}
@@ -295,6 +293,10 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
                 binName={name}
                 locationId={activeLocationId ?? undefined}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>{t.Area}</Label>
+              <AreaPicker locationId={activeLocationId ?? undefined} value={areaId} onChange={setAreaId} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="bin-notes">Notes</Label>
@@ -352,7 +354,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
           <DialogHeader>
             <DialogTitle>Set up AI Analysis</DialogTitle>
             <DialogDescription>
-              AI can analyze your bin photos and suggest names, items, tags, and notes automatically. Connect an AI provider in Settings to get started.
+              AI can analyze your {t.bin} photos and suggest names, items, tags, and notes automatically. Connect an AI provider in Settings to get started.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">

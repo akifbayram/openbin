@@ -19,6 +19,7 @@ import { addBin, updateBin, deleteBin, restoreBin, notifyBinsChanged, addItemsTo
 import { useAreaList, createArea } from '@/features/areas/useAreas';
 import { apiFetch } from '@/lib/api';
 import { queryInventoryText, mapCommandErrorMessage, type QueryResult } from './useInventoryQuery';
+import { useTerminology, type Terminology } from '@/lib/terminology';
 import type { Bin } from '@/types';
 
 interface CommandInputProps {
@@ -49,7 +50,7 @@ function getActionIcon(action: CommandAction) {
   }
 }
 
-function describeAction(action: CommandAction): string {
+function describeAction(action: CommandAction, t: Terminology): string {
   switch (action.type) {
     case 'add_items':
       return `Add ${action.items.join(', ')} to "${action.bin_name}"`;
@@ -58,7 +59,7 @@ function describeAction(action: CommandAction): string {
     case 'modify_item':
       return `Rename "${action.old_item}" to "${action.new_item}" in "${action.bin_name}"`;
     case 'create_bin': {
-      let desc = `Create bin "${action.name}"`;
+      let desc = `Create ${t.bin} "${action.name}"`;
       if (action.area_name) desc += ` in ${action.area_name}`;
       if (action.items?.length) desc += ` with ${action.items.length} item${action.items.length !== 1 ? 's' : ''}`;
       return desc;
@@ -72,7 +73,7 @@ function describeAction(action: CommandAction): string {
     case 'modify_tag':
       return `Rename tag "${action.old_tag}" to "${action.new_tag}" on "${action.bin_name}"`;
     case 'set_area':
-      return `Move "${action.bin_name}" to area "${action.area_name}"`;
+      return `Move "${action.bin_name}" to ${t.area} "${action.area_name}"`;
     case 'set_notes':
       if (action.mode === 'clear') return `Clear notes on "${action.bin_name}"`;
       if (action.mode === 'append') return `Append to notes on "${action.bin_name}"`;
@@ -85,6 +86,7 @@ function describeAction(action: CommandAction): string {
 }
 
 export function CommandInput({ open, onOpenChange }: CommandInputProps) {
+  const t = useTerminology();
   const { activeLocationId } = useAuth();
   const navigate = useNavigate();
   const { settings, isLoading: aiSettingsLoading } = useAiSettings();
@@ -410,7 +412,7 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
 
             {actions.length === 0 ? (
               <p className="text-[14px] text-[var(--text-tertiary)] py-4 text-center">
-                No matching bins found, or the command was ambiguous. Try using exact bin names.
+                No matching {t.bins} found, or the command was ambiguous. Try using exact {t.bin} names.
               </p>
             ) : (
               <ul className="space-y-1.5">
@@ -452,7 +454,7 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
                               ? 'text-[var(--destructive)]'
                               : 'text-[var(--text-primary)]'
                         )}>
-                          {describeAction(action)}
+                          {describeAction(action, t)}
                         </span>
                       </button>
                     </li>
@@ -511,7 +513,7 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="absolute right-2.5 bottom-2.5 p-1.5 rounded-full text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
-                title="Upload photos to auto-create bins with AI"
+                title={`Upload photos to auto-create ${t.bins} with AI`}
                 aria-label="Upload photos"
               >
                 <ImagePlus className="h-5 w-5" />
@@ -525,9 +527,9 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
                 <div className="grid gap-1">
                   <p><span className="text-[var(--text-secondary)]">Add/remove items</span> — "Add screwdriver to the tools bin" or "Remove batteries from kitchen box"</p>
                   <p><span className="text-[var(--text-secondary)]">Organize</span> — "Move batteries from kitchen to garage" or "Tag tools bin as hardware"</p>
-                  <p><span className="text-[var(--text-secondary)]">Manage bins</span> — "Create a bin called Holiday Decorations in the attic" or "Delete the empty box bin"</p>
-                  <p><span className="text-[var(--text-secondary)]">Find things</span> — "Where is the glass cleaner?" or "Which bins have batteries?"</p>
-                  <p><span className="text-[var(--text-secondary)]">Upload photos</span> — Snap a photo of a bin and AI will create it for you</p>
+                  <p><span className="text-[var(--text-secondary)]">Manage {t.bins}</span> — "Create a {t.bin} called Holiday Decorations in the attic" or "Delete the empty box {t.bin}"</p>
+                  <p><span className="text-[var(--text-secondary)]">Find things</span> — "Where is the glass cleaner?" or "Which {t.bins} have batteries?"</p>
+                  <p><span className="text-[var(--text-secondary)]">Upload photos</span> — Snap a photo of a {t.bin} and AI will create it for you</p>
                 </div>
               </div>
               <p className="text-[11px] text-[var(--text-tertiary)]">

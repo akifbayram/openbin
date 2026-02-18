@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
 import { createLocation, joinLocation, updateLocation, deleteLocation, useLocationList } from './useLocations';
 
 interface LocationCreateDialogProps {
@@ -21,6 +22,7 @@ interface LocationCreateDialogProps {
 
 export function LocationCreateDialog({ open, onOpenChange }: LocationCreateDialogProps) {
   const { setActiveLocationId } = useAuth();
+  const t = useTerminology();
   const { showToast } = useToast();
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -42,7 +44,7 @@ export function LocationCreateDialog({ open, onOpenChange }: LocationCreateDialo
       onOpenChange(false);
       showToast({ message: `Created "${location.name}"` });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to create location' });
+      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.location}` });
     } finally {
       setCreating(false);
     }
@@ -52,9 +54,9 @@ export function LocationCreateDialog({ open, onOpenChange }: LocationCreateDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Location</DialogTitle>
+          <DialogTitle>Create {t.Location}</DialogTitle>
           <DialogDescription>
-            A location is a shared space where members can manage bins together.
+            A {t.location} is a shared space where members can manage {t.bins} together.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -90,6 +92,7 @@ interface LocationJoinDialogProps {
 
 export function LocationJoinDialog({ open, onOpenChange }: LocationJoinDialogProps) {
   const { setActiveLocationId } = useAuth();
+  const t = useTerminology();
   const { showToast } = useToast();
   const [inviteCode, setInviteCode] = useState('');
   const [joining, setJoining] = useState(false);
@@ -111,7 +114,7 @@ export function LocationJoinDialog({ open, onOpenChange }: LocationJoinDialogPro
       onOpenChange(false);
       showToast({ message: `Joined "${location.name}"` });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to join location' });
+      showToast({ message: err instanceof Error ? err.message : `Failed to join ${t.location}` });
     } finally {
       setJoining(false);
     }
@@ -121,9 +124,9 @@ export function LocationJoinDialog({ open, onOpenChange }: LocationJoinDialogPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Join Location</DialogTitle>
+          <DialogTitle>Join {t.Location}</DialogTitle>
           <DialogDescription>
-            Enter the invite code shared by a location owner to join.
+            Enter the invite code shared by a {t.location} owner to join.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -161,6 +164,7 @@ interface LocationRenameDialogProps {
 
 export function LocationRenameDialog({ locationId, currentName, open, onOpenChange }: LocationRenameDialogProps) {
   const { showToast } = useToast();
+  const t = useTerminology();
   const [name, setName] = useState(currentName);
   const [renaming, setRenaming] = useState(false);
 
@@ -178,9 +182,9 @@ export function LocationRenameDialog({ locationId, currentName, open, onOpenChan
     try {
       await updateLocation(locationId, { name: name.trim() });
       onOpenChange(false);
-      showToast({ message: 'Location renamed' });
+      showToast({ message: `${t.Location} renamed` });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to rename location' });
+      showToast({ message: err instanceof Error ? err.message : `Failed to rename ${t.location}` });
     } finally {
       setRenaming(false);
     }
@@ -190,9 +194,9 @@ export function LocationRenameDialog({ locationId, currentName, open, onOpenChan
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Rename Location</DialogTitle>
+          <DialogTitle>Rename {t.Location}</DialogTitle>
           <DialogDescription>
-            Enter a new name for this location.
+            Enter a new name for this {t.location}.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -230,6 +234,7 @@ interface LocationDeleteDialogProps {
 export function LocationDeleteDialog({ locationId, locationName, open, onOpenChange }: LocationDeleteDialogProps) {
   const { activeLocationId, setActiveLocationId } = useAuth();
   const { locations } = useLocationList();
+  const t = useTerminology();
   const { showToast } = useToast();
   const [deleting, setDeleting] = useState(false);
 
@@ -243,9 +248,9 @@ export function LocationDeleteDialog({ locationId, locationName, open, onOpenCha
         setActiveLocationId(remaining.length > 0 ? remaining[0].id : null);
       }
       onOpenChange(false);
-      showToast({ message: 'Location deleted' });
+      showToast({ message: `${t.Location} deleted` });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete location' });
+      showToast({ message: err instanceof Error ? err.message : `Failed to delete ${t.location}` });
     } finally {
       setDeleting(false);
     }
@@ -255,9 +260,9 @@ export function LocationDeleteDialog({ locationId, locationName, open, onOpenCha
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete Location?</DialogTitle>
+          <DialogTitle>Delete {t.Location}?</DialogTitle>
           <DialogDescription>
-            This will permanently delete &quot;{locationName}&quot; and all its bins and photos. This cannot be undone.
+            This will permanently delete &quot;{locationName}&quot; and all its {t.bins} and photos. This cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
