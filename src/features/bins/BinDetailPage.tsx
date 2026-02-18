@@ -46,7 +46,7 @@ export function BinDetailPage() {
   const allTags = useAllTags();
   const { showToast } = useToast();
   const { theme } = useTheme();
-  const { activeLocationId, setActiveLocationId } = useAuth();
+  const { activeLocationId } = useAuth();
   const { tagColors } = useTagColorsContext();
   const { aiEnabled } = useAiEnabled();
   const [editing, setEditing] = useState(false);

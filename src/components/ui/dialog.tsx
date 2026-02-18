@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn, haptic } from '@/lib/utils';
 import { X } from 'lucide-react';
+import { useSheetDismiss, getSheetPanelStyle, getSheetBackdropStyle } from '@/lib/useSheetDismiss';
 
 interface DialogContextValue {
   open: boolean;
@@ -47,6 +48,30 @@ function DialogContent({
 }) {
   const { open, onOpenChange } = React.useContext(DialogContext);
   const contentRef = React.useRef<HTMLDivElement>(null);
+
+  const [isMobile, setIsMobile] = React.useState(false);
+  React.useEffect(() => {
+    const mql = window.matchMedia('(max-width: 639px)');
+    setIsMobile(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  const {
+    panelRef, scrollRef, handleRef,
+    translateY, isDragging, isDismissing,
+    handlers,
+  } = useSheetDismiss({
+    onDismiss: () => { haptic(10); onOpenChange(false); },
+    enabled: isMobile && open,
+  });
+
+  // Merge contentRef (focus trap) and panelRef (gesture) onto the same node
+  const mergedRef = React.useCallback((node: HTMLDivElement | null) => {
+    (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    (panelRef as unknown as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  }, [panelRef]);
 
   React.useEffect(() => {
     if (open) {
@@ -105,32 +130,47 @@ function DialogContent({
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
       <div
         className="fixed inset-0 bg-[var(--overlay-backdrop)] backdrop-blur-sm"
+        style={getSheetBackdropStyle(translateY, isDragging, isDismissing)}
         onClick={() => onOpenChange(false)}
       />
       <div
-        ref={contentRef}
+        ref={mergedRef}
         role="dialog"
         aria-modal="true"
         className={cn(
           'relative z-[60] w-full sm:max-w-md glass-heavy',
           'rounded-t-[var(--radius-xl)] sm:rounded-[var(--radius-xl)]',
-          'px-8 pt-5 sm:pt-7 mx-0 sm:mx-4 max-h-[85vh] overflow-y-auto',
-          'pb-[calc(24px+var(--safe-bottom))] sm:pb-6',
+          'mx-0 sm:mx-4 max-h-[85vh] overflow-hidden flex flex-col',
           className
         )}
+        style={getSheetPanelStyle(translateY, isDragging, isDismissing)}
+        {...handlers}
       >
-        {/* iOS-style drag handle on mobile */}
-        <div className="sm:hidden flex justify-center mb-5">
-          <div className="w-9 h-[5px] rounded-full bg-[var(--text-tertiary)] opacity-30" />
-        </div>
         <button
           aria-label="Close"
-          className="absolute right-5 top-5 rounded-full p-1.5 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors hidden sm:flex items-center justify-center"
+          className="absolute right-5 top-5 z-10 rounded-full p-1.5 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors hidden sm:flex items-center justify-center"
           onClick={() => onOpenChange(false)}
         >
           <X className="h-3.5 w-3.5" />
         </button>
-        {children}
+        {/* Drag handle — outside scroll container so it's always grabbable */}
+        <div
+          ref={handleRef}
+          className={cn(
+            'sm:hidden flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing',
+          )}
+        >
+          <div
+            className="w-9 h-[5px] rounded-full bg-[var(--text-tertiary)] transition-opacity"
+            style={{ opacity: isDragging ? 0.6 : 0.3 }}
+          />
+        </div>
+        <div
+          ref={scrollRef}
+          className="overflow-y-auto min-h-0 px-8 pt-2 sm:pt-7 pb-[calc(24px+var(--safe-bottom))] sm:pb-6"
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

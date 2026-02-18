@@ -44,7 +44,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [hasAnalyzed, setHasAnalyzed] = useState(false);
+
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -71,7 +71,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
       setItems(result.items);
       setTags(result.tags);
       setNotes(result.notes);
-      setHasAnalyzed(true);
+
     } catch (err) {
       setAnalyzeError(mapErrorMessage(err));
     } finally {
@@ -124,151 +124,157 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
   return (
     <div className="space-y-5">
-      {/* Photo thumbnails */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {previewUrls.map((url, i) => (
-          <img
-            key={i}
-            src={url}
-            alt={`Photo ${i + 1}`}
-            className="h-16 w-16 shrink-0 rounded-[var(--radius-md)] object-cover"
-          />
-        ))}
-      </div>
-
-      {/* AI analysis status */}
-      {isAnalyzing && (
-        <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="text-[13px]">Analyzing {Math.min(files.length, MAX_AI_PHOTOS)} photo{files.length !== 1 ? 's' : ''}...</span>
+      {isAnalyzing ? (
+        <div className="flex flex-col items-center justify-center py-8 gap-3">
+          <Loader2 className="h-6 w-6 animate-spin text-[var(--accent)]" />
+          <p className="text-[14px] text-[var(--text-secondary)]">
+            Analyzing {Math.min(files.length, MAX_AI_PHOTOS)} photo{Math.min(files.length, MAX_AI_PHOTOS) !== 1 ? 's' : ''}...
+          </p>
         </div>
-      )}
+      ) : (
+        <>
+          {/* Photo preview */}
+          <div className="pb-1">
+            <div className="relative w-fit max-w-full mx-auto">
+              <div className="flex gap-2 overflow-x-auto">
+                {previewUrls.map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`Photo ${i + 1}`}
+                    className="max-h-64 shrink-0 rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5"
+                  />
+                ))}
+              </div>
+              {aiEnabled && (
+                <button
+                  type="button"
+                  onClick={triggerAnalyze}
+                  title="Rescan"
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                >
+                  <Sparkles className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
 
-      {analyzeError && (
-        <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-red-500/10 px-3 py-2.5">
-          <AlertCircle className="h-4 w-4 text-[var(--destructive)] shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-[13px] text-[var(--destructive)]">{analyzeError}</p>
+          {analyzeError && (
+            <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-red-500/10 px-3 py-2.5">
+              <AlertCircle className="h-4 w-4 text-[var(--destructive)] shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-[13px] text-[var(--destructive)]">{analyzeError}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={triggerAnalyze}
+                  className="mt-1 h-7 px-2 text-[12px]"
+                >
+                  Retry
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Configure AI provider */}
+          {aiEnabled && !aiSettings && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setAiSetupExpanded(!aiSetupExpanded)}
+                className="text-[12px] text-[var(--accent)] font-medium flex items-center gap-0.5"
+              >
+                Configure AI provider
+                {aiSetupExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            </div>
+          )}
+
+          {/* Inline AI Setup */}
+          {aiEnabled && aiSetupExpanded && !aiSettings && (
+            <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />
+          )}
+
+          {/* Form Fields */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="single-bin-name">Name</Label>
+              <Input
+                id="single-bin-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., Holiday Decorations"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Area</Label>
+              <AreaPicker
+                locationId={activeLocationId ?? undefined}
+                value={areaId}
+                onChange={setAreaId}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Items</Label>
+              <ItemsInput items={items} onChange={setItems} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="single-bin-notes">Notes</Label>
+              <Textarea
+                id="single-bin-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Notes about this bin..."
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <IconPicker value={icon} onChange={setIcon} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <ColorPicker value={color} onChange={setColor} />
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex items-center justify-between pt-2">
             <Button
               variant="ghost"
-              size="sm"
-              onClick={triggerAnalyze}
-              className="mt-1 h-7 px-2 text-[12px]"
+              onClick={onBack}
+              className="rounded-[var(--radius-full)]"
             >
-              Retry
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={!name.trim() || isAnalyzing || isCreating}
+              className="rounded-[var(--radius-full)]"
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Bin'
+              )}
             </Button>
           </div>
-        </div>
+        </>
       )}
-
-      {/* AI controls */}
-      {aiEnabled && !isAnalyzing && (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={triggerAnalyze}
-            className="gap-1.5"
-          >
-            <Sparkles className="h-4 w-4 text-[var(--ai-accent)]" />
-            {analyzeError ? 'Retry Analysis' : hasAnalyzed ? 'Re-analyze with AI' : 'Analyze with AI'}
-          </Button>
-          {!aiSettings && (
-            <button
-              type="button"
-              onClick={() => setAiSetupExpanded(!aiSetupExpanded)}
-              className="text-[12px] text-[var(--accent)] font-medium flex items-center gap-0.5"
-            >
-              Configure AI provider
-              {aiSetupExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Inline AI Setup */}
-      {aiEnabled && aiSetupExpanded && !aiSettings && (
-        <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />
-      )}
-
-      {/* Form Fields */}
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="single-bin-name">Name</Label>
-          <Input
-            id="single-bin-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Holiday Decorations"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Area</Label>
-          <AreaPicker
-            locationId={activeLocationId ?? undefined}
-            value={areaId}
-            onChange={setAreaId}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Items</Label>
-          <ItemsInput items={items} onChange={setItems} />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="single-bin-notes">Notes</Label>
-          <Textarea
-            id="single-bin-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Notes about this bin..."
-            rows={2}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Tags</Label>
-          <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Icon</Label>
-          <IconPicker value={icon} onChange={setIcon} />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Color</Label>
-          <ColorPicker value={color} onChange={setColor} />
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <div className="flex items-center justify-between pt-2">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          className="rounded-[var(--radius-full)]"
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
-        <Button
-          onClick={handleCreate}
-          disabled={!name.trim() || isAnalyzing || isCreating}
-          className="rounded-[var(--radius-full)]"
-        >
-          {isCreating ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              Creating...
-            </>
-          ) : (
-            'Create Bin'
-          )}
-        </Button>
-      </div>
     </div>
   );
 }
