@@ -233,7 +233,7 @@ export default function App() {
                   }
                 />
                 <Route
-                  path="/areas"
+                  path="/locations"
                   element={
                     <Suspense fallback={<LoadingFallback />}>
                       <AreasPage />

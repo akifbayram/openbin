@@ -13,7 +13,7 @@ const topItems: { path: string; label: string; icon: React.ComponentType<{ class
 ];
 
 const manageItems: { path: string; label: string; icon: React.ComponentType<{ className?: string }>; termKey?: TermKey }[] = [
-  { path: '/areas', label: 'Locations', icon: MapPin, termKey: 'Locations' },
+  { path: '/locations', label: 'Locations', icon: MapPin, termKey: 'Locations' },
   { path: '/items', label: 'Items', icon: ClipboardList },
   { path: '/tags', label: 'Tags', icon: Tags },
   { path: '/print', label: 'Print', icon: Printer },

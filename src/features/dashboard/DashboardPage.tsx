@@ -107,7 +107,7 @@ export function DashboardPage() {
             </p>
           </div>
           <Button
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/locations')}
             variant="outline"
             className="rounded-[var(--radius-full)] mt-1"
           >
@@ -191,7 +191,7 @@ export function DashboardPage() {
             <StatCard
               label={t.Areas}
               value={totalAreas}
-              onClick={() => navigate('/areas')}
+              onClick={() => navigate('/locations')}
             />
           )}
         </div>

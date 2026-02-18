@@ -79,6 +79,34 @@ describe('useAuth', () => {
       expect(mockApiFetch).toHaveBeenCalledWith('/api/auth/me');
     });
 
+    it('uses activeLocationId from /me response and writes to localStorage', async () => {
+      localStorage.setItem(STORAGE_KEYS.TOKEN, 'valid-token');
+      mockApiFetch.mockResolvedValue({ ...makeUser(), activeLocationId: 'server-loc' });
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.activeLocationId).toBe('server-loc');
+      expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBe('server-loc');
+    });
+
+    it('preserves localStorage activeLocationId when /me returns null', async () => {
+      localStorage.setItem(STORAGE_KEYS.TOKEN, 'valid-token');
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'local-loc');
+      mockApiFetch.mockResolvedValue({ ...makeUser(), activeLocationId: null });
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.activeLocationId).toBe('local-loc');
+    });
+
     it('clears token from localStorage when apiFetch rejects', async () => {
       localStorage.setItem(STORAGE_KEYS.TOKEN, 'invalid-token');
       mockApiFetch.mockRejectedValue(new Error('Unauthorized'));
@@ -247,6 +275,44 @@ describe('useAuth', () => {
 
       expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBeNull();
       expect(result.current.activeLocationId).toBeNull();
+    });
+
+    it('calls PUT /api/auth/active-location when token exists', async () => {
+      localStorage.setItem(STORAGE_KEYS.TOKEN, 'my-token');
+      mockApiFetch.mockResolvedValueOnce(makeUser()); // /me
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      mockApiFetch.mockResolvedValueOnce({ activeLocationId: 'loc-3' }); // PUT
+
+      act(() => {
+        result.current.setActiveLocationId('loc-3');
+      });
+
+      expect(mockApiFetch).toHaveBeenCalledWith('/api/auth/active-location', {
+        method: 'PUT',
+        body: { locationId: 'loc-3' },
+      });
+    });
+
+    it('does not call API when logged out (no token)', async () => {
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      act(() => {
+        result.current.setActiveLocationId('loc-3');
+      });
+
+      // Only localStorage was updated, no API call (no /me call either since no token)
+      expect(mockApiFetch).not.toHaveBeenCalled();
+      expect(result.current.activeLocationId).toBe('loc-3');
     });
   });
 

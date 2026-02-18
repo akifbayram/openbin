@@ -1067,9 +1067,56 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                allOf:
+                  - $ref: '#/components/schemas/User'
+                  - type: object
+                    properties:
+                      activeLocationId:
+                        type: string
+                        format: uuid
+                        nullable: true
+                        description: Persisted active location selection (null if not set or membership lost)
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /auth/active-location:
+    put:
+      tags: [Auth]
+      summary: Persist active location selection
+      description: Sets the user's active location. The location is validated for membership.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locationId]
+              properties:
+                locationId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: Location ID to set as active, or null to clear
+      responses:
+        '200':
+          description: Active location updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  activeLocationId:
+                    type: string
+                    format: uuid
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Not a member of the specified location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /auth/profile:
     put:

@@ -43,9 +43,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    apiFetch<User>('/api/auth/me')
-      .then((user) => {
-        setState((s) => ({ ...s, user, token, loading: false }));
+    apiFetch<User & { activeLocationId?: string | null }>('/api/auth/me')
+      .then((data) => {
+        const { activeLocationId: serverLocationId, ...user } = data;
+        if (serverLocationId) {
+          localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, serverLocationId);
+        }
+        setState((s) => ({
+          ...s,
+          user,
+          token,
+          activeLocationId: serverLocationId ?? s.activeLocationId,
+          loading: false,
+        }));
       })
       .catch(() => {
         localStorage.removeItem(STORAGE_KEYS.TOKEN);
@@ -98,7 +108,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
     }
-    setState((s) => ({ ...s, activeLocationId: id }));
+    setState((s) => {
+      if (s.token) {
+        apiFetch('/api/auth/active-location', { method: 'PUT', body: { locationId: id } }).catch(() => {});
+      }
+      return { ...s, activeLocationId: id };
+    });
   }, []);
 
   const updateUser = useCallback((user: User) => {

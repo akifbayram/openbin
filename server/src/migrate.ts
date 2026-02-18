@@ -31,6 +31,7 @@ function migrate() {
       if (file === '001_init.sql') alreadyApplied = tableNames.has('locations');
       else if (file === '002_user_settings.sql') alreadyApplied = tableNames.has('user_preferences');
       else if (file === '003_terminology.sql') alreadyApplied = tableNames.has('locations') && columns('locations').has('term_bin');
+      else if (file === '004_active_location.sql') alreadyApplied = tableNames.has('users') && columns('users').has('active_location_id');
 
       if (alreadyApplied) {
         db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file);

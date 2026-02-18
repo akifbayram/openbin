@@ -5,7 +5,7 @@ import path from 'path';
 import { query, generateUuid } from '../db.js';
 import { authenticate, signToken } from '../middleware/auth.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { ValidationError, NotFoundError, UnauthorizedError, ConflictError } from '../lib/httpErrors.js';
+import { ValidationError, NotFoundError, UnauthorizedError, ConflictError, ForbiddenError } from '../lib/httpErrors.js';
 import { validateUsername, validatePassword, validateEmail, validateDisplayName } from '../lib/validation.js';
 import { isPathSafe } from '../lib/pathSafety.js';
 import { avatarUpload, AVATAR_STORAGE_PATH } from '../lib/uploadConfig.js';
@@ -58,7 +58,7 @@ router.post('/login', asyncHandler(async (req, res) => {
   }
 
   const result = await query(
-    'SELECT id, username, password_hash, display_name, email, avatar_path FROM users WHERE username = $1',
+    'SELECT id, username, password_hash, display_name, email, avatar_path, active_location_id FROM users WHERE username = $1',
     [username.toLowerCase()]
   );
 
@@ -74,14 +74,32 @@ router.post('/login', asyncHandler(async (req, res) => {
 
   const token = signToken({ id: user.id, username: user.username });
 
-  // Fetch user's first location for auto-selection
-  const locationsResult = await query(
-    `SELECT l.id FROM locations l
-     JOIN location_members lm ON lm.location_id = l.id AND lm.user_id = $1
-     ORDER BY l.updated_at DESC LIMIT 1`,
-    [user.id]
-  );
-  const activeLocationId = locationsResult.rows.length > 0 ? locationsResult.rows[0].id : null;
+  // Use persisted active_location_id if user is still a member
+  let activeLocationId: string | null = null;
+  if (user.active_location_id) {
+    const memberCheck = await query(
+      'SELECT 1 FROM location_members WHERE location_id = $1 AND user_id = $2',
+      [user.active_location_id, user.id]
+    );
+    if (memberCheck.rows.length > 0) {
+      activeLocationId = user.active_location_id;
+    }
+  }
+
+  // Fallback: pick most recently updated location
+  if (!activeLocationId) {
+    const locationsResult = await query(
+      `SELECT l.id FROM locations l
+       JOIN location_members lm ON lm.location_id = l.id AND lm.user_id = $1
+       ORDER BY l.updated_at DESC LIMIT 1`,
+      [user.id]
+    );
+    if (locationsResult.rows.length > 0) {
+      activeLocationId = locationsResult.rows[0].id;
+      // Seed the column for future logins
+      await query('UPDATE users SET active_location_id = $1 WHERE id = $2', [activeLocationId, user.id]);
+    }
+  }
 
   res.json({
     token,
@@ -99,7 +117,7 @@ router.post('/login', asyncHandler(async (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
-    'SELECT id, username, display_name, email, avatar_path, created_at, updated_at FROM users WHERE id = $1',
+    'SELECT id, username, display_name, email, avatar_path, active_location_id, created_at, updated_at FROM users WHERE id = $1',
     [req.user!.id]
   );
 
@@ -108,12 +126,27 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
   }
 
   const user = result.rows[0];
+
+  // Validate stored active_location_id — clear if no longer a member
+  let activeLocationId: string | null = user.active_location_id || null;
+  if (activeLocationId) {
+    const memberCheck = await query(
+      'SELECT 1 FROM location_members WHERE location_id = $1 AND user_id = $2',
+      [activeLocationId, user.id]
+    );
+    if (memberCheck.rows.length === 0) {
+      activeLocationId = null;
+      await query('UPDATE users SET active_location_id = NULL WHERE id = $1', [user.id]);
+    }
+  }
+
   res.json({
     id: user.id,
     username: user.username,
     displayName: user.display_name,
     email: user.email || null,
     avatarUrl: user.avatar_path ? `/api/auth/avatar/${user.id}` : null,
+    activeLocationId,
     createdAt: user.created_at,
     updatedAt: user.updated_at,
   });
@@ -166,6 +199,28 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
     createdAt: user.created_at,
     updatedAt: user.updated_at,
   });
+}));
+
+// PUT /api/auth/active-location — persist active location selection
+router.put('/active-location', authenticate, asyncHandler(async (req, res) => {
+  const { locationId } = req.body;
+
+  if (locationId !== null && locationId !== undefined) {
+    if (typeof locationId !== 'string' || locationId.length === 0) {
+      throw new ValidationError('locationId must be a non-empty string or null');
+    }
+    const memberCheck = await query(
+      'SELECT 1 FROM location_members WHERE location_id = $1 AND user_id = $2',
+      [locationId, req.user!.id]
+    );
+    if (memberCheck.rows.length === 0) {
+      throw new ForbiddenError('Not a member of this location');
+    }
+  }
+
+  await query('UPDATE users SET active_location_id = $1 WHERE id = $2', [locationId ?? null, req.user!.id]);
+
+  res.json({ activeLocationId: locationId ?? null });
 }));
 
 // PUT /api/auth/password — change password

@@ -51,7 +51,7 @@ export function TagsPage() {
   }, [tags, search]);
 
   function handleTagClick(tag: string) {
-    navigate('/', { state: { search: tag } });
+    navigate('/bins', { state: { search: tag } });
   }
 
   function handleColorChange(tag: string, color: string) {

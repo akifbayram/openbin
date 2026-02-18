@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sparkles, Loader2, ChevronLeft, Check, Plus, Minus, Package, Trash2,
-  Tag, MapPin, FileText, Palette, Image as ImageIcon, ChevronRight, Search, ImagePlus,
+  Tag, MapPin, FileText, Palette, Image as ImageIcon, ChevronRight, Search, ImagePlus, ChevronDown,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -101,6 +101,7 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
   const [isQuerying, setIsQuerying] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
   const [initialFiles, setInitialFiles] = useState<File[]>([]);
+  const [examplesOpen, setExamplesOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Inline AI setup
@@ -334,9 +335,6 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
     navigate(`/bin/${binId}`);
   }
 
-  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
-  const shortcutHint = isMac ? '\u2318Enter' : 'Ctrl+Enter';
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
@@ -520,21 +518,25 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
               </button>
             </div>
 
-            {/* Examples and keyboard shortcut */}
-            <div className="space-y-2">
-              <div className="text-[12px] text-[var(--text-tertiary)] leading-relaxed space-y-1.5">
-                <p className="font-medium text-[var(--text-secondary)]">Examples:</p>
-                <div className="grid gap-1">
+            {/* Collapsible examples */}
+            <div className="text-[12px] text-[var(--text-tertiary)] leading-relaxed">
+              <button
+                type="button"
+                onClick={() => setExamplesOpen((v) => !v)}
+                className="flex items-center gap-1 font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+              >
+                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', !examplesOpen && '-rotate-90')} />
+                Examples
+              </button>
+              {examplesOpen && (
+                <div className="grid gap-1 mt-1.5">
                   <p><span className="text-[var(--text-secondary)]">Add/remove items</span> — "Add screwdriver to the tools bin" or "Remove batteries from kitchen box"</p>
                   <p><span className="text-[var(--text-secondary)]">Organize</span> — "Move batteries from kitchen to garage" or "Tag tools bin as hardware"</p>
                   <p><span className="text-[var(--text-secondary)]">Manage {t.bins}</span> — "Create a {t.bin} called Holiday Decorations in the attic" or "Delete the empty box {t.bin}"</p>
                   <p><span className="text-[var(--text-secondary)]">Find things</span> — "Where is the glass cleaner?" or "Which {t.bins} have batteries?"</p>
                   <p><span className="text-[var(--text-secondary)]">Upload photos</span> — Snap a photo of a {t.bin} and AI will create it for you</p>
                 </div>
-              </div>
-              <p className="text-[11px] text-[var(--text-tertiary)]">
-                Press <kbd className="px-1.5 py-0.5 rounded bg-[var(--bg-active)] text-[var(--text-secondary)] font-mono text-[10px]">{shortcutHint}</kbd> to send
-              </p>
+              )}
             </div>
 
             {error && (

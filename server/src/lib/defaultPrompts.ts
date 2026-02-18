@@ -7,8 +7,8 @@ Return a JSON object with exactly these four fields:
 "name" — A concise title for the bin's contents (2–5 words, title case). Describe WHAT is stored, not the container. Good: "Assorted Screwdrivers", "Holiday Lights", "USB Cables". Bad: "Red Bin", "Stuff", "Miscellaneous Items".
 
 "items" — A flat array of distinct items. Rules:
-- One entry per distinct item type; include quantity in parentheses when more than one: "Phillips screwdriver (x3)"
-- Be specific: "adjustable crescent wrench" not just "wrench"; "AA batteries (x8)" not "batteries"
+- One entry per distinct item type, no quantities
+- Be specific: "adjustable crescent wrench" not just "wrench"; "AA batteries" not "batteries"
 - Include brand names, model numbers, or sizes when clearly readable on labels
 - For sealed/packaged items, describe the product, not the packaging
 - Omit the bin or container itself
@@ -23,7 +23,7 @@ Return a JSON object with exactly these four fields:
 "notes" — One sentence on organization or condition. Mention: how contents are arranged (sorted by size, loosely mixed, in original packaging), condition (new, used, worn), or any notable labels/markings. Use empty string "" if nothing notable.
 
 Respond with ONLY valid JSON, no markdown fences, no extra text. Example:
-{"name":"Assorted Screwdrivers","items":["Phillips screwdriver (x3)","flathead screwdriver (x2)","precision screwdriver set in case","magnetic bit holder"],"tags":["tools","screwdrivers","hardware"],"notes":"Neatly organized with larger screwdrivers on the left and precision set in original case."}`;
+{"name":"Assorted Screwdrivers","items":["Phillips screwdriver","flathead screwdriver","precision screwdriver set in case","magnetic bit holder"],"tags":["tools","screwdrivers","hardware"],"notes":"Neatly organized with larger screwdrivers on the left and precision set in original case."}`;
 
 export const DEFAULT_COMMAND_PROMPT = `You are an inventory management assistant. The user will give you a natural language command about their storage bins. Parse it into one or more structured actions.
 
@@ -56,18 +56,18 @@ export const DEFAULT_STRUCTURE_PROMPT = `You are an inventory item extractor. Th
 Rules:
 - Return a JSON object with a single "items" field containing an array of strings
 - Each entry should be one distinct item type
-- Include quantity in parentheses when more than one: "Socks (x3)", "AA batteries (x8)"
-- Normalize spoken numbers: "three pairs of socks" → "Socks (x3)"
+- List each item once without quantities
+- Normalize spoken numbers: "three pairs of socks" → "Socks"
 - Be specific: "Phillips screwdriver" not just "screwdriver"
 - Capitalize the first letter of each item
 - Remove filler words (um, uh, like, basically, etc.)
 - Remove conversational phrases ("I think there's", "and also", "let me see")
-- Deduplicate items — if the same item is mentioned multiple times, combine quantities
+- Deduplicate items — if the same item is mentioned multiple times, list it once
 - Order from first mentioned to last mentioned
 - Do NOT include the bin or container itself
 
 Respond with ONLY valid JSON, no markdown fences, no extra text. Example:
-{"items":["Winter jacket","Socks (x3)","Old t-shirts (x5)","Scarf","Wool gloves (x2)"]}`;
+{"items":["Winter jacket","Socks","Old t-shirts","Scarf","Wool gloves"]}`;
 
 export const ALL_DEFAULT_PROMPTS = {
   analysis: DEFAULT_AI_PROMPT,

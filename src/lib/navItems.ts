@@ -13,7 +13,7 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
   { path: '/bins', label: 'Bins', icon: Package, termKey: 'Bins' },
-  { path: '/areas', label: 'Locations', icon: MapPin, termKey: 'Locations' },
+  { path: '/locations', label: 'Locations', icon: MapPin, termKey: 'Locations' },
   { path: '/print', label: 'Print', icon: Printer },
   { path: '/scan', label: 'Scan', icon: ScanLine },
 ];
