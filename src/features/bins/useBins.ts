@@ -3,7 +3,7 @@ import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Events, notify, useRefreshOn } from '@/lib/eventBus';
 import { useListData } from '@/lib/useListData';
-import type { Bin, BinItem } from '@/types';
+import type { Bin, BinItem, BinVisibility } from '@/types';
 
 /** Notify all useBinList / useBin instances to refetch */
 export const notifyBinsChanged = () => notify(Events.BINS);
@@ -161,6 +161,7 @@ export interface AddBinOptions {
   areaId?: string | null;
   icon?: string;
   color?: string;
+  visibility?: BinVisibility;
 }
 
 export async function addBin(options: AddBinOptions): Promise<string> {
@@ -175,6 +176,7 @@ export async function addBin(options: AddBinOptions): Promise<string> {
       tags: options.tags ?? [],
       icon: options.icon ?? '',
       color: options.color ?? '',
+      visibility: options.visibility ?? 'location',
     },
   });
   notifyBinsChanged();
@@ -183,7 +185,7 @@ export async function addBin(options: AddBinOptions): Promise<string> {
 
 export async function updateBin(
   id: string,
-  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color'>> & { areaId?: string | null; items?: string[] }
+  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color' | 'visibility'>> & { areaId?: string | null; items?: string[] }
 ): Promise<void> {
   await apiFetch(`/api/bins/${id}`, {
     method: 'PUT',

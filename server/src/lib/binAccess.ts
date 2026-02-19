@@ -1,15 +1,19 @@
 import { query } from '../db.js';
 
-/** Verify user is a member of the location that owns a non-deleted bin */
-export async function verifyBinAccess(binId: string, userId: string): Promise<{ locationId: string } | null> {
+/** Verify user is a member of the location that owns a non-deleted bin.
+ *  Private bins are only accessible to their creator. */
+export async function verifyBinAccess(binId: string, userId: string): Promise<{ locationId: string; visibility: string; createdBy: string } | null> {
   const result = await query(
-    `SELECT b.location_id FROM bins b
+    `SELECT b.location_id, b.visibility, b.created_by FROM bins b
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
      WHERE b.id = $1 AND b.deleted_at IS NULL`,
     [binId, userId]
   );
   if (result.rows.length === 0) return null;
-  return { locationId: result.rows[0].location_id };
+  const row = result.rows[0];
+  // Private bins: only the creator can access
+  if (row.visibility === 'private' && row.created_by !== userId) return null;
+  return { locationId: row.location_id, visibility: row.visibility, createdBy: row.created_by };
 }
 
 /** Verify user is a member of a specific location */

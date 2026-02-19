@@ -19,7 +19,7 @@ router.use(authenticate);
 
 // POST /api/bins — create bin
 router.post('/', asyncHandler(async (req, res) => {
-  const { locationId, name, areaId, items, notes, tags, icon, color, id, shortCode } = req.body;
+  const { locationId, name, areaId, items, notes, tags, icon, color, id, shortCode, visibility } = req.body;
 
   if (!locationId) {
     throw new ValidationError('locationId is required');
@@ -55,6 +55,9 @@ router.post('/', asyncHandler(async (req, res) => {
   if (color && typeof color === 'string' && color.length > 50) {
     throw new ValidationError('Color value too long (max 50 characters)');
   }
+  if (visibility !== undefined && visibility !== 'location' && visibility !== 'private') {
+    throw new ValidationError('visibility must be "location" or "private"');
+  }
 
   if (!await verifyLocationMembership(locationId, req.user!.id)) {
     throw new ForbiddenError('Not a member of this location');
@@ -70,9 +73,9 @@ router.post('/', asyncHandler(async (req, res) => {
 
     try {
       await query(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, created_by, short_code)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [binId, locationId, name.trim(), areaId || null, notes || '', tags || [], icon || '', color || '', req.user!.id, code]
+        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, created_by, short_code, visibility)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [binId, locationId, name.trim(), areaId || null, notes || '', tags || [], icon || '', color || '', req.user!.id, code, visibility || 'location']
       );
 
       // Insert items into bin_items
@@ -137,7 +140,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const sort = req.query.sort as string | undefined;
   const sortDir = req.query.sort_dir as string | undefined;
 
-  const whereClauses: string[] = ['b.location_id = $1', 'b.deleted_at IS NULL'];
+  const whereClauses: string[] = ['b.location_id = $1', 'b.deleted_at IS NULL', '(b.visibility = \'location\' OR b.created_by = $2)'];
   const params: unknown[] = [locationId, req.user!.id];
   let paramIdx = 3;
 
@@ -209,8 +212,8 @@ router.get('/trash', asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT ${BIN_SELECT_COLS}, b.deleted_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-     WHERE b.location_id = $1 AND b.deleted_at IS NOT NULL ORDER BY b.deleted_at DESC`,
-    [locationId]
+     WHERE b.location_id = $1 AND b.deleted_at IS NOT NULL AND (b.visibility = 'location' OR b.created_by = $2) ORDER BY b.deleted_at DESC`,
+    [locationId, req.user!.id]
   );
 
   res.json({ results: result.rows, count: result.rows.length });
@@ -226,7 +229,7 @@ router.get('/lookup/:shortCode', asyncHandler(async (req, res) => {
      LEFT JOIN areas a ON a.id = b.area_id
      LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-     WHERE UPPER(b.short_code) = $1 AND b.deleted_at IS NULL`,
+     WHERE UPPER(b.short_code) = $1 AND b.deleted_at IS NULL AND (b.visibility = 'location' OR b.created_by = $2)`,
     [code, req.user!.id]
   );
 
@@ -251,7 +254,7 @@ router.get('/pinned', asyncHandler(async (req, res) => {
      FROM pinned_bins pb
      JOIN bins b ON b.id = pb.bin_id
      LEFT JOIN areas a ON a.id = b.area_id
-     WHERE pb.user_id = $1 AND b.location_id = $2 AND b.deleted_at IS NULL
+     WHERE pb.user_id = $1 AND b.location_id = $2 AND b.deleted_at IS NULL AND (b.visibility = 'location' OR b.created_by = $1)
      ORDER BY pb.position`,
     [req.user!.id, locationId]
   );
@@ -314,10 +317,16 @@ router.put('/:id', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Only admins or the bin creator can edit this bin');
   }
 
-  const { name, areaId, items, notes, tags, icon, color } = req.body;
+  const { name, areaId, items, notes, tags, icon, color, visibility } = req.body;
 
   if (name !== undefined) {
     validateBinName(name);
+  }
+  if (visibility !== undefined && visibility !== 'location' && visibility !== 'private') {
+    throw new ValidationError('visibility must be "location" or "private"');
+  }
+  if (visibility === 'private' && access.createdBy !== req.user!.id) {
+    throw new ForbiddenError('Only the bin creator can set visibility to private');
   }
   if (items !== undefined && Array.isArray(items) && items.length > 500) {
     throw new ValidationError('Too many items (max 500)');
@@ -351,7 +360,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
 
   // Fetch old state for activity log diff
   const oldResult = await query(
-    'SELECT name, area_id, notes, tags, icon, color FROM bins WHERE id = $1',
+    'SELECT name, area_id, notes, tags, icon, color, visibility FROM bins WHERE id = $1',
     [id]
   );
   const oldBin = oldResult.rows[0];
@@ -383,6 +392,10 @@ router.put('/:id', asyncHandler(async (req, res) => {
   if (color !== undefined) {
     setClauses.push(`color = $${paramIdx++}`);
     params.push(color);
+  }
+  if (visibility !== undefined) {
+    setClauses.push(`visibility = $${paramIdx++}`);
+    params.push(visibility);
   }
 
   params.push(id);
@@ -447,6 +460,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
     if (tags !== undefined) newObj.tags = tags;
     if (icon !== undefined) newObj.icon = icon;
     if (color !== undefined) newObj.color = color;
+    if (visibility !== undefined) newObj.visibility = visibility;
 
     const binFieldChanges = computeChanges(oldBin, newObj, Object.keys(newObj));
 
@@ -529,11 +543,11 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 router.post('/:id/restore', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Check access but for deleted bins
+  // Check access but for deleted bins (visibility-aware)
   const accessResult = await query(
     `SELECT b.location_id FROM bins b
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-     WHERE b.id = $1 AND b.deleted_at IS NOT NULL`,
+     WHERE b.id = $1 AND b.deleted_at IS NOT NULL AND (b.visibility = 'location' OR b.created_by = $2)`,
     [id, req.user!.id]
   );
 
@@ -576,11 +590,11 @@ router.post('/:id/restore', asyncHandler(async (req, res) => {
 router.delete('/:id/permanent', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Only allow permanent delete of already soft-deleted bins
+  // Only allow permanent delete of already soft-deleted bins (visibility-aware)
   const accessResult = await query(
     `SELECT b.location_id, b.name FROM bins b
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-     WHERE b.id = $1 AND b.deleted_at IS NOT NULL`,
+     WHERE b.id = $1 AND b.deleted_at IS NOT NULL AND (b.visibility = 'location' OR b.created_by = $2)`,
     [id, req.user!.id]
   );
 

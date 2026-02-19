@@ -58,6 +58,8 @@ export interface Area {
   updated_at: string;
 }
 
+export type BinVisibility = 'location' | 'private';
+
 export interface BinItem {
   id: string;
   name: string;
@@ -76,6 +78,8 @@ export interface Bin {
   color: string;
   short_code: string;
   created_by: string;
+  created_by_name: string;
+  visibility: BinVisibility;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
