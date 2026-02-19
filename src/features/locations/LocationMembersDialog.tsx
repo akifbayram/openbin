@@ -91,7 +91,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
         {/* Invite Code */}
         {location?.invite_code && (
           <div className="flex items-center gap-2 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
-            <span className="flex-1 text-[14px] font-mono text-[var(--text-primary)] tracking-wider">
+            <span className="flex-1 min-w-0 text-[14px] font-mono text-[var(--text-primary)] tracking-wider truncate">
               {location.invite_code}
             </span>
             <Button

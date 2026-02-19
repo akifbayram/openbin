@@ -8,9 +8,10 @@ interface LocationSettingsMenuProps {
   onRetention: () => void;
   onDelete: () => void;
   onLeave: () => void;
+  compact?: boolean;
 }
 
-export function LocationSettingsMenu({ isOwner, onRename, onRetention, onDelete, onLeave }: LocationSettingsMenuProps) {
+export function LocationSettingsMenu({ isOwner, onRename, onRetention, onDelete, onLeave, compact }: LocationSettingsMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -34,12 +35,15 @@ export function LocationSettingsMenu({ isOwner, onRename, onRetention, onDelete,
     return (
       <Button
         variant="ghost"
-        size="sm"
+        size={compact ? 'icon' : 'sm'}
         onClick={onLeave}
-        className="rounded-[var(--radius-full)] h-8 px-3 text-[var(--destructive)]"
+        className={compact
+          ? 'h-7 w-7 rounded-full text-[var(--destructive)]'
+          : 'rounded-[var(--radius-full)] h-8 px-3 text-[var(--destructive)]'
+        }
       >
-        <LogOut className="h-3.5 w-3.5 mr-1.5" />
-        Leave
+        <LogOut className="h-3.5 w-3.5" />
+        {!compact && <span className="ml-1.5">Leave</span>}
       </Button>
     );
   }
@@ -48,13 +52,21 @@ export function LocationSettingsMenu({ isOwner, onRename, onRetention, onDelete,
     <div className="relative" ref={menuRef}>
       <Button
         variant="ghost"
-        size="sm"
+        size={compact ? 'icon' : 'sm'}
         onClick={() => setOpen(!open)}
-        className="rounded-[var(--radius-full)] h-8 px-3"
+        className={compact
+          ? 'h-7 w-7 rounded-full'
+          : 'rounded-[var(--radius-full)] h-8 px-3'
+        }
+        aria-label="Settings"
       >
-        <Settings className="h-3.5 w-3.5 mr-1.5" />
-        Settings
-        <ChevronRight className={`h-3.5 w-3.5 ml-1 transition-transform ${open ? 'rotate-90' : ''}`} />
+        <Settings className="h-3.5 w-3.5" />
+        {!compact && (
+          <>
+            <span className="ml-1.5">Settings</span>
+            <ChevronRight className={`h-3.5 w-3.5 ml-1 transition-transform ${open ? 'rotate-90' : ''}`} />
+          </>
+        )}
       </Button>
       {open && (
         <div className="absolute right-0 top-full mt-1.5 z-50 min-w-[180px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]">
