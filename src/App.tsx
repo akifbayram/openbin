@@ -5,63 +5,65 @@ import { ToastProvider, useToast } from '@/components/ui/toast';
 import { AuthProvider } from '@/lib/auth';
 import { AuthGuard } from '@/features/auth/AuthGuard';
 import { AppLayout } from '@/features/layout/AppLayout';
-const BinListPage = React.lazy(() =>
-  import('@/features/bins/BinListPage').then((m) => ({ default: m.BinListPage }))
-);
-const BinDetailPage = React.lazy(() =>
-  import('@/features/bins/BinDetailPage').then((m) => ({ default: m.BinDetailPage }))
-);
+import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { Button } from '@/components/ui/button';
 
-const LoginPage = React.lazy(() =>
+const BinListPage = lazyWithRetry(() =>
+  import('@/features/bins/BinListPage').then((m) => ({ default: m.BinListPage }))
+);
+const BinDetailPage = lazyWithRetry(() =>
+  import('@/features/bins/BinDetailPage').then((m) => ({ default: m.BinDetailPage }))
+);
+
+const LoginPage = lazyWithRetry(() =>
   import('@/features/auth/LoginPage').then((m) => ({ default: m.LoginPage }))
 );
 
-const RegisterPage = React.lazy(() =>
+const RegisterPage = lazyWithRetry(() =>
   import('@/features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage }))
 );
 
-const QRScannerPage = React.lazy(() =>
+const QRScannerPage = lazyWithRetry(() =>
   import('@/features/qrcode/QRScannerPage').then((m) => ({ default: m.QRScannerPage }))
 );
 
-const PrintPage = React.lazy(() =>
+const PrintPage = lazyWithRetry(() =>
   import('@/features/print/PrintPage').then((m) => ({ default: m.PrintPage }))
 );
 
-const SettingsPage = React.lazy(() =>
+const SettingsPage = lazyWithRetry(() =>
   import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage }))
 );
 
-const ProfilePage = React.lazy(() =>
+const ProfilePage = lazyWithRetry(() =>
   import('@/features/profile/ProfilePage').then((m) => ({ default: m.ProfilePage }))
 );
 
-const TagsPage = React.lazy(() =>
+const TagsPage = lazyWithRetry(() =>
   import('@/features/tags/TagsPage').then((m) => ({ default: m.TagsPage }))
 );
 
-const DashboardPage = React.lazy(() =>
+const DashboardPage = lazyWithRetry(() =>
   import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage }))
 );
 
-const ItemsPage = React.lazy(() =>
+const ItemsPage = lazyWithRetry(() =>
   import('@/features/items/ItemsPage').then((m) => ({ default: m.ItemsPage }))
 );
 
-const AreasPage = React.lazy(() =>
+const AreasPage = lazyWithRetry(() =>
   import('@/features/areas/AreasPage').then((m) => ({ default: m.AreasPage }))
 );
 
-const TrashPage = React.lazy(() =>
+const TrashPage = lazyWithRetry(() =>
   import('@/features/bins/TrashPage').then((m) => ({ default: m.TrashPage }))
 );
 
-const ActivityPage = React.lazy(() =>
+const ActivityPage = lazyWithRetry(() =>
   import('@/features/activity/ActivityPage').then((m) => ({ default: m.ActivityPage }))
 );
 
-const BulkAddPage = React.lazy(() =>
+const BulkAddPage = lazyWithRetry(() =>
   import('@/features/bulk-add/BulkAddPage').then((m) => ({ default: m.BulkAddPage }))
 );
 
@@ -108,31 +110,46 @@ class ErrorBoundary extends React.Component<
   }
 }
 
+let controllerChangeReloaded = false;
+
 function SWUpdateNotifier() {
   const { showToast } = useToast();
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistration().then((reg) => {
-        if (!reg) return;
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          if (!newWorker) return;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              showToast({
-                message: 'New version available',
-                duration: 10000,
-                action: {
-                  label: 'Refresh',
-                  onClick: () => window.location.reload(),
-                },
-              });
-            }
-          });
+    if (!('serviceWorker' in navigator)) return;
+
+    // When a new SW takes control (e.g. skipWaiting after autoUpdate),
+    // reload once so the page uses fresh assets matching the new cache.
+    const onControllerChange = () => {
+      if (controllerChangeReloaded) return;
+      controllerChangeReloaded = true;
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      if (!reg) return;
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showToast({
+              message: 'New version available',
+              duration: 10000,
+              action: {
+                label: 'Refresh',
+                onClick: () => window.location.reload(),
+              },
+            });
+          }
         });
       });
-    }
+    });
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+    };
   }, [showToast]);
 
   return null;
