@@ -110,13 +110,15 @@ export function ActivityPage() {
       </h1>
 
       {isLoading && entries.length === 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex items-start gap-3">
-              <Skeleton className="h-8 w-8 rounded-full shrink-0" />
-              <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/4" />
+            <div key={i} className="glass-card rounded-[var(--radius-lg)] px-4 py-3.5">
+              <div className="flex items-start gap-3">
+                <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/4" />
+                </div>
               </div>
             </div>
           ))}
@@ -138,11 +140,11 @@ export function ActivityPage() {
               <h2 className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
                 {dateLabel}
               </h2>
-              <div className="space-y-0">
+              <div className="space-y-3">
                 {items.map((entry) => (
                   <button
                     key={entry.id}
-                    className="w-full flex items-start gap-3 py-2.5 px-1 text-left hover:bg-[var(--bg-hover)] rounded-[var(--radius-md)] transition-colors"
+                    className="glass-card w-full flex items-start gap-3 px-4 py-3.5 text-left rounded-[var(--radius-lg)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all duration-200"
                     onClick={() => {
                       if (entry.entity_type === 'bin' && entry.entity_id && entry.action !== 'permanent_delete') {
                         navigate(`/bin/${entry.entity_id}`);
