@@ -5,6 +5,7 @@ import { useAppSettings } from '@/lib/appSettings';
 import { useTerminology } from '@/lib/terminology';
 import type { TermKey } from '@/lib/navItems';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/usePermissions';
 import { getAvatarUrl } from '@/lib/api';
 import { LocationSwitcher } from './LocationSwitcher';
 import type { Location as LocationType } from '@/types';
@@ -63,6 +64,7 @@ export function Sidebar({ locations, activeLocationId, onLocationChange }: Sideb
   const { settings } = useAppSettings();
   const t = useTerminology();
   const { user, logout } = useAuth();
+  const { isAdmin } = usePermissions();
 
   return (
     <aside aria-label="Main navigation" className="hidden lg:flex flex-col w-[260px] h-dvh fixed left-0 top-0 bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] print-hide">
@@ -132,7 +134,7 @@ export function Sidebar({ locations, activeLocationId, onLocationChange }: Sideb
               <span className="flex-1 truncate">{user.displayName || user.username}</span>
             </button>
           )}
-          <NavButton path="/activity" label="Activity" icon={Clock} currentPath={location.pathname} navigate={navigate} />
+          {isAdmin && <NavButton path="/activity" label="Activity" icon={Clock} currentPath={location.pathname} navigate={navigate} />}
           <NavButton path="/settings" label="Settings" icon={Settings} currentPath={location.pathname} navigate={navigate} />
           <button
             onClick={logout}

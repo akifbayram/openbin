@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { usePermissions } from '@/lib/usePermissions';
 import { Clock, Package, MapPin, Users, Image, RotateCcw, Trash2, Plus, Pencil, LogIn, LogOut, UserMinus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -99,9 +100,15 @@ function groupByDate(entries: ActivityLogEntry[]): Map<string, ActivityLogEntry[
 
 export function ActivityPage() {
   const navigate = useNavigate();
+  const { isAdmin } = usePermissions();
   const t = useTerminology();
   const { entries, isLoading, hasMore, loadMore } = useActivityLog({ limit: 50 });
   const grouped = groupByDate(entries);
+
+  if (!isAdmin) {
+    navigate('/', { replace: true });
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2 max-w-2xl mx-auto">

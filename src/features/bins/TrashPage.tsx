@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Trash2, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,6 +28,7 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 export function TrashPage() {
+  const navigate = useNavigate();
   const { bins, isLoading } = useTrashBins();
   const { showToast } = useToast();
   const { activeLocationId } = useAuth();
@@ -36,6 +38,11 @@ export function TrashPage() {
   const [confirmDelete, setConfirmDelete] = useState<Bin | null>(null);
   const activeLoc = locations.find((l) => l.id === activeLocationId);
   const retentionDays = (activeLoc as { trash_retention_days?: number } | undefined)?.trash_retention_days ?? 30;
+
+  if (!isAdmin) {
+    navigate('/', { replace: true });
+    return null;
+  }
 
   async function handleRestore(bin: Bin) {
     try {
