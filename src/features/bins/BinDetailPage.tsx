@@ -256,7 +256,7 @@ export function BinDetailPage() {
         ) : (
           <div className="flex gap-1.5">
             {showAiButton && (
-              <Tooltip content="Analyze with AI">
+              <Tooltip content="Analyze with AI" side="bottom">
                 <Button
                   size="icon"
                   onClick={handleAnalyzeClick}
@@ -272,7 +272,7 @@ export function BinDetailPage() {
                 </Button>
               </Tooltip>
             )}
-            <Tooltip content={bin.is_pinned ? 'Unpin' : 'Pin'}>
+            <Tooltip content={bin.is_pinned ? 'Unpin' : 'Pin'} side="bottom">
               <Button
                 variant="ghost"
                 size="icon"
@@ -292,7 +292,7 @@ export function BinDetailPage() {
               </Button>
             </Tooltip>
             {canEdit && (
-              <Tooltip content="Edit">
+              <Tooltip content="Edit" side="bottom">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -304,7 +304,7 @@ export function BinDetailPage() {
                 </Button>
               </Tooltip>
             )}
-            <Tooltip content="Print label">
+            <Tooltip content="Print label" side="bottom">
               <Button
                 variant="ghost"
                 size="icon"
@@ -316,7 +316,7 @@ export function BinDetailPage() {
               </Button>
             </Tooltip>
             {isAdmin && otherLocations.length > 0 && (
-              <Tooltip content="Move">
+              <Tooltip content="Move" side="bottom">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -336,7 +336,7 @@ export function BinDetailPage() {
               </Tooltip>
             )}
             {canDelete && (
-              <Tooltip content="Delete">
+              <Tooltip content="Delete" side="bottom">
                 <Button
                   variant="ghost"
                   size="icon"

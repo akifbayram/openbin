@@ -129,13 +129,13 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
             variant="ghost"
             size="icon"
             onClick={(e) => { e.stopPropagation(); setActionsOpen(!actionsOpen); }}
-            className="h-7 w-7 rounded-full opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus:opacity-100 transition-opacity"
+            className="h-9 w-9 rounded-full [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus:opacity-100 transition-opacity"
             aria-label="More actions"
           >
             <MoreHorizontal className="h-3.5 w-3.5" />
           </Button>
           {actionsOpen && (
-            <div className="absolute right-0 top-full mt-1.5 z-50 min-w-[140px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)] overflow-hidden">
+            <div className="absolute right-0 top-full mt-1.5 z-50 min-w-[140px] glass-heavy rounded-[var(--radius-lg)] shadow-lg border border-[var(--border-glass)] overflow-hidden">
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); startEdit(); }}
