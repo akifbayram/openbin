@@ -248,7 +248,7 @@ components:
           type: integer
         role:
           type: string
-          enum: [owner, member]
+          enum: [admin, member]
 
     LocationMember:
       type: object
@@ -264,7 +264,7 @@ components:
           format: uuid
         role:
           type: string
-          enum: [owner, member]
+          enum: [admin, member]
         joined_at:
           type: string
           format: date-time
@@ -1396,7 +1396,7 @@ paths:
     put:
       tags: [Locations]
       summary: Update a location
-      description: Owner only. Can update name, activity retention, trash retention, and app name.
+      description: Admin only. Can update name, activity retention, trash retention, and app name.
       parameters:
         - name: id
           in: path
@@ -1443,7 +1443,7 @@ paths:
     delete:
       tags: [Locations]
       summary: Delete a location
-      description: Owner only. Cascades to bins, photos, areas, tag colors, and activity log.
+      description: Admin only. Cascades to bins, photos, areas, tag colors, and activity log.
       parameters:
         - name: id
           in: path
@@ -1501,7 +1501,7 @@ paths:
     delete:
       tags: [Locations]
       summary: Remove a member from location
-      description: Owner can remove anyone. Members can only remove themselves (leave).
+      description: Admins can remove anyone. Members can only remove themselves (leave). Last admin cannot leave.
       parameters:
         - name: id
           in: path
@@ -1531,11 +1531,58 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /locations/{id}/members/{userId}/role:
+    put:
+      tags: [Locations]
+      summary: Change a member's role
+      description: Admin only. Change a member's role to admin or member. Cannot demote the last admin.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [admin, member]
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Role updated to admin
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /locations/{id}/regenerate-invite:
     post:
       tags: [Locations]
       summary: Regenerate invite code
-      description: Owner only. Invalidates the previous invite code.
+      description: Admin only. Invalidates the previous invite code.
       parameters:
         - name: id
           in: path

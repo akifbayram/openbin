@@ -1,20 +1,23 @@
-import { useState } from 'react';
-import { MapPin, Plus, LogIn } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { LogIn, MapPin, MapPinned, Plus, Shield, Users } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/toast';
-import { ApiError } from '@/lib/api';
 import { useBinList } from '@/features/bins/useBins';
-import { useLocationList, leaveLocation } from '@/features/locations/useLocations';
-import { LocationCreateDialog, LocationJoinDialog, LocationRenameDialog, LocationDeleteDialog } from '@/features/locations/LocationDialogs';
+import { LocationCreateDialog, LocationDeleteDialog, LocationJoinDialog, LocationRenameDialog } from '@/features/locations/LocationDialogs';
 import { LocationMembersDialog } from '@/features/locations/LocationMembersDialog';
 import { LocationRetentionDialog } from '@/features/locations/LocationRetentionDialog';
-import { useAreaList, createArea, updateArea, deleteArea } from './useAreas';
+import { leaveLocation, useLocationList } from '@/features/locations/useLocations';
+import { ApiError } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
-import { LocationCard } from './LocationCard';
+import { AreaCard, CreateAreaCard, UnassignedAreaCard } from './AreaCard';
+import { LocationSettingsMenu } from './LocationSettingsMenu';
+import { LocationTabs } from './LocationTabs';
+import { createArea, deleteArea, updateArea, useAreaList } from './useAreas';
 
 interface DeleteAreaTarget {
   id: string;
@@ -24,6 +27,7 @@ interface DeleteAreaTarget {
 
 export function AreasPage() {
   const t = useTerminology();
+  const navigate = useNavigate();
   const { user, activeLocationId, setActiveLocationId } = useAuth();
   const { locations, isLoading: locationsLoading } = useLocationList();
   const { showToast } = useToast();
@@ -48,7 +52,33 @@ export function AreasPage() {
   const [deletingArea, setDeletingArea] = useState(false);
 
   const activeLocation = locations.find((l) => l.id === activeLocationId);
-  const inactiveLocations = locations.filter((l) => l.id !== activeLocationId);
+  const isAdmin = activeLocation?.role === 'admin';
+
+  const areaInfos = useMemo(() => {
+    const countMap = new Map<string | null, number>();
+    for (const bin of bins) {
+      countMap.set(bin.area_id, (countMap.get(bin.area_id) || 0) + 1);
+    }
+    const result = areas.map((a) => ({
+      id: a.id,
+      name: a.name,
+      binCount: countMap.get(a.id) || 0,
+    }));
+    result.sort((a, b) => a.name.localeCompare(b.name));
+    return result;
+  }, [areas, bins]);
+
+  const unassignedCount = useMemo(() => {
+    return bins.filter((b) => !b.area_id).length;
+  }, [bins]);
+
+  function handleAreaClick(areaId: string) {
+    navigate('/bins', { state: { areaFilter: areaId } });
+  }
+
+  function handleUnassignedClick() {
+    navigate('/bins', { state: { areaFilter: '__unassigned__' } });
+  }
 
   async function handleCreateArea(e: React.FormEvent) {
     e.preventDefault();
@@ -106,12 +136,14 @@ export function AreasPage() {
     }
   }
 
+  const memberCount = activeLocation?.member_count ?? 0;
+
   return (
     <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-          {t.Locations}
+          {locations.length === 1 ? activeLocation?.name ?? t.Locations : t.Locations}
         </h1>
         {locations.length > 0 && (
           <div className="flex gap-2">
@@ -144,7 +176,7 @@ export function AreasPage() {
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty state — no locations */}
       {!locationsLoading && locations.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
           <MapPin className="h-16 w-16 opacity-40" />
@@ -165,52 +197,86 @@ export function AreasPage() {
         </div>
       )}
 
-      {/* Active location card */}
+      {/* Active location content */}
       {!locationsLoading && activeLocation && (
-        <LocationCard
-          location={activeLocation}
-          isActive
-          areas={areas}
-          bins={bins}
-          onSetActive={setActiveLocationId}
-          onMembers={setMembersLocationId}
-          onRename={setRenameLocationId}
-          onRetention={setRetentionLocationId}
-          onDelete={setDeleteLocationId}
-          onLeave={handleLeave}
-          onCreateArea={() => setCreateAreaOpen(true)}
-          onRenameArea={handleRenameArea}
-          onDeleteArea={handleDeleteAreaRequest}
-        />
-      )}
-
-      {/* Inactive location cards */}
-      {!locationsLoading && inactiveLocations.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {inactiveLocations.length > 0 && locations.length > 1 && (
-            <span className="text-[13px] uppercase tracking-wider text-[var(--text-tertiary)] font-medium">
-              Other {t.Locations}
-            </span>
-          )}
-          {inactiveLocations.map((loc) => (
-            <LocationCard
-              key={loc.id}
-              location={loc}
-              isActive={false}
-              areas={[]}
-              bins={[]}
-              onSetActive={setActiveLocationId}
-              onMembers={setMembersLocationId}
-              onRename={setRenameLocationId}
-              onRetention={setRetentionLocationId}
-              onDelete={setDeleteLocationId}
-              onLeave={handleLeave}
-              onCreateArea={() => {}}
-              onRenameArea={async () => {}}
-              onDeleteArea={() => {}}
+        <>
+          {/* Location tabs — only if 2+ locations */}
+          {locations.length >= 2 && (
+            <LocationTabs
+              locations={locations}
+              activeId={activeLocationId}
+              onSelect={setActiveLocationId}
             />
-          ))}
-        </div>
+          )}
+
+          {/* Location meta line */}
+          <div className="flex items-center gap-2 text-[13px] text-[var(--text-tertiary)]">
+            {isAdmin ? (
+              <span className="inline-flex items-center gap-1">
+                <Shield className="h-3 w-3" />
+                Admin
+              </span>
+            ) : (
+              <span>Member</span>
+            )}
+            <span className="text-[var(--text-tertiary)] opacity-50">&middot;</span>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+              onClick={() => setMembersLocationId(activeLocation.id)}
+            >
+              <Users className="h-3 w-3" />
+              {memberCount} {memberCount !== 1 ? 'members' : 'member'}
+            </button>
+            <div className="flex-1" />
+            <LocationSettingsMenu
+              compact
+              isAdmin={isAdmin}
+              onRename={() => setRenameLocationId(activeLocation.id)}
+              onRetention={() => setRetentionLocationId(activeLocation.id)}
+              onDelete={() => setDeleteLocationId(activeLocation.id)}
+              onLeave={() => handleLeave(activeLocation.id)}
+            />
+          </div>
+
+          {/* Area grid */}
+          {areaInfos.length === 0 && unassignedCount === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-12 text-[var(--text-tertiary)]">
+              <MapPinned className="h-10 w-10 opacity-40" />
+              <p className="text-[13px]">{`No ${t.areas} yet`}</p>
+              {isAdmin && (
+                <Button onClick={() => setCreateAreaOpen(true)} variant="outline" size="sm" className="rounded-[var(--radius-full)]">
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  {`Create ${t.Area}`}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {areaInfos.map((area) => (
+                <AreaCard
+                  key={area.id}
+                  id={area.id}
+                  name={area.name}
+                  binCount={area.binCount}
+                  isAdmin={isAdmin}
+                  onNavigate={handleAreaClick}
+                  onRename={handleRenameArea}
+                  onDelete={handleDeleteAreaRequest}
+                />
+              ))}
+              {unassignedCount > 0 && (
+                <UnassignedAreaCard
+                  count={unassignedCount}
+                  onNavigate={handleUnassignedClick}
+                />
+              )}
+              {isAdmin && (
+                <CreateAreaCard onCreate={() => setCreateAreaOpen(true)} />
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/* Create Area Dialog */}

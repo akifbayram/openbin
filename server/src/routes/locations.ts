@@ -2,7 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { query, generateUuid } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
-import { isLocationOwner, verifyLocationMembership, getMemberRole } from '../lib/binAccess.js';
+import { isLocationAdmin, verifyLocationMembership, getMemberRole } from '../lib/binAccess.js';
 import { logActivity, computeChanges } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { ValidationError, NotFoundError, ForbiddenError, ConflictError } from '../lib/httpErrors.js';
@@ -65,10 +65,10 @@ router.post('/', asyncHandler(async (req, res) => {
 
   const location = locationResult.rows[0];
 
-  // Auto-add creator as owner
+  // Auto-add creator as admin
   await query(
     'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
-    [generateUuid(), location.id, req.user!.id, 'owner']
+    [generateUuid(), location.id, req.user!.id, 'admin']
   );
 
   res.status(201).json({
@@ -82,7 +82,7 @@ router.post('/', asyncHandler(async (req, res) => {
     term_bin: location.term_bin,
     term_location: location.term_location,
     term_area: location.term_area,
-    role: 'owner',
+    role: 'admin',
     member_count: 1,
     area_count: 0,
     created_at: location.created_at,
@@ -90,13 +90,13 @@ router.post('/', asyncHandler(async (req, res) => {
   });
 }));
 
-// PUT /api/locations/:id — update location (owner only)
+// PUT /api/locations/:id — update location (admin only)
 router.put('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { name, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area } = req.body;
 
-  if (!await isLocationOwner(id, req.user!.id)) {
-    throw new ForbiddenError('Only the owner can update this location');
+  if (!await isLocationAdmin(id, req.user!.id)) {
+    throw new ForbiddenError('Only admins can update this location');
   }
 
   // At least one field must be provided
@@ -216,12 +216,12 @@ router.put('/:id', asyncHandler(async (req, res) => {
   });
 }));
 
-// DELETE /api/locations/:id — delete location (owner only, cascades)
+// DELETE /api/locations/:id — delete location (admin only, cascades)
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  if (!await isLocationOwner(id, req.user!.id)) {
-    throw new ForbiddenError('Only the owner can delete this location');
+  if (!await isLocationAdmin(id, req.user!.id)) {
+    throw new ForbiddenError('Only admins can delete this location');
   }
 
   const result = await query('DELETE FROM locations WHERE id = $1 RETURNING id, name', [id]);
@@ -333,16 +333,22 @@ router.delete('/:id/members/:userId', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Not a member of this location');
   }
 
-  const isOwner = role === 'owner';
+  const isAdmin = role === 'admin';
 
-  // Members can only remove themselves; owners can remove anyone
-  if (!isOwner && requesterId !== userId) {
-    throw new ForbiddenError('Only owners can remove other members');
+  // Members can only remove themselves; admins can remove anyone
+  if (!isAdmin && requesterId !== userId) {
+    throw new ForbiddenError('Only admins can remove other members');
   }
 
-  // Prevent owner from removing themselves (must delete location instead)
-  if (isOwner && requesterId === userId) {
-    throw new ValidationError('Owner cannot leave. Delete the location or transfer ownership.');
+  // If an admin is leaving, check they're not the last admin
+  if (isAdmin && requesterId === userId) {
+    const adminCount = await query(
+      "SELECT COUNT(*) AS cnt FROM location_members WHERE location_id = $1 AND role = 'admin'",
+      [id]
+    );
+    if (adminCount.rows[0].cnt <= 1) {
+      throw new ValidationError('Cannot leave as the last admin. Promote another member first.');
+    }
   }
 
   // Get username for activity log
@@ -371,12 +377,70 @@ router.delete('/:id/members/:userId', asyncHandler(async (req, res) => {
   res.json({ message: 'Member removed' });
 }));
 
-// POST /api/locations/:id/regenerate-invite — new invite code (owner only)
+// PUT /api/locations/:id/members/:userId/role — change member role (admin only)
+router.put('/:id/members/:userId/role', asyncHandler(async (req, res) => {
+  const { id, userId } = req.params;
+  const { role } = req.body;
+
+  if (!role || !['admin', 'member'].includes(role)) {
+    throw new ValidationError('Role must be "admin" or "member"');
+  }
+
+  // Requester must be admin
+  if (!await isLocationAdmin(id, req.user!.id)) {
+    throw new ForbiddenError('Only admins can change member roles');
+  }
+
+  // Target must be a member
+  const targetRole = await getMemberRole(id, userId);
+  if (!targetRole) {
+    throw new NotFoundError('Member not found');
+  }
+
+  if (targetRole === role) {
+    res.json({ message: 'Role unchanged' });
+    return;
+  }
+
+  // Last-admin guard: prevent demoting the sole admin
+  if (targetRole === 'admin' && role === 'member') {
+    const adminCount = await query(
+      "SELECT COUNT(*) AS cnt FROM location_members WHERE location_id = $1 AND role = 'admin'",
+      [id]
+    );
+    if (adminCount.rows[0].cnt <= 1) {
+      throw new ValidationError('Cannot demote the last admin. Promote another member first.');
+    }
+  }
+
+  await query(
+    'UPDATE location_members SET role = $1 WHERE location_id = $2 AND user_id = $3',
+    [role, id, userId]
+  );
+
+  // Get username for activity log
+  const userResult = await query('SELECT username FROM users WHERE id = $1', [userId]);
+  const targetUsername = userResult.rows[0]?.username ?? 'unknown';
+
+  logActivity({
+    locationId: id,
+    userId: req.user!.id,
+    userName: req.user!.username,
+    action: 'change_role',
+    entityType: 'member',
+    entityName: targetUsername,
+    changes: { role: { old: targetRole, new: role } },
+  });
+
+  res.json({ message: `Role updated to ${role}` });
+}));
+
+// POST /api/locations/:id/regenerate-invite — new invite code (admin only)
 router.post('/:id/regenerate-invite', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  if (!await isLocationOwner(id, req.user!.id)) {
-    throw new ForbiddenError('Only the owner can regenerate invite codes');
+  if (!await isLocationAdmin(id, req.user!.id)) {
+    throw new ForbiddenError('Only admins can regenerate invite codes');
   }
 
   const newCode = generateInviteCode();

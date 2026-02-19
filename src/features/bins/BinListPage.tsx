@@ -18,6 +18,7 @@ import { useToast } from '@/components/ui/toast';
 import { haptic } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/usePermissions';
 import { useBinList, useAllTags, deleteBin, restoreBin, countActiveFilters, EMPTY_FILTERS, type SortOption, type BinFilters } from './useBins';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 
@@ -80,6 +81,7 @@ export function BinListPage() {
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
   const [bulkAreaOpen, setBulkAreaOpen] = useState(false);
   const { activeLocationId } = useAuth();
+  const { isAdmin } = usePermissions();
   const { bins, isLoading } = useBinList(debouncedSearch, sort, filters);
   const allTags = useAllTags();
   const activeCount = countActiveFilters(filters);
@@ -297,6 +299,7 @@ export function BinListPage() {
       {selectable && (
         <BulkActionBar
           selectedCount={selectedIds.size}
+          isAdmin={isAdmin}
           onTag={() => setBulkTagOpen(true)}
           onMove={() => setBulkAreaOpen(true)}
           onDelete={bulkDelete}

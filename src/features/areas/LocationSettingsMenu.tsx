@@ -3,7 +3,7 @@ import { Settings, Pencil, Clock, Trash2, LogOut, ChevronRight } from 'lucide-re
 import { Button } from '@/components/ui/button';
 
 interface LocationSettingsMenuProps {
-  isOwner: boolean;
+  isAdmin: boolean;
   onRename: () => void;
   onRetention: () => void;
   onDelete: () => void;
@@ -11,7 +11,7 @@ interface LocationSettingsMenuProps {
   compact?: boolean;
 }
 
-export function LocationSettingsMenu({ isOwner, onRename, onRetention, onDelete, onLeave, compact }: LocationSettingsMenuProps) {
+export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onDelete, onLeave, compact }: LocationSettingsMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -31,7 +31,7 @@ export function LocationSettingsMenu({ isOwner, onRename, onRetention, onDelete,
     action();
   }
 
-  if (!isOwner) {
+  if (!isAdmin) {
     return (
       <Button
         variant="ghost"

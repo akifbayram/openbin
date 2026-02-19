@@ -80,3 +80,11 @@ export async function regenerateInvite(locationId: string): Promise<{ inviteCode
   notifyLocationsChanged();
   return result;
 }
+
+export async function changeMemberRole(locationId: string, userId: string, role: 'admin' | 'member'): Promise<void> {
+  await apiFetch(`/api/locations/${locationId}/members/${userId}/role`, {
+    method: 'PUT',
+    body: { role },
+  });
+  notifyLocationsChanged();
+}

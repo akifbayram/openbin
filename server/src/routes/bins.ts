@@ -10,7 +10,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { ValidationError, NotFoundError, ForbiddenError } from '../lib/httpErrors.js';
 import { validateBinName } from '../lib/validation.js';
 import { binPhotoUpload, PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
-import { verifyBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
+import { verifyBinAccess, verifyLocationMembership, getMemberRole, isBinCreator } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS } from '../lib/binQueries.js';
 
 const router = Router();
@@ -308,6 +308,12 @@ router.put('/:id', asyncHandler(async (req, res) => {
     throw new NotFoundError('Bin not found');
   }
 
+  // Members can only edit bins they created; admins can edit any bin
+  const role = await getMemberRole(access.locationId, req.user!.id);
+  if (role === 'member' && !await isBinCreator(id, req.user!.id)) {
+    throw new ForbiddenError('Only admins or the bin creator can edit this bin');
+  }
+
   const { name, areaId, items, notes, tags, icon, color } = req.body;
 
   if (name !== undefined) {
@@ -475,13 +481,18 @@ router.put('/:id', asyncHandler(async (req, res) => {
   res.json(bin);
 }));
 
-// DELETE /api/bins/:id — soft-delete bin
+// DELETE /api/bins/:id — soft-delete bin (admin only)
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const access = await verifyBinAccess(id, req.user!.id);
   if (!access) {
     throw new NotFoundError('Bin not found');
+  }
+
+  const delRole = await getMemberRole(access.locationId, req.user!.id);
+  if (delRole !== 'admin') {
+    throw new ForbiddenError('Only admins can delete bins');
   }
 
   // Fetch bin before soft-deleting for response
@@ -514,7 +525,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   res.json(bin);
 }));
 
-// POST /api/bins/:id/restore — restore a soft-deleted bin
+// POST /api/bins/:id/restore — restore a soft-deleted bin (admin only)
 router.post('/:id/restore', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -531,6 +542,11 @@ router.post('/:id/restore', asyncHandler(async (req, res) => {
   }
 
   const locationId = accessResult.rows[0].location_id;
+
+  const restoreRole = await getMemberRole(locationId, req.user!.id);
+  if (restoreRole !== 'admin') {
+    throw new ForbiddenError('Only admins can restore bins');
+  }
 
   await query(
     `UPDATE bins SET deleted_at = NULL, updated_at = datetime('now') WHERE id = $1`,
@@ -556,7 +572,7 @@ router.post('/:id/restore', asyncHandler(async (req, res) => {
   res.json(bin);
 }));
 
-// DELETE /api/bins/:id/permanent — permanently delete a soft-deleted bin
+// DELETE /api/bins/:id/permanent — permanently delete a soft-deleted bin (admin only)
 router.delete('/:id/permanent', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -573,6 +589,11 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
   }
 
   const { location_id: locationId, name: binName } = accessResult.rows[0];
+
+  const permRole = await getMemberRole(locationId, req.user!.id);
+  if (permRole !== 'admin') {
+    throw new ForbiddenError('Only admins can permanently delete bins');
+  }
 
   // Get photos to delete from disk
   const photosResult = await query(
@@ -706,7 +727,7 @@ router.delete('/:id/pin', asyncHandler(async (req, res) => {
   res.json({ pinned: false });
 }));
 
-// POST /api/bins/:id/move — move bin to a different location
+// POST /api/bins/:id/move — move bin to a different location (admin only)
 router.post('/:id/move', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { locationId: targetLocationId } = req.body;
@@ -718,6 +739,11 @@ router.post('/:id/move', asyncHandler(async (req, res) => {
   const access = await verifyBinAccess(id, req.user!.id);
   if (!access) {
     throw new NotFoundError('Bin not found');
+  }
+
+  const moveRole = await getMemberRole(access.locationId, req.user!.id);
+  if (moveRole !== 'admin') {
+    throw new ForbiddenError('Only admins can move bins');
   }
 
   if (access.locationId === targetLocationId) {

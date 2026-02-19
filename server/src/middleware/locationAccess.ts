@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyLocationMembership, isLocationOwner } from '../lib/binAccess.js';
+import { verifyLocationMembership, isLocationAdmin } from '../lib/binAccess.js';
 
 /**
  * Middleware factory to verify user is member of a location.
@@ -28,4 +28,30 @@ export function requireLocationMember(paramName = 'id') {
   };
 }
 
-export { isLocationOwner };
+/**
+ * Middleware factory to verify user is an admin of a location.
+ */
+export function requireLocationAdmin(paramName = 'id') {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'Not authenticated' });
+      return;
+    }
+
+    const locationId = req.params[paramName] || req.body?.locationId || req.query.location_id;
+    if (!locationId) {
+      res.status(400).json({ error: 'Location ID required' });
+      return;
+    }
+
+    if (!await isLocationAdmin(locationId as string, userId)) {
+      res.status(403).json({ error: 'Only admins can perform this action' });
+      return;
+    }
+
+    next();
+  };
+}
+
+export { isLocationAdmin };

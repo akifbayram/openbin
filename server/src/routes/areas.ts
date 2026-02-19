@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { query, generateUuid } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
-import { requireLocationMember } from '../middleware/locationAccess.js';
+import { requireLocationMember, requireLocationAdmin } from '../middleware/locationAccess.js';
 import { logActivity } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { ValidationError, NotFoundError, ConflictError } from '../lib/httpErrors.js';
@@ -20,8 +20,8 @@ router.get('/:locationId/areas', requireLocationMember('locationId'), asyncHandl
   res.json({ results: result.rows, count: result.rows.length });
 }));
 
-// POST /api/locations/:locationId/areas — create area
-router.post('/:locationId/areas', requireLocationMember('locationId'), asyncHandler(async (req, res) => {
+// POST /api/locations/:locationId/areas — create area (admin only)
+router.post('/:locationId/areas', requireLocationAdmin('locationId'), asyncHandler(async (req, res) => {
   const { locationId } = req.params;
   const { name } = req.body;
 
@@ -59,8 +59,8 @@ router.post('/:locationId/areas', requireLocationMember('locationId'), asyncHand
   }
 }));
 
-// PUT /api/locations/:locationId/areas/:areaId — rename area
-router.put('/:locationId/areas/:areaId', requireLocationMember('locationId'), asyncHandler(async (req, res) => {
+// PUT /api/locations/:locationId/areas/:areaId — rename area (admin only)
+router.put('/:locationId/areas/:areaId', requireLocationAdmin('locationId'), asyncHandler(async (req, res) => {
   const { locationId, areaId } = req.params;
   const { name } = req.body;
 
@@ -109,8 +109,8 @@ router.put('/:locationId/areas/:areaId', requireLocationMember('locationId'), as
   }
 }));
 
-// DELETE /api/locations/:locationId/areas/:areaId — delete area (bins get area_id = NULL)
-router.delete('/:locationId/areas/:areaId', requireLocationMember('locationId'), asyncHandler(async (req, res) => {
+// DELETE /api/locations/:locationId/areas/:areaId — delete area (admin only, bins get area_id = NULL)
+router.delete('/:locationId/areas/:areaId', requireLocationAdmin('locationId'), asyncHandler(async (req, res) => {
   const { locationId, areaId } = req.params;
 
   // Get name for activity log

@@ -95,7 +95,7 @@ describe('useLocationList', () => {
 describe('useLocationMembers', () => {
   it('fetches members for a locationId', async () => {
     const members = [
-      { id: 'm1', location_id: 'loc-1', user_id: 'u1', role: 'owner' as const, joined_at: '' },
+      { id: 'm1', location_id: 'loc-1', user_id: 'u1', role: 'admin' as const, joined_at: '' },
     ];
     mockApiFetch.mockResolvedValue({ results: members, count: members.length });
 
