@@ -134,7 +134,7 @@ describe('deleteBin', () => {
 });
 
 describe('restoreBin', () => {
-  it('calls apiFetch with POST and includes bin id and areaId', async () => {
+  it('calls the restore endpoint with the bin id', async () => {
     mockApiFetch.mockResolvedValue(undefined);
 
     await restoreBin({
@@ -156,14 +156,8 @@ describe('restoreBin', () => {
       updated_at: '2024-01-01T00:00:00Z',
     });
 
-    expect(mockApiFetch).toHaveBeenCalledWith('/api/bins', {
+    expect(mockApiFetch).toHaveBeenCalledWith('/api/bins/restored-bin/restore', {
       method: 'POST',
-      body: expect.objectContaining({
-        id: 'restored-bin',
-        locationId: 'location-1',
-        name: 'Restored',
-        areaId: 'area-1',
-      }),
     });
   });
 });

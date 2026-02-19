@@ -233,21 +233,7 @@ export async function deleteBin(id: string): Promise<Bin> {
 }
 
 export async function restoreBin(bin: Bin): Promise<void> {
-  await apiFetch('/api/bins', {
-    method: 'POST',
-    body: {
-      id: bin.id,
-      locationId: bin.location_id,
-      name: bin.name,
-      areaId: bin.area_id,
-      items: bin.items.map((i) => i.name),
-      notes: bin.notes,
-      tags: bin.tags,
-      icon: bin.icon,
-      color: bin.color,
-      shortCode: bin.short_code,
-    },
-  });
+  await apiFetch(`/api/bins/${bin.id}/restore`, { method: 'POST' });
   notifyBinsChanged();
 }
 
