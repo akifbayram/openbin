@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Check, Pin, Plus, ArrowRightLeft } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Lock, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Check, Pin, Plus, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +17,7 @@ import { ItemList } from './ItemList';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { useBin, updateBin, deleteBin, restoreBin, useAllTags, moveBin } from './useBins';
+import { VisibilityPicker } from './VisibilityPicker';
 import { useQuickAdd } from './useQuickAdd';
 import { useLocationList } from '@/features/locations/useLocations';
 import { AreaPicker } from '@/features/areas/AreaPicker';
@@ -36,7 +37,7 @@ import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/usePermissions';
 import { useTerminology } from '@/lib/terminology';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
-import type { Bin } from '@/types';
+import type { Bin, BinVisibility } from '@/types';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -50,7 +51,7 @@ export function BinDetailPage() {
   const { showToast } = useToast();
   const { theme } = useTheme();
   const { activeLocationId } = useAuth();
-  const { isAdmin, canEditBin } = usePermissions();
+  const { isAdmin, canEditBin, canChangeVisibility } = usePermissions();
   const t = useTerminology();
   const { tagColors } = useTagColorsContext();
   const { aiEnabled } = useAiEnabled();
@@ -62,6 +63,7 @@ export function BinDetailPage() {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editIcon, setEditIcon] = useState('');
   const [editColor, setEditColor] = useState('');
+  const [editVisibility, setEditVisibility] = useState<BinVisibility>('location');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveTargetId, setMoveTargetId] = useState<string | null>(null);
@@ -136,6 +138,7 @@ export function BinDetailPage() {
     setEditTags([...bin.tags]);
     setEditIcon(bin.icon);
     setEditColor(bin.color);
+    setEditVisibility(bin.visibility);
     setEditing(true);
   }
 
@@ -149,6 +152,7 @@ export function BinDetailPage() {
       tags: editTags,
       icon: editIcon,
       color: editColor,
+      visibility: editVisibility,
     });
     setEditing(false);
   }
@@ -401,6 +405,12 @@ export function BinDetailPage() {
                 <Label>Color</Label>
                 <ColorPicker value={editColor} onChange={setEditColor} />
               </div>
+              {canChangeVisibility(bin.created_by) && (
+                <div className="space-y-2">
+                  <Label>Visibility</Label>
+                  <VisibilityPicker value={editVisibility} onChange={setEditVisibility} />
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -449,8 +459,14 @@ export function BinDetailPage() {
             {(() => { const Icon = resolveIcon(bin.icon); return <Icon className="h-7 w-7 text-[var(--text-secondary)] shrink-0 mt-0.5" />; })()}
             {bin.color && (() => { const preset = getColorPreset(bin.color); return preset ? <span className="h-3.5 w-3.5 rounded-full shrink-0 mt-2" style={{ backgroundColor: preset.dot }} /> : null; })()}
             <div className="min-w-0">
-              <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-tight">
+              <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-tight flex items-center gap-2">
                 {bin.name}
+                {bin.visibility === 'private' && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-secondary)] px-2 py-0.5 text-[12px] font-medium text-[var(--text-tertiary)]">
+                    <Lock className="h-3 w-3" />
+                    Private
+                  </span>
+                )}
               </h1>
               {bin.area_name && (
                 <p className="text-[15px] text-[var(--text-secondary)] mt-0.5 truncate">

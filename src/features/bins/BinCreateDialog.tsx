@@ -18,6 +18,7 @@ import { ItemsInput } from './ItemsInput';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { addBin, useAllTags } from './useBins';
+import { VisibilityPicker } from './VisibilityPicker';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAuth } from '@/lib/auth';
 import { useAiEnabled } from '@/lib/aiToggle';
@@ -27,7 +28,7 @@ import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
 import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
-import type { AiSuggestions } from '@/types';
+import type { AiSuggestions, BinVisibility } from '@/types';
 
 interface BinCreateDialogProps {
   open: boolean;
@@ -52,6 +53,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
   const [tags, setTags] = useState<string[]>([]);
   const [icon, setIcon] = useState('');
   const [color, setColor] = useState('');
+  const [visibility, setVisibility] = useState<BinVisibility>('location');
   const [loading, setLoading] = useState(false);
 
   const [photos, setPhotos] = useState<File[]>([]);
@@ -90,6 +92,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
     setTags([]);
     setIcon('');
     setColor('');
+    setVisibility('location');
     photoPreviews.forEach((url) => URL.revokeObjectURL(url));
     setPhotos([]);
     setPhotoPreviews([]);
@@ -168,6 +171,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
         areaId,
         icon,
         color,
+        visibility,
       });
       // Upload photos non-blocking (fire-and-forget)
       if (photos.length > 0) {
@@ -335,6 +339,10 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
             <div className="space-y-2">
               <Label>Color</Label>
               <ColorPicker value={color} onChange={setColor} />
+            </div>
+            <div className="space-y-2">
+              <Label>Visibility</Label>
+              <VisibilityPicker value={visibility} onChange={setVisibility} />
             </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

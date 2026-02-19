@@ -15,14 +15,16 @@ router.use(authenticate);
 /** Verify user has access to a photo via photo -> bin -> location chain */
 async function verifyPhotoAccess(photoId: string, userId: string): Promise<{ binId: string; storagePath: string; locationId: string } | null> {
   const result = await query(
-    `SELECT p.bin_id, p.storage_path, b.location_id FROM photos p
+    `SELECT p.bin_id, p.storage_path, b.location_id, b.visibility, b.created_by FROM photos p
      JOIN bins b ON b.id = p.bin_id
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
      WHERE p.id = $1`,
     [photoId, userId]
   );
   if (result.rows.length === 0) return null;
-  return { binId: result.rows[0].bin_id, storagePath: result.rows[0].storage_path, locationId: result.rows[0].location_id };
+  const row = result.rows[0];
+  if (row.visibility === 'private' && row.created_by !== userId) return null;
+  return { binId: row.bin_id, storagePath: row.storage_path, locationId: row.location_id };
 }
 
 // GET /api/photos — list photos for a bin
@@ -33,11 +35,11 @@ router.get('/', asyncHandler(async (req, res) => {
     throw new ValidationError('bin_id query parameter is required');
   }
 
-  // Verify user has access to the bin's location
+  // Verify user has access to the bin's location (and visibility)
   const accessResult = await query(
     `SELECT b.location_id FROM bins b
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-     WHERE b.id = $1`,
+     WHERE b.id = $1 AND (b.visibility = 'location' OR b.created_by = $2)`,
     [binId, req.user!.id]
   );
 

@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Pin } from 'lucide-react';
+import { Check, Lock, Pin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
 import { cn, haptic } from '@/lib/utils';
@@ -96,8 +96,9 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
           <BinIcon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-tertiary)]" style={mutedColor ? { color: mutedColor } : undefined} />
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug">
+          <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug flex items-center gap-1.5">
             <Highlight text={bin.name} query={searchQuery} />
+            {bin.visibility === 'private' && <Lock className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]" style={mutedColor ? { color: mutedColor } : undefined} />}
           </h3>
           {bin.area_name && (
             <p className="text-[12px] text-[var(--text-tertiary)] truncate leading-relaxed" style={mutedColor ? { color: mutedColor } : undefined}>
@@ -161,6 +162,7 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
     prev.bin.icon === next.bin.icon &&
     prev.bin.color === next.bin.color &&
     prev.bin.updated_at === next.bin.updated_at &&
+    prev.bin.visibility === next.bin.visibility &&
     prev.bin.is_pinned === next.bin.is_pinned &&
     prev.selectable === next.selectable &&
     prev.selected === next.selected &&

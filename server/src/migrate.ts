@@ -37,6 +37,9 @@ function migrate() {
         const ddl = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='location_members'").get() as { sql: string } | undefined;
         alreadyApplied = !!ddl && ddl.sql.includes("'admin'");
       }
+      else if (file === '006_bin_visibility.sql') {
+        alreadyApplied = tableNames.has('bins') && columns('bins').has('visibility');
+      }
 
       if (alreadyApplied) {
         db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file);

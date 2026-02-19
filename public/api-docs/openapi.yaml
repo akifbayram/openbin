@@ -354,6 +354,8 @@ components:
         short_code:
           type: string
           description: 6-character alphanumeric code for QR lookup
+        visibility:
+          $ref: '#/components/schemas/BinVisibility'
         created_by:
           type: string
           format: uuid
@@ -380,6 +382,15 @@ components:
           format: uuid
         name:
           type: string
+
+    BinVisibility:
+      type: string
+      enum: [location, private]
+      default: location
+      description: >
+        Visibility level for a bin.
+        `location` — visible to all location members (default).
+        `private` — visible only to the creator.
 
     CreateBinRequest:
       type: object
@@ -411,6 +422,8 @@ components:
           type: string
         color:
           type: string
+        visibility:
+          $ref: '#/components/schemas/BinVisibility'
 
     UpdateBinRequest:
       type: object
@@ -439,6 +452,8 @@ components:
           type: string
         color:
           type: string
+        visibility:
+          $ref: '#/components/schemas/BinVisibility'
 
     AddTagsRequest:
       type: object
