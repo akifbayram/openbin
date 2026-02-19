@@ -7,12 +7,13 @@ import {
   MapPin,
   Bookmark,
   Sparkles,
+  X,
 } from 'lucide-react';
 
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { haptic } from '@/lib/utils';
@@ -26,13 +27,14 @@ import { BinCreateDialog } from './BinCreateDialog';
 import { BinFilterDialog } from './BinFilterDialog';
 import { BulkTagDialog } from './BulkTagDialog';
 import { BulkAreaDialog } from './BulkAreaDialog';
-import { FilterBadgesBar } from './FilterBadgesBar';
 import { BulkActionBar } from './BulkActionBar';
 import { SortMenu } from './SortMenu';
 import { SaveViewDialog } from './SaveViewDialog';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useTerminology } from '@/lib/terminology';
+import { getColorPreset } from '@/lib/colorPalette';
+import { useTagStyle } from '@/features/tags/useTagStyle';
 import type { SavedView } from '@/lib/savedViews';
 import type { Bin } from '@/types';
 
@@ -88,6 +90,8 @@ export function BinListPage() {
   const { aiEnabled } = useAiEnabled();
   const [commandOpen, setCommandOpen] = useState(false);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
+  const getTagStyle = useTagStyle();
+  const hasBadges = activeCount > 0 || filters.needsOrganizing;
 
   const selectable = selectedIds.size > 0;
 
@@ -166,13 +170,107 @@ export function BinListPage() {
       {/* Search + Sort (only when a location is active) */}
       {activeLocationId && (
         <div className="flex items-center gap-2.5">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]" />
-            <Input
+          {/* Unified search bar with inline filter badges */}
+          <div className="flex flex-1 items-center flex-wrap gap-1.5 rounded-[var(--radius-full)] bg-[var(--bg-input)] px-3.5 min-h-10 py-1.5 focus-within:ring-2 focus-within:ring-[var(--accent)] transition-all duration-200">
+            <Search className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+            {filters.tags.map((tag) => (
+              <Badge key={`tag-${tag}`} variant="outline" className="gap-1 pr-1.5 py-0.5 shrink-0 text-[11px]" style={getTagStyle(tag)}>
+                {tag}
+                <button
+                  onClick={() => setFilters({ ...filters, tags: filters.tags.filter((t2) => t2 !== tag) })}
+                  aria-label={`Remove tag filter ${tag}`}
+                  className="ml-0.5 p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </Badge>
+            ))}
+            {filters.tags.length >= 2 && (
+              <Badge variant="outline" className="py-0.5 shrink-0 text-[11px] text-[var(--text-tertiary)]">
+                {filters.tagMode === 'all' ? 'All tags' : 'Any tag'}
+              </Badge>
+            )}
+            {filters.areas.map((areaKey) => {
+              const areaName = areaKey === '__unassigned__' ? 'Unassigned' : areas.find((a) => a.id === areaKey)?.name ?? areaKey;
+              return (
+                <Badge key={`area-${areaKey}`} variant="outline" className="gap-1 pr-1.5 py-0.5 shrink-0 text-[11px]">
+                  {areaName}
+                  <button
+                    onClick={() => setFilters({ ...filters, areas: filters.areas.filter((a) => a !== areaKey) })}
+                    aria-label={`Remove area filter ${areaName}`}
+                    className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </Badge>
+              );
+            })}
+            {filters.colors.map((key) => {
+              const preset = getColorPreset(key);
+              return (
+                <Badge key={`color-${key}`} variant="outline" className="gap-1.5 pr-1.5 py-0.5 shrink-0 text-[11px]">
+                  <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: preset?.dot }} />
+                  {preset?.label ?? key}
+                  <button
+                    onClick={() => setFilters({ ...filters, colors: filters.colors.filter((c) => c !== key) })}
+                    aria-label={`Remove color filter ${preset?.label ?? key}`}
+                    className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </Badge>
+              );
+            })}
+            {filters.hasItems && (
+              <Badge variant="outline" className="gap-1 pr-1.5 py-0.5 shrink-0 text-[11px]">
+                Has items
+                <button
+                  onClick={() => setFilters({ ...filters, hasItems: false })}
+                  aria-label="Remove has items filter"
+                  className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </Badge>
+            )}
+            {filters.hasNotes && (
+              <Badge variant="outline" className="gap-1 pr-1.5 py-0.5 shrink-0 text-[11px]">
+                Has notes
+                <button
+                  onClick={() => setFilters({ ...filters, hasNotes: false })}
+                  aria-label="Remove has notes filter"
+                  className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </Badge>
+            )}
+            {filters.needsOrganizing && (
+              <Badge variant="outline" className="gap-1 pr-1.5 py-0.5 shrink-0 text-[11px]">
+                Needs organizing
+                <button
+                  onClick={() => setFilters({ ...filters, needsOrganizing: false })}
+                  aria-label="Remove needs organizing filter"
+                  className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </Badge>
+            )}
+            {hasBadges && (activeCount > 1 || (activeCount > 0 && search) || filters.needsOrganizing) && (
+              <button
+                onClick={() => { setSearch(''); setFilters({ ...EMPTY_FILTERS, needsOrganizing: false }); }}
+                aria-label="Clear all filters"
+                className="p-0.5 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-active)] shrink-0"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={`Search ${t.bins}...`}
-              className="pl-10 rounded-[var(--radius-full)] h-10 text-[15px]"
+              className="flex-1 min-w-[80px] bg-transparent text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none"
             />
           </div>
           <Button
@@ -214,16 +312,6 @@ export function BinListPage() {
           onClear={clearSelection}
         />
       )}
-
-      {/* Active filter indicators */}
-      <FilterBadgesBar
-        search={search}
-        onSearchClear={() => setSearch('')}
-        filters={filters}
-        onFiltersChange={setFilters}
-        activeCount={activeCount}
-        areas={areas}
-      />
 
       {/* No location selected prompt */}
       {!activeLocationId ? (
