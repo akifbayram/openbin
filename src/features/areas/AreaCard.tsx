@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 
 interface AreaCardProps {
   id: string;
@@ -102,10 +103,15 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
   }
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onNavigate(id)}
-      className="glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-all duration-200 active:scale-[0.98] text-left relative group"
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(id); } }}
+      className={cn(
+        "glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-all duration-200 active:scale-[0.98] text-left relative group",
+        actionsOpen && "z-10"
+      )}
     >
       <span className="text-[15px] font-semibold text-[var(--text-primary)] truncate block pr-7">
         {name}
@@ -123,13 +129,13 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
             variant="ghost"
             size="icon"
             onClick={(e) => { e.stopPropagation(); setActionsOpen(!actionsOpen); }}
-            className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+            className="h-7 w-7 rounded-full opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus:opacity-100 transition-opacity"
             aria-label="More actions"
           >
             <MoreHorizontal className="h-3.5 w-3.5" />
           </Button>
           {actionsOpen && (
-            <div className="absolute right-0 top-full mt-1.5 z-50 min-w-[140px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]">
+            <div className="absolute right-0 top-full mt-1.5 z-50 min-w-[140px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)] overflow-hidden">
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); startEdit(); }}
@@ -151,7 +157,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
           )}
         </div>
       )}
-    </button>
+    </div>
   );
 }
 
