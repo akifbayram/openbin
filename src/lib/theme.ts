@@ -28,7 +28,7 @@ function applyToDOM(resolved: ResolvedTheme) {
 }
 
 let currentPreference: ThemePreference = getStoredPreference();
-let currentTheme: ResolvedTheme = resolve(currentPreference);
+let currentTheme: ResolvedTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 const listeners = new Set<() => void>();
 
 function notify() {
