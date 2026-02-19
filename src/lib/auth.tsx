@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    apiFetch<User & { activeLocationId?: string | null }>('/api/auth/me')
+    apiFetch<User & { activeLocationId?: string | null }>('/api/auth/me', { timeout: 8000 })
       .then((data) => {
         const { activeLocationId: serverLocationId, ...user } = data;
         if (serverLocationId) {

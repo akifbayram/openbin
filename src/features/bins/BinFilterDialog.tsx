@@ -7,8 +7,14 @@ import { COLOR_PALETTE } from '@/lib/colorPalette';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAuth } from '@/lib/auth';
-import type { BinFilters } from './useBins';
-import { EMPTY_FILTERS } from './useBins';
+import type { BinFilters, SortOption } from './useBins';
+import { EMPTY_FILTERS, countActiveFilters } from './useBins';
+
+const sortLabels: Record<SortOption, string> = {
+  updated: 'Recently Updated',
+  created: 'Recently Created',
+  name: 'Name',
+};
 
 interface BinFilterDialogProps {
   open: boolean;
@@ -16,6 +22,10 @@ interface BinFilterDialogProps {
   filters: BinFilters;
   onFiltersChange: (f: BinFilters) => void;
   availableTags: string[];
+  sort: SortOption;
+  onSortChange: (sort: SortOption) => void;
+  searchQuery: string;
+  onSaveView: () => void;
 }
 
 export function BinFilterDialog({
@@ -24,6 +34,10 @@ export function BinFilterDialog({
   filters,
   onFiltersChange,
   availableTags,
+  sort,
+  onSortChange,
+  searchQuery,
+  onSaveView,
 }: BinFilterDialogProps) {
   const [draft, setDraft] = useState<BinFilters>(filters);
   const getTagStyle = useTagStyle();
@@ -73,6 +87,30 @@ export function BinFilterDialog({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Sort */}
+          <div className="space-y-2.5">
+            <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
+              Sort
+            </span>
+            <div className="flex rounded-[var(--radius-full)] bg-[var(--bg-input)] p-0.5">
+              {(Object.keys(sortLabels) as SortOption[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => onSortChange(key)}
+                  className={cn(
+                    'flex-1 px-3 py-1.5 text-[12px] font-medium rounded-[var(--radius-full)] transition-colors',
+                    sort === key
+                      ? 'bg-[var(--accent)] text-white'
+                      : 'text-[var(--text-secondary)]'
+                  )}
+                >
+                  {sortLabels[key]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Tags */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
@@ -223,12 +261,27 @@ export function BinFilterDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={reset} className="rounded-[var(--radius-full)]">
-            Reset
-          </Button>
-          <Button onClick={apply} className="rounded-[var(--radius-full)]">
-            Apply
-          </Button>
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={reset} className="rounded-[var(--radius-full)]">
+                Reset
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              {(searchQuery || countActiveFilters(draft) > 0) && (
+                <Button
+                  variant="ghost"
+                  onClick={() => { onSaveView(); onOpenChange(false); }}
+                  className="rounded-[var(--radius-full)]"
+                >
+                  Save View
+                </Button>
+              )}
+              <Button onClick={apply} className="rounded-[var(--radius-full)]">
+                Apply
+              </Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

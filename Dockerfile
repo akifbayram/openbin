@@ -21,12 +21,12 @@ RUN npm run build
 # ── Stage 3: Runtime ─────────────────────────
 FROM node:20-alpine
 WORKDIR /app
-COPY --from=server-builder /app/package.json /app/package-lock.json* ./
-COPY --from=server-builder /app/node_modules ./node_modules
-COPY --from=server-builder /app/dist ./dist
-COPY server/migrations ./migrations
-COPY --from=frontend-builder /app/dist ./public
-RUN mkdir -p /data/photos /data/backups && chown -R node:node /data /app
+COPY --chown=node:node --from=server-builder /app/package.json /app/package-lock.json* ./
+COPY --chown=node:node --from=server-builder /app/node_modules ./node_modules
+COPY --chown=node:node --from=server-builder /app/dist ./dist
+COPY --chown=node:node server/migrations ./migrations
+COPY --chown=node:node --from=frontend-builder /app/dist ./public
+RUN mkdir -p /data/photos /data/backups && chown -R node:node /data
 USER node
 EXPOSE 3000
 CMD ["sh", "-c", "node dist/migrate.js && node dist/start.js"]

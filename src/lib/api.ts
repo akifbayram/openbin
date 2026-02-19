@@ -13,6 +13,7 @@ export class ApiError extends Error {
 
 interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
+  timeout?: number;
 }
 
 export async function apiFetch<T>(
@@ -40,9 +41,18 @@ export async function apiFetch<T>(
     }
   }
 
+  let controller: AbortController | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  if (options.timeout) {
+    controller = new AbortController();
+    timeoutId = setTimeout(() => controller!.abort(), options.timeout);
+  }
+
   const fetchOptions: RequestInit = {
     ...options,
     headers,
+    signal: controller?.signal ?? options.signal,
     body: isFormData
       ? (options.body as FormData)
       : options.body !== undefined
@@ -50,7 +60,12 @@ export async function apiFetch<T>(
         : undefined,
   };
 
-  const res = await fetch(`${API_BASE}${path}`, fetchOptions);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, fetchOptions);
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: res.statusText }));

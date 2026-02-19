@@ -197,7 +197,7 @@ function DialogContent({
           <div
             ref={handleRef}
             className={cn(
-              'sm:hidden flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing',
+              'sm:hidden flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing touch-none',
             )}
           >
             <div
