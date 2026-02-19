@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/usePermissions';
 import { useTerminology } from '@/lib/terminology';
 import { useLocationList } from '@/features/locations/useLocations';
 import { useTrashBins, restoreBinFromTrash, permanentDeleteBin, notifyBinsChanged } from './useBins';
@@ -29,6 +30,7 @@ export function TrashPage() {
   const { bins, isLoading } = useTrashBins();
   const { showToast } = useToast();
   const { activeLocationId } = useAuth();
+  const { isAdmin } = usePermissions();
   const t = useTerminology();
   const { locations } = useLocationList();
   const [confirmDelete, setConfirmDelete] = useState<Bin | null>(null);
@@ -101,25 +103,27 @@ export function TrashPage() {
                       {Array.isArray(bin.items) && bin.items.length > 0 ? ` · ${bin.items.length} items` : ''}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRestore(bin)}
-                      className="h-8 px-2.5 rounded-[var(--radius-full)] text-[var(--accent)]"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                      Restore
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setConfirmDelete(bin)}
-                      className="h-8 px-2.5 rounded-[var(--radius-full)] text-[var(--destructive)]"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  {isAdmin && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRestore(bin)}
+                        className="h-8 px-2.5 rounded-[var(--radius-full)] text-[var(--accent)]"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        Restore
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmDelete(bin)}
+                        className="h-8 px-2.5 rounded-[var(--radius-full)] text-[var(--destructive)]"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

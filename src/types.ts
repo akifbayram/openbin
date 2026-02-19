@@ -19,7 +19,7 @@ export interface Location {
   term_bin: string;
   term_location: string;
   term_area: string;
-  role?: 'owner' | 'member';
+  role?: 'admin' | 'member';
   member_count?: number;
   area_count?: number;
   created_at: string;
@@ -30,7 +30,7 @@ export interface LocationMember {
   id: string;
   location_id: string;
   user_id: string;
-  role: 'owner' | 'member';
+  role: 'admin' | 'member';
   joined_at: string;
   display_name?: string;
 }

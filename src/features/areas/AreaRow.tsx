@@ -8,13 +8,13 @@ interface AreaRowProps {
   id: string;
   name: string;
   binCount: number;
-  isOwner: boolean;
+  isAdmin: boolean;
   onNavigate: (areaId: string) => void;
   onRename: (id: string, newName: string) => Promise<void>;
   onDelete: (id: string, name: string, binCount: number) => void;
 }
 
-export function AreaRow({ id, name, binCount, isOwner, onNavigate, onRename, onDelete }: AreaRowProps) {
+export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onDelete }: AreaRowProps) {
   const t = useTerminology();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -103,7 +103,7 @@ export function AreaRow({ id, name, binCount, isOwner, onNavigate, onRename, onD
       <span className="text-[13px] text-[var(--text-tertiary)] shrink-0 tabular-nums">
         {binCount} {binCount !== 1 ? t.bins : t.bin}
       </span>
-      {isOwner && (
+      {isAdmin && (
         <div className="relative" ref={menuRef}>
           <Button
             variant="ghost"

@@ -11,7 +11,7 @@ beforeEach(() => {
 });
 
 describe('POST /api/locations', () => {
-  it('creates a location with creator as owner', async () => {
+  it('creates a location with creator as admin', async () => {
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -21,7 +21,7 @@ describe('POST /api/locations', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('My Home');
-    expect(res.body.role).toBe('owner');
+    expect(res.body.role).toBe('admin');
     expect(res.body.member_count).toBe(1);
     expect(res.body.invite_code).toBeDefined();
   });
@@ -66,7 +66,7 @@ describe('GET /api/locations', () => {
 });
 
 describe('PUT /api/locations/:id', () => {
-  it('allows owner to update', async () => {
+  it('allows admin to update', async () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token, 'Old Name');
 
@@ -79,9 +79,9 @@ describe('PUT /api/locations/:id', () => {
     expect(res.body.name).toBe('New Name');
   });
 
-  it('returns 403 for non-owner', async () => {
-    const { token: ownerToken } = await createTestUser(app);
-    const location = await createTestLocation(app, ownerToken, 'Owned');
+  it('returns 403 for non-admin', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken, 'Owned');
 
     // Create second user and join
     const { token: memberToken } = await createTestUser(app);
@@ -112,7 +112,7 @@ describe('PUT /api/locations/:id', () => {
 });
 
 describe('DELETE /api/locations/:id', () => {
-  it('allows owner to delete', async () => {
+  it('allows admin to delete', async () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
@@ -129,9 +129,9 @@ describe('DELETE /api/locations/:id', () => {
     expect(list.body.count).toBe(0);
   });
 
-  it('returns 403 for non-owner', async () => {
-    const { token: ownerToken } = await createTestUser(app);
-    const location = await createTestLocation(app, ownerToken);
+  it('returns 403 for non-admin', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
 
     const { token: memberToken } = await createTestUser(app);
     await request(app)
@@ -215,9 +215,9 @@ describe('GET /api/locations/:id/members', () => {
 });
 
 describe('DELETE /api/locations/:id/members/:userId', () => {
-  it('owner can remove a member', async () => {
-    const { token: ownerToken } = await createTestUser(app);
-    const location = await createTestLocation(app, ownerToken);
+  it('admin can remove a member', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
 
     const { token: memberToken, user: memberUser } = await createTestUser(app);
     await request(app)
@@ -227,25 +227,25 @@ describe('DELETE /api/locations/:id/members/:userId', () => {
 
     const res = await request(app)
       .delete(`/api/locations/${location.id}/members/${memberUser.id}`)
-      .set('Authorization', `Bearer ${ownerToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
   });
 
-  it('owner cannot leave (must delete location)', async () => {
-    const { token: ownerToken, user: ownerUser } = await createTestUser(app);
-    const location = await createTestLocation(app, ownerToken);
+  it('last admin cannot leave', async () => {
+    const { token: adminToken, user: adminUser } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
 
     const res = await request(app)
-      .delete(`/api/locations/${location.id}/members/${ownerUser.id}`)
-      .set('Authorization', `Bearer ${ownerToken}`);
+      .delete(`/api/locations/${location.id}/members/${adminUser.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(422);
   });
 
-  it('non-owner cannot remove others', async () => {
-    const { token: ownerToken, user: ownerUser } = await createTestUser(app);
-    const location = await createTestLocation(app, ownerToken);
+  it('non-admin cannot remove others', async () => {
+    const { token: adminToken, user: adminUser } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
 
     const { token: memberToken } = await createTestUser(app);
     await request(app)
@@ -254,7 +254,7 @@ describe('DELETE /api/locations/:id/members/:userId', () => {
       .send({ inviteCode: location.invite_code });
 
     const res = await request(app)
-      .delete(`/api/locations/${location.id}/members/${ownerUser.id}`)
+      .delete(`/api/locations/${location.id}/members/${adminUser.id}`)
       .set('Authorization', `Bearer ${memberToken}`);
 
     expect(res.status).toBe(403);
@@ -262,7 +262,7 @@ describe('DELETE /api/locations/:id/members/:userId', () => {
 });
 
 describe('POST /api/locations/:id/regenerate-invite', () => {
-  it('owner can regenerate invite code', async () => {
+  it('admin can regenerate invite code', async () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
     const oldCode = location.invite_code;
@@ -276,9 +276,9 @@ describe('POST /api/locations/:id/regenerate-invite', () => {
     expect(res.body.inviteCode).not.toBe(oldCode);
   });
 
-  it('non-owner cannot regenerate', async () => {
-    const { token: ownerToken } = await createTestUser(app);
-    const location = await createTestLocation(app, ownerToken);
+  it('non-admin cannot regenerate', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
 
     const { token: memberToken } = await createTestUser(app);
     await request(app)

@@ -32,6 +32,11 @@ function migrate() {
       else if (file === '002_user_settings.sql') alreadyApplied = tableNames.has('user_preferences');
       else if (file === '003_terminology.sql') alreadyApplied = tableNames.has('locations') && columns('locations').has('term_bin');
       else if (file === '004_active_location.sql') alreadyApplied = tableNames.has('users') && columns('users').has('active_location_id');
+      else if (file === '005_admin_role.sql') {
+        // Check if the table DDL already uses 'admin' instead of 'owner'
+        const ddl = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='location_members'").get() as { sql: string } | undefined;
+        alreadyApplied = !!ddl && ddl.sql.includes("'admin'");
+      }
 
       if (alreadyApplied) {
         db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file);

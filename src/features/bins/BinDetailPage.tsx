@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/theme';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/usePermissions';
 import { useTerminology } from '@/lib/terminology';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import type { Bin } from '@/types';
@@ -49,6 +50,7 @@ export function BinDetailPage() {
   const { showToast } = useToast();
   const { theme } = useTheme();
   const { activeLocationId } = useAuth();
+  const { isAdmin, canEditBin } = usePermissions();
   const t = useTerminology();
   const { tagColors } = useTagColorsContext();
   const { aiEnabled } = useAiEnabled();
@@ -207,6 +209,8 @@ export function BinDetailPage() {
   }
 
   const showAiButton = aiEnabled && photos.length > 0 && !editing;
+  const canEdit = canEditBin(bin.created_by);
+  const canDelete = isAdmin;
 
   const hasNotes = !!bin.notes;
   const hasTags = bin.tags.length > 0;
@@ -283,17 +287,19 @@ export function BinDetailPage() {
                 <Pin className="h-[18px] w-[18px]" fill={bin.is_pinned ? 'currentColor' : 'none'} />
               </Button>
             </Tooltip>
-            <Tooltip content="Edit">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={startEdit}
-                aria-label={`Edit ${t.bin}`}
-                className="rounded-full h-9 w-9"
-              >
-                <Pencil className="h-[18px] w-[18px]" />
-              </Button>
-            </Tooltip>
+            {canEdit && (
+              <Tooltip content="Edit">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={startEdit}
+                  aria-label={`Edit ${t.bin}`}
+                  className="rounded-full h-9 w-9"
+                >
+                  <Pencil className="h-[18px] w-[18px]" />
+                </Button>
+              </Tooltip>
+            )}
             <Tooltip content="Print label">
               <Button
                 variant="ghost"
@@ -305,7 +311,7 @@ export function BinDetailPage() {
                 <Printer className="h-[18px] w-[18px]" />
               </Button>
             </Tooltip>
-            {otherLocations.length > 0 && (
+            {isAdmin && otherLocations.length > 0 && (
               <Tooltip content="Move">
                 <Button
                   variant="ghost"
@@ -325,17 +331,19 @@ export function BinDetailPage() {
                 </Button>
               </Tooltip>
             )}
-            <Tooltip content="Delete">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setDeleteOpen(true)}
-                aria-label={`Delete ${t.bin}`}
-                className="rounded-full h-9 w-9 text-[var(--destructive)]"
-              >
-                <Trash2 className="h-[18px] w-[18px]" />
-              </Button>
-            </Tooltip>
+            {canDelete && (
+              <Tooltip content="Delete">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setDeleteOpen(true)}
+                  aria-label={`Delete ${t.bin}`}
+                  className="rounded-full h-9 w-9 text-[var(--destructive)]"
+                >
+                  <Trash2 className="h-[18px] w-[18px]" />
+                </Button>
+              </Tooltip>
+            )}
           </div>
         )}
       </div>
@@ -509,7 +517,7 @@ export function BinDetailPage() {
             <CardContent>
               <ItemList items={bin.items} binId={bin.id} />
               {/* Quick-add row */}
-              <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
+              {canEdit && <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
                 {quickAdd.state === 'input' && (
                   <div className="flex items-center gap-1.5">
                     <Input
@@ -638,7 +646,7 @@ export function BinDetailPage() {
                     </div>
                   </div>
                 )}
-              </div>
+              </div>}
             </CardContent>
           </Card>
 

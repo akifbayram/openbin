@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Copy, Check, UserMinus, Crown, RefreshCw, LogOut } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { Copy, Check, UserMinus, Shield, RefreshCw, LogOut, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
-import { useLocationMembers, useLocationList, removeMember, leaveLocation, regenerateInvite } from './useLocations';
+import { useLocationMembers, useLocationList, removeMember, leaveLocation, regenerateInvite, changeMemberRole } from './useLocations';
 
 interface LocationMembersDialogProps {
   locationId: string;
@@ -29,7 +30,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   const [regenerating, setRegenerating] = useState(false);
 
   const location = locations.find((h) => h.id === locationId);
-  const isOwner = location?.created_by === user?.id;
+  const isAdmin = location?.role === 'admin';
 
   async function handleCopyInvite() {
     if (!location?.invite_code) return;
@@ -60,6 +61,15 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
       showToast({ message: 'Member removed' });
     } catch (err) {
       showToast({ message: err instanceof Error ? err.message : 'Failed to remove member' });
+    }
+  }
+
+  async function handleRoleChange(userId: string, newRole: 'admin' | 'member') {
+    try {
+      await changeMemberRole(locationId, userId, newRole);
+      showToast({ message: `Role updated to ${newRole}` });
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : 'Failed to change role' });
     }
   }
 
@@ -103,7 +113,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
             >
               {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
             </Button>
-            {isOwner && (
+            {isAdmin && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -129,10 +139,10 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
             ))}
           </div>
         ) : (
-          <div className="space-y-1 py-2 max-h-60 overflow-y-auto">
+          <div className="space-y-1 py-2">
             {members.map((member) => {
               const isSelf = member.user_id === user?.id;
-              const memberIsOwner = member.role === 'owner';
+              const memberIsAdmin = member.role === 'admin';
               return (
                 <div
                   key={member.id}
@@ -143,16 +153,22 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-[14px] text-[var(--text-primary)] truncate block">
-                      {isSelf ? 'You' : member.user_id.slice(0, 8)}
+                      {isSelf ? 'You' : member.display_name || member.user_id.slice(0, 8)}
                     </span>
                   </div>
-                  {memberIsOwner && (
+                  {memberIsAdmin && (
                     <Badge variant="secondary" className="text-[11px] gap-1 py-0 shrink-0">
-                      <Crown className="h-3 w-3" />
-                      Owner
+                      <Shield className="h-3 w-3" />
+                      Admin
                     </Badge>
                   )}
-                  {isOwner && !isSelf && !memberIsOwner && (
+                  {isAdmin && !isSelf && (
+                    <RoleToggle
+                      currentRole={member.role}
+                      onChangeRole={(role) => handleRoleChange(member.user_id, role)}
+                    />
+                  )}
+                  {isAdmin && !isSelf && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -169,8 +185,8 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
           </div>
         )}
 
-        {/* Leave button for non-owners */}
-        {!isOwner && (
+        {/* Leave button for non-admins */}
+        {!isAdmin && (
           <Button
             variant="outline"
             onClick={handleLeave}
@@ -182,5 +198,67 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function RoleToggle({ currentRole, onChangeRole }: { currentRole: string; onChangeRole: (role: 'admin' | 'member') => void }) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  const reposition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 4, left: rect.right });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    reposition();
+    function handleClick(e: MouseEvent) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open, reposition]);
+
+  return (
+    <div className="shrink-0">
+      <button
+        ref={triggerRef}
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+      >
+        {currentRole === 'admin' ? 'Admin' : 'Member'}
+        <ChevronDown className="h-3 w-3" />
+      </button>
+      {open && pos && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[100] min-w-[120px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]"
+          style={{ top: pos.top, left: pos.left, transform: 'translateX(-100%)' }}
+        >
+          <button
+            onClick={() => { setOpen(false); if (currentRole !== 'admin') onChangeRole('admin'); }}
+            className={`w-full text-left px-3 py-2 text-[13px] transition-colors ${currentRole === 'admin' ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}
+          >
+            Admin
+          </button>
+          <button
+            onClick={() => { setOpen(false); if (currentRole !== 'member') onChangeRole('member'); }}
+            className={`w-full text-left px-3 py-2 text-[13px] transition-colors ${currentRole === 'member' ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}
+          >
+            Member
+          </button>
+        </div>,
+        document.body,
+      )}
+    </div>
   );
 }

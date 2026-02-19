@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crown, Users, Plus, MapPinned } from 'lucide-react';
+import { Shield, Users, Plus, MapPinned } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -48,7 +48,7 @@ export function LocationCard({
 }: LocationCardProps) {
   const t = useTerminology();
   const navigate = useNavigate();
-  const isOwner = location.role === 'owner';
+  const isAdmin = location.role === 'admin';
   const areaInfos = useMemo(() => {
     const countMap = new Map<string | null, number>();
     for (const bin of bins) {
@@ -97,10 +97,10 @@ export function LocationCard({
         </div>
         <div className="flex items-center gap-2 mt-1.5">
           <span className="text-[13px] text-[var(--text-tertiary)]">
-            {isOwner ? (
+            {isAdmin ? (
               <span className="inline-flex items-center gap-1">
-                <Crown className="h-3 w-3 inline" />
-                Owner
+                <Shield className="h-3 w-3 inline" />
+                Admin
               </span>
             ) : 'Member'}
           </span>
@@ -118,9 +118,9 @@ export function LocationCard({
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
           >
-            {isOwner ? (
+            {isAdmin ? (
               <LocationSettingsMenu
-                isOwner={isOwner}
+                isAdmin={isAdmin}
                 onRename={() => onRename(location.id)}
                 onRetention={() => onRetention(location.id)}
                 onDelete={() => onDelete(location.id)}
@@ -128,7 +128,7 @@ export function LocationCard({
               />
             ) : (
               <LocationSettingsMenu
-                isOwner={false}
+                isAdmin={false}
                 onRename={() => {}}
                 onRetention={() => {}}
                 onDelete={() => {}}
@@ -163,7 +163,7 @@ export function LocationCard({
           </span>
           <LocationSettingsMenu
             compact
-            isOwner={isOwner}
+            isAdmin={isAdmin}
             onRename={() => onRename(location.id)}
             onRetention={() => onRetention(location.id)}
             onDelete={() => onDelete(location.id)}
@@ -173,10 +173,10 @@ export function LocationCard({
 
         {/* Meta row */}
         <div className="flex items-center gap-2 text-[13px] text-[var(--text-tertiary)]">
-          {isOwner ? (
+          {isAdmin ? (
             <span className="inline-flex items-center gap-1">
-              <Crown className="h-3 w-3" />
-              Owner
+              <Shield className="h-3 w-3" />
+              Admin
             </span>
           ) : (
             <span>Member</span>
@@ -190,7 +190,7 @@ export function LocationCard({
             {memberCount} {memberCount !== 1 ? 'members' : 'member'}
           </button>
           <div className="flex-1" />
-          {isOwner && (
+          {isAdmin && (
             <Button
               onClick={onCreateArea}
               size="icon"
@@ -210,7 +210,7 @@ export function LocationCard({
           <p className="text-[13px]">
             {`No ${t.areas} yet`}
           </p>
-          {isOwner && (
+          {isAdmin && (
             <Button onClick={onCreateArea} variant="outline" size="sm" className="rounded-[var(--radius-full)]">
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               {`Create ${t.Area}`}
@@ -225,7 +225,7 @@ export function LocationCard({
               id={area.id}
               name={area.name}
               binCount={area.binCount}
-              isOwner={isOwner}
+              isAdmin={isAdmin}
               onNavigate={handleAreaClick}
               onRename={onRenameArea}
               onDelete={onDeleteArea}

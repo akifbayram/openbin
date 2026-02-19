@@ -30,7 +30,16 @@ export async function getMemberRole(locationId: string, userId: string): Promise
   return result.rows.length > 0 ? result.rows[0].role : null;
 }
 
-/** Check if a user is the owner of a location */
-export async function isLocationOwner(locationId: string, userId: string): Promise<boolean> {
-  return (await getMemberRole(locationId, userId)) === 'owner';
+/** Check if a user is an admin of a location */
+export async function isLocationAdmin(locationId: string, userId: string): Promise<boolean> {
+  return (await getMemberRole(locationId, userId)) === 'admin';
+}
+
+/** Check if a user created a specific bin */
+export async function isBinCreator(binId: string, userId: string): Promise<boolean> {
+  const result = await query(
+    'SELECT id FROM bins WHERE id = $1 AND created_by = $2',
+    [binId, userId]
+  );
+  return result.rows.length > 0;
 }
