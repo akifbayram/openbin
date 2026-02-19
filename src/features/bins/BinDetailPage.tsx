@@ -548,7 +548,7 @@ export function BinDetailPage() {
                       onPaste={quickAdd.handlePaste}
                       placeholder="Add item..."
                       disabled={quickAdd.saving}
-                      className="h-7 bg-transparent p-0 text-base focus-visible:ring-0"
+                      className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0"
                     />
                     {quickAdd.value.trim() && (
                       <button

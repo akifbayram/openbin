@@ -113,7 +113,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
           onKeyDown={handleKeyDown}
           onFocus={() => setShowSuggestions(true)}
           placeholder={tags.length === 0 ? 'Add tags...' : ''}
-          className="h-6 min-w-[80px] flex-1 bg-transparent p-0 text-base focus-visible:ring-0"
+          className="h-6 min-w-[80px] flex-1 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0"
         />
       </div>
       {visible && (

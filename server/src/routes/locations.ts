@@ -25,7 +25,7 @@ router.get('/', asyncHandler(async (req, res) => {
             (SELECT COUNT(*) FROM areas WHERE location_id = l.id) AS area_count
      FROM locations l
      JOIN location_members lm ON lm.location_id = l.id AND lm.user_id = $1
-     ORDER BY l.updated_at DESC`,
+     ORDER BY l.name COLLATE NOCASE ASC`,
     [req.user!.id]
   );
 
