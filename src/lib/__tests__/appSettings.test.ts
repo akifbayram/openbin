@@ -72,13 +72,19 @@ describe('useAppSettings', () => {
   });
 
   it('updateSettings calls updateLocation', () => {
+    vi.useFakeTimers();
     const { result } = renderHook(() => useAppSettings());
 
     act(() => {
       result.current.updateSettings({ appName: 'NewName' });
     });
 
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
     expect(mockUpdateLocation).toHaveBeenCalledWith('loc-1', { app_name: 'NewName' });
+    vi.useRealTimers();
   });
 
   it('resetSettings calls updateLocation with OpenBin', () => {
