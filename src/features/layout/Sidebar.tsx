@@ -6,6 +6,8 @@ import { useTerminology } from '@/lib/terminology';
 import type { TermKey } from '@/lib/navItems';
 import { useAuth } from '@/lib/auth';
 import { getAvatarUrl } from '@/lib/api';
+import { LocationSwitcher } from './LocationSwitcher';
+import type { Location as LocationType } from '@/types';
 
 const topItems: { path: string; label: string; icon: React.ComponentType<{ className?: string }>; termKey?: TermKey }[] = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
@@ -49,7 +51,13 @@ function NavButton({ path, label, icon: Icon, currentPath, navigate }: {
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  locations: LocationType[];
+  activeLocationId: string | null;
+  onLocationChange: (id: string) => void;
+}
+
+export function Sidebar({ locations, activeLocationId, onLocationChange }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { settings } = useAppSettings();
@@ -65,6 +73,13 @@ export function Sidebar() {
             {settings.appName}
           </h1>
         </div>
+
+        {/* Location switcher */}
+        <LocationSwitcher
+          locations={locations}
+          activeLocationId={activeLocationId}
+          onLocationChange={onLocationChange}
+        />
 
         {/* Top: Home, Bins */}
         <div className="space-y-1">
