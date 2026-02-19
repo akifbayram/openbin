@@ -1,27 +1,17 @@
 services:
-  api:
-    container_name: openbin-api
-    build:
-      context: ./server
-      dockerfile: Dockerfile
+  openbin:
+    container_name: openbin
+    image: openbin:latest
+    build: .
+    ports:
+      - "${HOST_PORT:-1453}:3000"
+    env_file: .env
     environment:
       DATABASE_PATH: /data/openbin.db
       PHOTO_STORAGE_PATH: /data/photos
-      PORT: "4000"
-      BACKUP_ENABLED: "${BACKUP_ENABLED:-false}"
-      BACKUP_INTERVAL: "${BACKUP_INTERVAL:-daily}"
-      BACKUP_RETENTION: "${BACKUP_RETENTION:-7}"
       BACKUP_PATH: /data/backups
     volumes:
       - api_data:/data
-
-  nginx:
-    container_name: openbin-nginx
-    build: .
-    ports:
-      - "1453:1453"
-    depends_on:
-      - api
 
 volumes:
   api_data:

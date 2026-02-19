@@ -1,5 +1,6 @@
 import { query } from '../db.js';
 import { decryptApiKey } from './crypto.js';
+import { getEnvAiConfig } from './config.js';
 import type { AiProviderConfig } from './aiCaller.js';
 
 export class NoAiSettingsError extends Error {
@@ -17,13 +18,23 @@ export interface UserAiSettings {
   structure_prompt: string | null;
 }
 
-/** Load and decrypt a user's AI settings. Throws NoAiSettingsError if none exist. */
+/** Load and decrypt a user's AI settings. Falls back to env config. Throws NoAiSettingsError if neither exist. */
 export async function getUserAiSettings(userId: string): Promise<UserAiSettings> {
   const result = await query(
     'SELECT provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt FROM user_ai_settings WHERE user_id = $1 AND is_active = 1',
     [userId]
   );
   if (result.rows.length === 0) {
+    const envConfig = getEnvAiConfig();
+    if (envConfig) {
+      return {
+        config: envConfig,
+        custom_prompt: null,
+        command_prompt: null,
+        query_prompt: null,
+        structure_prompt: null,
+      };
+    }
     throw new NoAiSettingsError();
   }
   const row = result.rows[0];

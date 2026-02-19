@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, Sun, Moon, Monitor, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,19 @@ export function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/auth/status')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.registrationEnabled === false) {
+          showToast({ message: 'Registration is currently disabled' });
+          navigate('/login');
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const passwordChecks = useMemo(() => ({
     length: password.length >= 8,

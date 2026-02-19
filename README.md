@@ -32,7 +32,7 @@ Self-hosted inventory system for organizing physical storage bins with QR codes.
 | Backend | Express 4, SQLite (better-sqlite3), JWT auth |
 | QR | `qrcode` + `html5-qrcode` |
 | AI | Self-Hosted, OpenAI, Anthropic, Gemini, or any OpenAI-compatible provider (per-user config) |
-| Infra | Docker Compose (API + Nginx) |
+| Infra | Docker Compose (single container) |
 
 ## Quick Start
 
@@ -58,7 +58,7 @@ cd server && npm install    # Install server dependencies
 ```
 
 ```bash
-cd server && npm run dev   # API server at http://localhost:4000
+cd server && npm run dev   # API server at http://localhost:3000
 npm run dev                 # Frontend dev server at http://localhost:5173
 ```
 
@@ -68,12 +68,24 @@ Optional. Set environment variables or create a `.env` file to override defaults
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PORT` | Express server port | `4000` |
+| `PORT` | Express server port | `3000` |
+| `HOST_PORT` | Docker external port | `1453` |
 | `DATABASE_PATH` | SQLite database file path | `./data/openbin.db` |
-| `PHOTO_STORAGE_PATH` | Photo upload directory | `./uploads` |
+| `PHOTO_STORAGE_PATH` | Photo upload directory | `./data/photos` |
 | `JWT_SECRET` | JWT signing secret; auto-generated and persisted to disk if unset | — |
+| `JWT_EXPIRES_IN` | JWT token expiration | `7d` |
+| `BCRYPT_ROUNDS` | Password hashing rounds | `12` |
 | `CORS_ORIGIN` | Allowed CORS origin | `http://localhost:5173` |
+| `REGISTRATION_ENABLED` | Allow new user registration | `true` |
+| `MAX_PHOTO_SIZE_MB` | Max photo upload size in MB | `5` |
+| `MAX_AVATAR_SIZE_MB` | Max avatar upload size in MB | `2` |
 | `AI_ENCRYPTION_KEY` | Encrypts AI API keys at rest with AES-256-GCM | — |
+| `BACKUP_ENABLED` | Enable automatic database backups | `false` |
+| `BACKUP_INTERVAL` | Backup schedule (hourly/daily/weekly/cron) | `daily` |
+| `BACKUP_RETENTION` | Backup retention in days | `30` |
+| `BACKUP_WEBHOOK_URL` | Webhook URL for backup notifications | — |
+
+See `.env.example` for the full list of supported variables.
 
 ## API Documentation
 

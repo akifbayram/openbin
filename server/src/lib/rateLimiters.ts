@@ -1,8 +1,9 @@
 import rateLimit from 'express-rate-limit';
 import type { RequestHandler } from 'express';
+import { config } from './config.js';
 
 const noop: RequestHandler = (_req, _res, next) => next();
-const isTest = process.env.NODE_ENV === 'test';
+const isTest = config.disableRateLimit;
 
 export const authLimiter: RequestHandler = isTest ? noop : rateLimit({
   windowMs: 15 * 60 * 1000,

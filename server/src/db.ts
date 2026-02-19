@@ -2,8 +2,9 @@ import Database from 'better-sqlite3';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { config } from './lib/config.js';
 
-const DB_PATH = process.env.DATABASE_PATH || './data/openbin.db';
+const DB_PATH = config.databasePath;
 
 // Ensure directory exists
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });

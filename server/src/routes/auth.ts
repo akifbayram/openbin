@@ -9,13 +9,21 @@ import { ValidationError, NotFoundError, UnauthorizedError, ConflictError, Forbi
 import { validateUsername, validatePassword, validateEmail, validateDisplayName } from '../lib/validation.js';
 import { isPathSafe } from '../lib/pathSafety.js';
 import { avatarUpload, AVATAR_STORAGE_PATH } from '../lib/uploadConfig.js';
+import { config } from '../lib/config.js';
 
 const router = Router();
 
-const BCRYPT_ROUNDS = 12;
+// GET /api/auth/status — public (no auth required)
+router.get('/status', (_req, res) => {
+  res.json({ registrationEnabled: config.registrationEnabled });
+});
 
 // POST /api/auth/register
 router.post('/register', asyncHandler(async (req, res) => {
+  if (!config.registrationEnabled) {
+    throw new ForbiddenError('Registration is currently disabled');
+  }
+
   const { username, password, displayName } = req.body;
 
   validateUsername(username);
@@ -26,7 +34,7 @@ router.post('/register', asyncHandler(async (req, res) => {
     throw new ConflictError('Username already taken');
   }
 
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
   const userId = generateUuid();
   const result = await query(
     'INSERT INTO users (id, username, password_hash, display_name) VALUES ($1, $2, $3, $4) RETURNING id, username, display_name, created_at',
@@ -242,7 +250,7 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
     throw new UnauthorizedError('Current password is incorrect');
   }
 
-  const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  const newHash = await bcrypt.hash(newPassword, config.bcryptRounds);
   await query(`UPDATE users SET password_hash = $1, updated_at = datetime('now') WHERE id = $2`, [newHash, req.user!.id]);
 
   res.json({ message: 'Password updated successfully' });
@@ -333,7 +341,7 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
     [userId]
   );
 
-  const PHOTO_STORAGE = process.env.PHOTO_STORAGE_PATH || './uploads';
+  const PHOTO_STORAGE = config.photoStoragePath;
 
   for (const location of locationsResult.rows) {
     const countResult = await query('SELECT COUNT(*) AS count FROM location_members WHERE location_id = $1', [location.id]);
