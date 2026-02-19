@@ -21,6 +21,7 @@ import { useAiEnabled } from '@/lib/aiToggle';
 import { useAppSettings } from '@/lib/appSettings';
 import { useTerminology } from '@/lib/terminology';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/usePermissions';
 import { useBinList } from '@/features/bins/useBins';
 import type { ExportData } from '@/types';
 import {
@@ -44,6 +45,7 @@ export function SettingsPage() {
   const { settings, updateSettings, resetSettings } = useAppSettings();
   const t = useTerminology();
   const { user, activeLocationId, logout, deleteAccount } = useAuth();
+  const { isAdmin } = usePermissions();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
@@ -261,66 +263,68 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Personalization */}
-      <Card>
-        <CardContent>
-          <Label>Personalization</Label>
-          <div className="flex flex-col gap-3 mt-3">
-            <div className="space-y-1.5">
-              <label htmlFor="app-name" className="text-[13px] text-[var(--text-secondary)]">App Name</label>
-              <Input
-                id="app-name"
-                value={settings.appName}
-                onChange={(e) => updateSettings({ appName: e.target.value })}
-                placeholder="OpenBin"
-              />
-            </div>
-            <Disclosure label="Custom Terminology">
-              <p className="text-[11px] text-[var(--text-tertiary)] mb-2">Rename core concepts to match your workflow.</p>
-              <div className="space-y-2">
-                {([
-                  { key: 'termBin' as const, singular: 'Bin', plural: 'Bins' },
-                  { key: 'termLocation' as const, singular: 'Location', plural: 'Locations' },
-                  { key: 'termArea' as const, singular: 'Area', plural: 'Areas' },
-                ]).map(({ key, singular, plural }) => {
-                  const raw = settings[key];
-                  const parts = raw ? raw.split('|') : ['', ''];
-                  return (
-                    <div key={key} className="grid grid-cols-2 gap-2">
-                      <Input
-                        value={parts[0] || ''}
-                        onChange={(e) => {
-                          const newSingular = e.target.value;
-                          const newPlural = parts[1] || '';
-                          updateSettings({ [key]: newSingular || newPlural ? `${newSingular}|${newPlural}` : '' });
-                        }}
-                        placeholder={`${singular} (singular)`}
-                      />
-                      <Input
-                        value={parts[1] || ''}
-                        onChange={(e) => {
-                          const newSingular = parts[0] || '';
-                          const newPlural = e.target.value;
-                          updateSettings({ [key]: newSingular || newPlural ? `${newSingular}|${newPlural}` : '' });
-                        }}
-                        placeholder={`${plural} (plural)`}
-                      />
-                    </div>
-                  );
-                })}
+      {/* Personalization (admin only — modifies location-level settings) */}
+      {isAdmin && (
+        <Card>
+          <CardContent>
+            <Label>Personalization</Label>
+            <div className="flex flex-col gap-3 mt-3">
+              <div className="space-y-1.5">
+                <label htmlFor="app-name" className="text-[13px] text-[var(--text-secondary)]">App Name</label>
+                <Input
+                  id="app-name"
+                  value={settings.appName}
+                  onChange={(e) => updateSettings({ appName: e.target.value })}
+                  placeholder="OpenBin"
+                />
               </div>
-            </Disclosure>
-            <Button
-              variant="outline"
-              onClick={resetSettings}
-              className="justify-start rounded-[var(--radius-sm)] h-11"
-            >
-              <RotateCcw className="h-4 w-4 mr-2.5" />
-              Reset to Default
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              <Disclosure label="Custom Terminology">
+                <p className="text-[11px] text-[var(--text-tertiary)] mb-2">Rename core concepts to match your workflow.</p>
+                <div className="space-y-2">
+                  {([
+                    { key: 'termBin' as const, singular: 'Bin', plural: 'Bins' },
+                    { key: 'termLocation' as const, singular: 'Location', plural: 'Locations' },
+                    { key: 'termArea' as const, singular: 'Area', plural: 'Areas' },
+                  ]).map(({ key, singular, plural }) => {
+                    const raw = settings[key];
+                    const parts = raw ? raw.split('|') : ['', ''];
+                    return (
+                      <div key={key} className="grid grid-cols-2 gap-2">
+                        <Input
+                          value={parts[0] || ''}
+                          onChange={(e) => {
+                            const newSingular = e.target.value;
+                            const newPlural = parts[1] || '';
+                            updateSettings({ [key]: newSingular || newPlural ? `${newSingular}|${newPlural}` : '' });
+                          }}
+                          placeholder={`${singular} (singular)`}
+                        />
+                        <Input
+                          value={parts[1] || ''}
+                          onChange={(e) => {
+                            const newSingular = parts[0] || '';
+                            const newPlural = e.target.value;
+                            updateSettings({ [key]: newSingular || newPlural ? `${newSingular}|${newPlural}` : '' });
+                          }}
+                          placeholder={`${plural} (plural)`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </Disclosure>
+              <Button
+                variant="outline"
+                onClick={resetSettings}
+                className="justify-start rounded-[var(--radius-sm)] h-11"
+              >
+                <RotateCcw className="h-4 w-4 mr-2.5" />
+                Reset to Default
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dashboard */}
       <Card>
@@ -347,46 +351,48 @@ export function SettingsPage() {
                 ))}
               </div>
             </div>
-            <div className="space-y-1.5">
-              <label htmlFor="recent-bins" className="text-[13px] text-[var(--text-secondary)]">Recent {t.bins} shown</label>
-              <Input
-                id="recent-bins"
-                type="number"
-                min={DASHBOARD_LIMITS.recentBinsCount.min}
-                max={DASHBOARD_LIMITS.recentBinsCount.max}
-                value={dashSettings.recentBinsCount}
-                onChange={(e) => updateDashSettings({ recentBinsCount: Number(e.target.value) })}
-              />
-              <p className="text-[11px] text-[var(--text-tertiary)]">
-                {DASHBOARD_LIMITS.recentBinsCount.min}–{DASHBOARD_LIMITS.recentBinsCount.max}
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="scan-history" className="text-[13px] text-[var(--text-secondary)]">Scan history entries</label>
-              <Input
-                id="scan-history"
-                type="number"
-                min={DASHBOARD_LIMITS.scanHistoryMax.min}
-                max={DASHBOARD_LIMITS.scanHistoryMax.max}
-                value={dashSettings.scanHistoryMax}
-                onChange={(e) => updateDashSettings({ scanHistoryMax: Number(e.target.value) })}
-              />
-              <p className="text-[11px] text-[var(--text-tertiary)]">
-                {DASHBOARD_LIMITS.scanHistoryMax.min}–{DASHBOARD_LIMITS.scanHistoryMax.max}
-              </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label htmlFor="recent-bins" className="text-[13px] text-[var(--text-secondary)]">Recent {t.bins} shown</label>
+                <Input
+                  id="recent-bins"
+                  type="number"
+                  min={DASHBOARD_LIMITS.recentBinsCount.min}
+                  max={DASHBOARD_LIMITS.recentBinsCount.max}
+                  value={dashSettings.recentBinsCount}
+                  onChange={(e) => updateDashSettings({ recentBinsCount: Number(e.target.value) })}
+                />
+                <p className="text-[11px] text-[var(--text-tertiary)]">
+                  {DASHBOARD_LIMITS.recentBinsCount.min}–{DASHBOARD_LIMITS.recentBinsCount.max}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="scan-history" className="text-[13px] text-[var(--text-secondary)]">Scan history entries</label>
+                <Input
+                  id="scan-history"
+                  type="number"
+                  min={DASHBOARD_LIMITS.scanHistoryMax.min}
+                  max={DASHBOARD_LIMITS.scanHistoryMax.max}
+                  value={dashSettings.scanHistoryMax}
+                  onChange={(e) => updateDashSettings({ scanHistoryMax: Number(e.target.value) })}
+                />
+                <p className="text-[11px] text-[var(--text-tertiary)]">
+                  {DASHBOARD_LIMITS.scanHistoryMax.min}–{DASHBOARD_LIMITS.scanHistoryMax.max}
+                </p>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* AI Settings */}
-      <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />
+      {/* AI Settings (admin only) */}
+      {isAdmin && <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />}
 
-      {/* API Keys */}
-      {aiEnabled && <ApiKeysSection />}
+      {/* API Keys (admin only) */}
+      {isAdmin && aiEnabled && <ApiKeysSection />}
 
-      {/* Data */}
-      <Card>
+      {/* Data (admin only) */}
+      {isAdmin && <Card>
         <CardContent>
           <Label>Data</Label>
           <div className="flex flex-col gap-2 mt-3">
@@ -467,7 +473,7 @@ export function SettingsPage() {
             onChange={(e) => handleReplaceFileSelected(e.target.files)}
           />
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* About */}
       <Card>
