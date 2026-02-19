@@ -10,7 +10,7 @@ Multi-user web app for organizing physical storage bins with QR codes. Data pers
 
 - **Client**: React 18 + TypeScript 5 (strict) + Vite 5, Tailwind CSS 4, react-router-dom 6 (BrowserRouter)
 - **Server**: Express 4, SQLite (better-sqlite3), JWT auth, express-rate-limit
-- **Docker**: `api` (Express + SQLite) + `nginx` (frontend + reverse proxy)
+- **Docker**: Single container (Express serves static frontend + API), reverse proxy optional
 - Features live in `src/features/`, server code in `server/src/`, shared types in `src/types.ts`
 - **No component library** — all UI primitives hand-rolled in `src/components/ui/`. Do not run `npx shadcn`.
 
@@ -50,6 +50,7 @@ OpenAPI spec at `server/openapi.yaml` (source of truth). Update when endpoints c
 - **SQLite syntax**: `json_each()` not `unnest()`. `datetime('now')` not `now()`. Error code `SQLITE_CONSTRAINT_UNIQUE` not `23505`.
 - **Backup env vars**: `BACKUP_ENABLED`, `BACKUP_INTERVAL` (hourly/daily/weekly/cron), `BACKUP_RETENTION`, `BACKUP_PATH`, `BACKUP_WEBHOOK_URL`.
 - **Route mounting**: Photos upload on bins router (`POST /api/bins/:id/photos`). Export at `/api`. Areas at `/api/locations`.
+- **Server config**: All env vars parsed and validated in `server/src/lib/config.ts` with safe defaults. See `.env.example` for the full list.
 
 ## Security (non-obvious)
 

@@ -3,6 +3,7 @@ import path from 'path';
 import archiver from 'archiver';
 import cron from 'node-cron';
 import { getDb } from '../db.js';
+import { config as appConfig } from './config.js';
 
 const SCHEDULE_PRESETS: Record<string, string> = {
   hourly: '0 * * * *',
@@ -20,13 +21,11 @@ export interface BackupConfig {
 
 export function getConfig(): BackupConfig {
   return {
-    enabled: process.env.BACKUP_ENABLED === 'true',
-    schedule: process.env.BACKUP_INTERVAL || 'daily',
-    retention: Math.max(1, Number.isFinite(parseInt(process.env.BACKUP_RETENTION || '', 10))
-      ? parseInt(process.env.BACKUP_RETENTION || '', 10)
-      : 7),
-    backupPath: process.env.BACKUP_PATH || './data/backups',
-    webhookUrl: process.env.BACKUP_WEBHOOK_URL || '',
+    enabled: appConfig.backupEnabled,
+    schedule: appConfig.backupInterval,
+    retention: appConfig.backupRetention,
+    backupPath: appConfig.backupPath,
+    webhookUrl: appConfig.backupWebhookUrl,
   };
 }
 
@@ -81,7 +80,7 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
       archive.pipe(output);
       archive.file(tempDbPath, { name: 'openbin.db' });
 
-      const photoDir = process.env.PHOTO_STORAGE_PATH || './uploads';
+      const photoDir = appConfig.photoStoragePath;
       if (fs.existsSync(photoDir)) {
         archive.directory(photoDir, 'photos');
       }

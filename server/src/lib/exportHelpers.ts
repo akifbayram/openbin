@@ -4,8 +4,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { query, querySync, generateUuid } from '../db.js';
 import { generateShortCode } from './shortCode.js';
 import { isPathSafe } from './pathSafety.js';
+import { config } from './config.js';
 
-const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
+const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
 const ALLOWED_PHOTO_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];

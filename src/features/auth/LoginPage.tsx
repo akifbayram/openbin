@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, Sun, Moon, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,14 @@ export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [registrationEnabled, setRegistrationEnabled] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/auth/status')
+      .then((r) => r.json())
+      .then((data) => setRegistrationEnabled(data.registrationEnabled !== false))
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -92,12 +100,14 @@ export function LoginPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-[14px] text-[var(--text-secondary)]">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-[var(--accent)] font-medium hover:underline">
-            Create one
-          </Link>
-        </p>
+        {registrationEnabled && (
+          <p className="text-center text-[14px] text-[var(--text-secondary)]">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-[var(--accent)] font-medium hover:underline">
+              Create one
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   );

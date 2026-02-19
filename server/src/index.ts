@@ -1,5 +1,8 @@
 import express from 'express';
+import path from 'path';
+import fs from 'fs';
 import cors from 'cors';
+import { config } from './lib/config.js';
 import { authLimiter, registerLimiter, joinLimiter } from './lib/rateLimiters.js';
 import authRoutes from './routes/auth.js';
 import locationsRoutes from './routes/locations.js';
@@ -19,12 +22,27 @@ import apiKeysRoutes from './routes/apiKeys.js';
 import { sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { HttpError } from './lib/httpErrors.js';
 
+const STATIC_DIR = path.join(import.meta.dirname, '..', 'public');
+
 export function createApp(): express.Express {
   const app = express();
   app.set('trust proxy', 1);
 
+  // Security headers
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self' blob:;",
+    );
+    next();
+  });
+
   app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: config.corsOrigin,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
   }));
   app.use(express.json({ limit: '1mb' }));
@@ -59,6 +77,21 @@ export function createApp(): express.Express {
     console.error(err.stack);
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
   });
+
+  // Catch-all for unmatched API routes
+  app.all('/api/*', (_req, res) => {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Endpoint not found' });
+  });
+
+  // Static file serving (production — Vite output baked into Docker image)
+  if (fs.existsSync(STATIC_DIR)) {
+    app.use(express.static(STATIC_DIR));
+
+    // SPA fallback — send index.html for any unmatched GET
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(STATIC_DIR, 'index.html'));
+    });
+  }
 
   return app;
 }

@@ -186,6 +186,7 @@ export interface AiSettings {
     model: string;
     endpointUrl: string | null;
   }>>;
+  source?: 'user' | 'env';
 }
 
 export interface ApiKey {

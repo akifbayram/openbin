@@ -24,8 +24,10 @@ import {
   type ExportData,
 } from '../lib/exportHelpers.js';
 
+import { config } from '../lib/config.js';
+
 const router = Router();
-const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
+const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
 router.use(authenticate);
 

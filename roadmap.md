@@ -13,7 +13,7 @@
 - Add minimal observability to support beta.
 
 Deliverables
-- Config validation at startup (fail fast if `JWT_SECRET`, `DATABASE_URL`, `ELECTRIC_URL` missing).
+- Config validation at startup (fail fast on invalid ranges; safe defaults for optional vars).
 - CORS allowlist based on env; disallow `*` in production.
 - API rate limiting for auth and upload routes.
 - Request size limits for JSON and uploads; reject oversize early.

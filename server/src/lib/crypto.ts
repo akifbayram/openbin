@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import { query } from '../db.js';
+import { config } from './config.js';
 
-const AI_ENCRYPTION_KEY = process.env.AI_ENCRYPTION_KEY;
+const AI_ENCRYPTION_KEY = config.aiEncryptionKey;
 const KDF_SALT = Buffer.from('openbin-ai-key-encryption-v1');
 
 function getDerivedKey(): Buffer | null {

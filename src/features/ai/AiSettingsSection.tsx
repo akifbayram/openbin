@@ -135,6 +135,14 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
           </p>
         )}
 
+        {aiEnabled && settings?.source === 'env' && (
+          <div className="mt-3 px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 border border-[var(--accent)]/20">
+            <p className="text-[13px] text-[var(--text-secondary)]">
+              AI configured by server. Save your own settings to override.
+            </p>
+          </div>
+        )}
+
         {aiEnabled && <div className="flex flex-col gap-4 mt-4">
           {/* Provider selector */}
           <div className="flex gap-1.5 bg-[var(--bg-input)] rounded-[var(--radius-full)] p-1">
@@ -307,7 +315,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
             >
               {setup.saving ? 'Saving...' : 'Save'}
             </Button>
-            {settings && (
+            {settings && settings.source !== 'env' && (
               <Button
                 variant="ghost"
                 onClick={handleRemove}

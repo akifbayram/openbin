@@ -1,8 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { query } from '../db.js';
+import { config } from './config.js';
 
-const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
+const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
 /**
  * Purge soft-deleted bins that have exceeded their location's trash_retention_days.

@@ -1,9 +1,11 @@
 node_modules
 dist
-server
+server/node_modules
+server/dist
 data
 *.log
 .env
 .env.*
+!.env.example
 .git
 .github

@@ -2,8 +2,9 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { config } from './config.js';
 
-const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
+const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
 const PHOTO_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -33,7 +34,7 @@ export const binPhotoStorage = multer.diskStorage({
 /** Multer config for bin photo uploads (max 5 MB, JPEG/PNG/WebP/GIF). */
 export const binPhotoUpload = multer({
   storage: binPhotoStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: config.maxPhotoSizeMb * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (PHOTO_MIME_TYPES.includes(file.mimetype)) {
       cb(null, true);
@@ -58,7 +59,7 @@ export const avatarStorage = multer.diskStorage({
 /** Multer config for avatar uploads (max 2 MB, JPEG/PNG/WebP). */
 export const avatarUpload = multer({
   storage: avatarStorage,
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: config.maxAvatarSizeMb * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (AVATAR_MIME_TYPES.includes(file.mimetype)) {
       cb(null, true);

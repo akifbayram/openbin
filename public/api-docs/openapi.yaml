@@ -604,6 +604,10 @@ components:
               endpointUrl:
                 type: string
                 nullable: true
+        source:
+          type: string
+          enum: [user, env]
+          description: "'user' when loaded from DB, 'env' when using server-wide env var config"
 
     AiSettingsRequest:
       type: object
@@ -994,11 +998,29 @@ paths:
   # ════════════════════════════════════════════════════════
   # Auth
   # ════════════════════════════════════════════════════════
+  /auth/status:
+    get:
+      tags: [Auth]
+      summary: Get public auth status
+      description: Returns server configuration flags relevant to the auth UI (e.g. whether registration is enabled). No authentication required.
+      security: []
+      responses:
+        '200':
+          description: Auth status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  registrationEnabled:
+                    type: boolean
+                    description: Whether new user registration is allowed
+
   /auth/register:
     post:
       tags: [Auth]
       summary: Register a new user
-      description: Creates a new user account. Rate limited to 3 per hour.
+      description: Creates a new user account. Rate limited to 3 per hour. Returns 403 if registration is disabled via REGISTRATION_ENABLED env var.
       security: []
       requestBody:
         required: true
@@ -1013,6 +1035,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
+        '403':
+          description: Registration disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: FORBIDDEN
+                message: Registration is currently disabled
         '409':
           description: Username already taken
           content:

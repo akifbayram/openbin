@@ -19,6 +19,7 @@ import { getUserAiSettings } from '../lib/aiSettings.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
+import { config, getEnvAiConfig } from '../lib/config.js';
 
 const router = Router();
 
@@ -37,10 +38,10 @@ const aiLimiter = rateLimit({
   message: { error: 'RATE_LIMITED', message: 'Too many AI requests, please try again later' },
 });
 
-const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || './uploads';
+const PHOTO_STORAGE_PATH = config.photoStoragePath;
 const memoryUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: config.maxPhotoSizeMb * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     cb(null, allowed.includes(file.mimetype));
@@ -57,6 +58,23 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
   );
 
   if (result.rows.length === 0) {
+    // Fall back to env-based AI config
+    const envConfig = getEnvAiConfig();
+    if (envConfig) {
+      res.json({
+        id: null,
+        provider: envConfig.provider,
+        apiKey: maskApiKey(envConfig.apiKey),
+        model: envConfig.model,
+        endpointUrl: envConfig.endpointUrl,
+        customPrompt: null,
+        commandPrompt: null,
+        queryPrompt: null,
+        structurePrompt: null,
+        source: 'env' as const,
+      });
+      return;
+    }
     res.json(null);
     return;
   }
@@ -84,6 +102,7 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
     queryPrompt: activeRow.query_prompt || null,
     structurePrompt: activeRow.structure_prompt || null,
     providerConfigs,
+    source: 'user' as const,
   });
 }));
 
