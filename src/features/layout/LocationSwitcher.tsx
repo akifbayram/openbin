@@ -31,14 +31,7 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
 
   const active = locations.find((l) => l.id === activeLocationId);
 
-  if (locations.length === 1) {
-    return (
-      <div className="flex items-center gap-2.5 px-3 py-2.5 text-[14px] font-medium text-[var(--text-secondary)]">
-        <MapPin className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
-        <span className="truncate">{active?.name ?? locations[0].name}</span>
-      </div>
-    );
-  }
+  if (locations.length <= 1) return null;
 
   return (
     <div className="relative" ref={ref}>

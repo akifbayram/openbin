@@ -203,7 +203,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
             onKeyDown={handleInputKeyDown}
             onPaste={handlePaste}
             placeholder={items.length === 0 ? 'Add items...' : 'Add another item...'}
-            className="h-7 bg-transparent p-0 text-base focus-visible:ring-0"
+            className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0"
           />
           {input.trim() && (
             <button
