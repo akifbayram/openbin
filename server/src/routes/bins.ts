@@ -325,6 +325,9 @@ router.put('/:id', asyncHandler(async (req, res) => {
   if (visibility !== undefined && visibility !== 'location' && visibility !== 'private') {
     throw new ValidationError('visibility must be "location" or "private"');
   }
+  if (visibility === 'private' && access.createdBy !== req.user!.id) {
+    throw new ForbiddenError('Only the bin creator can set visibility to private');
+  }
   if (items !== undefined && Array.isArray(items) && items.length > 500) {
     throw new ValidationError('Too many items (max 500)');
   }

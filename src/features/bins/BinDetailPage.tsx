@@ -735,6 +735,14 @@ export function BinDetailPage() {
                         </p>
                       </div>
                     )}
+                    {bin.created_by_name && (
+                      <div className="mb-4">
+                        <Label>Created by</Label>
+                        <p className="mt-1.5 text-[13px] text-[var(--text-secondary)]">
+                          {bin.created_by_name}
+                        </p>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-6">
                       <div>
                         <Label>Created</Label>

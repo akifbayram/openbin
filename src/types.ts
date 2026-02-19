@@ -78,6 +78,7 @@ export interface Bin {
   color: string;
   short_code: string;
   created_by: string;
+  created_by_name: string;
   visibility: BinVisibility;
   created_at: string;
   updated_at: string;
