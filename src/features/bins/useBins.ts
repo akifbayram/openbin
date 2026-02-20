@@ -3,6 +3,7 @@ import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Events, notify, useRefreshOn } from '@/lib/eventBus';
 import { useListData } from '@/lib/useListData';
+import { usePaginatedList } from '@/lib/usePaginatedList';
 import type { Bin, BinItem, BinVisibility } from '@/types';
 
 /** Notify all useBinList / useBin instances to refetch */
@@ -108,6 +109,52 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
   }, [rawBins, searchQuery, sort, filters]);
 
   return { bins, isLoading, refresh };
+}
+
+function buildFilterParams(
+  searchQuery: string | undefined,
+  sort: SortOption,
+  filters: BinFilters | undefined,
+): string {
+  const p = new URLSearchParams();
+  if (searchQuery?.trim()) p.set('q', searchQuery.trim());
+
+  const sortMap: Record<SortOption, string> = { updated: 'updated_at', created: 'created_at', name: 'name' };
+  p.set('sort', sortMap[sort]);
+  p.set('sort_dir', sort === 'name' ? 'asc' : 'desc');
+
+  if (filters) {
+    if (filters.tags.length > 0) {
+      p.set('tags', filters.tags.join(','));
+      if (filters.tagMode === 'all') p.set('tag_mode', 'all');
+    }
+    if (filters.colors.length > 0) p.set('colors', filters.colors.join(','));
+    if (filters.areas.length > 0) p.set('areas', filters.areas.join(','));
+    if (filters.hasItems) p.set('has_items', 'true');
+    if (filters.hasNotes) p.set('has_notes', 'true');
+    if (filters.needsOrganizing) p.set('needs_organizing', 'true');
+  }
+
+  const qs = p.toString();
+  return qs ? `&${qs}` : '';
+}
+
+export function usePaginatedBinList(
+  searchQuery?: string,
+  sort: SortOption = 'updated',
+  filters?: BinFilters,
+  pageSize = 40,
+) {
+  const { activeLocationId, token } = useAuth();
+
+  const basePath = token && activeLocationId
+    ? `/api/bins?location_id=${encodeURIComponent(activeLocationId)}${buildFilterParams(searchQuery, sort, filters)}`
+    : null;
+
+  const { items, totalCount, isLoading, isLoadingMore, hasMore, error, loadMore } =
+    usePaginatedList<Bin>(basePath, [Events.BINS], pageSize);
+
+  return { bins: items, totalCount, isLoading, isLoadingMore, hasMore, error, loadMore };
 }
 
 export function useBin(id: string | undefined) {

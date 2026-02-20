@@ -19,7 +19,7 @@ import { haptic } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/usePermissions';
-import { useBinList, useAllTags, deleteBin, restoreBin, countActiveFilters, EMPTY_FILTERS, type SortOption, type BinFilters } from './useBins';
+import { usePaginatedBinList, useAllTags, deleteBin, restoreBin, countActiveFilters, EMPTY_FILTERS, type SortOption, type BinFilters } from './useBins';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 
 import { BinCard } from './BinCard';
@@ -28,6 +28,7 @@ import { BinFilterDialog } from './BinFilterDialog';
 import { BulkTagDialog } from './BulkTagDialog';
 import { BulkAreaDialog } from './BulkAreaDialog';
 import { BulkActionBar } from './BulkActionBar';
+import { LoadMoreSentinel } from '@/components/ui/LoadMoreSentinel';
 
 import { SaveViewDialog } from './SaveViewDialog';
 import { useAreaList } from '@/features/areas/useAreas';
@@ -82,7 +83,7 @@ export function BinListPage() {
   const [bulkAreaOpen, setBulkAreaOpen] = useState(false);
   const { activeLocationId } = useAuth();
   const { isAdmin } = usePermissions();
-  const { bins, isLoading } = useBinList(debouncedSearch, sort, filters);
+  const { bins, totalCount, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedBinList(debouncedSearch, sort, filters);
   const allTags = useAllTags();
   const activeCount = countActiveFilters(filters);
   const { areas } = useAreaList(activeLocationId);
@@ -93,6 +94,11 @@ export function BinListPage() {
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const getTagStyle = useTagStyle();
   const hasBadges = activeCount > 0 || filters.needsOrganizing;
+
+  // Clear selection when filters/search/sort reset the list
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [debouncedSearch, sort, filters]);
 
   const selectable = selectedIds.size > 0;
 
@@ -354,20 +360,28 @@ export function BinListPage() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {bins.map((bin) => (
-                <BinCard
-                  key={bin.id}
-                  bin={bin}
-                  onTagClick={handleTagClick}
-                  selectable={selectable}
-                  selected={selectedIds.has(bin.id)}
-                  onSelect={toggleSelect}
-                  searchQuery={debouncedSearch}
-                  onPinToggle={handlePinToggle}
-                />
-              ))}
-            </div>
+            <>
+              {totalCount > 0 && (
+                <p className="text-[13px] text-[var(--text-tertiary)]">
+                  {totalCount} {totalCount === 1 ? t.bin : t.bins}
+                </p>
+              )}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {bins.map((bin) => (
+                  <BinCard
+                    key={bin.id}
+                    bin={bin}
+                    onTagClick={handleTagClick}
+                    selectable={selectable}
+                    selected={selectedIds.has(bin.id)}
+                    onSelect={toggleSelect}
+                    searchQuery={debouncedSearch}
+                    onPinToggle={handlePinToggle}
+                  />
+                ))}
+              </div>
+              <LoadMoreSentinel hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
+            </>
           )}
         </>
       )}
