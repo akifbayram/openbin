@@ -10,6 +10,8 @@ import { validateUsername, validatePassword, validateEmail, validateDisplayName 
 import { isPathSafe } from '../lib/pathSafety.js';
 import { avatarUpload, AVATAR_STORAGE_PATH } from '../lib/uploadConfig.js';
 import { config } from '../lib/config.js';
+import { setAccessTokenCookie, setRefreshTokenCookie, clearAuthCookies } from '../lib/cookies.js';
+import { createRefreshToken, rotateRefreshToken, revokeAllUserTokens, revokeSingleToken } from '../lib/refreshTokens.js';
 
 const router = Router();
 
@@ -43,6 +45,10 @@ router.post('/register', asyncHandler(async (req, res) => {
 
   const user = result.rows[0];
   const token = signToken({ id: user.id, username: user.username });
+  const refresh = await createRefreshToken(user.id);
+
+  setAccessTokenCookie(res, token);
+  setRefreshTokenCookie(res, refresh.rawToken);
 
   res.status(201).json({
     token,
@@ -81,6 +87,10 @@ router.post('/login', asyncHandler(async (req, res) => {
   }
 
   const token = signToken({ id: user.id, username: user.username });
+  const refresh = await createRefreshToken(user.id);
+
+  setAccessTokenCookie(res, token);
+  setRefreshTokenCookie(res, refresh.rawToken);
 
   // Use persisted active_location_id if user is still a member
   let activeLocationId: string | null = null;
@@ -120,6 +130,57 @@ router.post('/login', asyncHandler(async (req, res) => {
     },
     activeLocationId,
   });
+}));
+
+// POST /api/auth/refresh — rotate refresh token (no authenticate middleware — access token may be expired)
+router.post('/refresh', asyncHandler(async (req, res) => {
+  const rawToken = req.cookies?.['openbin-refresh'] as string | undefined;
+
+  if (!rawToken) {
+    clearAuthCookies(res);
+    throw new UnauthorizedError('No refresh token');
+  }
+
+  const rotated = await rotateRefreshToken(rawToken);
+  if (!rotated) {
+    clearAuthCookies(res);
+    throw new UnauthorizedError('Invalid or expired refresh token');
+  }
+
+  // Look up user for new access token
+  const userResult = await query<{ id: string; username: string }>(
+    'SELECT id, username FROM users WHERE id = $1',
+    [rotated.userId],
+  );
+  if (userResult.rows.length === 0) {
+    clearAuthCookies(res);
+    throw new UnauthorizedError('User not found');
+  }
+
+  const user = userResult.rows[0];
+  const accessToken = signToken({ id: user.id, username: user.username });
+
+  setAccessTokenCookie(res, accessToken);
+  setRefreshTokenCookie(res, rotated.rawToken);
+
+  res.json({ message: 'Token refreshed' });
+}));
+
+// POST /api/auth/logout — revoke refresh token and clear cookies (no authenticate required)
+router.post('/logout', asyncHandler(async (req, res) => {
+  const rawToken = req.cookies?.['openbin-refresh'] as string | undefined;
+  if (rawToken) {
+    await revokeSingleToken(rawToken);
+  }
+  clearAuthCookies(res);
+  res.json({ message: 'Logged out' });
+}));
+
+// POST /api/auth/logout-all — revoke all refresh tokens (requires authenticate)
+router.post('/logout-all', authenticate, asyncHandler(async (req, res) => {
+  await revokeAllUserTokens(req.user!.id);
+  clearAuthCookies(res);
+  res.json({ message: 'All sessions logged out' });
 }));
 
 // GET /api/auth/me
@@ -253,6 +314,10 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
   const newHash = await bcrypt.hash(newPassword, config.bcryptRounds);
   await query(`UPDATE users SET password_hash = $1, updated_at = datetime('now') WHERE id = $2`, [newHash, req.user!.id]);
 
+  // Revoke all refresh tokens to force re-login on all devices
+  await revokeAllUserTokens(req.user!.id);
+  clearAuthCookies(res);
+
   res.json({ message: 'Password updated successfully' });
 }));
 
@@ -373,8 +438,9 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
     try { fs.unlinkSync(avatarPath); } catch { /* ignore */ }
   }
 
-  // Delete user — cascades location_members, sets NULL on bins/photos/locations created_by
+  // Delete user — cascades location_members, refresh_tokens, sets NULL on bins/photos/locations created_by
   await query('DELETE FROM users WHERE id = $1', [userId]);
+  clearAuthCookies(res);
 
   res.json({ message: 'Account deleted' });
 }));

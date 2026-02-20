@@ -27,6 +27,7 @@ beforeAll(() => {
 });
 
 const TABLES = [
+  'refresh_tokens',
   'scan_history',
   'saved_views',
   'user_preferences',

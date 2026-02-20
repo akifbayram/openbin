@@ -1,5 +1,4 @@
 export const STORAGE_KEYS = {
-  TOKEN: 'openbin-token',
   ACTIVE_LOCATION: 'openbin-active-location',
   THEME: 'openbin-theme',
   LABEL_FORMAT: 'openbin-label-format',

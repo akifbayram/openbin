@@ -5,11 +5,10 @@ info:
   description: |
     REST API for OpenBin — a multi-user web app for organizing physical storage bins with QR codes.
 
-    **Authentication**: Most endpoints require authentication via either:
-    - **JWT Bearer token** obtained via `POST /auth/login` (expires after 7 days)
-    - **API key** created via `POST /api-keys` (long-lived, format: `sk_openbin_...`)
-
-    Include either in the `Authorization: Bearer <token>` header.
+    **Authentication**: Most endpoints require authentication via one of:
+    - **httpOnly cookies** (primary) — `openbin-access` (15 min) + `openbin-refresh` (7 days), set automatically on login/register. Browsers send these with every request.
+    - **JWT Bearer token** via `Authorization: Bearer <token>` header (backward compat, also set on login/register response body)
+    - **API key** created via `POST /api-keys` (long-lived, format: `sk_openbin_...`) — `Authorization: Bearer <key>`
 
     **Response envelopes**: All list endpoints return `{ results: T[], count: number }`.
     Error responses use `{ error: "CODE", message: "Human readable" }`.
@@ -1103,6 +1102,73 @@ paths:
                 message: Invalid username or password
         '429':
           $ref: '#/components/responses/RateLimited'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate refresh token
+      description: |
+        Reads the `openbin-refresh` httpOnly cookie, validates and revokes the old refresh token,
+        and issues a new access + refresh token pair as httpOnly cookies. No authentication header required
+        (the access token may be expired). Rate limited.
+        If the presented refresh token was already revoked (replay attack), the entire token family is revoked.
+      security: []
+      responses:
+        '200':
+          description: Tokens refreshed — new cookies set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Token refreshed
+        '401':
+          description: Invalid, expired, or missing refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out (revoke current refresh token)
+      description: Revokes the refresh token from the `openbin-refresh` cookie and clears auth cookies. No authentication required.
+      security: []
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out
+
+  /auth/logout-all:
+    post:
+      tags: [Auth]
+      summary: Log out all sessions
+      description: Revokes all refresh tokens for the authenticated user, effectively logging out every device.
+      responses:
+        '200':
+          description: All sessions logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: All sessions logged out
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /auth/me:
     get:

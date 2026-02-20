@@ -50,22 +50,19 @@ describe('useAuth', () => {
   });
 
   describe('initial state', () => {
-    it('reads token and activeLocationId from localStorage', () => {
-      localStorage.setItem(STORAGE_KEYS.TOKEN, 'stored-token');
+    it('reads activeLocationId from localStorage', () => {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'loc-1');
       mockApiFetch.mockResolvedValue(makeUser());
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
-      expect(result.current.token).toBe('stored-token');
       expect(result.current.activeLocationId).toBe('loc-1');
     });
   });
 
   describe('token validation on mount', () => {
-    it('sets user when token is valid', async () => {
+    it('sets user when cookie session is valid', async () => {
       const user = makeUser();
-      localStorage.setItem(STORAGE_KEYS.TOKEN, 'valid-token');
       mockApiFetch.mockResolvedValue(user);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -75,12 +72,11 @@ describe('useAuth', () => {
       });
 
       expect(result.current.user).toEqual(user);
-      expect(result.current.token).toBe('valid-token');
+      expect(result.current.token).toBe('cookie');
       expect(mockApiFetch).toHaveBeenCalledWith('/api/auth/me', { timeout: 8000 });
     });
 
     it('uses activeLocationId from /me response and writes to localStorage', async () => {
-      localStorage.setItem(STORAGE_KEYS.TOKEN, 'valid-token');
       mockApiFetch.mockResolvedValue({ ...makeUser(), activeLocationId: 'server-loc' });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -94,7 +90,6 @@ describe('useAuth', () => {
     });
 
     it('preserves localStorage activeLocationId when /me returns null', async () => {
-      localStorage.setItem(STORAGE_KEYS.TOKEN, 'valid-token');
       localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'local-loc');
       mockApiFetch.mockResolvedValue({ ...makeUser(), activeLocationId: null });
 
@@ -107,8 +102,7 @@ describe('useAuth', () => {
       expect(result.current.activeLocationId).toBe('local-loc');
     });
 
-    it('clears token from localStorage when apiFetch rejects', async () => {
-      localStorage.setItem(STORAGE_KEYS.TOKEN, 'invalid-token');
+    it('clears state when apiFetch rejects (no valid session)', async () => {
       mockApiFetch.mockRejectedValue(new Error('Unauthorized'));
 
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -119,29 +113,20 @@ describe('useAuth', () => {
 
       expect(result.current.user).toBeNull();
       expect(result.current.token).toBeNull();
-      expect(localStorage.getItem(STORAGE_KEYS.TOKEN)).toBeNull();
-    });
-
-    it('sets loading to false immediately when no token', async () => {
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      expect(result.current.user).toBeNull();
-      expect(mockApiFetch).not.toHaveBeenCalled();
     });
   });
 
   describe('login', () => {
-    it('calls API, stores token, and sets user with activeLocationId', async () => {
+    it('calls API and sets user with activeLocationId', async () => {
       const user = makeUser();
-      mockApiFetch.mockResolvedValue({
-        token: 'new-token',
-        user,
-        activeLocationId: 'loc-1',
-      });
+      // First call is /me on mount (fails = no existing session), second is login
+      mockApiFetch
+        .mockRejectedValueOnce(new Error('No session'))
+        .mockResolvedValueOnce({
+          token: 'access-jwt',
+          user,
+          activeLocationId: 'loc-1',
+        });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -157,22 +142,19 @@ describe('useAuth', () => {
         method: 'POST',
         body: { username: 'testuser', password: 'password' },
       });
-      expect(localStorage.getItem(STORAGE_KEYS.TOKEN)).toBe('new-token');
       expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBe('loc-1');
       expect(result.current.user).toEqual(user);
-      expect(result.current.token).toBe('new-token');
+      expect(result.current.token).toBe('cookie');
       expect(result.current.activeLocationId).toBe('loc-1');
     });
 
     it('keeps existing activeLocationId when response has none', async () => {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'existing-loc');
       const user = makeUser();
-      // First call is /api/auth/me on mount, second is login
+      // First call is /me on mount, second is login
       mockApiFetch
         .mockResolvedValueOnce(user) // /me
-        .mockResolvedValueOnce({ token: 'new-token', user }); // login (no activeLocationId)
-
-      localStorage.setItem(STORAGE_KEYS.TOKEN, 'old-token');
+        .mockResolvedValueOnce({ token: 'access-jwt', user }); // login (no activeLocationId)
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -189,13 +171,15 @@ describe('useAuth', () => {
   });
 
   describe('register', () => {
-    it('calls API, stores token, clears active-location, and sets user', async () => {
+    it('calls API, clears active-location, and sets user', async () => {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'stale-loc');
       const user = makeUser();
-      mockApiFetch.mockResolvedValue({
-        token: 'reg-token',
-        user,
-      });
+      mockApiFetch
+        .mockRejectedValueOnce(new Error('No session'))
+        .mockResolvedValueOnce({
+          token: 'reg-token',
+          user,
+        });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -211,19 +195,19 @@ describe('useAuth', () => {
         method: 'POST',
         body: { username: 'newuser', password: 'password', displayName: 'New User' },
       });
-      expect(localStorage.getItem(STORAGE_KEYS.TOKEN)).toBe('reg-token');
       expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBeNull();
       expect(result.current.user).toEqual(user);
-      expect(result.current.token).toBe('reg-token');
+      expect(result.current.token).toBe('cookie');
       expect(result.current.activeLocationId).toBeNull();
     });
   });
 
   describe('logout', () => {
-    it('removes token and active-location from localStorage and clears state', async () => {
-      localStorage.setItem(STORAGE_KEYS.TOKEN, 'my-token');
+    it('calls POST /api/auth/logout, clears active-location from localStorage and clears state', async () => {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'loc-1');
-      mockApiFetch.mockResolvedValue(makeUser());
+      mockApiFetch
+        .mockResolvedValueOnce(makeUser()) // /me
+        .mockResolvedValueOnce(undefined); // /logout
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -231,11 +215,13 @@ describe('useAuth', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      act(() => {
-        result.current.logout();
+      await act(async () => {
+        await result.current.logout();
       });
 
-      expect(localStorage.getItem(STORAGE_KEYS.TOKEN)).toBeNull();
+      expect(mockApiFetch).toHaveBeenCalledWith('/api/auth/logout', {
+        method: 'POST',
+      });
       expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBeNull();
       expect(result.current.user).toBeNull();
       expect(result.current.token).toBeNull();
@@ -246,6 +232,8 @@ describe('useAuth', () => {
 
   describe('setActiveLocationId', () => {
     it('stores id in localStorage and updates state', async () => {
+      mockApiFetch.mockRejectedValueOnce(new Error('No session'));
+
       const { result } = renderHook(() => useAuth(), { wrapper });
 
       await waitFor(() => {
@@ -262,6 +250,7 @@ describe('useAuth', () => {
 
     it('removes from localStorage when set to null', async () => {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'loc-1');
+      mockApiFetch.mockRejectedValueOnce(new Error('No session'));
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -277,8 +266,7 @@ describe('useAuth', () => {
       expect(result.current.activeLocationId).toBeNull();
     });
 
-    it('calls PUT /api/auth/active-location when token exists', async () => {
-      localStorage.setItem(STORAGE_KEYS.TOKEN, 'my-token');
+    it('calls PUT /api/auth/active-location when authenticated', async () => {
       mockApiFetch.mockResolvedValueOnce(makeUser()); // /me
 
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -300,6 +288,8 @@ describe('useAuth', () => {
     });
 
     it('does not call API when logged out (no token)', async () => {
+      mockApiFetch.mockRejectedValueOnce(new Error('No session'));
+
       const { result } = renderHook(() => useAuth(), { wrapper });
 
       await waitFor(() => {
@@ -310,14 +300,16 @@ describe('useAuth', () => {
         result.current.setActiveLocationId('loc-3');
       });
 
-      // Only localStorage was updated, no API call (no /me call either since no token)
-      expect(mockApiFetch).not.toHaveBeenCalled();
+      // Only the /me call (which rejected), no PUT call
+      expect(mockApiFetch).toHaveBeenCalledTimes(1);
       expect(result.current.activeLocationId).toBe('loc-3');
     });
   });
 
   describe('updateUser', () => {
     it('updates user in state', async () => {
+      mockApiFetch.mockRejectedValueOnce(new Error('No session'));
+
       const { result } = renderHook(() => useAuth(), { wrapper });
 
       await waitFor(() => {
@@ -336,9 +328,8 @@ describe('useAuth', () => {
   });
 
   describe('deleteAccount', () => {
-    it('calls API and calls logout', async () => {
+    it('calls API and clears state', async () => {
       const user = makeUser({ id: 'user-42' });
-      localStorage.setItem(STORAGE_KEYS.TOKEN, 'my-token');
       localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, 'loc-1');
 
       // First call: /me on mount, second call: DELETE /api/auth/account
@@ -360,7 +351,6 @@ describe('useAuth', () => {
         method: 'DELETE',
         body: { password: 'mypassword' },
       });
-      expect(localStorage.getItem(STORAGE_KEYS.TOKEN)).toBeNull();
       expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBeNull();
       expect(result.current.user).toBeNull();
       expect(result.current.token).toBeNull();
