@@ -32,7 +32,9 @@ export type CommandAction =
   | { type: 'set_area'; bin_id: string; bin_name: string; area_id: string | null; area_name: string }
   | { type: 'set_notes'; bin_id: string; bin_name: string; notes: string; mode: 'set' | 'append' | 'clear' }
   | { type: 'set_icon'; bin_id: string; bin_name: string; icon: string }
-  | { type: 'set_color'; bin_id: string; bin_name: string; color: string };
+  | { type: 'set_color'; bin_id: string; bin_name: string; color: string }
+  | { type: 'update_bin'; bin_id: string; bin_name: string; name?: string; notes?: string; tags?: string[]; area_name?: string; icon?: string; color?: string; visibility?: 'location' | 'private' }
+  | { type: 'restore_bin'; bin_id: string; bin_name: string };
 
 export interface CommandRequest {
   text: string;
@@ -105,7 +107,7 @@ ${JSON.stringify({ bins: binsContext, areas: areasContext })}`;
 const VALID_ACTION_TYPES = new Set([
   'add_items', 'remove_items', 'modify_item', 'create_bin', 'delete_bin',
   'add_tags', 'remove_tags', 'modify_tag', 'set_area', 'set_notes',
-  'set_icon', 'set_color',
+  'set_icon', 'set_color', 'update_bin', 'restore_bin',
 ]);
 
 function validateCommandResult(raw: unknown, binIds: Set<string>): CommandResult {
@@ -230,6 +232,31 @@ function validateCommandResult(raw: unknown, binIds: Set<string>): CommandResult
           bin_id: a.bin_id as string,
           bin_name: (a.bin_name as string) || '',
           color: a.color as string,
+        });
+        break;
+      case 'update_bin': {
+        if (typeof a.bin_id !== 'string') continue;
+        const vis = a.visibility as string | undefined;
+        actions.push({
+          type,
+          bin_id: a.bin_id as string,
+          bin_name: (a.bin_name as string) || '',
+          name: typeof a.name === 'string' ? a.name.trim() : undefined,
+          notes: typeof a.notes === 'string' ? a.notes : undefined,
+          tags: Array.isArray(a.tags) ? (a.tags as unknown[]).filter((t): t is string => typeof t === 'string') : undefined,
+          area_name: typeof a.area_name === 'string' ? a.area_name.trim() : undefined,
+          icon: typeof a.icon === 'string' ? a.icon : undefined,
+          color: typeof a.color === 'string' ? a.color : undefined,
+          visibility: vis === 'location' || vis === 'private' ? vis : undefined,
+        });
+        break;
+      }
+      case 'restore_bin':
+        if (typeof a.bin_id !== 'string') continue;
+        actions.push({
+          type,
+          bin_id: a.bin_id as string,
+          bin_name: (a.bin_name as string) || '',
         });
         break;
     }

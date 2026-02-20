@@ -22,6 +22,7 @@ import activityRoutes from './routes/activity.js';
 import apiKeysRoutes from './routes/apiKeys.js';
 import tagsRoutes from './routes/tags.js';
 import itemsRoutes from './routes/items.js';
+import { batchRoutes } from './routes/batch.js';
 import { sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { HttpError } from './lib/httpErrors.js';
 
@@ -75,6 +76,7 @@ export function createApp(): express.Express {
   app.use('/api/api-keys', apiKeysRoutes);
   app.use('/api/tags', tagsRoutes);
   app.use('/api/items', itemsRoutes);
+  app.use('/api', batchRoutes);
 
   // Global error handler
   app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
