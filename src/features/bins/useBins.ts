@@ -196,7 +196,7 @@ export function useBin(id: string | undefined) {
     return () => { cancelled = true; };
   }, [id, token, refreshCounter]);
 
-  return { bin: bin ?? undefined, isLoading };
+  return { bin, isLoading };
 }
 
 export interface AddBinOptions {

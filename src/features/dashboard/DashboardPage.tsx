@@ -138,7 +138,8 @@ export function DashboardPage() {
             <Button
               onClick={() => setCommandOpen(true)}
               size="icon"
-              className="h-10 w-10 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] active:scale-[0.97] transition-all"
+              variant="ghost"
+              className="h-10 w-10 rounded-full"
               aria-label="Ask AI"
             >
               <Sparkles className="h-5 w-5" />

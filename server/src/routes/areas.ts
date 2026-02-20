@@ -48,6 +48,7 @@ router.post('/:locationId/areas', requireLocationAdmin('locationId'), asyncHandl
       entityId: area.id,
       entityName: area.name,
       authMethod: req.authMethod,
+      apiKeyId: req.apiKeyId,
     });
 
     res.status(201).json(area);

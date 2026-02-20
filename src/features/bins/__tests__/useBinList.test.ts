@@ -488,7 +488,7 @@ describe('useBin', () => {
     expect(mockApiFetch).not.toHaveBeenCalled();
   });
 
-  it('returns undefined on API error (bin ?? undefined masks null)', async () => {
+  it('returns null on API error (not found)', async () => {
     mockApiFetch.mockRejectedValue(new Error('Not found'));
 
     const { result } = renderHook(() => useBin('bin-404'));
@@ -496,7 +496,7 @@ describe('useBin', () => {
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
-    expect(result.current.bin).toBeUndefined();
+    expect(result.current.bin).toBeNull();
   });
 
   it('listens to bins-changed for refresh', async () => {

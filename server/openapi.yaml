@@ -563,6 +563,14 @@ components:
             properties:
               old: {}
               new: {}
+        auth_method:
+          type: string
+          enum: [jwt, api_key]
+          nullable: true
+        api_key_name:
+          type: string
+          nullable: true
+          description: Name of the API key used (only present when auth_method is api_key)
         created_at:
           type: string
           format: date-time
