@@ -98,4 +98,48 @@ export function registerItemTools(server: McpServer, api: ApiClient) {
       };
     }),
   );
+
+  server.tool(
+    "rename_item",
+    "Rename an item within a bin",
+    {
+      bin_id: z.string().describe("Bin UUID"),
+      item_id: z.string().describe("Item UUID"),
+      name: z.string().describe("New item name"),
+    },
+    withErrorHandling(async ({ bin_id, item_id, name }) => {
+      const item = await api.put<{ id: string; name: string }>(
+        `/api/bins/${encodeURIComponent(bin_id)}/items/${encodeURIComponent(item_id)}`,
+        { name },
+      );
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Item renamed to "${item.name}".`,
+          },
+        ],
+      };
+    }),
+  );
+
+  server.tool(
+    "reorder_items",
+    "Reorder items within a bin",
+    {
+      bin_id: z.string().describe("Bin UUID"),
+      item_ids: z.array(z.string()).min(1).describe("Item UUIDs in the desired order"),
+    },
+    withErrorHandling(async ({ bin_id, item_ids }) => {
+      await api.put(
+        `/api/bins/${encodeURIComponent(bin_id)}/items/reorder`,
+        { item_ids },
+      );
+
+      return {
+        content: [{ type: "text" as const, text: `Items reordered (${item_ids.length} items).` }],
+      };
+    }),
+  );
 }

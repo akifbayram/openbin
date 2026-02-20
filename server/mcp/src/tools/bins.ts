@@ -215,4 +215,160 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
       };
     }),
   );
+
+  // --- Trash ---
+
+  server.tool(
+    "list_trash",
+    "List soft-deleted bins in a location's trash",
+    {
+      location_id: z.string().describe("Location UUID"),
+    },
+    withErrorHandling(async ({ location_id }) => {
+      const params = new URLSearchParams({ location_id });
+      const data = await api.get<ListResponse>(`/api/bins/trash?${params}`);
+
+      if (data.results.length === 0) {
+        return { content: [{ type: "text" as const, text: "Trash is empty." }] };
+      }
+
+      const lines = data.results.map((bin) => formatBin(bin));
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `${data.count} bin(s) in trash:\n\n${lines.join("\n\n---\n\n")}`,
+          },
+        ],
+      };
+    }),
+  );
+
+  server.tool(
+    "restore_bin",
+    "Restore a soft-deleted bin from trash",
+    { id: z.string().describe("Bin UUID") },
+    withErrorHandling(async ({ id }) => {
+      const bin = await api.post<Bin>(`/api/bins/${encodeURIComponent(id)}/restore`);
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Bin restored!\n\n${formatBin(bin)}`,
+          },
+        ],
+      };
+    }),
+  );
+
+  server.tool(
+    "permanent_delete_bin",
+    "Permanently delete a bin from trash (cannot be undone)",
+    { id: z.string().describe("Bin UUID (must already be in trash)") },
+    withErrorHandling(async ({ id }) => {
+      await api.del(`/api/bins/${encodeURIComponent(id)}/permanent`);
+
+      return {
+        content: [{ type: "text" as const, text: "Bin permanently deleted." }],
+      };
+    }),
+  );
+
+  // --- Pins ---
+
+  server.tool(
+    "list_pinned_bins",
+    "List pinned bins for the current user in a location",
+    {
+      location_id: z.string().describe("Location UUID"),
+    },
+    withErrorHandling(async ({ location_id }) => {
+      const params = new URLSearchParams({ location_id });
+      const data = await api.get<ListResponse>(`/api/bins/pinned?${params}`);
+
+      if (data.results.length === 0) {
+        return { content: [{ type: "text" as const, text: "No pinned bins." }] };
+      }
+
+      const lines = data.results.map((bin) => formatBin(bin));
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `${data.count} pinned bin(s):\n\n${lines.join("\n\n---\n\n")}`,
+          },
+        ],
+      };
+    }),
+  );
+
+  server.tool(
+    "pin_bin",
+    "Pin a bin for quick access",
+    { id: z.string().describe("Bin UUID") },
+    withErrorHandling(async ({ id }) => {
+      await api.post(`/api/bins/${encodeURIComponent(id)}/pin`);
+
+      return {
+        content: [{ type: "text" as const, text: "Bin pinned." }],
+      };
+    }),
+  );
+
+  server.tool(
+    "unpin_bin",
+    "Unpin a bin",
+    { id: z.string().describe("Bin UUID") },
+    withErrorHandling(async ({ id }) => {
+      await api.del(`/api/bins/${encodeURIComponent(id)}/pin`);
+
+      return {
+        content: [{ type: "text" as const, text: "Bin unpinned." }],
+      };
+    }),
+  );
+
+  server.tool(
+    "reorder_pinned_bins",
+    "Reorder pinned bins",
+    {
+      bin_ids: z.array(z.string()).min(1).describe("Bin UUIDs in the desired order"),
+    },
+    withErrorHandling(async ({ bin_ids }) => {
+      await api.put("/api/bins/pinned/reorder", { bin_ids });
+
+      return {
+        content: [{ type: "text" as const, text: `Pinned bins reordered (${bin_ids.length} bins).` }],
+      };
+    }),
+  );
+
+  // --- Move ---
+
+  server.tool(
+    "move_bin",
+    "Move a bin to a different location (admin only). Area is unassigned after move.",
+    {
+      id: z.string().describe("Bin UUID"),
+      location_id: z.string().describe("Target location UUID"),
+    },
+    withErrorHandling(async ({ id, location_id }) => {
+      const bin = await api.post<Bin>(
+        `/api/bins/${encodeURIComponent(id)}/move`,
+        { locationId: location_id },
+      );
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Bin moved!\n\n${formatBin(bin)}`,
+          },
+        ],
+      };
+    }),
+  );
 }

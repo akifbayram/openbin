@@ -70,6 +70,28 @@ export class ApiClient {
   del<T>(path: string): Promise<T> {
     return this.request<T>("DELETE", path);
   }
+
+  async getText(path: string): Promise<string> {
+    const url = `${this.baseUrl}${path}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${this.apiKey}` },
+    });
+
+    if (!res.ok) {
+      let code = "UNKNOWN";
+      let message = `HTTP ${res.status}`;
+      try {
+        const err = (await res.json()) as ErrorBody;
+        code = err.error;
+        message = err.message;
+      } catch {
+        // use defaults
+      }
+      throw new OpenBinApiError(res.status, code, message);
+    }
+
+    return res.text();
+  }
 }
 
 type ToolResult = { content: Array<{ type: "text"; text: string }>; isError?: boolean };

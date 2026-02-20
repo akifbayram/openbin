@@ -7,6 +7,8 @@ import { registerBinTools } from "./tools/bins.js";
 import { registerItemTools } from "./tools/items.js";
 import { registerTagTools } from "./tools/tags.js";
 import { registerScanHistoryTools } from "./tools/scan-history.js";
+import { registerExportTools } from "./tools/export.js";
+import { registerActivityTools } from "./tools/activity.js";
 
 const apiKey = process.env.OPENBIN_API_KEY;
 if (!apiKey) {
@@ -28,6 +30,8 @@ registerBinTools(server, api);
 registerItemTools(server, api);
 registerTagTools(server, api);
 registerScanHistoryTools(server, api);
+registerExportTools(server, api);
+registerActivityTools(server, api);
 
 async function main() {
   const transport = new StdioServerTransport();

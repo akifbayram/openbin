@@ -40,4 +40,71 @@ export function registerAreaTools(server: McpServer, api: ApiClient) {
       };
     }),
   );
+
+  server.tool(
+    "create_area",
+    "Create a new area within a location (admin only)",
+    {
+      location_id: z.string().describe("Location UUID"),
+      name: z.string().describe("Area name"),
+    },
+    withErrorHandling(async ({ location_id, name }) => {
+      const area = await api.post<Area>(
+        `/api/locations/${encodeURIComponent(location_id)}/areas`,
+        { name },
+      );
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Area created successfully!\n\n- **${area.name}** (id: ${area.id})`,
+          },
+        ],
+      };
+    }),
+  );
+
+  server.tool(
+    "rename_area",
+    "Rename an existing area (admin only)",
+    {
+      location_id: z.string().describe("Location UUID"),
+      area_id: z.string().describe("Area UUID"),
+      name: z.string().describe("New area name"),
+    },
+    withErrorHandling(async ({ location_id, area_id, name }) => {
+      const area = await api.put<Area>(
+        `/api/locations/${encodeURIComponent(location_id)}/areas/${encodeURIComponent(area_id)}`,
+        { name },
+      );
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Area renamed successfully!\n\n- **${area.name}** (id: ${area.id})`,
+          },
+        ],
+      };
+    }),
+  );
+
+  server.tool(
+    "delete_area",
+    "Delete an area (admin only). Bins in the area become unassigned.",
+    {
+      location_id: z.string().describe("Location UUID"),
+      area_id: z.string().describe("Area UUID"),
+    },
+    withErrorHandling(async ({ location_id, area_id }) => {
+      await api.del(
+        `/api/locations/${encodeURIComponent(location_id)}/areas/${encodeURIComponent(area_id)}`,
+      );
+
+      return {
+        content: [{ type: "text" as const, text: "Area deleted. Any bins in it are now unassigned." }],
+      };
+    }),
+  );
 }
