@@ -13,15 +13,16 @@ import type { Bin } from '@/types';
 
 interface BinCardProps {
   bin: Bin;
+  index?: number;
   onTagClick?: (tag: string) => void;
   selectable?: boolean;
   selected?: boolean;
-  onSelect?: (id: string) => void;
+  onSelect?: (id: string, index: number, shiftKey: boolean) => void;
   searchQuery?: string;
   onPinToggle?: (id: string, pinned: boolean) => void;
 }
 
-export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable, selected, onSelect, searchQuery = '', onPinToggle }: BinCardProps) {
+export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick, selectable, selected, onSelect, searchQuery = '', onPinToggle }: BinCardProps) {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const getTagStyle = useTagStyle();
@@ -36,16 +37,16 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
   const handleLongPress = useCallback(() => {
     if (!selectable) {
       haptic();
-      onSelect?.(bin.id);
+      onSelect?.(bin.id, index, false);
     }
-  }, [selectable, onSelect, bin.id]);
+  }, [selectable, onSelect, bin.id, index]);
 
   const { onTouchStart, onTouchEnd, onTouchMove, onContextMenu, didLongPress } = useLongPress(handleLongPress);
 
-  function handleClick() {
+  function handleClick(e: React.MouseEvent) {
     if (didLongPress.current) return;
     if (selectable) {
-      onSelect?.(bin.id);
+      onSelect?.(bin.id, index, e.shiftKey);
     } else {
       navigate(`/bin/${bin.id}`);
     }
@@ -54,12 +55,35 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter') {
       if (e.shiftKey) {
-        onSelect?.(bin.id);
+        onSelect?.(bin.id, index, false);
       } else {
-        handleClick();
+        if (selectable) {
+          onSelect?.(bin.id, index, false);
+        } else {
+          navigate(`/bin/${bin.id}`);
+        }
       }
     }
   }
+
+  function handleCheckboxClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    onSelect?.(bin.id, index, e.shiftKey);
+  }
+
+  const checkbox = (
+    <div
+      className={cn(
+        'mt-0.5 h-[22px] w-[22px] shrink-0 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
+        selected
+          ? 'bg-[var(--accent)] border-[var(--accent)]'
+          : 'border-[var(--text-tertiary)]'
+      )}
+      style={!selected && mutedColor ? { borderColor: mutedColor } : undefined}
+    >
+      {selected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+    </div>
+  );
 
   return (
     <div
@@ -81,19 +105,29 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
     >
       <div className="flex items-start gap-3">
         {selectable ? (
-          <div
-            className={cn(
-              'mt-0.5 h-[22px] w-[22px] shrink-0 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
-              selected
-                ? 'bg-[var(--accent)] border-[var(--accent)]'
-                : 'border-[var(--text-tertiary)]'
-            )}
-            style={!selected && mutedColor ? { borderColor: mutedColor } : undefined}
-          >
-            {selected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
-          </div>
+          checkbox
         ) : (
-          <BinIcon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-tertiary)]" style={mutedColor ? { color: mutedColor } : undefined} />
+          /* Layered icon / hover-checkbox for desktop discovery */
+          <div
+            className="relative mt-0.5 h-[22px] w-[22px] shrink-0"
+            onClick={handleCheckboxClick}
+          >
+            {/* Default icon — fades out on hover (hover:hover targets pointer devices only) */}
+            <BinIcon
+              className="absolute inset-0 h-5 w-5 text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
+              style={mutedColor ? { color: mutedColor } : undefined}
+            />
+            {/* Checkbox — hidden by default, revealed on hover for pointer devices */}
+            <div
+              className={cn(
+                'absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100',
+              )}
+            >
+              <div className="h-[22px] w-[22px] rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center"
+                style={mutedColor ? { borderColor: mutedColor } : undefined}
+              />
+            </div>
+          </div>
         )}
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug flex items-center gap-1.5">
@@ -166,6 +200,7 @@ export const BinCard = React.memo(function BinCard({ bin, onTagClick, selectable
     prev.bin.is_pinned === next.bin.is_pinned &&
     prev.selectable === next.selectable &&
     prev.selected === next.selected &&
+    prev.index === next.index &&
     prev.onTagClick === next.onTagClick &&
     prev.onSelect === next.onSelect &&
     prev.onPinToggle === next.onPinToggle &&

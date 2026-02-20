@@ -1,5 +1,7 @@
-import { CheckCircle2, Tag, MapPin, Trash2, X } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { CheckCircle2, Tag, MapPin, Trash2, X, MoreHorizontal, Palette, Box, Eye, ArrowRightLeft, Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useClickOutside } from '@/lib/useClickOutside';
 
 interface BulkActionBarProps {
   selectedCount: number;
@@ -8,9 +10,25 @@ interface BulkActionBarProps {
   onMove: () => void;
   onDelete: () => void;
   onClear: () => void;
+  onColor: () => void;
+  onIcon: () => void;
+  onVisibility: () => void;
+  onMoveLocation: () => void;
+  onPin: () => void;
+  pinLabel: string;
 }
 
-export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete, onClear }: BulkActionBarProps) {
+export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete, onClear, onColor, onIcon, onVisibility, onMoveLocation, onPin, pinLabel }: BulkActionBarProps) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+
+  useClickOutside(moreRef, useCallback(() => setMoreOpen(false), []));
+
+  function handleMoreAction(action: () => void) {
+    setMoreOpen(false);
+    action();
+  }
+
   return (
     <div className="glass-card rounded-[var(--radius-full)] flex items-center gap-2 px-4 py-2.5">
       <CheckCircle2 className="h-4 w-4 text-[var(--accent)]" />
@@ -49,6 +67,58 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
           <Trash2 className="h-3.5 w-3.5 mr-1.5" />
           Delete
         </Button>
+      )}
+      {isAdmin && (
+        <div className="relative" ref={moreRef}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full"
+            onClick={() => setMoreOpen((o) => !o)}
+            aria-label="More actions"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+          {moreOpen && (
+            <div className="absolute bottom-full mb-2 right-0 glass-heavy rounded-[var(--radius-md)] py-1 min-w-[180px] z-50 shadow-lg">
+              <button
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                onClick={() => handleMoreAction(onColor)}
+              >
+                <Palette className="h-4 w-4 text-[var(--text-tertiary)]" />
+                Change Color
+              </button>
+              <button
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                onClick={() => handleMoreAction(onIcon)}
+              >
+                <Box className="h-4 w-4 text-[var(--text-tertiary)]" />
+                Change Icon
+              </button>
+              <button
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                onClick={() => handleMoreAction(onVisibility)}
+              >
+                <Eye className="h-4 w-4 text-[var(--text-tertiary)]" />
+                Change Visibility
+              </button>
+              <button
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                onClick={() => handleMoreAction(onMoveLocation)}
+              >
+                <ArrowRightLeft className="h-4 w-4 text-[var(--text-tertiary)]" />
+                Move to Location
+              </button>
+              <button
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                onClick={() => handleMoreAction(onPin)}
+              >
+                <Pin className="h-4 w-4 text-[var(--text-tertiary)]" />
+                {pinLabel}
+              </button>
+            </div>
+          )}
+        </div>
       )}
       <Button
         variant="ghost"
