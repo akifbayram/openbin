@@ -48,14 +48,14 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
   const content = (
     <>
       {variant !== 'inline' && <Label>Photos</Label>}
-      <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2${variant !== 'inline' ? ' mt-2.5' : ''}`}>
+      <div className={`flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory${variant !== 'inline' ? ' mt-2.5' : ''}`}>
         {photos.map((photo) => (
-          <div key={photo.id} className="relative group">
+          <div key={photo.id} className="relative group flex-shrink-0">
             <button
               type="button"
               onClick={() => setLightboxPhoto(photo)}
               aria-label={`View ${photo.filename}`}
-              className="block w-full aspect-square rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-input)]"
+              className="block w-20 h-20 rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-input)] snap-start"
             >
               <img
                 src={getPhotoUrl(photo.id)}
@@ -79,7 +79,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
           type="button"
           onClick={() => inputRef.current?.click()}
           aria-label="Add photo"
-          className="flex flex-col items-center justify-center aspect-square rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+          className="flex flex-col items-center justify-center w-20 h-20 flex-shrink-0 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors snap-start"
         >
           <Plus className="h-6 w-6" />
           <span className="text-[11px] mt-1 font-medium">Add Photo</span>

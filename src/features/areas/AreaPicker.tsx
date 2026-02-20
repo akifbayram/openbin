@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAreaList, createArea } from './useAreas';
 import { Input } from '@/components/ui/input';
+import { useDialogPortal } from '@/components/ui/dialog';
 
 interface AreaPickerProps {
   locationId: string | undefined;
@@ -11,21 +13,34 @@ interface AreaPickerProps {
 }
 
 export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
+  const dialogPortal = useDialogPortal();
   const { areas } = useAreaList(locationId);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const selectedArea = areas.find((a) => a.id === value);
+
+  const reposition = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }, []);
 
   // Close dropdown on click outside
   useEffect(() => {
     if (!open) return;
+    reposition();
     function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current && !containerRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
         setCreating(false);
         setNewName('');
@@ -33,7 +48,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
+  }, [open, reposition]);
 
   // Focus input when creating
   useEffect(() => {
@@ -73,8 +88,12 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
         <ChevronDown className={cn('h-4 w-4 text-[var(--text-tertiary)] shrink-0 transition-transform', open && 'rotate-180')} />
       </button>
 
-      {open && (
-        <div className="absolute z-20 mt-1 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-lg overflow-hidden">
+      {open && pos && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[100] rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-lg overflow-hidden"
+          style={{ top: pos.top, left: pos.left, width: pos.width }}
+        >
           <div className="max-h-48 overflow-y-auto">
             <button
               type="button"
@@ -143,7 +162,8 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
               </button>
             )}
           </div>
-        </div>
+        </div>,
+        dialogPortal ?? document.body,
       )}
     </div>
   );

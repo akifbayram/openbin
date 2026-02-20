@@ -1,54 +1,29 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Tags as TagsIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
-import { useBinList } from '@/features/bins/useBins';
+import { useDebounce } from '@/lib/useDebounce';
+import { usePaginatedTagList } from './useTags';
 import { useTagColorsContext } from './TagColorsContext';
 import { setTagColor } from './useTagColors';
 import { TagColorPicker } from './TagColorPicker';
 import { getColorPreset } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
 
-interface TagInfo {
-  name: string;
-  count: number;
-}
-
 export function TagsPage() {
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const navigate = useNavigate();
   const { activeLocationId } = useAuth();
   const t = useTerminology();
-  const { bins } = useBinList();
+  const { tags, totalCount, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedTagList(debouncedSearch);
   const { tagColors } = useTagColorsContext();
   const { theme } = useTheme();
-
-  const tags = useMemo(() => {
-    const tagMap = new Map<string, number>();
-    for (const bin of bins) {
-      if (Array.isArray(bin.tags)) {
-        for (const tag of bin.tags) {
-          tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
-        }
-      }
-    }
-
-    const result: TagInfo[] = [];
-    for (const [name, count] of tagMap) {
-      result.push({ name, count });
-    }
-    result.sort((a, b) => a.name.localeCompare(b.name));
-    return result;
-  }, [bins]);
-
-  const filteredTags = useMemo(() => {
-    if (!search.trim()) return tags;
-    const q = search.toLowerCase().trim();
-    return tags.filter((t) => t.name.toLowerCase().includes(q));
-  }, [tags, search]);
 
   function handleTagClick(tag: string) {
     navigate('/bins', { state: { search: tag } });
@@ -76,7 +51,7 @@ export function TagsPage() {
         Tags
       </h1>
 
-      {tags.length > 0 && (
+      {(totalCount > 0 || search) && (
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]" />
           <Input
@@ -88,7 +63,16 @@ export function TagsPage() {
         </div>
       )}
 
-      {filteredTags.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col gap-1">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">
+              <Skeleton className="h-6 w-20" />
+              <Skeleton className="h-4 w-12 flex-1" />
+            </div>
+          ))}
+        </div>
+      ) : tags.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
           <TagsIcon className="h-16 w-16 opacity-40" />
           <div className="text-center space-y-1.5">
@@ -102,33 +86,34 @@ export function TagsPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-1">
-          {filteredTags.map((tag) => (
+          {tags.map((entry) => (
             <div
-              key={tag.name}
+              key={entry.tag}
               role="button"
               tabIndex={0}
-              onClick={() => handleTagClick(tag.name)}
+              onClick={() => handleTagClick(entry.tag)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleTagClick(tag.name);
+                if (e.key === 'Enter') handleTagClick(entry.tag);
               }}
               className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 cursor-pointer transition-all duration-200 active:scale-[0.98] hover:bg-[var(--bg-hover)]"
             >
               <Badge
                 variant="secondary"
                 className="text-[13px]"
-                style={getTagBadgeStyle(tag.name)}
+                style={getTagBadgeStyle(entry.tag)}
               >
-                {tag.name}
+                {entry.tag}
               </Badge>
               <span className="flex-1 text-[13px] text-[var(--text-tertiary)]">
-                {tag.count} {tag.count !== 1 ? t.bins : t.bin}
+                {entry.count} {entry.count !== 1 ? t.bins : t.bin}
               </span>
               <TagColorPicker
-                currentColor={tagColors.get(tag.name) || ''}
-                onColorChange={(color) => handleColorChange(tag.name, color)}
+                currentColor={tagColors.get(entry.tag) || ''}
+                onColorChange={(color) => handleColorChange(entry.tag, color)}
               />
             </div>
           ))}
+          <LoadMoreSentinel hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
         </div>
       )}
     </div>

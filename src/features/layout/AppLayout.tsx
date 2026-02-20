@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BottomNav } from './BottomNav';
@@ -11,6 +11,9 @@ import { useLocationList } from '@/features/locations/useLocations';
 import { TagColorsProvider } from '@/features/tags/TagColorsContext';
 import { useOnboarding } from '@/features/onboarding/useOnboarding';
 import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay';
+import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
+import { CommandPalette } from '@/components/ui/command-palette';
+import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -24,6 +27,29 @@ export function AppLayout() {
   const onboarding = useOnboarding();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const shortcutActions = useMemo<Record<string, () => void>>(() => ({
+    'go-home': () => navigate('/'),
+    'go-bins': () => navigate('/bins'),
+    'go-scan': () => navigate('/scan'),
+    'go-print': () => navigate('/print'),
+    'go-locations': () => navigate('/locations'),
+    'go-items': () => navigate('/items'),
+    'go-tags': () => navigate('/tags'),
+    'go-settings': () => navigate('/settings'),
+    'new-bin': () => navigate('/bins', { state: { create: true } }),
+    'focus-search': () => {
+      const el = document.querySelector<HTMLInputElement>('[data-shortcut-search]');
+      el?.focus();
+    },
+    'command-palette': () => setCommandPaletteOpen(true),
+    'shortcuts-help': () => setShortcutsHelpOpen(true),
+  }), [navigate]);
+
+  useKeyboardShortcuts({ actions: shortcutActions, enabled: !onboarding.isOnboarding });
 
   // If the user already has locations before onboarding even started (e.g. completed on
   // another device), mark it done locally so the overlay never shows. Only check once —
@@ -107,6 +133,12 @@ export function AppLayout() {
         </div>
       </main>
       <BottomNav />
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        onAction={(id) => shortcutActions[id]?.()}
+      />
+      <ShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
       {onboarding.isOnboarding && !onboarding.isLoading && !locationsLoading && (locations.length === 0 || onboarding.step > 0) && (
         <OnboardingOverlay
           step={onboarding.step}

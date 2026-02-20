@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import {
   Search,
   Plus,
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
-import { haptic } from '@/lib/utils';
+import { haptic, cn } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/usePermissions';
@@ -27,8 +27,12 @@ import { BinCreateDialog } from './BinCreateDialog';
 import { BinFilterDialog } from './BinFilterDialog';
 import { BulkTagDialog } from './BulkTagDialog';
 import { BulkAreaDialog } from './BulkAreaDialog';
+import { BulkColorDialog } from './BulkColorDialog';
+import { BulkIconDialog } from './BulkIconDialog';
+import { BulkVisibilityDialog } from './BulkVisibilityDialog';
+import { BulkLocationDialog } from './BulkLocationDialog';
 import { BulkActionBar } from './BulkActionBar';
-import { LoadMoreSentinel } from '@/components/ui/LoadMoreSentinel';
+import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 
 import { SaveViewDialog } from './SaveViewDialog';
 import { useAreaList } from '@/features/areas/useAreas';
@@ -49,7 +53,12 @@ export function BinListPage() {
 
   // Update search/filters when navigating from Tags/Areas/Dashboard pages
   useEffect(() => {
-    const state = location.state as { search?: string; areaFilter?: string; needsOrganizing?: boolean; savedView?: SavedView } | null;
+    const state = location.state as { search?: string; areaFilter?: string; needsOrganizing?: boolean; savedView?: SavedView; create?: boolean } | null;
+    if (state?.create) {
+      setCreateOpen(true);
+      window.history.replaceState({}, '');
+      return;
+    }
     if (state?.savedView) {
       const view = state.savedView;
       setSearch(view.searchQuery);
@@ -81,6 +90,10 @@ export function BinListPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
   const [bulkAreaOpen, setBulkAreaOpen] = useState(false);
+  const [bulkColorOpen, setBulkColorOpen] = useState(false);
+  const [bulkIconOpen, setBulkIconOpen] = useState(false);
+  const [bulkVisibilityOpen, setBulkVisibilityOpen] = useState(false);
+  const [bulkLocationOpen, setBulkLocationOpen] = useState(false);
   const { activeLocationId } = useAuth();
   const { isAdmin } = usePermissions();
   const { bins, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedBinList(debouncedSearch, sort, filters);
@@ -94,13 +107,31 @@ export function BinListPage() {
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const getTagStyle = useTagStyle();
   const hasBadges = activeCount > 0 || filters.needsOrganizing;
+  const lastSelectedIndex = useRef<number | null>(null);
 
   // Clear selection when filters/search/sort reset the list
   useEffect(() => {
     setSelectedIds(new Set());
+    lastSelectedIndex.current = null;
   }, [debouncedSearch, sort, filters]);
 
   const selectable = selectedIds.size > 0;
+
+  // Keyboard shortcuts: Escape to clear selection, Ctrl/Cmd+A to select all
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && selectable) {
+        setSelectedIds(new Set());
+        lastSelectedIndex.current = null;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'a' && selectable) {
+        e.preventDefault();
+        setSelectedIds(new Set(bins.map((b) => b.id)));
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectable, bins]);
 
   const handleTagClick = useCallback((tag: string) => {
     setSearch(tag);
@@ -111,17 +142,28 @@ export function BinListPage() {
     else await unpinBin(id);
   }, []);
 
-  const toggleSelect = useCallback((id: string) => {
+  const toggleSelect = useCallback((id: string, index: number, shiftKey: boolean) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (shiftKey && lastSelectedIndex.current !== null) {
+        // Range select
+        const start = Math.min(lastSelectedIndex.current, index);
+        const end = Math.max(lastSelectedIndex.current, index);
+        for (let i = start; i <= end; i++) {
+          if (bins[i]) next.add(bins[i].id);
+        }
+      } else {
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+      }
       return next;
     });
-  }, []);
+    lastSelectedIndex.current = index;
+  }, [bins]);
 
   function clearSelection() {
     setSelectedIds(new Set());
+    lastSelectedIndex.current = null;
   }
 
   async function bulkDelete() {
@@ -142,6 +184,23 @@ export function BinListPage() {
       },
     });
   }
+
+  async function bulkPinToggle() {
+    const selected = bins.filter((b) => selectedIds.has(b.id));
+    const majorityUnpinned = selected.filter((b) => !b.is_pinned).length >= selected.length / 2;
+    if (majorityUnpinned) {
+      await Promise.all(selected.filter((b) => !b.is_pinned).map((b) => pinBin(b.id)));
+    } else {
+      await Promise.all(selected.filter((b) => b.is_pinned).map((b) => unpinBin(b.id)));
+    }
+    clearSelection();
+  }
+
+  const pinLabel = (() => {
+    const selected = bins.filter((b) => selectedIds.has(b.id));
+    const majorityUnpinned = selected.filter((b) => !b.is_pinned).length >= selected.length / 2;
+    return majorityUnpinned ? 'Pin' : 'Unpin';
+  })();
 
   return (
     <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2">
@@ -269,6 +328,7 @@ export function BinListPage() {
               </div>
             )}
             <input
+              data-shortcut-search
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={`Search ${t.bins}...`}
@@ -299,18 +359,6 @@ export function BinListPage() {
             )}
           </Button>
         </div>
-      )}
-
-      {/* Bulk action bar */}
-      {selectable && (
-        <BulkActionBar
-          selectedCount={selectedIds.size}
-          isAdmin={isAdmin}
-          onTag={() => setBulkTagOpen(true)}
-          onMove={() => setBulkAreaOpen(true)}
-          onDelete={bulkDelete}
-          onClear={clearSelection}
-        />
       )}
 
       {/* No location selected prompt */}
@@ -361,11 +409,12 @@ export function BinListPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {bins.map((bin) => (
+              <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4", selectable && "pb-16")}>
+                {bins.map((bin, index) => (
                   <BinCard
                     key={bin.id}
                     bin={bin}
+                    index={index}
                     onTagClick={handleTagClick}
                     selectable={selectable}
                     selected={selectedIds.has(bin.id)}
@@ -405,6 +454,30 @@ export function BinListPage() {
         binIds={[...selectedIds]}
         onDone={clearSelection}
       />
+      <BulkColorDialog
+        open={bulkColorOpen}
+        onOpenChange={setBulkColorOpen}
+        binIds={[...selectedIds]}
+        onDone={clearSelection}
+      />
+      <BulkIconDialog
+        open={bulkIconOpen}
+        onOpenChange={setBulkIconOpen}
+        binIds={[...selectedIds]}
+        onDone={clearSelection}
+      />
+      <BulkVisibilityDialog
+        open={bulkVisibilityOpen}
+        onOpenChange={setBulkVisibilityOpen}
+        binIds={[...selectedIds]}
+        onDone={clearSelection}
+      />
+      <BulkLocationDialog
+        open={bulkLocationOpen}
+        onOpenChange={setBulkLocationOpen}
+        binIds={[...selectedIds]}
+        onDone={clearSelection}
+      />
 
       <SaveViewDialog
         open={saveViewOpen}
@@ -418,6 +491,23 @@ export function BinListPage() {
         <Suspense fallback={null}>
           {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
         </Suspense>
+      )}
+
+      {selectable && (
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          isAdmin={isAdmin}
+          onTag={() => setBulkTagOpen(true)}
+          onMove={() => setBulkAreaOpen(true)}
+          onDelete={bulkDelete}
+          onClear={clearSelection}
+          onColor={() => setBulkColorOpen(true)}
+          onIcon={() => setBulkIconOpen(true)}
+          onVisibility={() => setBulkVisibilityOpen(true)}
+          onMoveLocation={() => setBulkLocationOpen(true)}
+          onPin={bulkPinToggle}
+          pinLabel={pinLabel}
+        />
       )}
     </div>
   );

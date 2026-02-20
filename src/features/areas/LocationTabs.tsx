@@ -22,7 +22,7 @@ export function LocationTabs({ locations, activeId, onSelect }: LocationTabsProp
           onClick={() => onSelect(loc.id)}
           className={`${scrollable ? 'min-w-[100px]' : 'flex-1'} px-3 py-2 rounded-[var(--radius-xs)] text-[14px] font-medium transition-colors truncate min-w-0 ${
             loc.id === activeId
-              ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-sm'
+              ? 'bg-[var(--bg-elevated)] text-[var(--accent)] shadow-sm ring-1 ring-[var(--accent)]/40 shadow-[0_0_8px_var(--accent)]/15'
               : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
           }`}
         >

@@ -20,6 +20,8 @@ import savedViewsRoutes from './routes/savedViews.js';
 import scanHistoryRoutes from './routes/scanHistory.js';
 import activityRoutes from './routes/activity.js';
 import apiKeysRoutes from './routes/apiKeys.js';
+import tagsRoutes from './routes/tags.js';
+import itemsRoutes from './routes/items.js';
 import { sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { HttpError } from './lib/httpErrors.js';
 
@@ -71,6 +73,8 @@ export function createApp(): express.Express {
   app.use('/api', exportRoutes);
   app.use('/api/ai', aiRoutes);
   app.use('/api/api-keys', apiKeysRoutes);
+  app.use('/api/tags', tagsRoutes);
+  app.use('/api/items', itemsRoutes);
 
   // Global error handler
   app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

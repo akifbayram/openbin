@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useTagStyle } from '@/features/tags/useTagStyle';
-import { useClickOutside } from '@/lib/useClickOutside';
+import { useDialogPortal } from '@/components/ui/dialog';
 
 interface TagInputProps {
   tags: string[];
@@ -12,12 +13,14 @@ interface TagInputProps {
 }
 
 export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
+  const dialogPortal = useDialogPortal();
   const [input, setInput] = useState('');
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const getTagStyle = useTagStyle();
 
   const filtered = useMemo(() => {
@@ -71,17 +74,35 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
     }
   }
 
+  const reposition = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }, []);
+
   // Scroll highlighted item into view
   useEffect(() => {
-    if (highlightIndex >= 0 && listRef.current) {
-      const item = listRef.current.children[highlightIndex] as HTMLElement;
+    if (highlightIndex >= 0 && menuRef.current) {
+      const item = menuRef.current.children[highlightIndex] as HTMLElement;
       item?.scrollIntoView({ block: 'nearest' });
     }
   }, [highlightIndex]);
 
-  // Close suggestions on outside click
-  const closeSuggestions = useCallback(() => setShowSuggestions(false), []);
-  useClickOutside(containerRef, closeSuggestions);
+  // Reposition and close on outside click
+  useEffect(() => {
+    if (!showSuggestions) return;
+    reposition();
+    function handleClick(e: MouseEvent) {
+      if (
+        containerRef.current && !containerRef.current.contains(e.target as Node) &&
+        (!menuRef.current || !menuRef.current.contains(e.target as Node))
+      ) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showSuggestions, reposition]);
 
   function removeTag(tag: string) {
     onChange(tags.filter((t) => t !== tag));
@@ -116,10 +137,11 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
           className="h-6 min-w-[80px] flex-1 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0"
         />
       </div>
-      {visible && (
+      {visible && pos && createPortal(
         <div
-          ref={listRef}
-          className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-[var(--radius-lg)] bg-[var(--bg-elevated)] shadow-lg border border-[var(--border)] p-2 flex flex-wrap gap-1.5"
+          ref={menuRef}
+          className="fixed z-[100] max-h-48 overflow-auto rounded-[var(--radius-lg)] bg-[var(--bg-elevated)] shadow-lg border border-[var(--border)] p-2 flex flex-wrap gap-1.5"
+          style={{ top: pos.top, left: pos.left, width: pos.width }}
         >
           {filtered.map((tag, i) => {
             const baseStyle = getTagStyle(tag);
@@ -153,7 +175,8 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
               </button>
             );
           })}
-        </div>
+        </div>,
+        dialogPortal ?? document.body,
       )}
     </div>
   );
