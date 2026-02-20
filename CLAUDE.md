@@ -16,7 +16,6 @@ Multi-user web app for organizing physical storage bins with QR codes. Data pers
 
 ## Code Conventions
 
-- **Git branching**: Create a feature branch (e.g. `feat/short-description`) before implementing changes. Do not commit directly to `main`.
 - **Git commits**: No "Co-Authored-By" or AI attribution lines.
 - **Named exports only** — no default exports except `App.tsx`.
 - **Feature hooks pattern**: each feature exposes a hook (e.g. `useBinList`) for data via `apiFetch()` with event-based refresh (`bins-changed` DOM events), and plain async functions (e.g. `addBin`) for mutations. Same file.
