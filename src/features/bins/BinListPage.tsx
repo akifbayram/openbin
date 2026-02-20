@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
-import { haptic } from '@/lib/utils';
+import { haptic, cn } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/usePermissions';
@@ -355,24 +355,6 @@ export function BinListPage() {
         </div>
       )}
 
-      {/* Bulk action bar */}
-      {selectable && (
-        <BulkActionBar
-          selectedCount={selectedIds.size}
-          isAdmin={isAdmin}
-          onTag={() => setBulkTagOpen(true)}
-          onMove={() => setBulkAreaOpen(true)}
-          onDelete={bulkDelete}
-          onClear={clearSelection}
-          onColor={() => setBulkColorOpen(true)}
-          onIcon={() => setBulkIconOpen(true)}
-          onVisibility={() => setBulkVisibilityOpen(true)}
-          onMoveLocation={() => setBulkLocationOpen(true)}
-          onPin={bulkPinToggle}
-          pinLabel={pinLabel}
-        />
-      )}
-
       {/* No location selected prompt */}
       {!activeLocationId ? (
         <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
@@ -421,7 +403,7 @@ export function BinListPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4", selectable && "pb-16")}>
                 {bins.map((bin, index) => (
                   <BinCard
                     key={bin.id}
@@ -503,6 +485,23 @@ export function BinListPage() {
         <Suspense fallback={null}>
           {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
         </Suspense>
+      )}
+
+      {selectable && (
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          isAdmin={isAdmin}
+          onTag={() => setBulkTagOpen(true)}
+          onMove={() => setBulkAreaOpen(true)}
+          onDelete={bulkDelete}
+          onClear={clearSelection}
+          onColor={() => setBulkColorOpen(true)}
+          onIcon={() => setBulkIconOpen(true)}
+          onVisibility={() => setBulkVisibilityOpen(true)}
+          onMoveLocation={() => setBulkLocationOpen(true)}
+          onPin={bulkPinToggle}
+          pinLabel={pinLabel}
+        />
       )}
     </div>
   );

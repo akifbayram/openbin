@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { CheckCircle2, Tag, MapPin, Trash2, X, MoreHorizontal, Palette, Box, Eye, ArrowRightLeft, Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useClickOutside } from '@/lib/useClickOutside';
+import { cn } from '@/lib/utils';
 
 interface BulkActionBarProps {
   selectedCount: number;
@@ -20,9 +21,14 @@ interface BulkActionBarProps {
 
 export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete, onClear, onColor, onIcon, onVisibility, onMoveLocation, onPin, pinLabel }: BulkActionBarProps) {
   const [moreOpen, setMoreOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(moreRef, useCallback(() => setMoreOpen(false), []));
+
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true));
+  }, []);
 
   function handleMoreAction(action: () => void) {
     setMoreOpen(false);
@@ -30,7 +36,13 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
   }
 
   return (
-    <div className="glass-card rounded-[var(--radius-full)] flex items-center gap-2 px-4 py-2.5">
+    <div className={cn(
+      'fixed z-50 left-1/2 -translate-x-1/2 lg:left-[calc(50%+130px)]',
+      'bottom-[calc(76px+var(--safe-bottom))] lg:bottom-8',
+      'transition-all duration-200',
+      visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+    )}>
+    <div className="glass-card rounded-[var(--radius-full)] flex items-center gap-2 px-4 py-2.5 shadow-lg">
       <CheckCircle2 className="h-4 w-4 text-[var(--accent)]" />
       <span className="text-[13px] font-medium text-[var(--text-secondary)] flex-1">
         {selectedCount} selected
@@ -129,6 +141,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
       >
         <X className="h-4 w-4" />
       </Button>
+    </div>
     </div>
   );
 }
