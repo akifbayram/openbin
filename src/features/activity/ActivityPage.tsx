@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/lib/usePermissions';
-import { Clock, Package, MapPin, Users, Image, RotateCcw, Trash2, Plus, Pencil, LogIn, LogOut, UserMinus } from 'lucide-react';
+import { Clock, Package, MapPin, Users, Image, RotateCcw, Trash2, Plus, Pencil, LogIn, LogOut, UserMinus, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useActivityLog } from './useActivity';
@@ -16,6 +16,7 @@ function getActionIcon(entry: ActivityLogEntry) {
   if (action === 'restore') return <RotateCcw className="h-3.5 w-3.5" />;
   if (action === 'add_photo') return <Image className="h-3.5 w-3.5" />;
   if (action === 'delete_photo') return <Image className="h-3.5 w-3.5" />;
+  if (action === 'move_in' || action === 'move_out') return <ArrowRightLeft className="h-3.5 w-3.5" />;
   if (action === 'join') return <LogIn className="h-3.5 w-3.5" />;
   if (action === 'leave') return <LogOut className="h-3.5 w-3.5" />;
   if (action === 'remove_member') return <UserMinus className="h-3.5 w-3.5" />;
@@ -29,6 +30,7 @@ function getActionColor(action: string): string {
   if (action === 'delete' || action === 'permanent_delete') return 'text-[var(--destructive)]';
   if (action === 'restore') return 'text-[var(--accent)]';
   if (action === 'update') return 'text-amber-500';
+  if (action === 'move_in' || action === 'move_out') return 'text-blue-500';
   return 'text-[var(--text-tertiary)]';
 }
 
@@ -38,12 +40,54 @@ function getActionLabel(entry: ActivityLogEntry, t: Terminology): string {
 
   if (entity_type === 'bin') {
     if (action === 'create') return `created ${t.bin} ${name}`;
-    if (action === 'update') return `updated ${t.bin} ${name}`;
+    if (action === 'update') {
+      const c = entry.changes;
+      if (c) {
+        const keys = Object.keys(c);
+        const itemOnly = keys.every((k) => k === 'items_added' || k === 'items_removed' || k === 'items_renamed' || k === 'items');
+        if (itemOnly) {
+          const added = c.items_added ? (c.items_added.new as string[]) : [];
+          const removed = c.items_removed ? (c.items_removed.old as string[]) : [];
+          const renamed = c.items_renamed ? c.items_renamed : null;
+          // Legacy items array diff
+          let legacyAdded: string[] = [];
+          let legacyRemoved: string[] = [];
+          if (c.items && Array.isArray(c.items.old) && Array.isArray(c.items.new)) {
+            legacyAdded = (c.items.new as string[]).filter((i) => !(c.items.old as string[]).includes(i));
+            legacyRemoved = (c.items.old as string[]).filter((i) => !(c.items.new as string[]).includes(i));
+          }
+          const allAdded = [...added, ...legacyAdded];
+          const allRemoved = [...removed, ...legacyRemoved];
+          if (renamed && !allAdded.length && !allRemoved.length) {
+            return `renamed ${String(renamed.old ?? '')} to ${String(renamed.new ?? '')} in ${t.bin} ${name}`;
+          }
+          if (allAdded.length && !allRemoved.length) {
+            return `added ${allAdded.join(', ')} to ${t.bin} ${name}`;
+          }
+          if (allRemoved.length && !allAdded.length) {
+            return `removed ${allRemoved.join(', ')} from ${t.bin} ${name}`;
+          }
+          if (allAdded.length && allRemoved.length) {
+            return `added ${allAdded.join(', ')} and removed ${allRemoved.join(', ')} in ${t.bin} ${name}`;
+          }
+          // Reorder-only (legacy)
+          if (c.items && !allAdded.length && !allRemoved.length) {
+            return `reordered items in ${t.bin} ${name}`;
+          }
+        }
+      }
+      return `updated ${t.bin} ${name}`;
+    }
     if (action === 'delete') return `deleted ${t.bin} ${name}`;
     if (action === 'restore') return `restored ${t.bin} ${name}`;
     if (action === 'permanent_delete') return `permanently deleted ${t.bin} ${name}`;
-    if (action === 'add_photo') return `added photo to ${name}`;
-    if (action === 'delete_photo') return `removed photo from ${name}`;
+    if (action === 'move_in' || action === 'move_out') {
+      const from = entry.changes?.location?.old;
+      const to = entry.changes?.location?.new;
+      return `moved ${t.bin} ${name} from ${from ?? '?'} to ${to ?? '?'}`;
+    }
+    if (action === 'add_photo') return `added photo to ${t.bin} ${name}`;
+    if (action === 'delete_photo') return `removed photo from ${t.bin} ${name}`;
   }
   if (entity_type === 'area') {
     if (action === 'create') return `created ${t.area} ${name}`;
@@ -174,50 +218,26 @@ export function ActivityPage() {
                         <span className="font-medium">{entry.display_name}</span>{' '}
                         {getActionLabel(entry, t)}
                       </p>
-                      {entry.changes && (
-                        <div className="mt-1 text-[12px] text-[var(--text-tertiary)]">
-                          {Object.entries(entry.changes).map(([field, diff]) => {
-                            if (field === 'items_added' && Array.isArray(diff.new)) {
-                              return <p key={field}>added: {(diff.new as string[]).join(', ')}</p>;
-                            }
-                            if (field === 'items_removed' && Array.isArray(diff.old)) {
-                              return <p key={field}>removed: {(diff.old as string[]).join(', ')}</p>;
-                            }
-                            if (field === 'items_renamed') {
-                              return <p key={field}>renamed: <span className="line-through">{String(diff.old ?? '')}</span> → {String(diff.new ?? '')}</p>;
-                            }
-                            // Legacy items field — compute readable diff from arrays
-                            if (field === 'items' && Array.isArray(diff.old) && Array.isArray(diff.new)) {
-                              const oldItems = diff.old as string[];
-                              const newItems = diff.new as string[];
-                              const added = newItems.filter((i) => !oldItems.includes(i));
-                              const removed = oldItems.filter((i) => !newItems.includes(i));
-                              if (added.length === 0 && removed.length === 0) {
-                                return <p key={field}>reordered items</p>;
-                              }
+                      {entry.changes && (() => {
+                        const ITEM_FIELDS = new Set(['items_added', 'items_removed', 'items_renamed', 'items']);
+                        const SKIP_FIELDS = new Set(['location', 'area_id']);
+                        const fields = Object.entries(entry.changes).filter(([f]) => !ITEM_FIELDS.has(f) && !SKIP_FIELDS.has(f));
+                        if (fields.length === 0) return null;
+                        return (
+                          <div className="mt-1 text-[12px] text-[var(--text-tertiary)]">
+                            {fields.map(([field, diff]) => {
+                              const label = field === 'area' ? t.area
+                                : field === 'name' ? 'name'
+                                : field;
                               return (
-                                <div key={field}>
-                                  {added.length > 0 && <p>added: {added.join(', ')}</p>}
-                                  {removed.length > 0 && <p>removed: {removed.join(', ')}</p>}
-                                </div>
+                                <p key={field}>
+                                  {label}: <span className="line-through">{String(diff.old ?? 'none')}</span> → {String(diff.new ?? 'none')}
+                                </p>
                               );
-                            }
-                            // Hide raw area_id UUIDs from legacy records
-                            if (field === 'area_id') {
-                              return null;
-                            }
-                            // Readable labels for known fields
-                            const label = field === 'area' ? t.area
-                              : field === 'name' ? 'name'
-                              : field;
-                            return (
-                              <p key={field}>
-                                {label}: <span className="line-through">{String(diff.old ?? 'none')}</span> → {String(diff.new ?? 'none')}
-                              </p>
-                            );
-                          })}
-                        </div>
-                      )}
+                            })}
+                          </div>
+                        );
+                      })()}
                       <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
                         {formatTime(entry.created_at)}
                         {entry.auth_method === 'api_key' && (

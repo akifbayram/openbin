@@ -5,4 +5,5 @@ export const STORAGE_KEYS = {
   LABEL_OPTIONS: 'openbin-label-options',
   LABEL_CUSTOM: 'openbin-label-custom',
   LABEL_PRESETS: 'openbin-label-presets',
+  BIN_SORT: 'openbin-bin-sort',
 } as const;

@@ -38,6 +38,7 @@ import { SaveViewDialog } from './SaveViewDialog';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useTerminology } from '@/lib/terminology';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 import { getColorPreset } from '@/lib/colorPalette';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import type { SavedView } from '@/lib/savedViews';
@@ -83,7 +84,17 @@ export function BinListPage() {
   }, [location.state]);
 
   const debouncedSearch = useDebounce(search, 250);
-  const [sort, setSort] = useState<SortOption>('updated');
+  const [sort, _setSort] = useState<SortOption>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.BIN_SORT);
+    return (saved as SortOption) || 'updated';
+  });
+  const setSort = useCallback((value: SortOption | ((prev: SortOption) => SortOption)) => {
+    _setSort((prev) => {
+      const next = typeof value === 'function' ? value(prev) : value;
+      localStorage.setItem(STORAGE_KEYS.BIN_SORT, next);
+      return next;
+    });
+  }, []);
   const [createOpen, setCreateOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filters, setFilters] = useState<BinFilters>(EMPTY_FILTERS);
