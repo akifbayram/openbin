@@ -40,13 +40,17 @@ export function BinFilterDialog({
   onSaveView,
 }: BinFilterDialogProps) {
   const [draft, setDraft] = useState<BinFilters>(filters);
+  const [tagsExpanded, setTagsExpanded] = useState(false);
   const getTagStyle = useTagStyle();
   const { activeLocationId } = useAuth();
   const { areas } = useAreaList(activeLocationId);
 
   // Sync draft when dialog opens
   useEffect(() => {
-    if (open) setDraft(filters);
+    if (open) {
+      setDraft(filters);
+      setTagsExpanded(false);
+    }
   }, [open, filters]);
 
   function toggleTag(tag: string) {
@@ -141,31 +145,57 @@ export function BinFilterDialog({
               <p className="text-[13px] text-[var(--text-tertiary)]">No tags in this location</p>
             ) : (
               <div className="flex flex-wrap gap-1.5">
-                {availableTags.map((tag) => {
-                  const selected = draft.tags.includes(tag);
-                  const tagStyle = getTagStyle(tag);
+                {(() => {
+                  const TAG_LIMIT = 12;
+                  const sorted = [...availableTags].sort((a, b) => {
+                    const aSelected = draft.tags.includes(a);
+                    const bSelected = draft.tags.includes(b);
+                    if (aSelected !== bSelected) return aSelected ? -1 : 1;
+                    return a.localeCompare(b);
+                  });
+                  const canCollapse = sorted.length > TAG_LIMIT;
+                  const visible = canCollapse && !tagsExpanded ? sorted.slice(0, TAG_LIMIT) : sorted;
+                  const hiddenCount = sorted.length - TAG_LIMIT;
 
                   return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className={cn(
-                        'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
-                        tagStyle
-                          ? selected
-                            ? 'ring-2 ring-[var(--accent)] ring-offset-1'
-                            : 'opacity-60 hover:opacity-80'
-                          : selected
-                            ? 'bg-[var(--accent)] text-white'
-                            : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
+                    <>
+                      {visible.map((tag) => {
+                        const selected = draft.tags.includes(tag);
+                        const tagStyle = getTagStyle(tag);
+
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleTag(tag)}
+                            className={cn(
+                              'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
+                              tagStyle
+                                ? selected
+                                  ? 'ring-2 ring-[var(--accent)] ring-offset-1'
+                                  : 'opacity-60 hover:opacity-80'
+                                : selected
+                                  ? 'bg-[var(--accent)] text-white'
+                                  : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
+                            )}
+                            style={tagStyle}
+                          >
+                            {tag}
+                          </button>
+                        );
+                      })}
+                      {canCollapse && (
+                        <button
+                          type="button"
+                          onClick={() => setTagsExpanded((v) => !v)}
+                          className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium text-[var(--accent)] hover:underline cursor-pointer"
+                        >
+                          {tagsExpanded ? 'Show less' : `+${hiddenCount} more`}
+                        </button>
                       )}
-                      style={tagStyle}
-                    >
-                      {tag}
-                    </button>
+                    </>
                   );
-                })}
+                })()}
               </div>
             )}
           </div>
