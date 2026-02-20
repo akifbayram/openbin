@@ -49,6 +49,8 @@ tags:
     description: Per-user saved bin list filter/sort views
   - name: ScanHistory
     description: Per-user QR scan history
+  - name: Batch
+    description: Execute multiple bin operations in a single transaction
 
 
 components:
@@ -3504,6 +3506,187 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExecuteResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  # ════════════════════════════════════════════════════════
+  # Batch
+  # ════════════════════════════════════════════════════════
+  /batch:
+    post:
+      tags: [Batch]
+      summary: Execute multiple operations in a single transaction
+      description: |
+        Execute up to 50 bin operations atomically in one request.
+        Ideal for AI agents, MCP integrations, and bulk workflows.
+        Partial-success model: individual failures are reported in `errors`; the rest commit.
+        Rate limited: 60/hr for JWT, 600/hr for API keys.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locationId, operations]
+              properties:
+                locationId:
+                  type: string
+                  format: uuid
+                  description: Location to execute operations in
+                operations:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  description: Array of operations to execute
+                  items:
+                    type: object
+                    required: [type]
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - create_bin
+                          - update_bin
+                          - delete_bin
+                          - restore_bin
+                          - add_items
+                          - remove_items
+                          - modify_item
+                          - add_tags
+                          - remove_tags
+                          - modify_tag
+                          - set_area
+                          - set_notes
+                          - set_icon
+                          - set_color
+                        description: Operation type
+                      bin_id:
+                        type: string
+                        format: uuid
+                        description: Bin UUID (required for all types except create_bin)
+                      bin_name:
+                        type: string
+                        description: Bin name (for logging)
+                      name:
+                        type: string
+                        description: Bin name (create_bin, update_bin)
+                      items:
+                        type: array
+                        items:
+                          type: string
+                        description: Item names (add_items, remove_items, create_bin)
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                        description: Tag names (add_tags, remove_tags, create_bin, update_bin)
+                      notes:
+                        type: string
+                        description: Notes text (set_notes, create_bin, update_bin)
+                      mode:
+                        type: string
+                        enum: [set, append, clear]
+                        description: Notes mode (set_notes only)
+                      area_id:
+                        type: string
+                        format: uuid
+                        nullable: true
+                        description: Area UUID (set_area)
+                      area_name:
+                        type: string
+                        description: Area name — auto-creates if needed (set_area, create_bin, update_bin)
+                      icon:
+                        type: string
+                        description: Icon identifier (set_icon, create_bin, update_bin)
+                      color:
+                        type: string
+                        description: Color value (set_color, create_bin, update_bin)
+                      old_item:
+                        type: string
+                        description: Old item name (modify_item)
+                      new_item:
+                        type: string
+                        description: New item name (modify_item)
+                      old_tag:
+                        type: string
+                        description: Old tag name (modify_tag)
+                      new_tag:
+                        type: string
+                        description: New tag name (modify_tag)
+                      visibility:
+                        type: string
+                        enum: [location, private]
+                        description: Bin visibility (update_bin)
+            example:
+              locationId: "550e8400-e29b-41d4-a716-446655440000"
+              operations:
+                - type: add_tags
+                  bin_id: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+                  bin_name: Tools
+                  tags: [fragile]
+                - type: set_area
+                  bin_id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8"
+                  bin_name: Supplies
+                  area_id: null
+                  area_name: Garage
+                - type: create_bin
+                  name: New Bin
+                  items: [item1]
+                  tags: [new]
+      responses:
+        '200':
+          description: Batch execution results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        success:
+                          type: boolean
+                        details:
+                          type: string
+                        bin_id:
+                          type: string
+                          format: uuid
+                        bin_name:
+                          type: string
+                        error:
+                          type: string
+                  errors:
+                    type: array
+                    items:
+                      type: string
+              example:
+                results:
+                  - type: add_tags
+                    success: true
+                    details: "Added tags [fragile] to Tools"
+                    bin_id: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+                    bin_name: Tools
+                  - type: set_area
+                    success: true
+                    details: "Set area of Supplies to \"Garage\""
+                    bin_id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8"
+                    bin_name: Supplies
+                  - type: create_bin
+                    success: true
+                    details: "Created bin \"New Bin\""
+                    bin_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    bin_name: New Bin
+                errors: []
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

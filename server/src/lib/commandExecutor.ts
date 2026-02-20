@@ -341,6 +341,118 @@ function executeSingleAction(
       return { type: 'set_color', success: true, details: `Set color of ${action.bin_name} to ${action.color}`, bin_id: action.bin_id, bin_name: action.bin_name };
     }
 
+    case 'update_bin': {
+      const bin = querySync<{ id: string; name: string; notes: string; tags: string[]; area_id: string | null; icon: string; color: string; visibility: string }>(
+        'SELECT id, name, notes, tags, area_id, icon, color, visibility FROM bins WHERE id = $1 AND deleted_at IS NULL',
+        [action.bin_id]
+      );
+      if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+      const old = bin.rows[0];
+
+      const updates: string[] = [];
+      const params: unknown[] = [];
+      let paramIdx = 1;
+      const changes: Record<string, { old: unknown; new: unknown }> = {};
+
+      if (action.name !== undefined && action.name !== old.name) {
+        updates.push(`name = $${paramIdx++}`);
+        params.push(action.name);
+        changes.name = { old: old.name, new: action.name };
+      }
+      if (action.notes !== undefined && action.notes !== old.notes) {
+        updates.push(`notes = $${paramIdx++}`);
+        params.push(action.notes);
+        changes.notes = { old: old.notes, new: action.notes };
+      }
+      if (action.tags !== undefined) {
+        updates.push(`tags = $${paramIdx++}`);
+        params.push(action.tags);
+        changes.tags = { old: old.tags, new: action.tags };
+      }
+      if (action.icon !== undefined && action.icon !== old.icon) {
+        updates.push(`icon = $${paramIdx++}`);
+        params.push(action.icon);
+        changes.icon = { old: old.icon, new: action.icon };
+      }
+      if (action.color !== undefined && action.color !== old.color) {
+        updates.push(`color = $${paramIdx++}`);
+        params.push(action.color);
+        changes.color = { old: old.color, new: action.color };
+      }
+      if (action.visibility !== undefined && action.visibility !== old.visibility) {
+        updates.push(`visibility = $${paramIdx++}`);
+        params.push(action.visibility);
+        changes.visibility = { old: old.visibility, new: action.visibility };
+      }
+
+      // Resolve area by name
+      if (action.area_name !== undefined) {
+        let areaId: string | null = null;
+        if (action.area_name) {
+          const area = querySync(
+            'SELECT id FROM areas WHERE location_id = $1 AND LOWER(name) = LOWER($2)',
+            [locationId, action.area_name]
+          );
+          if (area.rows.length > 0) {
+            areaId = area.rows[0].id as string;
+          } else {
+            const newAreaId = generateUuid();
+            querySync(
+              'INSERT INTO areas (id, location_id, name, created_by) VALUES ($1, $2, $3, $4)',
+              [newAreaId, locationId, action.area_name, userId]
+            );
+            areaId = newAreaId;
+            pendingActivities.push({
+              locationId, userId, userName, authMethod, apiKeyId,
+              action: 'create', entityType: 'area', entityId: newAreaId, entityName: action.area_name,
+            });
+          }
+        }
+        if (areaId !== old.area_id) {
+          updates.push(`area_id = $${paramIdx++}`);
+          params.push(areaId);
+          // Resolve old area name for change tracking
+          let oldAreaName = '';
+          if (old.area_id) {
+            const oldArea = querySync<{ name: string }>('SELECT name FROM areas WHERE id = $1', [old.area_id]);
+            oldAreaName = oldArea.rows[0]?.name ?? '';
+          }
+          changes.area = { old: oldAreaName || null, new: action.area_name || null };
+        }
+      }
+
+      if (updates.length > 0) {
+        updates.push(`updated_at = datetime('now')`);
+        params.push(action.bin_id);
+        querySync(`UPDATE bins SET ${updates.join(', ')} WHERE id = $${paramIdx}`, params);
+      }
+
+      if (Object.keys(changes).length > 0) {
+        pendingActivities.push({
+          locationId, userId, userName, authMethod, apiKeyId,
+          action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.name || action.bin_name,
+          changes,
+        });
+      }
+
+      const changedFields = Object.keys(changes);
+      const detail = changedFields.length > 0
+        ? `Updated ${action.bin_name}: ${changedFields.join(', ')}`
+        : `No changes to ${action.bin_name}`;
+      return { type: 'update_bin', success: true, details: detail, bin_id: action.bin_id, bin_name: action.bin_name };
+    }
+
+    case 'restore_bin': {
+      const bin = querySync('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NOT NULL', [action.bin_id]);
+      if (bin.rows.length === 0) throw new Error(`Bin not found in trash: ${action.bin_name}`);
+      querySync("UPDATE bins SET deleted_at = NULL, updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
+      pendingActivities.push({
+        locationId, userId, userName, authMethod, apiKeyId,
+        action: 'restore', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
+      });
+      return { type: 'restore_bin', success: true, details: `Restored bin "${action.bin_name}" from trash`, bin_id: action.bin_id, bin_name: action.bin_name };
+    }
+
     default:
       return { type: (action as { type: string }).type, success: false, details: 'Unknown action type', error: 'Unknown action type' };
   }
