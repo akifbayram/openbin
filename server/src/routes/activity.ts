@@ -36,14 +36,16 @@ router.get('/:locationId/activity', requireLocationMember('locationId'), asyncHa
   );
   const count = countResult.rows[0].count;
 
-  // Get paginated results with optional display_name from users
+  // Get paginated results with optional display_name from users and api key name
   const result = await query(
     `SELECT al.id, al.location_id, al.user_id, al.user_name,
             COALESCE(u.display_name, al.user_name) AS display_name,
             al.action, al.entity_type, al.entity_id, al.entity_name,
-            al.changes, al.auth_method, al.created_at
+            al.changes, al.auth_method, al.api_key_id, ak.name AS api_key_name,
+            al.created_at
      FROM activity_log al
      LEFT JOIN users u ON u.id = al.user_id
+     LEFT JOIN api_keys ak ON ak.id = al.api_key_id
      ${whereClause}
      ORDER BY al.created_at DESC
      LIMIT $${paramIdx++} OFFSET $${paramIdx}`,

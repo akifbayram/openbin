@@ -28,6 +28,7 @@ interface PendingActivity {
   entityName?: string;
   changes?: Record<string, { old: unknown; new: unknown }>;
   authMethod?: 'jwt' | 'api_key';
+  apiKeyId?: string;
 }
 
 const MAX_ACTIONS = 50;
@@ -38,7 +39,8 @@ export async function executeActions(
   locationId: string,
   userId: string,
   userName: string,
-  authMethod?: 'jwt' | 'api_key'
+  authMethod?: 'jwt' | 'api_key',
+  apiKeyId?: string,
 ): Promise<ExecuteResult> {
   if (actions.length > MAX_ACTIONS) {
     throw new Error(`Too many actions (${actions.length}). Maximum is ${MAX_ACTIONS}.`);
@@ -52,7 +54,7 @@ export async function executeActions(
   const transaction = db.transaction(() => {
     for (const action of actions) {
       try {
-        const result = executeSingleAction(action, locationId, userId, userName, pendingActivities, authMethod);
+        const result = executeSingleAction(action, locationId, userId, userName, pendingActivities, authMethod, apiKeyId);
         executed.push(result);
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -83,7 +85,8 @@ function executeSingleAction(
   userId: string,
   userName: string,
   pendingActivities: PendingActivity[],
-  authMethod?: 'jwt' | 'api_key'
+  authMethod?: 'jwt' | 'api_key',
+  apiKeyId?: string,
 ): ActionResult {
   switch (action.type) {
     case 'add_items': {
@@ -97,7 +100,7 @@ function executeSingleAction(
       }
       querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
       pendingActivities.push({
-        locationId, userId, userName, authMethod,
+        locationId, userId, userName, authMethod, apiKeyId,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
         changes: { items_added: { old: null, new: action.items } },
       });
@@ -112,7 +115,7 @@ function executeSingleAction(
       }
       querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
       pendingActivities.push({
-        locationId, userId, userName, authMethod,
+        locationId, userId, userName, authMethod, apiKeyId,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
         changes: { items_removed: { old: action.items, new: null } },
       });
@@ -125,7 +128,7 @@ function executeSingleAction(
       querySync("UPDATE bin_items SET name = $1, updated_at = datetime('now') WHERE bin_id = $2 AND LOWER(name) = LOWER($3)", [action.new_item, action.bin_id, action.old_item]);
       querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
       pendingActivities.push({
-        locationId, userId, userName, authMethod,
+        locationId, userId, userName, authMethod, apiKeyId,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
         changes: { items_renamed: { old: action.old_item, new: action.new_item } },
       });
@@ -153,7 +156,7 @@ function executeSingleAction(
           );
           areaId = newAreaId;
           pendingActivities.push({
-            locationId, userId, userName, authMethod,
+            locationId, userId, userName, authMethod, apiKeyId,
             action: 'create', entityType: 'area', entityId: newAreaId, entityName: action.area_name,
           });
         }
@@ -187,7 +190,7 @@ function executeSingleAction(
       }
 
       pendingActivities.push({
-        locationId, userId, userName, authMethod,
+        locationId, userId, userName, authMethod, apiKeyId,
         action: 'create', entityType: 'bin', entityId: binId, entityName: action.name,
       });
       return { type: 'create_bin', success: true, details: `Created bin "${action.name}"`, bin_id: binId, bin_name: action.name };
@@ -198,7 +201,7 @@ function executeSingleAction(
       if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
       querySync("UPDATE bins SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
       pendingActivities.push({
-        locationId, userId, userName, authMethod,
+        locationId, userId, userName, authMethod, apiKeyId,
         action: 'delete', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
       });
       return { type: 'delete_bin', success: true, details: `Deleted bin "${action.bin_name}"`, bin_id: action.bin_id, bin_name: action.bin_name };
@@ -211,7 +214,7 @@ function executeSingleAction(
       const merged = [...new Set([...current, ...action.tags])];
       querySync("UPDATE bins SET tags = $1, updated_at = datetime('now') WHERE id = $2", [merged, action.bin_id]);
       pendingActivities.push({
-        locationId, userId, userName, authMethod,
+        locationId, userId, userName, authMethod, apiKeyId,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
         changes: { tags: { old: current, new: merged } },
       });
@@ -226,7 +229,7 @@ function executeSingleAction(
       const filtered = current.filter((t) => !removeSet.has(t.toLowerCase()));
       querySync("UPDATE bins SET tags = $1, updated_at = datetime('now') WHERE id = $2", [filtered, action.bin_id]);
       pendingActivities.push({
-        locationId, userId, userName, authMethod,
+        locationId, userId, userName, authMethod, apiKeyId,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
         changes: { tags: { old: current, new: filtered } },
       });
@@ -240,7 +243,7 @@ function executeSingleAction(
       const modified = current.map((t) => t.toLowerCase() === action.old_tag.toLowerCase() ? action.new_tag : t);
       querySync("UPDATE bins SET tags = $1, updated_at = datetime('now') WHERE id = $2", [modified, action.bin_id]);
       pendingActivities.push({
-        locationId, userId, userName, authMethod,
+        locationId, userId, userName, authMethod, apiKeyId,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
         changes: { tags: { old: current, new: modified } },
       });
@@ -268,7 +271,7 @@ function executeSingleAction(
           );
           areaId = newAreaId;
           pendingActivities.push({
-            locationId, userId, userName, authMethod,
+            locationId, userId, userName, authMethod, apiKeyId,
             action: 'create', entityType: 'area', entityId: newAreaId, entityName: action.area_name,
           });
         }
@@ -283,7 +286,7 @@ function executeSingleAction(
         oldAreaName = oldArea.rows[0]?.name ?? '';
       }
       pendingActivities.push({
-        locationId, userId, userName, authMethod,
+        locationId, userId, userName, authMethod, apiKeyId,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
         changes: { area: { old: oldAreaName || null, new: action.area_name || null } },
       });
@@ -307,7 +310,7 @@ function executeSingleAction(
       }
       querySync("UPDATE bins SET notes = $1, updated_at = datetime('now') WHERE id = $2", [newNotes, action.bin_id]);
       pendingActivities.push({
-        locationId, userId, userName, authMethod,
+        locationId, userId, userName, authMethod, apiKeyId,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
         changes: { notes: { old: oldNotes, new: newNotes } },
       });
@@ -319,7 +322,7 @@ function executeSingleAction(
       if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
       querySync("UPDATE bins SET icon = $1, updated_at = datetime('now') WHERE id = $2", [action.icon, action.bin_id]);
       pendingActivities.push({
-        locationId, userId, userName, authMethod,
+        locationId, userId, userName, authMethod, apiKeyId,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
         changes: { icon: { old: bin.rows[0].icon, new: action.icon } },
       });
@@ -331,7 +334,7 @@ function executeSingleAction(
       if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
       querySync("UPDATE bins SET color = $1, updated_at = datetime('now') WHERE id = $2", [action.color, action.bin_id]);
       pendingActivities.push({
-        locationId, userId, userName, authMethod,
+        locationId, userId, userName, authMethod, apiKeyId,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
         changes: { color: { old: bin.rows[0].color, new: action.color } },
       });

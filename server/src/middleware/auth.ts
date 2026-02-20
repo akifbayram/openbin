@@ -14,6 +14,7 @@ declare global {
     interface Request {
       user?: AuthUser;
       authMethod?: 'jwt' | 'api_key';
+      apiKeyId?: string;
     }
   }
 }
@@ -54,6 +55,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       const row = result.rows[0] as { key_id: string; id: string; username: string };
       req.user = { id: row.id, username: row.username };
       req.authMethod = 'api_key';
+      req.apiKeyId = row.key_id;
       // Fire-and-forget: update last_used_at
       query("UPDATE api_keys SET last_used_at = datetime('now') WHERE id = $1", [row.key_id]).catch(() => {});
       next();

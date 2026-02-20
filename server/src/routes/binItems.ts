@@ -57,6 +57,7 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
     entityName: binResult.rows[0]?.name,
     changes: { items_added: { old: null, new: newItems.map((i) => i.name) } },
     authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
   });
 
   res.status(201).json({ items: newItems });
@@ -95,6 +96,7 @@ router.delete('/:id/items/:itemId', asyncHandler(async (req, res) => {
     entityName: binResult.rows[0]?.name,
     changes: { items_removed: { old: [itemName], new: null } },
     authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
   });
 
   res.json({ success: true });
@@ -164,6 +166,7 @@ router.put('/:id/items/:itemId', asyncHandler(async (req, res) => {
     entityName: binResult.rows[0]?.name,
     changes: { items_renamed: { old: oldName, new: name.trim() } },
     authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
   });
 
   res.json({ id: itemId, name: name.trim() });

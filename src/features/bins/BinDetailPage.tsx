@@ -87,7 +87,7 @@ export function BinDetailPage() {
     onNavigateAiSetup: () => navigate('/settings#ai-settings'),
   });
 
-  if (isLoading || bin === undefined) {
+  if (isLoading && bin === undefined) {
     return (
       <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-4 pb-2">
         <Skeleton className="h-8 w-20" />
@@ -117,7 +117,7 @@ export function BinDetailPage() {
     );
   }
 
-  if (bin === null) {
+  if (!bin) {
     return (
       <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
         <p className="text-[17px] font-semibold text-[var(--text-secondary)]">{t.Bin} not found</p>
@@ -262,7 +262,8 @@ export function BinDetailPage() {
                   onClick={handleAnalyzeClick}
                   disabled={isAnalyzing}
                   aria-label="Analyze with AI"
-                  className="rounded-full h-9 w-9 bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] active:scale-[0.97] transition-all"
+                  variant="ghost"
+                  className="rounded-full h-9 w-9"
                 >
                   {isAnalyzing ? (
                     <Loader2 className="h-[18px] w-[18px] animate-spin" />

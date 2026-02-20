@@ -10,6 +10,7 @@ export interface LogActivityOptions {
   entityName?: string;
   changes?: Record<string, { old: unknown; new: unknown }>;
   authMethod?: 'jwt' | 'api_key';
+  apiKeyId?: string;
 }
 
 /**
@@ -19,8 +20,8 @@ export interface LogActivityOptions {
 export async function logActivity(opts: LogActivityOptions): Promise<void> {
   try {
     await query(
-      `INSERT INTO activity_log (id, location_id, user_id, user_name, action, entity_type, entity_id, entity_name, changes, auth_method)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      `INSERT INTO activity_log (id, location_id, user_id, user_name, action, entity_type, entity_id, entity_name, changes, auth_method, api_key_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         generateUuid(),
         opts.locationId,
@@ -32,6 +33,7 @@ export async function logActivity(opts: LogActivityOptions): Promise<void> {
         opts.entityName ?? null,
         opts.changes ? JSON.stringify(opts.changes) : null,
         opts.authMethod ?? null,
+        opts.apiKeyId ?? null,
       ]
     );
 

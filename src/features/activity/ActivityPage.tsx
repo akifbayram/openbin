@@ -154,12 +154,14 @@ export function ActivityPage() {
                 {dateLabel}
               </h2>
               <div className="space-y-3">
-                {items.map((entry) => (
+                {items.map((entry) => {
+                  const isClickable = entry.entity_type === 'bin' && entry.entity_id && entry.action !== 'permanent_delete' && entry.action !== 'delete';
+                  return (
                   <button
                     key={entry.id}
-                    className="glass-card w-full flex items-start gap-3 px-4 py-3.5 text-left rounded-[var(--radius-lg)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all duration-200"
+                    className={`glass-card w-full flex items-start gap-3 px-4 py-3.5 text-left rounded-[var(--radius-lg)] transition-all duration-200 ${isClickable ? 'hover:bg-[var(--bg-hover)] active:scale-[0.98] cursor-pointer' : 'cursor-default'}`}
                     onClick={() => {
-                      if (entry.entity_type === 'bin' && entry.entity_id && entry.action !== 'permanent_delete') {
+                      if (isClickable) {
                         navigate(`/bin/${entry.entity_id}`);
                       }
                     }}
@@ -220,13 +222,14 @@ export function ActivityPage() {
                         {formatTime(entry.created_at)}
                         {entry.auth_method === 'api_key' && (
                           <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-[var(--bg-elevated)] text-[var(--text-tertiary)]">
-                            API
+                            API{entry.api_key_name ? `: ${entry.api_key_name}` : ''}
                           </span>
                         )}
                       </p>
                     </div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}

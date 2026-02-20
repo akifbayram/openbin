@@ -105,6 +105,7 @@ router.post('/', asyncHandler(async (req, res) => {
         entityId: bin.id,
         entityName: bin.name,
         authMethod: req.authMethod,
+        apiKeyId: req.apiKeyId,
       });
 
       res.status(201).json(bin);
@@ -569,6 +570,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
         entityName: bin.name,
         changes: allChanges,
         authMethod: req.authMethod,
+        apiKeyId: req.apiKeyId,
       });
     }
   }
@@ -616,6 +618,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
     entityId: id,
     entityName: bin.name,
     authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
   });
 
   res.json(bin);
@@ -664,6 +667,7 @@ router.post('/:id/restore', asyncHandler(async (req, res) => {
     entityId: id,
     entityName: bin.name,
     authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
   });
 
   res.json(bin);
@@ -732,6 +736,7 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
     entityId: id,
     entityName: binName,
     authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
   });
 
   res.json({ message: 'Bin permanently deleted' });
@@ -777,6 +782,7 @@ router.post('/:id/photos', binPhotoUpload.single('photo'), asyncHandler(async (r
     entityId: binId,
     entityName: binResult.rows[0]?.name,
     authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
   });
 
   res.status(201).json({ id: photo.id });
@@ -885,6 +891,7 @@ router.post('/:id/move', asyncHandler(async (req, res) => {
     entityName: bin.name,
     changes,
     authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
   });
 
   // Log in target location
@@ -898,6 +905,7 @@ router.post('/:id/move', asyncHandler(async (req, res) => {
     entityName: bin.name,
     changes,
     authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
   });
 
   res.json(bin);
