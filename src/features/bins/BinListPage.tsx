@@ -83,7 +83,7 @@ export function BinListPage() {
   const [bulkAreaOpen, setBulkAreaOpen] = useState(false);
   const { activeLocationId } = useAuth();
   const { isAdmin } = usePermissions();
-  const { bins, totalCount, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedBinList(debouncedSearch, sort, filters);
+  const { bins, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedBinList(debouncedSearch, sort, filters);
   const allTags = useAllTags();
   const activeCount = countActiveFilters(filters);
   const { areas } = useAreaList(activeLocationId);
@@ -361,11 +361,6 @@ export function BinListPage() {
             </div>
           ) : (
             <>
-              {totalCount > 0 && (
-                <p className="text-[13px] text-[var(--text-tertiary)]">
-                  {totalCount} {totalCount === 1 ? t.bin : t.bins}
-                </p>
-              )}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {bins.map((bin) => (
                   <BinCard
