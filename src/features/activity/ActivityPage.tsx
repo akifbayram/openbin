@@ -212,6 +212,11 @@ export function ActivityPage() {
                       )}
                       <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
                         {formatTime(entry.created_at)}
+                        {entry.auth_method === 'api_key' && (
+                          <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-[var(--bg-elevated)] text-[var(--text-tertiary)]">
+                            API
+                          </span>
+                        )}
                       </p>
                     </div>
                   </button>

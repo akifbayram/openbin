@@ -345,7 +345,7 @@ router.post('/execute', aiLimiter, requireLocationMember(), aiRouteHandler('exec
     return;
   }
 
-  const result = await executeActions(parsed.actions, locationId, req.user!.id, req.user!.username);
+  const result = await executeActions(parsed.actions, locationId, req.user!.id, req.user!.username, req.authMethod);
   res.json({
     executed: result.executed,
     interpretation: parsed.interpretation,

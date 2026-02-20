@@ -197,6 +197,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
       entityId: id,
       entityName: location.name,
       changes,
+      authMethod: req.authMethod,
     });
   }
 
@@ -269,6 +270,7 @@ router.post('/join', asyncHandler(async (req, res) => {
     action: 'join',
     entityType: 'member',
     entityName: req.user!.username,
+    authMethod: req.authMethod,
   });
 
   // Get area count for the joined location
@@ -372,6 +374,7 @@ router.delete('/:id/members/:userId', asyncHandler(async (req, res) => {
     action,
     entityType: 'member',
     entityName: removedUsername,
+    authMethod: req.authMethod,
   });
 
   res.json({ message: 'Member removed' });
@@ -430,6 +433,7 @@ router.put('/:id/members/:userId/role', asyncHandler(async (req, res) => {
     entityType: 'member',
     entityName: targetUsername,
     changes: { role: { old: targetRole, new: role } },
+    authMethod: req.authMethod,
   });
 
   res.json({ message: `Role updated to ${role}` });
