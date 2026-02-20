@@ -106,7 +106,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       <div className="flex items-start gap-3">
         {selectable ? (
           checkbox
-        ) : (
+        ) : onSelect ? (
           /* Layered icon / hover-checkbox for desktop discovery */
           <div
             className="relative mt-0.5 h-[22px] w-[22px] shrink-0"
@@ -128,6 +128,11 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
               />
             </div>
           </div>
+        ) : (
+          <BinIcon
+            className="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-tertiary)]"
+            style={mutedColor ? { color: mutedColor } : undefined}
+          />
         )}
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug flex items-center gap-1.5">
