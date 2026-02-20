@@ -76,15 +76,14 @@ export function Sidebar({ locations, activeLocationId, onLocationChange }: Sideb
           </h1>
         </div>
 
-        {/* Location switcher */}
-        <LocationSwitcher
-          locations={locations}
-          activeLocationId={activeLocationId}
-          onLocationChange={onLocationChange}
-        />
-
         {/* Top: Home, Bins */}
         <div className="space-y-1">
+          {/* Location switcher */}
+          <LocationSwitcher
+            locations={locations}
+            activeLocationId={activeLocationId}
+            onLocationChange={onLocationChange}
+          />
           {topItems.map((item) => (
             <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate} />
           ))}
