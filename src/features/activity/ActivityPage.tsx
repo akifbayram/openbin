@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/lib/usePermissions';
 import { Clock, Package, MapPin, Users, Image, RotateCcw, Trash2, Plus, Pencil, LogIn, LogOut, UserMinus } from 'lucide-react';
@@ -100,13 +101,18 @@ function groupByDate(entries: ActivityLogEntry[]): Map<string, ActivityLogEntry[
 
 export function ActivityPage() {
   const navigate = useNavigate();
-  const { isAdmin } = usePermissions();
+  const { isAdmin, isLoading: permissionsLoading } = usePermissions();
   const t = useTerminology();
   const { entries, isLoading, hasMore, loadMore } = useActivityLog({ limit: 50 });
   const grouped = groupByDate(entries);
 
-  if (!isAdmin) {
-    navigate('/', { replace: true });
+  useEffect(() => {
+    if (!permissionsLoading && !isAdmin) {
+      navigate('/', { replace: true });
+    }
+  }, [permissionsLoading, isAdmin, navigate]);
+
+  if (permissionsLoading || !isAdmin) {
     return null;
   }
 
