@@ -121,7 +121,8 @@ router.post('/', asyncHandler(async (req, res) => {
 }));
 
 // GET /api/bins — list all (non-deleted) bins for a location
-// Optional query params: q, tag, area_id, sort, sort_dir, needs_organizing
+// Optional query params: q, tag, tags, tag_mode, area_id, areas, colors,
+//   has_items, has_notes, needs_organizing, sort, sort_dir, limit, offset
 router.get('/', asyncHandler(async (req, res) => {
   const locationId = req.query.location_id as string | undefined;
 
@@ -135,10 +136,21 @@ router.get('/', asyncHandler(async (req, res) => {
 
   const q = req.query.q as string | undefined;
   const tag = req.query.tag as string | undefined;
+  const tagsParam = req.query.tags as string | undefined;
+  const tagMode = (req.query.tag_mode as string | undefined) === 'all' ? 'all' : 'any';
   const areaId = req.query.area_id as string | undefined;
+  const areasParam = req.query.areas as string | undefined;
+  const colorsParam = req.query.colors as string | undefined;
+  const hasItems = req.query.has_items as string | undefined;
+  const hasNotes = req.query.has_notes as string | undefined;
   const needsOrganizing = req.query.needs_organizing as string | undefined;
   const sort = req.query.sort as string | undefined;
   const sortDir = req.query.sort_dir as string | undefined;
+
+  // Pagination params
+  const limitRaw = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
+  const limit = limitRaw !== undefined && !Number.isNaN(limitRaw) ? Math.max(1, Math.min(100, limitRaw)) : undefined;
+  const offset = limit !== undefined ? Math.max(0, Number(req.query.offset) || 0) : 0;
 
   const whereClauses: string[] = ['b.location_id = $1', 'b.deleted_at IS NULL', '(b.visibility = \'location\' OR b.created_by = $2)'];
   const params: unknown[] = [locationId, req.user!.id];
@@ -153,13 +165,40 @@ router.get('/', asyncHandler(async (req, res) => {
     paramIdx++;
   }
 
-  if (tag && tag.trim()) {
+  // Multi-tag filter (tags param takes precedence over single tag)
+  const tagList = tagsParam ? tagsParam.split(',').map((t) => t.trim()).filter(Boolean) : [];
+  if (tagList.length > 0) {
+    const tagPlaceholders = tagList.map((_, i) => `$${paramIdx + i}`);
+    if (tagMode === 'all') {
+      whereClauses.push(`(SELECT COUNT(DISTINCT value) FROM json_each(b.tags) WHERE value IN (${tagPlaceholders.join(', ')})) = ${tagList.length}`);
+    } else {
+      whereClauses.push(`EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value IN (${tagPlaceholders.join(', ')}))`);
+    }
+    params.push(...tagList);
+    paramIdx += tagList.length;
+  } else if (tag && tag.trim()) {
     whereClauses.push(`EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value = $${paramIdx})`);
     params.push(tag.trim());
     paramIdx++;
   }
 
-  if (areaId) {
+  // Multi-area filter (areas param takes precedence over single area_id)
+  const areaList = areasParam ? areasParam.split(',').map((a) => a.trim()).filter(Boolean) : [];
+  if (areaList.length > 0) {
+    const hasUnassigned = areaList.includes('__unassigned__');
+    const realAreas = areaList.filter((a) => a !== '__unassigned__');
+    const parts: string[] = [];
+    if (realAreas.length > 0) {
+      const areaPlaceholders = realAreas.map((_, i) => `$${paramIdx + i}`);
+      parts.push(`b.area_id IN (${areaPlaceholders.join(', ')})`);
+      params.push(...realAreas);
+      paramIdx += realAreas.length;
+    }
+    if (hasUnassigned) {
+      parts.push('b.area_id IS NULL');
+    }
+    whereClauses.push(`(${parts.join(' OR ')})`);
+  } else if (areaId) {
     if (areaId === '__unassigned__') {
       whereClauses.push('b.area_id IS NULL');
     } else {
@@ -167,6 +206,25 @@ router.get('/', asyncHandler(async (req, res) => {
       params.push(areaId);
       paramIdx++;
     }
+  }
+
+  // Color filter
+  const colorList = colorsParam ? colorsParam.split(',').map((c) => c.trim()).filter(Boolean) : [];
+  if (colorList.length > 0) {
+    const colorPlaceholders = colorList.map((_, i) => `$${paramIdx + i}`);
+    whereClauses.push(`b.color IN (${colorPlaceholders.join(', ')})`);
+    params.push(...colorList);
+    paramIdx += colorList.length;
+  }
+
+  // Has items filter
+  if (hasItems === 'true') {
+    whereClauses.push('EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id)');
+  }
+
+  // Has notes filter
+  if (hasNotes === 'true') {
+    whereClauses.push("b.notes IS NOT NULL AND b.notes != '' AND TRIM(b.notes) != ''");
   }
 
   if (needsOrganizing === 'true') {
@@ -181,17 +239,38 @@ router.get('/', asyncHandler(async (req, res) => {
   };
   const dir = sortDir === 'asc' ? 'ASC' : 'DESC';
   const orderBy = validSorts[sort || ''] || 'b.updated_at';
-  const orderClause = sort === 'area' ? `${orderBy} ${dir}` : `${orderBy} ${dir}`;
+  const orderClause = `${orderBy} ${dir}`;
 
-  const result = await query(
-    `SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
-     FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-     LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
-     WHERE ${whereClauses.join(' AND ')} ORDER BY ${orderClause}`,
-    params
-  );
+  const whereSQL = whereClauses.join(' AND ');
 
-  res.json({ results: result.rows, count: result.rows.length });
+  // When limit is provided, run a count query and apply LIMIT/OFFSET
+  if (limit !== undefined) {
+    const countResult = await query(
+      `SELECT COUNT(*) AS total FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE ${whereSQL}`,
+      params
+    );
+    const total = (countResult.rows[0] as { total: number }).total;
+
+    const result = await query(
+      `SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
+       FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+       LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
+       WHERE ${whereSQL} ORDER BY ${orderClause} LIMIT ${limit} OFFSET ${offset}`,
+      params
+    );
+
+    res.json({ results: result.rows, count: total });
+  } else {
+    const result = await query(
+      `SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
+       FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+       LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
+       WHERE ${whereSQL} ORDER BY ${orderClause}`,
+      params
+    );
+
+    res.json({ results: result.rows, count: result.rows.length });
+  }
 }));
 
 // GET /api/bins/trash — list soft-deleted bins for a location

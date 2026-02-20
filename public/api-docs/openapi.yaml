@@ -1786,8 +1786,13 @@ paths:
       tags: [Bins]
       summary: List bins for a location
       description: |
-        Returns non-deleted bins. Supports server-side search, filtering, and sorting.
-        All filter parameters are optional and composable.
+        Returns non-deleted bins. Supports server-side search, filtering, sorting,
+        and optional offset-based pagination.
+
+        When `limit` is provided, responses include a `count` field with the total
+        number of matching rows (for building pagination UI). When `limit` is absent,
+        all matching bins are returned and `count` equals `results.length` (backward
+        compatible).
       parameters:
         - name: location_id
           in: query
@@ -1804,12 +1809,46 @@ paths:
           in: query
           schema:
             type: string
-          description: Filter by exact tag match
+          description: Filter by exact tag match (use `tags` for multi-tag)
+        - name: tags
+          in: query
+          schema:
+            type: string
+          description: Comma-separated tag names. Combined with `tag_mode`.
+        - name: tag_mode
+          in: query
+          schema:
+            type: string
+            enum: [any, all]
+            default: any
+          description: When filtering by `tags`, require any or all tags to match
         - name: area_id
           in: query
           schema:
             type: string
-          description: "Filter by area. Use '__unassigned__' for bins with no area"
+          description: "Filter by single area. Use '__unassigned__' for bins with no area. See also `areas`."
+        - name: areas
+          in: query
+          schema:
+            type: string
+          description: "Comma-separated area IDs. Supports '__unassigned__'. Takes precedence over `area_id`."
+        - name: colors
+          in: query
+          schema:
+            type: string
+          description: Comma-separated color keys to filter by
+        - name: has_items
+          in: query
+          schema:
+            type: string
+            enum: ['true']
+          description: Only return bins that have at least one item
+        - name: has_notes
+          in: query
+          schema:
+            type: string
+            enum: ['true']
+          description: Only return bins with non-empty notes
         - name: needs_organizing
           in: query
           schema:
@@ -1828,6 +1867,20 @@ paths:
             type: string
             enum: [asc, desc]
             default: desc
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          description: Page size. When provided, enables pagination and `count` returns total matching rows.
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of rows to skip (used with `limit`)
       responses:
         '200':
           description: List of bins
@@ -1842,6 +1895,7 @@ paths:
                       $ref: '#/components/schemas/Bin'
                   count:
                     type: integer
+                    description: Total matching rows when paginated, or results.length otherwise
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
