@@ -1,21 +1,16 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ClipboardList, ArrowUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useBinList } from '@/features/bins/useBins';
+import { Skeleton } from '@/components/ui/skeleton';
+import { LoadMoreSentinel } from '@/components/ui/LoadMoreSentinel';
+import { useDebounce } from '@/lib/useDebounce';
+import { usePaginatedItemList } from './useItems';
 import { resolveIcon } from '@/lib/iconMap';
 import { getColorPreset } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
 import { useTerminology } from '@/lib/terminology';
-
-interface ItemEntry {
-  name: string;
-  binId: string;
-  binName: string;
-  binIcon: string;
-  binColor: string;
-}
 
 type SortOption = 'alpha' | 'bin';
 const sortLabels: Record<SortOption, (binLabel: string) => string> = {
@@ -27,50 +22,10 @@ export function ItemsPage() {
   const t = useTerminology();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortOption>('alpha');
+  const debouncedSearch = useDebounce(search, 300);
   const navigate = useNavigate();
-  const { bins } = useBinList();
+  const { items, totalCount, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedItemList(debouncedSearch, sort);
   const { theme } = useTheme();
-
-  const items = useMemo(() => {
-    const entries: ItemEntry[] = [];
-    for (const bin of bins) {
-      if (Array.isArray(bin.items)) {
-        for (const item of bin.items) {
-          entries.push({
-            name: item.name,
-            binId: bin.id,
-            binName: bin.name,
-            binIcon: bin.icon,
-            binColor: bin.color,
-          });
-        }
-      }
-    }
-    return entries;
-  }, [bins]);
-
-  const filteredItems = useMemo(() => {
-    let result = items;
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      result = result.filter(
-        (entry) =>
-          entry.name.toLowerCase().includes(q) ||
-          entry.binName.toLowerCase().includes(q)
-      );
-    }
-
-    if (sort === 'alpha') {
-      result = [...result].sort((a, b) => a.name.localeCompare(b.name));
-    } else {
-      result = [...result].sort(
-        (a, b) =>
-          a.binName.localeCompare(b.binName) || a.name.localeCompare(b.name)
-      );
-    }
-
-    return result;
-  }, [items, search, sort]);
 
   function cycleSort() {
     setSort((prev) => (prev === 'alpha' ? 'bin' : 'alpha'));
@@ -82,7 +37,7 @@ export function ItemsPage() {
         Items
       </h1>
 
-      {items.length > 0 && (
+      {(totalCount > 0 || search) && (
         <div className="flex items-center gap-2.5">
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]" />
@@ -105,7 +60,18 @@ export function ItemsPage() {
         </div>
       )}
 
-      {filteredItems.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col gap-1">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
           <ClipboardList className="h-16 w-16 opacity-40" />
           <div className="text-center space-y-1.5">
@@ -119,10 +85,10 @@ export function ItemsPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-1">
-          {filteredItems.map((entry, idx) => {
-            const Icon = resolveIcon(entry.binIcon);
-            const colorPreset = entry.binColor
-              ? getColorPreset(entry.binColor)
+          {items.map((entry) => {
+            const Icon = resolveIcon(entry.bin_icon);
+            const colorPreset = entry.bin_color
+              ? getColorPreset(entry.bin_color)
               : null;
             const dotColor = colorPreset
               ? theme === 'dark'
@@ -132,12 +98,12 @@ export function ItemsPage() {
 
             return (
               <div
-                key={`${entry.binId}-${entry.name}-${idx}`}
+                key={entry.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => navigate(`/bin/${entry.binId}`)}
+                onClick={() => navigate(`/bin/${entry.bin_id}`)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') navigate(`/bin/${entry.binId}`);
+                  if (e.key === 'Enter') navigate(`/bin/${entry.bin_id}`);
                 }}
                 className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 cursor-pointer transition-all duration-200 active:scale-[0.98] hover:bg-[var(--bg-hover)]"
               >
@@ -154,13 +120,14 @@ export function ItemsPage() {
                     )}
                     <Icon className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
                     <span className="text-[13px] text-[var(--text-tertiary)] truncate">
-                      {entry.binName}
+                      {entry.bin_name}
                     </span>
                   </div>
                 </div>
               </div>
             );
           })}
+          <LoadMoreSentinel hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
         </div>
       )}
     </div>

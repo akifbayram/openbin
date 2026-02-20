@@ -208,7 +208,6 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 multiple
                 className="hidden"
                 onChange={handlePhotoSelect}

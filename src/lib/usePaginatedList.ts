@@ -31,6 +31,7 @@ export function usePaginatedList<T>(
   const [error, setError] = useState<string | null>(null);
   const offsetRef = useRef(0);
   const generationRef = useRef(0);
+  const isRefreshingRef = useRef(false);
   const refreshCounter = useRefreshOn(...events);
 
   // Reset and fetch first page when basePath or refresh changes
@@ -38,11 +39,14 @@ export function usePaginatedList<T>(
     const generation = ++generationRef.current;
     offsetRef.current = 0;
 
+    isRefreshingRef.current = true;
+
     if (!basePath) {
       setItems([]);
       setTotalCount(0);
       setIsLoading(false);
       setError(null);
+      isRefreshingRef.current = false;
       return;
     }
 
@@ -67,6 +71,7 @@ export function usePaginatedList<T>(
       })
       .finally(() => {
         if (generation !== generationRef.current) return;
+        isRefreshingRef.current = false;
         setIsLoading(false);
       });
   }, [basePath, pageSize, refreshCounter]);
@@ -74,7 +79,7 @@ export function usePaginatedList<T>(
   const hasMore = offsetRef.current < totalCount;
 
   const loadMore = useCallback(() => {
-    if (!basePath || isLoadingMore || !hasMore) return;
+    if (!basePath || isLoadingMore || !hasMore || isRefreshingRef.current) return;
 
     const generation = generationRef.current;
     const currentOffset = offsetRef.current;
