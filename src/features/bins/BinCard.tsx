@@ -92,7 +92,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       aria-selected={selectable ? selected : undefined}
       className={cn(
         'group glass-card rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none',
-        selected && 'ring-2 ring-[var(--accent)]',
+        selected && 'ring-2 ring-[var(--accent)] scale-[0.97]',
         selectable && !selected && 'active:bg-[var(--bg-active)]'
       )}
       style={colorBg ? { backgroundColor: colorBg } : undefined}

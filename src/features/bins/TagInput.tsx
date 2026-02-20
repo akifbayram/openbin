@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useTagStyle } from '@/features/tags/useTagStyle';
+import { useDialogPortal } from '@/components/ui/dialog';
 
 interface TagInputProps {
   tags: string[];
@@ -12,6 +13,7 @@ interface TagInputProps {
 }
 
 export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
+  const dialogPortal = useDialogPortal();
   const [input, setInput] = useState('');
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -174,7 +176,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
             );
           })}
         </div>,
-        document.body,
+        dialogPortal ?? document.body,
       )}
     </div>
   );

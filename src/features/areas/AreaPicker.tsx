@@ -4,6 +4,7 @@ import { ChevronDown, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAreaList, createArea } from './useAreas';
 import { Input } from '@/components/ui/input';
+import { useDialogPortal } from '@/components/ui/dialog';
 
 interface AreaPickerProps {
   locationId: string | undefined;
@@ -12,6 +13,7 @@ interface AreaPickerProps {
 }
 
 export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
+  const dialogPortal = useDialogPortal();
   const { areas } = useAreaList(locationId);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -161,7 +163,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
             )}
           </div>
         </div>,
-        document.body,
+        dialogPortal ?? document.body,
       )}
     </div>
   );
