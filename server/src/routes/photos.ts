@@ -116,6 +116,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
     entityType: 'bin',
     entityId: access.binId,
     entityName: binResult.rows[0]?.name,
+    authMethod: req.authMethod,
   });
 
   res.json({ message: 'Photo deleted' });

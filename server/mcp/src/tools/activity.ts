@@ -13,6 +13,7 @@ interface ActivityEntry {
   entity_id: string;
   entity_name: string;
   changes: Record<string, unknown>;
+  auth_method: 'jwt' | 'api_key' | null;
   created_at: string;
 }
 
@@ -24,7 +25,9 @@ interface ListResponse {
 function formatEntry(entry: ActivityEntry): string {
   const who = entry.display_name || entry.user_name;
   const parts = [`- **${who}** ${entry.action} ${entry.entity_type} "${entry.entity_name}"`];
-  parts.push(`  ${entry.created_at}`);
+  const meta = [entry.created_at];
+  if (entry.auth_method) meta.push(`via ${entry.auth_method}`);
+  parts.push(`  ${meta.join(' | ')}`);
 
   if (entry.changes && Object.keys(entry.changes).length > 0) {
     const changes = Object.entries(entry.changes)
@@ -58,8 +61,8 @@ export function registerActivityTools(server: McpServer, api: ApiClient) {
     },
     withErrorHandling(async ({ location_id, limit, offset, entity_type, entity_id }) => {
       const params = new URLSearchParams();
-      if (limit) params.set("limit", String(limit));
-      if (offset) params.set("offset", String(offset));
+      if (limit !== undefined) params.set("limit", String(limit));
+      if (offset !== undefined) params.set("offset", String(offset));
       if (entity_type) params.set("entity_type", entity_type);
       if (entity_id) params.set("entity_id", entity_id);
 

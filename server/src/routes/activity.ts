@@ -41,7 +41,7 @@ router.get('/:locationId/activity', requireLocationMember('locationId'), asyncHa
     `SELECT al.id, al.location_id, al.user_id, al.user_name,
             COALESCE(u.display_name, al.user_name) AS display_name,
             al.action, al.entity_type, al.entity_id, al.entity_name,
-            al.changes, al.created_at
+            al.changes, al.auth_method, al.created_at
      FROM activity_log al
      LEFT JOIN users u ON u.id = al.user_id
      ${whereClause}

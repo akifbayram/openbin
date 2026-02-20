@@ -49,7 +49,7 @@ export function registerExportTools(server: McpServer, api: ApiClient) {
 
       for (const bin of data.bins) {
         const parts = [`- **${bin.name}** (${bin.shortCode})`];
-        if (bin.location) parts[0] += ` — ${bin.location}`;
+        if (bin.location) parts.push(`  Area: ${bin.location}`);
         if (bin.items.length > 0) parts.push(`  Items: ${bin.items.join(", ")}`);
         if (bin.tags.length > 0) parts.push(`  Tags: ${bin.tags.join(", ")}`);
         if (bin.notes) parts.push(`  Notes: ${bin.notes}`);

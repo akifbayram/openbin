@@ -47,6 +47,7 @@ router.post('/:locationId/areas', requireLocationAdmin('locationId'), asyncHandl
       entityType: 'area',
       entityId: area.id,
       entityName: area.name,
+      authMethod: req.authMethod,
     });
 
     res.status(201).json(area);
@@ -96,6 +97,7 @@ router.put('/:locationId/areas/:areaId', requireLocationAdmin('locationId'), asy
         entityId: areaId,
         entityName: area.name,
         changes: { name: { old: oldName, new: name.trim() } },
+        authMethod: req.authMethod,
       });
     }
 
@@ -134,6 +136,7 @@ router.delete('/:locationId/areas/:areaId', requireLocationAdmin('locationId'), 
     entityType: 'area',
     entityId: areaId,
     entityName: areaName,
+    authMethod: req.authMethod,
   });
 
   res.json({ message: 'Area deleted' });

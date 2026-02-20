@@ -36,7 +36,7 @@ function formatBin(bin: Bin): string {
 
   if (bin.area_name) parts.push(`Area: ${bin.area_name}`);
   if (bin.items.length > 0)
-    parts.push(`Items (${bin.items.length}): ${bin.items.map((i) => i.name).join(", ")}`);
+    parts.push(`Items (${bin.items.length}): ${bin.items.map((i) => `${i.name} [${i.id}]`).join(", ")}`);
   if (bin.tags.length > 0) parts.push(`Tags: ${bin.tags.join(", ")}`);
   if (bin.notes) parts.push(`Notes: ${bin.notes}`);
   if (bin.icon) parts.push(`Icon: ${bin.icon}`);
@@ -65,16 +65,23 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
         .describe("Sort field"),
       sort_dir: z.enum(["asc", "desc"]).optional().describe("Sort direction"),
       limit: z.number().min(1).max(100).optional().describe("Max results (1-100)"),
+      offset: z.number().min(0).optional().describe("Offset for pagination (requires limit)"),
+      tag_mode: z
+        .enum(["any", "all"])
+        .optional()
+        .describe("How to match multiple tags: 'any' (default, OR) or 'all' (AND)"),
     },
-    withErrorHandling(async ({ location_id, q, tag, tags, area_id, sort, sort_dir, limit }) => {
+    withErrorHandling(async ({ location_id, q, tag, tags, area_id, sort, sort_dir, limit, offset, tag_mode }) => {
       const params = new URLSearchParams({ location_id });
       if (q) params.set("q", q);
       if (tags) params.set("tags", tags);
       else if (tag) params.set("tag", tag);
+      if (tag_mode === "all") params.set("tag_mode", "all");
       if (area_id) params.set("area_id", area_id);
       if (sort) params.set("sort", sort);
       if (sort_dir) params.set("sort_dir", sort_dir);
-      if (limit) params.set("limit", String(limit));
+      if (limit !== undefined) params.set("limit", String(limit));
+      if (offset !== undefined) params.set("offset", String(offset));
 
       const data = await api.get<ListResponse>(`/api/bins?${params}`);
 

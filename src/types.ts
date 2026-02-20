@@ -46,6 +46,7 @@ export interface ActivityLogEntry {
   entity_id: string | null;
   entity_name: string | null;
   changes: Record<string, { old: unknown; new: unknown }> | null;
+  auth_method: 'jwt' | 'api_key' | null;
   created_at: string;
 }
 

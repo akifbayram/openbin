@@ -213,8 +213,8 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
       csvEscape(bin.icon || ''),
       csvEscape(bin.color || ''),
       csvEscape(bin.short_code || ''),
-      bin.created_at,
-      bin.updated_at,
+      bin.created_at?.includes('T') ? bin.created_at : `${bin.created_at.replace(' ', 'T')}Z`,
+      bin.updated_at?.includes('T') ? bin.updated_at : `${bin.updated_at.replace(' ', 'T')}Z`,
     ].join(',');
   });
 
