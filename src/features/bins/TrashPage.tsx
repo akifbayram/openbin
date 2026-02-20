@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,15 +32,20 @@ export function TrashPage() {
   const { bins, isLoading } = useTrashBins();
   const { showToast } = useToast();
   const { activeLocationId } = useAuth();
-  const { isAdmin } = usePermissions();
+  const { isAdmin, isLoading: permissionsLoading } = usePermissions();
   const t = useTerminology();
   const { locations } = useLocationList();
   const [confirmDelete, setConfirmDelete] = useState<Bin | null>(null);
   const activeLoc = locations.find((l) => l.id === activeLocationId);
   const retentionDays = (activeLoc as { trash_retention_days?: number } | undefined)?.trash_retention_days ?? 30;
 
-  if (!isAdmin) {
-    navigate('/', { replace: true });
+  useEffect(() => {
+    if (!permissionsLoading && !isAdmin) {
+      navigate('/', { replace: true });
+    }
+  }, [permissionsLoading, isAdmin, navigate]);
+
+  if (permissionsLoading || !isAdmin) {
     return null;
   }
 
