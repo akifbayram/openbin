@@ -1,7 +1,6 @@
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Events, notify } from '@/lib/eventBus';
-import { STORAGE_KEYS } from '@/lib/storageKeys';
 import { useListData } from '@/lib/useListData';
 import type { Photo } from '@/types';
 
@@ -22,8 +21,7 @@ export function usePhotos(binId: string | undefined) {
 }
 
 export function getPhotoUrl(photoId: string): string {
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-  return `/api/photos/${photoId}/file${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  return `/api/photos/${photoId}/file`;
 }
 
 export async function addPhoto(binId: string, file: File): Promise<string> {

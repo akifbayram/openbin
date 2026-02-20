@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { apiFetch, ApiError } from '@/lib/api';
-import { STORAGE_KEYS } from '@/lib/storageKeys';
+import { apiFetch, ApiError, getAvatarUrl } from '@/lib/api';
 
 function mockFetchResponse(overrides: Partial<Response> = {}, body?: string) {
   const res = {
@@ -28,18 +27,16 @@ describe('apiFetch', () => {
     vi.unstubAllGlobals();
   });
 
-  it('includes Authorization header when token exists in localStorage', async () => {
-    localStorage.setItem(STORAGE_KEYS.TOKEN, 'my-jwt');
+  it('includes credentials: same-origin', async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse({}, '{"ok":true}'));
 
     await apiFetch('/api/test');
 
     const [, init] = fetchSpy.mock.calls[0];
-    const headers = init?.headers as Record<string, string>;
-    expect(headers['Authorization']).toBe('Bearer my-jwt');
+    expect(init?.credentials).toBe('same-origin');
   });
 
-  it('omits Authorization header when no token', async () => {
+  it('does not set Authorization header (cookies handle auth)', async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse({}, '{"ok":true}'));
 
     await apiFetch('/api/test');
@@ -71,8 +68,7 @@ describe('apiFetch', () => {
     expect(headers['Content-Type']).toBeUndefined();
   });
 
-  it('merges custom headers without clobbering auto-set headers', async () => {
-    localStorage.setItem(STORAGE_KEYS.TOKEN, 'tk');
+  it('merges custom headers', async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse({}, '{"ok":true}'));
 
     await apiFetch('/api/test', {
@@ -83,7 +79,6 @@ describe('apiFetch', () => {
 
     const [, init] = fetchSpy.mock.calls[0];
     const headers = init?.headers as Record<string, string>;
-    expect(headers['Authorization']).toBe('Bearer tk');
     expect(headers['Content-Type']).toBe('application/json');
     expect(headers['X-Custom']).toBe('value');
   });
@@ -139,6 +134,41 @@ describe('apiFetch', () => {
     }
   });
 
+  it('attempts refresh on 401 and retries original request', async () => {
+    const failRes = mockFetchResponse({ ok: false, status: 401, statusText: 'Unauthorized' });
+    failRes.json = vi.fn().mockResolvedValue({ error: 'UNAUTHORIZED' });
+    const refreshRes = mockFetchResponse({}, '{"message":"Token refreshed"}');
+    const successRes = mockFetchResponse({}, '{"id":"1"}');
+
+    fetchSpy
+      .mockResolvedValueOnce(failRes)    // original 401
+      .mockResolvedValueOnce(refreshRes) // POST /api/auth/refresh
+      .mockResolvedValueOnce(successRes); // retry
+
+    const result = await apiFetch('/api/bins/1');
+    expect(result).toEqual({ id: '1' });
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(fetchSpy.mock.calls[1][0]).toBe('/api/auth/refresh');
+  });
+
+  it('dispatches openbin-auth-expired when refresh fails', async () => {
+    const failRes = mockFetchResponse({ ok: false, status: 401, statusText: 'Unauthorized' });
+    failRes.json = vi.fn().mockResolvedValue({ error: 'UNAUTHORIZED' });
+    const refreshFail = mockFetchResponse({ ok: false, status: 401, statusText: 'Unauthorized' });
+
+    fetchSpy
+      .mockResolvedValueOnce(failRes)
+      .mockResolvedValueOnce(refreshFail);
+
+    const handler = vi.fn();
+    window.addEventListener('openbin-auth-expired', handler);
+
+    await expect(apiFetch('/api/bins/1')).rejects.toThrow(ApiError);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener('openbin-auth-expired', handler);
+  });
+
   it('returns undefined for 204 responses', async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse({ status: 204 }));
 
@@ -171,5 +201,11 @@ describe('apiFetch', () => {
     expect(init?.body).toBeUndefined();
     const headers = init?.headers as Record<string, string>;
     expect(headers['Content-Type']).toBeUndefined();
+  });
+});
+
+describe('getAvatarUrl', () => {
+  it('returns path as-is (cookies handle auth)', () => {
+    expect(getAvatarUrl('/api/auth/avatar/user-1')).toBe('/api/auth/avatar/user-1');
   });
 });

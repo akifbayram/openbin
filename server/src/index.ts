@@ -1,4 +1,5 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import fs from 'fs';
 import cors from 'cors';
@@ -47,10 +48,12 @@ export function createApp(): express.Express {
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
   }));
   app.use(express.json({ limit: '1mb' }));
+  app.use(cookieParser());
 
   // Routes
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/register', registerLimiter);
+  app.use('/api/auth/refresh', sensitiveAuthLimiter);
   app.use('/api/auth/password', sensitiveAuthLimiter);
   app.use('/api/auth', authRoutes);
   app.use('/api/locations/join', joinLimiter);

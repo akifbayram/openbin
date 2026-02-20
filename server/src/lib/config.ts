@@ -40,6 +40,9 @@ export const config = Object.freeze({
   // Auth
   jwtSecret: resolveJwtSecret(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  accessTokenExpiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '15m',
+  refreshTokenMaxDays: clamp(parseInt(process.env.REFRESH_TOKEN_MAX_DAYS || '7', 10), 1, 90, 7),
+  cookieSecure: parseBool(process.env.COOKIE_SECURE, process.env.NODE_ENV === 'production'),
   bcryptRounds: clamp(parseInt(process.env.BCRYPT_ROUNDS || '12', 10), 4, 31, 12),
   registrationEnabled: parseBool(process.env.REGISTRATION_ENABLED, true),
 

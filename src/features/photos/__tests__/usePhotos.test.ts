@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 vi.mock('@/lib/api', () => ({
   apiFetch: vi.fn(),
@@ -8,7 +7,7 @@ vi.mock('@/lib/api', () => ({
 vi.mock('@/lib/auth', () => ({
   useAuth: () => ({
     activeLocationId: 'test-location',
-    token: 'test-token',
+    token: 'cookie',
   }),
 }));
 
@@ -52,15 +51,7 @@ describe('deletePhoto', () => {
 });
 
 describe('getPhotoUrl', () => {
-  it('includes token query param when token exists in localStorage', () => {
-    localStorage.setItem(STORAGE_KEYS.TOKEN, 'my-jwt-token');
-
-    expect(getPhotoUrl('photo-123')).toBe(
-      `/api/photos/photo-123/file?token=${encodeURIComponent('my-jwt-token')}`,
-    );
-  });
-
-  it('returns URL without query param when no token', () => {
+  it('returns plain URL without token query param (cookies handle auth)', () => {
     expect(getPhotoUrl('photo-123')).toBe('/api/photos/photo-123/file');
   });
 });

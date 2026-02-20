@@ -1,5 +1,3 @@
-import { STORAGE_KEYS } from './storageKeys';
-
 const API_BASE = '';
 
 export class ApiError extends Error {
@@ -16,16 +14,29 @@ interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
   timeout?: number;
 }
 
-export async function apiFetch<T>(
-  path: string,
-  options: ApiFetchOptions = {}
-): Promise<T> {
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-  const headers: Record<string, string> = {};
+// Shared promise to deduplicate concurrent refresh attempts
+let refreshPromise: Promise<boolean> | null = null;
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+async function tryRefresh(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+      return res.ok;
+    } catch {
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+}
+
+async function doFetch<T>(path: string, options: ApiFetchOptions, isRetry: boolean): Promise<T> {
+  const headers: Record<string, string> = {};
 
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
 
@@ -52,6 +63,7 @@ export async function apiFetch<T>(
   const fetchOptions: RequestInit = {
     ...options,
     headers,
+    credentials: 'same-origin',
     signal: controller?.signal ?? options.signal,
     body: isFormData
       ? (options.body as FormData)
@@ -67,6 +79,16 @@ export async function apiFetch<T>(
     if (timeoutId !== undefined) clearTimeout(timeoutId);
   }
 
+  // Auto-refresh on 401 (but not if this is already a retry or the failing request is the refresh endpoint itself)
+  if (res.status === 401 && !isRetry && !path.includes('/api/auth/refresh')) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      return doFetch<T>(path, options, true);
+    }
+    // Refresh failed — notify auth provider
+    window.dispatchEvent(new CustomEvent('openbin-auth-expired'));
+  }
+
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: res.statusText }));
     throw new ApiError(res.status, data.message || data.error || res.statusText);
@@ -79,8 +101,14 @@ export async function apiFetch<T>(
   return JSON.parse(text) as T;
 }
 
-/** Build an authenticated avatar URL (appends JWT as query param for <img> tags). */
+export async function apiFetch<T>(
+  path: string,
+  options: ApiFetchOptions = {}
+): Promise<T> {
+  return doFetch<T>(path, options, false);
+}
+
+/** Build an avatar URL (cookies handle auth automatically). */
 export function getAvatarUrl(avatarPath: string): string {
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-  return `${avatarPath}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  return avatarPath;
 }

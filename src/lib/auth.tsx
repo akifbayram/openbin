@@ -13,7 +13,7 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string, displayName: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   setActiveLocationId: (id: string | null) => void;
   updateUser: (user: User) => void;
   deleteAccount: (password: string) => Promise<void>;
@@ -30,19 +30,18 @@ export function useAuth(): AuthContextValue {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
-    token: localStorage.getItem(STORAGE_KEYS.TOKEN),
+    token: null,
     activeLocationId: localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION),
     loading: true,
   });
 
-  // Validate token on mount
+  // One-time cleanup of old localStorage token
   useEffect(() => {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-    if (!token) {
-      setState((s) => ({ ...s, loading: false }));
-      return;
-    }
+    localStorage.removeItem('openbin-token');
+  }, []);
 
+  // Validate session on mount via cookies
+  useEffect(() => {
     apiFetch<User & { activeLocationId?: string | null }>('/api/auth/me', { timeout: 8000 })
       .then((data) => {
         const { activeLocationId: serverLocationId, ...user } = data;
@@ -52,15 +51,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState((s) => ({
           ...s,
           user,
-          token,
+          token: 'cookie',
           activeLocationId: serverLocationId ?? s.activeLocationId,
           loading: false,
         }));
       })
       .catch(() => {
-        localStorage.removeItem(STORAGE_KEYS.TOKEN);
         setState((s) => ({ ...s, user: null, token: null, loading: false }));
       });
+  }, []);
+
+  // Listen for auth-expired events from apiFetch auto-refresh failure
+  useEffect(() => {
+    const handler = () => {
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
+      setState({ user: null, token: null, activeLocationId: null, loading: false });
+    };
+    window.addEventListener('openbin-auth-expired', handler);
+    return () => window.removeEventListener('openbin-auth-expired', handler);
   }, []);
 
   const login = useCallback(async (username: string, password: string) => {
@@ -68,14 +76,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: { username, password },
     });
-    localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
     if (data.activeLocationId) {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, data.activeLocationId);
     }
     setState((s) => ({
       ...s,
       user: data.user,
-      token: data.token,
+      token: 'cookie',
       activeLocationId: data.activeLocationId ?? s.activeLocationId,
     }));
   }, []);
@@ -85,19 +92,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: { username, password, displayName },
     });
-    localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
     // New registrations have no locations — clear any stale value from a previous session
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
     setState((s) => ({
       ...s,
       user: data.user,
-      token: data.token,
+      token: 'cookie',
       activeLocationId: null,
     }));
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+  const logout = useCallback(async () => {
+    try {
+      await apiFetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Best-effort — clear local state even if server call fails
+    }
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
     setState({ user: null, token: null, activeLocationId: null, loading: false });
   }, []);
@@ -122,8 +132,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const deleteAccount = useCallback(async (password: string) => {
     await apiFetch('/api/auth/account', { method: 'DELETE', body: { password } });
-    logout();
-  }, [logout]);
+    localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
+    setState({ user: null, token: null, activeLocationId: null, loading: false });
+  }, []);
 
   return (
     <AuthContext.Provider

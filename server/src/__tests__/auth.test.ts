@@ -10,6 +10,27 @@ beforeEach(() => {
   app = createApp();
 });
 
+function parseCookies(res: request.Response): Record<string, string> {
+  const cookies: Record<string, string> = {};
+  const setCookie = res.headers['set-cookie'];
+  if (!setCookie) return cookies;
+  const arr = Array.isArray(setCookie) ? setCookie : [setCookie];
+  for (const c of arr) {
+    const [nameVal] = c.split(';');
+    const [name, ...rest] = nameVal.split('=');
+    cookies[name.trim()] = rest.join('=');
+  }
+  return cookies;
+}
+
+function getRefreshCookie(res: request.Response): string | undefined {
+  return parseCookies(res)['openbin-refresh'];
+}
+
+function getAccessCookie(res: request.Response): string | undefined {
+  return parseCookies(res)['openbin-access'];
+}
+
 describe('POST /api/auth/register', () => {
   it('registers a new user', async () => {
     const res = await request(app)
@@ -20,6 +41,16 @@ describe('POST /api/auth/register', () => {
     expect(res.body.token).toBeDefined();
     expect(res.body.user.username).toBe('newuser');
     expect(res.body.user.id).toBeDefined();
+  });
+
+  it('sets httpOnly cookies on register', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ username: 'cookieuser', password: 'StrongPass1!' });
+
+    expect(res.status).toBe(201);
+    expect(getAccessCookie(res)).toBeDefined();
+    expect(getRefreshCookie(res)).toBeDefined();
   });
 
   it('lowercases the username', async () => {
@@ -86,6 +117,20 @@ describe('POST /api/auth/login', () => {
     expect(res.body.user.username).toBe('logintest');
   });
 
+  it('sets httpOnly cookies on login', async () => {
+    await request(app)
+      .post('/api/auth/register')
+      .send({ username: 'cookielogin', password: 'StrongPass1!' });
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ username: 'cookielogin', password: 'StrongPass1!' });
+
+    expect(res.status).toBe(200);
+    expect(getAccessCookie(res)).toBeDefined();
+    expect(getRefreshCookie(res)).toBeDefined();
+  });
+
   it('returns 401 for wrong password', async () => {
     await request(app)
       .post('/api/auth/register')
@@ -142,6 +187,22 @@ describe('GET /api/auth/me', () => {
     expect(res.body.username).toBeDefined();
   });
 
+  it('authenticates via access cookie', async () => {
+    const regRes = await request(app)
+      .post('/api/auth/register')
+      .send({ username: 'cookieme', password: 'StrongPass1!' });
+
+    const accessCookie = getAccessCookie(regRes);
+    expect(accessCookie).toBeDefined();
+
+    const res = await request(app)
+      .get('/api/auth/me')
+      .set('Cookie', `openbin-access=${accessCookie}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.username).toBe('cookieme');
+  });
+
   it('returns 401 without token', async () => {
     const res = await request(app).get('/api/auth/me');
 
@@ -154,6 +215,131 @@ describe('GET /api/auth/me', () => {
       .set('Authorization', 'Bearer invalidtoken');
 
     expect(res.status).toBe(401);
+  });
+});
+
+describe('POST /api/auth/refresh', () => {
+  it('issues new tokens when refresh cookie is valid', async () => {
+    const regRes = await request(app)
+      .post('/api/auth/register')
+      .send({ username: 'refreshuser', password: 'StrongPass1!' });
+
+    const refreshCookie = getRefreshCookie(regRes);
+    expect(refreshCookie).toBeDefined();
+
+    const res = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', `openbin-refresh=${refreshCookie}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Token refreshed');
+    expect(getAccessCookie(res)).toBeDefined();
+    expect(getRefreshCookie(res)).toBeDefined();
+    // New refresh token should differ from old one
+    expect(getRefreshCookie(res)).not.toBe(refreshCookie);
+  });
+
+  it('returns 401 when no refresh cookie', async () => {
+    const res = await request(app)
+      .post('/api/auth/refresh');
+
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 401 for invalid refresh token', async () => {
+    const res = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', 'openbin-refresh=invalid-token');
+
+    expect(res.status).toBe(401);
+  });
+
+  it('detects replay attack and revokes entire family', async () => {
+    const regRes = await request(app)
+      .post('/api/auth/register')
+      .send({ username: 'replayuser', password: 'StrongPass1!' });
+
+    const originalRefresh = getRefreshCookie(regRes)!;
+
+    // First rotation — succeeds
+    const firstRotation = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', `openbin-refresh=${originalRefresh}`);
+    expect(firstRotation.status).toBe(200);
+
+    const newRefresh = getRefreshCookie(firstRotation)!;
+
+    // Replay the original token — should fail and revoke family
+    const replay = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', `openbin-refresh=${originalRefresh}`);
+    expect(replay.status).toBe(401);
+
+    // The new token from first rotation should also be revoked now
+    const afterReplay = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', `openbin-refresh=${newRefresh}`);
+    expect(afterReplay.status).toBe(401);
+  });
+});
+
+describe('POST /api/auth/logout', () => {
+  it('revokes refresh token and clears cookies', async () => {
+    const regRes = await request(app)
+      .post('/api/auth/register')
+      .send({ username: 'logoutuser', password: 'StrongPass1!' });
+
+    const refreshCookie = getRefreshCookie(regRes)!;
+
+    const logoutRes = await request(app)
+      .post('/api/auth/logout')
+      .set('Cookie', `openbin-refresh=${refreshCookie}`);
+
+    expect(logoutRes.status).toBe(200);
+    expect(logoutRes.body.message).toBe('Logged out');
+
+    // Refresh token should no longer work
+    const refreshRes = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', `openbin-refresh=${refreshCookie}`);
+    expect(refreshRes.status).toBe(401);
+  });
+
+  it('succeeds even without refresh cookie', async () => {
+    const res = await request(app)
+      .post('/api/auth/logout');
+
+    expect(res.status).toBe(200);
+  });
+});
+
+describe('POST /api/auth/logout-all', () => {
+  it('revokes all refresh tokens for user', async () => {
+    const regRes = await request(app)
+      .post('/api/auth/register')
+      .send({ username: 'logoutall', password: 'StrongPass1!' });
+
+    const token = regRes.body.token;
+
+    // Login again to create a second refresh token
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ username: 'logoutall', password: 'StrongPass1!' });
+
+    const secondRefresh = getRefreshCookie(loginRes)!;
+
+    // Logout all
+    const logoutRes = await request(app)
+      .post('/api/auth/logout-all')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(logoutRes.status).toBe(200);
+
+    // Second session's refresh should be revoked
+    const refreshRes = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', `openbin-refresh=${secondRefresh}`);
+    expect(refreshRes.status).toBe(401);
   });
 });
 
@@ -195,23 +381,31 @@ describe('PUT /api/auth/profile', () => {
 });
 
 describe('PUT /api/auth/password', () => {
-  it('changes password successfully', async () => {
-    const { token, password } = await createTestUser(app);
+  it('changes password and revokes all refresh tokens', async () => {
+    const regRes = await request(app)
+      .post('/api/auth/register')
+      .send({ username: 'pwchangeuser', password: 'StrongPass1!' });
+
+    const token = regRes.body.token;
+    const refreshCookie = getRefreshCookie(regRes)!;
 
     const res = await request(app)
       .put('/api/auth/password')
       .set('Authorization', `Bearer ${token}`)
-      .send({ currentPassword: password, newPassword: 'NewStrongPass1!' });
+      .send({ currentPassword: 'StrongPass1!', newPassword: 'NewStrongPass1!' });
 
     expect(res.status).toBe(200);
 
+    // Old refresh token should be revoked
+    const refreshRes = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', `openbin-refresh=${refreshCookie}`);
+    expect(refreshRes.status).toBe(401);
+
     // Verify new password works
-    const me = await request(app)
-      .get('/api/auth/me')
-      .set('Authorization', `Bearer ${token}`);
     const loginRes = await request(app)
       .post('/api/auth/login')
-      .send({ username: me.body.username, password: 'NewStrongPass1!' });
+      .send({ username: 'pwchangeuser', password: 'NewStrongPass1!' });
 
     expect(loginRes.status).toBe(200);
   });

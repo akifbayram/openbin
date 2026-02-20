@@ -35,7 +35,7 @@ export function ProfilePage() {
 
   if (!user) return null;
 
-  const avatarSrc = user.avatarUrl ? `${getAvatarUrl(user.avatarUrl)}&t=${Date.now()}` : null;
+  const avatarSrc = user.avatarUrl ? `${getAvatarUrl(user.avatarUrl)}?t=${Date.now()}` : null;
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();

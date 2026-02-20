@@ -40,6 +40,9 @@ function migrate() {
       else if (file === '006_bin_visibility.sql') {
         alreadyApplied = tableNames.has('bins') && columns('bins').has('visibility');
       }
+      else if (file === '007_refresh_tokens.sql') {
+        alreadyApplied = tableNames.has('refresh_tokens');
+      }
 
       if (alreadyApplied) {
         db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file);
