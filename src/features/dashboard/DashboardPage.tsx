@@ -10,7 +10,7 @@ import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useSavedViews, deleteView } from '@/lib/savedViews';
-import { SavedViewChips } from '@/components/SavedViewChips';
+import { SavedViewChips } from '@/components/saved-view-chips';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
 import { useTerminology } from '@/lib/terminology';
 import { useDashboard } from './useDashboard';
@@ -159,6 +159,7 @@ export function DashboardPage() {
       <div className="flex flex-1 min-w-0 items-center gap-1.5 rounded-[var(--radius-full)] bg-[var(--bg-input)] px-3.5 min-h-10 py-1.5 focus-within:ring-2 focus-within:ring-[var(--accent)] transition-all duration-200">
         <Search className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
         <input
+          data-shortcut-search
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={`Search ${t.bins}...`}

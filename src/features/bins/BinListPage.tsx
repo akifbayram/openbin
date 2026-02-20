@@ -32,7 +32,7 @@ import { BulkIconDialog } from './BulkIconDialog';
 import { BulkVisibilityDialog } from './BulkVisibilityDialog';
 import { BulkLocationDialog } from './BulkLocationDialog';
 import { BulkActionBar } from './BulkActionBar';
-import { LoadMoreSentinel } from '@/components/ui/LoadMoreSentinel';
+import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 
 import { SaveViewDialog } from './SaveViewDialog';
 import { useAreaList } from '@/features/areas/useAreas';
@@ -53,7 +53,12 @@ export function BinListPage() {
 
   // Update search/filters when navigating from Tags/Areas/Dashboard pages
   useEffect(() => {
-    const state = location.state as { search?: string; areaFilter?: string; needsOrganizing?: boolean; savedView?: SavedView } | null;
+    const state = location.state as { search?: string; areaFilter?: string; needsOrganizing?: boolean; savedView?: SavedView; create?: boolean } | null;
+    if (state?.create) {
+      setCreateOpen(true);
+      window.history.replaceState({}, '');
+      return;
+    }
     if (state?.savedView) {
       const view = state.savedView;
       setSearch(view.searchQuery);
@@ -323,6 +328,7 @@ export function BinListPage() {
               </div>
             )}
             <input
+              data-shortcut-search
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={`Search ${t.bins}...`}

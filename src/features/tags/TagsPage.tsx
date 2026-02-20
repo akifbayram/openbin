@@ -4,7 +4,7 @@ import { Search, Tags as TagsIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LoadMoreSentinel } from '@/components/ui/LoadMoreSentinel';
+import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';

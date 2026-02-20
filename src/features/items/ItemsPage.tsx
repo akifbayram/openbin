@@ -4,7 +4,7 @@ import { Search, ClipboardList, ArrowUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LoadMoreSentinel } from '@/components/ui/LoadMoreSentinel';
+import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePaginatedItemList } from './useItems';
 import { resolveIcon } from '@/lib/iconMap';

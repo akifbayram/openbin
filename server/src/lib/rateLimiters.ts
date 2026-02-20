@@ -10,6 +10,7 @@ export const authLimiter: RequestHandler = isTest ? noop : rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
   message: { error: 'RATE_LIMITED', message: 'Too many attempts, please try again later' },
 });
 
