@@ -332,7 +332,7 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
 
   function handleBinClick(binId: string) {
     handleClose(false);
-    navigate(`/bin/${binId}`);
+    navigate(`/bin/${binId}`, { state: { backLabel: t.Bins, backPath: '/bins' } });
   }
 
   return (

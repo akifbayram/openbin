@@ -206,7 +206,7 @@ export function ActivityPage() {
                     className={`glass-card w-full flex items-start gap-3 px-4 py-3.5 text-left rounded-[var(--radius-lg)] transition-all duration-200 ${isClickable ? 'hover:bg-[var(--bg-hover)] active:scale-[0.98] cursor-pointer' : 'cursor-default'}`}
                     onClick={() => {
                       if (isClickable) {
-                        navigate(`/bin/${entry.entity_id}`);
+                        navigate(`/bin/${entry.entity_id}`, { state: { backLabel: 'Activity', backPath: '/activity' } });
                       }
                     }}
                   >

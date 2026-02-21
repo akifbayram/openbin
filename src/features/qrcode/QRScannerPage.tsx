@@ -40,7 +40,7 @@ export function QRScannerPage() {
       const bin = await lookupBinByCode(code);
       haptic();
       recordScan(bin.id);
-      navigate(`/bin/${bin.id}`);
+      navigate(`/bin/${bin.id}`, { state: { backLabel: 'Scan', backPath: '/scan' } });
     } catch {
       setManualError(`No ${t.bin} found with that code`);
     } finally {
@@ -62,7 +62,7 @@ export function QRScannerPage() {
             markFirstScanDone();
             setSuccessBinId(binId);
           } else {
-            navigate(`/bin/${binId}`);
+            navigate(`/bin/${binId}`, { state: { backLabel: 'Scan', backPath: '/scan' } });
           }
         } catch {
           setUnknownId(binId);
@@ -197,7 +197,7 @@ export function QRScannerPage() {
       />
 
       {successBinId && (
-        <ScanSuccessOverlay onDismiss={() => navigate(`/bin/${successBinId}`)} />
+        <ScanSuccessOverlay onDismiss={() => navigate(`/bin/${successBinId}`, { state: { backLabel: 'Scan', backPath: '/scan' } })} />
       )}
     </div>
   );

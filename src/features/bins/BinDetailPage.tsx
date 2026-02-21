@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronDown, Lock, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Check, Pin, Plus, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +46,7 @@ function formatDate(iso: string): string {
 export function BinDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { bin, isLoading } = useBin(id);
   const allTags = useAllTags();
   const { showToast } = useToast();
@@ -53,6 +54,8 @@ export function BinDetailPage() {
   const { activeLocationId } = useAuth();
   const { isAdmin, canEditBin, canChangeVisibility } = usePermissions();
   const t = useTerminology();
+  const backState = location.state as { backLabel?: string; backPath?: string } | null;
+  const backLabel = backState?.backLabel || t.Bins;
   const { tagColors } = useTagColorsContext();
   const { aiEnabled } = useAiEnabled();
   const [editing, setEditing] = useState(false);
@@ -226,11 +229,11 @@ export function BinDetailPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate('/bins')}
+          onClick={() => navigate(backState?.backPath || '/bins')}
           className="rounded-[var(--radius-full)] gap-0.5 pl-1.5 pr-3 text-[var(--accent)]"
         >
           <ChevronLeft className="h-5 w-5" />
-          <span className="text-[15px]">{t.Bins}</span>
+          <span className="text-[15px]">{backLabel}</span>
         </Button>
         <div className="flex-1" />
         {editing ? (

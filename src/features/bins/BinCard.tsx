@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Check, Lock, Pin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
@@ -8,6 +8,7 @@ import { resolveIcon } from '@/lib/iconMap';
 import { useLongPress } from '@/lib/useLongPress';
 import { getColorPreset } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
+import { useTerminology } from '@/lib/terminology';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import type { Bin } from '@/types';
 
@@ -24,8 +25,12 @@ interface BinCardProps {
 
 export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick, selectable, selected, onSelect, searchQuery = '', onPinToggle }: BinCardProps) {
   const navigate = useNavigate();
+  const loc = useLocation();
   const { theme } = useTheme();
+  const t = useTerminology();
   const getTagStyle = useTagStyle();
+  const backPath = loc.pathname + loc.search;
+  const backLabel = loc.pathname === '/' ? 'Home' : t.Bins;
   const BinIcon = resolveIcon(bin.icon);
   const colorPreset = getColorPreset(bin.color);
   const colorBg = colorPreset ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg) : undefined;
@@ -48,7 +53,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
     if (selectable) {
       onSelect?.(bin.id, index, e.shiftKey);
     } else {
-      navigate(`/bin/${bin.id}`);
+      navigate(`/bin/${bin.id}`, { state: { backLabel, backPath } });
     }
   }
 
@@ -60,7 +65,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
         if (selectable) {
           onSelect?.(bin.id, index, false);
         } else {
-          navigate(`/bin/${bin.id}`);
+          navigate(`/bin/${bin.id}`, { state: { backLabel, backPath } });
         }
       }
     }

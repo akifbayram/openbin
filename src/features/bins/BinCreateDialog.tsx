@@ -216,7 +216,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
         ).catch(() => { /* ignore */ });
       }
       onOpenChange(false);
-      navigate(`/bin/${id}`);
+      navigate(`/bin/${id}`, { state: { backLabel: t.Bins, backPath: '/bins' } });
     } finally {
       setLoading(false);
     }

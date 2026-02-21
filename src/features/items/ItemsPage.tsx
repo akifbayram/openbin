@@ -101,9 +101,9 @@ export function ItemsPage() {
                 key={entry.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => navigate(`/bin/${entry.bin_id}`)}
+                onClick={() => navigate(`/bin/${entry.bin_id}`, { state: { backLabel: 'Items', backPath: '/items' } })}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') navigate(`/bin/${entry.bin_id}`);
+                  if (e.key === 'Enter') navigate(`/bin/${entry.bin_id}`, { state: { backLabel: 'Items', backPath: '/items' } });
                 }}
                 className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 cursor-pointer transition-all duration-200 active:scale-[0.98] hover:bg-[var(--bg-hover)]"
               >
