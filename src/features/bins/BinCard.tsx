@@ -6,10 +6,11 @@ import { Highlight } from '@/components/ui/highlight';
 import { cn, haptic } from '@/lib/utils';
 import { resolveIcon } from '@/lib/iconMap';
 import { useLongPress } from '@/lib/useLongPress';
-import { getColorPreset } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
 import { useTerminology } from '@/lib/terminology';
 import { useTagStyle } from '@/features/tags/useTagStyle';
+import { getCardRenderProps, parseCardStyle } from '@/lib/cardStyle';
+import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
 import type { Bin } from '@/types';
 
 interface BinCardProps {
@@ -32,12 +33,12 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   const backPath = loc.pathname + loc.search;
   const backLabel = loc.pathname === '/' ? 'Home' : t.Bins;
   const BinIcon = resolveIcon(bin.icon);
-  const colorPreset = getColorPreset(bin.color);
-  const colorBg = colorPreset ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg) : undefined;
-  // Override muted text/icon color for better contrast on colored backgrounds
-  const mutedColor = colorPreset
-    ? (theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)')
-    : undefined;
+
+  const renderProps = getCardRenderProps(bin.color, bin.card_style, theme);
+  const cardStyle = parseCardStyle(bin.card_style);
+  const isPhoto = renderProps.isPhotoVariant;
+  const coverPhotoId = cardStyle?.coverPhotoId;
+  const { mutedColor } = renderProps;
 
   const handleLongPress = useCallback(() => {
     if (!selectable) {
@@ -76,6 +77,14 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
     onSelect?.(bin.id, index, e.shiftKey);
   }
 
+  // Photo text styles
+  const photoTextStyle: React.CSSProperties | undefined = isPhoto && coverPhotoId
+    ? { color: 'white', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }
+    : undefined;
+  const photoMutedStyle: React.CSSProperties | undefined = isPhoto && coverPhotoId
+    ? { color: 'rgba(255,255,255,0.8)', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }
+    : undefined;
+
   const checkbox = (
     <div
       className={cn(
@@ -84,9 +93,115 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           ? 'bg-[var(--accent)] border-[var(--accent)]'
           : 'border-[var(--text-tertiary)]'
       )}
-      style={!selected && mutedColor ? { borderColor: mutedColor } : undefined}
+      style={!selected ? (isPhoto ? { borderColor: 'rgba(255,255,255,0.7)' } : mutedColor ? { borderColor: mutedColor } : undefined) : undefined}
     >
       {selected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+    </div>
+  );
+
+  const cardContent = (
+    <div className="flex items-start gap-3">
+      <div className="min-w-0 flex-1">
+        <h3
+          className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug flex items-center gap-1.5"
+          style={photoTextStyle}
+        >
+          <Highlight text={bin.name} query={searchQuery} />
+          {bin.visibility === 'private' && (
+            <Lock
+              className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]"
+              style={isPhoto ? photoMutedStyle : mutedColor ? { color: mutedColor } : undefined}
+            />
+          )}
+        </h3>
+        {bin.area_name && (
+          <p
+            className="text-[12px] text-[var(--text-tertiary)] truncate leading-relaxed"
+            style={isPhoto ? photoMutedStyle : mutedColor ? { color: mutedColor } : undefined}
+          >
+            <Highlight text={bin.area_name} query={searchQuery} />
+          </p>
+        )}
+        {bin.items.length > 0 && (
+          <p
+            className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed"
+            style={isPhoto ? photoMutedStyle : mutedColor ? { color: mutedColor } : undefined}
+          >
+            <Highlight text={bin.items.map(i => i.name).join(', ')} query={searchQuery} />
+          </p>
+        )}
+        {bin.tags.length > 0 && (
+          <div className="flex gap-1.5 mt-2 overflow-hidden">
+            {bin.tags.map((tag) => {
+              return (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  className="cursor-pointer text-[11px] hover:bg-[var(--bg-active)] transition-colors"
+                  style={isPhoto
+                    ? { backgroundColor: 'rgba(0,0,0,0.4)', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }
+                    : getTagStyle(tag)
+                  }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!selectable) onTagClick?.(tag);
+                  }}
+                >
+                  {tag}
+                </Badge>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {onPinToggle && !selectable && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onPinToggle(bin.id, !bin.is_pinned);
+          }}
+          className={cn(
+            'shrink-0 mt-0.5 p-1 rounded-full transition-all',
+            bin.is_pinned
+              ? 'text-[var(--accent)]'
+              : 'text-[var(--text-tertiary)] dark:text-[var(--text-secondary)] opacity-0 group-hover:opacity-100'
+          )}
+          style={isPhoto && bin.is_pinned ? { color: 'white' } : undefined}
+          aria-label={bin.is_pinned ? 'Unpin bin' : 'Pin bin'}
+        >
+          <Pin className="h-4 w-4" fill={bin.is_pinned ? 'currentColor' : 'none'} />
+        </button>
+      )}
+      {selectable ? (
+        checkbox
+      ) : onSelect ? (
+        /* Layered icon / hover-checkbox for desktop discovery */
+        <div
+          className="relative mt-0.5 h-[22px] w-[22px] shrink-0"
+          onClick={handleCheckboxClick}
+        >
+          {/* Default icon — fades out on hover (hover:hover targets pointer devices only) */}
+          <BinIcon
+            className="absolute inset-0 h-[22px] w-[22px] text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
+            style={isPhoto ? { color: 'rgba(255,255,255,0.8)' } : mutedColor ? { color: mutedColor } : undefined}
+          />
+          {/* Checkbox — hidden by default, revealed on hover for pointer devices */}
+          <div
+            className={cn(
+              'absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100',
+            )}
+          >
+            <div className="h-[22px] w-[22px] rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center"
+              style={isPhoto ? { borderColor: 'rgba(255,255,255,0.7)' } : mutedColor ? { borderColor: mutedColor } : undefined}
+            />
+          </div>
+        </div>
+      ) : (
+        <BinIcon
+          className="mt-0.5 h-[22px] w-[22px] shrink-0 text-[var(--text-tertiary)]"
+          style={isPhoto ? { color: 'rgba(255,255,255,0.8)' } : mutedColor ? { color: mutedColor } : undefined}
+        />
+      )}
     </div>
   );
 
@@ -96,11 +211,12 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       role="button"
       aria-selected={selectable ? selected : undefined}
       className={cn(
-        'group glass-card rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none',
+        'group rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none',
+        renderProps.className,
         selected && 'ring-2 ring-[var(--accent)] scale-[0.97]',
         selectable && !selected && 'active:bg-[var(--bg-active)]'
       )}
-      style={colorBg ? { backgroundColor: colorBg } : undefined}
+      style={renderProps.style}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onTouchStart={onTouchStart}
@@ -108,91 +224,38 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       onTouchMove={onTouchMove}
       onContextMenu={onContextMenu}
     >
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug flex items-center gap-1.5">
-            <Highlight text={bin.name} query={searchQuery} />
-            {bin.visibility === 'private' && <Lock className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]" style={mutedColor ? { color: mutedColor } : undefined} />}
-          </h3>
-          {bin.area_name && (
-            <p className="text-[12px] text-[var(--text-tertiary)] truncate leading-relaxed" style={mutedColor ? { color: mutedColor } : undefined}>
-              <Highlight text={bin.area_name} query={searchQuery} />
-            </p>
-          )}
-          {bin.items.length > 0 && (
-            <p className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed" style={mutedColor ? { color: mutedColor } : undefined}>
-              <Highlight text={bin.items.map(i => i.name).join(', ')} query={searchQuery} />
-            </p>
-          )}
-          {bin.tags.length > 0 && (
-            <div className="flex gap-1.5 mt-2 overflow-hidden">
-              {bin.tags.map((tag) => {
-                return (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    className="cursor-pointer text-[11px] hover:bg-[var(--bg-active)] transition-colors"
-                    style={getTagStyle(tag)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!selectable) onTagClick?.(tag);
-                    }}
-                  >
-                    {tag}
-                  </Badge>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        {onPinToggle && !selectable && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onPinToggle(bin.id, !bin.is_pinned);
-            }}
-            className={cn(
-              'shrink-0 mt-0.5 p-1 rounded-full transition-all',
-              bin.is_pinned
-                ? 'text-[var(--accent)]'
-                : 'text-[var(--text-tertiary)] dark:text-[var(--text-secondary)] opacity-0 group-hover:opacity-100'
-            )}
-            aria-label={bin.is_pinned ? 'Unpin bin' : 'Pin bin'}
-          >
-            <Pin className="h-4 w-4" fill={bin.is_pinned ? 'currentColor' : 'none'} />
-          </button>
-        )}
-        {selectable ? (
-          checkbox
-        ) : onSelect ? (
-          /* Layered icon / hover-checkbox for desktop discovery */
-          <div
-            className="relative mt-0.5 h-[22px] w-[22px] shrink-0"
-            onClick={handleCheckboxClick}
-          >
-            {/* Default icon — fades out on hover (hover:hover targets pointer devices only) */}
-            <BinIcon
-              className="absolute inset-0 h-[22px] w-[22px] text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
-              style={mutedColor ? { color: mutedColor } : undefined}
-            />
-            {/* Checkbox — hidden by default, revealed on hover for pointer devices */}
-            <div
-              className={cn(
-                'absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100',
-              )}
-            >
-              <div className="h-[22px] w-[22px] rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center"
-                style={mutedColor ? { borderColor: mutedColor } : undefined}
-              />
-            </div>
-          </div>
-        ) : (
-          <BinIcon
-            className="mt-0.5 h-[22px] w-[22px] shrink-0 text-[var(--text-tertiary)]"
-            style={mutedColor ? { color: mutedColor } : undefined}
+      {renderProps.stripeBar && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            background: renderProps.stripeBar.color,
+            ...(renderProps.stripeBar.position === 'left' && { left: 0, top: 0, bottom: 0, width: renderProps.stripeBar.width }),
+            ...(renderProps.stripeBar.position === 'right' && { right: 0, top: 0, bottom: 0, width: renderProps.stripeBar.width }),
+            ...(renderProps.stripeBar.position === 'top' && { left: 0, top: 0, right: 0, height: renderProps.stripeBar.width }),
+            ...(renderProps.stripeBar.position === 'bottom' && { left: 0, bottom: 0, right: 0, height: renderProps.stripeBar.width }),
+          }}
+        />
+      )}
+      {isPhoto && coverPhotoId ? (
+        <>
+          {/* Background image */}
+          <img
+            src={getPhotoThumbUrl(coverPhotoId)}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
           />
-        )}
-      </div>
+          {/* Dark scrim overlay for text legibility */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-black/20" />
+          {/* Content on top */}
+          <div className="relative z-10">
+            {cardContent}
+          </div>
+        </>
+      ) : (
+        cardContent
+      )}
     </div>
   );
 }, (prev, next) => {
@@ -205,6 +268,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
     prev.bin.items.every((item, i) => item.id === next.bin.items[i].id && item.name === next.bin.items[i].name) &&
     prev.bin.icon === next.bin.icon &&
     prev.bin.color === next.bin.color &&
+    prev.bin.card_style === next.bin.card_style &&
     prev.bin.updated_at === next.bin.updated_at &&
     prev.bin.visibility === next.bin.visibility &&
     prev.bin.is_pinned === next.bin.is_pinned &&

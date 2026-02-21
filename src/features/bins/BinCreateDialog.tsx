@@ -18,6 +18,7 @@ import { TagInput } from './TagInput';
 import { ItemsInput } from './ItemsInput';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
+import { StylePicker } from './StylePicker';
 import { addBin, useAllTags } from './useBins';
 import { derivePrefix } from '@/lib/derivePrefix';
 import { VisibilityPicker } from './VisibilityPicker';
@@ -55,6 +56,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
   const [tags, setTags] = useState<string[]>([]);
   const [icon, setIcon] = useState('');
   const [color, setColor] = useState('');
+  const [cardStyle, setCardStyle] = useState('');
   const [visibility, setVisibility] = useState<BinVisibility>('location');
   const [shortCode, setShortCode] = useState('');
   const [codeManuallyEdited, setCodeManuallyEdited] = useState(false);
@@ -117,6 +119,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
     setTags([]);
     setIcon('');
     setColor('');
+    setCardStyle('');
     setVisibility('location');
     setShortCode('');
     setCodeManuallyEdited(false);
@@ -200,6 +203,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
         areaId,
         icon,
         color,
+        cardStyle: cardStyle || undefined,
         visibility,
         shortCode: displayCode || undefined,
       });
@@ -429,6 +433,10 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
             <div className="space-y-2">
               <Label>Color</Label>
               <ColorPicker value={color} onChange={setColor} />
+            </div>
+            <div className="space-y-2">
+              <Label>Style</Label>
+              <StylePicker value={cardStyle} color={color} onChange={setCardStyle} />
             </div>
             <div className="space-y-2">
               <Label>Visibility</Label>

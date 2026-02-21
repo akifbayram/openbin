@@ -79,6 +79,7 @@ router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async 
       tags: bin.tags,
       icon: bin.icon,
       color: bin.color,
+      cardStyle: bin.card_style || undefined,
       shortCode: bin.short_code,
       createdAt: bin.created_at,
       updatedAt: bin.updated_at,
@@ -142,6 +143,7 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
       tags: bin.tags,
       icon: bin.icon,
       color: bin.color,
+      cardStyle: bin.card_style || undefined,
       shortCode: bin.short_code,
       createdAt: bin.created_at,
       updatedAt: bin.updated_at,
@@ -200,7 +202,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
     return val;
   }
 
-  const header = 'Name,Area,Items,Tags,Notes,Icon,Color,Short Code,Created,Updated';
+  const header = 'Name,Area,Items,Tags,Notes,Icon,Color,Card Style,Short Code,Created,Updated';
   const rows = bins.map((bin) => {
     const items = extractItemNames(bin.items).join('; ');
     const tags = Array.isArray(bin.tags) ? bin.tags.join('; ') : '';
@@ -212,6 +214,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
       csvEscape(bin.notes || ''),
       csvEscape(bin.icon || ''),
       csvEscape(bin.color || ''),
+      csvEscape(bin.card_style || ''),
       csvEscape(bin.short_code || ''),
       bin.created_at?.includes('T') ? bin.created_at : `${bin.created_at.replace(' ', 'T')}Z`,
       bin.updated_at?.includes('T') ? bin.updated_at : `${bin.updated_at.replace(' ', 'T')}Z`,
@@ -277,6 +280,7 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
         tags: bin.tags || [],
         icon: bin.icon || '',
         color: bin.color || '',
+        cardStyle: bin.cardStyle,
         shortCode: bin.shortCode,
         createdAt: bin.createdAt || new Date().toISOString(),
         updatedAt: bin.updatedAt || new Date().toISOString(),
@@ -370,6 +374,7 @@ router.post('/import/legacy', asyncHandler(async (req, res) => {
         tags: bin.tags,
         icon: bin.icon,
         color: bin.color,
+        cardStyle: bin.cardStyle,
         createdAt: bin.createdAt,
         updatedAt: bin.updatedAt,
       }, areaId, userId);

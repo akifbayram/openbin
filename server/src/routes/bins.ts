@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
+import sharp from 'sharp';
 import { query, generateUuid, getDb } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { logActivity, computeChanges } from '../lib/activityLog.js';
@@ -19,7 +20,7 @@ router.use(authenticate);
 
 // POST /api/bins — create bin
 router.post('/', asyncHandler(async (req, res) => {
-  const { locationId, name, areaId, items, notes, tags, icon, color, shortCodePrefix, visibility } = req.body;
+  const { locationId, name, areaId, items, notes, tags, icon, color, shortCodePrefix, visibility, cardStyle } = req.body;
 
   if (!locationId) {
     throw new ValidationError('locationId is required');
@@ -55,6 +56,9 @@ router.post('/', asyncHandler(async (req, res) => {
   if (color && typeof color === 'string' && color.length > 50) {
     throw new ValidationError('Color value too long (max 50 characters)');
   }
+  if (cardStyle && typeof cardStyle === 'string' && cardStyle.length > 500) {
+    throw new ValidationError('Card style too long (max 500 characters)');
+  }
   if (visibility !== undefined && visibility !== 'location' && visibility !== 'private') {
     throw new ValidationError('visibility must be "location" or "private"');
   }
@@ -81,9 +85,9 @@ router.post('/', asyncHandler(async (req, res) => {
 
     try {
       await query(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, created_by, short_code, visibility)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [binId, locationId, name.trim(), areaId || null, notes || '', tags || [], icon || '', color || '', req.user!.id, code, visibility || 'location']
+        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, short_code, visibility)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [binId, locationId, name.trim(), areaId || null, notes || '', tags || [], icon || '', color || '', cardStyle || '', req.user!.id, code, visibility || 'location']
       );
 
       // Insert items into bin_items
@@ -406,7 +410,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Only admins or the bin creator can edit this bin');
   }
 
-  const { name, areaId, items, notes, tags, icon, color, visibility } = req.body;
+  const { name, areaId, items, notes, tags, icon, color, cardStyle, visibility } = req.body;
 
   if (name !== undefined) {
     validateBinName(name);
@@ -446,10 +450,13 @@ router.put('/:id', asyncHandler(async (req, res) => {
   if (color !== undefined && typeof color === 'string' && color.length > 50) {
     throw new ValidationError('Color value too long (max 50 characters)');
   }
+  if (cardStyle !== undefined && typeof cardStyle === 'string' && cardStyle.length > 500) {
+    throw new ValidationError('Card style too long (max 500 characters)');
+  }
 
   // Fetch old state for activity log diff
   const oldResult = await query(
-    'SELECT name, area_id, notes, tags, icon, color, visibility FROM bins WHERE id = $1',
+    'SELECT name, area_id, notes, tags, icon, color, card_style, visibility FROM bins WHERE id = $1',
     [id]
   );
   const oldBin = oldResult.rows[0];
@@ -482,6 +489,10 @@ router.put('/:id', asyncHandler(async (req, res) => {
   if (color !== undefined) {
     setClauses.push(`color = $${paramIdx++}`);
     params.push(color);
+  }
+  if (cardStyle !== undefined) {
+    setClauses.push(`card_style = $${paramIdx++}`);
+    params.push(cardStyle);
   }
   if (visibility !== undefined) {
     setClauses.push(`visibility = $${paramIdx++}`);
@@ -553,6 +564,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
     if (tags !== undefined) newObj.tags = tags;
     if (icon !== undefined) newObj.icon = icon;
     if (color !== undefined) newObj.color = color;
+    if (cardStyle !== undefined) newObj.card_style = cardStyle;
     if (visibility !== undefined) newObj.visibility = visibility;
 
     const binFieldChanges = computeChanges(oldBin, newObj, Object.keys(newObj));
@@ -710,7 +722,7 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
 
   // Get photos to delete from disk
   const photosResult = await query(
-    'SELECT storage_path FROM photos WHERE bin_id = $1',
+    'SELECT storage_path, thumb_path FROM photos WHERE bin_id = $1',
     [id]
   );
 
@@ -723,6 +735,12 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
       const filePath = path.join(PHOTO_STORAGE_PATH, photo.storage_path);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
+      }
+      if (photo.thumb_path) {
+        const thumbFilePath = path.join(PHOTO_STORAGE_PATH, photo.thumb_path);
+        if (fs.existsSync(thumbFilePath)) {
+          fs.unlinkSync(thumbFilePath);
+        }
       }
     } catch {
       // Ignore file cleanup errors
@@ -785,11 +803,25 @@ router.post('/:id/photos', asyncHandler(async (req, res, next) => {
   const storagePath = path.join(binId, file.filename);
   const photoId = generateUuid();
 
+  // Generate thumbnail
+  let thumbPath: string | null = null;
+  try {
+    const thumbFilename = `${path.basename(file.filename, path.extname(file.filename))}_thumb.webp`;
+    const thumbFullPath = path.join(path.dirname(file.path), thumbFilename);
+    await sharp(file.path)
+      .resize(600, undefined, { withoutEnlargement: true })
+      .webp({ quality: 70 })
+      .toFile(thumbFullPath);
+    thumbPath = path.join(binId, thumbFilename);
+  } catch {
+    // Thumbnail generation is non-critical
+  }
+
   const result = await query(
-    `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id, bin_id, filename, mime_type, size, storage_path, created_by, created_at`,
-    [photoId, binId, path.basename(file.originalname).slice(0, 255), file.mimetype, file.size, storagePath, req.user!.id]
+    `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, thumb_path, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING id, bin_id, filename, mime_type, size, storage_path, thumb_path, created_by, created_at`,
+    [photoId, binId, path.basename(file.originalname).slice(0, 255), file.mimetype, file.size, storagePath, thumbPath, req.user!.id]
   );
 
   await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [binId]);
