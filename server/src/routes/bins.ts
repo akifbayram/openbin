@@ -19,7 +19,7 @@ router.use(authenticate);
 
 // POST /api/bins — create bin
 router.post('/', asyncHandler(async (req, res) => {
-  const { locationId, name, areaId, items, notes, tags, icon, color, id, shortCode, visibility } = req.body;
+  const { locationId, name, areaId, items, notes, tags, icon, color, id, shortCode, shortCodePrefix, visibility } = req.body;
 
   if (!locationId) {
     throw new ValidationError('locationId is required');
@@ -63,12 +63,17 @@ router.post('/', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Not a member of this location');
   }
 
+  // Validate shortCodePrefix if provided
+  const cleanPrefix = shortCodePrefix
+    ? String(shortCodePrefix).replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 3)
+    : undefined;
+
   // Generate short_code with retry on collision
-  const sc = shortCode || generateShortCode();
+  const sc = shortCode || generateShortCode(name, cleanPrefix);
   const maxRetries = 10;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const code = attempt === 0 ? sc : generateShortCode();
+    const code = attempt === 0 ? sc : generateShortCode(name, cleanPrefix);
     const binId = id || generateUuid();
 
     try {

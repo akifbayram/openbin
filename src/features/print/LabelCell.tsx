@@ -1,28 +1,8 @@
 import type { Bin } from '@/types';
 import { resolveIcon } from '@/lib/iconMap';
 import { getColorPreset } from '@/lib/colorPalette';
-import { getOrientation } from './labelFormats';
+import { getOrientation, computeCodeFontSize } from './labelFormats';
 import type { LabelFormat } from './labelFormats';
-
-/** Compute optimal code font size to fill available horizontal space. */
-function computeCodeFontSize(format: LabelFormat): number {
-  const cellH = parseFloat(format.cellHeight) * 72; // inches → pt
-  const floor = parseFloat(format.codeFontSize);
-  const cap = 0.25 * cellH;
-
-  const cellW = parseFloat(format.cellWidth) * 72;
-  const qrW = parseFloat(format.qrSize) * 72;
-  const padParts = format.padding.split(/\s+/).map((p) => parseFloat(p));
-  const padH = (padParts[1] ?? padParts[0]) * 2; // left + right padding
-  const gap = 4; // gap between QR and content (pt)
-  const availW = cellW - qrW - padH - gap;
-
-  // 6 monospace chars: each ~0.6em wide + 0.2em letter-spacing per gap (5 gaps)
-  const charWidthEms = 6 * 0.6 + 5 * 0.2;
-  const computed = availW / charWidthEms;
-
-  return Math.max(floor, Math.min(computed, cap));
-}
 
 interface LabelCellProps {
   bin: Bin;

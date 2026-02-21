@@ -1,8 +1,3 @@
-import crypto from 'crypto';
-import { getDb } from '../db.js';
-
-const SHORT_CODE_CHARSET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
-
 const STOP_WORDS = new Set([
   'THE', 'A', 'AN', 'MY', 'OF', 'FOR', 'AND', 'OR', 'IN', 'ON', 'AT', 'TO', 'IS', 'IT', 'BY', 'WITH',
 ]);
@@ -78,47 +73,4 @@ export function derivePrefix(name: string): string {
 
   // Fallback: first 3 letters
   return word.slice(0, 3).toUpperCase();
-}
-
-function generateRandomCode(): string {
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += SHORT_CODE_CHARSET[crypto.randomInt(SHORT_CODE_CHARSET.length)];
-  }
-  return code;
-}
-
-export function generateShortCode(name?: string, prefix?: string): string {
-  // Validate and clean prefix if provided
-  let resolvedPrefix = '';
-  if (prefix) {
-    resolvedPrefix = prefix.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 3);
-  }
-  // Fall back to name derivation if prefix is missing or too short
-  if (resolvedPrefix.length !== 3 && name) {
-    resolvedPrefix = derivePrefix(name);
-  }
-
-  if (!resolvedPrefix || resolvedPrefix.length !== 3) {
-    return generateRandomCode();
-  }
-
-  // Query DB for max existing number with this prefix
-  try {
-    const db = getDb();
-    const row = db.prepare(
-      `SELECT MAX(CAST(SUBSTR(short_code, 4, 3) AS INTEGER)) AS max_num FROM bins WHERE short_code GLOB '${resolvedPrefix}[0-9][0-9][0-9]'`
-    ).get() as { max_num: number | null } | undefined;
-
-    const maxNum = row?.max_num ?? 0;
-    const nextNum = maxNum + 1;
-
-    if (nextNum > 999) {
-      return generateRandomCode();
-    }
-
-    return `${resolvedPrefix}${String(nextNum).padStart(3, '0')}`;
-  } catch {
-    return generateRandomCode();
-  }
 }

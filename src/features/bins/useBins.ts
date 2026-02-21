@@ -209,22 +209,27 @@ export interface AddBinOptions {
   icon?: string;
   color?: string;
   visibility?: BinVisibility;
+  shortCodePrefix?: string;
 }
 
 export async function addBin(options: AddBinOptions): Promise<string> {
+  const body: Record<string, unknown> = {
+    locationId: options.locationId,
+    name: options.name,
+    areaId: options.areaId ?? null,
+    items: options.items ?? [],
+    notes: options.notes ?? '',
+    tags: options.tags ?? [],
+    icon: options.icon ?? '',
+    color: options.color ?? '',
+    visibility: options.visibility ?? 'location',
+  };
+  if (options.shortCodePrefix) {
+    body.shortCodePrefix = options.shortCodePrefix;
+  }
   const result = await apiFetch<{ id: string }>('/api/bins', {
     method: 'POST',
-    body: {
-      locationId: options.locationId,
-      name: options.name,
-      areaId: options.areaId ?? null,
-      items: options.items ?? [],
-      notes: options.notes ?? '',
-      tags: options.tags ?? [],
-      icon: options.icon ?? '',
-      color: options.color ?? '',
-      visibility: options.visibility ?? 'location',
-    },
+    body,
   });
   notifyBinsChanged();
   return result.id;

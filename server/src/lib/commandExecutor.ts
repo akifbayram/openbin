@@ -163,10 +163,10 @@ function executeSingleAction(
       }
 
       // Generate short code with retry
-      let shortCode = generateShortCode();
+      let shortCode = generateShortCode(action.name);
       const maxRetries = 10;
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        const code = attempt === 0 ? shortCode : generateShortCode();
+        const code = attempt === 0 ? shortCode : generateShortCode(action.name);
         try {
           querySync(
             `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, created_by, short_code)

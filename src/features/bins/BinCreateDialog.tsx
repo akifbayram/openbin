@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Sparkles, X, Loader2, Settings } from 'lucide-react';
+import { Camera, HelpCircle, Sparkles, X, Loader2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,6 +18,7 @@ import { ItemsInput } from './ItemsInput';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { addBin, useAllTags } from './useBins';
+import { derivePrefix } from '@/lib/derivePrefix';
 import { VisibilityPicker } from './VisibilityPicker';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAuth } from '@/lib/auth';
@@ -54,7 +55,13 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
   const [icon, setIcon] = useState('');
   const [color, setColor] = useState('');
   const [visibility, setVisibility] = useState<BinVisibility>('location');
+  const [shortCodePrefix, setShortCodePrefix] = useState('');
+  const [prefixManuallyEdited, setPrefixManuallyEdited] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Auto-derive prefix from name unless user has manually edited it
+  const derivedPrefix = name.trim() ? derivePrefix(name.trim()) : '';
+  const displayPrefix = prefixManuallyEdited ? shortCodePrefix : derivedPrefix;
 
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
@@ -62,6 +69,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<AiSuggestions | null>(null);
   const [aiSetupOpen, setAiSetupOpen] = useState(false);
+  const [showCodeHelp, setShowCodeHelp] = useState(false);
 
   // Revoke ObjectURLs on cleanup
   useEffect(() => {
@@ -93,6 +101,8 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
     setIcon('');
     setColor('');
     setVisibility('location');
+    setShortCodePrefix('');
+    setPrefixManuallyEdited(false);
     photoPreviews.forEach((url) => URL.revokeObjectURL(url));
     setPhotos([]);
     setPhotoPreviews([]);
@@ -172,6 +182,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
         icon,
         color,
         visibility,
+        shortCodePrefix: displayPrefix || undefined,
       });
       // Upload photos non-blocking (fire-and-forget)
       if (photos.length > 0) {
@@ -279,11 +290,48 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
               <Input
                 id="bin-name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (prefixManuallyEdited && !e.target.value.trim()) {
+                    setPrefixManuallyEdited(false);
+                    setShortCodePrefix('');
+                  }
+                }}
                 placeholder="e.g., Holiday Decorations"
                 required
                 autoFocus
               />
+              {name.trim() && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)]">
+                    <span>Code:</span>
+                    <input
+                      type="text"
+                      value={displayPrefix}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 3);
+                        setShortCodePrefix(val);
+                        setPrefixManuallyEdited(true);
+                      }}
+                      className="w-[4.5ch] bg-[var(--bg-input)] border border-[var(--border)] rounded px-1 py-0.5 text-center font-mono text-[13px] text-[var(--text-primary)] uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                      maxLength={3}
+                    />
+                    <span className="font-mono tracking-wider">###</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowCodeHelp((v) => !v)}
+                      className="inline-flex items-center justify-center h-4 w-4 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                    >
+                      <HelpCircle className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {showCodeHelp && (
+                    <p className="text-[12px] text-[var(--text-tertiary)] leading-snug">
+                      The short code is printed on QR labels to identify this bin. The prefix is auto-derived from the name but can be overridden.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Items</Label>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Printer, CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical } from 'lucide-react';
+import { Printer, CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import { useAreaList } from '@/features/areas/useAreas';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { LabelSheet } from './LabelSheet';
-import { LABEL_FORMATS, getLabelFormat, DEFAULT_LABEL_FORMAT, getOrientation, computeLabelsPerPage } from './labelFormats';
+import { LABEL_FORMATS, getLabelFormat, DEFAULT_LABEL_FORMAT, getOrientation, computeLabelsPerPage, computePageSize } from './labelFormats';
 import { usePrintSettings } from './usePrintSettings';
 import type { LabelFormat } from './labelFormats';
 import type { LabelOptions, CustomState } from './usePrintSettings';
@@ -70,6 +70,8 @@ function applyFontScale(fmt: LabelFormat, scale: number): LabelFormat {
 }
 
 const CUSTOM_FIELDS: { label: string; key: keyof LabelFormat; min: string; max?: string; step: string; isNumber?: boolean }[] = [
+  { label: 'Page Width (in)', key: 'pageWidth', min: '1', step: '0.5', isNumber: true },
+  { label: 'Page Height (in)', key: 'pageHeight', min: '1', step: '0.5', isNumber: true },
   { label: 'Label Width (in)', key: 'cellWidth', min: '0.1', step: '0.0625' },
   { label: 'Label Height (in)', key: 'cellHeight', min: '0.1', step: '0.0625' },
   { label: 'Columns', key: 'columns', min: '1', max: '10', step: '1', isNumber: true },
@@ -93,6 +95,7 @@ export function PrintPage() {
   const [optionsExpanded, setOptionsExpanded] = useState(false);
   const [presetName, setPresetName] = useState('');
   const [showSaveInput, setShowSaveInput] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const { formatKey, customState, labelOptions, presets: savedPresets } = settings;
 
@@ -113,7 +116,10 @@ export function PrintPage() {
   }
 
   function seedOverrides(fmt: LabelFormat): Partial<LabelFormat> {
+    const { width, height } = computePageSize(fmt);
     return {
+      pageWidth: fmt.pageWidth ?? width,
+      pageHeight: fmt.pageHeight ?? height,
       cellWidth: fmt.cellWidth,
       cellHeight: fmt.cellHeight,
       columns: fmt.columns,
@@ -200,6 +206,17 @@ export function PrintPage() {
     : '11pt';
   const effectiveOrientation = customState.overrides.orientation ?? getOrientation(baseFormat);
   const selectedBins: Bin[] = allBins.filter((b) => selectedIds.has(b.id));
+
+  async function handleDownloadPDF() {
+    if (pdfLoading || selectedBins.length === 0) return;
+    setPdfLoading(true);
+    try {
+      const { downloadLabelPDF } = await import('./downloadLabelPDF');
+      await downloadLabelPDF({ bins: selectedBins, format: labelFormat, labelOptions, iconSize });
+    } finally {
+      setPdfLoading(false);
+    }
+  }
 
   function toggleOrientation() {
     const newOrientation = effectiveOrientation === 'landscape' ? 'portrait' : 'landscape';
@@ -590,13 +607,24 @@ export function PrintPage() {
 
         {selectedBins.length > 0 && (
           <>
-            <Button
-              onClick={() => window.print()}
-              className="w-full rounded-[var(--radius-md)] h-12 text-[17px]"
-            >
-              <Printer className="h-5 w-5 mr-2.5" />
-              Print {selectedBins.length} {selectedBins.length !== 1 ? 'Labels' : 'Label'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => window.print()}
+                className="flex-1 rounded-[var(--radius-md)] h-12 text-[17px]"
+              >
+                <Printer className="h-5 w-5 mr-2.5" />
+                Print {selectedBins.length} {selectedBins.length !== 1 ? 'Labels' : 'Label'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDownloadPDF}
+                disabled={pdfLoading}
+                className="rounded-[var(--radius-md)] h-12 px-4 text-[15px]"
+              >
+                <Download className={cn('h-5 w-5 mr-1.5', pdfLoading && 'animate-pulse')} />
+                PDF
+              </Button>
+            </div>
 
             <Card>
               <CardContent>

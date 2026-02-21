@@ -133,7 +133,7 @@ export function insertBinWithShortCode(
   userId: string,
 ): void {
   for (let attempt = 0; attempt <= 10; attempt++) {
-    const code = attempt === 0 && bin.shortCode ? bin.shortCode : generateShortCode();
+    const code = attempt === 0 && bin.shortCode ? bin.shortCode : generateShortCode(bin.name);
     try {
       querySync(
         `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, short_code, created_by, created_at, updated_at)
