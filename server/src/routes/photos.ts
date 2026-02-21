@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import fs from 'fs';
+import sharp from 'sharp';
 import { query } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { logActivity } from '../lib/activityLog.js';
@@ -7,6 +8,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { ValidationError, NotFoundError, ForbiddenError } from '../lib/httpErrors.js';
 import { safePath } from '../lib/pathSafety.js';
 import { PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
+import path from 'path';
 
 const router = Router();
 
@@ -82,6 +84,65 @@ router.get('/:id/file', asyncHandler(async (req, res) => {
   fs.createReadStream(filePath).pipe(res);
 }));
 
+// GET /api/photos/:id/thumb — serve photo thumbnail
+router.get('/:id/thumb', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const access = await verifyPhotoAccess(id, req.user!.id);
+  if (!access) {
+    throw new NotFoundError('Photo not found');
+  }
+
+  // Check for thumb_path
+  const thumbResult = await query('SELECT thumb_path, storage_path FROM photos WHERE id = $1', [id]);
+  const photo = thumbResult.rows[0];
+  if (!photo) {
+    throw new NotFoundError('Photo not found');
+  }
+
+  // Try to serve existing thumbnail
+  if (photo.thumb_path) {
+    const thumbFile = safePath(PHOTO_STORAGE_PATH, photo.thumb_path);
+    if (thumbFile && fs.existsSync(thumbFile)) {
+      res.setHeader('Content-Type', 'image/webp');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      fs.createReadStream(thumbFile).pipe(res);
+      return;
+    }
+  }
+
+  // Generate thumbnail lazily if it doesn't exist yet
+  const originalFile = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
+  if (!originalFile || !fs.existsSync(originalFile)) {
+    throw new NotFoundError('Photo file not found on disk');
+  }
+
+  try {
+    const thumbFilename = `${path.basename(photo.storage_path, path.extname(photo.storage_path))}_thumb.webp`;
+    const thumbStoragePath = path.join(path.dirname(photo.storage_path), thumbFilename);
+    const thumbFullPath = path.join(PHOTO_STORAGE_PATH, thumbStoragePath);
+
+    await sharp(originalFile)
+      .resize(600, undefined, { withoutEnlargement: true })
+      .webp({ quality: 70 })
+      .toFile(thumbFullPath);
+
+    // Update DB with thumb path
+    await query('UPDATE photos SET thumb_path = $1 WHERE id = $2', [thumbStoragePath, id]);
+
+    res.setHeader('Content-Type', 'image/webp');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    fs.createReadStream(thumbFullPath).pipe(res);
+  } catch {
+    // Fallback to original
+    const photoResult = await query('SELECT mime_type FROM photos WHERE id = $1', [id]);
+    const mimeType = photoResult.rows[0]?.mime_type || 'application/octet-stream';
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    fs.createReadStream(originalFile).pipe(res);
+  }
+}));
+
 // DELETE /api/photos/:id — delete photo
 router.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -90,6 +151,10 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   if (!access) {
     throw new NotFoundError('Photo not found');
   }
+
+  // Get thumb path before deletion
+  const thumbResult = await query('SELECT thumb_path FROM photos WHERE id = $1', [id]);
+  const thumbPath = thumbResult.rows[0]?.thumb_path;
 
   await query('DELETE FROM photos WHERE id = $1', [id]);
 
@@ -101,6 +166,20 @@ router.delete('/:id', asyncHandler(async (req, res) => {
       }
     } catch {
       // Ignore file cleanup errors
+    }
+  }
+
+  // Clean up thumbnail
+  if (thumbPath) {
+    const thumbFile = safePath(PHOTO_STORAGE_PATH, thumbPath);
+    if (thumbFile) {
+      try {
+        if (fs.existsSync(thumbFile)) {
+          fs.unlinkSync(thumbFile);
+        }
+      } catch {
+        // Ignore cleanup errors
+      }
     }
   }
 

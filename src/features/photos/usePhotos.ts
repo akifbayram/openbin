@@ -24,6 +24,10 @@ export function getPhotoUrl(photoId: string): string {
   return `/api/photos/${photoId}/file`;
 }
 
+export function getPhotoThumbUrl(photoId: string): string {
+  return `/api/photos/${photoId}/thumb`;
+}
+
 export async function addPhoto(binId: string, file: File): Promise<string> {
   const formData = new FormData();
   formData.append('photo', file);
