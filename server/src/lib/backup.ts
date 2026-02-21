@@ -20,12 +20,13 @@ export interface BackupConfig {
 }
 
 export function getConfig(): BackupConfig {
+  const rawRetention = parseInt(process.env.BACKUP_RETENTION || '7', 10);
   return {
-    enabled: appConfig.backupEnabled,
-    schedule: appConfig.backupInterval,
-    retention: appConfig.backupRetention,
-    backupPath: appConfig.backupPath,
-    webhookUrl: appConfig.backupWebhookUrl,
+    enabled: process.env.BACKUP_ENABLED === 'true' || process.env.BACKUP_ENABLED === '1',
+    schedule: process.env.BACKUP_INTERVAL || 'daily',
+    retention: Number.isFinite(rawRetention) ? Math.max(1, Math.min(rawRetention, 365)) : 7,
+    backupPath: process.env.BACKUP_PATH || './data/backups',
+    webhookUrl: process.env.BACKUP_WEBHOOK_URL || '',
   };
 }
 
