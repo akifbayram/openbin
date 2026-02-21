@@ -353,6 +353,32 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
     }),
   );
 
+  // --- Tags ---
+
+  server.tool(
+    "add_tags",
+    "Add tags to a bin (merges with existing tags, does not replace them)",
+    {
+      id: z.string().describe("Bin UUID"),
+      tags: z.array(z.string()).min(1).describe("Tag names to add"),
+    },
+    withErrorHandling(async ({ id, tags }) => {
+      const result = await api.put<{ id: string; tags: string[] }>(
+        `/api/bins/${encodeURIComponent(id)}/add-tags`,
+        { tags },
+      );
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Tags updated. Bin now has ${result.tags.length} tag(s): ${result.tags.join(", ")}`,
+          },
+        ],
+      };
+    }),
+  );
+
   // --- Move ---
 
   server.tool(

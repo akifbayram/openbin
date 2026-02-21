@@ -12,6 +12,20 @@ interface ListResponse {
   count: number;
 }
 
+interface TagColor {
+  id: string;
+  location_id: string;
+  tag: string;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface TagColorListResponse {
+  results: TagColor[];
+  count: number;
+}
+
 export function registerTagTools(server: McpServer, api: ApiClient) {
   server.tool(
     "list_tags",
@@ -41,6 +55,74 @@ export function registerTagTools(server: McpServer, api: ApiClient) {
             text: `Found ${data.count} tag(s):\n\n${lines.join("\n")}`,
           },
         ],
+      };
+    }),
+  );
+
+  // --- Tag Colors ---
+
+  server.tool(
+    "list_tag_colors",
+    "List all tag color assignments for a location",
+    {
+      location_id: z.string().describe("Location UUID"),
+    },
+    withErrorHandling(async ({ location_id }) => {
+      const params = new URLSearchParams({ location_id });
+      const data = await api.get<TagColorListResponse>(`/api/tag-colors?${params}`);
+
+      if (data.results.length === 0) {
+        return { content: [{ type: "text" as const, text: "No tag colors configured." }] };
+      }
+
+      const lines = data.results.map((tc) => `- **${tc.tag}**: ${tc.color}`);
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `${data.count} tag color(s):\n\n${lines.join("\n")}`,
+          },
+        ],
+      };
+    }),
+  );
+
+  server.tool(
+    "set_tag_color",
+    "Set or update the color for a tag in a location",
+    {
+      location_id: z.string().describe("Location UUID"),
+      tag: z.string().describe("Tag name"),
+      color: z.string().describe("Color value (e.g. '#ff0000', 'red')"),
+    },
+    withErrorHandling(async ({ location_id, tag, color }) => {
+      await api.put("/api/tag-colors", { locationId: location_id, tag, color });
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Tag color set: "${tag}" → ${color}`,
+          },
+        ],
+      };
+    }),
+  );
+
+  server.tool(
+    "delete_tag_color",
+    "Remove the color assignment for a tag",
+    {
+      location_id: z.string().describe("Location UUID"),
+      tag: z.string().describe("Tag name"),
+    },
+    withErrorHandling(async ({ location_id, tag }) => {
+      const params = new URLSearchParams({ location_id });
+      await api.del(`/api/tag-colors/${encodeURIComponent(tag)}?${params}`);
+
+      return {
+        content: [{ type: "text" as const, text: `Tag color removed for "${tag}".` }],
       };
     }),
   );

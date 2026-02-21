@@ -47,4 +47,32 @@ export function registerScanHistoryTools(server: McpServer, api: ApiClient) {
       };
     }),
   );
+
+  server.tool(
+    "record_scan",
+    "Record a QR scan for a bin (updates scan history)",
+    {
+      bin_id: z.string().describe("Bin UUID"),
+    },
+    withErrorHandling(async ({ bin_id }) => {
+      await api.post("/api/scan-history", { binId: bin_id });
+
+      return {
+        content: [{ type: "text" as const, text: "Scan recorded." }],
+      };
+    }),
+  );
+
+  server.tool(
+    "clear_scan_history",
+    "Clear all scan history for the current user",
+    {},
+    withErrorHandling(async () => {
+      await api.del("/api/scan-history");
+
+      return {
+        content: [{ type: "text" as const, text: "Scan history cleared." }],
+      };
+    }),
+  );
 }
