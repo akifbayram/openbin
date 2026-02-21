@@ -64,13 +64,17 @@ export function TagsPage() {
       )}
 
       {isLoading ? (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-10 w-full rounded-[var(--radius-full)]" />
+          <div className="flex flex-col gap-1">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">
               <Skeleton className="h-6 w-20" />
               <Skeleton className="h-4 w-12 flex-1" />
+              <Skeleton className="h-6 w-6 rounded-full" />
             </div>
           ))}
+          </div>
         </div>
       ) : tags.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">

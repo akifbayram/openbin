@@ -156,7 +156,7 @@ export function ActivityPage() {
     }
   }, [permissionsLoading, isAdmin, navigate]);
 
-  if (permissionsLoading || !isAdmin) {
+  if (!permissionsLoading && !isAdmin) {
     return null;
   }
 
@@ -166,19 +166,22 @@ export function ActivityPage() {
         Activity
       </h1>
 
-      {isLoading && entries.length === 0 ? (
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="glass-card rounded-[var(--radius-lg)] px-4 py-3.5">
-              <div className="flex items-start gap-3">
-                <Skeleton className="h-8 w-8 rounded-full shrink-0" />
-                <div className="flex-1 space-y-1.5">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/4" />
+      {(isLoading || permissionsLoading) && entries.length === 0 ? (
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <Skeleton className="h-3 w-16" />
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="glass-card rounded-[var(--radius-lg)] px-4 py-3.5">
+                <div className="flex items-start gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/4" />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       ) : entries.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">

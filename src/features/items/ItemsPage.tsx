@@ -61,7 +61,9 @@ export function ItemsPage() {
       )}
 
       {isLoading ? (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-10 w-full rounded-[var(--radius-full)]" />
+          <div className="flex flex-col gap-1">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">
               <div className="flex-1 min-w-0 space-y-1.5">
@@ -70,6 +72,7 @@ export function ItemsPage() {
               </div>
             </div>
           ))}
+          </div>
         </div>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
