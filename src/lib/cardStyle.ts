@@ -1,6 +1,12 @@
+import type { ColorPreset } from './colorPalette';
 import { getColorPreset } from './colorPalette';
 
 export type CardStyleVariant = 'glass' | 'outline' | 'gradient' | 'stripe' | 'photo';
+export type StripePosition = 'left' | 'right' | 'top' | 'bottom';
+export type StripeType = 'straight';  // undefined = rounded
+export type BorderStyle = 'solid' | 'dashed' | 'dotted' | 'double';
+export type BorderWidth = '1' | '2' | '3' | '4';
+export type StripeWidth = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10';
 
 export interface CardStyle {
   variant: CardStyleVariant;
@@ -8,12 +14,12 @@ export interface CardStyle {
   coverPhotoId?: string;
   borderColor?: string;
   fillColor?: string;
-  borderWidth?: string;
-  borderStyle?: string;
-  stripePosition?: string;
+  borderWidth?: BorderWidth;
+  borderStyle?: BorderStyle;
+  stripePosition?: StripePosition;
   stripeColor?: string;
-  stripeType?: string; // 'straight' | undefined (undefined = rounded, for backward compat)
-  stripeWidth?: string; // '1'..'10', default '4'
+  stripeType?: StripeType;
+  stripeWidth?: StripeWidth;
 }
 
 /** Parse the card_style JSON string from the DB. Returns null for default glass. */
@@ -41,7 +47,19 @@ export interface CardRenderProps {
   style: React.CSSProperties;
   mutedColor: string | undefined;
   isPhotoVariant: boolean;
-  stripeBar?: { color: string; position: 'left' | 'right' | 'top' | 'bottom'; width: number };
+  stripeBar?: { color: string; position: StripePosition; width: number };
+}
+
+/** Return muted text color when a color preset is active, undefined otherwise. */
+function getMutedColor(colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): string | undefined {
+  return colorPreset
+    ? (theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)')
+    : undefined;
+}
+
+/** Return the preset background for the given theme, undefined if no preset. */
+function getColorBg(colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): string | undefined {
+  return colorPreset ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg) : undefined;
 }
 
 /** Compute CSS class + inline style for a bin card based on its color + card_style. */
@@ -56,14 +74,11 @@ export function getCardRenderProps(
 
   // Default glass: existing behavior
   if (variant === 'glass' || !cardStyle) {
-    const colorBg = colorPreset ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg) : undefined;
-    const mutedColor = colorPreset
-      ? (theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)')
-      : undefined;
+    const colorBg = getColorBg(colorPreset, theme);
     return {
       className: 'glass-card',
       style: colorBg ? { backgroundColor: colorBg } : {},
-      mutedColor,
+      mutedColor: getMutedColor(colorPreset, theme),
       isPhotoVariant: false,
     };
   }
@@ -71,9 +86,7 @@ export function getCardRenderProps(
   if (variant === 'outline') {
     const borderPreset = getColorPreset(cardStyle.borderColor ?? '');
     const borderResolved = borderPreset?.dot ?? colorPreset?.dot ?? 'var(--border)';
-
-    const colorBg = colorPreset ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg) : undefined;
-
+    const colorBg = getColorBg(colorPreset, theme);
     const width = cardStyle.borderWidth ?? '2';
     const bStyle = cardStyle.borderStyle ?? 'solid';
 
@@ -83,9 +96,7 @@ export function getCardRenderProps(
         border: `${width}px ${bStyle} ${borderResolved}`,
         ...(colorBg ? { backgroundColor: colorBg } : {}),
       },
-      mutedColor: colorPreset
-        ? (theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)')
-        : undefined,
+      mutedColor: getMutedColor(colorPreset, theme),
       isPhotoVariant: false,
     };
   }
@@ -106,12 +117,10 @@ export function getCardRenderProps(
   }
 
   if (variant === 'stripe') {
-    const colorBg = colorPreset ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg) : undefined;
-
+    const colorBg = getColorBg(colorPreset, theme);
     const stripePreset = getColorPreset(cardStyle.stripeColor ?? '');
     const stripeResolved = stripePreset?.dot ?? colorPreset?.dot ?? 'var(--accent)';
-
-    const pos = (cardStyle.stripePosition ?? 'left') as 'left' | 'right' | 'top' | 'bottom';
+    const pos = cardStyle.stripePosition ?? 'left';
     const sw = Number(cardStyle.stripeWidth) || 4;
 
     if (cardStyle.stripeType === 'straight') {
@@ -122,9 +131,7 @@ export function getCardRenderProps(
           overflow: 'hidden',
           ...(colorBg ? { backgroundColor: colorBg } : {}),
         },
-        mutedColor: colorPreset
-          ? (theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)')
-          : undefined,
+        mutedColor: getMutedColor(colorPreset, theme),
         isPhotoVariant: false,
         stripeBar: { color: stripeResolved, position: pos, width: sw },
       };
@@ -142,9 +149,7 @@ export function getCardRenderProps(
         [borderProp]: `${sw}px solid ${stripeResolved}`,
         ...(colorBg ? { backgroundColor: colorBg } : {}),
       },
-      mutedColor: colorPreset
-        ? (theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)')
-        : undefined,
+      mutedColor: getMutedColor(colorPreset, theme),
       isPhotoVariant: false,
     };
   }

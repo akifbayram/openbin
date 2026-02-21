@@ -40,6 +40,17 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   const coverPhotoId = cardStyle?.coverPhotoId;
   const { mutedColor } = renderProps;
 
+  // Precomputed style variables for photo/color variants
+  const secondaryStyle: React.CSSProperties | undefined = isPhoto
+    ? { color: 'rgba(255,255,255,0.8)', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }
+    : mutedColor ? { color: mutedColor } : undefined;
+  const secondaryBorderStyle: React.CSSProperties | undefined = isPhoto
+    ? { borderColor: 'rgba(255,255,255,0.7)' }
+    : mutedColor ? { borderColor: mutedColor } : undefined;
+  const iconStyle: React.CSSProperties | undefined = isPhoto
+    ? { color: 'rgba(255,255,255,0.8)' }
+    : mutedColor ? { color: mutedColor } : undefined;
+
   const handleLongPress = useCallback(() => {
     if (!selectable) {
       haptic();
@@ -81,9 +92,6 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   const photoTextStyle: React.CSSProperties | undefined = isPhoto && coverPhotoId
     ? { color: 'white', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }
     : undefined;
-  const photoMutedStyle: React.CSSProperties | undefined = isPhoto && coverPhotoId
-    ? { color: 'rgba(255,255,255,0.8)', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }
-    : undefined;
 
   const checkbox = (
     <div
@@ -93,7 +101,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           ? 'bg-[var(--accent)] border-[var(--accent)]'
           : 'border-[var(--text-tertiary)]'
       )}
-      style={!selected ? (isPhoto ? { borderColor: 'rgba(255,255,255,0.7)' } : mutedColor ? { borderColor: mutedColor } : undefined) : undefined}
+      style={!selected ? secondaryBorderStyle : undefined}
     >
       {selected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
     </div>
@@ -110,14 +118,14 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           {bin.visibility === 'private' && (
             <Lock
               className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]"
-              style={isPhoto ? photoMutedStyle : mutedColor ? { color: mutedColor } : undefined}
+              style={secondaryStyle}
             />
           )}
         </h3>
         {bin.area_name && (
           <p
             className="text-[12px] text-[var(--text-tertiary)] truncate leading-relaxed"
-            style={isPhoto ? photoMutedStyle : mutedColor ? { color: mutedColor } : undefined}
+            style={secondaryStyle}
           >
             <Highlight text={bin.area_name} query={searchQuery} />
           </p>
@@ -125,7 +133,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
         {bin.items.length > 0 && (
           <p
             className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed"
-            style={isPhoto ? photoMutedStyle : mutedColor ? { color: mutedColor } : undefined}
+            style={secondaryStyle}
           >
             <Highlight text={bin.items.map(i => i.name).join(', ')} query={searchQuery} />
           </p>
@@ -183,7 +191,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           {/* Default icon — fades out on hover (hover:hover targets pointer devices only) */}
           <BinIcon
             className="absolute inset-0 h-[22px] w-[22px] text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
-            style={isPhoto ? { color: 'rgba(255,255,255,0.8)' } : mutedColor ? { color: mutedColor } : undefined}
+            style={iconStyle}
           />
           {/* Checkbox — hidden by default, revealed on hover for pointer devices */}
           <div
@@ -192,14 +200,14 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
             )}
           >
             <div className="h-[22px] w-[22px] rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center"
-              style={isPhoto ? { borderColor: 'rgba(255,255,255,0.7)' } : mutedColor ? { borderColor: mutedColor } : undefined}
+              style={secondaryBorderStyle}
             />
           </div>
         </div>
       ) : (
         <BinIcon
           className="mt-0.5 h-[22px] w-[22px] shrink-0 text-[var(--text-tertiary)]"
-          style={isPhoto ? { color: 'rgba(255,255,255,0.8)' } : mutedColor ? { color: mutedColor } : undefined}
+          style={iconStyle}
         />
       )}
     </div>

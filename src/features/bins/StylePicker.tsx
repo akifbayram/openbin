@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ColorPicker } from './ColorPicker';
 import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
-import type { CardStyleVariant } from '@/lib/cardStyle';
+import type { CardStyleVariant, CardStyle, StripePosition, BorderStyle, BorderWidth, StripeWidth } from '@/lib/cardStyle';
 import { parseCardStyle, serializeCardStyle } from '@/lib/cardStyle';
 import type { Photo } from '@/types';
 
@@ -24,7 +24,7 @@ const VARIANTS: { key: CardStyleVariant; label: string }[] = [
   { key: 'photo', label: 'Photo' },
 ];
 
-const STRIPE_POSITIONS: { key: string; label: string }[] = [
+const STRIPE_POSITIONS: { key: StripePosition; label: string }[] = [
   { key: 'left', label: 'Left' },
   { key: 'right', label: 'Right' },
   { key: 'top', label: 'Top' },
@@ -36,15 +36,49 @@ const STRIPE_TYPES: { key: string; label: string }[] = [
   { key: 'straight', label: 'Straight' },
 ];
 
-const STRIPE_WIDTHS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+const STRIPE_WIDTHS: StripeWidth[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
-const BORDER_WIDTHS = ['1', '2', '3', '4'];
-const BORDER_STYLES: { key: string; label: string }[] = [
+const BORDER_WIDTHS: BorderWidth[] = ['1', '2', '3', '4'];
+const BORDER_STYLES: { key: BorderStyle; label: string }[] = [
   { key: 'solid', label: 'Solid' },
   { key: 'dashed', label: 'Dashed' },
   { key: 'dotted', label: 'Dotted' },
   { key: 'double', label: 'Double' },
 ];
+
+function OptionGroup<K extends string>({
+  options,
+  value,
+  onChange,
+  gap = 'gap-1.5',
+  renderLabel,
+}: {
+  options: { key: K; label: string }[];
+  value: K;
+  onChange: (key: K) => void;
+  gap?: string;
+  renderLabel?: (opt: { key: K; label: string }) => string;
+}) {
+  return (
+    <div className={cn('flex', gap)}>
+      {options.map((opt) => (
+        <button
+          key={opt.key}
+          type="button"
+          onClick={() => onChange(opt.key)}
+          className={cn(
+            'flex-1 py-1 rounded-full text-[12px] font-medium transition-colors',
+            value === opt.key
+              ? 'bg-[var(--accent)] text-white'
+              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+          )}
+        >
+          {renderLabel ? renderLabel(opt) : opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function VariantPreview({ variant, color }: { variant: CardStyleVariant; color: string }) {
   const baseClass = 'aspect-square w-full rounded-[4px] transition-all';
@@ -83,6 +117,10 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
   const displayLabel = VARIANTS.find((v) => v.key === currentVariant)?.label ?? 'Glass';
   const hasPhotos = photos && photos.length > 0;
 
+  function updateStyle(patch: Partial<CardStyle>) {
+    onChange(serializeCardStyle({ ...parsed, ...patch } as CardStyle));
+  }
+
   function selectVariant(variant: CardStyleVariant) {
     if (variant === 'glass') {
       onChange('');
@@ -98,42 +136,6 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
     } else {
       onChange(serializeCardStyle({ variant }));
     }
-  }
-
-  function selectCoverPhoto(photoId: string) {
-    onChange(serializeCardStyle({ variant: 'photo', coverPhotoId: photoId }));
-  }
-
-  function setGradientEnd(colorEnd: string) {
-    onChange(serializeCardStyle({ variant: 'gradient', colorEnd }));
-  }
-
-  function setStripePosition(stripePosition: string) {
-    onChange(serializeCardStyle({ variant: 'stripe', stripePosition, stripeColor: parsed?.stripeColor, stripeType: parsed?.stripeType, stripeWidth: parsed?.stripeWidth }));
-  }
-
-  function setStripeColor(stripeColor: string) {
-    onChange(serializeCardStyle({ variant: 'stripe', stripePosition: parsed?.stripePosition, stripeColor, stripeType: parsed?.stripeType, stripeWidth: parsed?.stripeWidth }));
-  }
-
-  function setStripeType(stripeType: string) {
-    onChange(serializeCardStyle({ variant: 'stripe', stripePosition: parsed?.stripePosition, stripeColor: parsed?.stripeColor, stripeType: stripeType === 'rounded' ? undefined : stripeType, stripeWidth: parsed?.stripeWidth }));
-  }
-
-  function setStripeWidth(stripeWidth: string) {
-    onChange(serializeCardStyle({ variant: 'stripe', stripePosition: parsed?.stripePosition, stripeColor: parsed?.stripeColor, stripeType: parsed?.stripeType, stripeWidth: stripeWidth === '4' ? undefined : stripeWidth }));
-  }
-
-  function setOutlineBorderColor(borderColor: string) {
-    onChange(serializeCardStyle({ variant: 'outline', borderColor, borderWidth: parsed?.borderWidth, borderStyle: parsed?.borderStyle }));
-  }
-
-  function setOutlineBorderWidth(borderWidth: string) {
-    onChange(serializeCardStyle({ variant: 'outline', borderColor: parsed?.borderColor, borderWidth, borderStyle: parsed?.borderStyle }));
-  }
-
-  function setOutlineBorderStyle(borderStyle: string) {
-    onChange(serializeCardStyle({ variant: 'outline', borderColor: parsed?.borderColor, borderWidth: parsed?.borderWidth, borderStyle }));
   }
 
   return (
@@ -186,47 +188,23 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
             <div className="space-y-2.5">
               <div className="space-y-1.5">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Border color</p>
-                <ColorPicker value={parsed?.borderColor ?? ''} onChange={setOutlineBorderColor} />
+                <ColorPicker value={parsed?.borderColor ?? ''} onChange={(borderColor) => updateStyle({ borderColor })} />
               </div>
               <div className="space-y-1.5">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Thickness</p>
-                <div className="flex gap-1.5">
-                  {BORDER_WIDTHS.map((w) => (
-                    <button
-                      key={w}
-                      type="button"
-                      onClick={() => setOutlineBorderWidth(w)}
-                      className={cn(
-                        'flex-1 py-1 rounded-full text-[12px] font-medium transition-colors',
-                        (parsed?.borderWidth ?? '2') === w
-                          ? 'bg-[var(--accent)] text-white'
-                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                      )}
-                    >
-                      {w}px
-                    </button>
-                  ))}
-                </div>
+                <OptionGroup
+                  options={BORDER_WIDTHS.map((w) => ({ key: w, label: `${w}px` }))}
+                  value={(parsed?.borderWidth ?? '2') as BorderWidth}
+                  onChange={(borderWidth) => updateStyle({ borderWidth })}
+                />
               </div>
               <div className="space-y-1.5">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Border style</p>
-                <div className="flex gap-1.5">
-                  {BORDER_STYLES.map((s) => (
-                    <button
-                      key={s.key}
-                      type="button"
-                      onClick={() => setOutlineBorderStyle(s.key)}
-                      className={cn(
-                        'flex-1 py-1 rounded-full text-[12px] font-medium transition-colors',
-                        (parsed?.borderStyle ?? 'solid') === s.key
-                          ? 'bg-[var(--accent)] text-white'
-                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                      )}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
+                <OptionGroup
+                  options={BORDER_STYLES}
+                  value={(parsed?.borderStyle ?? 'solid') as BorderStyle}
+                  onChange={(borderStyle) => updateStyle({ borderStyle })}
+                />
               </div>
             </div>
           )}
@@ -236,67 +214,32 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
             <div className="space-y-2.5">
               <div className="space-y-1.5">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Type</p>
-                <div className="flex gap-1.5">
-                  {STRIPE_TYPES.map((st) => (
-                    <button
-                      key={st.key}
-                      type="button"
-                      onClick={() => setStripeType(st.key)}
-                      className={cn(
-                        'flex-1 py-1 rounded-full text-[12px] font-medium transition-colors',
-                        (parsed?.stripeType ?? 'rounded') === st.key
-                          ? 'bg-[var(--accent)] text-white'
-                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                      )}
-                    >
-                      {st.label}
-                    </button>
-                  ))}
-                </div>
+                <OptionGroup
+                  options={STRIPE_TYPES}
+                  value={parsed?.stripeType ?? 'rounded'}
+                  onChange={(key) => updateStyle({ stripeType: key === 'rounded' ? undefined : key as 'straight' })}
+                />
               </div>
               <div className="space-y-1.5">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Position</p>
-                <div className="flex gap-1.5">
-                  {STRIPE_POSITIONS.map((p) => (
-                    <button
-                      key={p.key}
-                      type="button"
-                      onClick={() => setStripePosition(p.key)}
-                      className={cn(
-                        'flex-1 py-1 rounded-full text-[12px] font-medium transition-colors',
-                        (parsed?.stripePosition ?? 'left') === p.key
-                          ? 'bg-[var(--accent)] text-white'
-                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                      )}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
+                <OptionGroup
+                  options={STRIPE_POSITIONS}
+                  value={(parsed?.stripePosition ?? 'left') as StripePosition}
+                  onChange={(stripePosition) => updateStyle({ stripePosition })}
+                />
               </div>
               <div className="space-y-1.5">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Thickness</p>
-                <div className="flex gap-1">
-                  {STRIPE_WIDTHS.map((w) => (
-                    <button
-                      key={w}
-                      type="button"
-                      onClick={() => setStripeWidth(w)}
-                      className={cn(
-                        'flex-1 py-1 rounded-full text-[12px] font-medium transition-colors',
-                        (parsed?.stripeWidth ?? '4') === w
-                          ? 'bg-[var(--accent)] text-white'
-                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                      )}
-                    >
-                      {w}
-                    </button>
-                  ))}
-                </div>
+                <OptionGroup
+                  options={STRIPE_WIDTHS.map((w) => ({ key: w, label: w }))}
+                  value={(parsed?.stripeWidth ?? '4') as StripeWidth}
+                  onChange={(stripeWidth) => updateStyle({ stripeWidth: stripeWidth === '4' ? undefined : stripeWidth })}
+                  gap="gap-1"
+                />
               </div>
               <div className="space-y-1.5">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Stripe color</p>
-                <ColorPicker value={parsed?.stripeColor ?? ''} onChange={setStripeColor} />
+                <ColorPicker value={parsed?.stripeColor ?? ''} onChange={(stripeColor) => updateStyle({ stripeColor })} />
               </div>
             </div>
           )}
@@ -305,7 +248,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
           {currentVariant === 'gradient' && (
             <div className="space-y-1.5">
               <p className="text-[12px] text-[var(--text-tertiary)]">End color</p>
-              <ColorPicker value={parsed?.colorEnd ?? ''} onChange={setGradientEnd} />
+              <ColorPicker value={parsed?.colorEnd ?? ''} onChange={(colorEnd) => updateStyle({ colorEnd })} />
             </div>
           )}
 
@@ -320,7 +263,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
                     <button
                       key={photo.id}
                       type="button"
-                      onClick={() => selectCoverPhoto(photo.id)}
+                      onClick={() => updateStyle({ variant: 'photo', coverPhotoId: photo.id })}
                       className={cn(
                         'relative aspect-square rounded-[var(--radius-sm)] overflow-hidden transition-all',
                         isSelected

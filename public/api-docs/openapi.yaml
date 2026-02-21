@@ -358,6 +358,10 @@ components:
         color:
           type: string
           description: Color preset key, empty string for no color
+        card_style:
+          type: string
+          maxLength: 500
+          description: JSON-encoded card style configuration, empty string for default glass
         short_code:
           type: string
           description: 6-character alphanumeric code for QR lookup
@@ -429,6 +433,10 @@ components:
           type: string
         color:
           type: string
+        cardStyle:
+          type: string
+          maxLength: 500
+          description: JSON-encoded card style configuration
         visibility:
           $ref: '#/components/schemas/BinVisibility'
 
@@ -459,6 +467,10 @@ components:
           type: string
         color:
           type: string
+        cardStyle:
+          type: string
+          maxLength: 500
+          description: JSON-encoded card style configuration
         visibility:
           $ref: '#/components/schemas/BinVisibility'
 
