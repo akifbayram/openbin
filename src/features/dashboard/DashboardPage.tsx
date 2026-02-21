@@ -10,6 +10,7 @@ import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useSavedViews, deleteView } from '@/lib/savedViews';
+import { buildViewSearchParams } from '@/features/bins/useBinSearchParams';
 import { SavedViewChips } from '@/components/saved-view-chips';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
 import { useTerminology } from '@/lib/terminology';
@@ -85,7 +86,7 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (debouncedSearch.trim()) {
-      navigate('/bins', { state: { search: debouncedSearch.trim() } });
+      navigate(`/bins?q=${encodeURIComponent(debouncedSearch.trim())}`);
     }
   }, [debouncedSearch, navigate]);
 
@@ -201,7 +202,7 @@ export function DashboardPage() {
       {/* Needs Organizing */}
       {dashSettings.showNeedsOrganizing && !isLoading && needsOrganizing > 0 && (
         <button
-          onClick={() => navigate('/bins', { state: { needsOrganizing: true } })}
+          onClick={() => navigate('/bins?needs_organizing=true')}
           className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center justify-between"
         >
           <div className="flex items-center gap-3">
@@ -223,7 +224,10 @@ export function DashboardPage() {
       {dashSettings.showSavedViews && !isLoading && (
         <SavedViewChips
           views={savedViews}
-          onApply={(view) => navigate('/bins', { state: { savedView: view } })}
+          onApply={(view) => {
+            const qs = buildViewSearchParams(view);
+            navigate(qs ? `/bins?${qs}` : '/bins');
+          }}
           onDelete={(viewId) => {
             deleteView(viewId).catch(() => {});
           }}

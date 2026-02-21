@@ -16,10 +16,10 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { haptic, cn } from '@/lib/utils';
-import { useDebounce } from '@/lib/useDebounce';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/usePermissions';
-import { usePaginatedBinList, useAllTags, deleteBin, restoreBin, countActiveFilters, EMPTY_FILTERS, type SortOption, type BinFilters } from './useBins';
+import { usePaginatedBinList, useAllTags, deleteBin, restoreBin, countActiveFilters } from './useBins';
+import { useBinSearchParams } from './useBinSearchParams';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 
 import { BinCard } from './BinCard';
@@ -38,66 +38,26 @@ import { SaveViewDialog } from './SaveViewDialog';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useTerminology } from '@/lib/terminology';
-import { STORAGE_KEYS } from '@/lib/storageKeys';
 import { getColorPreset } from '@/lib/colorPalette';
 import { useTagStyle } from '@/features/tags/useTagStyle';
-import type { SavedView } from '@/lib/savedViews';
 import type { Bin } from '@/types';
 
 export function BinListPage() {
   const t = useTerminology();
   const location = useLocation();
-  const [search, setSearch] = useState(() => {
-    const state = location.state as { search?: string } | null;
-    return state?.search || '';
-  });
+  const { search, setSearch, debouncedSearch, sort, setSort, filters, setFilters, clearAll } = useBinSearchParams();
 
-  // Update search/filters when navigating from Tags/Areas/Dashboard pages
+  const [createOpen, setCreateOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  // Handle create navigation state (ephemeral UI, not shareable)
   useEffect(() => {
-    const state = location.state as { search?: string; areaFilter?: string; needsOrganizing?: boolean; savedView?: SavedView; create?: boolean } | null;
+    const state = location.state as { create?: boolean } | null;
     if (state?.create) {
       setCreateOpen(true);
       window.history.replaceState({}, '');
-      return;
-    }
-    if (state?.savedView) {
-      const view = state.savedView;
-      setSearch(view.searchQuery);
-      setSort(view.sort);
-      setFilters(view.filters);
-      window.history.replaceState({}, '');
-      return;
-    }
-    if (state?.search) {
-      setSearch(state.search);
-    }
-    if (state?.areaFilter) {
-      setFilters((f) => ({ ...f, areas: [state.areaFilter!] }));
-    }
-    if (state?.needsOrganizing) {
-      setFilters((f) => ({ ...f, needsOrganizing: true }));
-    }
-    if (state?.search || state?.areaFilter || state?.needsOrganizing) {
-      // Clear the navigation state so it doesn't persist on refresh
-      window.history.replaceState({}, '');
     }
   }, [location.state]);
-
-  const debouncedSearch = useDebounce(search, 250);
-  const [sort, _setSort] = useState<SortOption>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.BIN_SORT);
-    return (saved as SortOption) || 'updated';
-  });
-  const setSort = useCallback((value: SortOption | ((prev: SortOption) => SortOption)) => {
-    _setSort((prev) => {
-      const next = typeof value === 'function' ? value(prev) : value;
-      localStorage.setItem(STORAGE_KEYS.BIN_SORT, next);
-      return next;
-    });
-  }, []);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState<BinFilters>(EMPTY_FILTERS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
   const [bulkAreaOpen, setBulkAreaOpen] = useState(false);
@@ -348,7 +308,7 @@ export function BinListPage() {
             />
             {(hasBadges || search) && (
               <button
-                onClick={() => { setSearch(''); setFilters({ ...EMPTY_FILTERS, needsOrganizing: false }); }}
+                onClick={clearAll}
                 aria-label="Clear all filters"
                 className="p-1 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-active)] shrink-0"
               >

@@ -73,11 +73,11 @@ export function AreasPage() {
   }, [bins]);
 
   function handleAreaClick(areaId: string) {
-    navigate('/bins', { state: { areaFilter: areaId } });
+    navigate(`/bins?areas=${encodeURIComponent(areaId)}`);
   }
 
   function handleUnassignedClick() {
-    navigate('/bins', { state: { areaFilter: '__unassigned__' } });
+    navigate('/bins?areas=__unassigned__');
   }
 
   async function handleCreateArea(e: React.FormEvent) {
