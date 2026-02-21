@@ -290,16 +290,12 @@ export async function restoreBin(bin: Bin): Promise<void> {
 }
 
 export function useAllTags(): string[] {
-  const { bins } = useBinList();
-  return useMemo(() => {
-    const tagSet = new Set<string>();
-    for (const bin of bins) {
-      if (Array.isArray(bin.tags)) {
-        for (const tag of bin.tags) tagSet.add(tag);
-      }
-    }
-    return [...tagSet].sort();
-  }, [bins]);
+  const { activeLocationId, token } = useAuth();
+  const { data } = useListData<{ tag: string; count: number }>(
+    token && activeLocationId ? `/api/tags?location_id=${activeLocationId}&limit=100` : null,
+    [Events.BINS],
+  );
+  return useMemo(() => data.map((t) => t.tag).sort(), [data]);
 }
 
 export async function moveBin(id: string, locationId: string): Promise<void> {

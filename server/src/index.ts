@@ -30,7 +30,7 @@ const STATIC_DIR = path.join(import.meta.dirname, '..', 'public');
 
 export function createApp(): express.Express {
   const app = express();
-  app.set('trust proxy', 1);
+  if (config.trustProxy) app.set('trust proxy', 1);
 
   // Security headers
   app.use((_req, res, next) => {
@@ -58,6 +58,7 @@ export function createApp(): express.Express {
   app.use('/api/auth/register', registerLimiter);
   app.use('/api/auth/refresh', sensitiveAuthLimiter);
   app.use('/api/auth/password', sensitiveAuthLimiter);
+  app.use('/api/auth/account', sensitiveAuthLimiter);
   app.use('/api/auth', authRoutes);
   app.use('/api/locations/join', joinLimiter);
   app.use('/api/locations', locationsRoutes);

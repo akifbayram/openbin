@@ -528,13 +528,15 @@ describe('useBin', () => {
 // useAllTags
 // ---------------------------------------------------------------------------
 describe('useAllTags', () => {
-  it('extracts and deduplicates tags from all bins, sorted', async () => {
-    const bins = [
-      makeBin({ id: '1', tags: ['beta', 'alpha'] }),
-      makeBin({ id: '2', tags: ['gamma', 'alpha'] }),
-      makeBin({ id: '3', tags: [] }),
-    ];
-    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
+  it('fetches tags from /api/tags endpoint and returns sorted', async () => {
+    mockApiFetch.mockResolvedValue({
+      results: [
+        { tag: 'beta', count: 1 },
+        { tag: 'alpha', count: 2 },
+        { tag: 'gamma', count: 1 },
+      ],
+      count: 3,
+    });
 
     const { result } = renderHook(() => useAllTags());
 
@@ -542,5 +544,6 @@ describe('useAllTags', () => {
       expect(result.current.length).toBeGreaterThan(0);
     });
     expect(result.current).toEqual(['alpha', 'beta', 'gamma']);
+    expect(mockApiFetch).toHaveBeenCalledWith('/api/tags?location_id=test-location&limit=100');
   });
 });

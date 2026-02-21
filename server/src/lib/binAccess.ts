@@ -1,4 +1,5 @@
 import { query } from '../db.js';
+import { ValidationError } from './httpErrors.js';
 
 /** Verify user is a member of the location that owns a non-deleted bin.
  *  Private bins are only accessible to their creator. */
@@ -46,4 +47,10 @@ export async function isBinCreator(binId: string, userId: string): Promise<boole
     [binId, userId]
   );
   return result.rows.length > 0;
+}
+
+/** Verify that an area belongs to the given location */
+export async function verifyAreaInLocation(areaId: string, locationId: string): Promise<void> {
+  const result = await query('SELECT id FROM areas WHERE id = $1 AND location_id = $2', [areaId, locationId]);
+  if (result.rows.length === 0) throw new ValidationError('Area does not belong to this location');
 }

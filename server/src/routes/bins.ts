@@ -10,7 +10,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { ValidationError, NotFoundError, ForbiddenError } from '../lib/httpErrors.js';
 import { validateBinName } from '../lib/validation.js';
 import { binPhotoUpload, PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
-import { verifyBinAccess, verifyLocationMembership, getMemberRole, isBinCreator } from '../lib/binAccess.js';
+import { verifyBinAccess, verifyLocationMembership, getMemberRole, isBinCreator, verifyAreaInLocation } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS } from '../lib/binQueries.js';
 
 const router = Router();
@@ -19,7 +19,7 @@ router.use(authenticate);
 
 // POST /api/bins — create bin
 router.post('/', asyncHandler(async (req, res) => {
-  const { locationId, name, areaId, items, notes, tags, icon, color, id, shortCode, shortCodePrefix, visibility } = req.body;
+  const { locationId, name, areaId, items, notes, tags, icon, color, shortCodePrefix, visibility } = req.body;
 
   if (!locationId) {
     throw new ValidationError('locationId is required');
@@ -63,28 +63,21 @@ router.post('/', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Not a member of this location');
   }
 
-  // Validate shortCode if provided: must be exactly 6 uppercase letters
-  let validatedCode: string | undefined;
+  if (areaId) await verifyAreaInLocation(areaId, locationId);
+
+  // Derive prefix from shortCodePrefix if provided
   let codePrefix: string | undefined;
-  if (shortCode) {
-    const cleaned = String(shortCode).replace(/[^a-zA-Z]/g, '').toUpperCase();
-    if (cleaned.length === 6) {
-      validatedCode = cleaned;
-      codePrefix = cleaned.slice(0, 3);
-    }
-  }
-  // Fall back to shortCodePrefix for backward compat
-  if (!codePrefix && shortCodePrefix) {
+  if (shortCodePrefix) {
     codePrefix = String(shortCodePrefix).replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 3);
   }
 
   // Generate short_code with retry on collision
-  const sc = validatedCode || generateShortCode(name, codePrefix);
+  const sc = generateShortCode(name, codePrefix);
   const maxRetries = 10;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const code = attempt === 0 ? sc : generateShortCode(name, codePrefix);
-    const binId = id || generateUuid();
+    const binId = generateUuid();
 
     try {
       await query(
@@ -470,6 +463,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
     params.push(name);
   }
   if (areaId !== undefined) {
+    if (areaId) await verifyAreaInLocation(areaId, access.locationId);
     setClauses.push(`area_id = $${paramIdx++}`);
     params.push(areaId || null);
   }
@@ -510,16 +504,19 @@ router.put('/:id', asyncHandler(async (req, res) => {
     );
     const oldItemNames = oldItemsResult.rows.map((r) => r.name);
 
-    // Delete all existing items and re-insert
-    await query('DELETE FROM bin_items WHERE bin_id = $1', [id]);
-    for (let i = 0; i < items.length; i++) {
-      const itemName = typeof items[i] === 'string' ? items[i] : (items[i] as { name: string }).name;
-      if (!itemName) continue;
-      await query(
-        'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
-        [generateUuid(), id, itemName, i]
-      );
-    }
+    // Atomically delete all existing items and re-insert
+    const db = getDb();
+    const deleteStmt = db.prepare('DELETE FROM bin_items WHERE bin_id = ?');
+    const insertStmt = db.prepare('INSERT INTO bin_items (id, bin_id, name, position) VALUES (?, ?, ?, ?)');
+    const replaceItems = db.transaction(() => {
+      deleteStmt.run(id);
+      for (let i = 0; i < items.length; i++) {
+        const itemName = typeof items[i] === 'string' ? items[i] : (items[i] as { name: string }).name;
+        if (!itemName) continue;
+        insertStmt.run(generateUuid(), id, itemName, i);
+      }
+    });
+    replaceItems();
 
     const newItemNames = items.map((item: string | { name: string }) =>
       typeof item === 'string' ? item : item.name
@@ -758,7 +755,20 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/bins/:id/photos — upload photo for a bin
-router.post('/:id/photos', binPhotoUpload.single('photo'), asyncHandler(async (req, res) => {
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+router.post('/:id/photos', asyncHandler(async (req, res, next) => {
+  // Validate UUID format and bin access before multer writes file to disk
+  const binId = req.params.id;
+  if (!UUID_REGEX.test(binId)) {
+    throw new ValidationError('Invalid bin ID format');
+  }
+  const access = await verifyBinAccess(binId, req.user!.id);
+  if (!access) {
+    throw new NotFoundError('Bin not found');
+  }
+  next();
+}), binPhotoUpload.single('photo'), asyncHandler(async (req, res) => {
   const binId = req.params.id;
   const file = req.file;
 
@@ -935,6 +945,16 @@ router.put('/:id/add-tags', asyncHandler(async (req, res) => {
     throw new ValidationError('tags array is required');
   }
 
+  // Validate each tag
+  const cleanedTags: string[] = [];
+  for (const tag of tags) {
+    if (typeof tag !== 'string') throw new ValidationError('Each tag must be a string');
+    const trimmed = tag.trim();
+    if (trimmed.length === 0) continue;
+    if (trimmed.length > 100) throw new ValidationError('Tag too long (max 100 characters)');
+    cleanedTags.push(trimmed);
+  }
+
   const access = await verifyBinAccess(id, req.user!.id);
   if (!access) {
     throw new NotFoundError('Bin not found');
@@ -951,7 +971,11 @@ router.put('/:id/add-tags', asyncHandler(async (req, res) => {
   }
 
   const currentTags: string[] = existing.rows[0].tags || [];
-  const mergedTags = [...new Set([...currentTags, ...tags])];
+  const mergedTags = [...new Set([...currentTags, ...cleanedTags])];
+
+  if (mergedTags.length > 50) {
+    throw new ValidationError('Too many tags (max 50 total)');
+  }
 
   const result = await query(
     `UPDATE bins SET tags = $1, updated_at = datetime('now')

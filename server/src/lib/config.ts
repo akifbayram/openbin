@@ -45,6 +45,7 @@ export const config = Object.freeze({
   cookieSecure: parseBool(process.env.COOKIE_SECURE, process.env.NODE_ENV === 'production'),
   bcryptRounds: clamp(parseInt(process.env.BCRYPT_ROUNDS || '12', 10), 4, 31, 12),
   registrationEnabled: parseBool(process.env.REGISTRATION_ENABLED, true),
+  trustProxy: parseBool(process.env.TRUST_PROXY, true),
 
   // Encryption
   aiEncryptionKey: process.env.AI_ENCRYPTION_KEY || null,

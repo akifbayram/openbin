@@ -144,8 +144,13 @@ export function PrintPage() {
   }
 
   function updateOverride(key: keyof LabelFormat, raw: string) {
+    if (!raw.trim()) return;
+    const num = parseFloat(raw);
+    if (isNaN(num)) return;
     const field = CUSTOM_FIELDS.find((f) => f.key === key);
-    const value = field?.isNumber ? Number(raw) : `${raw}in`;
+    const min = field ? parseFloat(field.min) : 0;
+    const clamped = Math.max(min, num);
+    const value = field?.isNumber ? clamped : `${clamped}in`;
     const newState: CustomState = {
       ...customState,
       overrides: { ...customState.overrides, [key]: value },

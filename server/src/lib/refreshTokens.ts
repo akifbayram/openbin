@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { query, generateUuid } from '../db.js';
+import { query, generateUuid, getDb } from '../db.js';
 import { config } from './config.js';
 
 function hashToken(raw: string): string {
@@ -69,20 +69,22 @@ export async function rotateRefreshToken(rawToken: string): Promise<{ userId: st
     return null;
   }
 
-  // Revoke old token
-  await query(`UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE id = $1`, [existing.id]);
-
-  // Issue new token in same family
+  // Atomically revoke old token and issue new one in the same family
   const newRawToken = generateRawToken();
   const newTokenHash = hashToken(newRawToken);
   const newId = generateUuid();
   const expiresAt = new Date(Date.now() + config.refreshTokenMaxDays * 24 * 60 * 60 * 1000).toISOString();
 
-  await query(
-    `INSERT INTO refresh_tokens (id, user_id, token_hash, family_id, expires_at)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [newId, existing.user_id, newTokenHash, existing.family_id, expiresAt],
+  const db = getDb();
+  const revokeStmt = db.prepare(`UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE id = ?`);
+  const insertStmt = db.prepare(
+    `INSERT INTO refresh_tokens (id, user_id, token_hash, family_id, expires_at) VALUES (?, ?, ?, ?, ?)`,
   );
+  const rotateTransaction = db.transaction(() => {
+    revokeStmt.run(existing.id);
+    insertStmt.run(newId, existing.user_id, newTokenHash, existing.family_id, expiresAt);
+  });
+  rotateTransaction();
 
   return { userId: existing.user_id, rawToken: newRawToken };
 }

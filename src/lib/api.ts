@@ -64,7 +64,9 @@ async function doFetch<T>(path: string, options: ApiFetchOptions, isRetry: boole
     ...options,
     headers,
     credentials: 'same-origin',
-    signal: controller?.signal ?? options.signal,
+    signal: controller && options.signal
+      ? AbortSignal.any([controller.signal, options.signal])
+      : controller?.signal ?? options.signal,
     body: isFormData
       ? (options.body as FormData)
       : options.body !== undefined

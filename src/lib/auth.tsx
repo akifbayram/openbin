@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { apiFetch } from './api';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { apiFetch, ApiError } from './api';
 import { STORAGE_KEYS } from './storageKeys';
 import type { User } from '@/types';
 
@@ -35,6 +35,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading: true,
   });
 
+  const tokenRef = useRef(state.token);
+  useEffect(() => { tokenRef.current = state.token; }, [state.token]);
+
   // One-time cleanup of old localStorage token
   useEffect(() => {
     localStorage.removeItem('openbin-token');
@@ -56,8 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           loading: false,
         }));
       })
-      .catch(() => {
-        setState((s) => ({ ...s, user: null, token: null, loading: false }));
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) {
+          setState((s) => ({ ...s, user: null, token: null, loading: false }));
+        } else {
+          setState((s) => ({ ...s, loading: false }));
+        }
       });
   }, []);
 
@@ -118,12 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
     }
-    setState((s) => {
-      if (s.token) {
-        apiFetch('/api/auth/active-location', { method: 'PUT', body: { locationId: id } }).catch(() => {});
-      }
-      return { ...s, activeLocationId: id };
-    });
+    setState((s) => ({ ...s, activeLocationId: id }));
+    if (tokenRef.current) {
+      apiFetch('/api/auth/active-location', { method: 'PUT', body: { locationId: id } }).catch(() => {});
+    }
   }, []);
 
   const updateUser = useCallback((user: User) => {

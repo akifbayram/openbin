@@ -30,18 +30,23 @@ router.post('/register', asyncHandler(async (req, res) => {
 
   validateUsername(username);
   validatePassword(password);
-
-  const existing = await query('SELECT id FROM users WHERE username = $1', [username.toLowerCase()]);
-  if (existing.rows.length > 0) {
-    throw new ConflictError('Username already taken');
-  }
+  if (displayName !== undefined) validateDisplayName(displayName);
 
   const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
   const userId = generateUuid();
-  const result = await query(
-    'INSERT INTO users (id, username, password_hash, display_name) VALUES ($1, $2, $3, $4) RETURNING id, username, display_name, created_at',
-    [userId, username.toLowerCase(), passwordHash, displayName || username]
-  );
+  let result;
+  try {
+    result = await query(
+      'INSERT INTO users (id, username, password_hash, display_name) VALUES ($1, $2, $3, $4) RETURNING id, username, display_name, created_at',
+      [userId, username.toLowerCase(), passwordHash, displayName || username]
+    );
+  } catch (err: unknown) {
+    const sqliteErr = err as { code?: string };
+    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      throw new ConflictError('Username already taken');
+    }
+    throw err;
+  }
 
   const user = result.rows[0];
   const token = signToken({ id: user.id, username: user.username });

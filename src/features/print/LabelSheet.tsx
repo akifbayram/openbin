@@ -38,6 +38,11 @@ export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode
         setQrMap(result);
         setLoading(false);
       }
+    }).catch(() => {
+      if (!cancelled) {
+        setQrMap(new Map());
+        setLoading(false);
+      }
     });
 
     return () => {

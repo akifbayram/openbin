@@ -78,9 +78,12 @@ export function usePaginatedList<T>(
 
   const hasMore = offsetRef.current < totalCount;
 
-  const loadMore = useCallback(() => {
-    if (!basePath || isLoadingMore || !hasMore || isRefreshingRef.current) return;
+  const isLoadingMoreRef = useRef(false);
 
+  const loadMore = useCallback(() => {
+    if (!basePath || isLoadingMoreRef.current || !hasMore || isRefreshingRef.current) return;
+
+    isLoadingMoreRef.current = true;
     const generation = generationRef.current;
     const currentOffset = offsetRef.current;
     setIsLoadingMore(true);
@@ -100,10 +103,11 @@ export function usePaginatedList<T>(
         setError(err instanceof Error ? err.message : 'Failed to load more');
       })
       .finally(() => {
+        isLoadingMoreRef.current = false;
         if (generation !== generationRef.current) return;
         setIsLoadingMore(false);
       });
-  }, [basePath, pageSize, isLoadingMore, hasMore]);
+  }, [basePath, pageSize, hasMore]);
 
   return { items, totalCount, isLoading, isLoadingMore, hasMore, error, loadMore };
 }
