@@ -188,15 +188,20 @@ export function PrintPage() {
 
   if (isLoading) {
     return (
-      <div className="print-hide flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2 max-w-2xl mx-auto">
-        <Skeleton className="h-10 w-24" />
-        <div className="glass-card rounded-[var(--radius-lg)] p-4 space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-3 px-3 py-3">
-              <Skeleton className="h-[22px] w-[22px] rounded-full shrink-0" />
-              <Skeleton className="h-4 flex-1" />
-            </div>
-          ))}
+      <div className="print-hide px-5 pt-2 lg:pt-6 pb-2 max-w-6xl mx-auto">
+        <Skeleton className="h-10 w-24 mb-4" />
+        <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
+          <div className="glass-card rounded-[var(--radius-lg)] p-4 space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-3">
+                <Skeleton className="h-[22px] w-[22px] rounded-full shrink-0" />
+                <Skeleton className="h-4 flex-1" />
+              </div>
+            ))}
+          </div>
+          <div className="hidden lg:block">
+            <Skeleton className="h-64 w-full rounded-[var(--radius-lg)]" />
+          </div>
         </div>
       </div>
     );
@@ -269,11 +274,14 @@ export function PrintPage() {
 
   return (
     <>
-      <div className="print-hide flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2 max-w-2xl mx-auto">
-        <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
+      <div className="print-hide px-5 pt-2 lg:pt-6 pb-2 max-w-6xl mx-auto">
+        <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none mb-4">
           Print
         </h1>
 
+        <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
+        {/* Left column — settings */}
+        <div className="flex flex-col gap-4">
         <Card>
           <CardContent>
             <div className="flex items-center justify-between w-full">
@@ -609,8 +617,11 @@ export function PrintPage() {
             )}
           </CardContent>
         </Card>
+        </div>
 
-        {selectedBins.length > 0 && (
+        {/* Right column — preview (sticky on desktop) */}
+        <div className="lg:sticky lg:top-6 flex flex-col gap-4">
+        {selectedBins.length > 0 ? (
           <>
             <div className="flex gap-2">
               <Button
@@ -634,13 +645,27 @@ export function PrintPage() {
             <Card>
               <CardContent>
                 <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal mb-3 block">Preview</Label>
-                <div className="bg-white rounded-[var(--radius-md)] p-4 overflow-auto dark:border dark:border-[var(--border-subtle)]">
+                <div className="bg-white rounded-[var(--radius-md)] p-4 max-h-[50vh] lg:max-h-[70vh] overflow-y-auto dark:border dark:border-[var(--border-subtle)]">
                   <LabelSheet bins={selectedBins} format={labelFormat} showColorSwatch={labelOptions.showColorSwatch} iconSize={iconSize} showQrCode={labelOptions.showQrCode} showBinName={labelOptions.showBinName} showIcon={labelOptions.showIcon} showLocation={labelOptions.showLocation} showBinCode={labelOptions.showBinCode} />
                 </div>
               </CardContent>
             </Card>
           </>
+        ) : (
+          <div className="hidden lg:block">
+            <Card>
+              <CardContent>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Printer className="h-10 w-10 text-[var(--text-tertiary)] mb-3 opacity-40" />
+                  <p className="text-[15px] font-medium text-[var(--text-secondary)] mb-1">No {t.bins} selected</p>
+                  <p className="text-[13px] text-[var(--text-tertiary)]">Select {t.bins} to preview and print labels</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
+        </div>
+        </div>
       </div>
 
       <div className="print-show">
