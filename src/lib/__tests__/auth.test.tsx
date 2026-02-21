@@ -73,7 +73,7 @@ describe('useAuth', () => {
 
       expect(result.current.user).toEqual(user);
       expect(result.current.token).toBe('cookie');
-      expect(mockApiFetch).toHaveBeenCalledWith('/api/auth/me', { timeout: 8000 });
+      expect(mockApiFetch).toHaveBeenCalledWith('/api/auth/me', { timeout: 8000, skipRefresh: true });
     });
 
     it('uses activeLocationId from /me response and writes to localStorage', async () => {
