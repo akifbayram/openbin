@@ -195,9 +195,31 @@ export function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2 max-w-2xl mx-auto">
-      <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-        Settings
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
+          Settings
+        </h1>
+        <div className="flex gap-1 rounded-[var(--radius-sm)] bg-[var(--bg-input)] p-1">
+          {([
+            { value: 'light' as const, icon: Sun, label: 'Light' },
+            { value: 'dark' as const, icon: Moon, label: 'Dark' },
+            { value: 'auto' as const, icon: Monitor, label: 'Auto' },
+          ]).map(({ value, icon: Icon, label }) => (
+            <button
+              key={value}
+              onClick={() => setThemePreference(value)}
+              aria-label={label}
+              className={`p-2 rounded-[var(--radius-xs)] transition-colors ${
+                preference === value
+                  ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-sm'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Account */}
       {user && (
@@ -236,33 +258,6 @@ export function SettingsPage() {
           </CardContent>
         </Card>
       )}
-
-      {/* Appearance */}
-      <Card>
-        <CardContent>
-          <Label>Appearance</Label>
-          <div className="flex mt-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)] p-1 gap-1">
-            {([
-              { value: 'light' as const, icon: Sun, label: 'Light' },
-              { value: 'dark' as const, icon: Moon, label: 'Dark' },
-              { value: 'auto' as const, icon: Monitor, label: 'Auto' },
-            ]).map(({ value, icon: Icon, label }) => (
-              <button
-                key={value}
-                onClick={() => setThemePreference(value)}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-[var(--radius-xs)] text-[14px] font-medium transition-colors ${
-                  preference === value
-                    ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-sm'
-                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Personalization (admin only — modifies location-level settings) */}
       {isAdmin && (
