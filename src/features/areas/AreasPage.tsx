@@ -1,12 +1,11 @@
 import { LogIn, MapPin, MapPinned, Plus, Shield, Users } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
-import { useBinList } from '@/features/bins/useBins';
 import { LocationCreateDialog, LocationDeleteDialog, LocationJoinDialog, LocationRenameDialog } from '@/features/locations/LocationDialogs';
 import { LocationMembersDialog } from '@/features/locations/LocationMembersDialog';
 import { LocationRetentionDialog } from '@/features/locations/LocationRetentionDialog';
@@ -31,8 +30,7 @@ export function AreasPage() {
   const { user, activeLocationId, setActiveLocationId } = useAuth();
   const { locations, isLoading: locationsLoading } = useLocationList();
   const { showToast } = useToast();
-  const { areas } = useAreaList(activeLocationId);
-  const { bins } = useBinList();
+  const { areas, unassignedCount } = useAreaList(activeLocationId);
 
   // Location dialog state
   const [createLocationOpen, setCreateLocationOpen] = useState(false);
@@ -53,24 +51,6 @@ export function AreasPage() {
 
   const activeLocation = locations.find((l) => l.id === activeLocationId);
   const isAdmin = activeLocation?.role === 'admin';
-
-  const areaInfos = useMemo(() => {
-    const countMap = new Map<string | null, number>();
-    for (const bin of bins) {
-      countMap.set(bin.area_id, (countMap.get(bin.area_id) || 0) + 1);
-    }
-    const result = areas.map((a) => ({
-      id: a.id,
-      name: a.name,
-      binCount: countMap.get(a.id) || 0,
-    }));
-    result.sort((a, b) => a.name.localeCompare(b.name));
-    return result;
-  }, [areas, bins]);
-
-  const unassignedCount = useMemo(() => {
-    return bins.filter((b) => !b.area_id).length;
-  }, [bins]);
 
   function handleAreaClick(areaId: string) {
     navigate(`/bins?areas=${encodeURIComponent(areaId)}`);
@@ -170,9 +150,22 @@ export function AreasPage() {
 
       {/* Loading state */}
       {locationsLoading && (
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-48 rounded-[var(--radius-lg)]" />
-          <Skeleton className="h-20 rounded-[var(--radius-lg)]" />
+        <div className="flex flex-col gap-4">
+          {/* Meta line skeleton */}
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-4 w-1" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          {/* Area grid skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-2">
+                <Skeleton className="h-5 w-2/3" />
+                <Skeleton className="h-4 w-1/3" />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -240,7 +233,7 @@ export function AreasPage() {
           </div>
 
           {/* Area grid */}
-          {areaInfos.length === 0 && unassignedCount === 0 ? (
+          {areas.length === 0 && unassignedCount === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-12 text-[var(--text-tertiary)]">
               <MapPinned className="h-10 w-10 opacity-40" />
               <p className="text-[13px]">{`No ${t.areas} yet`}</p>
@@ -253,12 +246,12 @@ export function AreasPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {areaInfos.map((area) => (
+              {areas.map((area) => (
                 <AreaCard
                   key={area.id}
                   id={area.id}
                   name={area.name}
-                  binCount={area.binCount}
+                  binCount={area.bin_count}
                   isAdmin={isAdmin}
                   onNavigate={handleAreaClick}
                   onRename={handleRenameArea}

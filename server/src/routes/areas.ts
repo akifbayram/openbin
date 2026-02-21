@@ -14,10 +14,18 @@ router.use(authenticate);
 router.get('/:locationId/areas', requireLocationMember('locationId'), asyncHandler(async (req, res) => {
   const { locationId } = req.params;
   const result = await query(
-    'SELECT id, location_id, name, created_by, created_at, updated_at FROM areas WHERE location_id = $1 ORDER BY name',
+    `SELECT a.id, a.location_id, a.name, a.created_by, a.created_at, a.updated_at,
+            (SELECT COUNT(*) FROM bins WHERE area_id = a.id AND deleted_at IS NULL AND location_id = a.location_id) AS bin_count
+     FROM areas a
+     WHERE a.location_id = $1
+     ORDER BY a.name`,
     [locationId]
   );
-  res.json({ results: result.rows, count: result.rows.length });
+  const unassignedResult = await query(
+    'SELECT COUNT(*) AS cnt FROM bins WHERE location_id = $1 AND area_id IS NULL AND deleted_at IS NULL',
+    [locationId]
+  );
+  res.json({ results: result.rows, count: result.rows.length, unassigned_count: unassignedResult.rows[0]?.cnt ?? 0 });
 }));
 
 // POST /api/locations/:locationId/areas — create area (admin only)

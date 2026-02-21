@@ -1,17 +1,55 @@
+import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
-import { Events, notify } from '@/lib/eventBus';
-import { useListData } from '@/lib/useListData';
+import { Events, notify, useRefreshOn } from '@/lib/eventBus';
 import { notifyBinsChanged } from '@/features/bins/useBins';
-import type { Area } from '@/types';
+import type { Area, ListResponse } from '@/types';
 
 export const notifyAreasChanged = () => notify(Events.AREAS);
 
+interface AreasResponse extends ListResponse<Area> {
+  unassigned_count: number;
+}
+
 export function useAreaList(locationId: string | null | undefined) {
-  const { data: areas, isLoading } = useListData<Area>(
-    locationId ? `/api/locations/${encodeURIComponent(locationId)}/areas` : null,
-    [Events.AREAS],
-  );
-  return { areas, isLoading };
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [unassignedCount, setUnassignedCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const refreshCounter = useRefreshOn(Events.AREAS);
+
+  const path = locationId ? `/api/locations/${encodeURIComponent(locationId)}/areas` : null;
+
+  useEffect(() => {
+    if (!path) {
+      setAreas([]);
+      setUnassignedCount(0);
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoading(true);
+
+    apiFetch<AreasResponse>(path)
+      .then((resp) => {
+        if (!cancelled) {
+          setAreas(resp.results);
+          setUnassignedCount(resp.unassigned_count);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAreas([]);
+          setUnassignedCount(0);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [path, refreshCounter]);
+
+  return { areas, unassignedCount, isLoading };
 }
 
 export async function createArea(locationId: string, name: string): Promise<Area> {

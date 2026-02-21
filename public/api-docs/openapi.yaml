@@ -302,6 +302,9 @@ components:
           format: uuid
         name:
           type: string
+        bin_count:
+          type: integer
+          description: Number of non-deleted bins in this area (only present in list response)
         created_by:
           type: string
           format: uuid
@@ -1727,6 +1730,9 @@ paths:
                       $ref: '#/components/schemas/Area'
                   count:
                     type: integer
+                  unassigned_count:
+                    type: integer
+                    description: Number of non-deleted bins with no area assigned
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
