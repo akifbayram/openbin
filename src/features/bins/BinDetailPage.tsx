@@ -55,7 +55,7 @@ export function BinDetailPage() {
   const { isAdmin, canEditBin, canChangeVisibility } = usePermissions();
   const t = useTerminology();
   const backState = location.state as { backLabel?: string; backPath?: string } | null;
-  const backLabel = backState?.backLabel || t.Bins;
+  const backLabel = backState?.backLabel || 'Back';
   const { tagColors } = useTagColorsContext();
   const { aiEnabled } = useAiEnabled();
   const [editing, setEditing] = useState(false);
@@ -229,7 +229,7 @@ export function BinDetailPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate(backState?.backPath || '/bins')}
+          onClick={() => backState?.backPath ? navigate(backState.backPath) : window.history.length > 1 ? navigate(-1) : navigate('/bins')}
           className="rounded-[var(--radius-full)] gap-0.5 pl-1.5 pr-3 text-[var(--accent)]"
         >
           <ChevronLeft className="h-5 w-5" />
