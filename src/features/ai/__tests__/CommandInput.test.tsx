@@ -220,7 +220,9 @@ describe('CommandInput', () => {
 
     fireEvent.click(screen.getByText('Kitchen Supplies'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/bin/b-kitchen');
+    expect(mockNavigate).toHaveBeenCalledWith('/bin/b-kitchen', {
+      state: { backLabel: 'Bins', backPath: '/bins' },
+    });
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
