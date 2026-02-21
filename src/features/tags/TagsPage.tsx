@@ -26,7 +26,7 @@ export function TagsPage() {
   const { theme } = useTheme();
 
   function handleTagClick(tag: string) {
-    navigate(`/bins?q=${encodeURIComponent(tag)}`);
+    navigate(`/bins?tags=${encodeURIComponent(tag)}`);
   }
 
   function handleColorChange(tag: string, color: string) {

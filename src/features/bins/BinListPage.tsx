@@ -105,8 +105,11 @@ export function BinListPage() {
   }, [selectable, bins]);
 
   const handleTagClick = useCallback((tag: string) => {
-    setSearch(tag);
-  }, []);
+    setFilters((prev) => ({
+      ...prev,
+      tags: prev.tags.includes(tag) ? prev.tags : [...prev.tags, tag],
+    }));
+  }, [setFilters]);
 
   const handlePinToggle = useCallback(async (id: string, pinned: boolean) => {
     if (pinned) await pinBin(id);
