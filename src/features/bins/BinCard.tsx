@@ -109,36 +109,6 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       onContextMenu={onContextMenu}
     >
       <div className="flex items-start gap-3">
-        {selectable ? (
-          checkbox
-        ) : onSelect ? (
-          /* Layered icon / hover-checkbox for desktop discovery */
-          <div
-            className="relative mt-0.5 h-[22px] w-[22px] shrink-0"
-            onClick={handleCheckboxClick}
-          >
-            {/* Default icon — fades out on hover (hover:hover targets pointer devices only) */}
-            <BinIcon
-              className="absolute inset-0 h-[22px] w-[22px] text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
-              style={mutedColor ? { color: mutedColor } : undefined}
-            />
-            {/* Checkbox — hidden by default, revealed on hover for pointer devices */}
-            <div
-              className={cn(
-                'absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100',
-              )}
-            >
-              <div className="h-[22px] w-[22px] rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center"
-                style={mutedColor ? { borderColor: mutedColor } : undefined}
-              />
-            </div>
-          </div>
-        ) : (
-          <BinIcon
-            className="mt-0.5 h-[22px] w-[22px] shrink-0 text-[var(--text-tertiary)]"
-            style={mutedColor ? { color: mutedColor } : undefined}
-          />
-        )}
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug flex items-center gap-1.5">
             <Highlight text={bin.name} query={searchQuery} />
@@ -191,6 +161,36 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           >
             <Pin className="h-4 w-4" fill={bin.is_pinned ? 'currentColor' : 'none'} />
           </button>
+        )}
+        {selectable ? (
+          checkbox
+        ) : onSelect ? (
+          /* Layered icon / hover-checkbox for desktop discovery */
+          <div
+            className="relative mt-0.5 h-[22px] w-[22px] shrink-0"
+            onClick={handleCheckboxClick}
+          >
+            {/* Default icon — fades out on hover (hover:hover targets pointer devices only) */}
+            <BinIcon
+              className="absolute inset-0 h-[22px] w-[22px] text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
+              style={mutedColor ? { color: mutedColor } : undefined}
+            />
+            {/* Checkbox — hidden by default, revealed on hover for pointer devices */}
+            <div
+              className={cn(
+                'absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100',
+              )}
+            >
+              <div className="h-[22px] w-[22px] rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center"
+                style={mutedColor ? { borderColor: mutedColor } : undefined}
+              />
+            </div>
+          </div>
+        ) : (
+          <BinIcon
+            className="mt-0.5 h-[22px] w-[22px] shrink-0 text-[var(--text-tertiary)]"
+            style={mutedColor ? { color: mutedColor } : undefined}
+          />
         )}
       </div>
     </div>
