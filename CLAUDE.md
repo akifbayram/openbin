@@ -35,7 +35,7 @@ Multi-user web app for organizing physical storage bins with QR codes. Data pers
 
 ## API Documentation
 
-OpenAPI spec at @server/openapi.yaml (source of truth). Update when endpoints change, then copy to `public/api-docs/openapi.yaml`.
+OpenAPI spec at `server/openapi.yaml` (source of truth). Update when endpoints change, then copy to `public/api-docs/openapi.yaml`.
 
 ## Gotchas
 
