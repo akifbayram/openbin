@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
+import React from 'react';
 
 vi.mock('@/lib/api', () => ({
   apiFetch: vi.fn(),
@@ -14,6 +15,7 @@ vi.mock('@/lib/auth', () => ({
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import {
+  LocationProvider,
   useLocationList,
   useLocationMembers,
   createLocation,
@@ -27,6 +29,10 @@ import {
 
 const mockApiFetch = vi.mocked(apiFetch);
 const mockUseAuth = vi.mocked(useAuth);
+
+function locationWrapper({ children }: { children: React.ReactNode }) {
+  return React.createElement(LocationProvider, null, children);
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -42,7 +48,7 @@ describe('useLocationList', () => {
     ];
     mockApiFetch.mockResolvedValue({ results: locations, count: locations.length });
 
-    const { result } = renderHook(() => useLocationList());
+    const { result } = renderHook(() => useLocationList(), { wrapper: locationWrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -53,7 +59,7 @@ describe('useLocationList', () => {
   it('returns empty array when no token', async () => {
     mockUseAuth.mockReturnValue({ token: null } as ReturnType<typeof useAuth>);
 
-    const { result } = renderHook(() => useLocationList());
+    const { result } = renderHook(() => useLocationList(), { wrapper: locationWrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -64,7 +70,7 @@ describe('useLocationList', () => {
   it('returns empty array on API error', async () => {
     mockApiFetch.mockRejectedValue(new Error('Network error'));
 
-    const { result } = renderHook(() => useLocationList());
+    const { result } = renderHook(() => useLocationList(), { wrapper: locationWrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -79,7 +85,7 @@ describe('useLocationList', () => {
     ];
     mockApiFetch.mockResolvedValueOnce({ results: initial, count: initial.length }).mockResolvedValueOnce({ results: updated, count: updated.length });
 
-    const { result } = renderHook(() => useLocationList());
+    const { result } = renderHook(() => useLocationList(), { wrapper: locationWrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.locations).toEqual(initial);

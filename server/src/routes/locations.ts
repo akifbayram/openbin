@@ -22,7 +22,8 @@ router.get('/', asyncHandler(async (req, res) => {
     `SELECT l.id, l.name, l.created_by, l.invite_code, l.activity_retention_days, l.trash_retention_days, l.app_name, l.term_bin, l.term_location, l.term_area, l.created_at, l.updated_at,
             lm.role,
             (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count,
-            (SELECT COUNT(*) FROM areas WHERE location_id = l.id) AS area_count
+            (SELECT COUNT(*) FROM areas WHERE location_id = l.id) AS area_count,
+            (SELECT COUNT(*) FROM bins WHERE location_id = l.id AND deleted_at IS NULL) AS bin_count
      FROM locations l
      JOIN location_members lm ON lm.location_id = l.id AND lm.user_id = $1
      ORDER BY l.name COLLATE NOCASE ASC`,
@@ -43,6 +44,7 @@ router.get('/', asyncHandler(async (req, res) => {
     role: row.role,
     member_count: row.member_count,
     area_count: row.area_count,
+    bin_count: row.bin_count,
     created_at: row.created_at,
     updated_at: row.updated_at,
   }));

@@ -247,6 +247,9 @@ components:
           type: integer
         area_count:
           type: integer
+        bin_count:
+          type: integer
+          description: Number of non-deleted bins in this location
         role:
           type: string
           enum: [admin, member]

@@ -22,6 +22,7 @@ export interface Location {
   role?: 'admin' | 'member';
   member_count?: number;
   area_count?: number;
+  bin_count?: number;
   created_at: string;
   updated_at: string;
 }

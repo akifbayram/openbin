@@ -22,7 +22,7 @@ import { useAppSettings } from '@/lib/appSettings';
 import { useTerminology } from '@/lib/terminology';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/usePermissions';
-import { useBinList } from '@/features/bins/useBins';
+import { useLocationList } from '@/features/locations/useLocations';
 import type { ExportData } from '@/types';
 import {
   exportAllData,
@@ -60,8 +60,9 @@ export function SettingsPage() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  const { bins } = useBinList();
-  const binCount = bins.length;
+  const { locations } = useLocationList();
+  const activeLocation = locations.find((l) => l.id === activeLocationId);
+  const binCount = activeLocation?.bin_count ?? 0;
   const { settings: dashSettings, updateSettings: updateDashSettings } = useDashboardSettings();
 
   // Scroll to AI settings section when navigated with #ai-settings hash
