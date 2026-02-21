@@ -130,7 +130,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
 
         {/* Members list */}
         {isLoading ? (
-          <div className="space-y-3 py-2">
+          <div className="space-y-1 py-2">
             {[1, 2].map((i) => (
               <div key={i} className="flex items-center gap-3">
                 <Skeleton className="h-8 w-8 rounded-full" />

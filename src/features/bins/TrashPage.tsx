@@ -83,10 +83,20 @@ export function TrashPage() {
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-2">
-              <Skeleton className="h-5 w-2/3" />
-              <Skeleton className="h-4 w-1/3" />
-            </div>
+            <Card key={i}>
+              <CardContent className="py-3 px-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <Skeleton className="h-5 w-2/3" />
+                    <Skeleton className="h-3.5 w-1/3" />
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Skeleton className="h-8 w-20 rounded-[var(--radius-full)]" />
+                    <Skeleton className="h-8 w-8 rounded-[var(--radius-full)]" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : bins.length === 0 ? (

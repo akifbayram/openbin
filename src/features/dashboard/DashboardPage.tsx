@@ -199,6 +199,40 @@ export function DashboardPage() {
         </div>
       ))}
 
+      {/* Pinned Bins skeleton */}
+      {dashSettings.showPinnedBins && isLoading && (
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-5 w-16" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[1, 2].map((i) => (
+              <Card key={i}>
+                <CardContent className="py-3 px-4 space-y-2">
+                  <Skeleton className="h-5 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recently Updated skeleton */}
+      {dashSettings.showRecentlyUpdated && isLoading && (
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-5 w-32" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardContent className="py-3 px-4 space-y-2">
+                  <Skeleton className="h-5 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Needs Organizing */}
       {dashSettings.showNeedsOrganizing && !isLoading && needsOrganizing > 0 && (
         <button
