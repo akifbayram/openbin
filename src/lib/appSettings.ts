@@ -1,6 +1,6 @@
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useRef, useState, useContext } from 'react';
 import { useAuth } from '@/lib/auth';
-import { useLocationList, updateLocation } from '@/features/locations/useLocations';
+import { LocationsContext, updateLocation } from '@/features/locations/useLocations';
 
 export interface AppSettings {
   appName: string;
@@ -11,7 +11,9 @@ export interface AppSettings {
 
 export function useAppSettings() {
   const { activeLocationId } = useAuth();
-  const { locations, isLoading } = useLocationList();
+  const ctx = useContext(LocationsContext);
+  const locations = ctx?.locations ?? [];
+  const isLoading = ctx?.isLoading ?? false;
   const [pendingPatch, setPendingPatch] = useState<Partial<AppSettings> | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const pendingPayloadRef = useRef<Record<string, string | number>>({});

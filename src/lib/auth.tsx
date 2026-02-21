@@ -43,29 +43,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('openbin-token');
   }, []);
 
-  // Validate session on mount via cookies
+  // Validate session on mount via cookies.
+  // skipRefresh prevents the auto-refresh 401 cascade when the user was never logged in.
+  // We manually try refresh only when /me fails and the user has a prior session hint.
   useEffect(() => {
-    apiFetch<User & { activeLocationId?: string | null }>('/api/auth/me', { timeout: 8000 })
-      .then((data) => {
-        const { activeLocationId: serverLocationId, ...user } = data;
-        if (serverLocationId) {
-          localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, serverLocationId);
+    let cancelled = false;
+    const hadSession = !!localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION);
+
+    function setUser(data: User & { activeLocationId?: string | null }) {
+      const { activeLocationId: serverLocationId, ...user } = data;
+      if (serverLocationId) {
+        localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, serverLocationId);
+      }
+      setState((s) => ({
+        ...s,
+        user,
+        token: 'cookie',
+        activeLocationId: serverLocationId ?? s.activeLocationId,
+        loading: false,
+      }));
+    }
+
+    async function checkSession() {
+      try {
+        const data = await apiFetch<User & { activeLocationId?: string | null }>(
+          '/api/auth/me',
+          { timeout: 8000, skipRefresh: true },
+        );
+        if (!cancelled) setUser(data);
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.status === 401 && hadSession) {
+          // Access cookie expired but user had a prior session — try refresh
+          try {
+            const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' });
+            if (!cancelled && res.ok) {
+              const data = await apiFetch<User & { activeLocationId?: string | null }>(
+                '/api/auth/me',
+                { timeout: 8000, skipRefresh: true },
+              );
+              if (!cancelled) { setUser(data); return; }
+            }
+          } catch { /* refresh failed */ }
         }
-        setState((s) => ({
-          ...s,
-          user,
-          token: 'cookie',
-          activeLocationId: serverLocationId ?? s.activeLocationId,
-          loading: false,
-        }));
-      })
-      .catch((err) => {
-        if (err instanceof ApiError && err.status === 401) {
-          setState((s) => ({ ...s, user: null, token: null, loading: false }));
-        } else {
-          setState((s) => ({ ...s, loading: false }));
+        if (!cancelled) {
+          if (err instanceof ApiError && err.status === 401) {
+            setState((s) => ({ ...s, user: null, token: null, loading: false }));
+          } else {
+            setState((s) => ({ ...s, loading: false }));
+          }
         }
-      });
+      }
+    }
+
+    checkSession();
+    return () => { cancelled = true; };
   }, []);
 
   // Listen for auth-expired events from apiFetch auto-refresh failure

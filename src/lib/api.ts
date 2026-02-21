@@ -105,9 +105,10 @@ async function doFetch<T>(path: string, options: ApiFetchOptions, isRetry: boole
 
 export async function apiFetch<T>(
   path: string,
-  options: ApiFetchOptions = {}
+  options: ApiFetchOptions & { skipRefresh?: boolean } = {}
 ): Promise<T> {
-  return doFetch<T>(path, options, false);
+  const { skipRefresh, ...rest } = options;
+  return doFetch<T>(path, rest, !!skipRefresh);
 }
 
 /** Build an avatar URL (cookies handle auth automatically). */
