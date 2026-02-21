@@ -23,6 +23,26 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Recovery for iOS PWA blank screen after service worker cache eviction.
+      // If React hasn't rendered anything after 5s, clear SW caches and reload once.
+      setTimeout(function() {
+        var root = document.getElementById('root');
+        if (root && !root.children.length) {
+          if (sessionStorage.getItem('openbin-sw-recovery')) return;
+          sessionStorage.setItem('openbin-sw-recovery', '1');
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              return Promise.all(names.map(function(n) { return caches.delete(n); }));
+            }).then(function() { window.location.reload(); });
+          } else {
+            window.location.reload();
+          }
+        } else {
+          sessionStorage.removeItem('openbin-sw-recovery');
+        }
+      }, 5000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

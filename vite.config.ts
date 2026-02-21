@@ -34,10 +34,25 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,ico,png,svg}'],
         cleanupOutdatedCaches: true,
-        navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        // Disable the default precache-based navigateFallback.
+        // iOS aggressively evicts Cache Storage for PWAs after idle periods;
+        // if the precached index.html is gone the SW serves a blank page.
+        // Use NetworkFirst via runtimeCaching instead — fetches from the server
+        // first, falling back to cache only when offline.
+        navigateFallback: undefined,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }: { request: Request }) =>
+              request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages',
+              networkTimeoutSeconds: 3,
+            },
+          },
+        ],
       },
     }),
   ],
