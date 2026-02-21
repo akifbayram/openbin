@@ -63,17 +63,27 @@ router.post('/', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Not a member of this location');
   }
 
-  // Validate shortCodePrefix if provided
-  const cleanPrefix = shortCodePrefix
-    ? String(shortCodePrefix).replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 3)
-    : undefined;
+  // Validate shortCode if provided: must be exactly 6 uppercase letters
+  let validatedCode: string | undefined;
+  let codePrefix: string | undefined;
+  if (shortCode) {
+    const cleaned = String(shortCode).replace(/[^a-zA-Z]/g, '').toUpperCase();
+    if (cleaned.length === 6) {
+      validatedCode = cleaned;
+      codePrefix = cleaned.slice(0, 3);
+    }
+  }
+  // Fall back to shortCodePrefix for backward compat
+  if (!codePrefix && shortCodePrefix) {
+    codePrefix = String(shortCodePrefix).replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 3);
+  }
 
   // Generate short_code with retry on collision
-  const sc = shortCode || generateShortCode(name, cleanPrefix);
+  const sc = validatedCode || generateShortCode(name, codePrefix);
   const maxRetries = 10;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const code = attempt === 0 ? sc : generateShortCode(name, cleanPrefix);
+    const code = attempt === 0 ? sc : generateShortCode(name, codePrefix);
     const binId = id || generateUuid();
 
     try {

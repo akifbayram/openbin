@@ -1,7 +1,6 @@
 import crypto from 'crypto';
-import { getDb } from '../db.js';
 
-const SHORT_CODE_CHARSET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+const LETTER_CHARSET = 'ABCDEFGHJKMNPQRTUVWXY';
 
 const STOP_WORDS = new Set([
   'THE', 'A', 'AN', 'MY', 'OF', 'FOR', 'AND', 'OR', 'IN', 'ON', 'AT', 'TO', 'IS', 'IT', 'BY', 'WITH',
@@ -80,12 +79,16 @@ export function derivePrefix(name: string): string {
   return word.slice(0, 3).toUpperCase();
 }
 
-function generateRandomCode(): string {
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += SHORT_CODE_CHARSET[crypto.randomInt(SHORT_CODE_CHARSET.length)];
+function randomLetters(count: number): string {
+  let result = '';
+  for (let i = 0; i < count; i++) {
+    result += LETTER_CHARSET[crypto.randomInt(LETTER_CHARSET.length)];
   }
-  return code;
+  return result;
+}
+
+function generateRandomCode(): string {
+  return randomLetters(6);
 }
 
 export function generateShortCode(name?: string, prefix?: string): string {
@@ -103,22 +106,5 @@ export function generateShortCode(name?: string, prefix?: string): string {
     return generateRandomCode();
   }
 
-  // Query DB for max existing number with this prefix
-  try {
-    const db = getDb();
-    const row = db.prepare(
-      `SELECT MAX(CAST(SUBSTR(short_code, 4, 3) AS INTEGER)) AS max_num FROM bins WHERE short_code GLOB '${resolvedPrefix}[0-9][0-9][0-9]'`
-    ).get() as { max_num: number | null } | undefined;
-
-    const maxNum = row?.max_num ?? 0;
-    const nextNum = maxNum + 1;
-
-    if (nextNum > 999) {
-      return generateRandomCode();
-    }
-
-    return `${resolvedPrefix}${String(nextNum).padStart(3, '0')}`;
-  } catch {
-    return generateRandomCode();
-  }
+  return resolvedPrefix + randomLetters(3);
 }
