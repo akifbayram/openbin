@@ -43,6 +43,12 @@ function migrate() {
       else if (file === '007_refresh_tokens.sql') {
         alreadyApplied = tableNames.has('refresh_tokens');
       }
+      else if (file === '010_card_style.sql') {
+        alreadyApplied = tableNames.has('bins') && columns('bins').has('card_style');
+      }
+      else if (file === '011_photo_thumbnails.sql') {
+        alreadyApplied = tableNames.has('photos') && columns('photos').has('thumb_path');
+      }
 
       if (alreadyApplied) {
         db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file);

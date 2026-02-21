@@ -37,6 +37,7 @@ function makeBin(overrides: Partial<Bin> = {}): Bin {
     tags: [],
     icon: '',
     color: '',
+    card_style: '',
     short_code: 'A1B2C3',
     created_by: 'user-1',
     created_by_name: '',

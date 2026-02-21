@@ -20,6 +20,7 @@ export interface ExportBin {
   tags: string[];
   icon: string;
   color: string;
+  cardStyle?: string;
   shortCode?: string;
   createdAt: string;
   updatedAt: string;
@@ -49,7 +50,7 @@ export async function fetchLocationBins(locationId: string) {
     `SELECT b.id, b.name, COALESCE(a.name, '') AS area_name,
        COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name))
          FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
-       b.notes, b.tags, b.icon, b.color, b.short_code, b.created_at, b.updated_at
+       b.notes, b.tags, b.icon, b.color, b.card_style, b.short_code, b.created_at, b.updated_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
      WHERE b.location_id = $1 AND b.deleted_at IS NULL
      ORDER BY b.updated_at DESC`,
@@ -128,7 +129,7 @@ export function resolveAreaSync(locationId: string, areaName: string, userId: st
 export function insertBinWithShortCode(
   binId: string,
   locationId: string,
-  bin: { name: string; notes: string; tags: string[]; icon: string; color: string; shortCode?: string; createdAt: string; updatedAt: string },
+  bin: { name: string; notes: string; tags: string[]; icon: string; color: string; cardStyle?: string; shortCode?: string; createdAt: string; updatedAt: string },
   areaId: string | null,
   userId: string,
 ): void {
@@ -136,9 +137,9 @@ export function insertBinWithShortCode(
     const code = attempt === 0 && bin.shortCode ? bin.shortCode : generateShortCode(bin.name);
     try {
       querySync(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, short_code, created_by, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [binId, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, code, userId, bin.createdAt, bin.updatedAt]
+        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, short_code, created_by, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        [binId, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle || '', code, userId, bin.createdAt, bin.updatedAt]
       );
       return;
     } catch (err: unknown) {

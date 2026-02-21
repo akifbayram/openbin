@@ -55,6 +55,7 @@ describe('addBin', () => {
         tags: ['electronics'],
         icon: 'Wrench',
         color: 'blue',
+        cardStyle: '',
         visibility: 'location',
       },
     });
@@ -76,6 +77,7 @@ describe('addBin', () => {
         tags: [],
         icon: '',
         color: '',
+        cardStyle: '',
         visibility: 'location',
       },
     });
@@ -148,6 +150,7 @@ describe('restoreBin', () => {
       tags: [],
       icon: '',
       color: '',
+      card_style: '',
       short_code: 'A3K7NP',
       created_by: 'user-1',
       created_by_name: '',

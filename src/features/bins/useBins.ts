@@ -214,6 +214,7 @@ export interface AddBinOptions {
   areaId?: string | null;
   icon?: string;
   color?: string;
+  cardStyle?: string;
   visibility?: BinVisibility;
   shortCode?: string;
 }
@@ -228,6 +229,7 @@ export async function addBin(options: AddBinOptions): Promise<string> {
     tags: options.tags ?? [],
     icon: options.icon ?? '',
     color: options.color ?? '',
+    cardStyle: options.cardStyle ?? '',
     visibility: options.visibility ?? 'location',
   };
   if (options.shortCode) {
@@ -243,7 +245,7 @@ export async function addBin(options: AddBinOptions): Promise<string> {
 
 export async function updateBin(
   id: string,
-  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color' | 'visibility'>> & { areaId?: string | null; items?: string[] }
+  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color' | 'card_style' | 'visibility'>> & { areaId?: string | null; items?: string[]; cardStyle?: string }
 ): Promise<void> {
   await apiFetch(`/api/bins/${id}`, {
     method: 'PUT',

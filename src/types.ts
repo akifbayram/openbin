@@ -80,6 +80,7 @@ export interface Bin {
   tags: string[];
   icon: string;
   color: string;
+  card_style: string;
   short_code: string;
   created_by: string;
   created_by_name: string;
@@ -103,6 +104,7 @@ export interface Photo {
   mime_type: string;
   size: number;
   storage_path: string;
+  thumb_path: string | null;
   created_by: string;
   created_at: string;
 }
@@ -146,6 +148,7 @@ export interface ExportBinV2 {
   tags: string[];
   icon?: string;
   color?: string;
+  cardStyle?: string;
   shortCode?: string;
   createdAt: string;
   updatedAt: string;

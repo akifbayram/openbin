@@ -16,6 +16,7 @@ import { ItemsInput } from './ItemsInput';
 import { ItemList } from './ItemList';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
+import { StylePicker } from './StylePicker';
 import { useBin, updateBin, deleteBin, restoreBin, useAllTags, moveBin } from './useBins';
 import { VisibilityPicker } from './VisibilityPicker';
 import { useQuickAdd } from './useQuickAdd';
@@ -66,6 +67,7 @@ export function BinDetailPage() {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editIcon, setEditIcon] = useState('');
   const [editColor, setEditColor] = useState('');
+  const [editCardStyle, setEditCardStyle] = useState('');
   const [editVisibility, setEditVisibility] = useState<BinVisibility>('location');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
@@ -141,6 +143,7 @@ export function BinDetailPage() {
     setEditTags([...bin.tags]);
     setEditIcon(bin.icon);
     setEditColor(bin.color);
+    setEditCardStyle(bin.card_style);
     setEditVisibility(bin.visibility);
     setEditing(true);
   }
@@ -155,6 +158,7 @@ export function BinDetailPage() {
       tags: editTags,
       icon: editIcon,
       color: editColor,
+      cardStyle: editCardStyle,
       visibility: editVisibility,
     });
     setEditing(false);
@@ -385,7 +389,7 @@ export function BinDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Identity — name, area, icon, color */}
+          {/* Identity — name, area, visibility */}
           <Card>
             <CardContent className="space-y-5 py-5">
               <div className="space-y-2">
@@ -400,14 +404,6 @@ export function BinDetailPage() {
               <div className="space-y-2">
                 <Label>{t.Area}</Label>
                 <AreaPicker locationId={activeLocationId ?? undefined} value={editAreaId} onChange={setEditAreaId} />
-              </div>
-              <div className="space-y-2">
-                <Label>Icon</Label>
-                <IconPicker value={editIcon} onChange={setEditIcon} />
-              </div>
-              <div className="space-y-2">
-                <Label>Color</Label>
-                <ColorPicker value={editColor} onChange={setEditColor} />
               </div>
               {canChangeVisibility(bin.created_by) && (
                 <div className="space-y-2">
@@ -431,6 +427,24 @@ export function BinDetailPage() {
                 binName={editName}
                 locationId={activeLocationId ?? undefined}
               />
+            </CardContent>
+          </Card>
+
+          {/* Appearance — icon, color, style */}
+          <Card>
+            <CardContent className="space-y-5 py-5">
+              <div className="space-y-2">
+                <Label>Icon</Label>
+                <IconPicker value={editIcon} onChange={setEditIcon} />
+              </div>
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <ColorPicker value={editColor} onChange={setEditColor} />
+              </div>
+              <div className="space-y-2">
+                <Label>Style</Label>
+                <StylePicker value={editCardStyle} color={editColor} onChange={setEditCardStyle} photos={photos} />
+              </div>
             </CardContent>
           </Card>
 
