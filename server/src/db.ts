@@ -13,6 +13,13 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+/** Word-boundary search: returns 1 if `term` appears at a word boundary in `text` */
+db.function('word_match', { deterministic: true }, (text: unknown, term: unknown) => {
+  if (!text || !term) return 0;
+  const escaped = String(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}`, 'i').test(String(text)) ? 1 : 0;
+});
+
 export function getDb(): Database.Database {
   return db;
 }

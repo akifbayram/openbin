@@ -167,9 +167,9 @@ router.get('/', asyncHandler(async (req, res) => {
   let paramIdx = 3;
 
   if (q && q.trim()) {
-    const searchTerm = `%${q.trim()}%`;
+    const searchTerm = q.trim();
     whereClauses.push(
-      `(b.name LIKE $${paramIdx} OR b.notes LIKE $${paramIdx} OR b.short_code LIKE $${paramIdx} OR COALESCE(a.name, '') LIKE $${paramIdx} OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND bi.name LIKE $${paramIdx}) OR EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value LIKE $${paramIdx}))`
+      `(word_match(b.name, $${paramIdx}) = 1 OR word_match(b.notes, $${paramIdx}) = 1 OR word_match(b.short_code, $${paramIdx}) = 1 OR word_match(COALESCE(a.name, ''), $${paramIdx}) = 1 OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND word_match(bi.name, $${paramIdx}) = 1) OR EXISTS (SELECT 1 FROM json_each(b.tags) WHERE word_match(value, $${paramIdx}) = 1))`
     );
     params.push(searchTerm);
     paramIdx++;

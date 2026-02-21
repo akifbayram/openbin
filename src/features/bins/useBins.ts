@@ -6,6 +6,12 @@ import { useListData } from '@/lib/useListData';
 import { usePaginatedList } from '@/lib/usePaginatedList';
 import type { Bin, BinItem, BinVisibility } from '@/types';
 
+/** Check if `query` appears at a word boundary in `text` (case-insensitive) */
+function matchesSearch(text: string, query: string): boolean {
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}`, 'i').test(text);
+}
+
 /** Notify all useBinList / useBin instances to refetch */
 export const notifyBinsChanged = () => notify(Events.BINS);
 
@@ -48,15 +54,15 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
     let filtered = [...rawBins];
 
     if (searchQuery?.trim()) {
-      const q = searchQuery.toLowerCase().trim();
+      const q = searchQuery.trim();
       filtered = filtered.filter(
         (bin) =>
-          bin.name.toLowerCase().includes(q) ||
-          (bin.area_name ?? '').toLowerCase().includes(q) ||
-          (Array.isArray(bin.items) ? bin.items : []).some((item) => item.name.toLowerCase().includes(q)) ||
-          bin.notes.toLowerCase().includes(q) ||
-          (Array.isArray(bin.tags) ? bin.tags : []).some((tag: string) => tag.toLowerCase().includes(q)) ||
-          (bin.short_code && bin.short_code.toLowerCase().includes(q))
+          matchesSearch(bin.name, q) ||
+          matchesSearch(bin.area_name ?? '', q) ||
+          (Array.isArray(bin.items) ? bin.items : []).some((item) => matchesSearch(item.name, q)) ||
+          matchesSearch(bin.notes, q) ||
+          (Array.isArray(bin.tags) ? bin.tags : []).some((tag: string) => matchesSearch(tag, q)) ||
+          (bin.short_code && matchesSearch(bin.short_code, q))
       );
     }
 

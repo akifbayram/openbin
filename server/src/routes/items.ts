@@ -29,8 +29,8 @@ router.get('/', asyncHandler(async (req, res) => {
   let whereClause = '';
 
   if (searchQuery?.trim()) {
-    params.push(`%${searchQuery.trim()}%`);
-    whereClause = `AND (bi.name LIKE $${params.length} OR b.name LIKE $${params.length})`;
+    params.push(searchQuery.trim());
+    whereClause = `AND (word_match(bi.name, $${params.length}) = 1 OR word_match(b.name, $${params.length}) = 1)`;
   }
 
   const baseQuery = `
