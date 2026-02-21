@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
+import React from 'react';
 
 vi.mock('@/lib/auth', () => ({
   useAuth: vi.fn(() => ({
@@ -14,9 +15,14 @@ vi.mock('@/lib/api', () => ({
 import { useAuth } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
 import { useOnboarding } from '../useOnboarding';
+import { UserPreferencesProvider } from '@/lib/userPreferences';
 
 const mockUseAuth = vi.mocked(useAuth);
 const mockApiFetch = vi.mocked(apiFetch);
+
+function wrapper({ children }: { children: React.ReactNode }) {
+  return React.createElement(UserPreferencesProvider, null, children);
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -28,7 +34,7 @@ beforeEach(() => {
 
 describe('useOnboarding', () => {
   it('returns initial state when no preferences stored', async () => {
-    const { result } = renderHook(() => useOnboarding());
+    const { result } = renderHook(() => useOnboarding(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.isOnboarding).toBe(true);
@@ -44,7 +50,7 @@ describe('useOnboarding', () => {
       onboarding_location_id: 'loc-1',
     });
 
-    const { result } = renderHook(() => useOnboarding());
+    const { result } = renderHook(() => useOnboarding(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.step).toBe(1);
@@ -54,7 +60,7 @@ describe('useOnboarding', () => {
   });
 
   it('advanceWithLocation increments step and stores locationId', async () => {
-    const { result } = renderHook(() => useOnboarding());
+    const { result } = renderHook(() => useOnboarding(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.isOnboarding).toBe(true);
@@ -69,7 +75,7 @@ describe('useOnboarding', () => {
   });
 
   it('complete sets completed', async () => {
-    const { result } = renderHook(() => useOnboarding());
+    const { result } = renderHook(() => useOnboarding(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.isOnboarding).toBe(true);
@@ -83,7 +89,7 @@ describe('useOnboarding', () => {
   });
 
   it('markFirstScanDone updates firstScanDone', async () => {
-    const { result } = renderHook(() => useOnboarding());
+    const { result } = renderHook(() => useOnboarding(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.firstScanDone).toBe(false);

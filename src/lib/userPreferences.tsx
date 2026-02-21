@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { apiFetch } from '@/lib/api';
 
 export interface UserPreferences {
@@ -39,7 +39,15 @@ export function notifyPreferencesChanged() {
   window.dispatchEvent(new Event(PREFERENCES_EVENT));
 }
 
-export function useUserPreferences() {
+interface UserPreferencesContextValue {
+  preferences: UserPreferences;
+  isLoading: boolean;
+  updatePreferences: (patch: Partial<UserPreferences>) => void;
+}
+
+const UserPreferencesContext = createContext<UserPreferencesContextValue | null>(null);
+
+export function UserPreferencesProvider({ children }: { children: React.ReactNode }) {
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [isLoading, setIsLoading] = useState(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -97,5 +105,20 @@ export function useUserPreferences() {
     debouncedSave(next);
   }, [debouncedSave]);
 
-  return { preferences, isLoading, updatePreferences };
+  const value = useMemo(
+    () => ({ preferences, isLoading, updatePreferences }),
+    [preferences, isLoading, updatePreferences],
+  );
+
+  return (
+    <UserPreferencesContext.Provider value={value}>
+      {children}
+    </UserPreferencesContext.Provider>
+  );
+}
+
+export function useUserPreferences() {
+  const ctx = useContext(UserPreferencesContext);
+  if (!ctx) throw new Error('useUserPreferences must be used within UserPreferencesProvider');
+  return ctx;
 }
