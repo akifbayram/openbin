@@ -123,34 +123,16 @@ export function getCardRenderProps(
     const pos = cardStyle.stripePosition ?? 'left';
     const sw = Number(cardStyle.stripeWidth) || 4;
 
-    if (cardStyle.stripeType === 'straight') {
-      return {
-        className: 'glass-card',
-        style: {
-          position: 'relative',
-          overflow: 'hidden',
-          ...(colorBg ? { backgroundColor: colorBg } : {}),
-        },
-        mutedColor: getMutedColor(colorPreset, theme),
-        isPhotoVariant: false,
-        stripeBar: { color: stripeResolved, position: pos, width: sw },
-      };
-    }
-
-    const borderProp =
-      pos === 'right' ? 'borderRight'
-      : pos === 'top' ? 'borderTop'
-      : pos === 'bottom' ? 'borderBottom'
-      : 'borderLeft';
-
     return {
       className: 'glass-card',
       style: {
-        [borderProp]: `${sw}px solid ${stripeResolved}`,
+        position: 'relative',
+        overflow: 'hidden',
         ...(colorBg ? { backgroundColor: colorBg } : {}),
       },
       mutedColor: getMutedColor(colorPreset, theme),
       isPhotoVariant: false,
+      stripeBar: { color: stripeResolved, position: pos, width: sw },
     };
   }
 
