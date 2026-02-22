@@ -1,3 +1,4 @@
+import './animations.css';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { MapPin, Package, X, Ban, Camera, Sparkles, Loader2, ChevronLeft, Check } from 'lucide-react';
 import { ScanSuccessOverlay } from './ScanSuccessOverlay';

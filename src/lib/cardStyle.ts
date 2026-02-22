@@ -1,6 +1,9 @@
 import type { ColorPreset } from './colorPalette';
 import { resolveColor } from './colorPalette';
 
+const MUTED_DARK = 'rgba(255,255,255,0.7)';
+const MUTED_LIGHT = 'rgba(0,0,0,0.55)';
+
 export type CardStyleVariant = 'glass' | 'border' | 'gradient' | 'stripe' | 'photo';
 export type StripePosition = 'left' | 'right' | 'top' | 'bottom';
 export type BorderStyle = 'solid' | 'dashed' | 'dotted' | 'double';
@@ -12,7 +15,6 @@ export interface CardStyle {
   colorEnd?: string;
   coverPhotoId?: string;
   borderColor?: string;
-  fillColor?: string;
   borderWidth?: BorderWidth;
   borderStyle?: BorderStyle;
   stripePosition?: StripePosition;
@@ -53,7 +55,7 @@ export interface CardRenderProps {
 /** Return muted text color when a color preset is active, undefined otherwise. */
 function getMutedColor(colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): string | undefined {
   return colorPreset
-    ? (theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)')
+    ? (theme === 'dark' ? MUTED_DARK : MUTED_LIGHT)
     : undefined;
 }
 
@@ -88,6 +90,84 @@ export function setSecondaryColor(cardStyleRaw: string, color: string): string {
   return serializeCardStyle({ ...parsed, [mapping.field]: color });
 }
 
+function renderGlassProps(colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): CardRenderProps {
+  const colorBg = getColorBg(colorPreset);
+  return {
+    className: 'glass-card',
+    style: colorBg ? { backgroundColor: colorBg } : {},
+    mutedColor: getMutedColor(colorPreset, theme),
+    isPhotoVariant: false,
+  };
+}
+
+function renderBorderProps(cardStyle: CardStyle, colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): CardRenderProps {
+  const borderPreset = resolveColor(cardStyle.borderColor ?? '');
+  const borderResolved = borderPreset?.bgCss ?? colorPreset?.bgCss ?? 'var(--border)';
+  const colorBg = getColorBg(colorPreset);
+  const width = cardStyle.borderWidth ?? '2';
+  const bStyle = cardStyle.borderStyle ?? 'solid';
+
+  return {
+    className: 'glass-card',
+    style: {
+      outline: `${width}px ${bStyle} ${borderResolved}`,
+      outlineOffset: `-${width}px`,
+      borderColor: 'transparent',
+      ...(colorBg ? { backgroundColor: colorBg } : {}),
+    },
+    mutedColor: getMutedColor(colorPreset, theme),
+    isPhotoVariant: false,
+  };
+}
+
+function renderGradientProps(cardStyle: CardStyle, colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): CardRenderProps {
+  const startColor = colorPreset?.bgCss ?? (theme === 'dark' ? '#374151' : '#D1D5DB');
+  const endPreset = resolveColor(cardStyle.colorEnd ?? '');
+  const endColor = endPreset?.bgCss ?? (theme === 'dark' ? '#1f2937' : '#f3f4f6');
+  return {
+    className: '',
+    style: {
+      background: `linear-gradient(135deg, ${startColor}, ${endColor})`,
+      borderRadius: 'var(--radius-lg)',
+    },
+    mutedColor: theme === 'dark' ? MUTED_DARK : MUTED_LIGHT,
+    isPhotoVariant: false,
+  };
+}
+
+function renderStripeProps(cardStyle: CardStyle, colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): CardRenderProps {
+  const colorBg = getColorBg(colorPreset);
+  const stripePreset = resolveColor(cardStyle.stripeColor ?? '');
+  const stripeResolved = stripePreset?.bgCss ?? colorPreset?.bgCss ?? 'var(--accent)';
+  const pos = cardStyle.stripePosition ?? 'left';
+  const sw = Number(cardStyle.stripeWidth) || 4;
+
+  return {
+    className: 'glass-card',
+    style: {
+      position: 'relative',
+      overflow: 'hidden',
+      ...(colorBg ? { backgroundColor: colorBg } : {}),
+    },
+    mutedColor: getMutedColor(colorPreset, theme),
+    isPhotoVariant: false,
+    stripeBar: { color: stripeResolved, position: pos, width: sw },
+  };
+}
+
+function renderPhotoProps(): CardRenderProps {
+  return {
+    className: '',
+    style: {
+      borderRadius: 'var(--radius-lg)',
+      position: 'relative',
+      overflow: 'hidden',
+    },
+    mutedColor: MUTED_DARK,
+    isPhotoVariant: true,
+  };
+}
+
 /** Compute CSS class + inline style for a bin card based on its color + card_style. */
 export function getCardRenderProps(
   colorKey: string,
@@ -98,90 +178,18 @@ export function getCardRenderProps(
   const variant = cardStyle?.variant ?? 'glass';
   const colorPreset = resolveColor(colorKey);
 
-  // Default glass: existing behavior
-  if (variant === 'glass' || !cardStyle) {
-    const colorBg = getColorBg(colorPreset);
-    return {
-      className: 'glass-card',
-      style: colorBg ? { backgroundColor: colorBg } : {},
-      mutedColor: getMutedColor(colorPreset, theme),
-      isPhotoVariant: false,
-    };
+  switch (variant) {
+    case 'glass':
+      return renderGlassProps(colorPreset, theme);
+    case 'border':
+      return renderBorderProps(cardStyle!, colorPreset, theme);
+    case 'gradient':
+      return renderGradientProps(cardStyle!, colorPreset, theme);
+    case 'stripe':
+      return renderStripeProps(cardStyle!, colorPreset, theme);
+    case 'photo':
+      return renderPhotoProps();
+    default:
+      return { className: 'glass-card', style: {}, mutedColor: undefined, isPhotoVariant: false };
   }
-
-  if (variant === 'border') {
-    const borderPreset = resolveColor(cardStyle.borderColor ?? '');
-    const borderResolved = borderPreset?.bgCss ?? colorPreset?.bgCss ?? 'var(--border)';
-    const colorBg = getColorBg(colorPreset);
-    const width = cardStyle.borderWidth ?? '2';
-    const bStyle = cardStyle.borderStyle ?? 'solid';
-
-    return {
-      className: 'glass-card',
-      style: {
-        outline: `${width}px ${bStyle} ${borderResolved}`,
-        outlineOffset: `-${width}px`,
-        borderColor: 'transparent',
-        ...(colorBg ? { backgroundColor: colorBg } : {}),
-      },
-      mutedColor: getMutedColor(colorPreset, theme),
-      isPhotoVariant: false,
-    };
-  }
-
-  if (variant === 'gradient') {
-    const startColor = colorPreset?.bgCss ?? (theme === 'dark' ? '#374151' : '#D1D5DB');
-    const endPreset = resolveColor(cardStyle.colorEnd ?? '');
-    const endColor = endPreset?.bgCss ?? (theme === 'dark' ? '#1f2937' : '#f3f4f6');
-    return {
-      className: '',
-      style: {
-        background: `linear-gradient(135deg, ${startColor}, ${endColor})`,
-        borderRadius: 'var(--radius-lg)',
-      },
-      mutedColor: theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)',
-      isPhotoVariant: false,
-    };
-  }
-
-  if (variant === 'stripe') {
-    const colorBg = getColorBg(colorPreset);
-    const stripePreset = resolveColor(cardStyle.stripeColor ?? '');
-    const stripeResolved = stripePreset?.bgCss ?? colorPreset?.bgCss ?? 'var(--accent)';
-    const pos = cardStyle.stripePosition ?? 'left';
-    const sw = Number(cardStyle.stripeWidth) || 4;
-
-    return {
-      className: 'glass-card',
-      style: {
-        position: 'relative',
-        overflow: 'hidden',
-        ...(colorBg ? { backgroundColor: colorBg } : {}),
-      },
-      mutedColor: getMutedColor(colorPreset, theme),
-      isPhotoVariant: false,
-      stripeBar: { color: stripeResolved, position: pos, width: sw },
-    };
-  }
-
-  if (variant === 'photo') {
-    return {
-      className: '',
-      style: {
-        borderRadius: 'var(--radius-lg)',
-        position: 'relative',
-        overflow: 'hidden',
-      },
-      mutedColor: 'rgba(255,255,255,0.7)',
-      isPhotoVariant: true,
-    };
-  }
-
-  // Fallback
-  return {
-    className: 'glass-card',
-    style: {},
-    mutedColor: undefined,
-    isPhotoVariant: false,
-  };
 }

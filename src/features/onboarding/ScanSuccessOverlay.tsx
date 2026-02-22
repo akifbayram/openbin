@@ -1,3 +1,4 @@
+import './animations.css';
 import { useEffect } from 'react';
 
 interface ScanSuccessOverlayProps {

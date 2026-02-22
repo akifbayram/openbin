@@ -1,3 +1,4 @@
+import '@/features/onboarding/animations.css';
 import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronDown, Lock, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Check, Pin, Plus, ArrowRightLeft } from 'lucide-react';

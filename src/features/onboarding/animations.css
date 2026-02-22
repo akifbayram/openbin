@@ -1,0 +1,106 @@
+/* ─── Onboarding Animations ─── */
+.onboarding-step-enter {
+  animation: onboardFadeInUp 0.35s ease-out;
+}
+
+@keyframes onboardFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scan success overlay */
+.scan-success-enter {
+  animation: scanFadeIn 0.3s ease-out;
+}
+
+@keyframes scanFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.scan-check-scale {
+  animation: scanCheckScale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+@keyframes scanCheckScale {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.scan-check-draw {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  animation: scanStrokeDraw 0.4s ease-out 0.45s forwards;
+}
+
+@keyframes scanStrokeDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.scan-ring {
+  opacity: 0;
+}
+
+.scan-ring-1 {
+  animation: scanRingExpand 1s ease-out 0.3s forwards;
+}
+
+.scan-ring-2 {
+  animation: scanRingExpand 1s ease-out 0.5s forwards;
+}
+
+.scan-ring-3 {
+  animation: scanRingExpand 1s ease-out 0.7s forwards;
+}
+
+@keyframes scanRingExpand {
+  from {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  to {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+.scan-text-fade {
+  animation: onboardFadeInUp 0.4s ease-out 0.6s both;
+}
+
+.scan-text-fade-delay {
+  animation: onboardFadeInUp 0.4s ease-out 0.8s both;
+}
+
+/* ─── Fade-in utility ─── */
+.fade-in-fast { animation: fadeInFast 0.15s ease-out; }
+@keyframes fadeInFast { from { opacity: 0; } to { opacity: 1; } }
+
+/* ─── Reduced Motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-step-enter, .scan-success-enter, .scan-check-scale,
+  .scan-check-draw, .scan-ring-1, .scan-ring-2, .scan-ring-3,
+  .scan-text-fade, .scan-text-fade-delay, .fade-in-fast {
+    animation: none !important;
+  }
+  .scan-check-draw { stroke-dashoffset: 0 !important; }
+  .scan-ring { opacity: 0 !important; }
+}

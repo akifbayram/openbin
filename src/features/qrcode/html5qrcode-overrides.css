@@ -1,0 +1,11 @@
+/* ─── html5-qrcode overrides ─── */
+#html5-qrcode-scanner video {
+  border-radius: var(--radius-lg) !important;
+}
+#html5-qrcode-scanner img[alt="Info icon"] {
+  display: none !important;
+}
+#html5-qrcode-scanner select,
+#html5-qrcode-scanner span {
+  color: var(--text-primary) !important;
+}

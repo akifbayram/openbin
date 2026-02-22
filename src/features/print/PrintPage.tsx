@@ -1,3 +1,4 @@
+import './print.css';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Printer, CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical, Download } from 'lucide-react';

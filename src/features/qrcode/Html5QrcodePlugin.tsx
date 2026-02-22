@@ -1,3 +1,4 @@
+import './html5qrcode-overrides.css';
 import { useEffect, useRef, useState } from 'react';
 import type { Html5Qrcode } from 'html5-qrcode';
 

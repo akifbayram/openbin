@@ -1,0 +1,63 @@
+/* ─── Print Labels ─── */
+.label-page {
+  overflow: hidden;
+  background: white;
+}
+
+.label-page + .label-page {
+  border-top: 1px dashed #ccc;
+}
+
+.label-sheet {
+  display: grid;
+  gap: 0;
+  color: black;
+}
+
+.label-cell {
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.label-name {
+  line-height: 1.2;
+}
+
+.label-contents {
+  line-height: 1.2;
+}
+
+.label-code {
+  line-height: 1.1;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+}
+
+.qr-icon-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 50%;
+  padding: 2pt;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-swatch-print {
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+@media print {
+  .label-page {
+    page-break-inside: avoid;
+  }
+
+  .label-page + .label-page {
+    border-top: none;
+  }
+}
