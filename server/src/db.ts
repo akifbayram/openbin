@@ -2,8 +2,10 @@ import Database from 'better-sqlite3';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { config } from './lib/config.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = config.databasePath;
 
 // Ensure directory exists
@@ -12,6 +14,12 @@ fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+
+// Initialize schema (all CREATE IF NOT EXISTS — safe to run on every start)
+const schemaPath = path.join(__dirname, '..', 'schema.sql');
+if (fs.existsSync(schemaPath)) {
+  db.exec(fs.readFileSync(schemaPath, 'utf-8'));
+}
 
 /** Word-boundary search: returns 1 if `term` appears at a word boundary in `text` */
 db.function('word_match', { deterministic: true }, (text: unknown, term: unknown) => {

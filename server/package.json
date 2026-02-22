@@ -7,7 +7,6 @@
     "dev": "tsx watch src/start.ts",
     "build": "tsc",
     "start": "node dist/start.js",
-    "migrate": "tsx src/migrate.ts",
     "lint": "npx biome check src/",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -1,6 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { beforeAll, afterEach, afterAll } from 'vitest';
 
 // Set env vars BEFORE any app code is imported
@@ -9,21 +6,12 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret';
 process.env.PHOTO_STORAGE_PATH = '/tmp/openbin-test-photos';
 
-// Now import db (triggers DB creation with :memory:)
+// Now import db (triggers DB creation with :memory: and runs schema.sql)
 const { getDb } = await import('../db.js');
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 beforeAll(() => {
-  const db = getDb();
-
-  // Run all migration SQL files
-  const migrationsDir = path.join(__dirname, '..', '..', 'migrations');
-  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
-  for (const file of files) {
-    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
-    db.exec(sql);
-  }
+  // Schema already applied by db.ts on import
+  getDb();
 });
 
 const TABLES = [

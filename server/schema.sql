@@ -1,12 +1,13 @@
 CREATE TABLE IF NOT EXISTS users (
-  id            TEXT PRIMARY KEY,
-  username      TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  display_name  TEXT NOT NULL DEFAULT '',
-  email         TEXT,
-  avatar_path   TEXT,
-  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  id                 TEXT PRIMARY KEY,
+  username           TEXT UNIQUE NOT NULL,
+  password_hash      TEXT NOT NULL,
+  display_name       TEXT NOT NULL DEFAULT '',
+  email              TEXT,
+  avatar_path        TEXT,
+  active_location_id TEXT REFERENCES locations(id) ON DELETE SET NULL,
+  created_at         TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS locations (
@@ -17,6 +18,9 @@ CREATE TABLE IF NOT EXISTS locations (
   activity_retention_days INTEGER NOT NULL DEFAULT 90 CHECK (activity_retention_days BETWEEN 7 AND 365),
   trash_retention_days    INTEGER NOT NULL DEFAULT 30 CHECK (trash_retention_days BETWEEN 7 AND 365),
   app_name                TEXT NOT NULL DEFAULT 'OpenBin',
+  term_bin                TEXT NOT NULL DEFAULT '',
+  term_location           TEXT NOT NULL DEFAULT '',
+  term_area               TEXT NOT NULL DEFAULT '',
   created_at              TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at              TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -25,7 +29,7 @@ CREATE TABLE IF NOT EXISTS location_members (
   id            TEXT PRIMARY KEY,
   location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
   user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role          TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'member')),
+  role          TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member')),
   joined_at     TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(location_id, user_id)
 );
@@ -50,6 +54,8 @@ CREATE TABLE IF NOT EXISTS bins (
   tags          TEXT NOT NULL DEFAULT '[]',
   icon          TEXT NOT NULL DEFAULT '',
   color         TEXT NOT NULL DEFAULT '',
+  card_style    TEXT NOT NULL DEFAULT '',
+  visibility    TEXT NOT NULL DEFAULT 'location' CHECK (visibility IN ('location', 'private')),
   short_code    TEXT NOT NULL UNIQUE,
   created_by    TEXT REFERENCES users(id) ON DELETE SET NULL,
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
@@ -74,6 +80,7 @@ CREATE TABLE IF NOT EXISTS photos (
   mime_type     TEXT NOT NULL,
   size          INTEGER NOT NULL,
   storage_path  TEXT NOT NULL,
+  thumb_path    TEXT,
   created_by    TEXT REFERENCES users(id) ON DELETE SET NULL,
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -125,6 +132,8 @@ CREATE TABLE IF NOT EXISTS activity_log (
   entity_id   TEXT,
   entity_name TEXT,
   changes     TEXT,
+  auth_method TEXT,
+  api_key_id  TEXT REFERENCES api_keys(id) ON DELETE SET NULL,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_activity_log_location ON activity_log(location_id, created_at DESC);
@@ -180,10 +189,23 @@ CREATE TABLE IF NOT EXISTS scan_history (
 CREATE INDEX IF NOT EXISTS idx_scan_history_user ON scan_history(user_id, scanned_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_scan_history_user_bin ON scan_history(user_id, bin_id);
 
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  family_id TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  revoked_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_family ON refresh_tokens(family_id);
+
 CREATE INDEX IF NOT EXISTS idx_bins_location_id ON bins(location_id);
 CREATE INDEX IF NOT EXISTS idx_bins_location_updated ON bins(location_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bins_area_id ON bins(area_id);
 CREATE INDEX IF NOT EXISTS idx_bins_deleted_at ON bins(location_id, deleted_at);
+CREATE INDEX IF NOT EXISTS idx_bins_visibility ON bins(location_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_photos_bin_id ON photos(bin_id);
 CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id);
