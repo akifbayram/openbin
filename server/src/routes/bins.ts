@@ -10,9 +10,12 @@ import { generateShortCode } from '../lib/shortCode.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { ValidationError, NotFoundError, ForbiddenError } from '../lib/httpErrors.js';
 import { validateBinName } from '../lib/validation.js';
-import { binPhotoUpload, PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
+import { binPhotoUpload } from '../lib/uploadConfig.js';
 import { verifyBinAccess, verifyLocationMembership, getMemberRole, isBinCreator, verifyAreaInLocation } from '../lib/binAccess.js';
-import { BIN_SELECT_COLS } from '../lib/binQueries.js';
+import { BIN_SELECT_COLS, buildBinListQuery } from '../lib/binQueries.js';
+import { validateBinFields } from '../lib/binValidation.js';
+import { buildBinSetClauses, replaceBinItems, resolveAreaNameChanges } from '../lib/binUpdateHelpers.js';
+import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 
 const router = Router();
 
@@ -27,41 +30,7 @@ router.post('/', asyncHandler(async (req, res) => {
   }
 
   validateBinName(name);
-  if (items && Array.isArray(items) && items.length > 500) {
-    throw new ValidationError('Too many items (max 500)');
-  }
-  if (tags && Array.isArray(tags) && tags.length > 50) {
-    throw new ValidationError('Too many tags (max 50)');
-  }
-  if (notes && typeof notes === 'string' && notes.length > 10000) {
-    throw new ValidationError('Notes too long (max 10000 characters)');
-  }
-  if (items && Array.isArray(items)) {
-    for (const item of items) {
-      if (typeof item === 'string' && item.length > 500) {
-        throw new ValidationError('Item name too long (max 500 characters)');
-      }
-    }
-  }
-  if (tags && Array.isArray(tags)) {
-    for (const tag of tags) {
-      if (typeof tag === 'string' && tag.length > 100) {
-        throw new ValidationError('Tag too long (max 100 characters)');
-      }
-    }
-  }
-  if (icon && typeof icon === 'string' && icon.length > 100) {
-    throw new ValidationError('Icon value too long (max 100 characters)');
-  }
-  if (color && typeof color === 'string' && color.length > 50) {
-    throw new ValidationError('Color value too long (max 50 characters)');
-  }
-  if (cardStyle && typeof cardStyle === 'string' && cardStyle.length > 500) {
-    throw new ValidationError('Card style too long (max 500 characters)');
-  }
-  if (visibility !== undefined && visibility !== 'location' && visibility !== 'private') {
-    throw new ValidationError('visibility must be "location" or "private"');
-  }
+  validateBinFields({ items, tags, notes, icon, color, cardStyle, visibility });
 
   if (!await verifyLocationMembership(locationId, req.user!.id)) {
     throw new ForbiddenError('Not a member of this location');
@@ -148,114 +117,27 @@ router.get('/', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Not a member of this location');
   }
 
-  const q = req.query.q as string | undefined;
-  const tag = req.query.tag as string | undefined;
-  const tagsParam = req.query.tags as string | undefined;
-  const tagMode = (req.query.tag_mode as string | undefined) === 'all' ? 'all' : 'any';
-  const areaId = req.query.area_id as string | undefined;
-  const areasParam = req.query.areas as string | undefined;
-  const colorsParam = req.query.colors as string | undefined;
-  const hasItems = req.query.has_items as string | undefined;
-  const hasNotes = req.query.has_notes as string | undefined;
-  const needsOrganizing = req.query.needs_organizing as string | undefined;
-  const sort = req.query.sort as string | undefined;
-  const sortDir = req.query.sort_dir as string | undefined;
-
   // Pagination params
   const limitRaw = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
   const limit = limitRaw !== undefined && !Number.isNaN(limitRaw) ? Math.max(1, Math.min(100, limitRaw)) : undefined;
   const offset = limit !== undefined ? Math.max(0, Number(req.query.offset) || 0) : 0;
 
-  const whereClauses: string[] = ['b.location_id = $1', 'b.deleted_at IS NULL', '(b.visibility = \'location\' OR b.created_by = $2)'];
-  const params: unknown[] = [locationId, req.user!.id];
-  let paramIdx = 3;
-
-  if (q && q.trim()) {
-    const searchTerm = q.trim();
-    whereClauses.push(
-      `(word_match(b.name, $${paramIdx}) = 1 OR word_match(b.notes, $${paramIdx}) = 1 OR word_match(b.short_code, $${paramIdx}) = 1 OR word_match(COALESCE(a.name, ''), $${paramIdx}) = 1 OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND word_match(bi.name, $${paramIdx}) = 1) OR EXISTS (SELECT 1 FROM json_each(b.tags) WHERE word_match(value, $${paramIdx}) = 1))`
-    );
-    params.push(searchTerm);
-    paramIdx++;
-  }
-
-  // Multi-tag filter (tags param takes precedence over single tag)
-  const tagList = tagsParam ? tagsParam.split(',').map((t) => t.trim()).filter(Boolean) : [];
-  if (tagList.length > 0) {
-    const tagPlaceholders = tagList.map((_, i) => `$${paramIdx + i}`);
-    if (tagMode === 'all') {
-      whereClauses.push(`(SELECT COUNT(DISTINCT value) FROM json_each(b.tags) WHERE value IN (${tagPlaceholders.join(', ')})) = ${tagList.length}`);
-    } else {
-      whereClauses.push(`EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value IN (${tagPlaceholders.join(', ')}))`);
-    }
-    params.push(...tagList);
-    paramIdx += tagList.length;
-  } else if (tag && tag.trim()) {
-    whereClauses.push(`EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value = $${paramIdx})`);
-    params.push(tag.trim());
-    paramIdx++;
-  }
-
-  // Multi-area filter (areas param takes precedence over single area_id)
-  const areaList = areasParam ? areasParam.split(',').map((a) => a.trim()).filter(Boolean) : [];
-  if (areaList.length > 0) {
-    const hasUnassigned = areaList.includes('__unassigned__');
-    const realAreas = areaList.filter((a) => a !== '__unassigned__');
-    const parts: string[] = [];
-    if (realAreas.length > 0) {
-      const areaPlaceholders = realAreas.map((_, i) => `$${paramIdx + i}`);
-      parts.push(`b.area_id IN (${areaPlaceholders.join(', ')})`);
-      params.push(...realAreas);
-      paramIdx += realAreas.length;
-    }
-    if (hasUnassigned) {
-      parts.push('b.area_id IS NULL');
-    }
-    whereClauses.push(`(${parts.join(' OR ')})`);
-  } else if (areaId) {
-    if (areaId === '__unassigned__') {
-      whereClauses.push('b.area_id IS NULL');
-    } else {
-      whereClauses.push(`b.area_id = $${paramIdx}`);
-      params.push(areaId);
-      paramIdx++;
-    }
-  }
-
-  // Color filter
-  const colorList = colorsParam ? colorsParam.split(',').map((c) => c.trim()).filter(Boolean) : [];
-  if (colorList.length > 0) {
-    const colorPlaceholders = colorList.map((_, i) => `$${paramIdx + i}`);
-    whereClauses.push(`b.color IN (${colorPlaceholders.join(', ')})`);
-    params.push(...colorList);
-    paramIdx += colorList.length;
-  }
-
-  // Has items filter
-  if (hasItems === 'true') {
-    whereClauses.push('EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id)');
-  }
-
-  // Has notes filter
-  if (hasNotes === 'true') {
-    whereClauses.push("b.notes IS NOT NULL AND b.notes != '' AND TRIM(b.notes) != ''");
-  }
-
-  if (needsOrganizing === 'true') {
-    whereClauses.push(`(b.tags = '[]' OR b.tags = '') AND b.area_id IS NULL AND NOT EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id)`);
-  }
-
-  const validSorts: Record<string, string> = {
-    name: 'b.name',
-    created_at: 'b.created_at',
-    updated_at: 'b.updated_at',
-    area: 'CASE WHEN a.name IS NULL OR a.name = \'\' THEN 1 ELSE 0 END, a.name, b.name',
-  };
-  const dir = sortDir === 'asc' ? 'ASC' : 'DESC';
-  const orderBy = validSorts[sort || ''] || 'b.updated_at';
-  const orderClause = `${orderBy} ${dir}`;
-
-  const whereSQL = whereClauses.join(' AND ');
+  const { whereSQL, orderClause, params } = buildBinListQuery({
+    locationId,
+    userId: req.user!.id,
+    q: req.query.q as string | undefined,
+    tag: req.query.tag as string | undefined,
+    tags: req.query.tags as string | undefined,
+    tagMode: (req.query.tag_mode as string | undefined) === 'all' ? 'all' : 'any',
+    areaId: req.query.area_id as string | undefined,
+    areas: req.query.areas as string | undefined,
+    colors: req.query.colors as string | undefined,
+    hasItems: req.query.has_items as string | undefined,
+    hasNotes: req.query.has_notes as string | undefined,
+    needsOrganizing: req.query.needs_organizing as string | undefined,
+    sort: req.query.sort as string | undefined,
+    sortDir: req.query.sort_dir as string | undefined,
+  });
 
   // When limit is provided, run a count query and apply LIMIT/OFFSET
   if (limit !== undefined) {
@@ -415,43 +297,9 @@ router.put('/:id', asyncHandler(async (req, res) => {
   if (name !== undefined) {
     validateBinName(name);
   }
-  if (visibility !== undefined && visibility !== 'location' && visibility !== 'private') {
-    throw new ValidationError('visibility must be "location" or "private"');
-  }
+  validateBinFields({ items, tags, notes, icon, color, cardStyle, visibility });
   if (visibility === 'private' && access.createdBy !== req.user!.id) {
     throw new ForbiddenError('Only the bin creator can set visibility to private');
-  }
-  if (items !== undefined && Array.isArray(items) && items.length > 500) {
-    throw new ValidationError('Too many items (max 500)');
-  }
-  if (tags !== undefined && Array.isArray(tags) && tags.length > 50) {
-    throw new ValidationError('Too many tags (max 50)');
-  }
-  if (notes !== undefined && typeof notes === 'string' && notes.length > 10000) {
-    throw new ValidationError('Notes too long (max 10000 characters)');
-  }
-  if (items !== undefined && Array.isArray(items)) {
-    for (const item of items) {
-      if (typeof item === 'string' && item.length > 500) {
-        throw new ValidationError('Item name too long (max 500 characters)');
-      }
-    }
-  }
-  if (tags !== undefined && Array.isArray(tags)) {
-    for (const tag of tags) {
-      if (typeof tag === 'string' && tag.length > 100) {
-        throw new ValidationError('Tag too long (max 100 characters)');
-      }
-    }
-  }
-  if (icon !== undefined && typeof icon === 'string' && icon.length > 100) {
-    throw new ValidationError('Icon value too long (max 100 characters)');
-  }
-  if (color !== undefined && typeof color === 'string' && color.length > 50) {
-    throw new ValidationError('Color value too long (max 50 characters)');
-  }
-  if (cardStyle !== undefined && typeof cardStyle === 'string' && cardStyle.length > 500) {
-    throw new ValidationError('Card style too long (max 500 characters)');
   }
 
   // Fetch old state for activity log diff
@@ -461,85 +309,22 @@ router.put('/:id', asyncHandler(async (req, res) => {
   );
   const oldBin = oldResult.rows[0];
 
-  const setClauses: string[] = ["updated_at = datetime('now')"];
-  const params: unknown[] = [];
-  let paramIdx = 1;
-
-  if (name !== undefined) {
-    setClauses.push(`name = $${paramIdx++}`);
-    params.push(name);
-  }
-  if (areaId !== undefined) {
-    if (areaId) await verifyAreaInLocation(areaId, access.locationId);
-    setClauses.push(`area_id = $${paramIdx++}`);
-    params.push(areaId || null);
-  }
-  if (notes !== undefined) {
-    setClauses.push(`notes = $${paramIdx++}`);
-    params.push(notes);
-  }
-  if (tags !== undefined) {
-    setClauses.push(`tags = $${paramIdx++}`);
-    params.push(tags);
-  }
-  if (icon !== undefined) {
-    setClauses.push(`icon = $${paramIdx++}`);
-    params.push(icon);
-  }
-  if (color !== undefined) {
-    setClauses.push(`color = $${paramIdx++}`);
-    params.push(color);
-  }
-  if (cardStyle !== undefined) {
-    setClauses.push(`card_style = $${paramIdx++}`);
-    params.push(cardStyle);
-  }
-  if (visibility !== undefined) {
-    setClauses.push(`visibility = $${paramIdx++}`);
-    params.push(visibility);
+  if (areaId !== undefined && areaId) {
+    await verifyAreaInLocation(areaId, access.locationId);
   }
 
+  const { setClauses, params, nextParamIdx } = buildBinSetClauses({ name, areaId, notes, tags, icon, color, cardStyle, visibility });
   params.push(id);
 
   await query(
-    `UPDATE bins SET ${setClauses.join(', ')} WHERE id = $${paramIdx} AND deleted_at IS NULL`,
+    `UPDATE bins SET ${setClauses.join(', ')} WHERE id = $${nextParamIdx} AND deleted_at IS NULL`,
     params
   );
 
   // Handle items separately — full replacement
-  let itemChanges: Record<string, { old: unknown; new: unknown }> | undefined;
-  if (items !== undefined && Array.isArray(items)) {
-    const oldItemsResult = await query<{ name: string }>(
-      'SELECT name FROM bin_items WHERE bin_id = $1 ORDER BY position',
-      [id]
-    );
-    const oldItemNames = oldItemsResult.rows.map((r) => r.name);
-
-    // Atomically delete all existing items and re-insert
-    const db = getDb();
-    const deleteStmt = db.prepare('DELETE FROM bin_items WHERE bin_id = ?');
-    const insertStmt = db.prepare('INSERT INTO bin_items (id, bin_id, name, position) VALUES (?, ?, ?, ?)');
-    const replaceItems = db.transaction(() => {
-      deleteStmt.run(id);
-      for (let i = 0; i < items.length; i++) {
-        const itemName = typeof items[i] === 'string' ? items[i] : (items[i] as { name: string }).name;
-        if (!itemName) continue;
-        insertStmt.run(generateUuid(), id, itemName, i);
-      }
-    });
-    replaceItems();
-
-    const newItemNames = items.map((item: string | { name: string }) =>
-      typeof item === 'string' ? item : item.name
-    );
-    const added = newItemNames.filter((n: string) => !oldItemNames.includes(n));
-    const removed = oldItemNames.filter((n) => !newItemNames.includes(n));
-    if (added.length > 0 || removed.length > 0) {
-      itemChanges = {};
-      if (added.length > 0) itemChanges.items_added = { old: null, new: added };
-      if (removed.length > 0) itemChanges.items_removed = { old: removed, new: null };
-    }
-  }
+  const itemChanges = items !== undefined && Array.isArray(items)
+    ? await replaceBinItems(id, items)
+    : null;
 
   // Re-fetch with BIN_SELECT_COLS
   const result = await query(
@@ -569,20 +354,13 @@ router.put('/:id', asyncHandler(async (req, res) => {
 
     const binFieldChanges = computeChanges(oldBin, newObj, Object.keys(newObj));
 
-    // Replace area_id UUIDs with readable area names
-    if (binFieldChanges?.area_id) {
-      const oldAreaName = oldBin.area_id
-        ? ((await query<{ name: string }>('SELECT name FROM areas WHERE id = $1', [oldBin.area_id])).rows[0]?.name ?? '')
-        : '';
-      const newAreaId = newObj.area_id as string | null;
-      const newAreaName = newAreaId
-        ? ((await query<{ name: string }>('SELECT name FROM areas WHERE id = $1', [newAreaId])).rows[0]?.name ?? '')
-        : '';
-      delete binFieldChanges.area_id;
-      binFieldChanges.area = { old: oldAreaName || null, new: newAreaName || null };
-    }
+    await resolveAreaNameChanges(
+      binFieldChanges ?? {},
+      oldBin.area_id as string | null,
+      (newObj.area_id as string | null) ?? null,
+    );
 
-    const allChanges = { ...binFieldChanges, ...itemChanges };
+    const allChanges = { ...(binFieldChanges ?? {}), ...itemChanges };
     if (Object.keys(allChanges).length > 0) {
       logActivity({
         locationId: access.locationId,
@@ -721,7 +499,7 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
   }
 
   // Get photos to delete from disk
-  const photosResult = await query(
+  const photosResult = await query<{ storage_path: string; thumb_path: string | null }>(
     'SELECT storage_path, thumb_path FROM photos WHERE bin_id = $1',
     [id]
   );
@@ -729,33 +507,7 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
   // Hard delete (cascades to photos in DB)
   await query('DELETE FROM bins WHERE id = $1', [id]);
 
-  // Clean up photo files from disk
-  for (const photo of photosResult.rows) {
-    try {
-      const filePath = path.join(PHOTO_STORAGE_PATH, photo.storage_path);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-      if (photo.thumb_path) {
-        const thumbFilePath = path.join(PHOTO_STORAGE_PATH, photo.thumb_path);
-        if (fs.existsSync(thumbFilePath)) {
-          fs.unlinkSync(thumbFilePath);
-        }
-      }
-    } catch {
-      // Ignore file cleanup errors
-    }
-  }
-
-  // Clean up empty bin directory
-  try {
-    const binDir = path.join(PHOTO_STORAGE_PATH, id);
-    if (fs.existsSync(binDir)) {
-      fs.rmdirSync(binDir);
-    }
-  } catch {
-    // Ignore directory cleanup errors
-  }
+  cleanupBinPhotos(id, photosResult.rows);
 
   logActivity({
     locationId,
