@@ -719,7 +719,7 @@ export function BinDetailPage() {
                     const tagPreset = tagColorKey ? resolveColor(tagColorKey) : undefined;
                     const tagStyle = tagPreset
                       ? {
-                          backgroundColor: theme === 'dark' ? tagPreset.bgDark : tagPreset.bg,
+                          backgroundColor: tagPreset.bgCss,
                           color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
                         }
                       : undefined;

@@ -9,7 +9,6 @@ import { useDebounce } from '@/lib/useDebounce';
 import { usePaginatedItemList } from './useItems';
 import { resolveIcon } from '@/lib/iconMap';
 import { resolveColor } from '@/lib/colorPalette';
-import { useTheme } from '@/lib/theme';
 import { useTerminology } from '@/lib/terminology';
 
 type SortOption = 'alpha' | 'bin';
@@ -25,8 +24,6 @@ export function ItemsPage() {
   const debouncedSearch = useDebounce(search, 300);
   const navigate = useNavigate();
   const { items, totalCount, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedItemList(debouncedSearch, sort);
-  const { theme } = useTheme();
-
   function cycleSort() {
     setSort((prev) => (prev === 'alpha' ? 'bin' : 'alpha'));
   }
@@ -93,11 +90,7 @@ export function ItemsPage() {
             const colorPreset = entry.bin_color
               ? resolveColor(entry.bin_color)
               : null;
-            const dotColor = colorPreset
-              ? theme === 'dark'
-                ? colorPreset.bgDark
-                : colorPreset.bg
-              : null;
+            const dotColor = colorPreset?.bgCss ?? null;
 
             return (
               <div

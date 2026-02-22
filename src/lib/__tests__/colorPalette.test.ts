@@ -5,6 +5,7 @@ import {
   buildColorKey,
   hslToHex,
   hexToHsl,
+  srgbMix,
   getHueRange,
   HUE_RANGES,
   SHADE_COUNT,
@@ -84,6 +85,24 @@ describe('colorPalette', () => {
     });
   });
 
+  describe('srgbMix', () => {
+    it('returns base at 0%', () => {
+      expect(srgbMix('#FF0000', '#FFFFFF', 0)).toBe('#FFFFFF');
+    });
+
+    it('returns ref at 100%', () => {
+      expect(srgbMix('#FF0000', '#FFFFFF', 100)).toBe('#FF0000');
+    });
+
+    it('returns midpoint at 50%', () => {
+      const result = srgbMix('#FF0000', '#000000', 50);
+      // Should be approximately #800000
+      expect(result).toMatch(/^#[0-9A-F]{6}$/);
+      const r = parseInt(result.substring(1, 3), 16);
+      expect(r).toBeCloseTo(128, -1);
+    });
+  });
+
   describe('resolveColor', () => {
     it('resolves a new-format key', () => {
       const preset = resolveColor('210:2');
@@ -92,13 +111,15 @@ describe('colorPalette', () => {
       expect(preset!.label).toBe('Blue');
       expect(preset!.dot).toMatch(/^#[0-9A-F]{6}$/);
       expect(preset!.bg).toMatch(/^#[0-9A-F]{6}$/);
-      expect(preset!.bgDark).toMatch(/^#[0-9A-F]{6}$/);
+      expect(preset!.ref).toMatch(/^#[0-9A-F]{6}$/);
+      expect(preset!.bgCss).toMatch(/^color-mix\(in oklch,/);
     });
 
     it('resolves neutral key', () => {
       const preset = resolveColor('neutral:2');
       expect(preset).toBeDefined();
       expect(preset!.label).toBe('Gray');
+      expect(preset!.bgCss).toContain('color-mix(in oklch,');
     });
 
     it('resolves legacy key "blue"', () => {
@@ -125,7 +146,19 @@ describe('colorPalette', () => {
       for (let s = 0; s < SHADE_COUNT; s++) {
         const preset = resolveColor(`180:${s}`);
         expect(preset).toBeDefined();
+        expect(preset!.bgCss).toContain('var(--bg-base)');
       }
+    });
+
+    it('bg is a valid hex for print fallback', () => {
+      const preset = resolveColor('220:2');
+      expect(preset!.bg).toMatch(/^#[0-9A-F]{6}$/);
+    });
+
+    it('ref is consistent for same hue across shades', () => {
+      const ref0 = resolveColor('220:0')!.ref;
+      const ref4 = resolveColor('220:4')!.ref;
+      expect(ref0).toBe(ref4);
     });
   });
 

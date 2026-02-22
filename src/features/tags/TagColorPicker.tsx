@@ -8,13 +8,9 @@ interface TagColorPickerProps {
   onColorChange: (color: string) => void;
 }
 
-const SHADE_PARAMS: [number, number][] = [
-  [80, 72], [75, 62], [70, 52], [65, 42], [60, 32],
-];
-
-function getShadeColor(hue: number | 'neutral', shade: number): string {
-  const [s, l] = SHADE_PARAMS[shade];
-  return hslToHex(hue === 'neutral' ? 0 : hue, hue === 'neutral' ? 0 : s, l);
+function getShadePreview(hue: number | 'neutral', shade: number): string {
+  const key = buildColorKey(hue, shade);
+  return resolveColor(key)?.bgCss ?? hslToHex(hue === 'neutral' ? 0 : hue, 70, 50);
 }
 
 export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerProps) {
@@ -173,7 +169,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
                       'flex-1 h-6 transition-all',
                       isActive && 'ring-2 ring-white ring-inset'
                     )}
-                    style={{ backgroundColor: getShadeColor(activeHue, i) }}
+                    style={{ backgroundColor: getShadePreview(activeHue, i) }}
                   />
                 );
               })}

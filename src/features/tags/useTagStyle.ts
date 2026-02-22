@@ -14,7 +14,7 @@ export function useTagStyle(): (tag: string) => CSSProperties | undefined {
       const preset = colorKey ? resolveColor(colorKey) : undefined;
       if (!preset) return undefined;
       return {
-        backgroundColor: theme === 'dark' ? preset.bgDark : preset.bg,
+        backgroundColor: preset.bgCss,
         color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
       };
     },

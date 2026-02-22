@@ -55,9 +55,9 @@ function getMutedColor(colorPreset: ColorPreset | undefined, theme: 'light' | 'd
     : undefined;
 }
 
-/** Return the preset background for the given theme, undefined if no preset. */
-function getColorBg(colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): string | undefined {
-  return colorPreset ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg) : undefined;
+/** Return the preset background CSS value, undefined if no preset. */
+function getColorBg(colorPreset: ColorPreset | undefined): string | undefined {
+  return colorPreset?.bgCss;
 }
 
 type SecondaryColorField = 'borderColor' | 'colorEnd' | 'stripeColor';
@@ -98,7 +98,7 @@ export function getCardRenderProps(
 
   // Default glass: existing behavior
   if (variant === 'glass' || !cardStyle) {
-    const colorBg = getColorBg(colorPreset, theme);
+    const colorBg = getColorBg(colorPreset);
     return {
       className: 'glass-card',
       style: colorBg ? { backgroundColor: colorBg } : {},
@@ -109,8 +109,8 @@ export function getCardRenderProps(
 
   if (variant === 'outline') {
     const borderPreset = resolveColor(cardStyle.borderColor ?? '');
-    const borderResolved = borderPreset?.dot ?? colorPreset?.dot ?? 'var(--border)';
-    const colorBg = getColorBg(colorPreset, theme);
+    const borderResolved = borderPreset?.bgCss ?? colorPreset?.bgCss ?? 'var(--border)';
+    const colorBg = getColorBg(colorPreset);
     const width = cardStyle.borderWidth ?? '2';
     const bStyle = cardStyle.borderStyle ?? 'solid';
 
@@ -128,9 +128,9 @@ export function getCardRenderProps(
   }
 
   if (variant === 'gradient') {
-    const startColor = colorPreset ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg) : (theme === 'dark' ? '#374151' : '#D1D5DB');
+    const startColor = colorPreset?.bgCss ?? (theme === 'dark' ? '#374151' : '#D1D5DB');
     const endPreset = resolveColor(cardStyle.colorEnd ?? '');
-    const endColor = endPreset ? (theme === 'dark' ? endPreset.bgDark : endPreset.bg) : (theme === 'dark' ? '#1f2937' : '#f3f4f6');
+    const endColor = endPreset?.bgCss ?? (theme === 'dark' ? '#1f2937' : '#f3f4f6');
     return {
       className: '',
       style: {
@@ -143,9 +143,9 @@ export function getCardRenderProps(
   }
 
   if (variant === 'stripe') {
-    const colorBg = getColorBg(colorPreset, theme);
+    const colorBg = getColorBg(colorPreset);
     const stripePreset = resolveColor(cardStyle.stripeColor ?? '');
-    const stripeResolved = stripePreset?.dot ?? colorPreset?.dot ?? 'var(--accent)';
+    const stripeResolved = stripePreset?.bgCss ?? colorPreset?.bgCss ?? 'var(--accent)';
     const pos = cardStyle.stripePosition ?? 'left';
     const sw = Number(cardStyle.stripeWidth) || 4;
 

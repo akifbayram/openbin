@@ -1,21 +1,48 @@
 export interface ColorPreset {
   key: string;
   label: string;
-  bg: string;
-  bgDark: string;
+  ref: string;
   dot: string;
+  bg: string;
+  bgCss: string;
 }
 
 export const SHADE_COUNT = 5;
 
-// Shade HSL parameters: [dotS, dotL, bgS, bgL, bgDarkS, bgDarkL]
-const SHADE_PARAMS: [number, number, number, number, number, number][] = [
-  [80, 72, 85, 88, 60, 35], // 0 lightest
-  [75, 62, 80, 82, 55, 30], // 1 light
-  [70, 52, 75, 78, 50, 25], // 2 medium
-  [65, 42, 70, 85, 45, 18], // 3 dark
-  [60, 32, 65, 88, 40, 13], // 4 darkest
+// Shade parameters: [dotS, dotL, mixPercent]
+// mixPercent controls how much of the reference color mixes into --bg-base
+const SHADE_PARAMS: [number, number, number][] = [
+  [80, 72, 25], // 0 lightest
+  [75, 62, 40], // 1 light
+  [70, 52, 55], // 2 medium
+  [65, 42, 70], // 3 dark
+  [60, 32, 90], // 4 darkest
 ];
+
+// Fixed reference color saturation/lightness for the vivid per-hue color
+const REF_S = 80;
+const REF_L = 65;
+
+// Light-mode base for print/PDF hex fallback
+const LIGHT_BASE = '#f2f2f7';
+
+/** Linear sRGB interpolation between two hex colors. Returns uppercase hex. */
+export function srgbMix(refHex: string, baseHex: string, percent: number): string {
+  const parse = (hex: string) => {
+    const raw = hex.replace('#', '');
+    return [
+      parseInt(raw.substring(0, 2), 16) / 255,
+      parseInt(raw.substring(2, 4), 16) / 255,
+      parseInt(raw.substring(4, 6), 16) / 255,
+    ];
+  };
+  const [r1, g1, b1] = parse(refHex);
+  const [r2, g2, b2] = parse(baseHex);
+  const t = percent / 100;
+  const mix = (a: number, b: number) => Math.round((a * t + b * (1 - t)) * 255);
+  const toHex = (v: number) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0');
+  return `#${toHex(mix(r1, r2))}${toHex(mix(g1, g2))}${toHex(mix(b1, b2))}`.toUpperCase();
+}
 
 // Hue name boundaries: [minHue, maxHue, name]
 const HUE_NAMES: [number, number, string][] = [
@@ -96,18 +123,16 @@ export function buildColorKey(hue: number | 'neutral', shade: number): string {
 }
 
 function computePreset(hue: number | 'neutral', shade: number): ColorPreset {
-  const [dotS, dotL, bgS, bgL, bgDarkS, bgDarkL] = SHADE_PARAMS[shade];
+  const [dotS, dotL, mixPct] = SHADE_PARAMS[shade];
   const h = hue === 'neutral' ? 0 : hue;
   const s = hue === 'neutral' ? 0 : 1;
   const key = buildColorKey(hue, shade);
   const label = hue === 'neutral' ? 'Gray' : getHueName(h);
-  return {
-    key,
-    label,
-    dot: hslToHex(h, dotS * s, dotL),
-    bg: hslToHex(h, bgS * s, bgL),
-    bgDark: hslToHex(h, bgDarkS * s, bgDarkL),
-  };
+  const ref = hslToHex(h, REF_S * s, REF_L);
+  const dot = hslToHex(h, dotS * s, dotL);
+  const bg = srgbMix(ref, LIGHT_BASE, mixPct);
+  const bgCss = `color-mix(in oklch, ${ref} ${mixPct}%, var(--bg-base))`;
+  return { key, label, ref, dot, bg, bgCss };
 }
 
 // Legacy key → new key map for backward compatibility
