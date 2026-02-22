@@ -25,8 +25,7 @@ import { BinFilterDialog } from './BinFilterDialog';
 import { BinSearchBar } from './BinSearchBar';
 import { BulkTagDialog } from './BulkTagDialog';
 import { BulkAreaDialog } from './BulkAreaDialog';
-import { BulkColorDialog } from './BulkColorDialog';
-import { BulkIconDialog } from './BulkIconDialog';
+import { BulkAppearanceDialog } from './BulkAppearanceDialog';
 import { BulkVisibilityDialog } from './BulkVisibilityDialog';
 import { BulkLocationDialog } from './BulkLocationDialog';
 import { BulkActionBar } from './BulkActionBar';
@@ -74,7 +73,7 @@ export function BinListPage() {
 
   const bulk = useBulkDialogs();
   const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(bins, [debouncedSearch, sort, filters]);
-  const { bulkDelete, bulkPinToggle, pinLabel } = useBulkActions(bins, selectedIds, clearSelection, showToast, t);
+  const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(bins, selectedIds, clearSelection, showToast, t);
 
   const handleTagClick = useCallback((tag: string) => {
     setFilters((prev) => ({
@@ -243,15 +242,9 @@ export function BinListPage() {
         binIds={[...selectedIds]}
         onDone={clearSelection}
       />
-      <BulkColorDialog
-        open={bulk.isOpen('color')}
-        onOpenChange={(v) => v ? bulk.open('color') : bulk.close()}
-        binIds={[...selectedIds]}
-        onDone={clearSelection}
-      />
-      <BulkIconDialog
-        open={bulk.isOpen('icon')}
-        onOpenChange={(v) => v ? bulk.open('icon') : bulk.close()}
+      <BulkAppearanceDialog
+        open={bulk.isOpen('appearance')}
+        onOpenChange={(v) => v ? bulk.open('appearance') : bulk.close()}
         binIds={[...selectedIds]}
         onDone={clearSelection}
       />
@@ -290,11 +283,11 @@ export function BinListPage() {
           onMove={() => bulk.open('area')}
           onDelete={bulkDelete}
           onClear={clearSelection}
-          onColor={() => bulk.open('color')}
-          onIcon={() => bulk.open('icon')}
+          onAppearance={() => bulk.open('appearance')}
           onVisibility={() => bulk.open('visibility')}
           onMoveLocation={() => bulk.open('location')}
           onPin={bulkPinToggle}
+          onDuplicate={bulkDuplicate}
           pinLabel={pinLabel}
         />
       )}

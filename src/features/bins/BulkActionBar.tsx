@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { CheckCircle2, Tag, MapPin, Trash2, X, MoreHorizontal, Palette, Box, Eye, ArrowRightLeft, Pin } from 'lucide-react';
+import { CheckCircle2, Tag, MapPin, Trash2, X, MoreHorizontal, Paintbrush, Eye, ArrowRightLeft, Pin, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { cn } from '@/lib/utils';
@@ -11,15 +11,15 @@ interface BulkActionBarProps {
   onMove: () => void;
   onDelete: () => void;
   onClear: () => void;
-  onColor: () => void;
-  onIcon: () => void;
+  onAppearance: () => void;
   onVisibility: () => void;
   onMoveLocation: () => void;
   onPin: () => void;
+  onDuplicate: () => void;
   pinLabel: string;
 }
 
-export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete, onClear, onColor, onIcon, onVisibility, onMoveLocation, onPin, pinLabel }: BulkActionBarProps) {
+export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel }: BulkActionBarProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -98,17 +98,10 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
             <div className="absolute bottom-full mb-2 right-0 glass-heavy rounded-[var(--radius-md)] py-1 min-w-[180px] z-50 shadow-lg">
               <button
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                onClick={() => handleMoreAction(onColor)}
+                onClick={() => handleMoreAction(onAppearance)}
               >
-                <Palette className="h-4 w-4 text-[var(--text-tertiary)]" />
-                Change Color
-              </button>
-              <button
-                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                onClick={() => handleMoreAction(onIcon)}
-              >
-                <Box className="h-4 w-4 text-[var(--text-tertiary)]" />
-                Change Icon
+                <Paintbrush className="h-4 w-4 text-[var(--text-tertiary)]" />
+                Appearance
               </button>
               <button
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
@@ -130,6 +123,13 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
               >
                 <Pin className="h-4 w-4 text-[var(--text-tertiary)]" />
                 {pinLabel}
+              </button>
+              <button
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                onClick={() => handleMoreAction(onDuplicate)}
+              >
+                <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
+                Duplicate
               </button>
             </div>
           )}

@@ -122,7 +122,7 @@ export function TrashPage() {
                     <p className="text-[12px] text-[var(--text-tertiary)]">
                       Deleted {formatTimeAgo(bin.deleted_at ?? bin.updated_at)}
                       {bin.area_name ? ` · ${bin.area_name}` : ''}
-                      {Array.isArray(bin.items) && bin.items.length > 0 ? ` · ${bin.items.length} items` : ''}
+                      {Array.isArray(bin.items) && bin.items.length > 0 ? ` · ${bin.items.length} ${bin.items.length === 1 ? 'item' : 'items'}` : ''}
                     </p>
                   </div>
                   {isAdmin && (

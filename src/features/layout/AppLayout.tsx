@@ -26,7 +26,7 @@ export function AppLayout() {
   const { locations, isLoading: locationsLoading } = useLocationList();
   const onboarding = useOnboarding();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem('openbin-install-dismissed') === '1');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const navigate = useNavigate();
@@ -106,29 +106,6 @@ export function AppLayout() {
       {/* pb: nav-height(52) + bottom-offset(20) + safe-area + breathing(16) ≈ 88+safe */}
       <main id="main-content" className="lg:ml-[260px] pt-[var(--safe-top)] pb-[calc(88px+var(--safe-bottom))] lg:pb-8">
         <div className="mx-auto w-full max-w-7xl">
-          {/* PWA install banner */}
-          {installPrompt && !dismissed && (
-            <div className="mx-5 mt-4 glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">
-              <Download className="h-5 w-5 text-[var(--accent)] shrink-0" />
-              <p className="flex-1 text-[14px] text-[var(--text-primary)]">
-                Install {settings.appName} for quick access
-              </p>
-              <Button
-                size="sm"
-                onClick={handleInstall}
-                className="rounded-[var(--radius-full)] h-8 px-3.5 text-[13px]"
-              >
-                Install
-              </Button>
-              <button
-                onClick={() => setDismissed(true)}
-                aria-label="Dismiss install prompt"
-                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] p-1"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          )}
           <Outlet />
         </div>
       </main>
@@ -139,6 +116,29 @@ export function AppLayout() {
         onAction={(id) => shortcutActions[id]?.()}
       />
       <ShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
+      {/* PWA install toast — fixed above bottom nav (mobile) / bottom-right (desktop) */}
+      {installPrompt && !dismissed && (
+        <div className="fixed z-40 bottom-[calc(68px+var(--safe-bottom))] lg:bottom-6 left-4 right-4 lg:left-auto lg:right-6 lg:w-[360px] glass-heavy rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 shadow-lg fade-in-fast">
+          <Download className="h-5 w-5 text-[var(--accent)] shrink-0" />
+          <p className="flex-1 text-[14px] text-[var(--text-primary)]">
+            Install {settings.appName}
+          </p>
+          <Button
+            size="sm"
+            onClick={handleInstall}
+            className="rounded-[var(--radius-full)] h-8 px-3.5 text-[13px]"
+          >
+            Install
+          </Button>
+          <button
+            onClick={() => { setDismissed(true); localStorage.setItem('openbin-install-dismissed', '1'); }}
+            aria-label="Dismiss install prompt"
+            className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] p-1"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       {onboarding.isOnboarding && !onboarding.isLoading && !locationsLoading && (locations.length === 0 || onboarding.step > 0) && (
         <OnboardingOverlay
           step={onboarding.step}

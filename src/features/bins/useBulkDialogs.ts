@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export type BulkDialog = 'tag' | 'area' | 'color' | 'icon' | 'visibility' | 'location';
+export type BulkDialog = 'tag' | 'area' | 'appearance' | 'visibility' | 'location';
 
 export function useBulkDialogs() {
   const [openDialog, setOpenDialog] = useState<BulkDialog | null>(null);

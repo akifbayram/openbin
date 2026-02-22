@@ -271,7 +271,12 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
         }
       }
 
-      const binId = bin.id || generateUuid();
+      let binId = bin.id || generateUuid();
+      // If the ID already exists (e.g. imported to another location), generate a new one
+      const idConflict = querySync('SELECT id FROM bins WHERE id = $1', [binId]);
+      if (idConflict.rows.length > 0) {
+        binId = generateUuid();
+      }
       const areaId = resolveAreaSync(locationId, bin.location || '', userId);
 
       insertBinWithShortCode(binId, locationId, {

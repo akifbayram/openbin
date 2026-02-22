@@ -231,10 +231,20 @@ export function ActivityPage() {
                             {fields.map(([field, diff]) => {
                               const label = field === 'area' ? t.area
                                 : field === 'name' ? 'name'
+                                : field === 'card_style' ? 'style'
                                 : field;
+                              const formatVal = (val: unknown) => {
+                                if (field === 'card_style') {
+                                  try {
+                                    const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+                                    return parsed?.variant || 'glass';
+                                  } catch { return String(val || 'glass'); }
+                                }
+                                return String(val ?? 'none');
+                              };
                               return (
                                 <p key={field}>
-                                  {label}: <span className="line-through">{String(diff.old ?? 'none')}</span> → {String(diff.new ?? 'none')}
+                                  {label}: <span className="line-through">{formatVal(diff.old)}</span> → {formatVal(diff.new)}
                                 </p>
                               );
                             })}

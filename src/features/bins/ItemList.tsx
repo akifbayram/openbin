@@ -10,6 +10,7 @@ import type { BinItem } from '@/types';
 interface ItemListProps {
   items: BinItem[];
   binId: string;
+  readOnly?: boolean;
 }
 
 type SortMode = 'manual' | 'az' | 'za';
@@ -145,7 +146,7 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
   );
 }
 
-export function ItemList({ items, binId }: ItemListProps) {
+export function ItemList({ items, binId, readOnly }: ItemListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('manual');
   const { showToast } = useToast();
@@ -194,7 +195,7 @@ export function ItemList({ items, binId }: ItemListProps) {
     <div>
       <div className="flex items-center justify-between mb-2">
         <Label>{items.length} {items.length === 1 ? 'Item' : 'Items'}</Label>
-        {items.length >= 2 && (
+        {!readOnly && items.length >= 2 && (
           <Button
             variant="secondary"
             size="sm"
@@ -210,7 +211,16 @@ export function ItemList({ items, binId }: ItemListProps) {
         <p className="text-[15px] text-[var(--text-tertiary)] italic">No items yet</p>
       ) : (
         <div className="space-y-0.5">
-          {items.map((item) => (
+          {items.map((item) => readOnly ? (
+            <div
+              key={item.id}
+              className="flex items-center gap-1.5 bg-[var(--bg-elevated)] px-2 py-1.5 rounded-[var(--radius-sm)]"
+            >
+              <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed py-0.5">
+                {item.name}
+              </span>
+            </div>
+          ) : (
             <ItemRow
               key={item.id}
               text={item.name}

@@ -3,10 +3,20 @@ import { query, generateUuid } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { logActivity } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { ValidationError, NotFoundError } from '../lib/httpErrors.js';
-import { verifyBinAccess } from '../lib/binAccess.js';
+import { ValidationError, NotFoundError, ForbiddenError } from '../lib/httpErrors.js';
+import { verifyBinAccess, isLocationAdmin } from '../lib/binAccess.js';
 
 const router = Router();
+
+/** Verify user can edit a bin (must be bin creator or location admin) */
+async function verifyBinEditAccess(binId: string, userId: string) {
+  const access = await verifyBinAccess(binId, userId);
+  if (!access) throw new NotFoundError('Bin not found');
+  if (access.createdBy !== userId && !(await isLocationAdmin(access.locationId, userId))) {
+    throw new ForbiddenError('Only the bin creator or a location admin can modify items');
+  }
+  return access;
+}
 
 router.use(authenticate);
 
@@ -19,10 +29,7 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
     throw new ValidationError('items array is required');
   }
 
-  const access = await verifyBinAccess(id, req.user!.id);
-  if (!access) {
-    throw new NotFoundError('Bin not found');
-  }
+  const access = await verifyBinEditAccess(id, req.user!.id);
 
   // Get max position
   const maxResult = await query<{ max_pos: number | null }>(
@@ -67,10 +74,7 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
 router.delete('/:id/items/:itemId', asyncHandler(async (req, res) => {
   const { id, itemId } = req.params;
 
-  const access = await verifyBinAccess(id, req.user!.id);
-  if (!access) {
-    throw new NotFoundError('Bin not found');
-  }
+  const access = await verifyBinEditAccess(id, req.user!.id);
 
   // Get item name before deleting
   const itemResult = await query<{ name: string }>(
@@ -111,10 +115,7 @@ router.put('/:id/items/reorder', asyncHandler(async (req, res) => {
     throw new ValidationError('item_ids array is required');
   }
 
-  const access = await verifyBinAccess(id, req.user!.id);
-  if (!access) {
-    throw new NotFoundError('Bin not found');
-  }
+  const access = await verifyBinEditAccess(id, req.user!.id);
 
   for (let i = 0; i < item_ids.length; i++) {
     await query(
@@ -135,10 +136,7 @@ router.put('/:id/items/:itemId', asyncHandler(async (req, res) => {
     throw new ValidationError('name is required');
   }
 
-  const access = await verifyBinAccess(id, req.user!.id);
-  if (!access) {
-    throw new NotFoundError('Bin not found');
-  }
+  const access = await verifyBinEditAccess(id, req.user!.id);
 
   const itemResult = await query<{ name: string }>(
     'SELECT name FROM bin_items WHERE id = $1 AND bin_id = $2',

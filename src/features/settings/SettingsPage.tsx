@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, Monitor, Download, Upload, AlertTriangle, RotateCcw, LogOut, ChevronRight, Trash2, Clock, FileArchive, FileSpreadsheet } from 'lucide-react';
+import { Sun, Moon, Monitor, Download, Upload, AlertTriangle, RotateCcw, LogOut, ChevronRight, Trash2, Clock, FileArchive, FileSpreadsheet, ExternalLink } from 'lucide-react';
 import { Disclosure } from '@/components/ui/disclosure';
 import { getAvatarUrl } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,7 @@ export function SettingsPage() {
   const { settings, updateSettings, resetSettings } = useAppSettings();
   const t = useTerminology();
   const { user, activeLocationId, logout, deleteAccount } = useAuth();
-  const { isAdmin } = usePermissions();
+  const { isAdmin, isLoading: permissionsLoading } = usePermissions();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
@@ -162,8 +162,9 @@ export function SettingsPage() {
       showToast({
         message: `Replaced all data: ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}`,
       });
-    } catch {
-      showToast({ message: 'Replace import failed' });
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      showToast({ message: `Replace import failed: ${detail}` });
     }
     setPendingData(null);
     setConfirmReplace(false);
@@ -260,7 +261,7 @@ export function SettingsPage() {
       )}
 
       {/* Personalization (admin only — modifies location-level settings) */}
-      {isAdmin && (
+      {(isAdmin || permissionsLoading) && (
         <Card>
           <CardContent>
             <Label>Personalization</Label>
@@ -382,13 +383,13 @@ export function SettingsPage() {
       </Card>
 
       {/* AI Settings (admin only) */}
-      {isAdmin && <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />}
+      {(isAdmin || permissionsLoading) && <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />}
 
       {/* API Keys (admin only) */}
-      {isAdmin && aiEnabled && <ApiKeysSection />}
+      {(isAdmin || permissionsLoading) && aiEnabled && <ApiKeysSection />}
 
       {/* Data (admin only) */}
-      {isAdmin && <Card>
+      {(isAdmin || permissionsLoading) && <Card>
         <CardContent>
           <Label>Data</Label>
           <div className="flex flex-col gap-2 mt-3">
@@ -476,8 +477,30 @@ export function SettingsPage() {
         <CardContent>
           <Label>About</Label>
           <div className="mt-3 space-y-2 text-[15px] text-[var(--text-secondary)]">
-            <p className="font-semibold text-[var(--text-primary)]">{settings.appName}</p>
-            <p>{binCount} {binCount !== 1 ? t.bins : t.bin}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="font-semibold text-[var(--text-primary)]">{settings.appName}</p>
+              <span className="text-[13px] text-[var(--text-tertiary)]">v{__APP_VERSION__}</span>
+            </div>
+            {activeLocation && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
+                <span>{binCount} {binCount !== 1 ? t.bins : t.bin}</span>
+                {activeLocation.area_count != null && (
+                  <span>{activeLocation.area_count} {activeLocation.area_count !== 1 ? t.areas : t.area}</span>
+                )}
+                {activeLocation.member_count != null && (
+                  <span>{activeLocation.member_count} {activeLocation.member_count === 1 ? 'member' : 'members'}</span>
+                )}
+              </div>
+            )}
+            <a
+              href="https://github.com/akifbayram/openbin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+            >
+              GitHub
+              <ExternalLink className="h-3 w-3" />
+            </a>
           </div>
         </CardContent>
       </Card>

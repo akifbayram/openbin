@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Check, Lock, Pin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +59,58 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   }, [selectable, onSelect, bin.id, index]);
 
   const { onTouchStart, onTouchEnd, onTouchMove, onContextMenu, didLongPress } = useLongPress(handleLongPress);
+
+  // Tag overflow: measure which tags fit in one line, show +N for the rest
+  const tagsRef = useRef<HTMLDivElement>(null);
+  const [visibleTagCount, setVisibleTagCount] = useState(bin.tags.length);
+
+  // Reset when tags change so we re-measure with all tags in DOM
+  const tagsKey = bin.tags.join('\0');
+  const prevTagsKeyRef = useRef(tagsKey);
+  if (prevTagsKeyRef.current !== tagsKey) {
+    prevTagsKeyRef.current = tagsKey;
+    setVisibleTagCount(bin.tags.length);
+  }
+
+  // Measure which tags fit before browser paint
+  useLayoutEffect(() => {
+    const el = tagsRef.current;
+    if (!el || bin.tags.length === 0 || visibleTagCount !== bin.tags.length) return;
+    const children = Array.from(el.children) as HTMLElement[];
+    if (children.length === 0) return;
+    const containerRight = el.getBoundingClientRect().right;
+    // All tags fit?
+    if (children[children.length - 1].getBoundingClientRect().right <= containerRight + 1) return;
+    // Find how many fit, reserving ~42px for the +N badge (36px badge + 6px gap)
+    let count = 0;
+    for (let i = 0; i < bin.tags.length && i < children.length; i++) {
+      if (children[i].getBoundingClientRect().right <= containerRight - 42 + 1) {
+        count++;
+      } else break;
+    }
+    setVisibleTagCount(Math.max(1, count));
+  }, [bin.tags, visibleTagCount]);
+
+  // Re-measure when container width changes (window resize, layout shift)
+  const tagsLenRef = useRef(bin.tags.length);
+  tagsLenRef.current = bin.tags.length;
+  useEffect(() => {
+    const el = tagsRef.current;
+    if (!el) return;
+    let prevWidth = el.clientWidth;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0].contentRect.width;
+      if (Math.abs(w - prevWidth) > 1) {
+        prevWidth = w;
+        setVisibleTagCount(tagsLenRef.current);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [bin.tags.length]);
+
+  const hiddenTagCount = bin.tags.length - visibleTagCount;
+  const displayedTags = hiddenTagCount > 0 ? bin.tags.slice(0, visibleTagCount) : bin.tags;
 
   function handleClick(e: React.MouseEvent) {
     if (didLongPress.current) return;
@@ -139,26 +191,36 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           </p>
         )}
         {bin.tags.length > 0 && (
-          <div className="flex gap-1.5 mt-2 overflow-hidden">
-            {bin.tags.map((tag) => {
-              return (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="cursor-pointer text-[11px] hover:bg-[var(--bg-active)] transition-colors"
-                  style={isPhoto
-                    ? { backgroundColor: 'rgba(0,0,0,0.4)', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }
-                    : getTagStyle(tag)
-                  }
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!selectable) onTagClick?.(tag);
-                  }}
-                >
-                  {tag}
-                </Badge>
-              );
-            })}
+          <div ref={tagsRef} className="flex flex-nowrap gap-1.5 mt-2 overflow-hidden items-center">
+            {displayedTags.map((tag) => (
+              <Badge
+                key={tag}
+                variant="secondary"
+                className="shrink-0 max-w-[8rem] truncate cursor-pointer text-[11px] hover:bg-[var(--bg-active)] transition-colors"
+                style={isPhoto
+                  ? { backgroundColor: 'rgba(0,0,0,0.4)', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }
+                  : getTagStyle(tag)
+                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!selectable) onTagClick?.(tag);
+                }}
+              >
+                {tag}
+              </Badge>
+            ))}
+            {hiddenTagCount > 0 && (
+              <Badge
+                variant="secondary"
+                className="shrink-0 text-[11px] opacity-70"
+                style={isPhoto
+                  ? { backgroundColor: 'rgba(0,0,0,0.4)', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }
+                  : undefined
+                }
+              >
+                +{hiddenTagCount}
+              </Badge>
+            )}
           </div>
         )}
       </div>

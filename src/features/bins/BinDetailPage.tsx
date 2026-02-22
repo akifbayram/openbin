@@ -1,7 +1,7 @@
 import '@/features/onboarding/animations.css';
 import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, Lock, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Check, Pin, Plus, ArrowRightLeft } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Lock, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Check, Pin, Plus, ArrowRightLeft, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,7 +19,7 @@ import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { StylePicker } from './StylePicker';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
-import { useBin, updateBin, deleteBin, restoreBin, useAllTags, moveBin } from './useBins';
+import { useBin, updateBin, deleteBin, restoreBin, useAllTags, moveBin, addBin } from './useBins';
 import { VisibilityPicker } from './VisibilityPicker';
 import { useQuickAdd } from './useQuickAdd';
 import { useLocationList } from '@/features/locations/useLocations';
@@ -221,6 +221,28 @@ export function BinDetailPage() {
     }
   }
 
+  async function handleDuplicate() {
+    if (!bin || !activeLocationId) return;
+    try {
+      const newId = await addBin({
+        name: `${bin.name} (copy)`,
+        locationId: activeLocationId,
+        items: bin.items.map((i) => i.name),
+        notes: bin.notes,
+        tags: [...bin.tags],
+        areaId: bin.area_id,
+        icon: bin.icon,
+        color: bin.color,
+        cardStyle: bin.card_style,
+        visibility: bin.visibility,
+      });
+      navigate(`/bin/${newId}`);
+      showToast({ message: `Duplicated "${bin.name}"` });
+    } catch {
+      showToast({ message: 'Failed to duplicate' });
+    }
+  }
+
   const showAiButton = aiEnabled && photos.length > 0 && !editing;
   const canEdit = canEditBin(bin.created_by);
   const canDelete = isAdmin;
@@ -323,6 +345,17 @@ export function BinDetailPage() {
                 className="rounded-full h-9 w-9"
               >
                 <Printer className="h-[18px] w-[18px]" />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Duplicate" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDuplicate}
+                aria-label={`Duplicate ${t.bin}`}
+                className="rounded-full h-9 w-9"
+              >
+                <Copy className="h-[18px] w-[18px]" />
               </Button>
             </Tooltip>
             {isAdmin && otherLocations.length > 0 && (
@@ -562,7 +595,7 @@ export function BinDetailPage() {
           {/* Items card — always visible */}
           <Card>
             <CardContent>
-              <ItemList items={bin.items} binId={bin.id} />
+              <ItemList items={bin.items} binId={bin.id} readOnly={!canEdit} />
               {/* Quick-add row */}
               {canEdit && <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
                 {quickAdd.state === 'input' && (

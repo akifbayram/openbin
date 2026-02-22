@@ -1,7 +1,9 @@
 import { useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { haptic } from '@/lib/utils';
-import { deleteBin, restoreBin } from './useBins';
+import { deleteBin, restoreBin, addBin } from './useBins';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
+import { useAuth } from '@/lib/auth';
 import type { Bin } from '@/types';
 import type { Terminology } from '@/lib/terminology';
 
@@ -12,6 +14,8 @@ export function useBulkActions(
   showToast: (toast: { message: string; action?: { label: string; onClick: () => void } }) => void,
   t: Terminology,
 ) {
+  const { activeLocationId } = useAuth();
+  const navigate = useNavigate();
   const selected = useMemo(
     () => bins.filter((b) => selectedIds.has(b.id)),
     [bins, selectedIds],
@@ -51,5 +55,32 @@ export function useBulkActions(
     clearSelection();
   }, [selected, majorityUnpinned, clearSelection]);
 
-  return { bulkDelete, bulkPinToggle, pinLabel };
+  const bulkDuplicate = useCallback(async () => {
+    if (!activeLocationId) return;
+    const ids: string[] = [];
+    for (const bin of selected) {
+      const newId = await addBin({
+        name: `${bin.name} (copy)`,
+        locationId: activeLocationId,
+        items: bin.items.map((i) => i.name),
+        notes: bin.notes,
+        tags: [...bin.tags],
+        areaId: bin.area_id,
+        icon: bin.icon,
+        color: bin.color,
+        cardStyle: bin.card_style,
+        visibility: bin.visibility,
+      });
+      ids.push(newId);
+    }
+    clearSelection();
+    if (ids.length === 1) {
+      navigate(`/bin/${ids[0]}`);
+      showToast({ message: `Duplicated "${selected[0].name}"` });
+    } else {
+      showToast({ message: `Duplicated ${ids.length} ${t.bins}` });
+    }
+  }, [selected, activeLocationId, clearSelection, showToast, navigate, t]);
+
+  return { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel };
 }

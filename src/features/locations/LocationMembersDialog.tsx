@@ -149,7 +149,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                   className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)]"
                 >
                   <div className="h-8 w-8 rounded-full bg-[var(--bg-active)] flex items-center justify-center text-[13px] font-semibold text-[var(--text-secondary)] shrink-0">
-                    {member.user_id.slice(0, 2).toUpperCase()}
+                    {(member.display_name?.[0] || member.user_id[0]).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-[14px] text-[var(--text-primary)] truncate block">

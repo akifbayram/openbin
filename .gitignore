@@ -5,5 +5,5 @@ dist/
 .env.*
 !.env.example
 .mcp.json
-.claude
-reports
+.claude/
+reports/
