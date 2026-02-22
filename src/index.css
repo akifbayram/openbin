@@ -39,8 +39,8 @@
   --overlay-heavy: rgba(0, 0, 0, 0.7);
   --overlay-button: rgba(0, 0, 0, 0.5);
   --overlay-button-hover: rgba(0, 0, 0, 0.7);
-  --ai-accent: rgba(120, 120, 128, 0.16);
-  --ai-accent-hover: rgba(120, 120, 128, 0.16);
+  --ai-accent: #007aff;
+  --ai-accent-hover: #0066d6;
   color-scheme: light;
 }
 
@@ -69,8 +69,8 @@
   --overlay-heavy: rgba(0, 0, 0, 0.8);
   --overlay-button: rgba(0, 0, 0, 0.5);
   --overlay-button-hover: rgba(0, 0, 0, 0.7);
-  --ai-accent: rgba(120, 120, 128, 0.28);
-  --ai-accent-hover: rgba(120, 120, 128, 0.28);
+  --ai-accent: #0a84ff;
+  --ai-accent-hover: #409cff;
   color-scheme: dark;
 }
 
