@@ -120,7 +120,7 @@ function HueGradientPicker({ value, onChange }: { value: string; onChange: (colo
                   'flex-1 h-8 transition-all',
                   i === 0 && 'rounded-l-lg',
                   i === SHADE_COUNT - 1 && 'rounded-r-lg',
-                  isActive && 'ring-2 ring-white ring-inset'
+                  isActive && 'ring-2 ring-white ring-inset shadow-[inset_0_0_0_2px_rgba(0,0,0,0.2)] dark:shadow-none'
                 )}
                 style={{ backgroundColor: getShadePreview(activeHue, i) }}
               />
@@ -135,7 +135,7 @@ function HueGradientPicker({ value, onChange }: { value: string; onChange: (colo
 function ColorDot({ colorKey }: { colorKey: string }) {
   const preset = resolveColor(colorKey);
   if (preset) {
-    return <span className="h-4 w-4 rounded-full shrink-0" style={{ backgroundColor: preset.dot }} />;
+    return <span className="h-4 w-4 rounded-full shrink-0" style={{ backgroundColor: preset.bgCss }} />;
   }
   return (
     <span className="h-4 w-4 rounded-full shrink-0 border-2 border-[var(--text-tertiary)] flex items-center justify-center">

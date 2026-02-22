@@ -72,7 +72,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
         {currentPreset ? (
           <span
             className="h-4 w-4 rounded-full"
-            style={{ backgroundColor: currentPreset.dot }}
+            style={{ backgroundColor: currentPreset.bgCss }}
           />
         ) : (
           <Palette className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
@@ -169,7 +169,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
                       'flex-1 h-6 transition-all',
                       i === 0 && 'rounded-l-md',
                       i === SHADE_COUNT - 1 && 'rounded-r-md',
-                      isActive && 'ring-2 ring-white ring-inset'
+                      isActive && 'ring-2 ring-white ring-inset shadow-[inset_0_0_0_2px_rgba(0,0,0,0.2)] dark:shadow-none'
                     )}
                     style={{ backgroundColor: getShadePreview(activeHue, i) }}
                   />
