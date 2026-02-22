@@ -38,7 +38,7 @@ import { SaveViewDialog } from './SaveViewDialog';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useTerminology } from '@/lib/terminology';
-import { getColorPreset } from '@/lib/colorPalette';
+import { HUE_RANGES } from '@/lib/colorPalette';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import type { Bin } from '@/types';
 
@@ -248,15 +248,15 @@ export function BinListPage() {
                     </Badge>
                   );
                 })}
-                {filters.colors.map((key) => {
-                  const preset = getColorPreset(key);
+                {filters.colors.map((rangeName) => {
+                  const range = HUE_RANGES.find((r) => r.name === rangeName);
                   return (
-                    <Badge key={`color-${key}`} variant="outline" className="gap-1.5 pr-1.5 py-0.5 shrink-0 text-[11px]">
-                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: preset?.dot }} />
-                      {preset?.label ?? key}
+                    <Badge key={`color-${rangeName}`} variant="outline" className="gap-1.5 pr-1.5 py-0.5 shrink-0 text-[11px]">
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: range?.dot }} />
+                      {range?.label ?? rangeName}
                       <button
-                        onClick={() => setFilters({ ...filters, colors: filters.colors.filter((c) => c !== key) })}
-                        aria-label={`Remove color filter ${preset?.label ?? key}`}
+                        onClick={() => setFilters({ ...filters, colors: filters.colors.filter((c) => c !== rangeName) })}
+                        aria-label={`Remove color filter ${range?.label ?? rangeName}`}
                         className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
                       >
                         <X className="h-2.5 w-2.5" />

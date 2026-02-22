@@ -1,6 +1,6 @@
 import type { Bin } from '@/types';
 import { resolveIcon } from '@/lib/iconMap';
-import { getColorPreset } from '@/lib/colorPalette';
+import { resolveColor } from '@/lib/colorPalette';
 import { getOrientation, computeCodeFontSize } from './labelFormats';
 import type { LabelFormat } from './labelFormats';
 
@@ -19,7 +19,7 @@ interface LabelCellProps {
 
 export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, showQrCode = true, showBinName = true, showIcon = true, showLocation = true, showBinCode = true }: LabelCellProps) {
   const Icon = resolveIcon(bin.icon);
-  const colorPreset = showColorSwatch && bin.color ? getColorPreset(bin.color) : null;
+  const colorPreset = showColorSwatch && bin.color ? resolveColor(bin.color) : null;
   const barHeight = `${Math.max(2, parseFloat(format.nameFontSize) * 0.45)}pt`;
   const isPortrait = getOrientation(format) === 'portrait';
   const resolvedIconSize = iconSize ?? '11pt';

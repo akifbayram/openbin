@@ -5,6 +5,7 @@ import { Events, notify, useRefreshOn } from '@/lib/eventBus';
 import { useListData } from '@/lib/useListData';
 import { usePaginatedList } from '@/lib/usePaginatedList';
 import type { Bin, BinItem, BinVisibility } from '@/types';
+import { getHueRange } from '@/lib/colorPalette';
 
 /** Check if `query` appears at a word boundary in `text` (case-insensitive) */
 function matchesSearch(text: string, query: string): boolean {
@@ -78,8 +79,11 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
         });
       }
       if (filters.colors.length > 0) {
-        const colorSet = new Set(filters.colors);
-        filtered = filtered.filter((bin) => colorSet.has(bin.color));
+        const rangeSet = new Set(filters.colors);
+        filtered = filtered.filter((bin) => {
+          const range = getHueRange(bin.color);
+          return range !== null && rangeSet.has(range);
+        });
       }
       if (filters.areas.length > 0) {
         const areaSet = new Set(filters.areas);

@@ -17,13 +17,14 @@ import { ItemList } from './ItemList';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { StylePicker } from './StylePicker';
+import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { useBin, updateBin, deleteBin, restoreBin, useAllTags, moveBin } from './useBins';
 import { VisibilityPicker } from './VisibilityPicker';
 import { useQuickAdd } from './useQuickAdd';
 import { useLocationList } from '@/features/locations/useLocations';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { resolveIcon } from '@/lib/iconMap';
-import { getColorPreset } from '@/lib/colorPalette';
+import { resolveColor } from '@/lib/colorPalette';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { usePhotos } from '@/features/photos/usePhotos';
 import { useAiSettings } from '@/features/ai/useAiSettings';
@@ -439,7 +440,18 @@ export function BinDetailPage() {
               </div>
               <div className="space-y-2">
                 <Label>Color</Label>
-                <ColorPicker value={editColor} onChange={setEditColor} />
+                {(() => {
+                  const sec = getSecondaryColorInfo(editCardStyle);
+                  return (
+                    <ColorPicker
+                      value={editColor}
+                      onChange={setEditColor}
+                      secondaryLabel={sec?.label}
+                      secondaryValue={sec?.value}
+                      onSecondaryChange={sec ? (c) => setEditCardStyle(setSecondaryColor(editCardStyle, c)) : undefined}
+                    />
+                  );
+                })()}
               </div>
               <div className="space-y-2">
                 <Label>Style</Label>
@@ -475,7 +487,7 @@ export function BinDetailPage() {
           {/* Title with location subtitle */}
           <div className="flex items-start gap-2.5">
             {(() => { const Icon = resolveIcon(bin.icon); return <Icon className="h-7 w-7 text-[var(--text-secondary)] shrink-0 mt-0.5" />; })()}
-            {bin.color && (() => { const preset = getColorPreset(bin.color); return preset ? <span className="h-3.5 w-3.5 rounded-full shrink-0 mt-2" style={{ backgroundColor: preset.dot }} /> : null; })()}
+            {bin.color && (() => { const preset = resolveColor(bin.color); return preset ? <span className="h-3.5 w-3.5 rounded-full shrink-0 mt-2" style={{ backgroundColor: preset.dot }} /> : null; })()}
             <div className="min-w-0">
               <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-tight flex items-center gap-2">
                 {bin.name}
@@ -704,7 +716,7 @@ export function BinDetailPage() {
                 <div className="flex flex-wrap gap-2 mt-2.5">
                   {bin.tags.map((tag) => {
                     const tagColorKey = tagColors.get(tag);
-                    const tagPreset = tagColorKey ? getColorPreset(tagColorKey) : undefined;
+                    const tagPreset = tagColorKey ? resolveColor(tagColorKey) : undefined;
                     const tagStyle = tagPreset
                       ? {
                           backgroundColor: theme === 'dark' ? tagPreset.bgDark : tagPreset.bg,

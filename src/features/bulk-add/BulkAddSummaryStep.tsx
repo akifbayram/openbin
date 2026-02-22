@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronDown, ChevronUp, Pencil, Plus, AlertCircle, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { resolveIcon } from '@/lib/iconMap';
-import { getColorPreset } from '@/lib/colorPalette';
+import { resolveColor } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
 import { useTerminology } from '@/lib/terminology';
 import type { BulkAddPhoto, BulkAddAction } from './useBulkAdd';
@@ -69,7 +69,7 @@ export function BulkAddSummaryStep({
       <div className="space-y-2">
         {confirmedWithName.map((photo) => {
           const Icon = resolveIcon(photo.icon);
-          const colorPreset = photo.color ? getColorPreset(photo.color) : undefined;
+          const colorPreset = photo.color ? resolveColor(photo.color) : undefined;
           const bgColor = colorPreset
             ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg)
             : undefined;

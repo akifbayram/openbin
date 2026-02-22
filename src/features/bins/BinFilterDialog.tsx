@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { COLOR_PALETTE } from '@/lib/colorPalette';
+import { HUE_RANGES } from '@/lib/colorPalette';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAuth } from '@/lib/auth';
@@ -60,10 +60,12 @@ export function BinFilterDialog({
     }));
   }
 
-  function toggleColor(key: string) {
+  function toggleHueRange(rangeName: string) {
     setDraft((d) => ({
       ...d,
-      colors: d.colors.includes(key) ? d.colors.filter((c) => c !== key) : [...d.colors, key],
+      colors: d.colors.includes(rangeName)
+        ? d.colors.filter((c) => c !== rangeName)
+        : [...d.colors, rangeName],
     }));
   }
 
@@ -247,21 +249,21 @@ export function BinFilterDialog({
               Color
             </span>
             <div className="flex flex-wrap gap-2">
-              {COLOR_PALETTE.map((c) => {
-                const selected = draft.colors.includes(c.key);
+              {HUE_RANGES.map((range) => {
+                const selected = draft.colors.includes(range.name);
                 return (
                   <button
-                    key={c.key}
+                    key={range.name}
                     type="button"
-                    onClick={() => toggleColor(c.key)}
-                    title={c.label}
+                    onClick={() => toggleHueRange(range.name)}
+                    title={range.label}
                     className={cn(
                       'h-8 w-8 rounded-full transition-all',
                       selected
                         ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110'
                         : 'hover:scale-105'
                     )}
-                    style={{ backgroundColor: c.dot }}
+                    style={{ backgroundColor: range.dot }}
                   />
                 );
               })}

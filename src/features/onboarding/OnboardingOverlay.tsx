@@ -16,8 +16,111 @@ import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
 import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
 import { InlineAiSetup, AiConfiguredIndicator } from '@/features/ai/InlineAiSetup';
-import { COLOR_PALETTE } from '@/lib/colorPalette';
+import { parseColorKey, buildColorKey, hslToHex, SHADE_COUNT } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
+
+const SHADE_PARAMS: [number, number][] = [
+  [80, 72], [75, 62], [70, 52], [65, 42], [60, 32],
+];
+
+function getShadeColor(hue: number | 'neutral', shade: number): string {
+  const [s, l] = SHADE_PARAMS[shade];
+  return hslToHex(hue === 'neutral' ? 0 : hue, hue === 'neutral' ? 0 : s, l);
+}
+
+function OnboardingColorPicker({ value, onChange }: { value: string; onChange: (color: string) => void }) {
+  const barRef = useRef<HTMLDivElement>(null);
+  const parsed = value ? parseColorKey(value) : null;
+  const isNeutral = parsed?.hue === 'neutral';
+  const currentHue = parsed && parsed.hue !== 'neutral' ? parsed.hue : null;
+  const currentShade = parsed?.shade ?? 2;
+  const activeHue = isNeutral ? 'neutral' as const : currentHue;
+
+  const hueFromPointer = useCallback((e: React.PointerEvent) => {
+    const rect = barRef.current?.getBoundingClientRect();
+    if (!rect) return 0;
+    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    return Math.round((x / rect.width) * 360);
+  }, []);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          onClick={() => onChange('')}
+          title="None"
+          className={cn(
+            'h-7 w-7 rounded-full border-2 flex items-center justify-center transition-all',
+            !value
+              ? 'border-[var(--accent)] scale-110'
+              : 'border-[var(--text-tertiary)] opacity-50 hover:opacity-100 hover:scale-105'
+          )}
+        >
+          <Ban className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(buildColorKey('neutral', currentShade))}
+          title="Gray"
+          className={cn(
+            'h-7 w-7 rounded-full transition-all',
+            isNeutral
+              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110'
+              : 'hover:scale-105'
+          )}
+          style={{ backgroundColor: hslToHex(0, 0, 52) }}
+        />
+      </div>
+      {!isNeutral && (
+        <div
+          ref={barRef}
+          className="relative h-7 rounded-lg cursor-pointer touch-none"
+          style={{
+            background: `linear-gradient(to right, ${
+              Array.from({ length: 13 }, (_, i) => `hsl(${i * 30}, 75%, 55%)`).join(', ')
+            })`,
+          }}
+          onPointerDown={(e) => {
+            (e.target as HTMLElement).setPointerCapture(e.pointerId);
+            onChange(buildColorKey(hueFromPointer(e), currentShade));
+          }}
+          onPointerMove={(e) => {
+            if (!(e.target as HTMLElement).hasPointerCapture(e.pointerId)) return;
+            onChange(buildColorKey(hueFromPointer(e), currentShade));
+          }}
+        >
+          {currentHue !== null && (
+            <div
+              className="absolute top-1/2 h-5 w-5 rounded-full border-2 border-white shadow-md pointer-events-none"
+              style={{
+                left: `${(currentHue / 360) * 100}%`,
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: hslToHex(currentHue, 75, 55),
+              }}
+            />
+          )}
+        </div>
+      )}
+      {activeHue !== null && (
+        <div className="flex overflow-hidden rounded-lg">
+          {Array.from({ length: SHADE_COUNT }, (_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onChange(buildColorKey(activeHue, i))}
+              className={cn(
+                'flex-1 h-7 transition-all',
+                currentShade === i && 'ring-2 ring-white ring-inset'
+              )}
+              style={{ backgroundColor: getShadeColor(activeHue, i) }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const STEPS = ['location', 'bin'] as const;
 
@@ -595,36 +698,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
                 {/* Color picker */}
                 <div className="text-left">
                   <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Color</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setBinColor('')}
-                      title="None"
-                      className={cn(
-                        'h-7 w-7 rounded-full border-2 flex items-center justify-center transition-all',
-                        !binColor
-                          ? 'border-[var(--accent)] scale-110'
-                          : 'border-[var(--text-tertiary)] opacity-50 hover:opacity-100 hover:scale-105'
-                      )}
-                    >
-                      <Ban className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-                    </button>
-                    {COLOR_PALETTE.map((c) => (
-                      <button
-                        key={c.key}
-                        type="button"
-                        onClick={() => setBinColor(c.key)}
-                        title={c.label}
-                        className={cn(
-                          'h-7 w-7 rounded-full transition-all',
-                          binColor === c.key
-                            ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110'
-                            : 'hover:scale-105'
-                        )}
-                        style={{ backgroundColor: c.dot }}
-                      />
-                    ))}
-                  </div>
+                  <OnboardingColorPicker value={binColor} onChange={setBinColor} />
                 </div>
 
                 {/* Tags input */}

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ColorPicker } from './ColorPicker';
 import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
 import type { CardStyleVariant, CardStyle, StripePosition, BorderStyle, BorderWidth, StripeWidth } from '@/lib/cardStyle';
 import { parseCardStyle, serializeCardStyle } from '@/lib/cardStyle';
@@ -11,7 +10,6 @@ interface StylePickerProps {
   value: string; // raw card_style JSON string
   color: string;
   onChange: (cardStyle: string) => void;
-  onColorEndChange?: (colorEnd: string) => void;
   /** Available photos for the photo variant (only when editing existing bin) */
   photos?: Photo[];
 }
@@ -29,11 +27,6 @@ const STRIPE_POSITIONS: { key: StripePosition; label: string }[] = [
   { key: 'right', label: 'Right' },
   { key: 'top', label: 'Top' },
   { key: 'bottom', label: 'Bottom' },
-];
-
-const STRIPE_TYPES: { key: string; label: string }[] = [
-  { key: 'rounded', label: 'Rounded' },
-  { key: 'straight', label: 'Straight' },
 ];
 
 const STRIPE_WIDTHS: StripeWidth[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
@@ -132,7 +125,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
     } else if (variant === 'outline') {
       onChange(serializeCardStyle({ variant: 'outline', borderColor: parsed?.borderColor, borderWidth: parsed?.borderWidth, borderStyle: parsed?.borderStyle }));
     } else if (variant === 'stripe') {
-      onChange(serializeCardStyle({ variant: 'stripe', stripePosition: parsed?.stripePosition, stripeColor: parsed?.stripeColor, stripeType: parsed?.stripeType, stripeWidth: parsed?.stripeWidth }));
+      onChange(serializeCardStyle({ variant: 'stripe', stripePosition: parsed?.stripePosition, stripeColor: parsed?.stripeColor, stripeWidth: parsed?.stripeWidth }));
     } else {
       onChange(serializeCardStyle({ variant }));
     }
@@ -183,13 +176,9 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
             })}
           </div>
 
-          {/* Outline border + fill pickers */}
+          {/* Outline non-color controls */}
           {currentVariant === 'outline' && (
             <div className="space-y-2.5">
-              <div className="space-y-1.5">
-                <p className="text-[12px] text-[var(--text-tertiary)]">Border color</p>
-                <ColorPicker value={parsed?.borderColor ?? ''} onChange={(borderColor) => updateStyle({ borderColor })} />
-              </div>
               <div className="space-y-1.5">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Thickness</p>
                 <OptionGroup
@@ -209,17 +198,9 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
             </div>
           )}
 
-          {/* Stripe type + position + color */}
+          {/* Stripe non-color controls */}
           {currentVariant === 'stripe' && (
             <div className="space-y-2.5">
-              <div className="space-y-1.5">
-                <p className="text-[12px] text-[var(--text-tertiary)]">Type</p>
-                <OptionGroup
-                  options={STRIPE_TYPES}
-                  value={parsed?.stripeType ?? 'rounded'}
-                  onChange={(key) => updateStyle({ stripeType: key === 'rounded' ? undefined : key as 'straight' })}
-                />
-              </div>
               <div className="space-y-1.5">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Position</p>
                 <OptionGroup
@@ -237,18 +218,6 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
                   gap="gap-1"
                 />
               </div>
-              <div className="space-y-1.5">
-                <p className="text-[12px] text-[var(--text-tertiary)]">Stripe color</p>
-                <ColorPicker value={parsed?.stripeColor ?? ''} onChange={(stripeColor) => updateStyle({ stripeColor })} />
-              </div>
-            </div>
-          )}
-
-          {/* Gradient end-color picker */}
-          {currentVariant === 'gradient' && (
-            <div className="space-y-1.5">
-              <p className="text-[12px] text-[var(--text-tertiary)]">End color</p>
-              <ColorPicker value={parsed?.colorEnd ?? ''} onChange={(colorEnd) => updateStyle({ colorEnd })} />
             </div>
           )}
 

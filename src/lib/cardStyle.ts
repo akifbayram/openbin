@@ -1,9 +1,8 @@
 import type { ColorPreset } from './colorPalette';
-import { getColorPreset } from './colorPalette';
+import { resolveColor } from './colorPalette';
 
 export type CardStyleVariant = 'glass' | 'outline' | 'gradient' | 'stripe' | 'photo';
 export type StripePosition = 'left' | 'right' | 'top' | 'bottom';
-export type StripeType = 'straight';  // undefined = rounded
 export type BorderStyle = 'solid' | 'dashed' | 'dotted' | 'double';
 export type BorderWidth = '1' | '2' | '3' | '4';
 export type StripeWidth = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10';
@@ -18,7 +17,6 @@ export interface CardStyle {
   borderStyle?: BorderStyle;
   stripePosition?: StripePosition;
   stripeColor?: string;
-  stripeType?: StripeType;
   stripeWidth?: StripeWidth;
 }
 
@@ -62,6 +60,32 @@ function getColorBg(colorPreset: ColorPreset | undefined, theme: 'light' | 'dark
   return colorPreset ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg) : undefined;
 }
 
+type SecondaryColorField = 'borderColor' | 'colorEnd' | 'stripeColor';
+
+const SECONDARY_COLOR_MAP: Partial<Record<CardStyleVariant, { field: SecondaryColorField; label: string }>> = {
+  outline: { field: 'borderColor', label: 'Border color' },
+  gradient: { field: 'colorEnd', label: 'End color' },
+  stripe: { field: 'stripeColor', label: 'Stripe color' },
+};
+
+/** Get the secondary color info for a card style, or null if the variant doesn't use one. */
+export function getSecondaryColorInfo(cardStyleRaw: string): { label: string; value: string } | null {
+  const parsed = parseCardStyle(cardStyleRaw);
+  if (!parsed) return null;
+  const mapping = SECONDARY_COLOR_MAP[parsed.variant];
+  if (!mapping) return null;
+  return { label: mapping.label, value: (parsed[mapping.field] as string) ?? '' };
+}
+
+/** Return a new card_style JSON string with the secondary color updated. */
+export function setSecondaryColor(cardStyleRaw: string, color: string): string {
+  const parsed = parseCardStyle(cardStyleRaw);
+  if (!parsed) return cardStyleRaw;
+  const mapping = SECONDARY_COLOR_MAP[parsed.variant];
+  if (!mapping) return cardStyleRaw;
+  return serializeCardStyle({ ...parsed, [mapping.field]: color });
+}
+
 /** Compute CSS class + inline style for a bin card based on its color + card_style. */
 export function getCardRenderProps(
   colorKey: string,
@@ -70,7 +94,7 @@ export function getCardRenderProps(
 ): CardRenderProps {
   const cardStyle = parseCardStyle(cardStyleRaw);
   const variant = cardStyle?.variant ?? 'glass';
-  const colorPreset = getColorPreset(colorKey);
+  const colorPreset = resolveColor(colorKey);
 
   // Default glass: existing behavior
   if (variant === 'glass' || !cardStyle) {
@@ -84,7 +108,7 @@ export function getCardRenderProps(
   }
 
   if (variant === 'outline') {
-    const borderPreset = getColorPreset(cardStyle.borderColor ?? '');
+    const borderPreset = resolveColor(cardStyle.borderColor ?? '');
     const borderResolved = borderPreset?.dot ?? colorPreset?.dot ?? 'var(--border)';
     const colorBg = getColorBg(colorPreset, theme);
     const width = cardStyle.borderWidth ?? '2';
@@ -93,7 +117,9 @@ export function getCardRenderProps(
     return {
       className: 'glass-card',
       style: {
-        border: `${width}px ${bStyle} ${borderResolved}`,
+        outline: `${width}px ${bStyle} ${borderResolved}`,
+        outlineOffset: `-${width}px`,
+        borderColor: 'transparent',
         ...(colorBg ? { backgroundColor: colorBg } : {}),
       },
       mutedColor: getMutedColor(colorPreset, theme),
@@ -103,7 +129,7 @@ export function getCardRenderProps(
 
   if (variant === 'gradient') {
     const startColor = colorPreset ? (theme === 'dark' ? colorPreset.bgDark : colorPreset.bg) : (theme === 'dark' ? '#374151' : '#D1D5DB');
-    const endPreset = getColorPreset(cardStyle.colorEnd ?? '');
+    const endPreset = resolveColor(cardStyle.colorEnd ?? '');
     const endColor = endPreset ? (theme === 'dark' ? endPreset.bgDark : endPreset.bg) : (theme === 'dark' ? '#1f2937' : '#f3f4f6');
     return {
       className: '',
@@ -118,39 +144,21 @@ export function getCardRenderProps(
 
   if (variant === 'stripe') {
     const colorBg = getColorBg(colorPreset, theme);
-    const stripePreset = getColorPreset(cardStyle.stripeColor ?? '');
+    const stripePreset = resolveColor(cardStyle.stripeColor ?? '');
     const stripeResolved = stripePreset?.dot ?? colorPreset?.dot ?? 'var(--accent)';
     const pos = cardStyle.stripePosition ?? 'left';
     const sw = Number(cardStyle.stripeWidth) || 4;
 
-    if (cardStyle.stripeType === 'straight') {
-      return {
-        className: 'glass-card',
-        style: {
-          position: 'relative',
-          overflow: 'hidden',
-          ...(colorBg ? { backgroundColor: colorBg } : {}),
-        },
-        mutedColor: getMutedColor(colorPreset, theme),
-        isPhotoVariant: false,
-        stripeBar: { color: stripeResolved, position: pos, width: sw },
-      };
-    }
-
-    const borderProp =
-      pos === 'right' ? 'borderRight'
-      : pos === 'top' ? 'borderTop'
-      : pos === 'bottom' ? 'borderBottom'
-      : 'borderLeft';
-
     return {
       className: 'glass-card',
       style: {
-        [borderProp]: `${sw}px solid ${stripeResolved}`,
+        position: 'relative',
+        overflow: 'hidden',
         ...(colorBg ? { backgroundColor: colorBg } : {}),
       },
       mutedColor: getMutedColor(colorPreset, theme),
       isPhotoVariant: false,
+      stripeBar: { color: stripeResolved, position: pos, width: sw },
     };
   }
 

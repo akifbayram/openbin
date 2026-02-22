@@ -1,7 +1,7 @@
 import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
 import { getOrientation, computeLabelsPerPage, computePageSize, computeCodeFontSize } from './labelFormats';
-import { getColorPreset } from '@/lib/colorPalette';
+import { resolveColor } from '@/lib/colorPalette';
 import { toInches, parsePaddingPt } from './pdfUnits';
 import type { LabelOptions } from './usePrintSettings';
 
@@ -90,7 +90,7 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
       const qrDataUrl = qrMap.get(bin.id);
       const hasQr = labelOptions.showQrCode && !!qrDataUrl;
       const hasIcon = labelOptions.showIcon;
-      const colorPreset = labelOptions.showColorSwatch && bin.color ? getColorPreset(bin.color) : undefined;
+      const colorPreset = labelOptions.showColorSwatch && bin.color ? resolveColor(bin.color) : undefined;
 
       if (isPortrait) {
         drawPortraitLabel(doc, {
@@ -128,7 +128,7 @@ interface DrawLabelParams {
   hasIcon: boolean;
   iconMap: Map<string, string>;
   iconSizeIn: number;
-  colorPreset: ReturnType<typeof getColorPreset>;
+  colorPreset: ReturnType<typeof resolveColor>;
   barHeightIn: number;
   codeFontSizePt: number;
   nameFontSizePt: number;

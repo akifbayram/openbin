@@ -19,6 +19,7 @@ import { ItemsInput } from './ItemsInput';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { StylePicker } from './StylePicker';
+import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { addBin, useAllTags } from './useBins';
 import { derivePrefix } from '@/lib/derivePrefix';
 import { VisibilityPicker } from './VisibilityPicker';
@@ -432,7 +433,18 @@ export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDi
             </div>
             <div className="space-y-2">
               <Label>Color</Label>
-              <ColorPicker value={color} onChange={setColor} />
+              {(() => {
+                const sec = getSecondaryColorInfo(cardStyle);
+                return (
+                  <ColorPicker
+                    value={color}
+                    onChange={setColor}
+                    secondaryLabel={sec?.label}
+                    secondaryValue={sec?.value}
+                    onSecondaryChange={sec ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
+                  />
+                );
+              })()}
             </div>
             <div className="space-y-2">
               <Label>Style</Label>

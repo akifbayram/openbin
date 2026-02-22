@@ -8,7 +8,7 @@ import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePaginatedItemList } from './useItems';
 import { resolveIcon } from '@/lib/iconMap';
-import { getColorPreset } from '@/lib/colorPalette';
+import { resolveColor } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
 import { useTerminology } from '@/lib/terminology';
 
@@ -91,7 +91,7 @@ export function ItemsPage() {
           {items.map((entry) => {
             const Icon = resolveIcon(entry.bin_icon);
             const colorPreset = entry.bin_color
-              ? getColorPreset(entry.bin_color)
+              ? resolveColor(entry.bin_color)
               : null;
             const dotColor = colorPreset
               ? theme === 'dark'

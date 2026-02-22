@@ -12,7 +12,7 @@ import { usePaginatedTagList } from './useTags';
 import { useTagColorsContext } from './TagColorsContext';
 import { setTagColor } from './useTagColors';
 import { TagColorPicker } from './TagColorPicker';
-import { getColorPreset } from '@/lib/colorPalette';
+import { resolveColor } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
 
 export function TagsPage() {
@@ -37,7 +37,7 @@ export function TagsPage() {
   function getTagBadgeStyle(tag: string) {
     const colorKey = tagColors.get(tag);
     if (!colorKey) return undefined;
-    const preset = getColorPreset(colorKey);
+    const preset = resolveColor(colorKey);
     if (!preset) return undefined;
     return {
       backgroundColor: theme === 'dark' ? preset.bgDark : preset.bg,
