@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import fs from 'fs';
@@ -31,6 +32,10 @@ const STATIC_DIR = path.join(import.meta.dirname, '..', 'public');
 export function createApp(): express.Express {
   const app = express();
   if (config.trustProxy) app.set('trust proxy', 1);
+  app.disable('x-powered-by');
+
+  // Compression
+  app.use(compression());
 
   // Security headers
   app.use((_req, res, next) => {
@@ -38,6 +43,9 @@ export function createApp(): express.Express {
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+    if (config.trustProxy) {
+      res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+    }
     // CSP hashes must match the inline scripts in index.html — update if those scripts change
     res.setHeader(
       'Content-Security-Policy',
@@ -96,6 +104,12 @@ export function createApp(): express.Express {
 
   // Static file serving (production — Vite output baked into Docker image)
   if (fs.existsSync(STATIC_DIR)) {
+    // Hashed assets — immutable (Vite includes content hash in filenames)
+    app.use('/assets', express.static(path.join(STATIC_DIR, 'assets'), {
+      maxAge: '1y',
+      immutable: true,
+    }));
+    // Root files (index.html, manifest, SW) — always revalidate
     app.use(express.static(STATIC_DIR));
 
     // SPA fallback — send index.html for any unmatched GET

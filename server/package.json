@@ -14,9 +14,11 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
+    "@types/compression": "^1.8.1",
     "archiver": "^7.0.1",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^11.7.0",
+    "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^4.21.0",

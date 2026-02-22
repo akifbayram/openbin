@@ -20,7 +20,7 @@ import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { StylePicker } from './StylePicker';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
-import { addBin, useAllTags } from './useBins';
+import { addBin, useAllTags as useAllTagsFetch } from './useBins';
 import { derivePrefix } from '@/lib/derivePrefix';
 import { VisibilityPicker } from './VisibilityPicker';
 import { AreaPicker } from '@/features/areas/AreaPicker';
@@ -38,13 +38,15 @@ interface BinCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prefillName?: string;
+  allTags?: string[];
 }
 
-export function BinCreateDialog({ open, onOpenChange, prefillName }: BinCreateDialogProps) {
+export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allTagsProp }: BinCreateDialogProps) {
   const navigate = useNavigate();
   const { activeLocationId } = useAuth();
   const t = useTerminology();
-  const allTags = useAllTags();
+  const allTagsFetched = useAllTagsFetch(allTagsProp !== undefined);
+  const allTags = allTagsProp ?? allTagsFetched;
   const { settings: aiSettings } = useAiSettings();
   const { aiEnabled } = useAiEnabled();
   const fileInputRef = useRef<HTMLInputElement>(null);

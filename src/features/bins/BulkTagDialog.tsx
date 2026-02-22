@@ -10,7 +10,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { TagInput } from './TagInput';
-import { useAllTags } from './useBins';
 import { apiFetch } from '@/lib/api';
 
 interface BulkTagDialogProps {
@@ -18,10 +17,10 @@ interface BulkTagDialogProps {
   onOpenChange: (open: boolean) => void;
   binIds: string[];
   onDone: () => void;
+  allTags: string[];
 }
 
-export function BulkTagDialog({ open, onOpenChange, binIds, onDone }: BulkTagDialogProps) {
-  const allTags = useAllTags();
+export function BulkTagDialog({ open, onOpenChange, binIds, onDone, allTags }: BulkTagDialogProps) {
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 

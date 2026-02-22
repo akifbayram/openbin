@@ -5,8 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { HUE_RANGES } from '@/lib/colorPalette';
 import { useTagStyle } from '@/features/tags/useTagStyle';
-import { useAreaList } from '@/features/areas/useAreas';
-import { useAuth } from '@/lib/auth';
+import type { Area } from '@/types';
 import type { BinFilters, SortOption } from './useBins';
 import { EMPTY_FILTERS, countActiveFilters } from './useBins';
 
@@ -22,6 +21,7 @@ interface BinFilterDialogProps {
   filters: BinFilters;
   onFiltersChange: (f: BinFilters) => void;
   availableTags: string[];
+  areas: Area[];
   sort: SortOption;
   onSortChange: (sort: SortOption) => void;
   searchQuery: string;
@@ -34,6 +34,7 @@ export function BinFilterDialog({
   filters,
   onFiltersChange,
   availableTags,
+  areas,
   sort,
   onSortChange,
   searchQuery,
@@ -42,8 +43,6 @@ export function BinFilterDialog({
   const [draft, setDraft] = useState<BinFilters>(filters);
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const getTagStyle = useTagStyle();
-  const { activeLocationId } = useAuth();
-  const { areas } = useAreaList(activeLocationId);
 
   // Sync draft when dialog opens
   useEffect(() => {

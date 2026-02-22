@@ -72,6 +72,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
+        experimentalMinChunkSize: 5000,
         manualChunks(id) {
           if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/') || id.includes('node_modules/react-router')) {
             return 'vendor-react';
@@ -81,6 +82,9 @@ export default defineConfig({
           }
           if (id.includes('node_modules/qrcode')) {
             return 'vendor-qrcode';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons';
           }
         },
       },

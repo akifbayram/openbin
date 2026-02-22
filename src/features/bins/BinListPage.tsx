@@ -215,13 +215,14 @@ export function BinListPage() {
         </>
       )}
 
-      <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} allTags={allTags} />
       <BinFilterDialog
         open={filterOpen}
         onOpenChange={setFilterOpen}
         filters={filters}
         onFiltersChange={setFilters}
         availableTags={allTags}
+        areas={areas}
         sort={sort}
         onSortChange={setSort}
         searchQuery={search}
@@ -232,6 +233,7 @@ export function BinListPage() {
         onOpenChange={(v) => v ? bulk.open('tag') : bulk.close()}
         binIds={[...selectedIds]}
         onDone={clearSelection}
+        allTags={allTags}
       />
       <BulkAreaDialog
         open={bulk.isOpen('area')}

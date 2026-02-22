@@ -301,10 +301,10 @@ export async function restoreBin(bin: Bin): Promise<void> {
   notifyBinsChanged();
 }
 
-export function useAllTags(): string[] {
+export function useAllTags(skip?: boolean): string[] {
   const { activeLocationId, token } = useAuth();
   const { data } = useListData<{ tag: string; count: number }>(
-    token && activeLocationId ? `/api/tags?location_id=${activeLocationId}&limit=100` : null,
+    !skip && token && activeLocationId ? `/api/tags?location_id=${activeLocationId}&limit=100` : null,
     [Events.BINS],
   );
   return useMemo(() => data.map((t) => t.tag).sort(), [data]);
