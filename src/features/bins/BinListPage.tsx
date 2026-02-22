@@ -6,6 +6,7 @@ import {
   SlidersHorizontal,
   MapPin,
   Sparkles,
+  ScanLine,
   X,
 } from 'lucide-react';
 
@@ -185,6 +186,15 @@ export function BinListPage() {
         </h1>
         {activeLocationId && (
           <div className="flex items-center gap-2">
+            <Button
+              onClick={() => navigate('/scan')}
+              size="icon"
+              variant="ghost"
+              className="h-10 w-10 rounded-full"
+              aria-label="Scan QR code"
+            >
+              <ScanLine className="h-5 w-5" />
+            </Button>
             {aiEnabled && (
               <Button
                 onClick={() => setCommandOpen(true)}

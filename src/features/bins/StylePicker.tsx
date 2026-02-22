@@ -16,7 +16,7 @@ interface StylePickerProps {
 
 const VARIANTS: { key: CardStyleVariant; label: string }[] = [
   { key: 'glass', label: 'Glass' },
-  { key: 'outline', label: 'Outline' },
+  { key: 'border', label: 'Border' },
   { key: 'gradient', label: 'Gradient' },
   { key: 'stripe', label: 'Stripe' },
   { key: 'photo', label: 'Photo' },
@@ -31,7 +31,7 @@ const STRIPE_POSITIONS: { key: StripePosition; label: string }[] = [
 
 const STRIPE_WIDTHS: StripeWidth[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
-const BORDER_WIDTHS: BorderWidth[] = ['1', '2', '3', '4'];
+const BORDER_WIDTHS: BorderWidth[] = ['1', '2', '3', '4', '5', '6', '7', '8'];
 const BORDER_STYLES: { key: BorderStyle; label: string }[] = [
   { key: 'solid', label: 'Solid' },
   { key: 'dashed', label: 'Dashed' },
@@ -79,7 +79,7 @@ function VariantPreview({ variant, color }: { variant: CardStyleVariant; color: 
   if (variant === 'glass') {
     return <div className={cn(baseClass, 'glass-card')} />;
   }
-  if (variant === 'outline') {
+  if (variant === 'border') {
     return <div className={cn(baseClass, 'border-2')} style={{ borderColor: color ? `var(--accent)` : 'var(--border)' }} />;
   }
   if (variant === 'gradient') {
@@ -122,8 +122,8 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
     } else if (variant === 'photo') {
       if (!hasPhotos) return;
       onChange(serializeCardStyle({ variant: 'photo', coverPhotoId: parsed?.coverPhotoId ?? photos![0].id }));
-    } else if (variant === 'outline') {
-      onChange(serializeCardStyle({ variant: 'outline', borderColor: parsed?.borderColor, borderWidth: parsed?.borderWidth, borderStyle: parsed?.borderStyle }));
+    } else if (variant === 'border') {
+      onChange(serializeCardStyle({ variant: 'border', borderColor: parsed?.borderColor, borderWidth: parsed?.borderWidth, borderStyle: parsed?.borderStyle }));
     } else if (variant === 'stripe') {
       onChange(serializeCardStyle({ variant: 'stripe', stripePosition: parsed?.stripePosition, stripeColor: parsed?.stripeColor, stripeWidth: parsed?.stripeWidth }));
     } else {
@@ -177,7 +177,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
           </div>
 
           {/* Outline non-color controls */}
-          {currentVariant === 'outline' && (
+          {currentVariant === 'border' && (
             <div className="space-y-2.5">
               <div className="space-y-1.5">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Thickness</p>

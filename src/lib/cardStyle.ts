@@ -1,10 +1,10 @@
 import type { ColorPreset } from './colorPalette';
 import { resolveColor } from './colorPalette';
 
-export type CardStyleVariant = 'glass' | 'outline' | 'gradient' | 'stripe' | 'photo';
+export type CardStyleVariant = 'glass' | 'border' | 'gradient' | 'stripe' | 'photo';
 export type StripePosition = 'left' | 'right' | 'top' | 'bottom';
 export type BorderStyle = 'solid' | 'dashed' | 'dotted' | 'double';
-export type BorderWidth = '1' | '2' | '3' | '4';
+export type BorderWidth = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' ;
 export type StripeWidth = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10';
 
 export interface CardStyle {
@@ -26,6 +26,8 @@ export function parseCardStyle(raw: string): CardStyle | null {
   try {
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === 'object' && parsed.variant) {
+      // Migrate legacy "outline" → "border"
+      if (parsed.variant === 'outline') parsed.variant = 'border';
       return parsed as CardStyle;
     }
   } catch {
@@ -63,7 +65,7 @@ function getColorBg(colorPreset: ColorPreset | undefined): string | undefined {
 type SecondaryColorField = 'borderColor' | 'colorEnd' | 'stripeColor';
 
 const SECONDARY_COLOR_MAP: Partial<Record<CardStyleVariant, { field: SecondaryColorField; label: string }>> = {
-  outline: { field: 'borderColor', label: 'Border color' },
+  border: { field: 'borderColor', label: 'Border color' },
   gradient: { field: 'colorEnd', label: 'End color' },
   stripe: { field: 'stripeColor', label: 'Stripe color' },
 };
@@ -107,7 +109,7 @@ export function getCardRenderProps(
     };
   }
 
-  if (variant === 'outline') {
+  if (variant === 'border') {
     const borderPreset = resolveColor(cardStyle.borderColor ?? '');
     const borderResolved = borderPreset?.bgCss ?? colorPreset?.bgCss ?? 'var(--border)';
     const colorBg = getColorBg(colorPreset);
