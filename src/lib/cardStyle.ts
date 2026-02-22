@@ -12,13 +12,11 @@ export type StripeWidth = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 
 
 export interface CardStyle {
   variant: CardStyleVariant;
-  colorEnd?: string;
+  secondaryColor?: string;
   coverPhotoId?: string;
-  borderColor?: string;
   borderWidth?: BorderWidth;
   borderStyle?: BorderStyle;
   stripePosition?: StripePosition;
-  stripeColor?: string;
   stripeWidth?: StripeWidth;
 }
 
@@ -28,8 +26,6 @@ export function parseCardStyle(raw: string): CardStyle | null {
   try {
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === 'object' && parsed.variant) {
-      // Migrate legacy "outline" → "border"
-      if (parsed.variant === 'outline') parsed.variant = 'border';
       return parsed as CardStyle;
     }
   } catch {
@@ -64,30 +60,27 @@ function getColorBg(colorPreset: ColorPreset | undefined): string | undefined {
   return colorPreset?.bgCss;
 }
 
-type SecondaryColorField = 'borderColor' | 'colorEnd' | 'stripeColor';
-
-const SECONDARY_COLOR_MAP: Partial<Record<CardStyleVariant, { field: SecondaryColorField; label: string }>> = {
-  border: { field: 'borderColor', label: 'Border color' },
-  gradient: { field: 'colorEnd', label: 'End color' },
-  stripe: { field: 'stripeColor', label: 'Stripe color' },
+const SECONDARY_COLOR_LABEL: Partial<Record<CardStyleVariant, string>> = {
+  border: 'Border Color',
+  gradient: 'End Color',
+  stripe: 'Stripe Color',
 };
 
 /** Get the secondary color info for a card style, or null if the variant doesn't use one. */
 export function getSecondaryColorInfo(cardStyleRaw: string): { label: string; value: string } | null {
   const parsed = parseCardStyle(cardStyleRaw);
   if (!parsed) return null;
-  const mapping = SECONDARY_COLOR_MAP[parsed.variant];
-  if (!mapping) return null;
-  return { label: mapping.label, value: (parsed[mapping.field] as string) ?? '' };
+  const label = SECONDARY_COLOR_LABEL[parsed.variant];
+  if (!label) return null;
+  return { label, value: parsed.secondaryColor ?? '' };
 }
 
 /** Return a new card_style JSON string with the secondary color updated. */
 export function setSecondaryColor(cardStyleRaw: string, color: string): string {
   const parsed = parseCardStyle(cardStyleRaw);
   if (!parsed) return cardStyleRaw;
-  const mapping = SECONDARY_COLOR_MAP[parsed.variant];
-  if (!mapping) return cardStyleRaw;
-  return serializeCardStyle({ ...parsed, [mapping.field]: color });
+  if (!SECONDARY_COLOR_LABEL[parsed.variant]) return cardStyleRaw;
+  return serializeCardStyle({ ...parsed, secondaryColor: color });
 }
 
 function renderGlassProps(colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): CardRenderProps {
@@ -101,7 +94,7 @@ function renderGlassProps(colorPreset: ColorPreset | undefined, theme: 'light' |
 }
 
 function renderBorderProps(cardStyle: CardStyle, colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): CardRenderProps {
-  const borderPreset = resolveColor(cardStyle.borderColor ?? '');
+  const borderPreset = resolveColor(cardStyle.secondaryColor ?? '');
   const borderResolved = borderPreset?.bgCss ?? colorPreset?.bgCss ?? 'var(--border)';
   const colorBg = getColorBg(colorPreset);
   const width = cardStyle.borderWidth ?? '2';
@@ -122,7 +115,7 @@ function renderBorderProps(cardStyle: CardStyle, colorPreset: ColorPreset | unde
 
 function renderGradientProps(cardStyle: CardStyle, colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): CardRenderProps {
   const startColor = colorPreset?.bgCss ?? (theme === 'dark' ? '#374151' : '#D1D5DB');
-  const endPreset = resolveColor(cardStyle.colorEnd ?? '');
+  const endPreset = resolveColor(cardStyle.secondaryColor ?? '');
   const endColor = endPreset?.bgCss ?? (theme === 'dark' ? '#1f2937' : '#f3f4f6');
   return {
     className: '',
@@ -137,7 +130,7 @@ function renderGradientProps(cardStyle: CardStyle, colorPreset: ColorPreset | un
 
 function renderStripeProps(cardStyle: CardStyle, colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): CardRenderProps {
   const colorBg = getColorBg(colorPreset);
-  const stripePreset = resolveColor(cardStyle.stripeColor ?? '');
+  const stripePreset = resolveColor(cardStyle.secondaryColor ?? '');
   const stripeResolved = stripePreset?.bgCss ?? colorPreset?.bgCss ?? 'var(--accent)';
   const pos = cardStyle.stripePosition ?? 'left';
   const sw = Number(cardStyle.stripeWidth) || 4;

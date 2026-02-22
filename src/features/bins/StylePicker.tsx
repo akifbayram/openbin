@@ -84,17 +84,11 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
   function selectVariant(variant: CardStyleVariant) {
     if (variant === 'glass') {
       onChange('');
-    } else if (variant === 'gradient') {
-      onChange(serializeCardStyle({ variant: 'gradient', colorEnd: parsed?.colorEnd ?? '' }));
     } else if (variant === 'photo') {
       if (!hasPhotos) return;
       onChange(serializeCardStyle({ variant: 'photo', coverPhotoId: parsed?.coverPhotoId ?? photos![0].id }));
-    } else if (variant === 'border') {
-      onChange(serializeCardStyle({ variant: 'border', borderColor: parsed?.borderColor, borderWidth: parsed?.borderWidth, borderStyle: parsed?.borderStyle }));
-    } else if (variant === 'stripe') {
-      onChange(serializeCardStyle({ variant: 'stripe', stripePosition: parsed?.stripePosition, stripeColor: parsed?.stripeColor, stripeWidth: parsed?.stripeWidth }));
     } else {
-      onChange(serializeCardStyle({ variant }));
+      onChange(serializeCardStyle({ ...parsed, variant, secondaryColor: parsed?.secondaryColor }));
     }
   }
 

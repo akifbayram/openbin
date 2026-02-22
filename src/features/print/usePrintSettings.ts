@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
-import { STORAGE_KEYS } from '@/lib/storageKeys';
 import type { LabelFormat } from './labelFormats';
 
 export interface LabelOptions {
@@ -49,44 +48,6 @@ export async function savePrintSettings(settings: PrintSettings): Promise<void> 
   await apiFetch('/api/print-settings', { method: 'PUT', body: settings });
 }
 
-function migrateFromLocalStorage(): PrintSettings | null {
-  const formatKey = localStorage.getItem(STORAGE_KEYS.LABEL_FORMAT);
-  const optionsRaw = localStorage.getItem(STORAGE_KEYS.LABEL_OPTIONS);
-  const customRaw = localStorage.getItem(STORAGE_KEYS.LABEL_CUSTOM);
-  const presetsRaw = localStorage.getItem(STORAGE_KEYS.LABEL_PRESETS);
-
-  if (!formatKey && !optionsRaw && !customRaw && !presetsRaw) return null;
-
-  let labelOptions = DEFAULT_LABEL_OPTIONS;
-  try {
-    if (optionsRaw) labelOptions = { ...DEFAULT_LABEL_OPTIONS, ...JSON.parse(optionsRaw) };
-  } catch { /* ignore */ }
-
-  let customState = DEFAULT_CUSTOM_STATE;
-  try {
-    if (customRaw) customState = JSON.parse(customRaw);
-  } catch { /* ignore */ }
-
-  let presets: LabelFormat[] = [];
-  try {
-    if (presetsRaw) presets = JSON.parse(presetsRaw);
-  } catch { /* ignore */ }
-
-  return {
-    formatKey: formatKey || DEFAULT_PRINT_SETTINGS.formatKey,
-    customState,
-    labelOptions,
-    presets,
-  };
-}
-
-function clearLocalStorage(): void {
-  localStorage.removeItem(STORAGE_KEYS.LABEL_FORMAT);
-  localStorage.removeItem(STORAGE_KEYS.LABEL_OPTIONS);
-  localStorage.removeItem(STORAGE_KEYS.LABEL_CUSTOM);
-  localStorage.removeItem(STORAGE_KEYS.LABEL_PRESETS);
-}
-
 export function usePrintSettings() {
   const [settings, setSettings] = useState<PrintSettings>(DEFAULT_PRINT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,18 +73,6 @@ export function usePrintSettings() {
         if (cancelled) return;
         if (data) {
           setSettings({ ...DEFAULT_PRINT_SETTINGS, ...data });
-          // If we got DB data, clear any leftover localStorage
-          clearLocalStorage();
-        } else {
-          // No DB settings — try migrating from localStorage
-          const migrated = migrateFromLocalStorage();
-          if (migrated) {
-            setSettings(migrated);
-            // Save migrated settings to DB, then clear localStorage
-            savePrintSettings(migrated)
-              .then(() => clearLocalStorage())
-              .catch((e) => console.error('Failed to migrate print settings:', e));
-          }
         }
       } catch {
         // Network or server error — keep defaults
