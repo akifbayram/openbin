@@ -1,6 +1,7 @@
 import './animations.css';
+import type { CSSProperties } from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Package, X, Ban, Camera, Sparkles, Loader2, ChevronLeft, Check } from 'lucide-react';
+import { MapPin, X, Ban, Camera, Sparkles, Loader2, ChevronLeft, Check } from 'lucide-react';
 import { ScanSuccessOverlay } from './ScanSuccessOverlay';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,9 @@ import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
 import { InlineAiSetup, AiConfiguredIndicator } from '@/features/ai/InlineAiSetup';
 import { parseColorKey, buildColorKey, hslToHex, SHADE_COUNT } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
+import { useTheme } from '@/lib/theme';
+import { resolveIcon } from '@/lib/iconMap';
+import { getCardRenderProps } from '@/lib/cardStyle';
 
 const SHADE_PARAMS: [number, number][] = [
   [80, 72], [75, 62], [70, 52], [65, 42], [60, 32],
@@ -112,6 +116,8 @@ function OnboardingColorPicker({ value, onChange }: { value: string; onChange: (
               onClick={() => onChange(buildColorKey(activeHue, i))}
               className={cn(
                 'flex-1 h-7 transition-all',
+                i === 0 && 'rounded-l-lg',
+                i === SHADE_COUNT - 1 && 'rounded-r-lg',
                 currentShade === i && 'ring-2 ring-white ring-inset'
               )}
               style={{ backgroundColor: getShadeColor(activeHue, i) }}
@@ -119,6 +125,51 @@ function OnboardingColorPicker({ value, onChange }: { value: string; onChange: (
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function BinPreviewCard({ name, color, items, tags }: {
+  name: string;
+  color: string;
+  items: string[];
+  tags: string[];
+}) {
+  const { theme } = useTheme();
+  const renderProps = getCardRenderProps(color, '', theme);
+  const { mutedColor } = renderProps;
+  const BinIcon = resolveIcon('');
+
+  const secondaryStyle: CSSProperties | undefined = mutedColor ? { color: mutedColor } : undefined;
+  const iconStyle: CSSProperties | undefined = mutedColor ? { color: mutedColor } : undefined;
+
+  return (
+    <div
+      className={cn('max-w-[240px] w-full mb-5 rounded-[var(--radius-lg)] px-4 py-3 text-left min-h-[72px]', renderProps.className)}
+      style={renderProps.style}
+    >
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug">
+            {name || <span>My bin</span>}
+          </h3>
+          {items.length > 0 && (
+            <p className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed" style={secondaryStyle}>
+              {items.join(', ')}
+            </p>
+          )}
+          {tags.length > 0 && (
+            <div className="flex gap-1.5 mt-2 overflow-hidden">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-[11px]">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+        <BinIcon className="mt-0.5 h-[22px] w-[22px] shrink-0 text-[var(--text-tertiary)]" style={iconStyle} />
+      </div>
     </div>
   );
 }
@@ -376,9 +427,13 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
 
           {step === 1 && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full bg-[var(--accent)] bg-opacity-10 flex items-center justify-center mb-5">
-                <Package className="h-8 w-8 text-[var(--accent)]" />
-              </div>
+              <BinPreviewCard
+                name={binName}
+                color={binColor}
+                items={binItems}
+                tags={binTags}
+
+              />
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Create your first {t.bin}
               </h2>

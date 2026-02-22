@@ -118,6 +118,8 @@ function HueGradientPicker({ value, onChange }: { value: string; onChange: (colo
                 onClick={() => selectShade(i)}
                 className={cn(
                   'flex-1 h-8 transition-all',
+                  i === 0 && 'rounded-l-lg',
+                  i === SHADE_COUNT - 1 && 'rounded-r-lg',
                   isActive && 'ring-2 ring-white ring-inset'
                 )}
                 style={{ backgroundColor: getShadePreview(activeHue, i) }}

@@ -126,26 +126,28 @@ export function DashboardPage() {
           Dashboard
         </h1>
         <div className="flex items-center gap-2">
-          <Button
-            onClick={() => navigate('/scan')}
-            size="icon"
-            variant="ghost"
-            className="h-10 w-10 rounded-full"
-            aria-label="Scan QR code"
-          >
-            <ScanLine className="h-5 w-5" />
-          </Button>
-          {aiEnabled && (
+          <div className="flex items-center">
             <Button
-              onClick={() => setCommandOpen(true)}
+              onClick={() => navigate('/scan')}
               size="icon"
               variant="ghost"
               className="h-10 w-10 rounded-full"
-              aria-label="Ask AI"
+              aria-label="Scan QR code"
             >
-              <Sparkles className="h-5 w-5" />
+              <ScanLine className="h-5 w-5" />
             </Button>
-          )}
+            {aiEnabled && (
+              <Button
+                onClick={() => setCommandOpen(true)}
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 rounded-full"
+                aria-label="Ask AI"
+              >
+                <Sparkles className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
           <Button
             onClick={() => setCreateOpen(true)}
             size="icon"

@@ -167,6 +167,8 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
                     }}
                     className={cn(
                       'flex-1 h-6 transition-all',
+                      i === 0 && 'rounded-l-md',
+                      i === SHADE_COUNT - 1 && 'rounded-r-md',
                       isActive && 'ring-2 ring-white ring-inset'
                     )}
                     style={{ backgroundColor: getShadePreview(activeHue, i) }}

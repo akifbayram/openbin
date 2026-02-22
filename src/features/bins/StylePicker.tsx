@@ -141,19 +141,19 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
           {currentVariant === 'border' && (
             <div className="space-y-2.5">
               <div className="space-y-1.5">
+                <p className="text-[12px] text-[var(--text-tertiary)]">Border Style</p>
+                <OptionGroup
+                  options={BORDER_STYLES}
+                  value={(parsed?.borderStyle ?? 'solid') as BorderStyle}
+                  onChange={(borderStyle) => updateStyle({ borderStyle })}
+                />
+              </div>
+              <div className="space-y-1.5">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Thickness</p>
                 <OptionGroup
                   options={BORDER_WIDTHS.map((w) => ({ key: w, label: `${w}px` }))}
                   value={(parsed?.borderWidth ?? '2') as BorderWidth}
                   onChange={(borderWidth) => updateStyle({ borderWidth })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-[12px] text-[var(--text-tertiary)]">Border style</p>
-                <OptionGroup
-                  options={BORDER_STYLES}
-                  value={(parsed?.borderStyle ?? 'solid') as BorderStyle}
-                  onChange={(borderStyle) => updateStyle({ borderStyle })}
                 />
               </div>
             </div>
@@ -173,7 +173,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
               <div className="space-y-1.5">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Thickness</p>
                 <OptionGroup
-                  options={STRIPE_WIDTHS.map((w) => ({ key: w, label: w }))}
+                  options={STRIPE_WIDTHS.map((w) => ({ key: w, label: `${w}px` }))}
                   value={(parsed?.stripeWidth ?? '4') as StripeWidth}
                   onChange={(stripeWidth) => updateStyle({ stripeWidth: stripeWidth === '4' ? undefined : stripeWidth })}
                   gap="gap-1"
