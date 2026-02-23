@@ -12,7 +12,6 @@ export interface BinSummary {
   notes: string;
   icon: string;
   color: string;
-  short_code: string;
 }
 
 export interface AreaSummary {
@@ -90,7 +89,6 @@ function buildUserMessage(request: CommandRequest): string {
     notes: b.notes.length > 200 ? b.notes.slice(0, 200) + '...' : b.notes,
     icon: b.icon,
     color: b.color,
-    short_code: b.short_code,
   }));
 
   const areasContext = request.context.areas.map((a) => ({

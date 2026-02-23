@@ -1,5 +1,6 @@
 import { getDb } from '../db.js';
 import { querySync, generateUuid } from '../db.js';
+import crypto from 'crypto';
 import { logActivity, computeChanges } from './activityLog.js';
 import { generateShortCode } from './shortCode.js';
 import type { CommandAction } from './commandParser.js';
@@ -136,7 +137,6 @@ function executeSingleAction(
     }
 
     case 'create_bin': {
-      const binId = generateUuid();
       let areaId: string | null = null;
 
       // Resolve area by name if provided
@@ -162,18 +162,18 @@ function executeSingleAction(
         }
       }
 
-      // Generate short code with retry
-      let shortCode = generateShortCode(action.name);
+      // Generate short code as ID with retry
+      let binId = generateShortCode(action.name);
       const maxRetries = 10;
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        const code = attempt === 0 ? shortCode : generateShortCode(action.name);
+        const code = attempt === 0 ? binId : generateShortCode(action.name);
         try {
           querySync(
-            `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, created_by, short_code)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-            [binId, locationId, action.name, areaId, action.notes || '', action.tags || [], action.icon || '', action.color || '', userId, code]
+            `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, created_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [code, locationId, action.name, areaId, action.notes || '', action.tags || [], action.icon || '', action.color || '', userId]
           );
-          shortCode = code;
+          binId = code;
           break;
         } catch (err: unknown) {
           const sqliteErr = err as { code?: string };
@@ -186,7 +186,7 @@ function executeSingleAction(
       const createItems: string[] = action.items || [];
       if (createItems.length > MAX_ITEMS_PER_ACTION) throw new Error('Too many items per action (max 500)');
       for (let i = 0; i < createItems.length; i++) {
-        querySync('INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)', [generateUuid(), binId, createItems[i], i]);
+        querySync('INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)', [crypto.randomUUID(), binId, createItems[i], i]);
       }
 
       pendingActivities.push({

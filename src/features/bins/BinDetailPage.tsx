@@ -489,14 +489,12 @@ export function BinDetailPage() {
                     <QRCodeDisplay binId={bin.id} size={160} />
                   </div>
                   <div className="border-t border-[var(--border-subtle)] pt-4">
-                    {bin.short_code && (
-                      <div className="mb-4">
-                        <Label>Short Code</Label>
-                        <p className="mt-1.5 text-[15px] font-mono tracking-widest text-[var(--text-primary)]">
-                          {bin.short_code}
-                        </p>
-                      </div>
-                    )}
+                    <div className="mb-4">
+                      <Label>Code</Label>
+                      <p className="mt-1.5 text-[15px] font-mono tracking-widest text-[var(--text-primary)]">
+                        {bin.id}
+                      </p>
+                    </div>
                     {bin.created_by_name && (
                       <div className="mb-4">
                         <Label>Created by</Label>

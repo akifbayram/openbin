@@ -151,7 +151,6 @@ describe('restoreBin', () => {
       icon: '',
       color: '',
       card_style: '',
-      short_code: 'A3K7NP',
       created_by: 'user-1',
       created_by_name: '',
       visibility: 'location',

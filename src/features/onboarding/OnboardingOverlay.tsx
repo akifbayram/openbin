@@ -308,13 +308,15 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
               <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 Print this label and stick it on your {t.bin}. Anyone can scan it to see what's inside.
               </p>
-              <QRCodeDisplay binId={createdBin.id} size={160} />
-              <div className="mt-4 space-y-1">
+              <div className="flex flex-col items-center">
+                <QRCodeDisplay binId={createdBin.id} size={160} />
+                <p className="font-mono font-bold tracking-wider text-[var(--text-tertiary)]" style={{ fontSize: `${160 / (6 * 0.6 + 5 * 0.2)}px` }}>
+                  {createdBin.id}
+                </p>
+              </div>
+              <div className="mt-3 space-y-1">
                 <p className="text-[15px] font-semibold text-[var(--text-primary)]">
                   {createdBin.name}
-                </p>
-                <p className="text-[13px] font-mono tracking-wider text-[var(--text-tertiary)]">
-                  {createdBin.short_code}
                 </p>
                 {createdBin.area_name && (
                   <p className="text-[13px] text-[var(--text-tertiary)]">

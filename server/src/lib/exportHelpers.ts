@@ -50,7 +50,7 @@ export async function fetchLocationBins(locationId: string) {
     `SELECT b.id, b.name, COALESCE(a.name, '') AS area_name,
        COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name))
          FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
-       b.notes, b.tags, b.icon, b.color, b.card_style, b.short_code, b.created_at, b.updated_at
+       b.notes, b.tags, b.icon, b.color, b.card_style, b.created_at, b.updated_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
      WHERE b.location_id = $1 AND b.deleted_at IS NULL
      ORDER BY b.updated_at DESC`,
@@ -123,25 +123,25 @@ export function resolveAreaSync(locationId: string, areaName: string, userId: st
 }
 
 /**
- * Insert a bin with short code collision retry. Synchronous (for use in transactions).
- * Returns true on success.
+ * Insert a bin with short code as ID, with collision retry. Synchronous (for use in transactions).
+ * Returns the generated bin ID.
  */
 export function insertBinWithShortCode(
-  binId: string,
+  _binId: string,
   locationId: string,
   bin: { name: string; notes: string; tags: string[]; icon: string; color: string; cardStyle?: string; shortCode?: string; createdAt: string; updatedAt: string },
   areaId: string | null,
   userId: string,
-): void {
+): string {
   for (let attempt = 0; attempt <= 10; attempt++) {
-    const code = attempt === 0 && bin.shortCode ? bin.shortCode : generateShortCode(bin.name);
+    const id = attempt === 0 && bin.shortCode ? bin.shortCode : generateShortCode(bin.name);
     try {
       querySync(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, short_code, created_by, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-        [binId, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle || '', code, userId, bin.createdAt, bin.updatedAt]
+        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [id, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle || '', userId, bin.createdAt, bin.updatedAt]
       );
-      return;
+      return id;
     } catch (err: unknown) {
       const sqliteErr = err as { code?: string };
       if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && attempt < 10) {

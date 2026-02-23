@@ -38,7 +38,6 @@ function makeBin(overrides: Partial<Bin> = {}): Bin {
     icon: '',
     color: '',
     card_style: '',
-    short_code: 'A1B2C3',
     created_by: 'user-1',
     created_by_name: '',
     visibility: 'location',
@@ -100,14 +99,14 @@ describe('countActiveFilters', () => {
 // lookupBinByCode
 // ---------------------------------------------------------------------------
 describe('lookupBinByCode', () => {
-  it('calls correct endpoint with encoded shortCode', async () => {
+  it('calls bin detail endpoint with uppercased code', async () => {
     const bin = makeBin();
     mockApiFetch.mockResolvedValue(bin);
 
-    const result = await lookupBinByCode('A1/B2');
+    const result = await lookupBinByCode('a1b2c3');
 
     expect(result).toEqual(bin);
-    expect(mockApiFetch).toHaveBeenCalledWith('/api/bins/lookup/A1%2FB2');
+    expect(mockApiFetch).toHaveBeenCalledWith('/api/bins/A1B2C3');
   });
 });
 
@@ -241,10 +240,10 @@ describe('useBinList', () => {
     expect(result.current.bins[0].id).toBe('1');
   });
 
-  it('search: filters by short_code', async () => {
+  it('search: filters by bin ID (short code)', async () => {
     const bins = [
-      makeBin({ id: '1', name: 'Bin A', short_code: 'XY7Z9K' }),
-      makeBin({ id: '2', name: 'Bin B', short_code: 'AB3CD4' }),
+      makeBin({ id: 'XY7Z9K', name: 'Bin A' }),
+      makeBin({ id: 'AB3CD4', name: 'Bin B' }),
     ];
     mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
@@ -254,7 +253,7 @@ describe('useBinList', () => {
       expect(result.current.isLoading).toBe(false);
     });
     expect(result.current.bins).toHaveLength(1);
-    expect(result.current.bins[0].id).toBe('1');
+    expect(result.current.bins[0].id).toBe('XY7Z9K');
   });
 
   // -- filters --------------------------------------------------------------

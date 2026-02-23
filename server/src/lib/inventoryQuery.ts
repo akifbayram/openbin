@@ -24,7 +24,6 @@ export interface InventoryContext {
     tags: string[];
     area_name: string;
     notes: string;
-    short_code: string;
   }>;
   areas: Array<{ id: string; name: string }>;
 }
@@ -48,7 +47,6 @@ function buildUserMessage(question: string, context: InventoryContext): string {
     tags: b.tags,
     area_name: b.area_name,
     notes: b.notes.length > 200 ? b.notes.slice(0, 200) + '...' : b.notes,
-    short_code: b.short_code,
   }));
 
   const areasContext = context.areas.map((a) => ({

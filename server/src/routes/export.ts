@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import archiver from 'archiver';
-import { query, querySync, getDb, generateUuid } from '../db.js';
+import { query, querySync, getDb } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
@@ -80,7 +80,7 @@ router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async 
       icon: bin.icon,
       color: bin.color,
       cardStyle: bin.card_style || undefined,
-      shortCode: bin.short_code,
+      shortCode: bin.id,
       createdAt: bin.created_at,
       updatedAt: bin.updated_at,
       photos,
@@ -144,7 +144,7 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
       icon: bin.icon,
       color: bin.color,
       cardStyle: bin.card_style || undefined,
-      shortCode: bin.short_code,
+      shortCode: bin.id,
       createdAt: bin.created_at,
       updatedAt: bin.updated_at,
       photos: photoRefs,
@@ -215,7 +215,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
       csvEscape(bin.icon || ''),
       csvEscape(bin.color || ''),
       csvEscape(bin.card_style || ''),
-      csvEscape(bin.short_code || ''),
+      csvEscape(bin.id || ''),
       bin.created_at?.includes('T') ? bin.created_at : `${bin.created_at.replace(' ', 'T')}Z`,
       bin.updated_at?.includes('T') ? bin.updated_at : `${bin.updated_at.replace(' ', 'T')}Z`,
     ].join(',');
@@ -271,15 +271,9 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
         }
       }
 
-      let binId = bin.id || generateUuid();
-      // If the ID already exists (e.g. imported to another location), generate a new one
-      const idConflict = querySync('SELECT id FROM bins WHERE id = $1', [binId]);
-      if (idConflict.rows.length > 0) {
-        binId = generateUuid();
-      }
       const areaId = resolveAreaSync(locationId, bin.location || '', userId);
 
-      insertBinWithShortCode(binId, locationId, {
+      const binId = insertBinWithShortCode('', locationId, {
         name: bin.name,
         notes: bin.notes || '',
         tags: bin.tags || [],
@@ -366,14 +360,9 @@ router.post('/import/legacy', asyncHandler(async (req, res) => {
     let imported = 0;
 
     for (const bin of normalizedBins) {
-      const binId = bin.id;
-
-      const existing = querySync('SELECT id FROM bins WHERE id = $1', [binId]);
-      if (existing.rows.length > 0) continue;
-
       const areaId = resolveAreaSync(locationId, bin.location || '', userId);
 
-      insertBinWithShortCode(binId, locationId, {
+      const binId = insertBinWithShortCode('', locationId, {
         name: bin.name,
         notes: bin.notes,
         tags: bin.tags,

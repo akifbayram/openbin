@@ -50,7 +50,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
         color: data.color,
         cardStyle: data.cardStyle || undefined,
         visibility: data.visibility,
-        shortCode: data.shortCode || undefined,
+        shortCodePrefix: data.shortCodePrefix || undefined,
       });
       // Upload photos non-blocking (fire-and-forget)
       if (data.photos.length > 0) {

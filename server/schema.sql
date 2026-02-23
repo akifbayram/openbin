@@ -56,7 +56,6 @@ CREATE TABLE IF NOT EXISTS bins (
   color         TEXT NOT NULL DEFAULT '',
   card_style    TEXT NOT NULL DEFAULT '',
   visibility    TEXT NOT NULL DEFAULT 'location' CHECK (visibility IN ('location', 'private')),
-  short_code    TEXT NOT NULL UNIQUE,
   created_by    TEXT REFERENCES users(id) ON DELETE SET NULL,
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT NOT NULL DEFAULT (datetime('now')),

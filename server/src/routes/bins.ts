@@ -2,7 +2,7 @@ import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
-import { query, generateUuid, getDb } from '../db.js';
+import { query, getDb } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { logActivity, computeChanges } from '../lib/activityLog.js';
 import { purgeExpiredTrash } from '../lib/trashPurge.js';
@@ -44,19 +44,18 @@ router.post('/', asyncHandler(async (req, res) => {
     codePrefix = String(shortCodePrefix).replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 3);
   }
 
-  // Generate short_code with retry on collision
+  // Generate short code as the bin ID with retry on collision
   const sc = generateShortCode(name, codePrefix);
   const maxRetries = 10;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const code = attempt === 0 ? sc : generateShortCode(name, codePrefix);
-    const binId = generateUuid();
+    const binId = attempt === 0 ? sc : generateShortCode(name, codePrefix);
 
     try {
       await query(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, short_code, visibility)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [binId, locationId, name.trim(), areaId || null, notes || '', tags || [], icon || '', color || '', cardStyle || '', req.user!.id, code, visibility || 'location']
+        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [binId, locationId, name.trim(), areaId || null, notes || '', tags || [], icon || '', color || '', cardStyle || '', req.user!.id, visibility || 'location']
       );
 
       // Insert items into bin_items
@@ -66,7 +65,7 @@ router.post('/', asyncHandler(async (req, res) => {
         if (!itemName) continue;
         await query(
           'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
-          [generateUuid(), binId, itemName, i]
+          [crypto.randomUUID(), binId, itemName, i]
         );
       }
 
@@ -194,7 +193,7 @@ router.get('/trash', asyncHandler(async (req, res) => {
   res.json({ results: result.rows, count: result.rows.length });
 }));
 
-// GET /api/bins/lookup/:shortCode — lookup bin by short code
+// GET /api/bins/lookup/:shortCode — lookup bin by short code (alias for GET /api/bins/:id)
 router.get('/lookup/:shortCode', asyncHandler(async (req, res) => {
   const code = req.params.shortCode.toUpperCase();
 
@@ -204,7 +203,7 @@ router.get('/lookup/:shortCode', asyncHandler(async (req, res) => {
      LEFT JOIN areas a ON a.id = b.area_id
      LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-     WHERE UPPER(b.short_code) = $1 AND b.deleted_at IS NULL AND (b.visibility = 'location' OR b.created_by = $2)`,
+     WHERE UPPER(b.id) = $1 AND b.deleted_at IS NULL AND (b.visibility = 'location' OR b.created_by = $2)`,
     [code, req.user!.id]
   );
 
@@ -525,14 +524,9 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/bins/:id/photos — upload photo for a bin
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 router.post('/:id/photos', asyncHandler(async (req, res, next) => {
-  // Validate UUID format and bin access before multer writes file to disk
+  // Validate bin access before multer writes file to disk
   const binId = req.params.id;
-  if (!UUID_REGEX.test(binId)) {
-    throw new ValidationError('Invalid bin ID format');
-  }
   const access = await verifyBinAccess(binId, req.user!.id);
   if (!access) {
     throw new NotFoundError('Bin not found');
@@ -553,7 +547,7 @@ router.post('/:id/photos', asyncHandler(async (req, res, next) => {
   }
 
   const storagePath = path.join(binId, file.filename);
-  const photoId = generateUuid();
+  const photoId = crypto.randomUUID();
 
   // Generate thumbnail
   let thumbPath: string | null = null;

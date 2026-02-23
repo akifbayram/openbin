@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 import { getBinUrl } from './constants';
 
-export const BIN_URL_REGEX = /(?:#\/bin\/|\/bin\/)([a-f0-9-]{36})/i;
+export const BIN_URL_REGEX = /(?:#\/bin\/|\/bin\/)([A-Z0-9]{4,8})/i;
 
 // LRU cache: key = "binId:size", value = data URL string
 const MAX_CACHE = 200;

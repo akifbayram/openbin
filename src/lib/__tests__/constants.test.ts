@@ -7,11 +7,11 @@ describe('getBinUrl', () => {
     expect(url).toBe(`${window.location.origin}/bin/abc-123`);
   });
 
-  it('handles different binId formats', () => {
-    const uuid = '550e8400-e29b-41d4-a716-446655440000';
-    const url = getBinUrl(uuid);
+  it('handles short code binId format', () => {
+    const shortCode = 'TBXABC';
+    const url = getBinUrl(shortCode);
     expect(url).toContain('/bin/');
-    expect(url).toContain(uuid);
-    expect(url).toBe(`${window.location.origin}/bin/${uuid}`);
+    expect(url).toContain(shortCode);
+    expect(url).toBe(`${window.location.origin}/bin/${shortCode}`);
   });
 });

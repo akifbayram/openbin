@@ -81,7 +81,6 @@ export interface Bin {
   icon: string;
   color: string;
   card_style: string;
-  short_code: string;
   created_by: string;
   created_by_name: string;
   visibility: BinVisibility;

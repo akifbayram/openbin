@@ -330,7 +330,9 @@ components:
       properties:
         id:
           type: string
-          format: uuid
+          description: 6-character alphanumeric short code (e.g. TBXABC)
+          minLength: 4
+          maxLength: 8
         location_id:
           type: string
           format: uuid
@@ -362,9 +364,6 @@ components:
           type: string
           maxLength: 500
           description: JSON-encoded card style configuration, empty string for default glass
-        short_code:
-          type: string
-          description: 6-character alphanumeric code for QR lookup
         visibility:
           $ref: '#/components/schemas/BinVisibility'
         created_by:
@@ -921,7 +920,7 @@ components:
             properties:
               id:
                 type: string
-                format: uuid
+                description: 6-character alphanumeric short code
               name:
                 type: string
               location:
@@ -943,6 +942,7 @@ components:
                 type: string
               shortCode:
                 type: string
+                description: Same as id (kept for export format compatibility)
               createdAt:
                 type: string
                 format: date-time
@@ -1858,8 +1858,8 @@ paths:
       tags: [Bins]
       summary: Create a bin
       description: |
-        Creates a new bin with an auto-generated 6-character short code.
-        The short code uses a charset excluding ambiguous characters (0/O, 1/l/I).
+        Creates a new bin with an auto-generated 6-character alphanumeric ID.
+        The ID uses a charset excluding ambiguous characters (0/O, 1/l/I).
       requestBody:
         required: true
         content:
@@ -1901,7 +1901,7 @@ paths:
           in: query
           schema:
             type: string
-          description: Search across bin name, items, notes, tags, short code, and area name
+          description: Search across bin name, items, notes, tags, ID, and area name
         - name: tag
           in: query
           schema:
@@ -2032,8 +2032,8 @@ paths:
   /bins/lookup/{shortCode}:
     get:
       tags: [Bins]
-      summary: Look up a bin by short code
-      description: Used for manual QR code entry. Returns the bin matching the 6-character code.
+      summary: Look up a bin by ID (alias)
+      description: Legacy alias for GET /bins/{id}. Since bin IDs are now short codes, this endpoint is equivalent to fetching by ID.
       parameters:
         - name: shortCode
           in: path
@@ -3072,7 +3072,7 @@ paths:
       summary: Export location as CSV
       description: |
         Returns a CSV spreadsheet with columns: name, area, items (semicolon-separated),
-        tags (semicolon-separated), notes, icon, color, short_code.
+        tags (semicolon-separated), notes, icon, color, id.
       parameters:
         - name: id
           in: path

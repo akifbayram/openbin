@@ -28,20 +28,22 @@ describe('POST /api/bins', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('Electronics');
-    expect(res.body.short_code).toBeDefined();
-    expect(res.body.short_code).toHaveLength(6);
+    expect(res.body.id).toBeDefined();
+    expect(res.body.id).toHaveLength(6);
     expect(res.body.tags).toEqual(['tech', 'office']);
     expect(res.body.notes).toBe('Spare parts');
   });
 
-  it('auto-generates a unique short_code', async () => {
+  it('auto-generates unique short code IDs', async () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
     const bin1 = await createTestBin(app, token, location.id);
     const bin2 = await createTestBin(app, token, location.id);
 
-    expect(bin1.short_code).not.toBe(bin2.short_code);
+    expect(bin1.id).not.toBe(bin2.id);
+    expect(bin1.id).toHaveLength(6);
+    expect(bin2.id).toHaveLength(6);
   });
 
   it('returns 403 for non-member', async () => {
@@ -327,7 +329,7 @@ describe('GET /api/bins/lookup/:shortCode', () => {
     const bin = await createTestBin(app, token, location.id, { name: 'Lookup Bin' });
 
     const res = await request(app)
-      .get(`/api/bins/lookup/${bin.short_code}`)
+      .get(`/api/bins/lookup/${bin.id}`)
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);

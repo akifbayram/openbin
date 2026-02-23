@@ -63,7 +63,7 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
           (Array.isArray(bin.items) ? bin.items : []).some((item) => matchesSearch(item.name, q)) ||
           matchesSearch(bin.notes, q) ||
           (Array.isArray(bin.tags) ? bin.tags : []).some((tag: string) => matchesSearch(tag, q)) ||
-          (bin.short_code && matchesSearch(bin.short_code, q))
+          matchesSearch(bin.id, q)
       );
     }
 
@@ -220,7 +220,7 @@ export interface AddBinOptions {
   color?: string;
   cardStyle?: string;
   visibility?: BinVisibility;
-  shortCode?: string;
+  shortCodePrefix?: string;
 }
 
 export async function addBin(options: AddBinOptions): Promise<Bin> {
@@ -236,8 +236,8 @@ export async function addBin(options: AddBinOptions): Promise<Bin> {
     cardStyle: options.cardStyle ?? '',
     visibility: options.visibility ?? 'location',
   };
-  if (options.shortCode) {
-    body.shortCode = options.shortCode;
+  if (options.shortCodePrefix) {
+    body.shortCodePrefix = options.shortCodePrefix;
   }
   const result = await apiFetch<Bin>('/api/bins', {
     method: 'POST',
@@ -316,7 +316,7 @@ export async function moveBin(id: string, locationId: string): Promise<void> {
 }
 
 export async function lookupBinByCode(shortCode: string): Promise<Bin> {
-  return apiFetch<Bin>(`/api/bins/lookup/${encodeURIComponent(shortCode)}`);
+  return apiFetch<Bin>(`/api/bins/${encodeURIComponent(shortCode.toUpperCase())}`);
 }
 
 export function useTrashBins() {

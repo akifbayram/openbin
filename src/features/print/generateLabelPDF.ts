@@ -139,11 +139,16 @@ interface DrawLabelParams {
 
 function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
   let qrEndX = p.contentX;
+  const codeUnderQr = !!p.qrDataUrl && p.labelOptions.showBinCode && !!p.bin.id;
 
   if (p.qrDataUrl) {
-    // Vertically center QR in content area
-    const qrY = p.contentY + (p.contentH - p.qrSize) / 2;
-    doc.addImage(p.qrDataUrl, 'PNG', p.contentX, qrY, p.qrSize, p.qrSize);
+    // Compute code height so QR+code block can be vertically centered together
+    const qrCodeFontSizePt = computeQrCodeFontSize(p.qrSize);
+    const codeHeightIn = codeUnderQr ? qrCodeFontSizePt / 72 : 0;
+    const blockH = p.qrSize + codeHeightIn;
+    const blockY = p.contentY + (p.contentH - blockH) / 2;
+
+    doc.addImage(p.qrDataUrl, 'PNG', p.contentX, blockY, p.qrSize, p.qrSize);
 
     // Icon overlay in center of QR
     if (p.hasIcon) {
@@ -151,12 +156,17 @@ function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
       if (iconDataUrl) {
         const circleR = p.qrSize * 0.15;
         const cx = p.contentX + p.qrSize / 2;
-        const cy = qrY + p.qrSize / 2;
+        const cy = blockY + p.qrSize / 2;
         doc.setFillColor(255, 255, 255);
         doc.circle(cx, cy, circleR, 'F');
         const iconDrawSize = circleR * 1.4;
         doc.addImage(iconDataUrl, 'PNG', cx - iconDrawSize / 2, cy - iconDrawSize / 2, iconDrawSize, iconDrawSize);
       }
+    }
+
+    // Short code under QR
+    if (codeUnderQr) {
+      drawCodeUnderQr(doc, p.bin.id, p.contentX, blockY + p.qrSize, p.qrSize, qrCodeFontSizePt);
     }
 
     qrEndX = p.contentX + p.qrSize + p.gapIn;
@@ -173,11 +183,12 @@ function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
   const textX = qrEndX;
   const textW = p.contentX + p.contentW - textX;
 
-  drawTextColumn(doc, p, textX, textW, false);
+  drawTextColumn(doc, p, textX, textW, false, undefined, codeUnderQr);
 }
 
 function drawPortraitLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
   let currentY = p.contentY;
+  const codeUnderQr = !!p.qrDataUrl && p.labelOptions.showBinCode && !!p.bin.id;
 
   if (p.qrDataUrl) {
     // Center QR horizontally
@@ -198,7 +209,16 @@ function drawPortraitLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
       }
     }
 
-    currentY += p.qrSize + 2 / 72; // 2pt gap
+    currentY += p.qrSize;
+
+    // Short code under QR
+    if (codeUnderQr) {
+      const qrCodeFontSizePt = computeQrCodeFontSize(p.qrSize);
+      drawCodeUnderQr(doc, p.bin.id, qrX, currentY, p.qrSize, qrCodeFontSizePt);
+      currentY += qrCodeFontSizePt / 72;
+    }
+
+    currentY += 2 / 72; // 2pt gap
   } else if (p.hasIcon && !p.labelOptions.showQrCode) {
     const iconDataUrl = p.iconMap.get(p.bin.icon);
     if (iconDataUrl) {
@@ -208,7 +228,27 @@ function drawPortraitLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
     }
   }
 
-  drawTextColumn(doc, p, p.contentX, p.contentW, true, currentY);
+  drawTextColumn(doc, p, p.contentX, p.contentW, true, currentY, codeUnderQr);
+}
+
+/** Compute font size (pt) so 6 monospace chars fill the QR width. */
+function computeQrCodeFontSize(qrSizeIn: number): number {
+  const qrSizePt = qrSizeIn * 72;
+  return qrSizePt / (6 * 0.6 + 5 * 0.2);
+}
+
+/** Draw the short code centered under the QR image. */
+function drawCodeUnderQr(doc: import('jspdf').jsPDF, code: string, qrX: number, codeY: number, qrSizeIn: number, fontSizePt: number) {
+  doc.setFont('courier', 'bold');
+  doc.setFontSize(fontSizePt);
+  doc.setTextColor(0, 0, 0);
+  const cellWidthIn = (fontSizePt * 0.8) / 72;
+  const totalCodeW = code.length * cellWidthIn;
+  const startX = qrX + (qrSizeIn - totalCodeW) / 2 + cellWidthIn / 2;
+  const baselineY = codeY + fontSizePt / 72 * 0.8;
+  for (let i = 0; i < code.length; i++) {
+    doc.text(code[i], startX + i * cellWidthIn, baselineY, { align: 'center' });
+  }
 }
 
 function drawTextColumn(
@@ -218,11 +258,12 @@ function drawTextColumn(
   textW: number,
   centered: boolean,
   startY?: number,
+  codeDrawnUnderQr = false,
 ) {
   // Collect text elements to measure total height for vertical centering
   const elements: { type: 'swatch' | 'code' | 'name' | 'area'; height: number }[] = [];
   if (p.colorPreset) elements.push({ type: 'swatch', height: p.barHeightIn });
-  if (p.labelOptions.showBinCode && p.bin.short_code) elements.push({ type: 'code', height: p.codeFontSizePt / 72 });
+  if (p.labelOptions.showBinCode && p.bin.id && !codeDrawnUnderQr) elements.push({ type: 'code', height: p.codeFontSizePt / 72 });
   if (p.labelOptions.showBinName) elements.push({ type: 'name', height: p.nameFontSizePt / 72 });
   if (p.labelOptions.showLocation && p.bin.area_name) elements.push({ type: 'area', height: p.contentFontSizePt / 72 });
 
@@ -253,7 +294,7 @@ function drawTextColumn(
     } else if (el.type === 'code') {
       doc.setFont('courier', 'bold');
       doc.setFontSize(p.codeFontSizePt);
-      const code = p.bin.short_code;
+      const code = p.bin.id;
       // Draw each character at uniform intervals for consistent monospace spacing.
       // jsPDF's built-in Courier has varying glyph widths, so setCharSpace gives
       // uneven visual gaps. Manual positioning guarantees uniform spacing.

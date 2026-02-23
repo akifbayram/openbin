@@ -24,6 +24,10 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
   const isPortrait = getOrientation(format) === 'portrait';
   const resolvedIconSize = iconSize ?? '11pt';
   const codeFontSize = `${computeCodeFontSize(format).toFixed(1).replace(/\.0$/, '')}pt`;
+  const qrSizePt = parseFloat(format.qrSize) * 72;
+  // Font size so 6 monospace chars span the QR width: each ~0.6em + 0.2em letter-spacing × 5 gaps
+  const qrCodeFontSize = `${(qrSizePt / (6 * 0.6 + 5 * 0.2)).toFixed(1).replace(/\.0$/, '')}pt`;
+  const codeUnderQr = showQrCode && qrDataUrl && showBinCode && bin.id;
 
   return (
     <div
@@ -31,11 +35,21 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
       style={{ width: format.cellWidth, height: format.cellHeight, padding: format.padding }}
     >
       {showQrCode && qrDataUrl ? (
-        <div className="relative shrink-0" style={{ width: format.qrSize, height: format.qrSize, ...(isPortrait ? { marginBottom: '2pt' } : {}) }}>
-          <img src={qrDataUrl} alt="" style={{ width: '100%', height: '100%' }} />
-          {showIcon && (
-            <div className="qr-icon-overlay" style={{ width: '30%', height: '30%' }}>
-              <Icon style={{ width: '100%', height: '100%' }} />
+        <div className={`shrink-0 flex flex-col items-center ${isPortrait ? 'mb-[2pt]' : ''}`}>
+          <div className="relative" style={{ width: format.qrSize, height: format.qrSize }}>
+            <img src={qrDataUrl} alt="" style={{ width: '100%', height: '100%' }} />
+            {showIcon && (
+              <div className="qr-icon-overlay" style={{ width: '30%', height: '30%' }}>
+                <Icon style={{ width: '100%', height: '100%' }} />
+              </div>
+            )}
+          </div>
+          {codeUnderQr && (
+            <div
+              className="label-code text-gray-700 font-mono font-bold text-center"
+              style={{ fontSize: qrCodeFontSize, width: format.qrSize }}
+            >
+              {bin.id}
             </div>
           )}
         </div>
@@ -55,12 +69,12 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
             }}
           />
         )}
-        {showBinCode && bin.short_code && (
+        {!codeUnderQr && showBinCode && bin.id && (
           <div
             className="label-code text-gray-700 font-mono font-bold"
             style={{ fontSize: codeFontSize }}
           >
-            {bin.short_code}
+            {bin.id}
           </div>
         )}
         {showBinName && (
