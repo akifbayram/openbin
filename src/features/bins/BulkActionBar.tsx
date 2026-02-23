@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { CheckCircle2, Tag, MapPin, Trash2, X, MoreHorizontal, Paintbrush, Eye, ArrowRightLeft, Pin, Copy } from 'lucide-react';
+import { CheckCircle2, Tag, MapPin, Trash2, X, MoreHorizontal, Paintbrush, Eye, ArrowRightLeft, Pin, Copy, Clipboard, ClipboardPaste } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { cn } from '@/lib/utils';
@@ -17,9 +17,13 @@ interface BulkActionBarProps {
   onPin: () => void;
   onDuplicate: () => void;
   pinLabel: string;
+  onCopyStyle?: () => void;
+  onPasteStyle?: () => void;
+  canCopyStyle?: boolean;
+  canPasteStyle?: boolean;
 }
 
-export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel }: BulkActionBarProps) {
+export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel, onCopyStyle, onPasteStyle, canCopyStyle, canPasteStyle }: BulkActionBarProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -131,6 +135,27 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                 <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
                 Duplicate
               </button>
+              {(canCopyStyle || canPasteStyle) && (
+                <div className="my-1 border-t border-[var(--border-primary)]" />
+              )}
+              {canCopyStyle && onCopyStyle && (
+                <button
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  onClick={() => handleMoreAction(onCopyStyle)}
+                >
+                  <Clipboard className="h-4 w-4 text-[var(--text-tertiary)]" />
+                  Copy Style
+                </button>
+              )}
+              {canPasteStyle && onPasteStyle && (
+                <button
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  onClick={() => handleMoreAction(onPasteStyle)}
+                >
+                  <ClipboardPaste className="h-4 w-4 text-[var(--text-tertiary)]" />
+                  Paste Style
+                </button>
+              )}
             </div>
           )}
         </div>

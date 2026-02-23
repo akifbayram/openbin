@@ -15,7 +15,7 @@ import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/usePermissions';
-import { usePaginatedBinList, useAllTags, countActiveFilters } from './useBins';
+import { usePaginatedBinList, useAllTags, countActiveFilters, updateBin } from './useBins';
 import { useBinSearchParams } from './useBinSearchParams';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 
@@ -74,6 +74,25 @@ export function BinListPage() {
   const bulk = useBulkDialogs();
   const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(bins, [debouncedSearch, sort, filters]);
   const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(bins, selectedIds, clearSelection, showToast, t);
+
+  const [copiedStyle, setCopiedStyle] = useState<{ icon: string; color: string; card_style: string } | null>(null);
+
+  const handleCopyStyle = useCallback(() => {
+    const [id] = selectedIds;
+    const bin = bins.find((b) => b.id === id);
+    if (!bin) return;
+    setCopiedStyle({ icon: bin.icon, color: bin.color, card_style: bin.card_style });
+    clearSelection();
+    showToast({ message: 'Style copied' });
+  }, [selectedIds, bins, clearSelection, showToast]);
+
+  const handlePasteStyle = useCallback(async () => {
+    if (!copiedStyle) return;
+    const ids = [...selectedIds];
+    await Promise.all(ids.map((id) => updateBin(id, { icon: copiedStyle.icon, color: copiedStyle.color, cardStyle: copiedStyle.card_style })));
+    clearSelection();
+    showToast({ message: `Style applied to ${ids.length} ${ids.length === 1 ? t.bin : t.bins}` });
+  }, [copiedStyle, selectedIds, clearSelection, showToast, t]);
 
   const handleTagClick = useCallback((tag: string) => {
     setFilters((prev) => ({
@@ -289,6 +308,10 @@ export function BinListPage() {
           onPin={bulkPinToggle}
           onDuplicate={bulkDuplicate}
           pinLabel={pinLabel}
+          onCopyStyle={handleCopyStyle}
+          onPasteStyle={handlePasteStyle}
+          canCopyStyle={selectedIds.size === 1}
+          canPasteStyle={copiedStyle !== null}
         />
       )}
     </div>
