@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, HelpCircle, Pencil, Sparkles, X, Loader2 } from 'lucide-react';
+import { Camera, Sparkles, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +11,6 @@ import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { StylePicker } from './StylePicker';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
-import { derivePrefix } from '@/lib/derivePrefix';
 import { VisibilityPicker } from './VisibilityPicker';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
@@ -35,7 +34,6 @@ export interface BinCreateFormData {
   color: string;
   cardStyle: string;
   visibility: BinVisibility;
-  shortCodePrefix: string;
   photos: File[];
 }
 
@@ -84,38 +82,17 @@ export function BinCreateForm({
   const [color, setColor] = useState('');
   const [cardStyle, setCardStyle] = useState('');
   const [visibility, setVisibility] = useState<BinVisibility>('location');
-  const [shortCode, setShortCode] = useState('');
-  const [codeManuallyEdited, setCodeManuallyEdited] = useState(false);
-
-  // Short code generation
-  const LETTER_CHARSET = 'ABCDEFGHJKMNPQRTUVWXY';
-  const randomSuffix = () => {
-    let s = '';
-    for (let i = 0; i < 3; i++) s += LETTER_CHARSET[Math.floor(Math.random() * LETTER_CHARSET.length)];
-    return s;
-  };
-  const derivedPrefix = name.trim() ? derivePrefix(name.trim()) : '';
-  const [autoSuffix, setAutoSuffix] = useState(() => randomSuffix());
-  const displayCode = codeManuallyEdited ? shortCode : (derivedPrefix ? derivedPrefix + autoSuffix : '');
 
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<AiSuggestions | null>(null);
-  const [showCodeHelp, setShowCodeHelp] = useState(false);
-  const [codeEditing, setCodeEditing] = useState(false);
-  const codeInputRef = useRef<HTMLInputElement>(null);
 
   // Onboarding-specific: inline AI setup
   const [aiExpanded, setAiExpanded] = useState(false);
   const setup = useAiProviderSetup({ onSaveSuccess: () => setAiExpanded(false) });
   const aiConfiguredInline = setup.configured || (aiSettings !== null && !aiSettingsLoading);
-
-  // Auto-focus code input when entering edit mode
-  useEffect(() => {
-    if (codeEditing) codeInputRef.current?.focus();
-  }, [codeEditing]);
 
   // Revoke ObjectURLs on cleanup
   useEffect(() => {
@@ -216,7 +193,6 @@ export function BinCreateForm({
       color,
       cardStyle: cardStyle || '',
       visibility,
-      shortCodePrefix: displayCode,
       photos,
     });
   }
@@ -251,70 +227,11 @@ export function BinCreateForm({
         <Input
           id={isFull ? 'bin-name' : undefined}
           value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            if (!codeManuallyEdited) setAutoSuffix(randomSuffix());
-            if (codeManuallyEdited && !e.target.value.trim()) {
-              setCodeManuallyEdited(false);
-              setShortCode('');
-            }
-          }}
+          onChange={(e) => setName(e.target.value)}
           placeholder={isFull ? 'e.g., Holiday Decorations' : `${t.Bin} name`}
           required
           autoFocus
         />
-        {isFull && name.trim() && (
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)]">
-              <span>Code:</span>
-              {codeEditing ? (
-                <input
-                  ref={codeInputRef}
-                  type="text"
-                  value={displayCode}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 6);
-                    setShortCode(val);
-                    setCodeManuallyEdited(true);
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => setCodeEditing(false), 150);
-                  }}
-                  className="w-[7.5ch] bg-[var(--bg-input)] border border-[var(--border)] rounded px-1 py-0.5 text-center font-mono text-[13px] text-[var(--text-primary)] uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                  maxLength={6}
-                />
-              ) : (
-                <span className="font-mono text-[13px] tracking-wider bg-[var(--bg-input)] border border-[var(--border)] rounded px-1.5 py-0.5 text-[var(--text-primary)]">
-                  {displayCode}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => setCodeEditing((v) => !v)}
-                className={cn(
-                  "inline-flex items-center justify-center h-4 w-4 rounded-full transition-colors",
-                  codeEditing
-                    ? "text-[var(--accent)]"
-                    : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
-                )}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCodeHelp((v) => !v)}
-                className="inline-flex items-center justify-center h-4 w-4 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
-              >
-                <HelpCircle className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            {showCodeHelp && (
-              <p className="text-[12px] text-[var(--text-tertiary)] leading-snug">
-                The 6-letter short code is printed on QR labels to identify this bin. It's auto-generated from the name but you can edit the full code.
-              </p>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Items */}

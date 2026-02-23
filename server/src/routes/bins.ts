@@ -23,7 +23,7 @@ router.use(authenticate);
 
 // POST /api/bins — create bin
 router.post('/', asyncHandler(async (req, res) => {
-  const { locationId, name, areaId, items, notes, tags, icon, color, shortCodePrefix, visibility, cardStyle } = req.body;
+  const { locationId, name, areaId, items, notes, tags, icon, color, visibility, cardStyle } = req.body;
 
   if (!locationId) {
     throw new ValidationError('locationId is required');
@@ -38,18 +38,12 @@ router.post('/', asyncHandler(async (req, res) => {
 
   if (areaId) await verifyAreaInLocation(areaId, locationId);
 
-  // Derive prefix from shortCodePrefix if provided
-  let codePrefix: string | undefined;
-  if (shortCodePrefix) {
-    codePrefix = String(shortCodePrefix).replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 3);
-  }
-
   // Generate short code as the bin ID with retry on collision
-  const sc = generateShortCode(name, codePrefix);
+  const sc = generateShortCode(name);
   const maxRetries = 10;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const binId = attempt === 0 ? sc : generateShortCode(name, codePrefix);
+    const binId = attempt === 0 ? sc : generateShortCode(name);
 
     try {
       await query(
