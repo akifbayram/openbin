@@ -69,6 +69,7 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
           color: typeof op.color === 'string' ? op.color : undefined,
           icon: typeof op.icon === 'string' ? op.icon : undefined,
           notes: typeof op.notes === 'string' ? op.notes : undefined,
+          card_style: typeof op.card_style === 'string' ? op.card_style : undefined,
         });
         break;
 
@@ -86,6 +87,7 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
           area_name: typeof op.area_name === 'string' ? op.area_name.trim() : undefined,
           icon: typeof op.icon === 'string' ? op.icon : undefined,
           color: typeof op.color === 'string' ? op.color : undefined,
+          card_style: typeof op.card_style === 'string' ? op.card_style : undefined,
           visibility: op.visibility === 'location' || op.visibility === 'private' ? op.visibility : undefined,
         });
         break;

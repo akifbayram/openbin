@@ -18,6 +18,7 @@ interface Bin {
   tags: string[];
   icon: string;
   color: string;
+  card_style: string;
   short_code: string;
   created_by_name: string;
   visibility: string;
@@ -41,6 +42,7 @@ function formatBin(bin: Bin): string {
   if (bin.notes) parts.push(`Notes: ${bin.notes}`);
   if (bin.icon) parts.push(`Icon: ${bin.icon}`);
   if (bin.color) parts.push(`Color: ${bin.color}`);
+  if (bin.card_style) parts.push(`Card style: ${bin.card_style}`);
   parts.push(`Created by: ${bin.created_by_name} | Updated: ${bin.updated_at}`);
 
   return parts.join("\n");
@@ -139,8 +141,9 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
       area_id: z.string().optional().describe("Area UUID to assign the bin to"),
       icon: z.string().optional().describe("Icon identifier"),
       color: z.string().optional().describe("Color value"),
+      card_style: z.string().optional().describe('Card style JSON. Variants: "glass" (default, omit or empty string), "border" ({variant,secondaryColor,borderWidth,borderStyle}), "gradient" ({variant,secondaryColor}), "stripe" ({variant,secondaryColor,stripePosition:left|right|top|bottom,stripeWidth}), "photo" ({variant,coverPhotoId})'),
     },
-    withErrorHandling(async ({ location_id, name, items, tags, notes, area_id, icon, color }) => {
+    withErrorHandling(async ({ location_id, name, items, tags, notes, area_id, icon, color, card_style }) => {
       const body: Record<string, unknown> = { locationId: location_id, name };
       if (items) body.items = items;
       if (tags) body.tags = tags;
@@ -148,6 +151,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
       if (area_id) body.areaId = area_id;
       if (icon) body.icon = icon;
       if (color) body.color = color;
+      if (card_style) body.cardStyle = card_style;
 
       const bin = await api.post<Bin>("/api/bins", body);
 
@@ -181,8 +185,9 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
         .describe("Area UUID (null to unassign)"),
       icon: z.string().optional().describe("Icon identifier"),
       color: z.string().optional().describe("Color value"),
+      card_style: z.string().optional().describe('Card style JSON. Variants: "glass" (default, omit or empty string), "border" ({variant,secondaryColor,borderWidth,borderStyle}), "gradient" ({variant,secondaryColor}), "stripe" ({variant,secondaryColor,stripePosition:left|right|top|bottom,stripeWidth}), "photo" ({variant,coverPhotoId})'),
     },
-    withErrorHandling(async ({ id, name, items, tags, notes, area_id, icon, color }) => {
+    withErrorHandling(async ({ id, name, items, tags, notes, area_id, icon, color, card_style }) => {
       const body: Record<string, unknown> = {};
       if (name !== undefined) body.name = name;
       if (items !== undefined) body.items = items;
@@ -191,6 +196,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
       if (area_id !== undefined) body.areaId = area_id;
       if (icon !== undefined) body.icon = icon;
       if (color !== undefined) body.color = color;
+      if (card_style !== undefined) body.cardStyle = card_style;
 
       const bin = await api.put<Bin>(`/api/bins/${encodeURIComponent(id)}`, body);
 

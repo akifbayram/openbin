@@ -169,9 +169,9 @@ function executeSingleAction(
         const code = attempt === 0 ? binId : generateShortCode(action.name);
         try {
           querySync(
-            `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, created_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-            [code, locationId, action.name, areaId, action.notes || '', action.tags || [], action.icon || '', action.color || '', userId]
+            `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            [code, locationId, action.name, areaId, action.notes || '', action.tags || [], action.icon || '', action.color || '', action.card_style || '', userId]
           );
           binId = code;
           break;
@@ -342,8 +342,8 @@ function executeSingleAction(
     }
 
     case 'update_bin': {
-      const bin = querySync<{ id: string; name: string; notes: string; tags: string[]; area_id: string | null; icon: string; color: string; visibility: string }>(
-        'SELECT id, name, notes, tags, area_id, icon, color, visibility FROM bins WHERE id = $1 AND deleted_at IS NULL',
+      const bin = querySync<{ id: string; name: string; notes: string; tags: string[]; area_id: string | null; icon: string; color: string; card_style: string; visibility: string }>(
+        'SELECT id, name, notes, tags, area_id, icon, color, card_style, visibility FROM bins WHERE id = $1 AND deleted_at IS NULL',
         [action.bin_id]
       );
       if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
@@ -378,6 +378,11 @@ function executeSingleAction(
         updates.push(`color = $${paramIdx++}`);
         params.push(action.color);
         changes.color = { old: old.color, new: action.color };
+      }
+      if (action.card_style !== undefined && action.card_style !== old.card_style) {
+        updates.push(`card_style = $${paramIdx++}`);
+        params.push(action.card_style);
+        changes.card_style = { old: old.card_style, new: action.card_style };
       }
       if (action.visibility !== undefined && action.visibility !== old.visibility) {
         updates.push(`visibility = $${paramIdx++}`);

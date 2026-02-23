@@ -1,6 +1,7 @@
 import './animations.css';
 import { useState, useEffect } from 'react';
-import { MapPin, X, Sparkles, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MapPin, X, Sparkles, Plus, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,7 @@ export interface OnboardingActions {
 
 export function OnboardingOverlay({ step, locationId, advanceWithLocation, advanceStep, complete }: OnboardingActions) {
   const t = useTerminology();
+  const navigate = useNavigate();
   const { setActiveLocationId } = useAuth();
   const { showToast } = useToast();
 
@@ -308,29 +310,25 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
               <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 Print this label and stick it on your {t.bin}. Anyone can scan it to see what's inside.
               </p>
-              <div className="flex flex-col items-center">
-                <QRCodeDisplay binId={createdBin.id} size={160} />
-                <p className="font-mono font-bold tracking-wider text-[var(--text-tertiary)]" style={{ fontSize: `${160 / (6 * 0.6 + 5 * 0.2)}px` }}>
-                  {createdBin.id}
-                </p>
+              <QRCodeDisplay binId={createdBin.id} size={160} shortCode={createdBin.id} />
+              <div className="flex gap-3 w-full mt-6">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => { complete(); navigate('/print'); }}
+                  className="flex-1 rounded-[var(--radius-md)] h-11 text-[15px] gap-1.5"
+                >
+                  <Printer className="h-4 w-4" />
+                  Print Label
+                </Button>
+                <Button
+                  type="button"
+                  onClick={advanceStep}
+                  className="flex-1 rounded-[var(--radius-md)] h-11 text-[15px]"
+                >
+                  Next
+                </Button>
               </div>
-              <div className="mt-3 space-y-1">
-                <p className="text-[15px] font-semibold text-[var(--text-primary)]">
-                  {createdBin.name}
-                </p>
-                {createdBin.area_name && (
-                  <p className="text-[13px] text-[var(--text-tertiary)]">
-                    {createdBin.area_name}
-                  </p>
-                )}
-              </div>
-              <Button
-                type="button"
-                onClick={advanceStep}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px] mt-6"
-              >
-                Next
-              </Button>
             </div>
           )}
 

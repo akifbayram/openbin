@@ -492,6 +492,20 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
           </div>
         ) : (
           <div className="space-y-3">
+            {/* Inline AI setup section */}
+            {!aiSettingsLoading && !isAiReady && (
+              <InlineAiSetup
+                expanded={aiExpanded}
+                onExpandedChange={setAiExpanded}
+                setup={setup}
+              />
+            )}
+
+            {/* AI configured indicator (after inline setup) */}
+            {!aiSettingsLoading && !settings && setup.configured && (
+              <AiConfiguredIndicator />
+            )}
+
             <div className="relative">
               <Textarea
                 value={text}
@@ -541,20 +555,6 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
 
             {error && (
               <p className="text-[13px] text-[var(--destructive)]">{error}</p>
-            )}
-
-            {/* Inline AI setup section */}
-            {!aiSettingsLoading && !isAiReady && (
-              <InlineAiSetup
-                expanded={aiExpanded}
-                onExpandedChange={setAiExpanded}
-                setup={setup}
-              />
-            )}
-
-            {/* AI configured indicator (after inline setup) */}
-            {!aiSettingsLoading && !settings && setup.configured && (
-              <AiConfiguredIndicator />
             )}
 
             <Button

@@ -34,6 +34,7 @@ const OperationSchema = z.object({
   area_name: z.string().optional().describe("Area name — auto-creates if needed (set_area, create_bin, update_bin)"),
   icon: z.string().optional().describe("Icon identifier (set_icon, create_bin, update_bin)"),
   color: z.string().optional().describe("Color value (set_color, create_bin, update_bin)"),
+  card_style: z.string().optional().describe('Card style JSON (create_bin, update_bin). Variants: "glass" (default, omit or empty string), "border" ({variant,secondaryColor,borderWidth,borderStyle}), "gradient" ({variant,secondaryColor}), "stripe" ({variant,secondaryColor,stripePosition:left|right|top|bottom,stripeWidth}), "photo" ({variant,coverPhotoId})'),
   old_item: z.string().optional().describe("Old item name (modify_item)"),
   new_item: z.string().optional().describe("New item name (modify_item)"),
   old_tag: z.string().optional().describe("Old tag name (modify_tag)"),
