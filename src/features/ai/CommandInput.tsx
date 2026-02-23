@@ -12,8 +12,7 @@ import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { useAiSettings } from './useAiSettings';
 import { useCommand, type CommandAction } from './useCommand';
-import { useAiProviderSetup } from './useAiProviderSetup';
-import { InlineAiSetup, AiConfiguredIndicator } from './InlineAiSetup';
+import { AiSetupView } from './InlineAiSetup';
 import { PhotoBulkAdd } from './PhotoBulkAdd';
 import { addBin, updateBin, deleteBin, restoreBin, notifyBinsChanged, addItemsToBin } from '@/features/bins/useBins';
 import { useAreaList, createArea } from '@/features/areas/useAreas';
@@ -104,20 +103,12 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
   const [examplesOpen, setExamplesOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Inline AI setup
-  const [aiExpanded, setAiExpanded] = useState(false);
-  const setup = useAiProviderSetup({ onSaveSuccess: () => setAiExpanded(false) });
-
   const state: State = isExecuting ? 'executing' : isParsing ? 'parsing' : isQuerying ? 'querying' : queryResult ? 'query-result' : actions ? 'preview' : 'idle';
 
-  const isAiReady = settings !== null || setup.configured;
+  const isAiReady = settings !== null;
 
   async function handleParse() {
-    if (!text.trim() || !activeLocationId) return;
-    if (!isAiReady) {
-      setAiExpanded(true);
-      return;
-    }
+    if (!text.trim() || !activeLocationId || !isAiReady) return;
     const result = await parse({ text: text.trim(), locationId: activeLocationId });
     if (result?.actions) {
       if (result.actions.length === 0) {
@@ -490,22 +481,10 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
               </Button>
             </div>
           </div>
+        ) : !aiSettingsLoading && !isAiReady ? (
+          <AiSetupView onNavigate={() => { handleClose(false); navigate('/settings#ai-settings'); }} />
         ) : (
           <div className="space-y-3">
-            {/* Inline AI setup section */}
-            {!aiSettingsLoading && !isAiReady && (
-              <InlineAiSetup
-                expanded={aiExpanded}
-                onExpandedChange={setAiExpanded}
-                setup={setup}
-              />
-            )}
-
-            {/* AI configured indicator (after inline setup) */}
-            {!aiSettingsLoading && !settings && setup.configured && (
-              <AiConfiguredIndicator />
-            )}
-
             <div className="relative">
               <Textarea
                 value={text}

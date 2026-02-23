@@ -66,13 +66,21 @@ export function SettingsPage() {
   const { settings: dashSettings, updateSettings: updateDashSettings } = useDashboardSettings();
 
   // Scroll to AI settings section when navigated with #ai-settings hash
+  // Retry briefly to handle async-rendered sections (e.g. AiSettingsSection loading state)
   useEffect(() => {
-    if (window.location.hash === '#ai-settings') {
+    if (window.location.hash !== '#ai-settings') return;
+    let attempts = 0;
+    const tryScroll = () => {
       const el = document.getElementById('ai-settings');
       if (el) {
         el.scrollIntoView({ behavior: 'smooth' });
+        return;
       }
-    }
+      if (++attempts < 10) {
+        requestAnimationFrame(tryScroll);
+      }
+    };
+    tryScroll();
   }, []);
 
   async function handleExport() {

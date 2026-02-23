@@ -117,3 +117,24 @@ export function AiConfiguredIndicator({ children }: { children?: React.ReactNode
     </div>
   );
 }
+
+export function AiSetupView({ onNavigate }: { onNavigate: () => void }) {
+  return (
+    <div className="flex flex-col items-center py-8 px-2">
+      <Sparkles className="h-6 w-6 text-[var(--ai-accent)] mb-3" />
+      <p className="text-[15px] font-semibold text-[var(--text-primary)] text-center mb-1">
+        Set up an AI provider to start using Ask AI
+      </p>
+      <p className="text-[13px] text-[var(--text-tertiary)] text-center mb-5">
+        Your key is encrypted and stored securely
+      </p>
+      <button
+        type="button"
+        onClick={onNavigate}
+        className="h-9 px-5 rounded-full bg-[var(--ai-accent)] text-[13px] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+      >
+        Go to Settings
+      </button>
+    </div>
+  );
+}
