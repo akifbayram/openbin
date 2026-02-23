@@ -1,11 +1,14 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { navItems, settingsNavItem } from '@/lib/navItems';
+import { useNavigationGuard } from '@/lib/navigationGuard';
 import { useTerminology } from '@/lib/terminology';
 
 export function BottomNav() {
   const location = useLocation();
-  const navigate = useNavigate();
+  const rawNavigate = useNavigate();
+  const { guardedNavigate } = useNavigationGuard();
+  const navigate = (path: string) => guardedNavigate(() => rawNavigate(path));
   const t = useTerminology();
 
   return (

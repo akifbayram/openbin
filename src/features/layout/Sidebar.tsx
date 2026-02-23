@@ -5,6 +5,7 @@ import { useAppSettings } from '@/lib/appSettings';
 import { useTerminology } from '@/lib/terminology';
 import type { TermKey } from '@/lib/navItems';
 import { useAuth } from '@/lib/auth';
+import { useNavigationGuard } from '@/lib/navigationGuard';
 import { usePermissions } from '@/lib/usePermissions';
 import { getAvatarUrl } from '@/lib/api';
 import { LocationSwitcher } from './LocationSwitcher';
@@ -60,7 +61,9 @@ interface SidebarProps {
 
 export function Sidebar({ locations, activeLocationId, onLocationChange }: SidebarProps) {
   const location = useLocation();
-  const navigate = useNavigate();
+  const rawNavigate = useNavigate();
+  const { guardedNavigate } = useNavigationGuard();
+  const navigate = (path: string) => guardedNavigate(() => rawNavigate(path));
   const { settings } = useAppSettings();
   const t = useTerminology();
   const { user, logout } = useAuth();

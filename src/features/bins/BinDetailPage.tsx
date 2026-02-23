@@ -1,5 +1,5 @@
 import '@/features/onboarding/animations.css';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronDown, Lock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,12 +37,14 @@ import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/usePermissions';
 import { useTerminology } from '@/lib/terminology';
+import { useNavigationGuard } from '@/lib/navigationGuard';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import { useEditBinForm } from './useEditBinForm';
 import { QuickAddWidget } from './QuickAddWidget';
 import { BinDetailToolbar } from './BinDetailToolbar';
 import { DeleteBinDialog } from './DeleteBinDialog';
 import { MoveBinDialog } from './MoveBinDialog';
+import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 import type { Bin } from '@/types';
 
 function formatDate(iso: string): string {
@@ -67,6 +69,39 @@ export function BinDetailPage() {
   const edit = useEditBinForm(id);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [unsavedOpen, setUnsavedOpen] = useState(false);
+  const pendingNav = useRef<(() => void) | null>(null);
+  const { setGuard } = useNavigationGuard();
+
+  // Register navigation guard with the global context so sidebar/bottom nav are intercepted
+  useEffect(() => {
+    if (!edit.editing || !edit.isDirty) {
+      setGuard(null);
+      return;
+    }
+    setGuard({
+      shouldBlock: () => true,
+      onBlocked: (proceed) => {
+        pendingNav.current = proceed;
+        setUnsavedOpen(true);
+      },
+    });
+    return () => setGuard(null);
+  }, [edit.editing, edit.isDirty, setGuard]);
+
+  // Block browser back/forward via popstate when dirty
+  useEffect(() => {
+    if (!edit.editing || !edit.isDirty) return;
+    window.history.pushState(null, '', window.location.href);
+    function handlePopState() {
+      window.history.pushState(null, '', window.location.href);
+      pendingNav.current = () => window.history.go(-2);
+      setUnsavedOpen(true);
+    }
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [edit.editing, edit.isDirty]);
+
   const { locations } = useLocationList();
   const otherLocations = locations.filter((l) => l.id !== bin?.location_id);
   const [qrExpanded, setQrExpanded] = useState(false);
@@ -261,8 +296,23 @@ export function BinDetailPage() {
         isAnalyzing={isAnalyzing}
         editNameValid={!!edit.name.trim()}
         otherLocations={otherLocations}
-        onBack={() => backState?.backPath ? navigate(backState.backPath) : window.history.length > 1 ? navigate(-1) : navigate('/bins')}
-        onCancelEdit={edit.cancelEdit}
+        onBack={() => {
+          const doNav = () => backState?.backPath ? navigate(backState.backPath) : window.history.length > 1 ? navigate(-1) : navigate('/bins');
+          if (edit.editing && edit.isDirty) {
+            pendingNav.current = doNav;
+            setUnsavedOpen(true);
+          } else {
+            doNav();
+          }
+        }}
+        onCancelEdit={() => {
+          if (edit.isDirty) {
+            pendingNav.current = () => edit.cancelEdit();
+            setUnsavedOpen(true);
+          } else {
+            edit.cancelEdit();
+          }
+        }}
         onSave={edit.saveEdit}
         onStartEdit={() => edit.startEdit(bin)}
         onAnalyze={handleAnalyzeClick}
@@ -538,6 +588,26 @@ export function BinDetailPage() {
         binName={bin.name}
         locations={otherLocations}
         onConfirm={handleMove}
+      />
+
+      <UnsavedChangesDialog
+        open={unsavedOpen}
+        onSave={async () => {
+          await edit.saveEdit();
+          setUnsavedOpen(false);
+          pendingNav.current?.();
+          pendingNav.current = null;
+        }}
+        onDiscard={() => {
+          edit.cancelEdit();
+          setUnsavedOpen(false);
+          pendingNav.current?.();
+          pendingNav.current = null;
+        }}
+        onCancel={() => {
+          setUnsavedOpen(false);
+          pendingNav.current = null;
+        }}
       />
     </div>
   );

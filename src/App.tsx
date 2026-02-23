@@ -7,6 +7,7 @@ import { AuthGuard } from '@/features/auth/AuthGuard';
 import { AppLayout } from '@/features/layout/AppLayout';
 import { LocationProvider } from '@/features/locations/useLocations';
 import { UserPreferencesProvider } from '@/lib/userPreferences';
+import { NavigationGuardProvider } from '@/lib/navigationGuard';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { Button } from '@/components/ui/button';
 
@@ -175,6 +176,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
+        <NavigationGuardProvider>
         <ToastProvider>
           <AuthProvider>
             <SWUpdateNotifier />
@@ -318,6 +320,7 @@ export default function App() {
             </Routes>
           </AuthProvider>
         </ToastProvider>
+        </NavigationGuardProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );

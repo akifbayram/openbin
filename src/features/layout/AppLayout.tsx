@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { TagColorsProvider } from '@/features/tags/TagColorsContext';
 import { useOnboarding } from '@/features/onboarding/useOnboarding';
 import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay';
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
+import { useNavigationGuard } from '@/lib/navigationGuard';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
 interface BeforeInstallPromptEvent extends Event {
@@ -29,7 +30,12 @@ export function AppLayout() {
   const [dismissed, setDismissed] = useState(() => localStorage.getItem('openbin-install-dismissed') === '1');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
-  const navigate = useNavigate();
+  const rawNavigate = useNavigate();
+  const { guardedNavigate } = useNavigationGuard();
+  const navigate = useCallback(
+    (path: string, opts?: { state?: unknown }) => guardedNavigate(() => rawNavigate(path, opts)),
+    [rawNavigate, guardedNavigate],
+  );
 
   const shortcutActions = useMemo<Record<string, () => void>>(() => ({
     'go-home': () => navigate('/'),
