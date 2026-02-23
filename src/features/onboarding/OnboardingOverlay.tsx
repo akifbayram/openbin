@@ -1,11 +1,9 @@
 import './animations.css';
-import type { CSSProperties } from 'react';
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, X, Ban, Camera, Sparkles, Loader2, ChevronLeft, Check } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { MapPin, X } from 'lucide-react';
 import { ScanSuccessOverlay } from './ScanSuccessOverlay';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
@@ -13,166 +11,10 @@ import { createLocation } from '@/features/locations/useLocations';
 import { addBin } from '@/features/bins/useBins';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { compressImage } from '@/features/photos/compressImage';
-import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
-import { useAiSettings } from '@/features/ai/useAiSettings';
-import { useTextStructuring } from '@/features/ai/useTextStructuring';
-import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
-import { InlineAiSetup, AiConfiguredIndicator } from '@/features/ai/InlineAiSetup';
-import { parseColorKey, buildColorKey, hslToHex, SHADE_COUNT } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
-import { useTheme } from '@/lib/theme';
-import { resolveIcon } from '@/lib/iconMap';
-import { getCardRenderProps } from '@/lib/cardStyle';
-
-const SHADE_PARAMS: [number, number][] = [
-  [80, 72], [75, 62], [70, 52], [65, 42], [60, 32],
-];
-
-function getShadeColor(hue: number | 'neutral', shade: number): string {
-  const [s, l] = SHADE_PARAMS[shade];
-  return hslToHex(hue === 'neutral' ? 0 : hue, hue === 'neutral' ? 0 : s, l);
-}
-
-function OnboardingColorPicker({ value, onChange }: { value: string; onChange: (color: string) => void }) {
-  const barRef = useRef<HTMLDivElement>(null);
-  const parsed = value ? parseColorKey(value) : null;
-  const isNeutral = parsed?.hue === 'neutral';
-  const currentHue = parsed && parsed.hue !== 'neutral' ? parsed.hue : null;
-  const currentShade = parsed?.shade ?? 2;
-  const activeHue = isNeutral ? 'neutral' as const : currentHue;
-
-  const hueFromPointer = useCallback((e: React.PointerEvent) => {
-    const rect = barRef.current?.getBoundingClientRect();
-    if (!rect) return 0;
-    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    return Math.round((x / rect.width) * 360);
-  }, []);
-
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-1.5">
-        <button
-          type="button"
-          onClick={() => onChange('')}
-          title="None"
-          className={cn(
-            'h-7 w-7 rounded-full border-2 flex items-center justify-center transition-all',
-            !value
-              ? 'border-[var(--accent)] scale-110'
-              : 'border-[var(--text-tertiary)] opacity-50 hover:opacity-100 hover:scale-105'
-          )}
-        >
-          <Ban className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onChange(buildColorKey('neutral', currentShade))}
-          title="Gray"
-          className={cn(
-            'h-7 w-7 rounded-full transition-all',
-            isNeutral
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110'
-              : 'hover:scale-105'
-          )}
-          style={{ backgroundColor: hslToHex(0, 0, 52) }}
-        />
-      </div>
-      {!isNeutral && (
-        <div
-          ref={barRef}
-          className="relative h-7 rounded-lg cursor-pointer touch-none"
-          style={{
-            background: `linear-gradient(to right, ${
-              Array.from({ length: 13 }, (_, i) => `hsl(${i * 30}, 75%, 55%)`).join(', ')
-            })`,
-          }}
-          onPointerDown={(e) => {
-            (e.target as HTMLElement).setPointerCapture(e.pointerId);
-            onChange(buildColorKey(hueFromPointer(e), currentShade));
-          }}
-          onPointerMove={(e) => {
-            if (!(e.target as HTMLElement).hasPointerCapture(e.pointerId)) return;
-            onChange(buildColorKey(hueFromPointer(e), currentShade));
-          }}
-        >
-          {currentHue !== null && (
-            <div
-              className="absolute top-1/2 h-5 w-5 rounded-full border-2 border-white shadow-md pointer-events-none"
-              style={{
-                left: `${(currentHue / 360) * 100}%`,
-                transform: 'translate(-50%, -50%)',
-                backgroundColor: hslToHex(currentHue, 75, 55),
-              }}
-            />
-          )}
-        </div>
-      )}
-      {activeHue !== null && (
-        <div className="flex overflow-hidden rounded-lg">
-          {Array.from({ length: SHADE_COUNT }, (_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => onChange(buildColorKey(activeHue, i))}
-              className={cn(
-                'flex-1 h-7 transition-all',
-                i === 0 && 'rounded-l-lg',
-                i === SHADE_COUNT - 1 && 'rounded-r-lg',
-                currentShade === i && 'ring-2 ring-white ring-inset'
-              )}
-              style={{ backgroundColor: getShadeColor(activeHue, i) }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function BinPreviewCard({ name, color, items, tags }: {
-  name: string;
-  color: string;
-  items: string[];
-  tags: string[];
-}) {
-  const { theme } = useTheme();
-  const renderProps = getCardRenderProps(color, '', theme);
-  const { mutedColor } = renderProps;
-  const BinIcon = resolveIcon('');
-
-  const secondaryStyle: CSSProperties | undefined = mutedColor ? { color: mutedColor } : undefined;
-  const iconStyle: CSSProperties | undefined = mutedColor ? { color: mutedColor } : undefined;
-
-  return (
-    <div
-      className={cn('max-w-[240px] w-full mb-5 rounded-[var(--radius-lg)] px-4 py-3 text-left min-h-[72px]', renderProps.className)}
-      style={renderProps.style}
-    >
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug">
-            {name || <span>My bin</span>}
-          </h3>
-          {items.length > 0 && (
-            <p className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed" style={secondaryStyle}>
-              {items.join(', ')}
-            </p>
-          )}
-          {tags.length > 0 && (
-            <div className="flex gap-1.5 mt-2 overflow-hidden">
-              {tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-[11px]">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-        <BinIcon className="mt-0.5 h-[22px] w-[22px] shrink-0 text-[var(--text-tertiary)]" style={iconStyle} />
-      </div>
-    </div>
-  );
-}
+import { BinPreviewCard } from '@/features/bins/BinPreviewCard';
+import { BinCreateForm } from '@/features/bins/BinCreateForm';
+import type { BinCreateFormData } from '@/features/bins/BinCreateForm';
 
 const STEPS = ['location', 'bin'] as const;
 
@@ -187,35 +29,9 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
   const t = useTerminology();
   const { setActiveLocationId } = useAuth();
   const { showToast } = useToast();
-  const { settings: existingAiSettings, isLoading: aiSettingsLoading } = useAiSettings();
 
   // Step 0 state
   const [locationName, setLocationName] = useState('');
-  // Step 1 state
-  const [binName, setBinName] = useState('');
-  const [binColor, setBinColor] = useState('');
-  const [binTags, setBinTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
-  const tagInputRef = useRef<HTMLInputElement>(null);
-  const [binItems, setBinItems] = useState<string[]>([]);
-  const [itemInput, setItemInput] = useState('');
-  const itemInputRef = useRef<HTMLInputElement>(null);
-  const [itemAiState, setItemAiState] = useState<'input' | 'expanded' | 'processing' | 'preview'>('input');
-  const [itemAiText, setItemAiText] = useState('');
-  const [itemAiChecked, setItemAiChecked] = useState<Map<number, boolean>>(new Map());
-  // Photo state
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  // AI text structuring
-  const { structuredItems: itemAiStructured, isStructuring: itemAiStructuring, error: itemAiError, structure: itemAiStructure, clearStructured: itemAiClearStructured } = useTextStructuring();
-  // AI analysis state
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  // Inline AI setup
-  const [aiExpanded, setAiExpanded] = useState(false);
-  const setup = useAiProviderSetup({ onSaveSuccess: () => setAiExpanded(false) });
-  const aiConfigured = setup.configured || (existingAiSettings !== null && !aiSettingsLoading);
   // Loading
   const [loading, setLoading] = useState(false);
   // Success animation after first bin creation
@@ -232,62 +48,6 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
-
-  // Clean up photo preview URLs
-  useEffect(() => {
-    return () => {
-      photoPreviews.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [photoPreviews]);
-
-  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const newFiles = Array.from(files).slice(0, MAX_AI_PHOTOS - photos.length);
-    if (newFiles.length === 0) return;
-    const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
-    setPhotos((prev) => [...prev, ...newFiles]);
-    setPhotoPreviews((prev) => [...prev, ...newPreviews]);
-    setAnalyzeError(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }
-
-  function handleRemovePhoto(index: number) {
-    URL.revokeObjectURL(photoPreviews[index]);
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
-    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
-    setAnalyzeError(null);
-  }
-
-  async function handleAnalyzePhoto() {
-    if (photos.length === 0) return;
-    // If AI isn't configured, guide user to the setup section
-    if (!aiConfigured) {
-      setAiExpanded(true);
-      setAnalyzeError('Configure an AI provider below to analyze photos');
-      return;
-    }
-    setAnalyzing(true);
-    setAnalyzeError(null);
-    try {
-      const compressedFiles = await Promise.all(
-        photos.map(async (p) => {
-          const compressed = await compressImage(p);
-          return compressed instanceof File
-            ? compressed
-            : new File([compressed], p.name, { type: compressed.type || 'image/jpeg' });
-        })
-      );
-      const suggestions = await analyzeImageFiles(compressedFiles, locationId);
-      if (suggestions.name) setBinName(suggestions.name);
-      if (suggestions.items?.length) setBinItems(suggestions.items);
-      if (suggestions.tags?.length) setBinTags(suggestions.tags.map(t => t.toLowerCase()));
-    } catch (err) {
-      setAnalyzeError(err instanceof Error ? err.message : 'Failed to analyze photos');
-    } finally {
-      setAnalyzing(false);
-    }
-  }
 
   async function handleCreateLocation() {
     if (!locationName.trim()) return;
@@ -308,20 +68,20 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
     complete();
   }, [complete]);
 
-  async function handleCreateBin() {
-    if (!binName.trim() || !locationId) return;
+  async function handleCreateBin(data: BinCreateFormData) {
+    if (!locationId) return;
     setLoading(true);
     try {
       const binId = await addBin({
-        name: binName.trim(),
+        name: data.name,
         locationId,
-        color: binColor || undefined,
-        tags: binTags.length > 0 ? binTags : undefined,
-        items: binItems.length > 0 ? binItems : undefined,
+        color: data.color || undefined,
+        tags: data.tags.length > 0 ? data.tags : undefined,
+        items: data.items.length > 0 ? data.items : undefined,
       });
 
       // Upload photos if selected (non-blocking — bin already created)
-      for (const p of photos) {
+      for (const p of data.photos) {
         try {
           const compressed = await compressImage(p);
           const file = compressed instanceof File
@@ -425,402 +185,29 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, compl
             </div>
           )}
 
-          {step === 1 && (
+          {step === 1 && locationId && (
             <div className="flex flex-col items-center text-center">
-              <BinPreviewCard
-                name={binName}
-                color={binColor}
-                items={binItems}
-                tags={binTags}
-
-              />
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Create your first {t.bin}
               </h2>
               <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
                 A {t.bin} is any container you want to track — a box, drawer, shelf, etc.
               </p>
-              <div className="w-full space-y-3 mb-4">
-                {/* Photo upload area */}
-                <div className="text-left">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    capture="environment"
-                    multiple
-                    onChange={handlePhotoSelect}
-                    className="hidden"
+              <BinCreateForm
+                mode="onboarding"
+                locationId={locationId}
+                onSubmit={handleCreateBin}
+                submitting={loading}
+                header={(state) => (
+                  <BinPreviewCard
+                    name={state.name}
+                    color={state.color}
+                    items={state.items}
+                    tags={state.tags}
                   />
-                  {photos.length === 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border-primary)] py-3 text-[14px] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
-                    >
-                      <Camera className="h-4 w-4" />
-                      Add Photo
-                    </button>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 overflow-x-auto rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2">
-                        {photoPreviews.map((preview, i) => (
-                          <div key={i} className="relative shrink-0">
-                            <img
-                              src={preview}
-                              alt={`Preview ${i + 1}`}
-                              className="h-14 w-14 rounded-[var(--radius-sm)] object-cover"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRemovePhoto(i)}
-                              className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                        {photos.length < MAX_AI_PHOTOS && (
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="h-14 w-14 shrink-0 flex items-center justify-center rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
-                          >
-                            <Camera className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAnalyzePhoto}
-                        disabled={analyzing}
-                        className="flex items-center gap-1.5 text-[13px] text-[var(--ai-accent)] hover:opacity-80 transition-opacity disabled:opacity-50"
-                      >
-                        {analyzing ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-3.5 w-3.5" />
-                        )}
-                        {analyzing ? 'Analyzing...' : `Analyze with AI${photos.length > 1 ? ` (${photos.length})` : ''}`}
-                      </button>
-                    </div>
-                  )}
-                  {analyzeError && (
-                    <p className="text-[12px] text-red-500 mt-1">{analyzeError}</p>
-                  )}
-                </div>
-
-                <Input
-                  value={binName}
-                  onChange={(e) => setBinName(e.target.value)}
-                  placeholder={`${t.Bin} name`}
-                  autoFocus
-                />
-
-                {/* Items input */}
-                <div className="text-left">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[13px] text-[var(--text-tertiary)]">Items</label>
-                    {itemAiState === 'input' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!aiConfigured) {
-                            setAiExpanded(true);
-                            setAnalyzeError('Configure an AI provider below to use AI extraction');
-                            return;
-                          }
-                          itemAiClearStructured();
-                          if (itemInput.trim()) {
-                            const text = itemInput.trim();
-                            setItemAiText(text);
-                            setItemInput('');
-                            setItemAiState('processing');
-                            itemAiStructure({
-                              text,
-                              mode: 'items',
-                              context: { binName, existingItems: binItems },
-                              locationId,
-                            }).then((items) => {
-                              if (items) {
-                                const initial = new Map<number, boolean>();
-                                items.forEach((_, i) => initial.set(i, true));
-                                setItemAiChecked(initial);
-                                setItemAiState('preview');
-                              } else {
-                                setItemAiState('expanded');
-                              }
-                            });
-                          } else {
-                            setItemAiText('');
-                            setItemAiState('expanded');
-                          }
-                        }}
-                        className="flex items-center gap-1 text-[12px] text-[var(--ai-accent)] hover:opacity-80 transition-opacity"
-                      >
-                        <Sparkles className="h-3.5 w-3.5" />
-                        AI Extract
-                      </button>
-                    )}
-                  </div>
-
-                  {itemAiState === 'input' && (
-                    <div className="flex flex-wrap gap-1.5 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2 focus-within:ring-2 focus-within:ring-[var(--accent)]">
-                      {binItems.map((item, i) => (
-                        <Badge key={i} variant="secondary" className="gap-1 pl-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setBinItems(binItems.filter((_, j) => j !== i))}
-                            className="mr-0.5 rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                          >
-                            <X className="h-2.5 w-2.5" />
-                          </button>
-                          {item}
-                        </Badge>
-                      ))}
-                      <input
-                        ref={itemInputRef}
-                        value={itemInput}
-                        onChange={(e) => setItemInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if ((e.key === 'Enter' || e.key === ',') && itemInput.trim()) {
-                            e.preventDefault();
-                            setBinItems([...binItems, itemInput.trim()]);
-                            setItemInput('');
-                          } else if (e.key === 'Backspace' && !itemInput && binItems.length > 0) {
-                            setBinItems(binItems.slice(0, -1));
-                          }
-                        }}
-                        placeholder={binItems.length === 0 ? 'Type and press Enter' : ''}
-                        className="h-6 min-w-[80px] flex-1 bg-transparent p-0 text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none"
-                      />
-                    </div>
-                  )}
-
-                  {(itemAiState === 'expanded' || itemAiState === 'processing') && (
-                    <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 space-y-2">
-                      <textarea
-                        value={itemAiText}
-                        onChange={(e) => setItemAiText(e.target.value)}
-                        onKeyDown={(e) => {
-                          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                            e.preventDefault();
-                            if (!itemAiText.trim() || itemAiStructuring) return;
-                            setItemAiState('processing');
-                            itemAiStructure({
-                              text: itemAiText.trim(),
-                              mode: 'items',
-                              context: { binName, existingItems: binItems },
-                              locationId,
-                            }).then((items) => {
-                              if (items) {
-                                const initial = new Map<number, boolean>();
-                                items.forEach((_, i) => initial.set(i, true));
-                                setItemAiChecked(initial);
-                                setItemAiState('preview');
-                              } else {
-                                setItemAiState('expanded');
-                              }
-                            });
-                          } else if (e.key === 'Escape') {
-                            e.preventDefault();
-                            setItemAiState('input');
-                            setItemAiText('');
-                            itemAiClearStructured();
-                          }
-                        }}
-                        placeholder="List or describe items, e.g. 'three socks, AA batteries, winter jacket'"
-                        rows={3}
-                        disabled={itemAiStructuring}
-                        autoFocus
-                        className="w-full min-h-[80px] bg-[var(--bg-elevated)] rounded-[var(--radius-sm)] px-3 py-2 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none resize-none disabled:opacity-50"
-                      />
-                      {itemAiError && (
-                        <p className="text-[12px] text-[var(--destructive)]">{itemAiError}</p>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setItemAiState('input');
-                            setItemAiText('');
-                            itemAiClearStructured();
-                          }}
-                          className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <div className="flex-1" />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!itemAiText.trim() || itemAiStructuring) return;
-                            setItemAiState('processing');
-                            itemAiStructure({
-                              text: itemAiText.trim(),
-                              mode: 'items',
-                              context: { binName, existingItems: binItems },
-                              locationId,
-                            }).then((items) => {
-                              if (items) {
-                                const initial = new Map<number, boolean>();
-                                items.forEach((_, i) => initial.set(i, true));
-                                setItemAiChecked(initial);
-                                setItemAiState('preview');
-                              } else {
-                                setItemAiState('expanded');
-                              }
-                            });
-                          }}
-                          disabled={!itemAiText.trim() || itemAiStructuring}
-                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[var(--ai-accent)] text-white text-[12px] disabled:opacity-40 transition-colors"
-                        >
-                          {itemAiStructuring ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Sparkles className="h-3 w-3" />
-                          )}
-                          {itemAiStructuring ? 'Extracting...' : 'Extract'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {itemAiState === 'preview' && itemAiStructured && (
-                    <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 space-y-2">
-                      <div className="flex flex-wrap gap-1.5">
-                        {itemAiStructured.map((item, i) => {
-                          const checked = itemAiChecked.get(i) !== false;
-                          return (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => {
-                                setItemAiChecked((prev) => {
-                                  const next = new Map(prev);
-                                  next.set(i, !(prev.get(i) ?? true));
-                                  return next;
-                                });
-                              }}
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] transition-all ${
-                                checked
-                                  ? 'bg-[var(--accent)] text-white'
-                                  : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] line-through'
-                              }`}
-                            >
-                              {checked && <Check className="h-2.5 w-2.5" />}
-                              {item}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="flex items-center gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            itemAiClearStructured();
-                            setItemAiChecked(new Map());
-                            setItemAiState('expanded');
-                          }}
-                          className="inline-flex items-center gap-0.5 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-                        >
-                          <ChevronLeft className="h-3 w-3" />
-                          Back
-                        </button>
-                        <div className="flex-1" />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!itemAiStructured) return;
-                            const selected = itemAiStructured.filter((_, i) => itemAiChecked.get(i) !== false);
-                            if (selected.length > 0) {
-                              setBinItems([...binItems, ...selected]);
-                            }
-                            setItemAiState('input');
-                            setItemAiText('');
-                            itemAiClearStructured();
-                            setItemAiChecked(new Map());
-                          }}
-                          disabled={itemAiStructured.filter((_, i) => itemAiChecked.get(i) !== false).length === 0}
-                          className="px-3 py-1 rounded-full bg-[var(--accent)] text-white text-[12px] disabled:opacity-40 transition-colors"
-                        >
-                          Add {itemAiStructured.filter((_, i) => itemAiChecked.get(i) !== false).length}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Color picker */}
-                <div className="text-left">
-                  <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Color</label>
-                  <OnboardingColorPicker value={binColor} onChange={setBinColor} />
-                </div>
-
-                {/* Tags input */}
-                <div className="text-left">
-                  <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Tags</label>
-                  <div className="flex flex-wrap gap-1.5 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2 focus-within:ring-2 focus-within:ring-[var(--accent)]">
-                    {binTags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="gap-1 pl-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setBinTags(binTags.filter((t) => t !== tag))}
-                          className="mr-0.5 rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                        >
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                        {tag}
-                      </Badge>
-                    ))}
-                    <input
-                      ref={tagInputRef}
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
-                          e.preventDefault();
-                          const t = tagInput.trim().toLowerCase();
-                          if (!binTags.includes(t)) setBinTags([...binTags, t]);
-                          setTagInput('');
-                        } else if (e.key === 'Backspace' && !tagInput && binTags.length > 0) {
-                          setBinTags(binTags.slice(0, -1));
-                        }
-                      }}
-                      placeholder={binTags.length === 0 ? 'Type and press Enter' : ''}
-                      className="h-6 min-w-[80px] flex-1 bg-transparent p-0 text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* AI setup section */}
-                {!aiSettingsLoading && (
-                  <div className="text-left">
-                    {aiConfigured ? (
-                      <AiConfiguredIndicator>
-                        {photos.length > 0 && (
-                          <span className="text-[var(--text-tertiary)]">— tap <Sparkles className="h-3 w-3 inline" /> to analyze</span>
-                        )}
-                      </AiConfiguredIndicator>
-                    ) : (
-                      <InlineAiSetup
-                        expanded={aiExpanded}
-                        onExpandedChange={setAiExpanded}
-                        setup={setup}
-                        label="Set up AI Analysis"
-                      />
-                    )}
-                  </div>
                 )}
-              </div>
-              <Button
-                type="button"
-                onClick={handleCreateBin}
-                disabled={!binName.trim() || loading}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
-              >
-                {loading ? 'Creating...' : `Create ${t.Bin}`}
-              </Button>
+                className="w-full"
+              />
             </div>
           )}
         </div>

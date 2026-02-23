@@ -16,7 +16,7 @@ function getShadePreview(hue: number | 'neutral', shade: number): string {
   return resolveColor(key)?.bgCss ?? hslToHex(hue === 'neutral' ? 0 : hue, 70, 50);
 }
 
-function HueGradientPicker({ value, onChange }: { value: string; onChange: (color: string) => void }) {
+export function HueGradientPicker({ value, onChange }: { value: string; onChange: (color: string) => void }) {
   const parsed = value ? parseColorKey(value) : null;
   const isNeutral = parsed?.hue === 'neutral';
   const currentHue = parsed && parsed.hue !== 'neutral' ? parsed.hue : null;
