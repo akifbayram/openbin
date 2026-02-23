@@ -14,7 +14,7 @@ vi.mock('@/lib/api', () => ({
 
 import { useAuth } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
-import { useOnboarding } from '../useOnboarding';
+import { useOnboarding, ONBOARDING_TOTAL_STEPS } from '../useOnboarding';
 import { UserPreferencesProvider } from '@/lib/userPreferences';
 
 const mockUseAuth = vi.mocked(useAuth);
@@ -100,5 +100,77 @@ describe('useOnboarding', () => {
     });
 
     expect(result.current.firstScanDone).toBe(true);
+  });
+
+  it('advanceStep increments step', async () => {
+    mockApiFetch.mockResolvedValue({
+      onboarding_completed: false,
+      onboarding_step: 2,
+    });
+
+    const { result } = renderHook(() => useOnboarding(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.step).toBe(2);
+    });
+
+    act(() => {
+      result.current.advanceStep();
+    });
+
+    expect(result.current.step).toBe(3);
+    expect(result.current.isOnboarding).toBe(true);
+  });
+
+  it('advanceStep on last step completes onboarding', async () => {
+    mockApiFetch.mockResolvedValue({
+      onboarding_completed: false,
+      onboarding_step: ONBOARDING_TOTAL_STEPS - 1,
+    });
+
+    const { result } = renderHook(() => useOnboarding(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.step).toBe(ONBOARDING_TOTAL_STEPS - 1);
+    });
+
+    act(() => {
+      result.current.advanceStep();
+    });
+
+    expect(result.current.isOnboarding).toBe(false);
+  });
+
+  it('full flow from step 0 through completion', async () => {
+    const { result } = renderHook(() => useOnboarding(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isOnboarding).toBe(true);
+      expect(result.current.step).toBe(0);
+    });
+
+    // Step 0 -> 1: advance with location
+    act(() => {
+      result.current.advanceWithLocation('loc-1');
+    });
+    expect(result.current.step).toBe(1);
+
+    // Step 1 -> 2: advance step (after bin creation success)
+    act(() => {
+      result.current.advanceStep();
+    });
+    expect(result.current.step).toBe(2);
+
+    // Step 2 -> 3: QR preview -> Get Started
+    act(() => {
+      result.current.advanceStep();
+    });
+    expect(result.current.step).toBe(3);
+
+    // Step 3 -> completed (Get Started)
+    act(() => {
+      result.current.advanceStep();
+    });
+    expect(result.current.isOnboarding).toBe(false);
   });
 });

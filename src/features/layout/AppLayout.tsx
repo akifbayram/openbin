@@ -144,6 +144,7 @@ export function AppLayout() {
           step={onboarding.step}
           locationId={onboarding.locationId ?? undefined}
           advanceWithLocation={onboarding.advanceWithLocation}
+          advanceStep={onboarding.advanceStep}
           complete={onboarding.complete}
         />
       )}

@@ -39,7 +39,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
     if (!activeLocationId) return;
     setLoading(true);
     try {
-      const id = await addBin({
+      const { id } = await addBin({
         name: data.name,
         locationId: activeLocationId,
         items: data.items,

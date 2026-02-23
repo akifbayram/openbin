@@ -5,16 +5,19 @@ import { useTheme } from '@/lib/theme';
 import { resolveIcon } from '@/lib/iconMap';
 import { getCardRenderProps } from '@/lib/cardStyle';
 
-export function BinPreviewCard({ name, color, items, tags }: {
+export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, areaName }: {
   name: string;
   color: string;
   items: string[];
   tags: string[];
+  icon?: string;
+  cardStyle?: string;
+  areaName?: string;
 }) {
   const { theme } = useTheme();
-  const renderProps = getCardRenderProps(color, '', theme);
+  const renderProps = getCardRenderProps(color, cardStyle ?? '', theme);
   const { mutedColor } = renderProps;
-  const BinIcon = resolveIcon('');
+  const BinIcon = resolveIcon(icon ?? '');
 
   const secondaryStyle: CSSProperties | undefined = mutedColor ? { color: mutedColor } : undefined;
   const iconStyle: CSSProperties | undefined = mutedColor ? { color: mutedColor } : undefined;
@@ -29,6 +32,11 @@ export function BinPreviewCard({ name, color, items, tags }: {
           <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug">
             {name || <span>My bin</span>}
           </h3>
+          {areaName && (
+            <p className="text-[12px] text-[var(--text-tertiary)] truncate leading-relaxed" style={secondaryStyle}>
+              {areaName}
+            </p>
+          )}
           {items.length > 0 && (
             <p className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed" style={secondaryStyle}>
               {items.join(', ')}
@@ -46,6 +54,19 @@ export function BinPreviewCard({ name, color, items, tags }: {
         </div>
         <BinIcon className="mt-0.5 h-[22px] w-[22px] shrink-0 text-[var(--text-tertiary)]" style={iconStyle} />
       </div>
+      {renderProps.stripeBar && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            background: renderProps.stripeBar.color,
+            ...(renderProps.stripeBar.position === 'left' && { left: 0, top: 0, bottom: 0, width: renderProps.stripeBar.width }),
+            ...(renderProps.stripeBar.position === 'right' && { right: 0, top: 0, bottom: 0, width: renderProps.stripeBar.width }),
+            ...(renderProps.stripeBar.position === 'top' && { left: 0, top: 0, right: 0, height: renderProps.stripeBar.width }),
+            ...(renderProps.stripeBar.position === 'bottom' && { left: 0, bottom: 0, right: 0, height: renderProps.stripeBar.width }),
+          }}
+        />
+      )}
     </div>
   );
 }

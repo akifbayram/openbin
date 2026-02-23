@@ -59,7 +59,7 @@ export function useBulkActions(
     if (!activeLocationId) return;
     const ids: string[] = [];
     for (const bin of selected) {
-      const newId = await addBin({
+      const newBin = await addBin({
         name: `${bin.name} (copy)`,
         locationId: activeLocationId,
         items: bin.items.map((i) => i.name),
@@ -71,7 +71,7 @@ export function useBulkActions(
         cardStyle: bin.card_style,
         visibility: bin.visibility,
       });
-      ids.push(newId);
+      ids.push(newBin.id);
     }
     clearSelection();
     if (ids.length === 1) {

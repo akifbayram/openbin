@@ -180,7 +180,7 @@ export function BinDetailPage() {
   async function handleDuplicate() {
     if (!bin || !activeLocationId) return;
     try {
-      const newId = await addBin({
+      const newBin = await addBin({
         name: `${bin.name} (copy)`,
         locationId: activeLocationId,
         items: bin.items.map((i) => i.name),
@@ -192,7 +192,7 @@ export function BinDetailPage() {
         cardStyle: bin.card_style,
         visibility: bin.visibility,
       });
-      navigate(`/bin/${newId}`);
+      navigate(`/bin/${newBin.id}`);
       showToast({ message: `Duplicated "${bin.name}"` });
     } catch {
       showToast({ message: 'Failed to duplicate' });

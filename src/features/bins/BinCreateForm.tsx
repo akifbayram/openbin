@@ -8,12 +8,13 @@ import { cn } from '@/lib/utils';
 import { TagInput } from './TagInput';
 import { ItemsInput } from './ItemsInput';
 import { IconPicker } from './IconPicker';
-import { ColorPicker, HueGradientPicker } from './ColorPicker';
+import { ColorPicker } from './ColorPicker';
 import { StylePicker } from './StylePicker';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { derivePrefix } from '@/lib/derivePrefix';
 import { VisibilityPicker } from './VisibilityPicker';
 import { AreaPicker } from '@/features/areas/AreaPicker';
+import { useAreaList } from '@/features/areas/useAreas';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
@@ -49,7 +50,7 @@ interface BinCreateFormProps {
   onAiSetupRedirect?: () => void;
   prefillName?: string;
   allTags?: string[];
-  header?: React.ReactNode | ((state: { name: string; color: string; items: string[]; tags: string[] }) => React.ReactNode);
+  header?: React.ReactNode | ((state: { name: string; color: string; items: string[]; tags: string[]; icon: string; cardStyle: string; areaName: string }) => React.ReactNode);
   className?: string;
 }
 
@@ -68,6 +69,7 @@ export function BinCreateForm({
   className,
 }: BinCreateFormProps) {
   const t = useTerminology();
+  const { areas } = useAreaList(locationId);
   const { settings: aiSettings, isLoading: aiSettingsLoading } = useAiSettings();
   const { aiEnabled } = useAiEnabled();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -234,8 +236,9 @@ export function BinCreateForm({
     }
   };
 
+  const areaName = areas.find(a => a.id === areaId)?.name ?? '';
   const renderedHeader = typeof header === 'function'
-    ? header({ name, color, items, tags })
+    ? header({ name, color, items, tags, icon, cardStyle, areaName })
     : header;
 
   return (
@@ -436,10 +439,15 @@ export function BinCreateForm({
         />
       </div>
 
-      {/* Area (full mode only) */}
-      {isFull && (
+      {/* Area */}
+      {isFull ? (
         <div className="space-y-2">
           <Label>{t.Area}</Label>
+          <AreaPicker locationId={locationId} value={areaId} onChange={setAreaId} />
+        </div>
+      ) : (
+        <div className="text-left">
+          <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">{t.Area}</label>
           <AreaPicker locationId={locationId} value={areaId} onChange={setAreaId} />
         </div>
       )}
@@ -488,36 +496,42 @@ export function BinCreateForm({
         ) : (
           <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Color</label>
         )}
-        {isFull ? (
-          (() => {
-            const sec = getSecondaryColorInfo(cardStyle);
-            return (
-              <ColorPicker
-                value={color}
-                onChange={setColor}
-                secondaryLabel={sec?.label}
-                secondaryValue={sec?.value}
-                onSecondaryChange={sec ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
-              />
-            );
-          })()
-        ) : (
-          <HueGradientPicker value={color} onChange={setColor} />
-        )}
+        {(() => {
+          const sec = getSecondaryColorInfo(cardStyle);
+          return (
+            <ColorPicker
+              value={color}
+              onChange={setColor}
+              secondaryLabel={sec?.label}
+              secondaryValue={sec?.value}
+              onSecondaryChange={sec ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
+            />
+          );
+        })()}
       </div>
 
-      {/* Icon (full mode only) */}
-      {isFull && (
+      {/* Icon */}
+      {isFull ? (
         <div className="space-y-2">
           <Label>Icon</Label>
           <IconPicker value={icon} onChange={setIcon} />
         </div>
+      ) : (
+        <div className="text-left">
+          <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Icon</label>
+          <IconPicker value={icon} onChange={setIcon} />
+        </div>
       )}
 
-      {/* Style (full mode only) */}
-      {isFull && (
+      {/* Style */}
+      {isFull ? (
         <div className="space-y-2">
           <Label>Style</Label>
+          <StylePicker value={cardStyle} color={color} onChange={setCardStyle} />
+        </div>
+      ) : (
+        <div className="text-left">
+          <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Style</label>
           <StylePicker value={cardStyle} color={color} onChange={setCardStyle} />
         </div>
       )}

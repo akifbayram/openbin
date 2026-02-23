@@ -49,7 +49,7 @@ export function BulkAddPage() {
       for (const photo of toCreate) {
         dispatch({ type: 'SET_CREATING', id: photo.id });
         try {
-          const binId = await addBin({
+          const createdBin = await addBin({
             name: photo.name.trim(),
             locationId: activeLocationId,
             items: photo.items,
@@ -59,7 +59,7 @@ export function BulkAddPage() {
             icon: photo.icon,
             color: photo.color,
           });
-          dispatch({ type: 'SET_CREATED', id: photo.id, binId });
+          dispatch({ type: 'SET_CREATED', id: photo.id, binId: createdBin.id });
           successCount++;
           // Upload photo fire-and-forget
           compressImage(photo.file)
@@ -70,7 +70,7 @@ export function BulkAddPage() {
                   : new File([compressed], photo.file.name, {
                       type: compressed.type || 'image/jpeg',
                     });
-              return addPhoto(binId, file);
+              return addPhoto(createdBin.id, file);
             })
             .catch(() => {});
         } catch (err) {

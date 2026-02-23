@@ -93,7 +93,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     if (!name.trim() || !activeLocationId) return;
     setIsCreating(true);
     try {
-      const binId = await addBin({
+      const createdBin = await addBin({
         name: name.trim(),
         locationId: activeLocationId,
         items,
@@ -111,7 +111,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               blob instanceof File
                 ? blob
                 : new File([blob], file.name, { type: blob.type || 'image/jpeg' });
-            return addPhoto(binId, f);
+            return addPhoto(createdBin.id, f);
           })
           .catch(() => {});
       }

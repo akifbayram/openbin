@@ -223,7 +223,7 @@ export interface AddBinOptions {
   shortCode?: string;
 }
 
-export async function addBin(options: AddBinOptions): Promise<string> {
+export async function addBin(options: AddBinOptions): Promise<Bin> {
   const body: Record<string, unknown> = {
     locationId: options.locationId,
     name: options.name,
@@ -239,12 +239,12 @@ export async function addBin(options: AddBinOptions): Promise<string> {
   if (options.shortCode) {
     body.shortCode = options.shortCode;
   }
-  const result = await apiFetch<{ id: string }>('/api/bins', {
+  const result = await apiFetch<Bin>('/api/bins', {
     method: 'POST',
     body,
   });
   notifyBinsChanged();
-  return result.id;
+  return result;
 }
 
 export async function updateBin(

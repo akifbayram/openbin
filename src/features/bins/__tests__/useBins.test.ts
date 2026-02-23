@@ -33,7 +33,7 @@ describe('addBin', () => {
   it('calls apiFetch with correct parameters', async () => {
     mockApiFetch.mockResolvedValue({ id: 'new-id' });
 
-    const id = await addBin({
+    const bin = await addBin({
       name: 'My Bin',
       locationId: 'location-1',
       items: ['stuff'],
@@ -43,7 +43,7 @@ describe('addBin', () => {
       color: 'blue',
     });
 
-    expect(id).toBe('new-id');
+    expect(bin.id).toBe('new-id');
     expect(mockApiFetch).toHaveBeenCalledWith('/api/bins', {
       method: 'POST',
       body: {
