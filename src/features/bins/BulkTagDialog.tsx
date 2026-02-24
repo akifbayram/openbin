@@ -67,10 +67,10 @@ export function BulkTagDialog({ open, onOpenChange, binIds, onDone, allTags }: B
           <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
             Cancel
           </Button>
-          <Button onClick={handleApply} disabled={tags.length === 0 || loading}>
+          <Button onClick={handleApply} disabled={tags.length === 0 || loading} className="rounded-[var(--radius-full)]">
             {loading ? 'Applying...' : 'Apply'}
           </Button>
         </DialogFooter>

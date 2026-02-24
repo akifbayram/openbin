@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Settings, Pencil, Clock, Trash2, LogOut, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useClickOutside } from '@/lib/useClickOutside';
 
 interface LocationSettingsMenuProps {
   isAdmin: boolean;
@@ -14,17 +15,7 @@ interface LocationSettingsMenuProps {
 export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onDelete, onLeave, compact }: LocationSettingsMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
+  useClickOutside(menuRef, () => setOpen(false));
 
   function handleItem(action: () => void) {
     setOpen(false);

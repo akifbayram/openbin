@@ -2,6 +2,7 @@ import { Sparkles, ChevronRight, Eye, EyeOff, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AI_PROVIDERS } from './aiConstants';
 import type { AiProviderSetup } from './useAiProviderSetup';
+import { OptionGroup } from '@/components/ui/option-group';
 
 interface InlineAiSetupProps {
   expanded: boolean;
@@ -25,23 +26,13 @@ export function InlineAiSetup({ expanded, onExpandedChange, setup, label = 'Set 
       {expanded && (
         <div className="mt-2 space-y-2.5 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-3">
           {/* Provider pills */}
-          <div className="flex gap-1.5">
-            {AI_PROVIDERS.map((p) => (
-              <button
-                key={p.key}
-                type="button"
-                onClick={() => setup.handleProviderChange(p.key)}
-                className={cn(
-                  'px-2.5 py-1 rounded-full text-[12px] transition-colors',
-                  setup.provider === p.key
-                    ? 'bg-[var(--accent)] text-white'
-                    : 'bg-[var(--bg-active)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          <OptionGroup
+            options={AI_PROVIDERS}
+            value={setup.provider}
+            onChange={setup.handleProviderChange}
+            shape="pill"
+            size="sm"
+          />
           {/* API key */}
           <div className="relative">
             <input

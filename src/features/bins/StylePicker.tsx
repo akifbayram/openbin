@@ -108,34 +108,22 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
       {open && (
         <div className="space-y-3 p-3 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
           {/* Variant buttons */}
-          <div className="grid grid-cols-5 gap-1.5">
-            {VARIANTS.map((v) => {
-              const isSelected = currentVariant === v.key;
-              const disabled = v.key === 'photo' && !hasPhotos;
-              return (
-                <button
-                  key={v.key}
-                  type="button"
-                  onClick={() => !disabled && selectVariant(v.key)}
-                  disabled={disabled}
-                  className={cn(
-                    'flex flex-col items-center gap-1 p-2 rounded-[var(--radius-sm)] transition-colors text-[11px]',
-                    isSelected
-                      ? 'bg-[var(--accent)] text-white'
-                      : disabled
-                        ? 'text-[var(--text-tertiary)] opacity-40 cursor-not-allowed'
-                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                  )}
-                  title={disabled ? 'Add photos first' : v.label}
-                >
-                  <div className="w-full">
-                    <VariantPreview variant={v.key} color={color} rectangular />
-                  </div>
-                  {v.label}
-                </button>
-              );
-            })}
-          </div>
+          <OptionGroup
+            options={VARIANTS.map((v) => ({
+              ...v,
+              disabled: v.key === 'photo' && !hasPhotos,
+              disabledTitle: 'Add photos first',
+            }))}
+            value={currentVariant}
+            onChange={selectVariant}
+            size="sm"
+            renderContent={(opt) => (
+              <div className="flex flex-col items-center gap-1 text-[11px]">
+                <VariantPreview variant={opt.key as CardStyleVariant} color={color} rectangular />
+                {opt.label}
+              </div>
+            )}
+          />
 
           {/* Outline non-color controls */}
           {currentVariant === 'border' && (

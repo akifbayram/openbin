@@ -72,10 +72,10 @@ export function LocationCreateDialog({ open, onOpenChange }: LocationCreateDialo
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
               Cancel
             </Button>
-            <Button type="submit" disabled={!name.trim() || creating}>
+            <Button type="submit" disabled={!name.trim() || creating} className="rounded-[var(--radius-full)]">
               {creating ? 'Creating...' : 'Create'}
             </Button>
           </DialogFooter>
@@ -142,10 +142,10 @@ export function LocationJoinDialog({ open, onOpenChange }: LocationJoinDialogPro
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
               Cancel
             </Button>
-            <Button type="submit" disabled={!inviteCode.trim() || joining}>
+            <Button type="submit" disabled={!inviteCode.trim() || joining} className="rounded-[var(--radius-full)]">
               {joining ? 'Joining...' : 'Join'}
             </Button>
           </DialogFooter>
@@ -211,10 +211,10 @@ export function LocationRenameDialog({ locationId, currentName, open, onOpenChan
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
               Cancel
             </Button>
-            <Button type="submit" disabled={!name.trim() || renaming}>
+            <Button type="submit" disabled={!name.trim() || renaming} className="rounded-[var(--radius-full)]">
               {renaming ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>

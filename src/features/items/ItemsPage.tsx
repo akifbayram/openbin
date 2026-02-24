@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ClipboardList, ArrowUpDown } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -72,17 +73,11 @@ export function ItemsPage() {
           </div>
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-          <ClipboardList className="h-16 w-16 opacity-40" />
-          <div className="text-center space-y-1.5">
-            <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
-              {search ? 'No items match your search' : 'No items yet'}
-            </p>
-            {!search && (
-              <p className="text-[13px]">Items added to {t.bins} will appear here</p>
-            )}
-          </div>
-        </div>
+        <EmptyState
+          icon={ClipboardList}
+          title={search ? 'No items match your search' : 'No items yet'}
+          subtitle={search ? undefined : `Items added to ${t.bins} will appear here`}
+        />
       ) : (
         <div className="flex flex-col gap-1">
           {items.map((entry) => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Tags as TagsIcon } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -77,17 +78,11 @@ export function TagsPage() {
           </div>
         </div>
       ) : tags.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-          <TagsIcon className="h-16 w-16 opacity-40" />
-          <div className="text-center space-y-1.5">
-            <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
-              {search ? 'No tags match your search' : 'No tags yet'}
-            </p>
-            {!search && (
-              <p className="text-[13px]">Tags added to {t.bins} will appear here</p>
-            )}
-          </div>
-        </div>
+        <EmptyState
+          icon={TagsIcon}
+          title={search ? 'No tags match your search' : 'No tags yet'}
+          subtitle={search ? undefined : `Tags added to ${t.bins} will appear here`}
+        />
       ) : (
         <div className="flex flex-col gap-1">
           {tags.map((entry) => (

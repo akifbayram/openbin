@@ -1,6 +1,7 @@
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { DismissibleBadge } from '@/components/ui/dismissible-badge';
 import { HUE_RANGES } from '@/lib/colorPalette';
 import type { CSSProperties } from 'react';
 import type { BinFilters } from './useBins';
@@ -42,16 +43,14 @@ export function BinSearchBar({
         {hasBadges && (
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide min-w-0 shrink">
             {filters.tags.map((tag) => (
-              <Badge key={`tag-${tag}`} variant="outline" className="gap-1 pr-1.5 py-0.5 shrink-0 text-[11px]" style={getTagStyle(tag)}>
+              <DismissibleBadge
+                key={`tag-${tag}`}
+                onDismiss={() => setFilters({ ...filters, tags: filters.tags.filter((t2) => t2 !== tag) })}
+                ariaLabel={`Remove tag filter ${tag}`}
+                style={getTagStyle(tag)}
+              >
                 {tag}
-                <button
-                  onClick={() => setFilters({ ...filters, tags: filters.tags.filter((t2) => t2 !== tag) })}
-                  aria-label={`Remove tag filter ${tag}`}
-                  className="ml-0.5 p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </Badge>
+              </DismissibleBadge>
             ))}
             {filters.tags.length >= 2 && (
               <Badge variant="outline" className="py-0.5 shrink-0 text-[11px] text-[var(--text-tertiary)]">
@@ -61,69 +60,42 @@ export function BinSearchBar({
             {filters.areas.map((areaKey) => {
               const areaName = areaKey === '__unassigned__' ? 'Unassigned' : areas.find((a) => a.id === areaKey)?.name ?? areaKey;
               return (
-                <Badge key={`area-${areaKey}`} variant="outline" className="gap-1 pr-1.5 py-0.5 shrink-0 text-[11px]">
+                <DismissibleBadge
+                  key={`area-${areaKey}`}
+                  onDismiss={() => setFilters({ ...filters, areas: filters.areas.filter((a) => a !== areaKey) })}
+                  ariaLabel={`Remove area filter ${areaName}`}
+                >
                   {areaName}
-                  <button
-                    onClick={() => setFilters({ ...filters, areas: filters.areas.filter((a) => a !== areaKey) })}
-                    aria-label={`Remove area filter ${areaName}`}
-                    className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </Badge>
+                </DismissibleBadge>
               );
             })}
             {filters.colors.map((rangeName) => {
               const range = HUE_RANGES.find((r) => r.name === rangeName);
               return (
-                <Badge key={`color-${rangeName}`} variant="outline" className="gap-1.5 pr-1.5 py-0.5 shrink-0 text-[11px]">
-                  <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: range?.dot }} />
+                <DismissibleBadge
+                  key={`color-${rangeName}`}
+                  onDismiss={() => setFilters({ ...filters, colors: filters.colors.filter((c) => c !== rangeName) })}
+                  ariaLabel={`Remove color filter ${range?.label ?? rangeName}`}
+                  dot={range?.dot}
+                >
                   {range?.label ?? rangeName}
-                  <button
-                    onClick={() => setFilters({ ...filters, colors: filters.colors.filter((c) => c !== rangeName) })}
-                    aria-label={`Remove color filter ${range?.label ?? rangeName}`}
-                    className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </Badge>
+                </DismissibleBadge>
               );
             })}
             {filters.hasItems && (
-              <Badge variant="outline" className="gap-1 pr-1.5 py-0.5 shrink-0 text-[11px]">
+              <DismissibleBadge onDismiss={() => setFilters({ ...filters, hasItems: false })} ariaLabel="Remove has items filter">
                 Has items
-                <button
-                  onClick={() => setFilters({ ...filters, hasItems: false })}
-                  aria-label="Remove has items filter"
-                  className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </Badge>
+              </DismissibleBadge>
             )}
             {filters.hasNotes && (
-              <Badge variant="outline" className="gap-1 pr-1.5 py-0.5 shrink-0 text-[11px]">
+              <DismissibleBadge onDismiss={() => setFilters({ ...filters, hasNotes: false })} ariaLabel="Remove has notes filter">
                 Has notes
-                <button
-                  onClick={() => setFilters({ ...filters, hasNotes: false })}
-                  aria-label="Remove has notes filter"
-                  className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </Badge>
+              </DismissibleBadge>
             )}
             {filters.needsOrganizing && (
-              <Badge variant="outline" className="gap-1 pr-1.5 py-0.5 shrink-0 text-[11px]">
+              <DismissibleBadge onDismiss={() => setFilters({ ...filters, needsOrganizing: false })} ariaLabel="Remove needs organizing filter">
                 Needs organizing
-                <button
-                  onClick={() => setFilters({ ...filters, needsOrganizing: false })}
-                  aria-label="Remove needs organizing filter"
-                  className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </Badge>
+              </DismissibleBadge>
             )}
           </div>
         )}
