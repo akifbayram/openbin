@@ -42,6 +42,7 @@ import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import { useEditBinForm } from './useEditBinForm';
 import { QuickAddWidget } from './QuickAddWidget';
 import { BinDetailToolbar } from './BinDetailToolbar';
+import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { DeleteBinDialog } from './DeleteBinDialog';
 import { MoveBinDialog } from './MoveBinDialog';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
@@ -70,6 +71,7 @@ export function BinDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [unsavedOpen, setUnsavedOpen] = useState(false);
+  const [aiSetupOpen, setAiSetupOpen] = useState(false);
   const pendingNav = useRef<(() => void) | null>(null);
   const { setGuard } = useNavigationGuard();
 
@@ -119,7 +121,7 @@ export function BinDetailPage() {
     existingItems: bin?.items.map((i) => i.name) ?? [],
     activeLocationId: activeLocationId ?? undefined,
     aiConfigured: aiEnabled && !!aiSettings,
-    onNavigateAiSetup: () => navigate('/settings#ai-settings'),
+    onNavigateAiSetup: () => setAiSetupOpen(true),
   });
 
   if (isLoading && bin === undefined) {
@@ -193,7 +195,7 @@ export function BinDetailPage() {
 
   function handleAnalyzeClick() {
     if (!aiSettings) {
-      navigate('/settings#ai-settings');
+      setAiSetupOpen(true);
       return;
     }
     if (photos.length > 0) {
@@ -367,7 +369,7 @@ export function BinDetailPage() {
                 onChange={edit.setItems}
                 showAi={aiEnabled}
                 aiConfigured={aiEnabled && !!aiSettings}
-                onAiSetupNeeded={() => navigate('/settings#ai-settings')}
+                onAiSetupNeeded={() => setAiSetupOpen(true)}
                 binName={edit.name}
                 locationId={activeLocationId ?? undefined}
               />
@@ -589,6 +591,8 @@ export function BinDetailPage() {
         locations={otherLocations}
         onConfirm={handleMove}
       />
+
+      <AiSetupDialog open={aiSetupOpen} onOpenChange={setAiSetupOpen} />
 
       <UnsavedChangesDialog
         open={unsavedOpen}

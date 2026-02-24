@@ -1,20 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import { addBin, useAllTags as useAllTagsFetch } from './useBins';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
+import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { BinCreateForm } from './BinCreateForm';
 import type { BinCreateFormData } from './BinCreateForm';
 
@@ -94,43 +92,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
         </DialogContent>
       </Dialog>
 
-      {/* AI Setup Guidance Dialog */}
-      <Dialog open={aiSetupOpen} onOpenChange={setAiSetupOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Set up AI Analysis</DialogTitle>
-            <DialogDescription>
-              AI can analyze your {t.bin} photos and suggest names, items, tags, and notes automatically. Connect an AI provider in Settings to get started.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] p-3 space-y-2 text-[13px] text-[var(--text-secondary)]">
-              <p className="font-medium text-[var(--text-primary)]">Supported providers</p>
-              <ul className="space-y-1">
-                <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shrink-0" />OpenAI (GPT-4o, GPT-4o mini)</li>
-                <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shrink-0" />Anthropic (Claude)</li>
-                <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shrink-0" />Local LLM (OpenAI-compatible)</li>
-              </ul>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setAiSetupOpen(false)} className="rounded-[var(--radius-full)]">
-              Later
-            </Button>
-            <Button
-              onClick={() => {
-                setAiSetupOpen(false);
-                onOpenChange(false);
-                navigate('/settings');
-              }}
-              className="rounded-[var(--radius-full)]"
-            >
-              <Settings className="h-4 w-4 mr-1.5" />
-              Go to Settings
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AiSetupDialog open={aiSetupOpen} onOpenChange={setAiSetupOpen} onNavigate={() => onOpenChange(false)} />
     </>
   );
 }

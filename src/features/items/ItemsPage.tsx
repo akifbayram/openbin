@@ -8,8 +8,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePaginatedItemList } from './useItems';
-import { resolveIcon } from '@/lib/iconMap';
-import { resolveColor } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
 
 type SortOption = 'alpha' | 'bin';
@@ -80,14 +78,7 @@ export function ItemsPage() {
         />
       ) : (
         <div className="flex flex-col gap-1">
-          {items.map((entry) => {
-            const Icon = resolveIcon(entry.bin_icon);
-            const colorPreset = entry.bin_color
-              ? resolveColor(entry.bin_color)
-              : null;
-            const dotColor = colorPreset?.bgCss ?? null;
-
-            return (
+          {items.map((entry) => (
               <div
                 key={entry.id}
                 role="button"
@@ -102,22 +93,12 @@ export function ItemsPage() {
                   <p className="text-[15px] font-medium text-[var(--text-primary)] truncate">
                     {entry.name}
                   </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {dotColor && (
-                      <span
-                        className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: dotColor }}
-                      />
-                    )}
-                    <Icon className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
-                    <span className="text-[13px] text-[var(--text-tertiary)] truncate">
-                      {entry.bin_name}
-                    </span>
-                  </div>
+                  <span className="text-[13px] text-[var(--text-tertiary)] truncate mt-0.5 block">
+                    {entry.bin_name}
+                  </span>
                 </div>
               </div>
-            );
-          })}
+            ))}
           <LoadMoreSentinel hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
         </div>
       )}
