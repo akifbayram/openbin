@@ -5,9 +5,10 @@ interface EmptyStateProps {
   title: string;
   subtitle?: string;
   compact?: boolean;
+  children?: React.ReactNode;
 }
 
-export function EmptyState({ icon: Icon, title, subtitle, compact }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, subtitle, compact, children }: EmptyStateProps) {
   return (
     <div className={cn(
       'flex flex-col items-center justify-center gap-5 text-[var(--text-tertiary)]',
@@ -18,6 +19,7 @@ export function EmptyState({ icon: Icon, title, subtitle, compact }: EmptyStateP
         <p className="text-[17px] font-semibold text-[var(--text-secondary)]">{title}</p>
         {subtitle && <p className="text-[13px]">{subtitle}</p>}
       </div>
+      {children}
     </div>
   );
 }

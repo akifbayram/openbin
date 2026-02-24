@@ -173,12 +173,13 @@ export function TrashPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setConfirmDelete(null)}>
+            <Button variant="ghost" onClick={() => setConfirmDelete(null)} className="rounded-[var(--radius-full)]">
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handlePermanentDelete}
+              className="rounded-[var(--radius-full)]"
             >
               Delete Forever
             </Button>

@@ -44,8 +44,8 @@ export function SaveViewDialog({ open, onOpenChange, searchQuery, sort, filters 
           onKeyDown={(e) => { if (e.key === 'Enter' && viewName.trim()) handleSave(); }}
         />
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!viewName.trim()}>Save</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">Cancel</Button>
+          <Button onClick={handleSave} disabled={!viewName.trim()} className="rounded-[var(--radius-full)]">Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -184,10 +184,10 @@ export function ApiKeysSection() {
                 />
               </div>
               <DialogFooter>
-                <Button type="button" variant="ghost" onClick={handleCloseCreate}>
+                <Button type="button" variant="ghost" onClick={handleCloseCreate} className="rounded-[var(--radius-full)]">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={creating}>
+                <Button type="submit" disabled={creating} className="rounded-[var(--radius-full)]">
                   {creating ? 'Creating...' : 'Create'}
                 </Button>
               </DialogFooter>

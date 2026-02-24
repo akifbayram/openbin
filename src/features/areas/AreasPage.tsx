@@ -13,6 +13,7 @@ import { leaveLocation, useLocationList } from '@/features/locations/useLocation
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import { EmptyState } from '@/components/ui/empty-state';
 import { AreaCard, CreateAreaCard, UnassignedAreaCard } from './AreaCard';
 import { LocationSettingsMenu } from './LocationSettingsMenu';
 import { LocationTabs } from './LocationTabs';
@@ -171,12 +172,11 @@ export function AreasPage() {
 
       {/* Empty state — no locations */}
       {!locationsLoading && locations.length === 0 && (
-        <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-          <MapPin className="h-16 w-16 opacity-40" />
-          <div className="text-center space-y-1.5">
-            <p className="text-[17px] font-semibold text-[var(--text-secondary)]">No locations yet</p>
-            <p className="text-[13px]">Create a location or join one with an invite code</p>
-          </div>
+        <EmptyState
+          icon={MapPin}
+          title="No locations yet"
+          subtitle="Create a location or join one with an invite code"
+        >
           <div className="flex gap-2.5">
             <Button onClick={() => setJoinLocationOpen(true)} variant="outline" className="rounded-[var(--radius-full)]">
               <LogIn className="h-4 w-4 mr-2" />
@@ -187,7 +187,7 @@ export function AreasPage() {
               Create Location
             </Button>
           </div>
-        </div>
+        </EmptyState>
       )}
 
       {/* Active location content */}

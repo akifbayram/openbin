@@ -4,6 +4,7 @@ import { ScanLine, MapPin, ChevronRight, Plus, Inbox, Sparkles, Search } from 'l
 
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDebounce } from '@/lib/useDebounce';
@@ -96,16 +97,11 @@ export function DashboardPage() {
         <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
           Dashboard
         </h1>
-        <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-          <MapPin className="h-16 w-16 opacity-40" />
-          <div className="text-center space-y-1.5">
-            <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
-              {`No ${t.location} selected`}
-            </p>
-            <p className="text-[13px]">
-              {`Create or join a ${t.location} to start organizing ${t.bins}`}
-            </p>
-          </div>
+        <EmptyState
+          icon={MapPin}
+          title={`No ${t.location} selected`}
+          subtitle={`Create or join a ${t.location} to start organizing ${t.bins}`}
+        >
           <Button
             onClick={() => navigate('/locations')}
             variant="outline"
@@ -114,7 +110,7 @@ export function DashboardPage() {
             <MapPin className="h-4 w-4 mr-2" />
             {`Manage ${t.Locations}`}
           </Button>
-        </div>
+        </EmptyState>
       </div>
     );
   }

@@ -1,8 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
-import { Pencil, Trash2, Check, X, MoreHorizontal } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Check, MoreHorizontal, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useClickOutside } from '@/lib/useClickOutside';
 import { useTerminology } from '@/lib/terminology';
+import { AreaActionMenu } from './AreaActionMenu';
+import { useInlineEdit } from './useInlineEdit';
 
 interface AreaRowProps {
   id: string;
@@ -16,41 +19,18 @@ interface AreaRowProps {
 
 export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onDelete }: AreaRowProps) {
   const t = useTerminology();
-  const [editing, setEditing] = useState(false);
-  const [editValue, setEditValue] = useState('');
-  const [saving, setSaving] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  useClickOutside(menuRef, () => setActionsOpen(false));
 
-  useEffect(() => {
-    if (!actionsOpen) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setActionsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [actionsOpen]);
+  const { editing, editValue, saving, startEdit: _startEdit, cancelEdit, setEditValue, handleSave, handleKeyDown } = useInlineEdit({
+    currentName: name,
+    onSave: (newName) => onRename(id, newName),
+  });
 
   function startEdit() {
-    setEditValue(name);
-    setEditing(true);
+    _startEdit();
     setActionsOpen(false);
-  }
-
-  async function handleSave() {
-    if (!editValue.trim() || editValue.trim() === name) {
-      setEditing(false);
-      return;
-    }
-    setSaving(true);
-    try {
-      await onRename(id, editValue.trim());
-      setEditing(false);
-    } finally {
-      setSaving(false);
-    }
   }
 
   if (editing) {
@@ -59,10 +39,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
         <Input
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
-            if (e.key === 'Escape') { setEditing(false); }
-          }}
+          onKeyDown={handleKeyDown}
           disabled={saving}
           autoFocus
           className="h-8 text-[14px] flex-1"
@@ -80,7 +57,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setEditing(false)}
+          onClick={cancelEdit}
           className="h-8 w-8 rounded-full shrink-0"
           aria-label="Cancel"
         >
@@ -114,25 +91,11 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
           >
             <MoreHorizontal className="h-3.5 w-3.5" />
           </Button>
-          {actionsOpen && (
-            <div className="absolute right-0 top-full mt-1.5 z-50 min-w-[140px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]">
-              <button
-                onClick={(e) => { e.stopPropagation(); startEdit(); }}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-              >
-                <Pencil className="h-4 w-4" />
-                Rename
-              </button>
-              <div className="my-1 border-t border-[var(--border-glass)]" />
-              <button
-                onClick={(e) => { e.stopPropagation(); setActionsOpen(false); onDelete(id, name, binCount); }}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete
-              </button>
-            </div>
-          )}
+          <AreaActionMenu
+            open={actionsOpen}
+            onRename={startEdit}
+            onDelete={() => { setActionsOpen(false); onDelete(id, name, binCount); }}
+          />
         </div>
       )}
     </div>

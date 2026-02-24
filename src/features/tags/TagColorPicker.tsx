@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Palette } from 'lucide-react';
 import { resolveColor, parseColorKey, buildColorKey, hslToHex, SHADE_COUNT } from '@/lib/colorPalette';
+import { useClickOutside } from '@/lib/useClickOutside';
 import { cn } from '@/lib/utils';
 
 interface TagColorPickerProps {
@@ -17,18 +18,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [open]);
+  useClickOutside(ref, () => setOpen(false));
 
   const parsed = currentColor ? parseColorKey(currentColor) : null;
   const isNeutral = parsed?.hue === 'neutral';
