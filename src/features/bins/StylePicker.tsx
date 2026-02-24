@@ -40,14 +40,14 @@ const BORDER_STYLES: { key: BorderStyle; label: string }[] = [
   { key: 'double', label: 'Double' },
 ];
 
-function VariantPreview({ variant, color }: { variant: CardStyleVariant; color: string }) {
-  const baseClass = 'aspect-square w-full rounded-[4px] transition-all';
+function VariantPreview({ variant, color, rectangular }: { variant: CardStyleVariant; color: string; rectangular?: boolean }) {
+  const baseClass = cn(rectangular ? 'aspect-[16/9]' : 'aspect-square', 'w-full rounded-[4px] transition-all');
 
   if (variant === 'glass') {
     return <div className={cn(baseClass, 'glass-card')} />;
   }
   if (variant === 'border') {
-    return <div className={cn(baseClass, 'border-2')} style={{ borderColor: color ? `var(--accent)` : 'var(--border)' }} />;
+    return <div className={cn(baseClass, 'border-4')} style={{ borderColor: color ? `var(--accent)` : 'var(--border)' }} />;
   }
   if (variant === 'gradient') {
     return (
@@ -58,7 +58,7 @@ function VariantPreview({ variant, color }: { variant: CardStyleVariant; color: 
     );
   }
   if (variant === 'stripe') {
-    return <div className={cn(baseClass, 'glass-card')} style={{ borderLeft: '4px solid var(--accent)' }} />;
+    return <div className={cn(baseClass, 'glass-card')} style={{ borderLeft: '6px solid var(--accent)' }} />;
   }
   if (variant === 'photo') {
     return (
@@ -129,7 +129,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
                   title={disabled ? 'Add photos first' : v.label}
                 >
                   <div className="w-full">
-                    <VariantPreview variant={v.key} color={color} />
+                    <VariantPreview variant={v.key} color={color} rectangular />
                   </div>
                   {v.label}
                 </button>
@@ -195,7 +195,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
                       type="button"
                       onClick={() => updateStyle({ variant: 'photo', coverPhotoId: photo.id })}
                       className={cn(
-                        'relative aspect-square rounded-[var(--radius-sm)] overflow-hidden transition-all',
+                        'relative aspect-[16/9] rounded-[var(--radius-sm)] overflow-hidden transition-all',
                         isSelected
                           ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-elevated)]'
                           : 'hover:opacity-80'

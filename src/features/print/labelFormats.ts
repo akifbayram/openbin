@@ -198,6 +198,33 @@ export const LABEL_FORMATS: LabelFormat[] = [
 
 export const DEFAULT_LABEL_FORMAT = 'avery-5160';
 
+/**
+ * Cross-reference of compatible Avery product numbers per format key.
+ * Users can search by any of these numbers to find the matching base format.
+ * Source: avery.com/software/template-compatibility
+ */
+const AVERY_CROSS_REFERENCE: Record<string, string[]> = {
+  'avery-5126': ['5126', '8126', '15516', '18126'],
+  'avery-5160': ['5160', '5260', '5660', '5810', '5960', '5970', '5971', '5972', '5979', '5980', '6240', '6241', '6460', '6585', '8160', '8250', '8460', '8660', '8810', '15160', '15510', '15660', '15960', '18160', '18260', '18660', '48160', '48260', '48360', '48460', '48860', '55160', '58160', '58660', '75160', '85560', '95520', '95905', '95915', '95940', '95945'],
+  'avery-5163': ['5163', '5263', '5663', '5963', '6173', '8163', '8253', '8463', '8663', '15163', '15513', '15563', '15663', '15963', '18163', '18263', '18663', '48263', '48363', '48463', '48863', '55163', '58163', '58663', '75163'],
+  'avery-5164': ['5164', '5264', '5664', '5964', '6464', '8164', '8254', '8464', '8664', '15164', '15664', '15964', '18164', '18264', '18664', '48264', '48364', '48464', '48864', '55164', '58164', '58664', '75164'],
+  'avery-5168': ['5168', '5268', '5668', '5968', '6478', '8168', '8468', '8668', '15168', '15668', '15968', '18168', '18268', '18668', '48268', '48368', '48468', '48868', '55168', '58168', '58668'],
+  'avery-5444': ['5444', '8444'],
+  'avery-5454': ['5454', '8454'],
+};
+
+export function filterLabelFormats(query: string): LabelFormat[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return LABEL_FORMATS;
+  return LABEL_FORMATS.filter((fmt) => {
+    if (fmt.name.toLowerCase().includes(q)) return true;
+    if (fmt.key.toLowerCase().includes(q)) return true;
+    const refs = AVERY_CROSS_REFERENCE[fmt.key];
+    if (refs) return refs.some((num) => num.includes(q));
+    return false;
+  });
+}
+
 export function getLabelFormat(key: string, customPresets?: LabelFormat[]): LabelFormat {
   const all = [...LABEL_FORMATS, ...(customPresets ?? [])];
   return all.find((f) => f.key === key) ?? LABEL_FORMATS[0];

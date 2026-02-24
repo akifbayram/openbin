@@ -6,6 +6,7 @@ RUN npm ci
 COPY index.html vite.config.ts tsconfig*.json biome.json ./
 COPY src ./src
 COPY public ./public
+COPY server/openapi.yaml ./server/openapi.yaml
 RUN npx vite build
 
 # ── Stage 2: Build server ────────────────────

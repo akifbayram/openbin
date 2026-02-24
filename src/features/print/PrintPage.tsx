@@ -1,7 +1,7 @@
 import './print.css';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Printer, CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical, Download } from 'lucide-react';
+import { Printer, CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical, Download, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,7 @@ import { useAreaList } from '@/features/areas/useAreas';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { LabelSheet } from './LabelSheet';
-import { LABEL_FORMATS, getLabelFormat, DEFAULT_LABEL_FORMAT, getOrientation, applyOrientation, computeLabelsPerPage, computePageSize } from './labelFormats';
+import { getLabelFormat, DEFAULT_LABEL_FORMAT, getOrientation, applyOrientation, computeLabelsPerPage, computePageSize, filterLabelFormats } from './labelFormats';
 import { usePrintSettings } from './usePrintSettings';
 import type { LabelFormat } from './labelFormats';
 import type { LabelOptions, CustomState } from './usePrintSettings';
@@ -97,6 +97,7 @@ export function PrintPage() {
   const [presetName, setPresetName] = useState('');
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [formatSearch, setFormatSearch] = useState('');
 
   const { formatKey, customState, labelOptions, presets: savedPresets } = settings;
 
@@ -396,27 +397,56 @@ export function PrintPage() {
 
             {formatExpanded && (
               <>
-                <div className="space-y-1 mt-3">
-                  {LABEL_FORMATS.map((fmt) => (
+                {/* Format search */}
+                <div className="relative mt-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-tertiary)] pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search by Avery product number..."
+                    value={formatSearch}
+                    onChange={(e) => setFormatSearch(e.target.value)}
+                    className="w-full h-9 rounded-[var(--radius-full)] bg-[var(--bg-input)] pl-9 pr-8 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-2 focus:ring-[var(--accent)]/30 transition-shadow"
+                  />
+                  {formatSearch && (
                     <button
-                      key={fmt.key}
-                      className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
-                      onClick={() => handleFormatChange(fmt.key)}
+                      onClick={() => setFormatSearch('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                     >
-                      {formatKey === fmt.key ? (
-                        <CheckCircle2 className="h-[20px] w-[20px] text-[var(--accent)] shrink-0" />
-                      ) : (
-                        <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
-                      )}
-                      <div className="min-w-0">
-                        <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
-                        <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
-                          {computeLabelsPerPage(fmt) > 1 ? `${computeLabelsPerPage(fmt)} per page` : 'single label'}
-                        </span>
-                      </div>
+                      <X className="h-3.5 w-3.5" />
                     </button>
-                  ))}
+                  )}
                 </div>
+
+                {(() => {
+                  const filteredFormats = filterLabelFormats(formatSearch);
+                  return filteredFormats.length > 0 ? (
+                    <div className="space-y-1 mt-2">
+                      {filteredFormats.map((fmt) => (
+                        <button
+                          key={fmt.key}
+                          className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
+                          onClick={() => handleFormatChange(fmt.key)}
+                        >
+                          {formatKey === fmt.key ? (
+                            <CheckCircle2 className="h-[20px] w-[20px] text-[var(--accent)] shrink-0" />
+                          ) : (
+                            <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
+                            <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
+                              {computeLabelsPerPage(fmt) > 1 ? `${computeLabelsPerPage(fmt)} per page` : 'single label'}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[13px] text-[var(--text-tertiary)] py-6 text-center">
+                      No matching label formats
+                    </p>
+                  );
+                })()}
 
                 {savedPresets.length > 0 && (
                   <div className="space-y-1 mt-2 pt-2 border-t border-[var(--border-subtle)]">
