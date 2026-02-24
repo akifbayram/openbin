@@ -1,9 +1,8 @@
 import { batchGenerateQRDataURLs } from '@/lib/qr';
-import type { QRColorOptions } from '@/lib/qr';
-import { resolveColor } from '@/lib/colorPalette';
 import { batchRenderIconDataURLs } from './iconToDataUrl';
 import { generateLabelPDF } from './generateLabelPDF';
 import type { LabelFormat } from './labelFormats';
+import { buildColorMap } from './labelFormats';
 import type { LabelOptions } from './usePrintSettings';
 import type { Bin } from '@/types';
 
@@ -12,21 +11,6 @@ interface DownloadLabelPDFParams {
   format: LabelFormat;
   labelOptions: LabelOptions;
   iconSize: string;
-}
-
-/** Build a color map for QR generation when color background is enabled. */
-function buildColorMap(bins: Bin[], showColorSwatch: boolean): Map<string, QRColorOptions> | undefined {
-  if (!showColorSwatch) return undefined;
-  const map = new Map<string, QRColorOptions>();
-  for (const bin of bins) {
-    if (bin.color) {
-      const preset = resolveColor(bin.color);
-      if (preset) {
-        map.set(bin.id, { dark: '#000000', light: preset.bg });
-      }
-    }
-  }
-  return map.size > 0 ? map : undefined;
 }
 
 export async function downloadLabelPDF(params: DownloadLabelPDFParams): Promise<void> {

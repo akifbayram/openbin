@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { batchGenerateQRDataURLs } from '@/lib/qr';
-import type { QRColorOptions } from '@/lib/qr';
-import { resolveColor } from '@/lib/colorPalette';
 import type { Bin } from '@/types';
 import { LabelCell } from './LabelCell';
 import type { LabelFormat } from './labelFormats';
-import { getLabelFormat, DEFAULT_LABEL_FORMAT, computeLabelsPerPage, computePageSize } from './labelFormats';
+import { getLabelFormat, DEFAULT_LABEL_FORMAT, computeLabelsPerPage, computePageSize, buildColorMap } from './labelFormats';
 
 interface LabelSheetProps {
   bins: Bin[];
@@ -17,21 +15,6 @@ interface LabelSheetProps {
   showIcon?: boolean;
   showLocation?: boolean;
   showBinCode?: boolean;
-}
-
-/** Build a color map for QR generation when color background is enabled. */
-function buildColorMap(bins: Bin[], showColorSwatch: boolean): Map<string, QRColorOptions> | undefined {
-  if (!showColorSwatch) return undefined;
-  const map = new Map<string, QRColorOptions>();
-  for (const bin of bins) {
-    if (bin.color) {
-      const preset = resolveColor(bin.color);
-      if (preset) {
-        map.set(bin.id, { dark: '#000000', light: preset.bg });
-      }
-    }
-  }
-  return map.size > 0 ? map : undefined;
 }
 
 export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode, showBinName, showIcon, showLocation, showBinCode }: LabelSheetProps) {

@@ -15,7 +15,6 @@ export interface LabelOptions {
 export interface CustomState {
   customizing: boolean;
   overrides: Partial<LabelFormat>;
-  orientation?: 'landscape' | 'portrait';
 }
 
 export interface PrintSettings {
@@ -23,6 +22,7 @@ export interface PrintSettings {
   customState: CustomState;
   labelOptions: LabelOptions;
   presets: LabelFormat[];
+  orientation?: 'landscape' | 'portrait';
 }
 
 export const DEFAULT_LABEL_OPTIONS: LabelOptions = {
@@ -126,12 +126,17 @@ export function usePrintSettings() {
     update({ presets: next });
   }
 
+  function updateOrientation(orientation: 'landscape' | 'portrait' | undefined) {
+    update({ orientation });
+  }
+
   return {
     settings,
     isLoading,
     updateFormatKey,
     updateCustomState,
     updateLabelOptions,
+    updateOrientation,
     addPreset,
     removePreset,
   };

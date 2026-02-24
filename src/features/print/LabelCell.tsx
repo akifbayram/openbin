@@ -45,16 +45,12 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
   const cellHPt = parseFloat(format.cellHeight) * 72;
   const borderRadius = `${(Math.min(cellWPt, cellHPt) * 0.08).toFixed(1)}pt`;
 
-  // Boosted name font size when colored card is active
-  const nameFontSize = useColoredCard
-    ? `${(parseFloat(format.nameFontSize) * 1.4).toFixed(1).replace(/\.0$/, '')}pt`
-    : format.nameFontSize;
 
   if (useColoredCard) {
     // Colored card layout
     return (
       <div
-        className={`label-cell flex overflow-hidden ${isPortrait ? 'flex-col items-center' : 'flex-row items-center gap-[4pt]'}`}
+        className={`label-cell flex justify-center overflow-hidden ${isPortrait ? 'flex-col items-center' : 'flex-row items-center gap-[4pt]'}`}
         style={{ width: format.cellWidth, height: format.cellHeight, padding: format.padding }}
       >
         {/* Colored card wrapping QR + short code */}
@@ -85,11 +81,11 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
         </div>
 
         {/* Text column — bin name (large), area */}
-        <div className={`min-w-0 flex-1 flex flex-col ${isPortrait ? 'items-center text-center w-full' : ''}`}>
+        <div className={`min-w-0 flex flex-col ${isPortrait ? 'items-center text-center w-full' : ''}`}>
           {showBinName && (
             <div
               className={`label-name font-semibold ${isPortrait ? 'text-center' : ''}`}
-              style={{ fontSize: nameFontSize }}
+              style={{ fontSize: format.nameFontSize }}
             >
               <span className="min-w-0 line-clamp-2">{bin.name}</span>
             </div>
@@ -107,7 +103,7 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
   // Non-colored path: unchanged plain layout
   return (
     <div
-      className={`label-cell flex overflow-hidden ${isPortrait ? 'flex-col items-center' : 'flex-row items-center gap-[4pt]'}`}
+      className={`label-cell flex justify-center overflow-hidden ${isPortrait ? 'flex-col items-center' : 'flex-row items-center gap-[4pt]'}`}
       style={{ width: format.cellWidth, height: format.cellHeight, padding: format.padding }}
     >
       {showQrCode && qrDataUrl ? (
@@ -134,7 +130,7 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
           <Icon style={{ width: resolvedIconSize, height: resolvedIconSize }} />
         </div>
       ) : null}
-      <div className={`min-w-0 flex-1 flex flex-col ${isPortrait ? 'items-center text-center w-full' : ''}`}>
+      <div className={`min-w-0 flex flex-col ${isPortrait ? 'items-center text-center w-full' : ''}`}>
         {colorPreset && (
           <div
             className="color-swatch-print rounded-[1pt] w-full shrink-0"

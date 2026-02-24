@@ -13,7 +13,7 @@ import { useAreaList } from '@/features/areas/useAreas';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { LabelSheet } from './LabelSheet';
-import { LABEL_FORMATS, getLabelFormat, DEFAULT_LABEL_FORMAT, getOrientation, computeLabelsPerPage, computePageSize } from './labelFormats';
+import { LABEL_FORMATS, getLabelFormat, DEFAULT_LABEL_FORMAT, getOrientation, applyOrientation, computeLabelsPerPage, computePageSize } from './labelFormats';
 import { usePrintSettings } from './usePrintSettings';
 import type { LabelFormat } from './labelFormats';
 import type { LabelOptions, CustomState } from './usePrintSettings';
@@ -89,7 +89,7 @@ export function PrintPage() {
   const { activeLocationId } = useAuth();
   const t = useTerminology();
   const { areas } = useAreaList(activeLocationId);
-  const { settings, isLoading: settingsLoading, updateFormatKey, updateCustomState, updateLabelOptions, addPreset, removePreset } = usePrintSettings();
+  const { settings, isLoading: settingsLoading, updateFormatKey, updateCustomState, updateLabelOptions, updateOrientation, addPreset, removePreset } = usePrintSettings();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [binsExpanded, setBinsExpanded] = useState(false);
   const [formatExpanded, setFormatExpanded] = useState(true);
@@ -110,8 +110,9 @@ export function PrintPage() {
   function handleFormatChange(key: string) {
     updateFormatKey(key);
     if (customState.customizing) {
-      const newPreset = getLabelFormat(key, savedPresets);
-      const newState: CustomState = { customizing: true, overrides: seedOverrides(newPreset) };
+      const newBase = getLabelFormat(key, savedPresets);
+      const oriented = applyOrientation(newBase, settings.orientation);
+      const newState: CustomState = { customizing: true, overrides: seedOverrides(oriented) };
       updateCustomState(newState);
     }
   }
@@ -129,7 +130,6 @@ export function PrintPage() {
       pageMarginBottom: fmt.pageMarginBottom,
       pageMarginLeft: fmt.pageMarginLeft,
       pageMarginRight: fmt.pageMarginRight,
-      orientation: getOrientation(fmt),
     };
   }
 
@@ -137,7 +137,8 @@ export function PrintPage() {
     const next = !customState.customizing;
     let newState: CustomState;
     if (next) {
-      newState = { customizing: true, overrides: seedOverrides(getLabelFormat(formatKey, savedPresets)) };
+      const oriented = applyOrientation(getLabelFormat(formatKey, savedPresets), settings.orientation);
+      newState = { customizing: true, overrides: seedOverrides(oriented) };
     } else {
       newState = { customizing: false, overrides: {} };
     }
@@ -209,13 +210,14 @@ export function PrintPage() {
   }
 
   const baseFormat = getLabelFormat(formatKey, savedPresets);
-  const mergedFormat = customState.customizing ? { ...baseFormat, ...customState.overrides } : baseFormat;
-  const scaledFormat = customState.customizing ? applyAutoScale(baseFormat, mergedFormat) : mergedFormat;
+  const orientedBase = applyOrientation(baseFormat, settings.orientation);
+  const customFormat = customState.customizing ? { ...orientedBase, ...customState.overrides } : orientedBase;
+  const scaledFormat = customState.customizing ? applyAutoScale(orientedBase, customFormat) : customFormat;
   const labelFormat = applyFontScale(scaledFormat, labelOptions.fontScale);
   const iconSize = customState.customizing
-    ? `${(11 * computeScaleFactor(baseFormat, mergedFormat)).toFixed(2).replace(/\.?0+$/, '')}pt`
+    ? `${(11 * computeScaleFactor(orientedBase, customFormat)).toFixed(2).replace(/\.?0+$/, '')}pt`
     : '11pt';
-  const effectiveOrientation = customState.overrides.orientation ?? getOrientation(baseFormat);
+  const effectiveOrientation = settings.orientation ?? getOrientation(baseFormat);
   const selectedBins: Bin[] = allBins.filter((b) => selectedIds.has(b.id));
 
   async function handleDownloadPDF() {
@@ -230,20 +232,15 @@ export function PrintPage() {
   }
 
   function toggleOrientation() {
-    const newOrientation = effectiveOrientation === 'landscape' ? 'portrait' : 'landscape';
-    const currentW = customState.overrides.cellWidth ?? baseFormat.cellWidth;
-    const currentH = customState.overrides.cellHeight ?? baseFormat.cellHeight;
-    const newState: CustomState = {
-      ...customState,
-      orientation: newOrientation,
-      overrides: {
-        ...customState.overrides,
-        cellWidth: currentH,
-        cellHeight: currentW,
-        orientation: newOrientation,
-      },
-    };
-    updateCustomState(newState);
+    const next = effectiveOrientation === 'landscape' ? 'portrait' : 'landscape';
+    // If toggling back to the format's default, clear the override
+    const value = next === getOrientation(baseFormat) ? undefined : next;
+    updateOrientation(value);
+    // Re-seed customize overrides from the newly oriented base
+    if (customState.customizing) {
+      const oriented = applyOrientation(baseFormat, value);
+      updateCustomState({ customizing: true, overrides: seedOverrides(oriented) });
+    }
   }
 
   function toggleBin(id: string) {
@@ -414,7 +411,7 @@ export function PrintPage() {
                       <div className="min-w-0">
                         <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
                         <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
-                          {fmt.columns > 1 ? `${computeLabelsPerPage(fmt)} per page` : 'single label'}
+                          {computeLabelsPerPage(fmt) > 1 ? `${computeLabelsPerPage(fmt)} per page` : 'single label'}
                         </span>
                       </div>
                     </button>
@@ -454,6 +451,37 @@ export function PrintPage() {
                   </div>
                 )}
 
+                {/* Orientation toggle */}
+                <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[var(--border-subtle)] px-1">
+                  <span className="text-[12px] text-[var(--text-secondary)] font-medium mr-2">Orientation</span>
+                  <div className="flex rounded-[var(--radius-sm)] border border-[var(--border-subtle)] overflow-hidden">
+                    <button
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 text-[13px] transition-colors',
+                        effectiveOrientation === 'landscape'
+                          ? 'bg-[var(--accent)] text-white'
+                          : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+                      )}
+                      onClick={() => effectiveOrientation !== 'landscape' && toggleOrientation()}
+                    >
+                      <RectangleHorizontal className="h-3.5 w-3.5" />
+                      Landscape
+                    </button>
+                    <button
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 text-[13px] transition-colors border-l border-[var(--border-subtle)]',
+                        effectiveOrientation === 'portrait'
+                          ? 'bg-[var(--accent)] text-white'
+                          : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+                      )}
+                      onClick={() => effectiveOrientation !== 'portrait' && toggleOrientation()}
+                    >
+                      <RectangleVertical className="h-3.5 w-3.5" />
+                      Portrait
+                    </button>
+                  </div>
+                </div>
+
                 {/* Customize toggle */}
                 <div className="mt-3 pt-3 border-t border-[var(--border-subtle)]">
                   <label className="flex items-center gap-3 px-3 py-1 cursor-pointer">
@@ -467,36 +495,6 @@ export function PrintPage() {
 
                 {customState.customizing && (
                   <>
-                    <div className="flex items-center gap-1 mt-3 px-1">
-                      <span className="text-[12px] text-[var(--text-secondary)] font-medium mr-2">Orientation</span>
-                      <div className="flex rounded-[var(--radius-sm)] border border-[var(--border-subtle)] overflow-hidden">
-                        <button
-                          className={cn(
-                            'flex items-center gap-1.5 px-3 py-1.5 text-[13px] transition-colors',
-                            effectiveOrientation === 'landscape'
-                              ? 'bg-[var(--accent)] text-white'
-                              : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                          )}
-                          onClick={() => effectiveOrientation !== 'landscape' && toggleOrientation()}
-                        >
-                          <RectangleHorizontal className="h-3.5 w-3.5" />
-                          Landscape
-                        </button>
-                        <button
-                          className={cn(
-                            'flex items-center gap-1.5 px-3 py-1.5 text-[13px] transition-colors border-l border-[var(--border-subtle)]',
-                            effectiveOrientation === 'portrait'
-                              ? 'bg-[var(--accent)] text-white'
-                              : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                          )}
-                          onClick={() => effectiveOrientation !== 'portrait' && toggleOrientation()}
-                        >
-                          <RectangleVertical className="h-3.5 w-3.5" />
-                          Portrait
-                        </button>
-                      </div>
-                    </div>
-
                     <div className="grid grid-cols-2 gap-3 mt-3 px-1">
                       {CUSTOM_FIELDS.map((field) => (
                         <div key={field.key} className="flex flex-col gap-1">

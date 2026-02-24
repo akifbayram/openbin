@@ -34,6 +34,29 @@ function hexToRgb(hex: string): [number, number, number] {
   ];
 }
 
+/** Draw icon overlay in the center of a QR code with a circular background. */
+function drawIconOverlay(
+  doc: import('jspdf').jsPDF,
+  iconDataUrl: string,
+  qrX: number,
+  qrY: number,
+  qrSize: number,
+  bgColor?: string,
+): void {
+  const circleR = qrSize * 0.15;
+  const cx = qrX + qrSize / 2;
+  const cy = qrY + qrSize / 2;
+  if (bgColor) {
+    const [r, g, b] = hexToRgb(bgColor);
+    doc.setFillColor(r, g, b);
+  } else {
+    doc.setFillColor(255, 255, 255);
+  }
+  doc.circle(cx, cy, circleR, 'F');
+  const iconDrawSize = circleR * 1.4;
+  doc.addImage(iconDataUrl, 'PNG', cx - iconDrawSize / 2, cy - iconDrawSize / 2, iconDrawSize, iconDrawSize);
+}
+
 export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<Blob> {
   const { bins, format, labelOptions, qrMap, iconMap, iconSize } = params;
   const { default: jsPDF } = await import('jspdf');
@@ -146,8 +169,38 @@ interface DrawLabelParams {
   cardRadiusIn: number;
 }
 
+/** Measure the natural width of text column elements (inches). */
+function measureTextBlockWidth(doc: import('jspdf').jsPDF, p: DrawLabelParams, codeUnderQr: boolean): number {
+  let maxW = 0;
+  if (p.colorPreset && !p.useColoredCard) {
+    // Swatch bar — spans whatever width we give it, not a constraint
+  }
+  if (p.labelOptions.showBinCode && p.bin.id && !codeUnderQr) {
+    const cellWidthIn = (p.codeFontSizePt * 0.8) / 72;
+    maxW = Math.max(maxW, p.bin.id.length * cellWidthIn);
+  }
+  if (p.labelOptions.showBinName) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(p.nameFontSizePt);
+    maxW = Math.max(maxW, doc.getTextWidth(p.bin.name));
+  }
+  if (p.labelOptions.showLocation && p.bin.area_name) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(p.contentFontSizePt);
+    maxW = Math.max(maxW, doc.getTextWidth(p.bin.area_name));
+  }
+  return maxW;
+}
+
+/** Compute horizontal offset to center QR+text block within contentW. */
+function computeCenterOffset(contentW: number, leftBlockW: number, gap: number, textNaturalW: number): number {
+  const maxTextW = contentW - leftBlockW - gap;
+  const textW = Math.min(textNaturalW, maxTextW);
+  const totalW = leftBlockW + gap + textW;
+  return Math.max(0, (contentW - totalW) / 2);
+}
+
 function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
-  let qrEndX = p.contentX;
   const codeUnderQr = !!p.qrDataUrl && p.labelOptions.showBinCode && !!p.bin.id;
 
   if (p.useColoredCard && p.qrDataUrl) {
@@ -161,35 +214,27 @@ function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
     const cardH = cardContentH + cardPadIn * 2;
     const cardY = p.contentY + (p.contentH - cardH) / 2;
 
+    // Center horizontally
+    const textNaturalW = measureTextBlockWidth(doc, p, true);
+    const offsetX = computeCenterOffset(p.contentW, cardW, p.gapIn, textNaturalW);
+    const baseX = p.contentX + offsetX;
+
     // Draw rounded rect fill only if bin has a color
     if (p.colorPreset) {
       const [r, g, b] = hexToRgb(p.colorPreset.bg);
       doc.setFillColor(r, g, b);
-      doc.roundedRect(p.contentX, cardY, cardW, cardH, p.cardRadiusIn, p.cardRadiusIn, 'F');
+      doc.roundedRect(baseX, cardY, cardW, cardH, p.cardRadiusIn, p.cardRadiusIn, 'F');
     }
 
     // QR inside card
-    const qrX = p.contentX + cardPadIn;
+    const qrX = baseX + cardPadIn;
     const qrY = cardY + cardPadIn;
     doc.addImage(p.qrDataUrl, 'PNG', qrX, qrY, p.qrSize, p.qrSize);
 
     // Icon overlay
     if (p.hasIcon) {
       const iconDataUrl = p.iconMap.get(p.bin.icon);
-      if (iconDataUrl) {
-        const circleR = p.qrSize * 0.15;
-        const cx = qrX + p.qrSize / 2;
-        const cy = qrY + p.qrSize / 2;
-        if (p.colorPreset) {
-          const [r, g, b] = hexToRgb(p.colorPreset.bg);
-          doc.setFillColor(r, g, b);
-        } else {
-          doc.setFillColor(255, 255, 255);
-        }
-        doc.circle(cx, cy, circleR, 'F');
-        const iconDrawSize = circleR * 1.4;
-        doc.addImage(iconDataUrl, 'PNG', cx - iconDrawSize / 2, cy - iconDrawSize / 2, iconDrawSize, iconDrawSize);
-      }
+      if (iconDataUrl) drawIconOverlay(doc, iconDataUrl, qrX, qrY, p.qrSize, p.colorPreset?.bg);
     }
 
     // Short code inside card (always black)
@@ -197,58 +242,60 @@ function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
       drawCodeUnderQr(doc, p.bin.id, qrX, qrY + p.qrSize, p.qrSize, qrCodeFontSizePt);
     }
 
-    qrEndX = p.contentX + cardW + p.gapIn;
-
     // Text column with boosted name
-    const textX = qrEndX;
-    const textW = p.contentX + p.contentW - textX;
+    const textX = baseX + cardW + p.gapIn;
+    const textW = Math.min(textNaturalW, p.contentW - cardW - p.gapIn);
     drawTextColumn(doc, p, textX, textW, false, undefined, true);
   } else if (p.qrDataUrl) {
     // Non-colored QR path
     const qrCodeFontSizePt = computeQrCodeFontSize(p.qrSize);
     const codeHeightIn = codeUnderQr ? qrCodeFontSizePt / 72 : 0;
     const blockH = p.qrSize + codeHeightIn;
+
+    // Center horizontally
+    const textNaturalW = measureTextBlockWidth(doc, p, codeUnderQr);
+    const offsetX = computeCenterOffset(p.contentW, p.qrSize, p.gapIn, textNaturalW);
+    const baseX = p.contentX + offsetX;
     const blockY = p.contentY + (p.contentH - blockH) / 2;
 
-    doc.addImage(p.qrDataUrl, 'PNG', p.contentX, blockY, p.qrSize, p.qrSize);
+    doc.addImage(p.qrDataUrl, 'PNG', baseX, blockY, p.qrSize, p.qrSize);
 
     // Icon overlay in center of QR
     if (p.hasIcon) {
       const iconDataUrl = p.iconMap.get(p.bin.icon);
-      if (iconDataUrl) {
-        const circleR = p.qrSize * 0.15;
-        const cx = p.contentX + p.qrSize / 2;
-        const cy = blockY + p.qrSize / 2;
-        doc.setFillColor(255, 255, 255);
-        doc.circle(cx, cy, circleR, 'F');
-        const iconDrawSize = circleR * 1.4;
-        doc.addImage(iconDataUrl, 'PNG', cx - iconDrawSize / 2, cy - iconDrawSize / 2, iconDrawSize, iconDrawSize);
-      }
+      if (iconDataUrl) drawIconOverlay(doc, iconDataUrl, baseX, blockY, p.qrSize);
     }
 
     // Short code under QR
     if (codeUnderQr) {
-      drawCodeUnderQr(doc, p.bin.id, p.contentX, blockY + p.qrSize, p.qrSize, qrCodeFontSizePt);
+      drawCodeUnderQr(doc, p.bin.id, baseX, blockY + p.qrSize, p.qrSize, qrCodeFontSizePt);
     }
 
-    qrEndX = p.contentX + p.qrSize + p.gapIn;
-
-    const textX = qrEndX;
-    const textW = p.contentX + p.contentW - textX;
+    const textX = baseX + p.qrSize + p.gapIn;
+    const textW = Math.min(textNaturalW, p.contentW - p.qrSize - p.gapIn);
     drawTextColumn(doc, p, textX, textW, false, undefined, codeUnderQr);
   } else {
+    let leftBlockW = 0;
     if (p.hasIcon && !p.labelOptions.showQrCode) {
-      // Icon only (no QR) — draw standalone icon
+      const iconDataUrl = p.iconMap.get(p.bin.icon);
+      if (iconDataUrl) leftBlockW = p.iconSizeIn;
+    }
+
+    const textNaturalW = measureTextBlockWidth(doc, p, false);
+    const gap = leftBlockW > 0 ? p.gapIn : 0;
+    const offsetX = computeCenterOffset(p.contentW, leftBlockW, gap, textNaturalW);
+    const baseX = p.contentX + offsetX;
+
+    if (leftBlockW > 0) {
       const iconDataUrl = p.iconMap.get(p.bin.icon);
       if (iconDataUrl) {
         const iconY = p.contentY + (p.contentH - p.iconSizeIn) / 2;
-        doc.addImage(iconDataUrl, 'PNG', p.contentX, iconY, p.iconSizeIn, p.iconSizeIn);
-        qrEndX = p.contentX + p.iconSizeIn + p.gapIn;
+        doc.addImage(iconDataUrl, 'PNG', baseX, iconY, p.iconSizeIn, p.iconSizeIn);
       }
     }
 
-    const textX = qrEndX;
-    const textW = p.contentX + p.contentW - textX;
+    const textX = baseX + leftBlockW + gap;
+    const textW = Math.min(textNaturalW, p.contentW - leftBlockW - gap);
     drawTextColumn(doc, p, textX, textW, false, undefined, false);
   }
 }
@@ -283,20 +330,7 @@ function drawPortraitLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
     // Icon overlay
     if (p.hasIcon) {
       const iconDataUrl = p.iconMap.get(p.bin.icon);
-      if (iconDataUrl) {
-        const circleR = p.qrSize * 0.15;
-        const cx = qrX + p.qrSize / 2;
-        const cy = qrY + p.qrSize / 2;
-        if (p.colorPreset) {
-          const [r, g, b] = hexToRgb(p.colorPreset.bg);
-          doc.setFillColor(r, g, b);
-        } else {
-          doc.setFillColor(255, 255, 255);
-        }
-        doc.circle(cx, cy, circleR, 'F');
-        const iconDrawSize = circleR * 1.4;
-        doc.addImage(iconDataUrl, 'PNG', cx - iconDrawSize / 2, cy - iconDrawSize / 2, iconDrawSize, iconDrawSize);
-      }
+      if (iconDataUrl) drawIconOverlay(doc, iconDataUrl, qrX, qrY, p.qrSize, p.colorPreset?.bg);
     }
 
     // Short code inside card (always black)
@@ -316,15 +350,7 @@ function drawPortraitLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
     // Icon overlay
     if (p.hasIcon) {
       const iconDataUrl = p.iconMap.get(p.bin.icon);
-      if (iconDataUrl) {
-        const circleR = p.qrSize * 0.15;
-        const cx = qrX + p.qrSize / 2;
-        const cy = currentY + p.qrSize / 2;
-        doc.setFillColor(255, 255, 255);
-        doc.circle(cx, cy, circleR, 'F');
-        const iconDrawSize = circleR * 1.4;
-        doc.addImage(iconDataUrl, 'PNG', cx - iconDrawSize / 2, cy - iconDrawSize / 2, iconDrawSize, iconDrawSize);
-      }
+      if (iconDataUrl) drawIconOverlay(doc, iconDataUrl, qrX, currentY, p.qrSize);
     }
 
     currentY += p.qrSize;
@@ -389,14 +415,12 @@ function drawTextColumn(
   startY?: number,
   codeDrawnUnderQr = false,
 ) {
-  const boostedNamePt = p.useColoredCard ? p.nameFontSizePt * 1.4 : p.nameFontSizePt;
-
   // Collect text elements to measure total height for vertical centering
   const elements: { type: 'swatch' | 'code' | 'name' | 'area'; height: number }[] = [];
   // No swatch bar in colored card mode — replaced by the card itself
   if (p.colorPreset && !p.useColoredCard) elements.push({ type: 'swatch', height: p.barHeightIn });
   if (p.labelOptions.showBinCode && p.bin.id && !codeDrawnUnderQr) elements.push({ type: 'code', height: p.codeFontSizePt / 72 });
-  if (p.labelOptions.showBinName) elements.push({ type: 'name', height: boostedNamePt / 72 });
+  if (p.labelOptions.showBinName) elements.push({ type: 'name', height: p.nameFontSizePt / 72 });
   if (p.labelOptions.showLocation && p.bin.area_name) elements.push({ type: 'area', height: p.contentFontSizePt / 72 });
 
   const lineGap = 1 / 72; // 1pt gap between lines
@@ -443,10 +467,10 @@ function drawTextColumn(
       curY += p.codeFontSizePt / 72 + lineGap;
     } else if (el.type === 'name') {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(boostedNamePt);
+      doc.setFontSize(p.nameFontSizePt);
       const name = truncateToWidth(doc, p.bin.name, textW);
-      doc.text(name, anchorX, curY + boostedNamePt / 72 * 0.8, { align });
-      curY += boostedNamePt / 72 + lineGap;
+      doc.text(name, anchorX, curY + p.nameFontSizePt / 72 * 0.8, { align });
+      curY += p.nameFontSizePt / 72 + lineGap;
     } else if (el.type === 'area') {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(p.contentFontSizePt);
