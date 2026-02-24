@@ -24,7 +24,21 @@ export function Disclosure({ label, defaultOpen = false, children }: DisclosureP
         {label}
         <ChevronDown className={cn('h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200', open && 'rotate-180')} />
       </button>
-      {open && <div id={contentId} role="region" className="mt-2">{children}</div>}
+      <div
+        id={contentId}
+        role="region"
+        aria-hidden={!open}
+        className={cn(
+          'grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none',
+          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+        )}
+      >
+        <div className="overflow-hidden min-h-0">
+          <div className={cn('mt-2 transition-opacity duration-200 motion-reduce:transition-none', open ? 'opacity-100' : 'opacity-0')}>
+            {children}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

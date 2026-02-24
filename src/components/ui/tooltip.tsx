@@ -29,19 +29,21 @@ export function Tooltip({ content, children, side = 'top' }: TooltipProps) {
         onFocus: show,
         onBlur: hide,
       })}
-      {visible && (
-        <span
-          role="tooltip"
-          className={cn(
-            'absolute left-1/2 -translate-x-1/2 z-50 px-2.5 py-1 rounded-[var(--radius-sm)] text-[12px] font-medium whitespace-nowrap pointer-events-none',
-            'glass-heavy text-[var(--text-primary)]',
-            side === 'top' && 'bottom-full mb-1.5',
-            side === 'bottom' && 'top-full mt-1.5',
-          )}
-        >
-          {content}
-        </span>
-      )}
+      <span
+        role="tooltip"
+        className={cn(
+          'absolute left-1/2 -translate-x-1/2 z-50 px-2.5 py-1 rounded-[var(--radius-sm)] text-[12px] font-medium whitespace-nowrap pointer-events-none',
+          'glass-heavy text-[var(--text-primary)]',
+          'transition-all duration-150 ease-out motion-reduce:transition-none',
+          side === 'top' && 'bottom-full mb-1.5',
+          side === 'bottom' && 'top-full mt-1.5',
+          visible
+            ? 'opacity-100 translate-y-0 visible'
+            : cn('opacity-0 invisible', side === 'top' ? 'translate-y-1' : '-translate-y-1'),
+        )}
+      >
+        {content}
+      </span>
     </span>
   );
 }

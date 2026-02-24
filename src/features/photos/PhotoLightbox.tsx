@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface PhotoLightboxProps {
   src: string;
@@ -11,15 +12,36 @@ interface PhotoLightboxProps {
 
 export function PhotoLightbox({ src, filename, onClose, onDelete }: PhotoLightboxProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [animating, setAnimating] = useState<'enter' | 'exit' | null>(null);
+  const [prefersReducedMotion] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
+
+  useEffect(() => {
+    requestAnimationFrame(() => setAnimating('enter'));
+  }, []);
 
   useEffect(() => {
     containerRef.current?.focus();
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') handleClose();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleClose = useCallback(() => {
+    if (prefersReducedMotion) {
+      onClose();
+      return;
+    }
+    setAnimating('exit');
+    setTimeout(onClose, 200);
+  }, [onClose, prefersReducedMotion]);
+
+  const show = animating === 'enter';
+  const duration = prefersReducedMotion ? 'duration-0' : 'duration-200';
 
   return (
     <div
@@ -31,10 +53,20 @@ export function PhotoLightbox({ src, filename, onClose, onDelete }: PhotoLightbo
       className="fixed inset-0 z-[70] flex items-center justify-center outline-none"
     >
       <div
-        className="fixed inset-0 bg-[var(--overlay-heavy)] backdrop-blur-sm"
-        onClick={onClose}
+        className={cn(
+          'fixed inset-0 bg-[var(--overlay-heavy)] backdrop-blur-sm transition-opacity',
+          duration,
+          show ? 'opacity-100' : 'opacity-0',
+        )}
+        onClick={handleClose}
       />
-      <div className="relative z-[70] flex flex-col items-center w-full max-w-3xl px-4">
+      <div
+        className={cn(
+          'relative z-[70] flex flex-col items-center w-full max-w-3xl px-4 transition-all',
+          duration,
+          show ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
+        )}
+      >
         <div className="absolute top-2 right-4 flex gap-2 z-10">
           <Button
             variant="ghost"
@@ -48,7 +80,7 @@ export function PhotoLightbox({ src, filename, onClose, onDelete }: PhotoLightbo
           <Button
             variant="ghost"
             size="icon"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close"
             className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)]"
           >

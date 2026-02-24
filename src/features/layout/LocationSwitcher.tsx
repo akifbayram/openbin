@@ -54,7 +54,7 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 right-0 top-full mt-1.5 z-50 glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)] max-h-64 overflow-y-auto"
+          className="animate-popover-enter absolute left-0 right-0 top-full mt-1.5 z-50 glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)] max-h-64 overflow-y-auto"
         >
           {locations.map((loc) => {
             const isActive = loc.id === activeLocationId;

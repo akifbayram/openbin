@@ -70,7 +70,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 shadow-lg min-w-[180px] space-y-2">
+        <div className="animate-popover-enter absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 shadow-lg min-w-[180px] space-y-2">
           {/* None + Gray buttons */}
           <div className="flex gap-1.5">
             <button

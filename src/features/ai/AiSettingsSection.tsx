@@ -130,186 +130,199 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
           <Switch id="ai-toggle" checked={aiEnabled} onCheckedChange={onToggle} />
         </div>
 
-        {aiEnabled && settings === null && !touched && (
-          <p className="text-[13px] text-[var(--text-secondary)] mt-3">
-            Connect an AI provider to unlock photo analysis, item extraction from text and voice, and natural language commands for managing your bins.
-          </p>
-        )}
+        {/* Animated expand/collapse wrapper */}
+        <div className={cn(
+          'grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none',
+          aiEnabled ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+        )}>
+          <div className="overflow-hidden min-h-0">
+            <div className={cn(
+              'transition-opacity duration-200 motion-reduce:transition-none',
+              aiEnabled ? 'opacity-100' : 'opacity-0',
+            )}>
+              {settings === null && !touched && (
+                <p className="text-[13px] text-[var(--text-secondary)] mt-3">
+                  Connect an AI provider to unlock photo analysis, item extraction from text and voice, and natural language commands for managing your bins.
+                </p>
+              )}
 
-        {aiEnabled && settings?.source === 'env' && (
-          <div className="mt-3 px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 border border-[var(--accent)]/20">
-            <p className="text-[13px] text-[var(--text-secondary)]">
-              AI configured by server. Save your own settings to override.
-            </p>
-          </div>
-        )}
+              {settings?.source === 'env' && (
+                <div className="mt-3 px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 border border-[var(--accent)]/20">
+                  <p className="text-[13px] text-[var(--text-secondary)]">
+                    AI configured by server. Save your own settings to override.
+                  </p>
+                </div>
+              )}
 
-        {aiEnabled && <div className="flex flex-col gap-4 mt-4">
-          {/* Provider selector */}
-          <OptionGroup
-            options={AI_PROVIDERS}
-            value={setup.provider}
-            onChange={setup.handleProviderChange}
-          />
+              <div className="flex flex-col gap-4 mt-4">
+                {/* Provider selector */}
+                <OptionGroup
+                  options={AI_PROVIDERS}
+                  value={setup.provider}
+                  onChange={setup.handleProviderChange}
+                />
 
-          {/* API Key */}
-          <div className="space-y-1.5">
-            <label htmlFor="ai-api-key" className="text-[13px] text-[var(--text-secondary)]">API Key</label>
-            <div className="relative">
-              <Input
-                id="ai-api-key"
-                type={setup.showKey ? 'text' : 'password'}
-                value={setup.apiKey}
-                onChange={(e) => { setup.setApiKey(e.target.value); setup.setTestResult(null); setTouched(true); }}
-                placeholder={KEY_PLACEHOLDERS[setup.provider]}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setup.setShowKey(!setup.showKey)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
-              >
-                {setup.showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Model */}
-          <div className="space-y-1.5">
-            <label htmlFor="ai-model" className="text-[13px] text-[var(--text-secondary)]">Model</label>
-            <Input
-              id="ai-model"
-              value={setup.model}
-              onChange={(e) => { setup.setModel(e.target.value); setup.setTestResult(null); setTouched(true); }}
-              placeholder={MODEL_HINTS[setup.provider]}
-            />
-          </div>
-
-          {/* Endpoint URL — only for openai-compatible */}
-          {setup.provider === 'openai-compatible' && (
-            <div className="space-y-1.5">
-              <label htmlFor="ai-endpoint" className="text-[13px] text-[var(--text-secondary)]">Endpoint URL</label>
-              <Input
-                id="ai-endpoint"
-                value={setup.endpointUrl}
-                onChange={(e) => { setup.setEndpointUrl(e.target.value); setup.setTestResult(null); }}
-                placeholder="http://localhost:11434/v1"
-              />
-            </div>
-          )}
-
-          {/* Required fields hint */}
-          {touched && !setup.apiKey && !setup.model && (
-            <p className="text-[12px] text-[var(--text-tertiary)]">
-              API key and model are required.
-            </p>
-          )}
-
-          {/* Custom Prompts */}
-          {(() => {
-            const promptMap = {
-              analysis:  { value: customPrompt,    set: setCustomPrompt },
-              command:   { value: commandPrompt,   set: setCommandPrompt },
-              query:     { value: queryPrompt,     set: setQueryPrompt },
-              structure: { value: structurePrompt, set: setStructurePrompt },
-            };
-            const helpText: Record<PromptTab, React.ReactNode> = {
-              analysis: <>Use <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--bg-input)]">{'{available_tags}'}</code> to inject existing tags. Leave empty for default.</>,
-              command: 'Customize how commands are parsed. Leave empty for default.',
-              query: 'Customize how inventory queries are answered. Leave empty for default.',
-              structure: 'Customize how text is parsed into item lists. Leave empty for default.',
-            };
-            const active = promptMap[activePromptTab];
-            return (
-              <Disclosure label="Custom Prompts">
-                <div className="space-y-2">
-                  <OptionGroup
-                    options={PROMPT_TAB_META.map((tab) => ({ key: tab.key, label: tab.label, shortLabel: tab.shortLabel }))}
-                    value={activePromptTab}
-                    onChange={setActivePromptTab}
-                    size="sm"
-                    renderContent={(opt, active) => (
-                      <span className="relative text-center w-full">
-                        <span className="sm:hidden">{opt.shortLabel}</span>
-                        <span className="hidden sm:inline">{opt.label}</span>
-                        {promptMap[opt.key as PromptTab].value.trim() && (
-                          <span className={cn('absolute top-1/2 -translate-y-1/2 -right-0.5 h-1.5 w-1.5 rounded-full',
-                            active ? 'bg-[var(--text-primary)]' : 'bg-[var(--accent)]'
-                          )} />
-                        )}
-                      </span>
-                    )}
-                  />
-                  <Textarea
-                    value={active.value}
-                    onChange={(e) => active.set(e.target.value)}
-                    placeholder={defaultPrompts?.[activePromptTab] ?? ''}
-                    className="font-mono text-[13px] min-h-[200px] resize-y"
-                    maxLength={10000}
-                  />
-                  <div className="flex items-center justify-between">
-                    <p className="text-[12px] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
-                    {active.value.trim() ? (
-                      <button
-                        type="button"
-                        onClick={() => active.set('')}
-                        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                        Reset to Default
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => active.set(defaultPrompts?.[activePromptTab] ?? '')}
-                        className="text-[12px] text-[var(--accent)] hover:underline shrink-0 ml-2"
-                      >
-                        Load default to customize
-                      </button>
-                    )}
+                {/* API Key */}
+                <div className="space-y-1.5">
+                  <label htmlFor="ai-api-key" className="text-[13px] text-[var(--text-secondary)]">API Key</label>
+                  <div className="relative">
+                    <Input
+                      id="ai-api-key"
+                      type={setup.showKey ? 'text' : 'password'}
+                      value={setup.apiKey}
+                      onChange={(e) => { setup.setApiKey(e.target.value); setup.setTestResult(null); setTouched(true); }}
+                      placeholder={KEY_PLACEHOLDERS[setup.provider]}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setup.setShowKey(!setup.showKey)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                    >
+                      {setup.showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
-              </Disclosure>
-            );
-          })()}
 
-          {/* Test result */}
-          {setup.testResult === 'success' && (
-            <p className="text-[13px] text-green-600 dark:text-green-400">Connected to {setup.model} successfully</p>
-          )}
-          {setup.testResult === 'error' && (
-            <p className="text-[13px] text-[var(--destructive)]">{testError}</p>
-          )}
+                {/* Model */}
+                <div className="space-y-1.5">
+                  <label htmlFor="ai-model" className="text-[13px] text-[var(--text-secondary)]">Model</label>
+                  <Input
+                    id="ai-model"
+                    value={setup.model}
+                    onChange={(e) => { setup.setModel(e.target.value); setup.setTestResult(null); setTouched(true); }}
+                    placeholder={MODEL_HINTS[setup.provider]}
+                  />
+                </div>
 
-          {/* Buttons */}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              onClick={handleTest}
-              disabled={setup.testing || !setup.apiKey || !setup.model}
-              className="rounded-[var(--radius-full)]"
-            >
-              {setup.testing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
-              Test Connection
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={setup.saving || !setup.apiKey || !setup.model}
-              className="rounded-[var(--radius-full)]"
-            >
-              {setup.saving ? 'Saving...' : 'Save'}
-            </Button>
-            {settings && settings.source !== 'env' && (
-              <Button
-                variant="ghost"
-                onClick={handleRemove}
-                className="rounded-[var(--radius-full)] text-[var(--destructive)]"
-              >
-                Remove AI Settings
-              </Button>
-            )}
+                {/* Endpoint URL — only for openai-compatible */}
+                {setup.provider === 'openai-compatible' && (
+                  <div className="space-y-1.5">
+                    <label htmlFor="ai-endpoint" className="text-[13px] text-[var(--text-secondary)]">Endpoint URL</label>
+                    <Input
+                      id="ai-endpoint"
+                      value={setup.endpointUrl}
+                      onChange={(e) => { setup.setEndpointUrl(e.target.value); setup.setTestResult(null); }}
+                      placeholder="http://localhost:11434/v1"
+                    />
+                  </div>
+                )}
+
+                {/* Required fields hint */}
+                {touched && !setup.apiKey && !setup.model && (
+                  <p className="text-[12px] text-[var(--text-tertiary)]">
+                    API key and model are required.
+                  </p>
+                )}
+
+                {/* Custom Prompts */}
+                {(() => {
+                  const promptMap = {
+                    analysis:  { value: customPrompt,    set: setCustomPrompt },
+                    command:   { value: commandPrompt,   set: setCommandPrompt },
+                    query:     { value: queryPrompt,     set: setQueryPrompt },
+                    structure: { value: structurePrompt, set: setStructurePrompt },
+                  };
+                  const helpText: Record<PromptTab, React.ReactNode> = {
+                    analysis: <>Use <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--bg-input)]">{'{available_tags}'}</code> to inject existing tags. Leave empty for default.</>,
+                    command: 'Customize how commands are parsed. Leave empty for default.',
+                    query: 'Customize how inventory queries are answered. Leave empty for default.',
+                    structure: 'Customize how text is parsed into item lists. Leave empty for default.',
+                  };
+                  const active = promptMap[activePromptTab];
+                  return (
+                    <Disclosure label="Custom Prompts">
+                      <div className="space-y-2">
+                        <OptionGroup
+                          options={PROMPT_TAB_META.map((tab) => ({ key: tab.key, label: tab.label, shortLabel: tab.shortLabel }))}
+                          value={activePromptTab}
+                          onChange={setActivePromptTab}
+                          size="sm"
+                          renderContent={(opt, active) => (
+                            <span className="relative text-center w-full">
+                              <span className="sm:hidden">{opt.shortLabel}</span>
+                              <span className="hidden sm:inline">{opt.label}</span>
+                              {promptMap[opt.key as PromptTab].value.trim() && (
+                                <span className={cn('absolute top-1/2 -translate-y-1/2 -right-0.5 h-1.5 w-1.5 rounded-full',
+                                  active ? 'bg-[var(--text-primary)]' : 'bg-[var(--accent)]'
+                                )} />
+                              )}
+                            </span>
+                          )}
+                        />
+                        <Textarea
+                          value={active.value}
+                          onChange={(e) => active.set(e.target.value)}
+                          placeholder={defaultPrompts?.[activePromptTab] ?? ''}
+                          className="font-mono text-[13px] min-h-[200px] resize-y"
+                          maxLength={10000}
+                        />
+                        <div className="flex items-center justify-between">
+                          <p className="text-[12px] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
+                          {active.value.trim() ? (
+                            <button
+                              type="button"
+                              onClick={() => active.set('')}
+                              className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              Reset to Default
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => active.set(defaultPrompts?.[activePromptTab] ?? '')}
+                              className="text-[12px] text-[var(--accent)] hover:underline shrink-0 ml-2"
+                            >
+                              Load default to customize
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </Disclosure>
+                  );
+                })()}
+
+                {/* Test result */}
+                {setup.testResult === 'success' && (
+                  <p className="text-[13px] text-green-600 dark:text-green-400">Connected to {setup.model} successfully</p>
+                )}
+                {setup.testResult === 'error' && (
+                  <p className="text-[13px] text-[var(--destructive)]">{testError}</p>
+                )}
+
+                {/* Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleTest}
+                    disabled={setup.testing || !setup.apiKey || !setup.model}
+                    className="rounded-[var(--radius-full)]"
+                  >
+                    {setup.testing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+                    Test Connection
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    disabled={setup.saving || !setup.apiKey || !setup.model}
+                    className="rounded-[var(--radius-full)]"
+                  >
+                    {setup.saving ? 'Saving...' : 'Save'}
+                  </Button>
+                  {settings && settings.source !== 'env' && (
+                    <Button
+                      variant="ghost"
+                      onClick={handleRemove}
+                      className="rounded-[var(--radius-full)] text-[var(--destructive)]"
+                    >
+                      Remove AI Settings
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>}
+        </div>
       </CardContent>
     </Card>
   );

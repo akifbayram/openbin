@@ -60,7 +60,7 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onDelete,
         )}
       </Button>
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 z-50 min-w-[180px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]">
+        <div className="animate-popover-enter absolute right-0 top-full mt-1.5 z-50 min-w-[180px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]">
           <button
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
             onClick={() => handleItem(onRename)}

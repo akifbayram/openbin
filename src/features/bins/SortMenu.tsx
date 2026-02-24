@@ -38,7 +38,7 @@ export function SortMenu({ sort, onSortChange }: SortMenuProps) {
         )}
       </Button>
       {open && (
-        <div className="absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-lg overflow-hidden z-20">
+        <div className="animate-popover-enter absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-lg overflow-hidden z-20">
           {(Object.keys(sortLabels) as SortOption[]).map((key) => (
             <button
               key={key}

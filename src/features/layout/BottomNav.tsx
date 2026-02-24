@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { navItems, settingsNavItem } from '@/lib/navItems';
@@ -10,6 +11,9 @@ export function BottomNav() {
   const { guardedNavigate } = useNavigationGuard();
   const navigate = (path: string) => guardedNavigate(() => rawNavigate(path));
   const t = useTerminology();
+  const [prefersReducedMotion] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
 
   return (
     <nav aria-label="Main navigation" className="fixed bottom-[calc(12px+var(--safe-bottom))] left-1/2 -translate-x-1/2 z-40 lg:hidden print-hide">
@@ -27,14 +31,23 @@ export function BottomNav() {
               aria-label={displayLabel}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex items-center gap-2 py-2 rounded-[var(--radius-full)] text-[13px] font-medium transition-all duration-200',
+                'flex items-center py-2 rounded-[var(--radius-full)] text-[13px] font-medium',
+                prefersReducedMotion ? '' : 'transition-all duration-300',
                 isActive
                   ? 'bg-[var(--accent)] text-white shadow-sm px-4'
                   : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] w-11 justify-center'
               )}
             >
               <Icon className="h-[18px] w-[18px] shrink-0" />
-              {isActive && <span className="whitespace-nowrap">{displayLabel}</span>}
+              <span
+                className={cn(
+                  'whitespace-nowrap overflow-hidden',
+                  prefersReducedMotion ? '' : 'transition-all duration-300',
+                  isActive ? 'max-w-[80px] opacity-100 ml-2' : 'max-w-0 opacity-0 ml-0',
+                )}
+              >
+                {displayLabel}
+              </span>
             </button>
           );
         })}
