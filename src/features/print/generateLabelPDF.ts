@@ -202,6 +202,7 @@ function computeCenterOffset(contentW: number, leftBlockW: number, gap: number, 
 
 function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
   const codeUnderQr = !!p.qrDataUrl && p.labelOptions.showBinCode && !!p.bin.id;
+  const isLeftAligned = p.labelOptions.textAlign === 'left';
 
   if (p.useColoredCard && p.qrDataUrl) {
     // Card layout mode: rounded rect wrapping QR + short code
@@ -214,9 +215,9 @@ function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
     const cardH = cardContentH + cardPadIn * 2;
     const cardY = p.contentY + (p.contentH - cardH) / 2;
 
-    // Center horizontally
+    // Center horizontally (or left-align)
     const textNaturalW = measureTextBlockWidth(doc, p, true);
-    const offsetX = computeCenterOffset(p.contentW, cardW, p.gapIn, textNaturalW);
+    const offsetX = isLeftAligned ? 0 : computeCenterOffset(p.contentW, cardW, p.gapIn, textNaturalW);
     const baseX = p.contentX + offsetX;
 
     // Draw rounded rect fill only if bin has a color
@@ -252,9 +253,9 @@ function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
     const codeHeightIn = codeUnderQr ? qrCodeFontSizePt / 72 : 0;
     const blockH = p.qrSize + codeHeightIn;
 
-    // Center horizontally
+    // Center horizontally (or left-align)
     const textNaturalW = measureTextBlockWidth(doc, p, codeUnderQr);
-    const offsetX = computeCenterOffset(p.contentW, p.qrSize, p.gapIn, textNaturalW);
+    const offsetX = isLeftAligned ? 0 : computeCenterOffset(p.contentW, p.qrSize, p.gapIn, textNaturalW);
     const baseX = p.contentX + offsetX;
     const blockY = p.contentY + (p.contentH - blockH) / 2;
 
@@ -283,7 +284,7 @@ function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
 
     const textNaturalW = measureTextBlockWidth(doc, p, false);
     const gap = leftBlockW > 0 ? p.gapIn : 0;
-    const offsetX = computeCenterOffset(p.contentW, leftBlockW, gap, textNaturalW);
+    const offsetX = isLeftAligned ? 0 : computeCenterOffset(p.contentW, leftBlockW, gap, textNaturalW);
     const baseX = p.contentX + offsetX;
 
     if (leftBlockW > 0) {
@@ -303,6 +304,8 @@ function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
 function drawPortraitLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
   let currentY = p.contentY;
   const codeUnderQr = !!p.qrDataUrl && p.labelOptions.showBinCode && !!p.bin.id;
+  const isLeftAligned = p.labelOptions.textAlign === 'left';
+  const centered = !isLeftAligned;
 
   if (p.useColoredCard && p.qrDataUrl) {
     // Card layout mode
@@ -313,7 +316,7 @@ function drawPortraitLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
     const cardContentH = p.qrSize + codeHeightIn;
     const cardW = p.qrSize + cardPadIn * 2;
     const cardH = cardContentH + cardPadIn * 2;
-    const cardX = p.contentX + (p.contentW - cardW) / 2;
+    const cardX = isLeftAligned ? p.contentX : p.contentX + (p.contentW - cardW) / 2;
 
     // Draw rounded rect fill only if bin has a color
     if (p.colorPreset) {
@@ -341,10 +344,10 @@ function drawPortraitLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
     currentY += cardH + 2 / 72; // 2pt gap after card
 
     // Text column with boosted name
-    drawTextColumn(doc, p, p.contentX, p.contentW, true, currentY, true);
+    drawTextColumn(doc, p, p.contentX, p.contentW, centered, currentY, true);
   } else if (p.qrDataUrl) {
     // Non-colored QR path
-    const qrX = p.contentX + (p.contentW - p.qrSize) / 2;
+    const qrX = isLeftAligned ? p.contentX : p.contentX + (p.contentW - p.qrSize) / 2;
     doc.addImage(p.qrDataUrl, 'PNG', qrX, currentY, p.qrSize, p.qrSize);
 
     // Icon overlay
@@ -364,18 +367,18 @@ function drawPortraitLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
 
     currentY += 2 / 72; // 2pt gap
 
-    drawTextColumn(doc, p, p.contentX, p.contentW, true, currentY, codeUnderQr);
+    drawTextColumn(doc, p, p.contentX, p.contentW, centered, currentY, codeUnderQr);
   } else {
     if (p.hasIcon && !p.labelOptions.showQrCode) {
       const iconDataUrl = p.iconMap.get(p.bin.icon);
       if (iconDataUrl) {
-        const iconX = p.contentX + (p.contentW - p.iconSizeIn) / 2;
+        const iconX = isLeftAligned ? p.contentX : p.contentX + (p.contentW - p.iconSizeIn) / 2;
         doc.addImage(iconDataUrl, 'PNG', iconX, currentY, p.iconSizeIn, p.iconSizeIn);
         currentY += p.iconSizeIn + 2 / 72;
       }
     }
 
-    drawTextColumn(doc, p, p.contentX, p.contentW, true, currentY, false);
+    drawTextColumn(doc, p, p.contentX, p.contentW, centered, currentY, false);
   }
 }
 

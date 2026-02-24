@@ -4,6 +4,7 @@ import type { LabelFormat } from './labelFormats';
 
 export interface LabelOptions {
   fontScale: number;
+  textAlign: 'left' | 'center';
   showQrCode: boolean;
   showBinName: boolean;
   showIcon: boolean;
@@ -27,6 +28,7 @@ export interface PrintSettings {
 
 export const DEFAULT_LABEL_OPTIONS: LabelOptions = {
   fontScale: 1,
+  textAlign: 'center',
   showQrCode: true,
   showBinName: true,
   showIcon: true,

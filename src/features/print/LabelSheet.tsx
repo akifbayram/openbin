@@ -15,9 +15,10 @@ interface LabelSheetProps {
   showIcon?: boolean;
   showLocation?: boolean;
   showBinCode?: boolean;
+  textAlign?: 'left' | 'center';
 }
 
-export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode, showBinName, showIcon, showLocation, showBinCode }: LabelSheetProps) {
+export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode, showBinName, showIcon, showLocation, showBinCode, textAlign }: LabelSheetProps) {
   const labelFormat = format ?? getLabelFormat(DEFAULT_LABEL_FORMAT);
   const qrPixelSize = Math.round(parseFloat(labelFormat.qrSize) * 150);
   const [qrMap, setQrMap] = useState<Map<string, string>>(new Map());
@@ -108,6 +109,7 @@ export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode
                 showIcon={showIcon}
                 showLocation={showLocation}
                 showBinCode={showBinCode}
+                textAlign={textAlign}
               />
             ))}
           </div>

@@ -1,7 +1,7 @@
 import './print.css';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Printer, CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical, Download, Search } from 'lucide-react';
+import { Printer, CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical, Download, Search, AlignLeft, AlignCenter } from 'lucide-react';
 import { OptionGroup } from '@/components/ui/option-group';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -595,6 +595,19 @@ export function PrintPage() {
                   />
                 </div>
 
+                <div className="px-1">
+                  <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">Text Alignment</span>
+                  <OptionGroup
+                    options={[
+                      { key: 'left' as const, label: 'Left', icon: AlignLeft },
+                      { key: 'center' as const, label: 'Center', icon: AlignCenter },
+                    ]}
+                    value={labelOptions.textAlign}
+                    onChange={(v) => handleUpdateLabelOption('textAlign', v)}
+                    size="sm"
+                  />
+                </div>
+
                 <div className="space-y-1 px-1">
                   <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-1">Visible Elements</span>
                   {([
@@ -647,7 +660,7 @@ export function PrintPage() {
               <CardContent>
                 <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal mb-3 block">Preview</Label>
                 <div className="bg-white rounded-[var(--radius-md)] p-4 max-h-[50vh] lg:max-h-[70vh] overflow-y-auto dark:border dark:border-[var(--border-subtle)]">
-                  <LabelSheet bins={selectedBins} format={labelFormat} showColorSwatch={labelOptions.showColorSwatch} iconSize={iconSize} showQrCode={labelOptions.showQrCode} showBinName={labelOptions.showBinName} showIcon={labelOptions.showIcon} showLocation={labelOptions.showLocation} showBinCode={labelOptions.showBinCode} />
+                  <LabelSheet bins={selectedBins} format={labelFormat} showColorSwatch={labelOptions.showColorSwatch} iconSize={iconSize} showQrCode={labelOptions.showQrCode} showBinName={labelOptions.showBinName} showIcon={labelOptions.showIcon} showLocation={labelOptions.showLocation} showBinCode={labelOptions.showBinCode} textAlign={labelOptions.textAlign} />
                 </div>
               </CardContent>
             </Card>
@@ -670,7 +683,7 @@ export function PrintPage() {
       </div>
 
       <div className="print-show">
-        <LabelSheet bins={selectedBins} format={labelFormat} showColorSwatch={labelOptions.showColorSwatch} iconSize={iconSize} showQrCode={labelOptions.showQrCode} showBinName={labelOptions.showBinName} showIcon={labelOptions.showIcon} showLocation={labelOptions.showLocation} showBinCode={labelOptions.showBinCode} />
+        <LabelSheet bins={selectedBins} format={labelFormat} showColorSwatch={labelOptions.showColorSwatch} iconSize={iconSize} showQrCode={labelOptions.showQrCode} showBinName={labelOptions.showBinName} showIcon={labelOptions.showIcon} showLocation={labelOptions.showLocation} showBinCode={labelOptions.showBinCode} textAlign={labelOptions.textAlign} />
       </div>
     </>
   );
