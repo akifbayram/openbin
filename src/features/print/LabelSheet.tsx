@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { batchGenerateQRDataURLs } from '@/lib/qr';
+import type { QRColorOptions } from '@/lib/qr';
+import { resolveColor } from '@/lib/colorPalette';
 import type { Bin } from '@/types';
 import { LabelCell } from './LabelCell';
 import type { LabelFormat } from './labelFormats';
@@ -17,11 +19,29 @@ interface LabelSheetProps {
   showBinCode?: boolean;
 }
 
+/** Build a color map for QR generation when color background is enabled. */
+function buildColorMap(bins: Bin[], showColorSwatch: boolean): Map<string, QRColorOptions> | undefined {
+  if (!showColorSwatch) return undefined;
+  const map = new Map<string, QRColorOptions>();
+  for (const bin of bins) {
+    if (bin.color) {
+      const preset = resolveColor(bin.color);
+      if (preset) {
+        map.set(bin.id, { dark: '#000000', light: preset.bg });
+      }
+    }
+  }
+  return map.size > 0 ? map : undefined;
+}
+
 export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode, showBinName, showIcon, showLocation, showBinCode }: LabelSheetProps) {
   const labelFormat = format ?? getLabelFormat(DEFAULT_LABEL_FORMAT);
   const qrPixelSize = Math.round(parseFloat(labelFormat.qrSize) * 150);
   const [qrMap, setQrMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(false);
+
+  // Serialize bin colors to a stable string for the dependency array
+  const binColorKey = showColorSwatch ? bins.map((b) => `${b.id}:${b.color || ''}`).join(',') : '';
 
   useEffect(() => {
     if (bins.length === 0) {
@@ -33,7 +53,8 @@ export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode
     setLoading(true);
 
     const binIds = bins.map((b) => b.id);
-    batchGenerateQRDataURLs(binIds, qrPixelSize).then((result) => {
+    const colorMap = buildColorMap(bins, !!showColorSwatch);
+    batchGenerateQRDataURLs(binIds, qrPixelSize, undefined, colorMap).then((result) => {
       if (!cancelled) {
         setQrMap(result);
         setLoading(false);
@@ -48,7 +69,7 @@ export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode
     return () => {
       cancelled = true;
     };
-  }, [bins, qrPixelSize]);
+  }, [bins, qrPixelSize, binColorKey]);
 
   if (loading) {
     return (

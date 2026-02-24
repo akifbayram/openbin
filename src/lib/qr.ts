@@ -3,7 +3,12 @@ import { getBinUrl } from './constants';
 
 export const BIN_URL_REGEX = /(?:#\/bin\/|\/bin\/)([A-Z0-9]{4,8})/i;
 
-// LRU cache: key = "binId:size", value = data URL string
+export interface QRColorOptions {
+  dark: string;
+  light: string;
+}
+
+// LRU cache: key = "binId:size:dark:light", value = data URL string
 const MAX_CACHE = 200;
 const cache = new Map<string, string>();
 
@@ -28,9 +33,12 @@ function cacheSet(key: string, value: string): void {
 
 export async function generateQRDataURL(
   binId: string,
-  size: number = 256
+  size: number = 256,
+  colors?: QRColorOptions,
 ): Promise<string> {
-  const key = `${binId}:${size}`;
+  const dark = colors?.dark ?? '#000000';
+  const light = colors?.light ?? '#ffffff';
+  const key = `${binId}:${size}:${dark}:${light}`;
   const cached = cacheGet(key);
   if (cached) return cached;
 
@@ -38,10 +46,7 @@ export async function generateQRDataURL(
   const dataUrl = await QRCode.toDataURL(url, {
     width: size,
     margin: 1,
-    color: {
-      dark: '#000000',
-      light: '#ffffff',
-    },
+    color: { dark, light },
   });
   cacheSet(key, dataUrl);
   return dataUrl;
@@ -54,7 +59,8 @@ export async function generateQRDataURL(
 export async function batchGenerateQRDataURLs(
   binIds: string[],
   size: number = 256,
-  concurrency: number = 6
+  concurrency: number = 6,
+  colorsByBinId?: Map<string, QRColorOptions>,
 ): Promise<Map<string, string>> {
   const results = new Map<string, string>();
   let idx = 0;
@@ -63,7 +69,7 @@ export async function batchGenerateQRDataURLs(
     while (idx < binIds.length) {
       const i = idx++;
       const binId = binIds[i];
-      const dataUrl = await generateQRDataURL(binId, size);
+      const dataUrl = await generateQRDataURL(binId, size, colorsByBinId?.get(binId));
       results.set(binId, dataUrl);
     }
   }

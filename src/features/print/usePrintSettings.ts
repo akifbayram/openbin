@@ -30,7 +30,7 @@ export const DEFAULT_LABEL_OPTIONS: LabelOptions = {
   showQrCode: true,
   showBinName: true,
   showIcon: true,
-  showLocation: true,
+  showLocation: false,
   showBinCode: true,
   showColorSwatch: false,
 };

@@ -603,7 +603,7 @@ export function PrintPage() {
                     { key: 'showIcon' as const, label: `${t.Bin} Icon` },
                     { key: 'showLocation' as const, label: t.Area },
                     { key: 'showBinCode' as const, label: `${t.Bin} Code` },
-                    { key: 'showColorSwatch' as const, label: 'Color Swatch' },
+                    { key: 'showColorSwatch' as const, label: 'Color Background' },
                   ]).map(({ key, label }) => (
                     <label key={key} className="flex items-center gap-3 px-2 py-1.5 cursor-pointer rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] transition-colors">
                       <Checkbox

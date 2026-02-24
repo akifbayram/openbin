@@ -52,6 +52,11 @@
   -webkit-print-color-adjust: exact;
 }
 
+.label-qr-card {
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
 @media print {
   .label-page {
     page-break-inside: avoid;
