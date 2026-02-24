@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { HUE_RANGES } from '@/lib/colorPalette';
 import { useTagStyle } from '@/features/tags/useTagStyle';
+import { OptionGroup } from '@/components/ui/option-group';
 import type { Area } from '@/types';
 import type { BinFilters, SortOption } from './useBins';
 import { EMPTY_FILTERS, countActiveFilters } from './useBins';
@@ -97,23 +98,12 @@ export function BinFilterDialog({
             <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
               Sort
             </span>
-            <div className="flex rounded-[var(--radius-full)] bg-[var(--bg-input)] p-0.5">
-              {(Object.keys(sortLabels) as SortOption[]).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => onSortChange(key)}
-                  className={cn(
-                    'flex-1 px-3 py-1.5 text-[12px] font-medium rounded-[var(--radius-full)] transition-colors',
-                    sort === key
-                      ? 'bg-[var(--accent)] text-white'
-                      : 'text-[var(--text-secondary)]'
-                  )}
-                >
-                  {sortLabels[key]}
-                </button>
-              ))}
-            </div>
+            <OptionGroup
+              options={(Object.keys(sortLabels) as SortOption[]).map((key) => ({ key, label: sortLabels[key] }))}
+              value={sort}
+              onChange={onSortChange}
+              size="sm"
+            />
           </div>
 
           {/* Tags */}
@@ -123,23 +113,15 @@ export function BinFilterDialog({
                 Tags
               </span>
               {draft.tags.length >= 2 && (
-                <div className="flex rounded-[var(--radius-full)] bg-[var(--bg-input)] p-0.5">
-                  {(['any', 'all'] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setDraft((d) => ({ ...d, tagMode: mode }))}
-                      className={cn(
-                        'px-3 py-1 text-[12px] font-medium rounded-[var(--radius-full)] transition-colors capitalize',
-                        draft.tagMode === mode
-                          ? 'bg-[var(--accent)] text-white'
-                          : 'text-[var(--text-secondary)]'
-                      )}
-                    >
-                      {mode}
-                    </button>
-                  ))}
-                </div>
+                <OptionGroup
+                  options={[
+                    { key: 'any' as const, label: 'Any' },
+                    { key: 'all' as const, label: 'All' },
+                  ]}
+                  value={draft.tagMode}
+                  onChange={(mode) => setDraft((d) => ({ ...d, tagMode: mode }))}
+                  size="sm"
+                />
               )}
             </div>
             {availableTags.length === 0 ? (

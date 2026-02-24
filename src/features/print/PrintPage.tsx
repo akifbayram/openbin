@@ -2,6 +2,7 @@ import './print.css';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Printer, CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical, Download, Search } from 'lucide-react';
+import { OptionGroup } from '@/components/ui/option-group';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -484,32 +485,14 @@ export function PrintPage() {
                 {/* Orientation toggle */}
                 <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[var(--border-subtle)] px-1">
                   <span className="text-[12px] text-[var(--text-secondary)] font-medium mr-2">Orientation</span>
-                  <div className="flex rounded-[var(--radius-sm)] border border-[var(--border-subtle)] overflow-hidden">
-                    <button
-                      className={cn(
-                        'flex items-center gap-1.5 px-3 py-1.5 text-[13px] transition-colors',
-                        effectiveOrientation === 'landscape'
-                          ? 'bg-[var(--accent)] text-white'
-                          : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                      )}
-                      onClick={() => effectiveOrientation !== 'landscape' && toggleOrientation()}
-                    >
-                      <RectangleHorizontal className="h-3.5 w-3.5" />
-                      Landscape
-                    </button>
-                    <button
-                      className={cn(
-                        'flex items-center gap-1.5 px-3 py-1.5 text-[13px] transition-colors border-l border-[var(--border-subtle)]',
-                        effectiveOrientation === 'portrait'
-                          ? 'bg-[var(--accent)] text-white'
-                          : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                      )}
-                      onClick={() => effectiveOrientation !== 'portrait' && toggleOrientation()}
-                    >
-                      <RectangleVertical className="h-3.5 w-3.5" />
-                      Portrait
-                    </button>
-                  </div>
+                  <OptionGroup
+                    options={[
+                      { key: 'landscape' as const, label: 'Landscape', icon: RectangleHorizontal },
+                      { key: 'portrait' as const, label: 'Portrait', icon: RectangleVertical },
+                    ]}
+                    value={effectiveOrientation}
+                    onChange={(v) => v !== effectiveOrientation && toggleOrientation()}
+                  />
                 </div>
 
                 {/* Customize toggle */}
@@ -604,23 +587,12 @@ export function PrintPage() {
               <div className="mt-3 space-y-4">
                 <div className="px-1">
                   <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">Font Size</span>
-                  <div className="flex rounded-[var(--radius-sm)] border border-[var(--border-subtle)] overflow-hidden">
-                    {FONT_SCALE_PRESETS.map((preset) => (
-                      <button
-                        key={preset.value}
-                        className={cn(
-                          'flex-1 px-3 py-1.5 text-[13px] transition-colors',
-                          preset.value !== FONT_SCALE_PRESETS[0].value && 'border-l border-[var(--border-subtle)]',
-                          labelOptions.fontScale === preset.value
-                            ? 'bg-[var(--accent)] text-white'
-                            : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                        )}
-                        onClick={() => handleUpdateLabelOption('fontScale', preset.value)}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
+                  <OptionGroup
+                    options={FONT_SCALE_PRESETS.map((p) => ({ key: String(p.value), label: p.label }))}
+                    value={String(labelOptions.fontScale)}
+                    onChange={(v) => handleUpdateLabelOption('fontScale', Number(v))}
+                    size="sm"
+                  />
                 </div>
 
                 <div className="space-y-1 px-1">

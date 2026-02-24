@@ -176,7 +176,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
                   options={STRIPE_WIDTHS.map((w) => ({ key: w, label: `${w}px` }))}
                   value={(parsed?.stripeWidth ?? '4') as StripeWidth}
                   onChange={(stripeWidth) => updateStyle({ stripeWidth: stripeWidth === '4' ? undefined : stripeWidth })}
-                  gap="gap-1"
+                  size="sm"
                 />
               </div>
             </div>

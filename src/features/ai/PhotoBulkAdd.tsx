@@ -3,7 +3,7 @@ import { Camera, X, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
-import { cn } from '@/lib/utils';
+import { OptionGroup } from '@/components/ui/option-group';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { AreaPicker } from '@/features/areas/AreaPicker';
@@ -185,33 +185,14 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   return (
     <div className="space-y-4">
       {/* Mode toggle */}
-      <div className="flex gap-1.5 bg-[var(--bg-input)] rounded-[var(--radius-full)] p-1">
-        <button
-          type="button"
-          onClick={() => setMode('per-photo')}
-          className={cn(
-            'flex-1 text-[13px] font-medium py-1.5 px-3 rounded-[var(--radius-full)] transition-colors',
-            mode === 'per-photo'
-              ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
-              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-          )}
-        >
-          Separate {t.bins}
-        </button>
-        <button
-          type="button"
-          onClick={() => { if (!singleBinDisabled) setMode('single-bin'); }}
-          className={cn(
-            'flex-1 text-[13px] font-medium py-1.5 px-3 rounded-[var(--radius-full)] transition-colors',
-            mode === 'single-bin'
-              ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
-              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
-            singleBinDisabled && mode !== 'single-bin' && 'opacity-40 cursor-not-allowed'
-          )}
-        >
-          Same {t.bin}
-        </button>
-      </div>
+      <OptionGroup
+        options={[
+          { key: 'per-photo' as const, label: `Separate ${t.bins}` },
+          { key: 'single-bin' as const, label: `Same ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Max ${MAX_AI_PHOTOS} photos for single ${t.bin}` },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
 
       <input
         ref={fileInputRef}

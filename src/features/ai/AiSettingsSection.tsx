@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { Disclosure } from '@/components/ui/disclosure';
+import { OptionGroup } from '@/components/ui/option-group';
 import { useAiSettings, saveAiSettings, deleteAiSettings, testAiConnection } from './useAiSettings';
 import { useAiProviderSetup } from './useAiProviderSetup';
 import { AI_PROVIDERS, MODEL_HINTS, KEY_PLACEHOLDERS } from './aiConstants';
@@ -145,22 +146,11 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
 
         {aiEnabled && <div className="flex flex-col gap-4 mt-4">
           {/* Provider selector */}
-          <div className="flex gap-1.5 bg-[var(--bg-input)] rounded-[var(--radius-full)] p-1">
-            {AI_PROVIDERS.map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => setup.handleProviderChange(opt.key)}
-                className={`flex-1 text-[13px] font-medium py-1.5 px-3 rounded-[var(--radius-full)] transition-colors ${
-                  setup.provider === opt.key
-                    ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          <OptionGroup
+            options={AI_PROVIDERS}
+            value={setup.provider}
+            onChange={setup.handleProviderChange}
+          />
 
           {/* API Key */}
           <div className="space-y-1.5">
@@ -233,29 +223,23 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
             return (
               <Disclosure label="Custom Prompts">
                 <div className="space-y-2">
-                  <div className="flex gap-1 bg-[var(--bg-input)] rounded-[var(--radius-full)] p-1">
-                    {PROMPT_TAB_META.map((tab) => (
-                      <button
-                        key={tab.key}
-                        type="button"
-                        onClick={() => setActivePromptTab(tab.key)}
-                        className={cn(
-                          'relative flex-1 text-[12px] font-medium py-1.5 px-2 rounded-[var(--radius-full)] transition-colors text-center',
-                          activePromptTab === tab.key
-                            ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
-                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                        )}
-                      >
-                        <span className="sm:hidden">{tab.shortLabel}</span>
-                        <span className="hidden sm:inline">{tab.label}</span>
-                        {promptMap[tab.key].value.trim() && (
-                          <span className={cn('absolute top-1/2 -translate-y-1/2 right-1 h-1.5 w-1.5 rounded-full',
-                            activePromptTab === tab.key ? 'bg-[var(--text-on-accent)]' : 'bg-[var(--accent)]'
+                  <OptionGroup
+                    options={PROMPT_TAB_META.map((tab) => ({ key: tab.key, label: tab.label, shortLabel: tab.shortLabel }))}
+                    value={activePromptTab}
+                    onChange={setActivePromptTab}
+                    size="sm"
+                    renderContent={(opt, active) => (
+                      <span className="relative text-center w-full">
+                        <span className="sm:hidden">{opt.shortLabel}</span>
+                        <span className="hidden sm:inline">{opt.label}</span>
+                        {promptMap[opt.key as PromptTab].value.trim() && (
+                          <span className={cn('absolute top-1/2 -translate-y-1/2 -right-0.5 h-1.5 w-1.5 rounded-full',
+                            active ? 'bg-[var(--text-primary)]' : 'bg-[var(--accent)]'
                           )} />
                         )}
-                      </button>
-                    ))}
-                  </div>
+                      </span>
+                    )}
+                  />
                   <Textarea
                     value={active.value}
                     onChange={(e) => active.set(e.target.value)}

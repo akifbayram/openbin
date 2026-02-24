@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sun, Moon, Monitor, Download, Upload, AlertTriangle, RotateCcw, LogOut, ChevronRight, Trash2, Clock, FileArchive, FileSpreadsheet, ExternalLink } from 'lucide-react';
+import { OptionGroup } from '@/components/ui/option-group';
 import { Disclosure } from '@/components/ui/disclosure';
 import { getAvatarUrl } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -208,26 +209,16 @@ export function SettingsPage() {
         <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
           Settings
         </h1>
-        <div className="flex gap-1 rounded-[var(--radius-sm)] bg-[var(--bg-input)] p-1">
-          {([
-            { value: 'light' as const, icon: Sun, label: 'Light' },
-            { value: 'dark' as const, icon: Moon, label: 'Dark' },
-            { value: 'auto' as const, icon: Monitor, label: 'Auto' },
-          ]).map(({ value, icon: Icon, label }) => (
-            <button
-              key={value}
-              onClick={() => setThemePreference(value)}
-              aria-label={label}
-              className={`p-2 rounded-[var(--radius-xs)] transition-colors ${
-                preference === value
-                  ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-sm'
-                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-            </button>
-          ))}
-        </div>
+        <OptionGroup
+          options={[
+            { key: 'light' as const, label: 'Light', icon: Sun },
+            { key: 'dark' as const, label: 'Dark', icon: Moon },
+            { key: 'auto' as const, label: 'Auto', icon: Monitor },
+          ]}
+          value={preference}
+          onChange={setThemePreference}
+          iconOnly
+        />
       </div>
 
       {/* Account */}
