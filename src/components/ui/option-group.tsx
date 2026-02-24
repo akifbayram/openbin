@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface OptionGroupOption<K extends string> {
@@ -43,15 +43,71 @@ export function OptionGroup<K extends string>({
   const textSize = size === 'sm' ? 'text-[12px]' : 'text-[13px]';
   const padding = iconOnly ? 'p-2' : size === 'sm' ? 'px-2 py-1' : 'px-3 py-1.5';
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRefs = useRef(new Map<string, HTMLElement>());
+  const [hasMounted, setHasMounted] = useState(false);
+  const [prefersReducedMotion] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+
+  const setButtonRef = useCallback(
+    (key: string) => (el: HTMLElement | null) => {
+      if (el) buttonRefs.current.set(key, el);
+      else buttonRefs.current.delete(key);
+    },
+    [],
+  );
+
+  const measure = useCallback(() => {
+    const container = containerRef.current;
+    const btn = buttonRefs.current.get(value);
+    if (!container || !btn) return;
+    const cr = container.getBoundingClientRect();
+    const br = btn.getBoundingClientRect();
+    setIndicator({ left: br.left - cr.left, width: br.width });
+  }, [value]);
+
+  useLayoutEffect(() => {
+    measure();
+    if (!hasMounted) {
+      // Allow one frame for the indicator to snap into position before enabling transitions
+      requestAnimationFrame(() => setHasMounted(true));
+    }
+  }, [measure, hasMounted]);
+
+  // Re-measure on container resize
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  const animate = hasMounted && !prefersReducedMotion;
+
   return (
     <div
+      ref={containerRef}
       className={cn(
-        'flex bg-[var(--bg-input)] p-1 gap-0.5',
+        'relative flex bg-[var(--bg-input)] p-1 gap-0.5',
         containerRadius,
         scrollable && 'overflow-x-auto flex-nowrap',
         className,
       )}
     >
+      {indicator && (
+        <div
+          aria-hidden
+          className={cn('absolute top-1 bottom-1 bg-[var(--bg-elevated)] shadow-sm', segmentRadius)}
+          style={{
+            left: indicator.left,
+            width: indicator.width,
+            transition: animate ? 'left 200ms ease-out, width 200ms ease-out' : 'none',
+          }}
+        />
+      )}
       {options.map((opt) => {
         const active = value === opt.key;
         const Icon = opt.icon;
@@ -60,12 +116,13 @@ export function OptionGroup<K extends string>({
         return (
           <button
             key={opt.key}
+            ref={setButtonRef(opt.key)}
             type="button"
             disabled={disabled}
             title={disabled ? opt.disabledTitle : undefined}
             onClick={() => !disabled && onChange(opt.key)}
             className={cn(
-              'font-medium transition-all',
+              'relative z-10 font-medium transition-colors',
               textSize,
               segmentRadius,
               padding,
@@ -74,7 +131,7 @@ export function OptionGroup<K extends string>({
                 ? ''
                 : 'flex items-center justify-center gap-1.5',
               active
-                ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-sm'
+                ? 'text-[var(--text-primary)]'
                 : disabled
                   ? 'text-[var(--text-tertiary)] opacity-40 cursor-not-allowed'
                   : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]',
