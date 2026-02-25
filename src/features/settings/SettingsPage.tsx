@@ -69,13 +69,14 @@ export function SettingsPage() {
   const binCount = activeLocation?.bin_count ?? 0;
   const { settings: dashSettings, updateSettings: updateDashSettings } = useDashboardSettings();
 
-  // Scroll to AI settings section when navigated with #ai-settings hash
-  // Retry briefly to handle async-rendered sections (e.g. AiSettingsSection loading state)
+  // Scroll to a settings section when navigated with a hash (e.g. #ai-settings, #dashboard-settings)
+  // Retry briefly to handle async-rendered sections
   useEffect(() => {
-    if (window.location.hash !== '#ai-settings') return;
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
     let attempts = 0;
     const tryScroll = () => {
-      const el = document.getElementById('ai-settings');
+      const el = document.getElementById(hash);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth' });
         return;
@@ -323,7 +324,7 @@ export function SettingsPage() {
       )}
 
       {/* Dashboard */}
-      <Card>
+      <Card id="dashboard-settings">
         <CardContent>
           <Label>Dashboard</Label>
           <div className="flex flex-col gap-3 mt-3">

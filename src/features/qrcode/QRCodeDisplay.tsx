@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Printer } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { generateQRDataURL } from '@/lib/qr';
 import { getBinUrl } from '@/lib/constants';
@@ -12,6 +13,7 @@ interface QRCodeDisplayProps {
 }
 
 export function QRCodeDisplay({ binId, size = 200, shortCode }: QRCodeDisplayProps) {
+  const navigate = useNavigate();
   const [dataUrl, setDataUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
@@ -49,6 +51,15 @@ export function QRCodeDisplay({ binId, size = 200, shortCode }: QRCodeDisplayPro
         >
           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           {copied ? 'Copied' : 'Copy URL'}
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => navigate(`/print?ids=${binId}`)}
+          className="rounded-[var(--radius-full)] gap-1.5"
+        >
+          <Printer className="h-4 w-4" />
+          Print
         </Button>
       </div>
     </div>

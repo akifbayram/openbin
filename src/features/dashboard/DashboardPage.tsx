@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ScanLine, MapPin, ChevronRight, Plus, Inbox, Sparkles } from 'lucide-react';
+import { ScanLine, MapPin, ChevronRight, Plus, Inbox, Sparkles, Settings } from 'lucide-react';
 
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 import { Card, CardContent } from '@/components/ui/card';
@@ -346,6 +346,31 @@ export function DashboardPage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Empty state nudge */}
+        {!(
+          (dashSettings.showNeedsOrganizing && needsOrganizing > 0) ||
+          (dashSettings.showSavedViews && savedViews.length > 0) ||
+          (dashSettings.showPinnedBins && pinnedBins.length > 0) ||
+          (dashSettings.showRecentlyScanned && recentlyScanned.length > 0) ||
+          (dashSettings.showRecentlyUpdated && recentlyUpdated.length > 0)
+        ) && (
+          <EmptyState
+            icon={Settings}
+            title="Your dashboard is empty"
+            subtitle="Choose which sections to display in settings"
+            compact
+          >
+            <Button
+              onClick={() => navigate('/settings#dashboard-settings')}
+              variant="outline"
+              className="rounded-[var(--radius-full)] mt-1"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Dashboard Settings
+            </Button>
+          </EmptyState>
         )}
       </Crossfade>
 

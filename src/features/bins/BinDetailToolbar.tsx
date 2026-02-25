@@ -1,8 +1,11 @@
-import { ChevronLeft, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Pin, ArrowRightLeft, Copy } from 'lucide-react';
+import { useRef } from 'react';
+import { ChevronLeft, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Pin, ArrowRightLeft, Copy, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
 import { MenuButton } from '@/components/ui/menu-button';
+import { usePopover } from '@/lib/usePopover';
+import { useClickOutside } from '@/lib/useClickOutside';
 import type { Bin, Location } from '@/types';
 
 interface BinDetailToolbarProps {
@@ -49,6 +52,14 @@ export function BinDetailToolbar({
   onDelete,
 }: BinDetailToolbarProps) {
   const t = useTerminology();
+  const { visible, animating, close, toggle } = usePopover();
+  const menuRef = useRef<HTMLDivElement>(null);
+  useClickOutside(menuRef, close);
+
+  function handleItem(action: () => void) {
+    close();
+    action();
+  }
 
   return (
     <div className="flex items-center gap-2">
@@ -127,54 +138,58 @@ export function BinDetailToolbar({
               </Button>
             </Tooltip>
           )}
-          <Tooltip content="Print label" side="bottom">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onPrint}
-              aria-label="Print label"
-              className="rounded-full h-9 w-9"
-            >
-              <Printer className="h-[18px] w-[18px]" />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Duplicate" side="bottom">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onDuplicate}
-              aria-label={`Duplicate ${t.bin}`}
-              className="rounded-full h-9 w-9"
-            >
-              <Copy className="h-[18px] w-[18px]" />
-            </Button>
-          </Tooltip>
-          {otherLocations.length > 0 && (
-            <Tooltip content="Move" side="bottom">
+          <div className="relative" ref={menuRef}>
+            <Tooltip content="More" side="bottom">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={onMove}
-                aria-label={`Move ${t.bin}`}
+                onClick={toggle}
+                aria-label="More actions"
                 className="rounded-full h-9 w-9"
               >
-                <ArrowRightLeft className="h-[18px] w-[18px]" />
+                <MoreHorizontal className="h-[18px] w-[18px]" />
               </Button>
             </Tooltip>
-          )}
-          {canDelete && (
-            <Tooltip content="Delete" side="bottom">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onDelete}
-                aria-label={`Delete ${t.bin}`}
-                className="rounded-full h-9 w-9 text-[var(--destructive)]"
-              >
-                <Trash2 className="h-[18px] w-[18px]" />
-              </Button>
-            </Tooltip>
-          )}
+            {visible && (
+              <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1.5 z-50 min-w-[180px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]`}>
+                <button
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  onClick={() => handleItem(onDuplicate)}
+                >
+                  <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
+                  Duplicate
+                </button>
+                <button
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  onClick={() => handleItem(onPrint)}
+                >
+                  <Printer className="h-4 w-4 text-[var(--text-tertiary)]" />
+                  Print Label
+                </button>
+                {otherLocations.length > 0 && (
+                  <button
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                    onClick={() => handleItem(onMove)}
+                  >
+                    <ArrowRightLeft className="h-4 w-4 text-[var(--text-tertiary)]" />
+                    Move
+                  </button>
+                )}
+                {canDelete && (
+                  <>
+                    <div className="my-1 border-t border-[var(--border-glass)]" />
+                    <button
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors"
+                      onClick={() => handleItem(onDelete)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
