@@ -150,7 +150,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   const checkbox = (
     <div
       className={cn(
-        'mt-0.5 h-[22px] w-[22px] shrink-0 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
+        'mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
         selected
           ? 'bg-[var(--accent)] border-[var(--accent)]'
           : 'border-[var(--text-tertiary)]'
@@ -234,7 +234,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
             onPinToggle(bin.id, !bin.is_pinned);
           }}
           className={cn(
-            'shrink-0 mt-0.5 p-1 rounded-full transition-all',
+            'shrink-0 mt-0.5 rounded-full transition-all',
             bin.is_pinned
               ? 'text-[var(--accent)]'
               : 'text-[var(--text-tertiary)] dark:text-[var(--text-secondary)] opacity-0 group-hover:opacity-100'
@@ -243,7 +243,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           aria-label={bin.is_pinned ? 'Unpin bin' : 'Pin bin'}
         >
           <span key={pinPulseKey} className={pinPulseKey > 0 ? 'inline-flex animate-success-pulse' : 'inline-flex'}>
-            <Pin className="h-4 w-4" fill={bin.is_pinned ? 'currentColor' : 'none'} />
+            <Pin className="h-5 w-5" fill={bin.is_pinned ? 'currentColor' : 'none'} />
           </span>
         </button>
       )}
@@ -252,12 +252,12 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       ) : onSelect ? (
         /* Layered icon / hover-checkbox for desktop discovery */
         <div
-          className="relative mt-0.5 h-[22px] w-[22px] shrink-0"
+          className="relative mt-0.5 h-5 w-5 shrink-0"
           onClick={handleCheckboxClick}
         >
           {/* Default icon — fades out on hover (hover:hover targets pointer devices only) */}
           <BinIcon
-            className="absolute inset-0 h-[22px] w-[22px] text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
+            className="absolute inset-0 h-5 w-5 text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
             style={iconStyle}
           />
           {/* Checkbox — hidden by default, revealed on hover for pointer devices */}
@@ -266,14 +266,14 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
               'absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100',
             )}
           >
-            <div className="h-[22px] w-[22px] rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center"
+            <div className="h-5 w-5 rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center"
               style={secondaryBorderStyle}
             />
           </div>
         </div>
       ) : (
         <BinIcon
-          className="mt-0.5 h-[22px] w-[22px] shrink-0 text-[var(--text-tertiary)]"
+          className="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-tertiary)]"
           style={iconStyle}
         />
       )}
@@ -322,7 +322,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
             loading="lazy"
           />
           {/* Dark scrim overlay for text legibility */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-black/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/10" />
           {/* Content on top */}
           <div className="relative z-10">
             {cardContent}

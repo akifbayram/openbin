@@ -297,16 +297,18 @@ export function DashboardPage() {
 
         {/* Saved Views */}
         {dashSettings.showSavedViews && (
-          <SavedViewChips
-            views={savedViews}
-            onApply={(view) => {
-              const qs = buildViewSearchParams(view);
-              navigate(qs ? `/bins?${qs}` : '/bins');
-            }}
-            onDelete={(viewId) => {
-              deleteView(viewId).catch(() => {});
-            }}
-          />
+          <div className="mt-2">
+            <SavedViewChips
+              views={savedViews}
+              onApply={(view) => {
+                const qs = buildViewSearchParams(view);
+                navigate(qs ? `/bins?${qs}` : '/bins');
+              }}
+              onDelete={(viewId) => {
+                deleteView(viewId).catch(() => {});
+              }}
+            />
+          </div>
         )}
 
         {/* Pinned Bins */}
@@ -335,7 +337,7 @@ export function DashboardPage() {
 
         {/* Recently Updated */}
         {dashSettings.showRecentlyUpdated && recentlyUpdated.length > 0 && (
-          <div className="flex flex-col gap-3">
+          <div className="mt-2 flex flex-col gap-3">
             <SectionHeader
               title="Recently Updated"
               action={{ label: `All ${t.Bins}`, onClick: () => navigate('/bins') }}
