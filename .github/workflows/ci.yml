@@ -54,7 +54,9 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Pull latest code
-        run: git -C /opt/openbin pull
+        run: |
+          git -C /opt/openbin fetch origin main
+          git -C /opt/openbin reset --hard origin/main
 
       - name: Deploy with Docker Compose
         run: |
