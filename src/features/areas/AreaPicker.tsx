@@ -79,7 +79,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          'flex items-center justify-between w-full h-10 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 text-[15px] text-left transition-colors',
+          'flex items-center justify-between w-full h-10 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 text-[15px] text-left transition-colors',
           'hover:border-[var(--border-glass)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]',
           !selectedArea && 'text-[var(--text-tertiary)]'
         )}

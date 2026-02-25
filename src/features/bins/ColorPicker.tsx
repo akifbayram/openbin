@@ -84,7 +84,7 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
       {!isNeutral && (
         <div
           ref={barRef}
-          className="relative h-7 rounded-lg cursor-pointer touch-none"
+          className="relative h-7 rounded-[var(--radius-sm)] cursor-pointer touch-none"
           style={{
             background: `linear-gradient(to right, ${
               Array.from({ length: 13 }, (_, i) => `hsl(${i * 30}, 75%, 55%)`).join(', ')
@@ -108,7 +108,7 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
 
       {/* Shade swatches */}
       {activeHue !== null && (
-        <div className="flex overflow-hidden rounded-lg">
+        <div className="flex overflow-hidden rounded-[var(--radius-sm)]">
           {Array.from({ length: SHADE_COUNT }, (_, i) => {
             const isActive = currentShade === i;
             return (
@@ -118,8 +118,8 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
                 onClick={() => selectShade(i)}
                 className={cn(
                   'flex-1 h-8 transition-all',
-                  i === 0 && 'rounded-l-lg',
-                  i === SHADE_COUNT - 1 && 'rounded-r-lg',
+                  i === 0 && 'rounded-l-[var(--radius-sm)]',
+                  i === SHADE_COUNT - 1 && 'rounded-r-[var(--radius-sm)]',
                   isActive && 'ring-2 ring-white ring-inset shadow-[inset_0_0_0_2px_rgba(0,0,0,0.2)] dark:shadow-none'
                 )}
                 style={{ backgroundColor: getShadePreview(activeHue, i) }}

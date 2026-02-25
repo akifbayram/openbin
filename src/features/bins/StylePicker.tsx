@@ -41,7 +41,7 @@ const BORDER_STYLES: { key: BorderStyle; label: string }[] = [
 ];
 
 function VariantPreview({ variant, color, rectangular }: { variant: CardStyleVariant; color: string; rectangular?: boolean }) {
-  const baseClass = cn(rectangular ? 'aspect-[16/9]' : 'aspect-square', 'w-full rounded-[4px] transition-all');
+  const baseClass = cn(rectangular ? 'aspect-[16/9]' : 'aspect-square', 'w-full rounded-[var(--radius-sm)] transition-all');
 
   if (variant === 'glass') {
     return <div className={cn(baseClass, 'glass-card')} />;
