@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Tags as TagsIcon } from 'lucide-react';
+import { Tags as TagsIcon } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Input } from '@/components/ui/input';
+import { ListItem } from '@/components/ui/list-item';
+import { SearchInput } from '@/components/ui/search-input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-list';
 import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
@@ -15,6 +17,7 @@ import { setTagColor } from './useTagColors';
 import { TagColorPicker } from './TagColorPicker';
 import { resolveColor } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
+import { PageHeader } from '@/components/ui/page-header';
 
 export function TagsPage() {
   const [search, setSearch] = useState('');
@@ -47,35 +50,29 @@ export function TagsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2 max-w-2xl mx-auto">
-      <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-        Tags
-      </h1>
+    <div className="page-content">
+      <PageHeader title="Tags" />
 
       {(totalCount > 0 || search) && (
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tags..."
-            className="pl-10 rounded-[var(--radius-full)] h-10 text-[15px]"
-          />
-        </div>
+        <SearchInput
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search tags..."
+        />
       )}
 
       {isLoading ? (
         <div className="flex flex-col gap-4">
           <Skeleton className="h-10 w-full rounded-[var(--radius-full)]" />
-          <div className="flex flex-col gap-1">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">
-              <Skeleton className="h-6 w-20" />
-              <Skeleton className="h-4 w-12 flex-1" />
-              <Skeleton className="h-6 w-6 rounded-full" />
-            </div>
-          ))}
-          </div>
+          <SkeletonList>
+            {() => (
+              <div className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-4 w-12 flex-1" />
+                <Skeleton className="h-6 w-6 rounded-full" />
+              </div>
+            )}
+          </SkeletonList>
         </div>
       ) : tags.length === 0 ? (
         <EmptyState
@@ -86,15 +83,15 @@ export function TagsPage() {
       ) : (
         <div className="flex flex-col gap-1">
           {tags.map((entry) => (
-            <div
+            <ListItem
               key={entry.tag}
+              interactive
               role="button"
               tabIndex={0}
               onClick={() => handleTagClick(entry.tag)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleTagClick(entry.tag);
               }}
-              className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 cursor-pointer transition-all duration-200 active:scale-[0.98] hover:bg-[var(--bg-hover)]"
             >
               <Badge
                 variant="secondary"
@@ -110,7 +107,7 @@ export function TagsPage() {
                 currentColor={tagColors.get(entry.tag) || ''}
                 onColorChange={(color) => handleColorChange(entry.tag, color)}
               />
-            </div>
+            </ListItem>
           ))}
           <LoadMoreSentinel hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
         </div>

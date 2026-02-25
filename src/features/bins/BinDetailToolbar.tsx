@@ -2,6 +2,7 @@ import { ChevronLeft, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Pin, Arr
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
+import { MenuButton } from '@/components/ui/menu-button';
 import type { Bin, Location } from '@/types';
 
 interface BinDetailToolbarProps {
@@ -51,6 +52,7 @@ export function BinDetailToolbar({
 
   return (
     <div className="flex items-center gap-2">
+      <MenuButton />
       <Button
         variant="ghost"
         size="sm"

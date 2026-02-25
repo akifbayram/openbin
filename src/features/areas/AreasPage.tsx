@@ -18,6 +18,7 @@ import { AreaCard, CreateAreaCard, UnassignedAreaCard } from './AreaCard';
 import { LocationSettingsMenu } from './LocationSettingsMenu';
 import { LocationTabs } from './LocationTabs';
 import { createArea, deleteArea, updateArea, useAreaList } from './useAreas';
+import { PageHeader } from '@/components/ui/page-header';
 
 interface DeleteAreaTarget {
   id: string;
@@ -120,13 +121,11 @@ export function AreasPage() {
   const memberCount = activeLocation?.member_count ?? 0;
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2 max-w-2xl mx-auto">
+    <div className="page-content">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-          {locations.length === 1 ? activeLocation?.name ?? t.Locations : t.Locations}
-        </h1>
-        {locations.length > 0 && (
+      <PageHeader
+        title={locations.length === 1 ? activeLocation?.name ?? t.Locations : t.Locations}
+        actions={locations.length > 0 ? (
           <div className="flex gap-2">
             <Button
               variant="secondary"
@@ -146,8 +145,8 @@ export function AreasPage() {
               <Plus className="h-5 w-5" />
             </Button>
           </div>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {/* Loading state */}
       {locationsLoading && (

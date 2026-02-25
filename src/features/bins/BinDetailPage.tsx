@@ -46,6 +46,7 @@ import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { DeleteBinDialog } from './DeleteBinDialog';
 import { MoveBinDialog } from './MoveBinDialog';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
+import { MenuButton } from '@/components/ui/menu-button';
 import type { Bin } from '@/types';
 
 function formatDate(iso: string): string {
@@ -127,7 +128,10 @@ export function BinDetailPage() {
   if (isLoading && bin === undefined) {
     return (
       <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-4 pb-2">
-        <Skeleton className="h-8 w-20" />
+        <div className="flex items-center gap-2">
+          <MenuButton />
+          <Skeleton className="h-8 w-20" />
+        </div>
         <div className="space-y-1.5">
           <Skeleton className="h-8 w-3/4" />
           <Skeleton className="h-4 w-1/3" />
@@ -287,7 +291,7 @@ export function BinDetailPage() {
   );
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-4 pb-2 max-w-3xl mx-auto">
+    <div className="page-content">
       <BinDetailToolbar
         bin={bin}
         editing={edit.editing}

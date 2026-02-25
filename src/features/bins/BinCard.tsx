@@ -40,6 +40,8 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   const coverPhotoId = cardStyle?.coverPhotoId;
   const { mutedColor } = renderProps;
 
+  const [pinPulseKey, setPinPulseKey] = useState(0);
+
   // Precomputed style variables for photo/color variants
   const secondaryStyle: React.CSSProperties | undefined = isPhoto
     ? { color: 'rgba(255,255,255,0.8)', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }
@@ -155,7 +157,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       )}
       style={!selected ? secondaryBorderStyle : undefined}
     >
-      {selected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+      {selected && <Check className="h-3 w-3 text-white animate-check-pop" strokeWidth={3} />}
     </div>
   );
 
@@ -228,6 +230,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
         <button
           onClick={(e) => {
             e.stopPropagation();
+            setPinPulseKey((k) => k + 1);
             onPinToggle(bin.id, !bin.is_pinned);
           }}
           className={cn(
@@ -239,7 +242,9 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           style={isPhoto && bin.is_pinned ? { color: 'white' } : undefined}
           aria-label={bin.is_pinned ? 'Unpin bin' : 'Pin bin'}
         >
-          <Pin className="h-4 w-4" fill={bin.is_pinned ? 'currentColor' : 'none'} />
+          <span key={pinPulseKey} className={pinPulseKey > 0 ? 'inline-flex animate-success-pulse' : 'inline-flex'}>
+            <Pin className="h-4 w-4" fill={bin.is_pinned ? 'currentColor' : 'none'} />
+          </span>
         </button>
       )}
       {selectable ? (
@@ -281,12 +286,12 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       role="button"
       aria-selected={selectable ? selected : undefined}
       className={cn(
-        'group rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none',
+        'group rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none [@media(hover:hover)]:hover:scale-[1.02] [@media(hover:hover)]:hover:shadow-[var(--shadow-elevated)] [@media(hover:hover)]:hover:-translate-y-0.5 animate-stagger-in',
         renderProps.className,
         selected && 'ring-2 ring-[var(--accent)] scale-[0.97]',
         selectable && !selected && 'active:bg-[var(--bg-active)]'
       )}
-      style={renderProps.style}
+      style={{ ...renderProps.style, animationDelay: `${Math.min(index * 30, 300)}ms` }}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onTouchStart={onTouchStart}

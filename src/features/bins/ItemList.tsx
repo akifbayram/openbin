@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { X, ArrowUpDown } from 'lucide-react';
 import { removeItemFromBin, renameItem, reorderItems } from './useBins';
 import { useToast } from '@/components/ui/toast';
@@ -150,6 +150,16 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('manual');
   const { showToast } = useToast();
+  const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
+  const knownIdsRef = useRef<Set<string>>(new Set(items.map((i) => i.id)));
+  const newIds = new Set<string>();
+  for (const item of items) {
+    if (!knownIdsRef.current.has(item.id)) newIds.add(item.id);
+  }
+  // Update known IDs after render
+  useEffect(() => {
+    knownIdsRef.current = new Set(items.map((i) => i.id));
+  }, [items]);
 
   const handleSort = useCallback(async (mode: SortMode) => {
     setSortMode(mode);
@@ -181,12 +191,16 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
     }
   }
 
-  async function handleDelete(itemId: string) {
-    try {
-      await removeItemFromBin(binId, itemId);
-    } catch {
-      showToast({ message: 'Failed to delete item' });
-    }
+  function handleDelete(itemId: string) {
+    setExitingIds((prev) => new Set(prev).add(itemId));
+    setTimeout(async () => {
+      setExitingIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
+      try {
+        await removeItemFromBin(binId, itemId);
+      } catch {
+        showToast({ message: 'Failed to delete item' });
+      }
+    }, 200);
   }
 
   const sortLabel = sortMode === 'az' ? 'A–Z' : sortMode === 'za' ? 'Z–A' : 'Sort';
@@ -214,22 +228,32 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
           {items.map((item) => readOnly ? (
             <div
               key={item.id}
-              className="flex items-center gap-1.5 bg-[var(--bg-elevated)] px-2 py-1.5 rounded-[var(--radius-sm)]"
+              className={cn(
+                'flex items-center gap-1.5 bg-[var(--bg-elevated)] px-2 py-1.5 rounded-[var(--radius-sm)]',
+                newIds.has(item.id) && 'animate-fade-in-up',
+              )}
             >
               <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed py-0.5">
                 {item.name}
               </span>
             </div>
           ) : (
-            <ItemRow
+            <div
               key={item.id}
-              text={item.name}
-              isEditing={editingId === item.id}
-              onStartEdit={() => setEditingId(item.id)}
-              onSave={(value) => handleSaveEdit(item.id, value)}
-              onCancel={() => setEditingId(null)}
-              onDelete={() => handleDelete(item.id)}
-            />
+              className={cn(
+                exitingIds.has(item.id) && 'animate-shrink-out',
+                newIds.has(item.id) && !exitingIds.has(item.id) && 'animate-fade-in-up',
+              )}
+            >
+              <ItemRow
+                text={item.name}
+                isEditing={editingId === item.id}
+                onStartEdit={() => setEditingId(item.id)}
+                onSave={(value) => handleSaveEdit(item.id, value)}
+                onCancel={() => setEditingId(null)}
+                onDelete={() => handleDelete(item.id)}
+              />
+            </div>
           ))}
         </div>
       )}

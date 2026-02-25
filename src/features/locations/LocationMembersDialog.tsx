@@ -4,6 +4,8 @@ import { Copy, Check, UserMinus, Shield, RefreshCw, LogOut, ChevronDown } from '
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-list';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import {
   Dialog,
   DialogContent,
@@ -130,14 +132,14 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
 
         {/* Members list */}
         {isLoading ? (
-          <div className="space-y-1 py-2">
-            {[1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-3">
+          <SkeletonList count={2} className="space-y-1 py-2">
+            {() => (
+              <div className="flex items-center gap-3">
                 <Skeleton className="h-8 w-8 rounded-full" />
                 <Skeleton className="h-4 flex-1" />
               </div>
-            ))}
-          </div>
+            )}
+          </SkeletonList>
         ) : (
           <div className="space-y-1 py-2">
             {members.map((member) => {
@@ -148,9 +150,10 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                   key={member.id}
                   className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)]"
                 >
-                  <div className="h-8 w-8 rounded-full bg-[var(--bg-active)] flex items-center justify-center text-[13px] font-semibold text-[var(--text-secondary)] shrink-0">
-                    {(member.display_name?.[0] || member.user_id[0]).toUpperCase()}
-                  </div>
+                  <UserAvatar
+                    displayName={member.display_name || member.user_id}
+                    size="sm"
+                  />
                   <div className="flex-1 min-w-0">
                     <span className="text-[14px] text-[var(--text-primary)] truncate block">
                       {isSelf ? 'You' : member.display_name || member.user_id.slice(0, 8)}

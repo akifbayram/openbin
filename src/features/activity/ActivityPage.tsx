@@ -3,9 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/lib/usePermissions';
 import { Clock, Package, MapPin, Users, Image, RotateCcw, Trash2, Plus, Pencil, LogIn, LogOut, UserMinus, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useActivityLog } from './useActivity';
 import { useTerminology, type Terminology } from '@/lib/terminology';
+import { PageHeader } from '@/components/ui/page-header';
+import { formatTimeAgo } from '@/lib/formatTime';
 import type { ActivityLogEntry } from '@/types';
 
 function getActionIcon(entry: ActivityLogEntry) {
@@ -106,20 +110,6 @@ function getActionLabel(entry: ActivityLogEntry, t: Terminology): string {
   return `${action} ${entity_type} ${name}`;
 }
 
-function formatTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return date.toLocaleDateString();
-}
-
 function groupByDate(entries: ActivityLogEntry[]): Map<string, ActivityLogEntry[]> {
   const groups = new Map<string, ActivityLogEntry[]>();
   for (const entry of entries) {
@@ -161,38 +151,34 @@ export function ActivityPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2 max-w-2xl mx-auto">
-      <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-        Activity
-      </h1>
+    <div className="page-content">
+      <PageHeader title="Activity" />
 
       {(isLoading || permissionsLoading) && entries.length === 0 ? (
         <div className="space-y-6">
           <div className="space-y-3">
             <Skeleton className="h-3 w-16" />
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="glass-card rounded-[var(--radius-lg)] px-4 py-3.5">
-                <div className="flex items-start gap-3">
-                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/4" />
+            <SkeletonList className="flex flex-col gap-3">
+              {() => (
+                <div className="glass-card rounded-[var(--radius-lg)] px-4 py-3.5">
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/4" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )}
+            </SkeletonList>
           </div>
         </div>
       ) : entries.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-          <Clock className="h-16 w-16 opacity-40" />
-          <div className="text-center space-y-1.5">
-            <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
-              No activity yet
-            </p>
-            <p className="text-[13px]">Actions like creating, editing, and deleting {t.bins} will appear here</p>
-          </div>
-        </div>
+        <EmptyState
+          icon={Clock}
+          title="No activity yet"
+          subtitle={`Actions like creating, editing, and deleting ${t.bins} will appear here`}
+        />
       ) : (
         <div className="space-y-6">
           {[...grouped.entries()].map(([dateLabel, items]) => (
@@ -252,7 +238,7 @@ export function ActivityPage() {
                         );
                       })()}
                       <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
-                        {formatTime(entry.created_at)}
+                        {formatTimeAgo(entry.created_at)}
                         {entry.auth_method === 'api_key' && (
                           <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-[var(--bg-elevated)] text-[var(--text-tertiary)]">
                             API{entry.api_key_name ? `: ${entry.api_key_name}` : ''}

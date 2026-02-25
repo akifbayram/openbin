@@ -1,19 +1,20 @@
 import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Camera } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FormField } from '@/components/ui/form-field';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { apiFetch, getAvatarUrl } from '@/lib/api';
 import { useLocationList } from '@/features/locations/useLocations';
 import { compressImage } from '@/features/photos/compressImage';
+import { PageHeader } from '@/components/ui/page-header';
 import type { User } from '@/types';
 
 export function ProfilePage() {
-  const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const { showToast } = useToast();
   const { locations } = useLocationList();
@@ -125,22 +126,9 @@ export function ProfilePage() {
     : 'Unknown';
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2 max-w-2xl mx-auto">
+    <div className="page-content">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate(-1)}
-          className="rounded-full h-9 w-9 shrink-0"
-          aria-label="Go back"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-          Profile
-        </h1>
-      </div>
+      <PageHeader title="Profile" />
 
       {/* Avatar */}
       <Card>
@@ -148,13 +136,11 @@ export function ProfilePage() {
           <Label>Photo</Label>
           <div className="flex flex-col items-center gap-3 mt-3">
             <div className="relative">
-              <div className="h-24 w-24 rounded-full overflow-hidden bg-[var(--bg-active)] flex items-center justify-center text-[32px] font-bold text-[var(--text-secondary)]">
-                {avatarSrc ? (
-                  <img src={avatarSrc} alt="Avatar" className="h-full w-full object-cover" />
-                ) : (
-                  user.displayName?.[0]?.toUpperCase() || user.username[0].toUpperCase()
-                )}
-              </div>
+              <UserAvatar
+                avatarUrl={avatarSrc}
+                displayName={user.displayName || user.username}
+                size="lg"
+              />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -191,8 +177,7 @@ export function ProfilePage() {
         <CardContent>
           <Label>Profile Info</Label>
           <form onSubmit={handleSaveProfile} className="flex flex-col gap-3 mt-3">
-            <div className="space-y-1.5">
-              <label htmlFor="profile-name" className="text-[13px] text-[var(--text-secondary)]">Display Name</label>
+            <FormField label="Display Name" htmlFor="profile-name">
               <Input
                 id="profile-name"
                 value={displayName}
@@ -200,9 +185,8 @@ export function ProfilePage() {
                 placeholder="Your name"
                 required
               />
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="profile-email" className="text-[13px] text-[var(--text-secondary)]">Email</label>
+            </FormField>
+            <FormField label="Email" htmlFor="profile-email">
               <Input
                 id="profile-email"
                 type="email"
@@ -210,7 +194,7 @@ export function ProfilePage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Optional"
               />
-            </div>
+            </FormField>
             <Button
               type="submit"
               disabled={savingProfile || !displayName.trim()}
@@ -227,8 +211,7 @@ export function ProfilePage() {
         <CardContent>
           <Label>Change Password</Label>
           <form onSubmit={handleChangePassword} className="flex flex-col gap-3 mt-3">
-            <div className="space-y-1.5">
-              <label htmlFor="current-password" className="text-[13px] text-[var(--text-secondary)]">Current Password</label>
+            <FormField label="Current Password" htmlFor="current-password">
               <Input
                 id="current-password"
                 type="password"
@@ -236,9 +219,8 @@ export function ProfilePage() {
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required
               />
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="new-password" className="text-[13px] text-[var(--text-secondary)]">New Password</label>
+            </FormField>
+            <FormField label="New Password" htmlFor="new-password">
               <Input
                 id="new-password"
                 type="password"
@@ -247,9 +229,8 @@ export function ProfilePage() {
                 placeholder="Min 8 characters"
                 required
               />
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="confirm-password" className="text-[13px] text-[var(--text-secondary)]">Confirm Password</label>
+            </FormField>
+            <FormField label="Confirm Password" htmlFor="confirm-password">
               <Input
                 id="confirm-password"
                 type="password"
@@ -257,7 +238,7 @@ export function ProfilePage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
               />
-            </div>
+            </FormField>
             <Button
               type="submit"
               disabled={savingPassword || !currentPassword || !newPassword || !confirmPassword}

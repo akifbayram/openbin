@@ -22,6 +22,15 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const getTagStyle = useTagStyle();
+  const [exitingTags, setExitingTags] = useState<Set<string>>(new Set());
+  const knownTagsRef = useRef<Set<string>>(new Set(tags));
+  const newTags = new Set<string>();
+  for (const tag of tags) {
+    if (!knownTagsRef.current.has(tag)) newTags.add(tag);
+  }
+  useEffect(() => {
+    knownTagsRef.current = new Set(tags);
+  }, [tags]);
 
   const filtered = useMemo(() => {
     const available = suggestions.filter((s) => !tags.includes(s));
@@ -105,14 +114,23 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
   }, [showSuggestions, reposition]);
 
   function removeTag(tag: string) {
-    onChange(tags.filter((t) => t !== tag));
+    setExitingTags((prev) => new Set(prev).add(tag));
+    setTimeout(() => {
+      setExitingTags((prev) => { const next = new Set(prev); next.delete(tag); return next; });
+      onChange(tags.filter((t) => t !== tag));
+    }, 200);
   }
 
   return (
     <div ref={containerRef} className="relative">
-      <div className="flex flex-wrap gap-1.5 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 focus-within:ring-2 focus-within:ring-[var(--accent)]">
+      <div className="flex flex-wrap gap-1.5 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-shadow duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:shadow-[0_0_0_4px_var(--accent-glow)]">
         {tags.map((tag) => (
-          <Badge key={tag} variant="secondary" className="gap-1 pl-1.5" style={getTagStyle(tag)}>
+          <Badge
+            key={tag}
+            variant="secondary"
+            className={`gap-1 pl-1.5 ${exitingTags.has(tag) ? 'animate-shrink-out' : newTags.has(tag) ? 'animate-fade-in-up' : ''}`}
+            style={getTagStyle(tag)}
+          >
             <button
               type="button"
               onClick={() => removeTag(tag)}

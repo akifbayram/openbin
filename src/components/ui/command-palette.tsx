@@ -2,6 +2,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { SHORTCUTS, formatKeys, type ShortcutDef } from '@/lib/shortcuts';
+import { useOverlayAnimation } from '@/lib/useOverlayAnimation';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -21,40 +22,22 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
   const [activeIndex, setActiveIndex] = React.useState(0);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  const [visible, setVisible] = React.useState(false);
-  const [animating, setAnimating] = React.useState<'enter' | 'exit' | null>(null);
+  const { visible, isEntered } = useOverlayAnimation({
+    open,
+    duration: 150,
+  });
 
+  // Reset state when opening
   React.useEffect(() => {
     if (open) {
-      setVisible(true);
       setQuery('');
       setActiveIndex(0);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setAnimating('enter'));
-      });
-    } else if (visible) {
-      setAnimating('exit');
-      const timer = setTimeout(() => {
-        setVisible(false);
-        setAnimating(null);
-      }, 150);
-      return () => clearTimeout(timer);
     }
-  }, [open, visible]);
+  }, [open]);
 
   // Auto-focus input
   React.useEffect(() => {
     if (visible) inputRef.current?.focus();
-  }, [visible]);
-
-  // Body scroll lock
-  React.useEffect(() => {
-    if (visible) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
   }, [visible]);
 
   // Filter items excluding the command-palette shortcut itself
@@ -118,8 +101,6 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
   }, [activeIndex]);
 
   if (!visible) return null;
-
-  const isEntered = animating === 'enter';
 
   return createPortal(
     <div

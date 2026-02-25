@@ -16,6 +16,7 @@ import { ScanSuccessOverlay } from '@/features/onboarding/ScanSuccessOverlay';
 import { useOnboarding } from '@/features/onboarding/useOnboarding';
 import { recordScan } from '@/features/dashboard/scanHistory';
 import { BIN_URL_REGEX } from '@/lib/qr';
+import { PageHeader } from '@/components/ui/page-header';
 
 export function QRScannerPage() {
   const t = useTerminology();
@@ -82,10 +83,8 @@ export function QRScannerPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2 max-w-2xl mx-auto">
-      <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-        Scan
-      </h1>
+    <div className="page-content">
+      <PageHeader title="Scan" />
 
       {error ? (
         <Card>

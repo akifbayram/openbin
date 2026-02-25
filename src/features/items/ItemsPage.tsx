@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ClipboardList, ArrowUpDown } from 'lucide-react';
+import { ClipboardList, ArrowUpDown } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Input } from '@/components/ui/input';
+import { ListItem } from '@/components/ui/list-item';
+import { SearchInput } from '@/components/ui/search-input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-list';
 import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePaginatedItemList } from './useItems';
 import { useTerminology } from '@/lib/terminology';
+import { PageHeader } from '@/components/ui/page-header';
 
 type SortOption = 'alpha' | 'bin';
 const sortLabels: Record<SortOption, (binLabel: string) => string> = {
@@ -28,22 +31,17 @@ export function ItemsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2 max-w-2xl mx-auto">
-      <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-        Items
-      </h1>
+    <div className="page-content">
+      <PageHeader title="Items" />
 
       {(totalCount > 0 || search) && (
         <div className="flex items-center gap-2.5">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search items..."
-              className="pl-10 rounded-[var(--radius-full)] h-10 text-[15px]"
-            />
-          </div>
+          <SearchInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search items..."
+            containerClassName="flex-1"
+          />
           <Button
             variant="secondary"
             size="sm"
@@ -59,16 +57,16 @@ export function ItemsPage() {
       {isLoading ? (
         <div className="flex flex-col gap-4">
           <Skeleton className="h-10 w-full rounded-[var(--radius-full)]" />
-          <div className="flex flex-col gap-1">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">
-              <div className="flex-1 min-w-0 space-y-1.5">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+          <SkeletonList>
+            {() => (
+              <div className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
               </div>
-            </div>
-          ))}
-          </div>
+            )}
+          </SkeletonList>
         </div>
       ) : items.length === 0 ? (
         <EmptyState
@@ -79,15 +77,15 @@ export function ItemsPage() {
       ) : (
         <div className="flex flex-col gap-1">
           {items.map((entry) => (
-              <div
+              <ListItem
                 key={entry.id}
+                interactive
                 role="button"
                 tabIndex={0}
                 onClick={() => navigate(`/bin/${entry.bin_id}`, { state: { backLabel: 'Items', backPath: '/items' } })}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') navigate(`/bin/${entry.bin_id}`, { state: { backLabel: 'Items', backPath: '/items' } });
                 }}
-                className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 cursor-pointer transition-all duration-200 active:scale-[0.98] hover:bg-[var(--bg-hover)]"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-medium text-[var(--text-primary)] truncate">
@@ -97,7 +95,7 @@ export function ItemsPage() {
                     {entry.bin_name}
                   </span>
                 </div>
-              </div>
+              </ListItem>
             ))}
           <LoadMoreSentinel hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
         </div>

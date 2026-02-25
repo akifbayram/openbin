@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FormField } from '@/components/ui/form-field';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +39,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { ApiKeysSection } from './ApiKeysSection';
+import { PageHeader } from '@/components/ui/page-header';
 import { useDashboardSettings, DASHBOARD_LIMITS } from '@/lib/dashboardSettings';
 
 export function SettingsPage() {
@@ -204,22 +207,22 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-          Settings
-        </h1>
-        <OptionGroup
-          options={[
-            { key: 'light' as const, label: 'Light', icon: Sun },
-            { key: 'dark' as const, label: 'Dark', icon: Moon },
-            { key: 'auto' as const, label: 'Auto', icon: Monitor },
-          ]}
-          value={preference}
-          onChange={setThemePreference}
-          iconOnly
-        />
-      </div>
+    <div className="page-content">
+      <PageHeader
+        title="Settings"
+        actions={
+          <OptionGroup
+            options={[
+              { key: 'light' as const, label: 'Light', icon: Sun },
+              { key: 'dark' as const, label: 'Dark', icon: Moon },
+              { key: 'auto' as const, label: 'Auto', icon: Monitor },
+            ]}
+            value={preference}
+            onChange={setThemePreference}
+            iconOnly
+          />
+        }
+      />
 
       {/* Account */}
       {user && (
@@ -231,13 +234,11 @@ export function SettingsPage() {
                 onClick={() => navigate('/profile')}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] transition-colors w-full text-left"
               >
-                {user.avatarUrl ? (
-                  <img src={getAvatarUrl(user.avatarUrl)} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
-                ) : (
-                  <div className="h-9 w-9 rounded-full bg-[var(--bg-active)] flex items-center justify-center text-[14px] font-semibold text-[var(--text-secondary)] shrink-0">
-                    {user.displayName?.[0]?.toUpperCase() || user.username[0].toUpperCase()}
-                  </div>
-                )}
+                <UserAvatar
+                  avatarUrl={user.avatarUrl ? getAvatarUrl(user.avatarUrl) : null}
+                  displayName={user.displayName || user.username}
+                  size="md"
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-medium text-[var(--text-primary)] truncate">
                     {user.displayName || user.username}
@@ -265,15 +266,14 @@ export function SettingsPage() {
           <CardContent>
             <Label>Personalization</Label>
             <div className="flex flex-col gap-3 mt-3">
-              <div className="space-y-1.5">
-                <label htmlFor="app-name" className="text-[13px] text-[var(--text-secondary)]">App Name</label>
+              <FormField label="App Name" htmlFor="app-name">
                 <Input
                   id="app-name"
                   value={settings.appName}
                   onChange={(e) => updateSettings({ appName: e.target.value })}
                   placeholder="OpenBin"
                 />
-              </div>
+              </FormField>
               <Disclosure label="Custom Terminology">
                 <p className="text-[11px] text-[var(--text-tertiary)] mb-2">Rename core concepts to match your workflow.</p>
                 <div className="space-y-2">
@@ -348,8 +348,11 @@ export function SettingsPage() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label htmlFor="recent-bins" className="text-[13px] text-[var(--text-secondary)]">Recent {t.bins} shown</label>
+              <FormField
+                label={`Recent ${t.bins} shown`}
+                htmlFor="recent-bins"
+                hint={`${DASHBOARD_LIMITS.recentBinsCount.min}–${DASHBOARD_LIMITS.recentBinsCount.max}`}
+              >
                 <Input
                   id="recent-bins"
                   type="number"
@@ -358,12 +361,12 @@ export function SettingsPage() {
                   value={dashSettings.recentBinsCount}
                   onChange={(e) => updateDashSettings({ recentBinsCount: Number(e.target.value) })}
                 />
-                <p className="text-[11px] text-[var(--text-tertiary)]">
-                  {DASHBOARD_LIMITS.recentBinsCount.min}–{DASHBOARD_LIMITS.recentBinsCount.max}
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="scan-history" className="text-[13px] text-[var(--text-secondary)]">Scan history entries</label>
+              </FormField>
+              <FormField
+                label="Scan history entries"
+                htmlFor="scan-history"
+                hint={`${DASHBOARD_LIMITS.scanHistoryMax.min}–${DASHBOARD_LIMITS.scanHistoryMax.max}`}
+              >
                 <Input
                   id="scan-history"
                   type="number"
@@ -372,10 +375,7 @@ export function SettingsPage() {
                   value={dashSettings.scanHistoryMax}
                   onChange={(e) => updateDashSettings({ scanHistoryMax: Number(e.target.value) })}
                 />
-                <p className="text-[11px] text-[var(--text-tertiary)]">
-                  {DASHBOARD_LIMITS.scanHistoryMax.min}–{DASHBOARD_LIMITS.scanHistoryMax.max}
-                </p>
-              </div>
+              </FormField>
             </div>
           </div>
         </CardContent>

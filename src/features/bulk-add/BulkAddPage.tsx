@@ -12,6 +12,7 @@ import { bulkAddReducer, initialState, stepIndex } from './useBulkAdd';
 import { BulkAddUploadStep } from './BulkAddUploadStep';
 import { BulkAddReviewStep } from './BulkAddReviewStep';
 import { BulkAddSummaryStep } from './BulkAddSummaryStep';
+import { MenuButton } from '@/components/ui/menu-button';
 import type { BulkAddPhoto } from './useBulkAdd';
 
 const STEPS = [
@@ -111,21 +112,25 @@ export function BulkAddPage() {
   const currentStepIndex = stepIndex(state.step);
 
   return (
-    <div className="max-w-2xl mx-auto px-5 pt-2 lg:pt-6 pb-8">
+    <div className="page-content pb-8">
       {/* Back navigation */}
       {state.step === 'upload' && (
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          className="mb-4 -ml-2 rounded-[var(--radius-full)] text-[var(--text-secondary)]"
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
+        <div className="flex items-center gap-1 mb-4">
+          <MenuButton />
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="-ml-2 rounded-[var(--radius-full)] text-[var(--text-secondary)]"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+        </div>
       )}
 
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-6">
+        {state.step !== 'upload' && <MenuButton />}
         {STEPS.map((step, i) => (
           <div key={step.key} className="flex items-center gap-2">
             {i > 0 && <div className="h-px w-6 bg-[var(--border)]" />}

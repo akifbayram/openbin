@@ -3,29 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { Trash2, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/usePermissions';
 import { useTerminology } from '@/lib/terminology';
 import { useLocationList } from '@/features/locations/useLocations';
+import { PageHeader } from '@/components/ui/page-header';
+import { formatTimeAgo } from '@/lib/formatTime';
 import { useTrashBins, restoreBinFromTrash, permanentDeleteBin, notifyBinsChanged } from './useBins';
 import type { Bin } from '@/types';
-
-function formatTimeAgo(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 30) return `${diffDay}d ago`;
-  return date.toLocaleDateString();
-}
 
 export function TrashPage() {
   const navigate = useNavigate();
@@ -72,18 +62,16 @@ export function TrashPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2">
-      <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-        Trash
-      </h1>
+    <div className="page-content">
+      <PageHeader title="Trash" />
       <p className="text-[13px] text-[var(--text-tertiary)]">
         Deleted {t.bins} are kept for {retentionDays} day{retentionDays !== 1 ? 's' : ''} before being permanently removed.
       </p>
 
       {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
+        <SkeletonList count={3} className="flex flex-col gap-3">
+          {() => (
+            <Card>
               <CardContent className="py-3 px-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
@@ -97,18 +85,14 @@ export function TrashPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          )}
+        </SkeletonList>
       ) : bins.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-          <Trash2 className="h-16 w-16 opacity-40" />
-          <div className="text-center space-y-1.5">
-            <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
-              Trash is empty
-            </p>
-            <p className="text-[13px]">Deleted {t.bins} will appear here</p>
-          </div>
-        </div>
+        <EmptyState
+          icon={Trash2}
+          title="Trash is empty"
+          subtitle={`Deleted ${t.bins} will appear here`}
+        />
       ) : (
         <div className="space-y-3">
           {bins.map((bin) => (

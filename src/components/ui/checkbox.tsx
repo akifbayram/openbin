@@ -23,7 +23,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         )}
         onClick={() => onCheckedChange?.(!checked)}
       >
-        {checked && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+        {checked && <Check className="h-3.5 w-3.5 text-white animate-check-pop" strokeWidth={3} />}
         <input ref={ref} type="checkbox" className="sr-only" checked={checked} readOnly {...props} />
       </button>
     );

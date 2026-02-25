@@ -11,7 +11,7 @@ interface EmptyStateProps {
 export function EmptyState({ icon: Icon, title, subtitle, compact, children }: EmptyStateProps) {
   return (
     <div className={cn(
-      'flex flex-col items-center justify-center gap-5 text-[var(--text-tertiary)]',
+      'flex flex-col items-center justify-center gap-5 text-[var(--text-tertiary)] animate-fade-in-up',
       compact ? 'py-4' : 'py-24'
     )}>
       <Icon className="h-16 w-16 opacity-40" />

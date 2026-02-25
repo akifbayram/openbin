@@ -2,6 +2,8 @@ import * as React from 'react';
 import { cn, haptic } from '@/lib/utils';
 import { X } from 'lucide-react';
 import { useSheetDismiss, getSheetPanelStyle, getSheetBackdropStyle } from '@/lib/useSheetDismiss';
+import { useOverlayAnimation } from '@/lib/useOverlayAnimation';
+import { useFocusTrap } from '@/lib/useFocusTrap';
 
 interface DialogContextValue {
   open: boolean;
@@ -58,30 +60,10 @@ function DialogContent({
   const titleId = React.useId();
   const [portalNode, setPortalNode] = React.useState<HTMLDivElement | null>(null);
 
-  const [visible, setVisible] = React.useState(false);
-  const [animating, setAnimating] = React.useState<'enter' | 'exit' | null>(null);
-
-  const prefersReducedMotion = React.useRef(false);
-  React.useEffect(() => {
-    prefersReducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }, []);
-
-  React.useEffect(() => {
-    if (open) {
-      setVisible(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setAnimating('enter'));
-      });
-    } else if (visible) {
-      setAnimating('exit');
-      const duration = prefersReducedMotion.current ? 0 : 200;
-      const timer = setTimeout(() => {
-        setVisible(false);
-        setAnimating(null);
-      }, duration);
-      return () => clearTimeout(timer);
-    }
-  }, [open, visible]);
+  const { visible, isEntered, isExiting } = useOverlayAnimation({
+    open,
+    onClose: () => onOpenChange(false),
+  });
 
   const [isMobile, setIsMobile] = React.useState(false);
   React.useEffect(() => {
@@ -107,61 +89,9 @@ function DialogContent({
     (panelRef as unknown as React.MutableRefObject<HTMLDivElement | null>).current = node;
   }, [panelRef]);
 
-  React.useEffect(() => {
-    if (visible) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [visible]);
-
-  // Escape key to close
-  React.useEffect(() => {
-    if (!open) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onOpenChange(false);
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, onOpenChange]);
-
-  // Focus trap
-  React.useEffect(() => {
-    if (!open || !contentRef.current) return;
-    const el = contentRef.current;
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-
-    // Focus first focusable element
-    const focusableSelector = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
-    const firstFocusable = el.querySelector<HTMLElement>(focusableSelector);
-    firstFocusable?.focus();
-
-    function trapFocus(e: KeyboardEvent) {
-      if (e.key !== 'Tab') return;
-      const focusables = el.querySelectorAll<HTMLElement>(focusableSelector);
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-    document.addEventListener('keydown', trapFocus);
-    return () => {
-      document.removeEventListener('keydown', trapFocus);
-      previouslyFocused?.focus();
-    };
-  }, [open]);
+  useFocusTrap({ active: open, containerRef: contentRef });
 
   if (!visible) return null;
-
-  const isEntered = animating === 'enter';
-  const isExiting = animating === 'exit';
 
   return (
     <DialogContext.Provider value={{ open, onOpenChange, titleId }}>

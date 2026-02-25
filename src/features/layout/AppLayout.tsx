@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { BottomNav } from './BottomNav';
-import { Sidebar } from './Sidebar';
+import { Sidebar, SidebarContent } from './Sidebar';
+import { MobileDrawer } from './MobileDrawer';
+import { DrawerProvider } from './DrawerContext';
 import { useTheme } from '@/lib/theme';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
@@ -15,6 +16,7 @@ import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
 import { useNavigationGuard } from '@/lib/navigationGuard';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
+import { PageTransition } from '@/components/page-transition';
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -30,12 +32,19 @@ export function AppLayout() {
   const [dismissed, setDismissed] = useState(() => localStorage.getItem('openbin-install-dismissed') === '1');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const rawNavigate = useNavigate();
+  const location = useLocation();
   const { guardedNavigate } = useNavigationGuard();
   const navigate = useCallback(
     (path: string, opts?: { state?: unknown }) => guardedNavigate(() => rawNavigate(path, opts)),
     [rawNavigate, guardedNavigate],
   );
+
+  // Close drawer on route change
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
 
   const shortcutActions = useMemo<Record<string, () => void>>(() => ({
     'go-home': () => navigate('/'),
@@ -109,22 +118,34 @@ export function AppLayout() {
         Skip to main content
       </a>
       <Sidebar locations={locations} activeLocationId={activeLocationId} onLocationChange={setActiveLocationId} />
-      {/* pb: nav-height(52) + bottom-offset(20) + safe-area + breathing(16) ≈ 88+safe */}
-      <main id="main-content" className="lg:ml-[260px] pt-[var(--safe-top)] pb-[calc(88px+var(--safe-bottom))] lg:pb-8">
+
+      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+        <SidebarContent
+          locations={locations}
+          activeLocationId={activeLocationId}
+          onLocationChange={setActiveLocationId}
+          onItemClick={() => setDrawerOpen(false)}
+        />
+      </MobileDrawer>
+
+      <DrawerProvider isOnboarding={onboarding.isOnboarding} onOpen={() => setDrawerOpen(true)}>
+      <main id="main-content" className="lg:ml-[260px] pt-[var(--safe-top)] lg:pt-[var(--safe-top)] pb-[calc(16px+var(--safe-bottom))] lg:pb-8">
         <div className="mx-auto w-full max-w-7xl">
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </div>
       </main>
-      <BottomNav />
+      </DrawerProvider>
       <CommandPalette
         open={commandPaletteOpen}
         onOpenChange={setCommandPaletteOpen}
         onAction={(id) => shortcutActions[id]?.()}
       />
       <ShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
-      {/* PWA install toast — fixed above bottom nav (mobile) / bottom-right (desktop) */}
+      {/* PWA install toast — fixed bottom-left (mobile) / bottom-right (desktop) */}
       {installPrompt && !dismissed && (
-        <div className="fixed z-40 bottom-[calc(68px+var(--safe-bottom))] lg:bottom-6 left-4 right-4 lg:left-auto lg:right-6 lg:w-[360px] glass-heavy rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 shadow-lg fade-in-fast">
+        <div className="fixed z-40 bottom-[calc(16px+var(--safe-bottom))] lg:bottom-6 left-4 right-4 lg:left-auto lg:right-6 lg:w-[360px] glass-heavy rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 shadow-lg fade-in-fast">
           <Download className="h-5 w-5 text-[var(--accent)] shrink-0" />
           <p className="flex-1 text-[14px] text-[var(--text-primary)]">
             Install {settings.appName}

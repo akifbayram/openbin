@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ScanLine, MapPin, ChevronRight, Plus, Inbox, Sparkles, Search } from 'lucide-react';
 
@@ -18,6 +18,40 @@ import { useTerminology } from '@/lib/terminology';
 import { useDashboard } from './useDashboard';
 import { BinCard } from '@/features/bins/BinCard';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
+import { PageHeader } from '@/components/ui/page-header';
+
+function useAnimatedNumber(target: number, duration = 400) {
+  const [display, setDisplay] = useState(target);
+  const rafRef = useRef<number>();
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplay(target);
+      return;
+    }
+    const start = display;
+    const delta = target - start;
+    if (delta === 0) return;
+    const startTime = performance.now();
+
+    function tick(now: number) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Cubic ease-out
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(start + delta * eased));
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    }
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    // Only re-run when target changes, not display
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, duration]);
+
+  return display;
+}
 
 function StatCard({
   label,
@@ -28,6 +62,7 @@ function StatCard({
   value: number;
   onClick?: () => void;
 }) {
+  const animatedValue = useAnimatedNumber(value);
   const Wrapper = onClick ? 'button' : 'div';
   return (
     <Card className="flex-1">
@@ -37,7 +72,7 @@ function StatCard({
       >
         <CardContent className="py-3 px-4">
           <p className="text-[24px] font-bold text-[var(--text-primary)] leading-tight">
-            {value}
+            {animatedValue}
           </p>
           <p className="text-[13px] text-[var(--text-tertiary)]">{label}</p>
         </CardContent>
@@ -93,10 +128,8 @@ export function DashboardPage() {
 
   if (!activeLocationId) {
     return (
-      <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2">
-        <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-          Dashboard
-        </h1>
+      <div className="page-content max-w-none">
+        <PageHeader title="Dashboard" />
         <EmptyState
           icon={MapPin}
           title={`No ${t.location} selected`}
@@ -116,47 +149,47 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2">
-      <div className="flex items-center justify-between">
-        <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-          Dashboard
-        </h1>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center">
-            <Button
-              onClick={() => navigate('/scan')}
-              size="icon"
-              variant="ghost"
-              className="h-10 w-10 rounded-full"
-              aria-label="Scan QR code"
-            >
-              <ScanLine className="h-5 w-5" />
-            </Button>
-            {aiEnabled && (
+    <div className="page-content max-w-none">
+      <PageHeader
+        title="Dashboard"
+        actions={
+          <div className="flex items-center gap-2">
+            <div className="flex items-center">
               <Button
-                onClick={() => setCommandOpen(true)}
+                onClick={() => navigate('/scan')}
                 size="icon"
                 variant="ghost"
                 className="h-10 w-10 rounded-full"
-                aria-label="Ask AI"
+                aria-label="Scan QR code"
               >
-                <Sparkles className="h-5 w-5" />
+                <ScanLine className="h-5 w-5" />
               </Button>
-            )}
+              {aiEnabled && (
+                <Button
+                  onClick={() => setCommandOpen(true)}
+                  size="icon"
+                  variant="ghost"
+                  className="h-10 w-10 rounded-full"
+                  aria-label="Ask AI"
+                >
+                  <Sparkles className="h-5 w-5" />
+                </Button>
+              )}
+            </div>
+            <Button
+              onClick={() => setCreateOpen(true)}
+              size="icon"
+              className="h-10 w-10 rounded-full"
+              aria-label={`New ${t.bin}`}
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
           </div>
-          <Button
-            onClick={() => setCreateOpen(true)}
-            size="icon"
-            className="h-10 w-10 rounded-full"
-            aria-label={`New ${t.bin}`}
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Search */}
-      <div className="flex flex-1 min-w-0 items-center gap-1.5 rounded-[var(--radius-full)] bg-[var(--bg-input)] px-3.5 min-h-10 py-1.5 focus-within:ring-2 focus-within:ring-[var(--accent)] transition-all duration-200">
+      <div className="flex flex-1 min-w-0 items-center gap-1.5 rounded-[var(--radius-full)] bg-[var(--bg-input)] px-3.5 min-h-10 py-1.5 focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:shadow-[0_0_0_4px_var(--accent-glow)] transition-all duration-200">
         <Search className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
         <input
           data-shortcut-search

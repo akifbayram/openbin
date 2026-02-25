@@ -19,6 +19,8 @@ import { usePrintSettings } from './usePrintSettings';
 import type { LabelFormat } from './labelFormats';
 import type { LabelOptions, CustomState } from './usePrintSettings';
 import type { Bin } from '@/types';
+import { PageHeader } from '@/components/ui/page-header';
+import { MenuButton } from '@/components/ui/menu-button';
 
 function computeScaleFactor(base: LabelFormat, custom: LabelFormat): number {
   const baseW = parseFloat(base.cellWidth);
@@ -192,8 +194,11 @@ export function PrintPage() {
 
   if (isLoading) {
     return (
-      <div className="print-hide px-5 pt-2 lg:pt-6 pb-2 max-w-6xl mx-auto">
-        <Skeleton className="h-10 w-24 mb-4" />
+      <div className="page-content print-hide max-w-6xl">
+        <div className="flex items-center gap-2 mb-4">
+          <MenuButton />
+          <Skeleton className="h-10 w-24" />
+        </div>
         <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
           <div className="glass-card rounded-[var(--radius-lg)] p-4 space-y-2">
             {[1, 2, 3].map((i) => (
@@ -274,10 +279,8 @@ export function PrintPage() {
 
   return (
     <>
-      <div className="print-hide px-5 pt-2 lg:pt-6 pb-2 max-w-6xl mx-auto">
-        <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none mb-4">
-          Print
-        </h1>
+      <div className="page-content print-hide max-w-6xl">
+        <PageHeader title="Print" className="mb-4" />
 
         <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
         {/* Left column — settings */}

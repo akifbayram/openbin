@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth';
 import { useNavigationGuard } from '@/lib/navigationGuard';
 import { usePermissions } from '@/lib/usePermissions';
 import { getAvatarUrl } from '@/lib/api';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { LocationSwitcher } from './LocationSwitcher';
 import type { Location as LocationType } from '@/types';
 
@@ -24,12 +25,13 @@ const manageItems: { path: string; label: string; icon: React.ComponentType<{ cl
   { path: '/scan', label: 'Scan', icon: ScanLine },
 ];
 
-function NavButton({ path, label, icon: Icon, currentPath, navigate }: {
+function NavButton({ path, label, icon: Icon, currentPath, navigate, onClick }: {
   path: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   currentPath: string;
   navigate: (path: string) => void;
+  onClick?: () => void;
 }) {
   const isActive = path === '/bins'
     ? currentPath === '/bins' || currentPath.startsWith('/bin/')
@@ -37,7 +39,7 @@ function NavButton({ path, label, icon: Icon, currentPath, navigate }: {
 
   return (
     <button
-      onClick={() => navigate(path)}
+      onClick={() => { navigate(path); onClick?.(); }}
       aria-label={label}
       aria-current={isActive ? 'page' : undefined}
       className={cn(
@@ -53,13 +55,14 @@ function NavButton({ path, label, icon: Icon, currentPath, navigate }: {
   );
 }
 
-interface SidebarProps {
+interface SidebarContentProps {
   locations: LocationType[];
   activeLocationId: string | null;
   onLocationChange: (id: string) => void;
+  onItemClick?: () => void;
 }
 
-export function Sidebar({ locations, activeLocationId, onLocationChange }: SidebarProps) {
+export function SidebarContent({ locations, activeLocationId, onLocationChange, onItemClick }: SidebarContentProps) {
   const location = useLocation();
   const rawNavigate = useNavigate();
   const { guardedNavigate } = useNavigationGuard();
@@ -70,7 +73,7 @@ export function Sidebar({ locations, activeLocationId, onLocationChange }: Sideb
   const { isAdmin } = usePermissions();
 
   return (
-    <aside aria-label="Main navigation" className="hidden lg:flex flex-col w-[260px] h-dvh fixed left-0 top-0 bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] print-hide">
+    <>
       <div className="flex-1 flex flex-col px-5 pt-6 pb-4">
         {/* Brand */}
         <div className="px-3 pt-2 pb-4">
@@ -85,10 +88,10 @@ export function Sidebar({ locations, activeLocationId, onLocationChange }: Sideb
           <LocationSwitcher
             locations={locations}
             activeLocationId={activeLocationId}
-            onLocationChange={onLocationChange}
+            onLocationChange={(id) => { onLocationChange(id); onItemClick?.(); }}
           />
           {topItems.map((item) => (
-            <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate} />
+            <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate} onClick={onItemClick} />
           ))}
         </div>
 
@@ -101,7 +104,7 @@ export function Sidebar({ locations, activeLocationId, onLocationChange }: Sideb
             Manage
           </p>
           {manageItems.map((item) => (
-            <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate} />
+            <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate} onClick={onItemClick} />
           ))}
         </div>
 
@@ -117,7 +120,7 @@ export function Sidebar({ locations, activeLocationId, onLocationChange }: Sideb
         <div className="space-y-1">
           {user && (
             <button
-              onClick={() => navigate('/profile')}
+              onClick={() => { navigate('/profile'); onItemClick?.(); }}
               aria-current={location.pathname === '/profile' ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium transition-all duration-200 w-full text-left',
@@ -126,20 +129,18 @@ export function Sidebar({ locations, activeLocationId, onLocationChange }: Sideb
                   : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
               )}
             >
-              {user.avatarUrl ? (
-                <img src={getAvatarUrl(user.avatarUrl)} alt="" className="h-5 w-5 rounded-full object-cover shrink-0" />
-              ) : (
-                <div className="h-5 w-5 rounded-full bg-[var(--bg-active)] flex items-center justify-center text-[10px] font-semibold shrink-0">
-                  {user.displayName?.[0]?.toUpperCase() || user.username[0].toUpperCase()}
-                </div>
-              )}
+              <UserAvatar
+                avatarUrl={user.avatarUrl ? getAvatarUrl(user.avatarUrl) : null}
+                displayName={user.displayName || user.username}
+                size="xs"
+              />
               <span className="flex-1 truncate">{user.displayName || user.username}</span>
             </button>
           )}
-          {isAdmin && <NavButton path="/activity" label="Activity" icon={Clock} currentPath={location.pathname} navigate={navigate} />}
-          <NavButton path="/settings" label="Settings" icon={Settings} currentPath={location.pathname} navigate={navigate} />
+          {isAdmin && <NavButton path="/activity" label="Activity" icon={Clock} currentPath={location.pathname} navigate={navigate} onClick={onItemClick} />}
+          <NavButton path="/settings" label="Settings" icon={Settings} currentPath={location.pathname} navigate={navigate} onClick={onItemClick} />
           <button
-            onClick={logout}
+            onClick={() => { logout(); onItemClick?.(); }}
             className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors w-full"
           >
             <LogOut className="h-5 w-5" />
@@ -147,6 +148,20 @@ export function Sidebar({ locations, activeLocationId, onLocationChange }: Sideb
           </button>
         </div>
       </div>
+    </>
+  );
+}
+
+interface SidebarProps {
+  locations: LocationType[];
+  activeLocationId: string | null;
+  onLocationChange: (id: string) => void;
+}
+
+export function Sidebar({ locations, activeLocationId, onLocationChange }: SidebarProps) {
+  return (
+    <aside aria-label="Main navigation" className="hidden lg:flex flex-col w-[260px] h-dvh fixed left-0 top-0 bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] print-hide">
+      <SidebarContent locations={locations} activeLocationId={activeLocationId} onLocationChange={onLocationChange} />
     </aside>
   );
 }

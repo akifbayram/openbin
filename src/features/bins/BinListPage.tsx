@@ -10,6 +10,7 @@ import {
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,7 @@ import { BulkVisibilityDialog } from './BulkVisibilityDialog';
 import { BulkLocationDialog } from './BulkLocationDialog';
 import { BulkActionBar } from './BulkActionBar';
 import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
+import { Crossfade } from '@/components/ui/crossfade';
 
 import { SaveViewDialog } from './SaveViewDialog';
 import { useAreaList } from '@/features/areas/useAreas';
@@ -39,6 +41,7 @@ import { useTagStyle } from '@/features/tags/useTagStyle';
 import { useBulkDialogs } from './useBulkDialogs';
 import { useBulkSelection } from './useBulkSelection';
 import { useBulkActions } from './useBulkActions';
+import { PageHeader } from '@/components/ui/page-header';
 
 export function BinListPage() {
   const t = useTerminology();
@@ -107,13 +110,11 @@ export function BinListPage() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-6 pb-2">
+    <div className="page-content max-w-none">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
-          {t.Bins}
-        </h1>
-        {activeLocationId && (
+      <PageHeader
+        title={t.Bins}
+        actions={activeLocationId ? (
           <div className="flex items-center gap-2">
             <div className="flex items-center">
               <Button
@@ -146,8 +147,8 @@ export function BinListPage() {
               <Plus className="h-5 w-5" />
             </Button>
           </div>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {/* Search + Sort (only when a location is active) */}
       {activeLocationId && (
@@ -168,50 +169,46 @@ export function BinListPage() {
 
       {/* No location selected prompt */}
       {!activeLocationId ? (
-        <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-          <MapPin className="h-16 w-16 opacity-40" />
-          <div className="text-center space-y-1.5">
-            <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
-              {`No ${t.location} selected`}
-            </p>
-            <p className="text-[13px]">{`Create or join a ${t.location} to start organizing ${t.bins}`}</p>
-          </div>
+        <EmptyState
+          icon={MapPin}
+          title={`No ${t.location} selected`}
+          subtitle={`Create or join a ${t.location} to start organizing ${t.bins}`}
+        >
           <Button onClick={() => navigate('/locations')} variant="outline" className="rounded-[var(--radius-full)] mt-1">
             <MapPin className="h-4 w-4 mr-2" />
             {`Manage ${t.Locations}`}
           </Button>
-        </div>
+        </EmptyState>
       ) : (
         <>
           {/* Bin grid */}
-          {isLoading && bins.length === 0 ? (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-3">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              ))}
-            </div>
-          ) : bins.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-              <PackageOpen className="h-16 w-16 opacity-40" />
-              <div className="text-center space-y-1.5">
-                <p className="text-[17px] font-semibold text-[var(--text-secondary)]">
-                  {search || activeCount > 0 ? `No ${t.bins} match your filters` : `No ${t.bins} yet`}
-                </p>
-                {!search && activeCount === 0 && (
-                  <p className="text-[13px]">{`Create your first ${t.bin} to get started`}</p>
-                )}
+          <Crossfade
+            isLoading={isLoading && bins.length === 0}
+            skeleton={
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-3">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                ))}
               </div>
+            }
+          >
+          {bins.length === 0 ? (
+            <EmptyState
+              icon={PackageOpen}
+              title={search || activeCount > 0 ? `No ${t.bins} match your filters` : `No ${t.bins} yet`}
+              subtitle={!search && activeCount === 0 ? `Create your first ${t.bin} to get started` : undefined}
+            >
               {!search && activeCount === 0 && (
                 <Button onClick={() => setCreateOpen(true)} variant="outline" className="rounded-[var(--radius-full)] mt-1">
                   <Plus className="h-4 w-4 mr-2" />
                   {`Create ${t.Bin}`}
                 </Button>
               )}
-            </div>
+            </EmptyState>
           ) : (
             <>
               <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4", selectable && "pb-16")}>
@@ -232,6 +229,7 @@ export function BinListPage() {
               <LoadMoreSentinel hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
             </>
           )}
+          </Crossfade>
         </>
       )}
 
