@@ -158,7 +158,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
       {visible && pos && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[100] max-h-48 overflow-auto rounded-[var(--radius-lg)] bg-[var(--bg-elevated)] shadow-lg border border-[var(--border)] p-2 flex flex-wrap gap-1.5"
+          className="fixed z-[100] max-h-48 overflow-auto rounded-[var(--radius-lg)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg border border-[var(--border)] p-2 flex flex-wrap gap-1.5"
           style={{ top: pos.top, left: pos.left, width: pos.width }}
         >
           {filtered.map((tag, i) => {

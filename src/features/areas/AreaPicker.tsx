@@ -91,7 +91,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
       {open && pos && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[100] rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-lg overflow-hidden"
+          className="fixed z-[100] rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg overflow-hidden"
           style={{ top: pos.top, left: pos.left, width: pos.width }}
         >
           <div className="max-h-48 overflow-y-auto">

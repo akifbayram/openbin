@@ -5,9 +5,10 @@ interface LoadMoreSentinelProps {
   hasMore: boolean;
   isLoadingMore: boolean;
   onLoadMore: () => void;
+  skeleton?: React.ReactNode;
 }
 
-export function LoadMoreSentinel({ hasMore, isLoadingMore, onLoadMore }: LoadMoreSentinelProps) {
+export function LoadMoreSentinel({ hasMore, isLoadingMore, onLoadMore, skeleton }: LoadMoreSentinelProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,13 +26,13 @@ export function LoadMoreSentinel({ hasMore, isLoadingMore, onLoadMore }: LoadMor
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasMore, onLoadMore]);
+  }, [hasMore, isLoadingMore, onLoadMore]);
 
   if (!hasMore && !isLoadingMore) return null;
 
   return (
     <div ref={sentinelRef}>
-      {isLoadingMore && (
+      {isLoadingMore && (skeleton ?? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-3">
@@ -41,7 +42,7 @@ export function LoadMoreSentinel({ hasMore, isLoadingMore, onLoadMore }: LoadMor
             </div>
           ))}
         </div>
-      )}
+      ))}
     </div>
   );
 }

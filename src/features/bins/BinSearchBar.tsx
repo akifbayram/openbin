@@ -20,6 +20,7 @@ interface BinSearchBarProps {
   hasBadges: boolean;
   onOpenFilter: () => void;
   t: Terminology;
+  viewToggle?: React.ReactNode;
 }
 
 export function BinSearchBar({
@@ -34,6 +35,7 @@ export function BinSearchBar({
   hasBadges,
   onOpenFilter,
   t,
+  viewToggle,
 }: BinSearchBarProps) {
   return (
     <div className="flex items-center gap-2.5">
@@ -116,6 +118,7 @@ export function BinSearchBar({
           </button>
         )}
       </div>
+      {viewToggle}
       <Button
         variant="secondary"
         size="icon"

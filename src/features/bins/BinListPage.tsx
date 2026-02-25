@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Plus,
   PackageOpen,
@@ -7,11 +7,9 @@ import {
   ScanLine,
 } from 'lucide-react';
 
-const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
@@ -21,19 +19,18 @@ import { useBinSearchParams } from './useBinSearchParams';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 
 import { BinCard } from './BinCard';
-import { BinCreateDialog } from './BinCreateDialog';
-import { BinFilterDialog } from './BinFilterDialog';
+import { BinCompactCard } from './BinCompactCard';
+import { BinTableView } from './BinTableView';
 import { BinSearchBar } from './BinSearchBar';
-import { BulkTagDialog } from './BulkTagDialog';
-import { BulkAreaDialog } from './BulkAreaDialog';
-import { BulkAppearanceDialog } from './BulkAppearanceDialog';
-import { BulkVisibilityDialog } from './BulkVisibilityDialog';
-import { BulkLocationDialog } from './BulkLocationDialog';
+import { ViewModeToggle } from './ViewModeToggle';
+import { useViewMode } from './useViewMode';
+import { usePageSize } from './usePageSize';
 import { BulkActionBar } from './BulkActionBar';
-import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
+import { Pagination } from '@/components/ui/pagination';
 import { Crossfade } from '@/components/ui/crossfade';
+import { BinListDialogs } from './BinListDialogs';
+import { BinListSkeleton } from './BinListSkeleton';
 
-import { SaveViewDialog } from './SaveViewDialog';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useTerminology } from '@/lib/terminology';
@@ -46,7 +43,7 @@ import { PageHeader } from '@/components/ui/page-header';
 export function BinListPage() {
   const t = useTerminology();
   const location = useLocation();
-  const { search, setSearch, debouncedSearch, sort, setSort, filters, setFilters, clearAll } = useBinSearchParams();
+  const { search, setSearch, debouncedSearch, sort, setSort, filters, setFilters, page, setPage, clearAll } = useBinSearchParams();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -62,7 +59,9 @@ export function BinListPage() {
 
   const { activeLocationId } = useAuth();
   const { isAdmin } = usePermissions();
-  const { bins, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedBinList(debouncedSearch, sort, filters);
+  const resetPage = useCallback(() => setPage(1), [setPage]);
+  const { pageSize, setPageSize, pageSizeOptions } = usePageSize(resetPage);
+  const { bins, totalCount, totalPages, isLoading } = usePaginatedBinList(debouncedSearch, sort, filters, page, pageSize, setPage);
   const allTags = useAllTags();
   const activeCount = countActiveFilters(filters);
   const { areas } = useAreaList(activeLocationId);
@@ -72,6 +71,7 @@ export function BinListPage() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const getTagStyle = useTagStyle();
+  const { viewMode, setViewMode } = useViewMode();
   const hasBadges = activeCount > 0 || !!filters.needsOrganizing;
 
   const bulk = useBulkDialogs();
@@ -164,6 +164,7 @@ export function BinListPage() {
           hasBadges={hasBadges}
           onOpenFilter={() => setFilterOpen(true)}
           t={t}
+          viewToggle={<ViewModeToggle value={viewMode} onChange={setViewMode} />}
         />
       )}
 
@@ -181,20 +182,10 @@ export function BinListPage() {
         </EmptyState>
       ) : (
         <>
-          {/* Bin grid */}
+          {/* Bin views */}
           <Crossfade
             isLoading={isLoading && bins.length === 0}
-            skeleton={
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-3">
-                    <Skeleton className="h-5 w-3/4" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                ))}
-              </div>
-            }
+            skeleton={<BinListSkeleton viewMode={viewMode} />}
           >
           {bins.length === 0 ? (
             <EmptyState
@@ -209,9 +200,43 @@ export function BinListPage() {
                 </Button>
               )}
             </EmptyState>
+          ) : viewMode === 'compact' ? (
+            <div className={cn(selectable && "pb-16")}>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {bins.map((bin, index) => (
+                  <BinCompactCard
+                    key={bin.id}
+                    bin={bin}
+                    index={index}
+                    onTagClick={handleTagClick}
+                    selectable={selectable}
+                    selected={selectedIds.has(bin.id)}
+                    onSelect={toggleSelect}
+                    searchQuery={debouncedSearch}
+                    onPinToggle={handlePinToggle}
+                  />
+                ))}
+              </div>
+              <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalCount={totalCount} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={setPageSize} itemLabel={t.bins} />
+            </div>
+          ) : viewMode === 'table' ? (
+            <div className={cn(selectable && "pb-16")}>
+              <BinTableView
+                bins={bins}
+                sort={sort}
+                onSortChange={setSort}
+                selectable={selectable}
+                selectedIds={selectedIds}
+                onSelect={toggleSelect}
+                searchQuery={debouncedSearch}
+                onTagClick={handleTagClick}
+                onPinToggle={handlePinToggle}
+              />
+              <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalCount={totalCount} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={setPageSize} itemLabel={t.bins} />
+            </div>
           ) : (
-            <>
-              <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4", selectable && "pb-16")}>
+            <div className={cn(selectable && "pb-16")}>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {bins.map((bin, index) => (
                   <BinCard
                     key={bin.id}
@@ -226,71 +251,28 @@ export function BinListPage() {
                   />
                 ))}
               </div>
-              <LoadMoreSentinel hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
-            </>
+              <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalCount={totalCount} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={setPageSize} itemLabel={t.bins} />
+            </div>
           )}
           </Crossfade>
         </>
       )}
 
-      <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} allTags={allTags} />
-      <BinFilterDialog
-        open={filterOpen}
-        onOpenChange={setFilterOpen}
-        filters={filters}
-        onFiltersChange={setFilters}
-        availableTags={allTags}
-        areas={areas}
-        sort={sort}
-        onSortChange={setSort}
-        searchQuery={search}
-        onSaveView={() => setSaveViewOpen(true)}
-      />
-      <BulkTagDialog
-        open={bulk.isOpen('tag')}
-        onOpenChange={(v) => v ? bulk.open('tag') : bulk.close()}
-        binIds={[...selectedIds]}
-        onDone={clearSelection}
+      <BinListDialogs
+        createOpen={createOpen} setCreateOpen={setCreateOpen}
+        filterOpen={filterOpen} setFilterOpen={setFilterOpen}
+        saveViewOpen={saveViewOpen} setSaveViewOpen={setSaveViewOpen}
+        commandOpen={commandOpen} setCommandOpen={setCommandOpen}
+        aiEnabled={aiEnabled}
         allTags={allTags}
+        areas={areas}
+        filters={filters} setFilters={setFilters}
+        sort={sort} setSort={setSort}
+        search={search}
+        bulk={bulk}
+        selectedIds={selectedIds}
+        clearSelection={clearSelection}
       />
-      <BulkAreaDialog
-        open={bulk.isOpen('area')}
-        onOpenChange={(v) => v ? bulk.open('area') : bulk.close()}
-        binIds={[...selectedIds]}
-        onDone={clearSelection}
-      />
-      <BulkAppearanceDialog
-        open={bulk.isOpen('appearance')}
-        onOpenChange={(v) => v ? bulk.open('appearance') : bulk.close()}
-        binIds={[...selectedIds]}
-        onDone={clearSelection}
-      />
-      <BulkVisibilityDialog
-        open={bulk.isOpen('visibility')}
-        onOpenChange={(v) => v ? bulk.open('visibility') : bulk.close()}
-        binIds={[...selectedIds]}
-        onDone={clearSelection}
-      />
-      <BulkLocationDialog
-        open={bulk.isOpen('location')}
-        onOpenChange={(v) => v ? bulk.open('location') : bulk.close()}
-        binIds={[...selectedIds]}
-        onDone={clearSelection}
-      />
-
-      <SaveViewDialog
-        open={saveViewOpen}
-        onOpenChange={setSaveViewOpen}
-        searchQuery={search}
-        sort={sort}
-        filters={filters}
-      />
-
-      {aiEnabled && (
-        <Suspense fallback={null}>
-          {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
-        </Suspense>
-      )}
 
       {selectable && (
         <BulkActionBar

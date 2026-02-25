@@ -3,7 +3,7 @@ import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Events, notify, useRefreshOn } from '@/lib/eventBus';
 import { useListData } from '@/lib/useListData';
-import { usePaginatedList } from '@/lib/usePaginatedList';
+import { usePagedList } from '@/lib/usePagedList';
 import type { Bin, BinItem, BinVisibility } from '@/types';
 import { getHueRange } from '@/lib/colorPalette';
 
@@ -153,7 +153,9 @@ export function usePaginatedBinList(
   searchQuery?: string,
   sort: SortOption = 'updated',
   filters?: BinFilters,
-  pageSize = 40,
+  page = 1,
+  pageSize = 24,
+  onPageChange: (page: number) => void = () => {},
 ) {
   const { activeLocationId, token } = useAuth();
 
@@ -161,10 +163,10 @@ export function usePaginatedBinList(
     ? `/api/bins?location_id=${encodeURIComponent(activeLocationId)}${buildFilterParams(searchQuery, sort, filters)}`
     : null;
 
-  const { items, totalCount, isLoading, isLoadingMore, hasMore, error, loadMore } =
-    usePaginatedList<Bin>(basePath, [Events.BINS], pageSize);
+  const { items, totalCount, totalPages, isLoading, error, goToPage } =
+    usePagedList<Bin>(basePath, [Events.BINS], page, pageSize, onPageChange);
 
-  return { bins: items, totalCount, isLoading, isLoadingMore, hasMore, error, loadMore };
+  return { bins: items, totalCount, page, totalPages, isLoading, error, goToPage };
 }
 
 export function useBin(id: string | undefined) {

@@ -121,7 +121,6 @@ function renderGradientProps(cardStyle: CardStyle, colorPreset: ColorPreset | un
     className: '',
     style: {
       background: `linear-gradient(135deg, ${startColor}, ${endColor})`,
-      borderRadius: 'var(--radius-lg)',
     },
     mutedColor: theme === 'dark' ? MUTED_DARK : MUTED_LIGHT,
     isPhotoVariant: false,
@@ -152,7 +151,6 @@ function renderPhotoProps(): CardRenderProps {
   return {
     className: '',
     style: {
-      borderRadius: 'var(--radius-lg)',
       position: 'relative',
       overflow: 'hidden',
     },

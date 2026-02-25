@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDebounce } from '@/lib/useDebounce';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
@@ -30,6 +30,13 @@ function parseFiltersFromParams(params: URLSearchParams): BinFilters {
   };
 }
 
+function parsePageFromParams(params: URLSearchParams): number {
+  const raw = params.get('page');
+  if (!raw) return 1;
+  const n = Number.parseInt(raw, 10);
+  return Number.isNaN(n) || n < 1 ? 1 : n;
+}
+
 export function buildViewSearchParams(view: SavedView): string {
   const params = new URLSearchParams();
   if (view.searchQuery.trim()) params.set('q', view.searchQuery.trim());
@@ -55,6 +62,25 @@ export function useBinSearchParams() {
 
   const [filters, _setFilters] = useState<BinFilters>(() => parseFiltersFromParams(searchParams));
 
+  const [page, _setPage] = useState(() => parsePageFromParams(searchParams));
+
+  // Track previous search/sort/filters to reset page on change
+  const prevDepsRef = useRef({ debouncedSearch, sort, filters });
+
+  useEffect(() => {
+    const prev = prevDepsRef.current;
+    const changed =
+      prev.debouncedSearch !== debouncedSearch ||
+      prev.sort !== sort ||
+      prev.filters !== filters;
+
+    prevDepsRef.current = { debouncedSearch, sort, filters };
+
+    if (changed) {
+      _setPage(1);
+    }
+  }, [debouncedSearch, sort, filters]);
+
   const setSort = useCallback((value: SortOption | ((prev: SortOption) => SortOption)) => {
     _setSort((prev) => {
       const next = typeof value === 'function' ? value(prev) : value;
@@ -67,9 +93,15 @@ export function useBinSearchParams() {
     _setFilters(value);
   }, []);
 
+  const setPage = useCallback((value: number) => {
+    _setPage(value);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   const clearAll = useCallback(() => {
     setSearch('');
     _setFilters(EMPTY_FILTERS);
+    _setPage(1);
   }, []);
 
   // Sync state → URL (replace, no history push)
@@ -88,8 +120,10 @@ export function useBinSearchParams() {
     if (filters.hasNotes) params.set('has_notes', 'true');
     if (filters.needsOrganizing) params.set('needs_organizing', 'true');
 
+    if (page > 1) params.set('page', String(page));
+
     setSearchParams(params, { replace: true });
-  }, [debouncedSearch, sort, filters, setSearchParams]);
+  }, [debouncedSearch, sort, filters, page, setSearchParams]);
 
   // Handle browser back/forward
   useEffect(() => {
@@ -98,10 +132,11 @@ export function useBinSearchParams() {
       setSearch(params.get('q') || '');
       _setSort(parseSortFromParams(params));
       _setFilters(parseFiltersFromParams(params));
+      _setPage(parsePageFromParams(params));
     }
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  return { search, setSearch, debouncedSearch, sort, setSort, filters, setFilters, clearAll };
+  return { search, setSearch, debouncedSearch, sort, setSort, filters, setFilters, page, setPage, clearAll };
 }

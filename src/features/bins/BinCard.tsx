@@ -1,16 +1,15 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Check, Lock, Pin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
-import { cn, haptic } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { resolveIcon } from '@/lib/iconMap';
-import { useLongPress } from '@/lib/useLongPress';
 import { useTheme } from '@/lib/theme';
-import { useTerminology } from '@/lib/terminology';
 import { useTagStyle } from '@/features/tags/useTagStyle';
-import { getCardRenderProps, parseCardStyle } from '@/lib/cardStyle';
 import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
+import { computeBinCardStyles } from './binCardStyles';
+import { useBinCardInteraction } from './useBinCardInteraction';
+import { areCommonBinCardPropsEqual } from './binMemoUtils';
 import type { Bin } from '@/types';
 
 interface BinCardProps {
@@ -25,42 +24,27 @@ interface BinCardProps {
 }
 
 export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick, selectable, selected, onSelect, searchQuery = '', onPinToggle }: BinCardProps) {
-  const navigate = useNavigate();
-  const loc = useLocation();
   const { theme } = useTheme();
-  const t = useTerminology();
   const getTagStyle = useTagStyle();
-  const backPath = loc.pathname + loc.search;
-  const backLabel = loc.pathname === '/' ? 'Home' : t.Bins;
   const BinIcon = resolveIcon(bin.icon);
 
-  const renderProps = getCardRenderProps(bin.color, bin.card_style, theme);
-  const cardStyle = parseCardStyle(bin.card_style);
-  const isPhoto = renderProps.isPhotoVariant;
-  const coverPhotoId = cardStyle?.coverPhotoId;
-  const { mutedColor } = renderProps;
+  const { renderProps, isPhoto, coverPhotoId, secondaryStyle, secondaryBorderStyle, iconStyle, photoTextStyle } =
+    computeBinCardStyles(bin.color, bin.card_style, theme);
 
   const [pinPulseKey, setPinPulseKey] = useState(0);
 
-  // Precomputed style variables for photo/color variants
-  const secondaryStyle: React.CSSProperties | undefined = isPhoto
-    ? { color: 'rgba(255,255,255,0.8)', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }
-    : mutedColor ? { color: mutedColor } : undefined;
-  const secondaryBorderStyle: React.CSSProperties | undefined = isPhoto
-    ? { borderColor: 'rgba(255,255,255,0.7)' }
-    : mutedColor ? { borderColor: mutedColor } : undefined;
-  const iconStyle: React.CSSProperties | undefined = isPhoto
-    ? { color: 'rgba(255,255,255,0.8)' }
-    : mutedColor ? { color: mutedColor } : undefined;
+  const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect });
 
-  const handleLongPress = useCallback(() => {
-    if (!selectable) {
-      haptic();
-      onSelect?.(bin.id, index, false);
+  // BinCard has extra shift+Enter logic for selection — override handleKeyDown
+  function handleKeyDownWithShift(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        onSelect?.(bin.id, index, false);
+      } else {
+        handleKeyDown(e);
+      }
     }
-  }, [selectable, onSelect, bin.id, index]);
-
-  const { onTouchStart, onTouchEnd, onTouchMove, onContextMenu, didLongPress } = useLongPress(handleLongPress);
+  }
 
   // Tag overflow: measure which tags fit in one line, show +N for the rest
   const tagsRef = useRef<HTMLDivElement>(null);
@@ -114,38 +98,10 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   const hiddenTagCount = bin.tags.length - visibleTagCount;
   const displayedTags = hiddenTagCount > 0 ? bin.tags.slice(0, visibleTagCount) : bin.tags;
 
-  function handleClick(e: React.MouseEvent) {
-    if (didLongPress.current) return;
-    if (selectable) {
-      onSelect?.(bin.id, index, e.shiftKey);
-    } else {
-      navigate(`/bin/${bin.id}`, { state: { backLabel, backPath } });
-    }
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') {
-      if (e.shiftKey) {
-        onSelect?.(bin.id, index, false);
-      } else {
-        if (selectable) {
-          onSelect?.(bin.id, index, false);
-        } else {
-          navigate(`/bin/${bin.id}`, { state: { backLabel, backPath } });
-        }
-      }
-    }
-  }
-
   function handleCheckboxClick(e: React.MouseEvent) {
     e.stopPropagation();
     onSelect?.(bin.id, index, e.shiftKey);
   }
-
-  // Photo text styles
-  const photoTextStyle: React.CSSProperties | undefined = isPhoto && coverPhotoId
-    ? { color: 'white', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }
-    : undefined;
 
   const checkbox = (
     <div
@@ -237,7 +193,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
             'shrink-0 mt-0.5 rounded-full transition-all',
             bin.is_pinned
               ? 'text-[var(--accent)]'
-              : 'text-[var(--text-tertiary)] dark:text-[var(--text-secondary)] opacity-0 group-hover:opacity-100'
+              : 'text-[var(--text-secondary)] opacity-0 group-hover:opacity-100'
           )}
           style={isPhoto && bin.is_pinned ? { color: 'white' } : undefined}
           aria-label={bin.is_pinned ? 'Unpin bin' : 'Pin bin'}
@@ -293,11 +249,11 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       )}
       style={{ ...renderProps.style, animationDelay: `${Math.min(index * 30, 300)}ms` }}
       onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-      onTouchMove={onTouchMove}
-      onContextMenu={onContextMenu}
+      onKeyDown={handleKeyDownWithShift}
+      onTouchStart={longPress.onTouchStart}
+      onTouchEnd={longPress.onTouchEnd}
+      onTouchMove={longPress.onTouchMove}
+      onContextMenu={longPress.onContextMenu}
     >
       {renderProps.stripeBar && (
         <div
@@ -335,24 +291,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   );
 }, (prev, next) => {
   return (
-    prev.bin.id === next.bin.id &&
-    prev.bin.name === next.bin.name &&
-    prev.bin.area_id === next.bin.area_id &&
-    prev.bin.area_name === next.bin.area_name &&
-    prev.bin.items.length === next.bin.items.length &&
-    prev.bin.items.every((item, i) => item.id === next.bin.items[i].id && item.name === next.bin.items[i].name) &&
-    prev.bin.icon === next.bin.icon &&
-    prev.bin.color === next.bin.color &&
-    prev.bin.card_style === next.bin.card_style &&
-    prev.bin.updated_at === next.bin.updated_at &&
-    prev.bin.visibility === next.bin.visibility &&
-    prev.bin.is_pinned === next.bin.is_pinned &&
-    prev.selectable === next.selectable &&
-    prev.selected === next.selected &&
-    prev.index === next.index &&
-    prev.onTagClick === next.onTagClick &&
-    prev.onSelect === next.onSelect &&
-    prev.onPinToggle === next.onPinToggle &&
-    prev.searchQuery === next.searchQuery
+    areCommonBinCardPropsEqual(prev, next) &&
+    prev.onTagClick === next.onTagClick
   );
 });
