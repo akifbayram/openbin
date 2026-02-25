@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ScanLine, MapPin, ChevronRight, Plus, Inbox, Sparkles, Search } from 'lucide-react';
+import { ScanLine, MapPin, ChevronRight, Plus, Inbox, Sparkles } from 'lucide-react';
 
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +20,7 @@ import { useDashboard } from './useDashboard';
 import { BinCard } from '@/features/bins/BinCard';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 import { PageHeader } from '@/components/ui/page-header';
+import { SearchInput } from '@/components/ui/search-input';
 
 function useAnimatedNumber(target: number, duration = 400) {
   const [display, setDisplay] = useState(target);
@@ -190,16 +191,13 @@ export function DashboardPage() {
       />
 
       {/* Search */}
-      <div className="flex flex-1 min-w-0 items-center gap-1.5 rounded-[var(--radius-full)] bg-[var(--bg-input)] px-3.5 min-h-10 py-1.5 focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:shadow-[0_0_0_4px_var(--accent-glow)] transition-all duration-200">
-        <Search className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
-        <input
-          data-shortcut-search
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={`Search ${t.bins}...`}
-          className="flex-1 min-w-[80px] bg-transparent text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none"
-        />
-      </div>
+      <SearchInput
+        data-shortcut-search
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder={`Search ${t.bins}...`}
+        containerClassName="flex-1"
+      />
 
       <Crossfade
         isLoading={isLoading}
