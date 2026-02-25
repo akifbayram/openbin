@@ -198,8 +198,15 @@ body {
 .animate-popover-enter {
   animation: popover-enter 150ms ease-out;
 }
+@keyframes popover-exit {
+  to { opacity: 0; transform: scale(0.95) translateY(-4px); }
+}
+.animate-popover-exit {
+  animation: popover-exit 120ms ease-in forwards;
+}
 @media (prefers-reduced-motion: reduce) {
-  .animate-popover-enter { animation: none; }
+  .animate-popover-enter,
+  .animate-popover-exit { animation: none; }
 }
 
 /* ─── Skeleton Shimmer ─── */

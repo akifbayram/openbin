@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Crossfade } from '@/components/ui/crossfade';
 import { useToast } from '@/components/ui/toast';
 import { LocationCreateDialog, LocationDeleteDialog, LocationJoinDialog, LocationRenameDialog } from '@/features/locations/LocationDialogs';
 import { LocationMembersDialog } from '@/features/locations/LocationMembersDialog';
@@ -148,128 +149,132 @@ export function AreasPage() {
         ) : undefined}
       />
 
-      {/* Loading state */}
-      {locationsLoading && (
-        <div className="flex flex-col gap-4">
-          {/* Meta line skeleton */}
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-12" />
-            <Skeleton className="h-4 w-1" />
-            <Skeleton className="h-4 w-20" />
-          </div>
-          {/* Area grid skeleton */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-2">
-                <Skeleton className="h-5 w-2/3" />
-                <Skeleton className="h-4 w-1/3" />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty state — no locations */}
-      {!locationsLoading && locations.length === 0 && (
-        <EmptyState
-          icon={MapPin}
-          title="No locations yet"
-          subtitle="Create a location or join one with an invite code"
-        >
-          <div className="flex gap-2.5">
-            <Button onClick={() => setJoinLocationOpen(true)} variant="outline" className="rounded-[var(--radius-full)]">
-              <LogIn className="h-4 w-4 mr-2" />
-              Join Location
-            </Button>
-            <Button onClick={() => setCreateLocationOpen(true)} className="rounded-[var(--radius-full)]">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Location
-            </Button>
-          </div>
-        </EmptyState>
-      )}
-
-      {/* Active location content */}
-      {!locationsLoading && activeLocation && (
-        <>
-          {/* Location tabs — only if 2+ locations */}
-          {locations.length >= 2 && (
-            <LocationTabs
-              locations={locations}
-              activeId={activeLocationId}
-              onSelect={setActiveLocationId}
-            />
-          )}
-
-          {/* Location meta line */}
-          <div className="flex items-center gap-2 text-[13px] text-[var(--text-tertiary)]">
-            {isAdmin ? (
-              <span className="inline-flex items-center gap-1">
-                <Shield className="h-3 w-3" />
-                Admin
-              </span>
-            ) : (
-              <span>Member</span>
-            )}
-            <span className="text-[var(--text-tertiary)] opacity-50">&middot;</span>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-              onClick={() => setMembersLocationId(activeLocation.id)}
-            >
-              <Users className="h-3 w-3" />
-              {memberCount} {memberCount !== 1 ? 'members' : 'member'}
-            </button>
-            <div className="flex-1" />
-            <LocationSettingsMenu
-              compact
-              isAdmin={isAdmin}
-              onRename={() => setRenameLocationId(activeLocation.id)}
-              onRetention={() => setRetentionLocationId(activeLocation.id)}
-              onDelete={() => setDeleteLocationId(activeLocation.id)}
-              onLeave={() => handleLeave(activeLocation.id)}
-            />
-          </div>
-
-          {/* Area grid */}
-          {areas.length === 0 && unassignedCount === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-12 text-[var(--text-tertiary)]">
-              <MapPinned className="h-10 w-10 opacity-40" />
-              <p className="text-[13px]">{`No ${t.areas} yet`}</p>
-              {isAdmin && (
-                <Button onClick={() => setCreateAreaOpen(true)} variant="outline" size="sm" className="rounded-[var(--radius-full)]">
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  {`Create ${t.Area}`}
-                </Button>
-              )}
+      <Crossfade
+        isLoading={locationsLoading}
+        skeleton={
+          <div className="flex flex-col gap-4">
+            {/* Meta line skeleton */}
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-4 w-1" />
+              <Skeleton className="h-4 w-20" />
             </div>
-          ) : (
+            {/* Area grid skeleton */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {areas.map((area) => (
-                <AreaCard
-                  key={area.id}
-                  id={area.id}
-                  name={area.name}
-                  binCount={area.bin_count}
-                  isAdmin={isAdmin}
-                  onNavigate={handleAreaClick}
-                  onRename={handleRenameArea}
-                  onDelete={handleDeleteAreaRequest}
-                />
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-2">
+                  <Skeleton className="h-5 w-2/3" />
+                  <Skeleton className="h-4 w-1/3" />
+                </div>
               ))}
-              {unassignedCount > 0 && (
-                <UnassignedAreaCard
-                  count={unassignedCount}
-                  onNavigate={handleUnassignedClick}
-                />
-              )}
-              {isAdmin && (
-                <CreateAreaCard onCreate={() => setCreateAreaOpen(true)} />
-              )}
             </div>
-          )}
-        </>
-      )}
+          </div>
+        }
+      >
+        {/* Empty state — no locations */}
+        {locations.length === 0 && (
+          <EmptyState
+            icon={MapPin}
+            title="No locations yet"
+            subtitle="Create a location or join one with an invite code"
+          >
+            <div className="flex gap-2.5">
+              <Button onClick={() => setJoinLocationOpen(true)} variant="outline" className="rounded-[var(--radius-full)]">
+                <LogIn className="h-4 w-4 mr-2" />
+                Join Location
+              </Button>
+              <Button onClick={() => setCreateLocationOpen(true)} className="rounded-[var(--radius-full)]">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Location
+              </Button>
+            </div>
+          </EmptyState>
+        )}
+
+        {/* Active location content */}
+        {activeLocation && (
+          <>
+            {/* Location tabs — only if 2+ locations */}
+            {locations.length >= 2 && (
+              <LocationTabs
+                locations={locations}
+                activeId={activeLocationId}
+                onSelect={setActiveLocationId}
+              />
+            )}
+
+            {/* Location meta line */}
+            <div className="flex items-center gap-2 text-[13px] text-[var(--text-tertiary)]">
+              {isAdmin ? (
+                <span className="inline-flex items-center gap-1">
+                  <Shield className="h-3 w-3" />
+                  Admin
+                </span>
+              ) : (
+                <span>Member</span>
+              )}
+              <span className="text-[var(--text-tertiary)] opacity-50">&middot;</span>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                onClick={() => setMembersLocationId(activeLocation.id)}
+              >
+                <Users className="h-3 w-3" />
+                {memberCount} {memberCount !== 1 ? 'members' : 'member'}
+              </button>
+              <div className="flex-1" />
+              <LocationSettingsMenu
+                compact
+                isAdmin={isAdmin}
+                onRename={() => setRenameLocationId(activeLocation.id)}
+                onRetention={() => setRetentionLocationId(activeLocation.id)}
+                onDelete={() => setDeleteLocationId(activeLocation.id)}
+                onLeave={() => handleLeave(activeLocation.id)}
+              />
+            </div>
+
+            {/* Area grid */}
+            {areas.length === 0 && unassignedCount === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-[var(--text-tertiary)]">
+                <MapPinned className="h-10 w-10 opacity-40" />
+                <p className="text-[13px]">{`No ${t.areas} yet`}</p>
+                {isAdmin && (
+                  <Button onClick={() => setCreateAreaOpen(true)} variant="outline" size="sm" className="rounded-[var(--radius-full)]">
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    {`Create ${t.Area}`}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {areas.map((area, index) => (
+                  <AreaCard
+                    key={area.id}
+                    id={area.id}
+                    name={area.name}
+                    binCount={area.bin_count}
+                    isAdmin={isAdmin}
+                    index={index}
+                    onNavigate={handleAreaClick}
+                    onRename={handleRenameArea}
+                    onDelete={handleDeleteAreaRequest}
+                  />
+                ))}
+                {unassignedCount > 0 && (
+                  <UnassignedAreaCard
+                    count={unassignedCount}
+                    index={areas.length}
+                    onNavigate={handleUnassignedClick}
+                  />
+                )}
+                {isAdmin && (
+                  <CreateAreaCard onCreate={() => setCreateAreaOpen(true)} />
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </Crossfade>
 
       {/* Create Area Dialog */}
       <Dialog open={createAreaOpen} onOpenChange={setCreateAreaOpen}>

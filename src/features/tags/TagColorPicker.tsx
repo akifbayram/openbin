@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import { Palette } from 'lucide-react';
 import { resolveColor, parseColorKey, buildColorKey, hslToHex, SHADE_COUNT } from '@/lib/colorPalette';
 import { useClickOutside } from '@/lib/useClickOutside';
+import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
 
 interface TagColorPickerProps {
@@ -15,10 +16,10 @@ function getShadePreview(hue: number | 'neutral', shade: number): string {
 }
 
 export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerProps) {
-  const [open, setOpen] = useState(false);
+  const { visible, animating, close, toggle } = usePopover();
   const ref = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
-  useClickOutside(ref, () => setOpen(false));
+  useClickOutside(ref, close);
 
   const parsed = currentColor ? parseColorKey(currentColor) : null;
   const isNeutral = parsed?.hue === 'neutral';
@@ -54,7 +55,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          setOpen(!open);
+          toggle();
         }}
         className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-[var(--bg-active)] transition-colors shrink-0"
         aria-label="Pick tag color"
@@ -69,8 +70,8 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
         )}
       </button>
 
-      {open && (
-        <div className="animate-popover-enter absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 shadow-lg min-w-[180px] space-y-2">
+      {visible && (
+        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 shadow-lg min-w-[180px] space-y-2`}>
           {/* None + Gray buttons */}
           <div className="flex gap-1.5">
             <button
@@ -78,7 +79,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               onClick={(e) => {
                 e.stopPropagation();
                 onColorChange('');
-                setOpen(false);
+                close();
               }}
               className={cn(
                 'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all',

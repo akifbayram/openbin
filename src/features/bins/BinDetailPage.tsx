@@ -282,7 +282,7 @@ export function BinDetailPage() {
           />
         </button>
         {photosExpanded && (
-          <div className="pb-4">
+          <div className="pb-4 animate-fade-in-up">
             <PhotoGallery binId={bin.id} variant="inline" />
           </div>
         )}
@@ -540,7 +540,7 @@ export function BinDetailPage() {
                 />
               </button>
               {qrExpanded && (
-                <div className="pb-4 space-y-4">
+                <div className="pb-4 space-y-4 animate-fade-in-up">
                   <div className="flex flex-col items-center">
                     <QRCodeDisplay binId={bin.id} size={160} />
                   </div>

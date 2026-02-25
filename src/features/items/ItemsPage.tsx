@@ -7,6 +7,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
+import { Crossfade } from '@/components/ui/crossfade';
 import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePaginatedItemList } from './useItems';
@@ -54,52 +55,59 @@ export function ItemsPage() {
         </div>
       )}
 
-      {isLoading ? (
-        <div className="flex flex-col gap-4">
-          <Skeleton className="h-10 w-full rounded-[var(--radius-full)]" />
-          <SkeletonList>
-            {() => (
-              <div className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">
-                <div className="flex-1 min-w-0 space-y-1.5">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
+      <Crossfade
+        isLoading={isLoading}
+        skeleton={
+          <div className="flex flex-col gap-4">
+            <Skeleton className="h-10 w-full rounded-[var(--radius-full)]" />
+            <SkeletonList>
+              {() => (
+                <div className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3">
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
                 </div>
-              </div>
-            )}
-          </SkeletonList>
-        </div>
-      ) : items.length === 0 ? (
-        <EmptyState
-          icon={ClipboardList}
-          title={search ? 'No items match your search' : 'No items yet'}
-          subtitle={search ? undefined : `Items added to ${t.bins} will appear here`}
-        />
-      ) : (
-        <div className="flex flex-col gap-1">
-          {items.map((entry) => (
-              <ListItem
-                key={entry.id}
-                interactive
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate(`/bin/${entry.bin_id}`, { state: { backLabel: 'Items', backPath: '/items' } })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') navigate(`/bin/${entry.bin_id}`, { state: { backLabel: 'Items', backPath: '/items' } });
-                }}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-medium text-[var(--text-primary)] truncate">
-                    {entry.name}
-                  </p>
-                  <span className="text-[13px] text-[var(--text-tertiary)] truncate mt-0.5 block">
-                    {entry.bin_name}
-                  </span>
-                </div>
-              </ListItem>
-            ))}
-          <LoadMoreSentinel hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
-        </div>
-      )}
+              )}
+            </SkeletonList>
+          </div>
+        }
+      >
+        {items.length === 0 ? (
+          <EmptyState
+            icon={ClipboardList}
+            title={search ? 'No items match your search' : 'No items yet'}
+            subtitle={search ? undefined : `Items added to ${t.bins} will appear here`}
+          />
+        ) : (
+          <div className="flex flex-col gap-1">
+            {items.map((entry, index) => (
+                <ListItem
+                  key={entry.id}
+                  interactive
+                  role="button"
+                  tabIndex={0}
+                  className="animate-stagger-in [@media(hover:hover)]:hover:shadow-[var(--shadow-elevated)] [@media(hover:hover)]:hover:-translate-y-0.5"
+                  style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
+                  onClick={() => navigate(`/bin/${entry.bin_id}`, { state: { backLabel: 'Items', backPath: '/items' } })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') navigate(`/bin/${entry.bin_id}`, { state: { backLabel: 'Items', backPath: '/items' } });
+                  }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] font-medium text-[var(--text-primary)] truncate">
+                      {entry.name}
+                    </p>
+                    <span className="text-[13px] text-[var(--text-tertiary)] truncate mt-0.5 block">
+                      {entry.bin_name}
+                    </span>
+                  </div>
+                </ListItem>
+              ))}
+            <LoadMoreSentinel hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore} />
+          </div>
+        )}
+      </Crossfade>
     </div>
   );
 }

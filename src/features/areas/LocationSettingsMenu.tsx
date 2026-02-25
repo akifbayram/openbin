@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { Settings, Pencil, Clock, Trash2, LogOut, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useClickOutside } from '@/lib/useClickOutside';
+import { usePopover } from '@/lib/usePopover';
 
 interface LocationSettingsMenuProps {
   isAdmin: boolean;
@@ -13,12 +14,12 @@ interface LocationSettingsMenuProps {
 }
 
 export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onDelete, onLeave, compact }: LocationSettingsMenuProps) {
-  const [open, setOpen] = useState(false);
+  const { visible, animating, isOpen, close, toggle } = usePopover();
   const menuRef = useRef<HTMLDivElement>(null);
-  useClickOutside(menuRef, () => setOpen(false));
+  useClickOutside(menuRef, close);
 
   function handleItem(action: () => void) {
-    setOpen(false);
+    close();
     action();
   }
 
@@ -44,7 +45,7 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onDelete,
       <Button
         variant="ghost"
         size={compact ? 'icon' : 'sm'}
-        onClick={() => setOpen(!open)}
+        onClick={toggle}
         className={compact
           ? 'h-7 w-7 rounded-full'
           : 'rounded-[var(--radius-full)] h-8 px-3'
@@ -55,12 +56,12 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onDelete,
         {!compact && (
           <>
             <span className="ml-1.5">Settings</span>
-            <ChevronRight className={`h-3.5 w-3.5 ml-1 transition-transform ${open ? 'rotate-90' : ''}`} />
+            <ChevronRight className={`h-3.5 w-3.5 ml-1 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
           </>
         )}
       </Button>
-      {open && (
-        <div className="animate-popover-enter absolute right-0 top-full mt-1.5 z-50 min-w-[180px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]">
+      {visible && (
+        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1.5 z-50 min-w-[180px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]`}>
           <button
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
             onClick={() => handleItem(onRename)}

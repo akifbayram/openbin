@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { Check, MoreHorizontal, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useClickOutside } from '@/lib/useClickOutside';
+import { usePopover } from '@/lib/usePopover';
 import { useTerminology } from '@/lib/terminology';
 import { AreaActionMenu } from './AreaActionMenu';
 import { useInlineEdit } from './useInlineEdit';
@@ -19,9 +20,9 @@ interface AreaRowProps {
 
 export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onDelete }: AreaRowProps) {
   const t = useTerminology();
-  const [actionsOpen, setActionsOpen] = useState(false);
+  const { visible, animating, close, toggle } = usePopover();
   const menuRef = useRef<HTMLDivElement>(null);
-  useClickOutside(menuRef, () => setActionsOpen(false));
+  useClickOutside(menuRef, close);
 
   const { editing, editValue, saving, startEdit: _startEdit, cancelEdit, setEditValue, handleSave, handleKeyDown } = useInlineEdit({
     currentName: name,
@@ -30,7 +31,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
 
   function startEdit() {
     _startEdit();
-    setActionsOpen(false);
+    close();
   }
 
   if (editing) {
@@ -85,16 +86,17 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
           <Button
             variant="ghost"
             size="icon"
-            onClick={(e) => { e.stopPropagation(); setActionsOpen(!actionsOpen); }}
+            onClick={(e) => { e.stopPropagation(); toggle(); }}
             className="h-7 w-7 rounded-full"
             aria-label="More actions"
           >
             <MoreHorizontal className="h-3.5 w-3.5" />
           </Button>
           <AreaActionMenu
-            open={actionsOpen}
+            visible={visible}
+            animating={animating}
             onRename={startEdit}
-            onDelete={() => { setActionsOpen(false); onDelete(id, name, binCount); }}
+            onDelete={() => { close(); onDelete(id, name, binCount); }}
           />
         </div>
       )}

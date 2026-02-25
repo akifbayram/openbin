@@ -120,7 +120,7 @@ function DialogContent({
             style={{
               ...getSheetPanelStyle(translateY, isDragging, isDismissing),
               opacity: isEntered ? 1 : isExiting ? 0 : 0,
-              transform: `${getSheetPanelStyle(translateY, isDragging, isDismissing)?.transform ?? ''} translateY(${isEntered ? '0px' : '8px'})`.trim(),
+              transform: `${getSheetPanelStyle(translateY, isDragging, isDismissing)?.transform ?? ''} translateY(${isEntered ? '0px' : isExiting ? '4px' : '8px'}) scale(${isEntered ? 1 : isExiting ? 0.98 : 0.97})`.trim(),
             }}
             {...handlers}
           >

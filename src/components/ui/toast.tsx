@@ -49,7 +49,9 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    requestAnimationFrame(() => setVisible(true));
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setVisible(true));
+    });
     const timer = setTimeout(() => {
       setVisible(false);
       setTimeout(() => onDismiss(toast.id), 300);
