@@ -22,15 +22,12 @@ declare global {
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   const header = req.headers.authorization;
   const cookieToken = req.cookies?.['openbin-access'] as string | undefined;
-  const queryToken = req.query.token as string | undefined;
 
   let token: string | undefined;
   if (header?.startsWith('Bearer ')) {
     token = header.slice(7);
   } else if (cookieToken) {
     token = cookieToken;
-  } else if (queryToken) {
-    token = queryToken;
   }
 
   if (!token) {
@@ -67,7 +64,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
 
   // JWT path
   try {
-    const payload = jwt.verify(token, config.jwtSecret) as AuthUser;
+    const payload = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] }) as AuthUser;
     req.user = { id: payload.id, username: payload.username };
     req.authMethod = 'jwt';
     next();

@@ -29,7 +29,9 @@ export function aiRouteHandler(
         res.status(422).json({ error: 'VALIDATION_ERROR', message: err.message });
         return;
       }
-      console.error(`AI ${action} error:`, err);
+      // Redact potentially sensitive fields (auth headers, API keys) from external provider errors
+      const safeErr = err instanceof Error ? { message: err.message, name: err.name } : '[non-Error thrown]';
+      console.error(`AI ${action} error:`, safeErr);
       res.status(500).json({ error: 'INTERNAL_ERROR', message: `Failed to ${action}` });
     }
   };

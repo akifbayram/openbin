@@ -24,6 +24,13 @@ jobs:
         run: npm ci
         working-directory: server
 
+      - name: Audit dependencies (client)
+        run: npm audit --audit-level=moderate
+
+      - name: Audit dependencies (server)
+        run: npm audit --audit-level=moderate
+        working-directory: server
+
       - name: Type check (client)
         run: npx tsc --noEmit
 
