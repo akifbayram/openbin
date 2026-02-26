@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronDown, Lock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -257,8 +256,8 @@ export function BinDetailPage() {
   const hasNotes = !!bin.notes;
   const hasTags = bin.tags.length > 0;
 
-  const ResolvedIcon = resolveIcon(bin.icon);
-  const colorPreset = resolveColor(bin.color);
+  const HeaderIcon = resolveIcon(edit.editing ? edit.icon : bin.icon);
+  const headerColorPreset = resolveColor(edit.editing ? edit.color : bin.color);
   const secondaryInfo = getSecondaryColorInfo(edit.cardStyle);
 
   // Photos collapsible — shared between edit and view modes
@@ -335,34 +334,54 @@ export function BinDetailPage() {
         onDelete={() => setDeleteOpen(true)}
       />
 
+      {/* Unified header — stable across edit/view modes */}
+      <div className="flex items-start gap-2.5">
+        <HeaderIcon className="h-7 w-7 text-[var(--text-secondary)] shrink-0 mt-0.5" />
+        {headerColorPreset && (
+          <span
+            className="h-3.5 w-3.5 rounded-full shrink-0 mt-2"
+            style={{ backgroundColor: headerColorPreset.dot }}
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          {edit.editing ? (
+            <input
+              id="edit-name"
+              value={edit.name}
+              onChange={(e) => edit.setName(e.target.value)}
+              autoFocus
+              className="w-full bg-transparent text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-tight border-b-2 border-b-transparent outline-none placeholder:text-[var(--text-tertiary)] p-0"
+              placeholder="Name..."
+            />
+          ) : (
+            <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-tight flex items-center gap-2 border-b-2 border-b-transparent">
+              {bin.name}
+              {bin.visibility === 'private' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-input)] px-2 py-0.5 text-[12px] font-medium text-[var(--text-tertiary)]">
+                  <Lock className="h-3 w-3" />
+                  Private
+                </span>
+              )}
+            </h1>
+          )}
+
+          {edit.editing ? (
+            <div className="mt-0.5">
+              <AreaPicker locationId={activeLocationId ?? undefined} value={edit.areaId} onChange={edit.setAreaId} />
+            </div>
+          ) : (
+            bin.area_name && (
+              <p className="text-[15px] text-[var(--text-secondary)] mt-0.5 truncate">
+                {bin.area_name}
+              </p>
+            )
+          )}
+        </div>
+      </div>
+
       {edit.editing ? (
         <div className="fade-in-fast contents">
           {photosSection}
-
-          {/* Identity — name, area, visibility */}
-          <Card>
-            <CardContent className="space-y-5 py-5">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Name</Label>
-                <Input
-                  id="edit-name"
-                  value={edit.name}
-                  onChange={(e) => edit.setName(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t.Area}</Label>
-                <AreaPicker locationId={activeLocationId ?? undefined} value={edit.areaId} onChange={edit.setAreaId} />
-              </div>
-              {canChangeVisibility(bin.created_by) && (
-                <div className="space-y-2">
-                  <Label>Visibility</Label>
-                  <VisibilityPicker value={edit.visibility} onChange={edit.setVisibility} />
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Items */}
           <Card>
@@ -424,31 +443,19 @@ export function BinDetailPage() {
               <TagInput tags={edit.tags} onChange={edit.setTags} suggestions={allTags} />
             </CardContent>
           </Card>
+
+          {/* Visibility */}
+          {canChangeVisibility(bin.created_by) && (
+            <Card>
+              <CardContent className="space-y-2 py-5">
+                <Label>Visibility</Label>
+                <VisibilityPicker value={edit.visibility} onChange={edit.setVisibility} />
+              </CardContent>
+            </Card>
+          )}
         </div>
       ) : (
         <div className="fade-in-fast contents">
-          {/* Title with location subtitle */}
-          <div className="flex items-start gap-2.5">
-            <ResolvedIcon className="h-7 w-7 text-[var(--text-secondary)] shrink-0 mt-0.5" />
-            {colorPreset && <span className="h-3.5 w-3.5 rounded-full shrink-0 mt-2" style={{ backgroundColor: colorPreset.dot }} />}
-            <div className="min-w-0">
-              <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-tight flex items-center gap-2">
-                {bin.name}
-                {bin.visibility === 'private' && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-secondary)] px-2 py-0.5 text-[12px] font-medium text-[var(--text-tertiary)]">
-                    <Lock className="h-3 w-3" />
-                    Private
-                  </span>
-                )}
-              </h1>
-              {bin.area_name && (
-                <p className="text-[15px] text-[var(--text-secondary)] mt-0.5 truncate">
-                  {bin.area_name}
-                </p>
-              )}
-            </div>
-          </div>
-
           {/* AI error */}
           {aiError && (
             <Card className="border-t-2 border-t-[var(--destructive)]">
