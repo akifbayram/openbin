@@ -349,7 +349,6 @@ export function BinDetailPage() {
               id="edit-name"
               value={edit.name}
               onChange={(e) => edit.setName(e.target.value)}
-              autoFocus
               className="w-full bg-transparent text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-tight border-b-2 border-b-transparent outline-none placeholder:text-[var(--text-tertiary)] p-0"
               placeholder="Name..."
             />
@@ -365,16 +364,10 @@ export function BinDetailPage() {
             </h1>
           )}
 
-          {edit.editing ? (
-            <div className="mt-0.5">
-              <AreaPicker locationId={activeLocationId ?? undefined} value={edit.areaId} onChange={edit.setAreaId} />
-            </div>
-          ) : (
-            bin.area_name && (
-              <p className="text-[15px] text-[var(--text-secondary)] mt-0.5 truncate">
-                {bin.area_name}
-              </p>
-            )
+          {!edit.editing && bin.area_name && (
+            <p className="text-[15px] text-[var(--text-secondary)] mt-0.5 truncate">
+              {bin.area_name}
+            </p>
           )}
         </div>
       </div>
@@ -396,6 +389,14 @@ export function BinDetailPage() {
                 binName={edit.name}
                 locationId={activeLocationId ?? undefined}
               />
+            </CardContent>
+          </Card>
+
+          {/* Area */}
+          <Card>
+            <CardContent className="space-y-2 py-5">
+              <Label>{t.Area}</Label>
+              <AreaPicker locationId={activeLocationId ?? undefined} value={edit.areaId} onChange={edit.setAreaId} />
             </CardContent>
           </Card>
 

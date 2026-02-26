@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { CheckCircle2, Tag, MapPin, Trash2, X, MoreHorizontal, Paintbrush, Eye, ArrowRightLeft, Pin, Copy, Clipboard, ClipboardPaste } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { cn } from '@/lib/utils';
 
@@ -52,52 +53,60 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
         {selectedCount} selected
       </span>
       {isAdmin && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)]"
-          onClick={onTag}
-          aria-label="Tag"
-        >
-          <Tag className="h-3.5 w-3.5 sm:mr-1.5" />
-          <span className="hidden sm:inline">Tag</span>
-        </Button>
+        <Tooltip content="Tag" side="top">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)]"
+            onClick={onTag}
+            aria-label="Tag"
+          >
+            <Tag className="h-3.5 w-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Tag</span>
+          </Button>
+        </Tooltip>
       )}
       {isAdmin && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)]"
-          onClick={onMove}
-          aria-label="Move"
-        >
-          <MapPin className="h-3.5 w-3.5 sm:mr-1.5" />
-          <span className="hidden sm:inline">Move</span>
-        </Button>
+        <Tooltip content="Move" side="top">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)]"
+            onClick={onMove}
+            aria-label="Move"
+          >
+            <MapPin className="h-3.5 w-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Move</span>
+          </Button>
+        </Tooltip>
       )}
       {isAdmin && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)] text-[var(--destructive)]"
-          onClick={onDelete}
-          aria-label="Delete"
-        >
-          <Trash2 className="h-3.5 w-3.5 sm:mr-1.5" />
-          <span className="hidden sm:inline">Delete</span>
-        </Button>
+        <Tooltip content="Delete" side="top">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)] text-[var(--destructive)]"
+            onClick={onDelete}
+            aria-label="Delete"
+          >
+            <Trash2 className="h-3.5 w-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Delete</span>
+          </Button>
+        </Tooltip>
       )}
       {isAdmin && (
         <div className="relative" ref={moreRef}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full"
-            onClick={() => setMoreOpen((o) => !o)}
-            aria-label="More actions"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
+          <Tooltip content="More actions" side="top">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => setMoreOpen((o) => !o)}
+              aria-label="More actions"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </Tooltip>
           {moreOpen && (
             <div className="absolute bottom-full mb-2 right-0 glass-heavy rounded-[var(--radius-md)] py-1 min-w-[180px] z-50 shadow-lg">
               <button
@@ -160,15 +169,17 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
           )}
         </div>
       )}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 rounded-full"
-        onClick={onClear}
-        aria-label="Clear selection"
-      >
-        <X className="h-4 w-4" />
-      </Button>
+      <Tooltip content="Clear selection" side="top">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-full"
+          onClick={onClear}
+          aria-label="Clear selection"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </Tooltip>
     </div>
     </div>
   );

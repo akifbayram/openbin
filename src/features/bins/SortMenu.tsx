@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { ArrowUpDown, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
@@ -26,18 +27,20 @@ export function SortMenu({ sort, onSortChange }: SortMenuProps) {
 
   return (
     <div ref={menuRef} className="relative">
-      <Button
-        variant="secondary"
-        size="icon"
-        onClick={toggle}
-        className="shrink-0 h-10 w-10 rounded-full relative"
-        aria-label={`Sort by ${sortLabels[sort]}`}
-      >
-        <ArrowUpDown className="h-4 w-4" />
-        {sort !== 'updated' && (
-          <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[var(--accent)]" />
-        )}
-      </Button>
+      <Tooltip content="Sort" side="bottom">
+        <Button
+          variant="secondary"
+          size="icon"
+          onClick={toggle}
+          className="shrink-0 h-10 w-10 rounded-full relative"
+          aria-label={`Sort by ${sortLabels[sort]}`}
+        >
+          <ArrowUpDown className="h-4 w-4" />
+          {sort !== 'updated' && (
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[var(--accent)]" />
+          )}
+        </Button>
+      </Tooltip>
       {visible && (
         <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg overflow-hidden z-20`}>
           {(Object.keys(sortLabels) as SortOption[]).map((key) => (

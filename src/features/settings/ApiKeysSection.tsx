@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Key, Plus, Trash2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -89,14 +90,16 @@ export function ApiKeysSection() {
         <CardContent>
           <div className="flex items-center justify-between">
             <Label>API Keys</Label>
-            <Button
-              onClick={() => setCreateOpen(true)}
-              size="icon"
-              className="h-8 w-8 rounded-full"
-              aria-label="Create API key"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+            <Tooltip content="Create API key" side="bottom">
+              <Button
+                onClick={() => setCreateOpen(true)}
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                aria-label="Create API key"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </Tooltip>
           </div>
           <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
             Use API keys for smart home integrations and headless access.
@@ -123,15 +126,17 @@ export function ApiKeysSection() {
                       {k.last_used_at ? ` \u00b7 Last used ${formatDate(k.last_used_at)}` : ''}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full h-8 w-8 text-[var(--destructive)] shrink-0"
-                    onClick={() => setRevokeId(k.id)}
-                    aria-label="Revoke API key"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  <Tooltip content="Revoke API key" side="bottom">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full h-8 w-8 text-[var(--destructive)] shrink-0"
+                      onClick={() => setRevokeId(k.id)}
+                      aria-label="Revoke API key"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </Tooltip>
                 </div>
               ))}
             </div>

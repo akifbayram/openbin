@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { X, Sparkles, Loader2, Check, ChevronLeft, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
 
 type InputState = 'input' | 'expanded' | 'processing' | 'preview';
@@ -206,24 +207,28 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
             className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0"
           />
           {input.trim() && (
-            <button
-              type="button"
-              onClick={addItem}
-              className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
-              aria-label="Add item"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
+            <Tooltip content="Add item">
+              <button
+                type="button"
+                onClick={addItem}
+                className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+                aria-label="Add item"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </Tooltip>
           )}
           {showSparkles && (
-            <button
-              type="button"
-              onClick={handleSparklesClick}
-              className="shrink-0 rounded-full p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
-              aria-label="AI extract items"
-            >
-              <Sparkles className="h-4 w-4" />
-            </button>
+            <Tooltip content="AI extract items">
+              <button
+                type="button"
+                onClick={handleSparklesClick}
+                className="shrink-0 rounded-full p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
+                aria-label="AI extract items"
+              >
+                <Sparkles className="h-4 w-4" />
+              </button>
+            </Tooltip>
           )}
         </div>
       )}

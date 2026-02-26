@@ -1,5 +1,6 @@
 import { useRef, useCallback } from 'react';
 import { Palette } from 'lucide-react';
+import { Tooltip } from '@/components/ui/tooltip';
 import { resolveColor, parseColorKey, buildColorKey, hslToHex, SHADE_COUNT } from '@/lib/colorPalette';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
@@ -51,24 +52,26 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          toggle();
-        }}
-        className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-[var(--bg-active)] transition-colors shrink-0"
-        aria-label="Pick tag color"
-      >
-        {currentPreset ? (
-          <span
-            className="h-4 w-4 rounded-full"
-            style={{ backgroundColor: currentPreset.bgCss }}
-          />
-        ) : (
-          <Palette className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-        )}
-      </button>
+      <Tooltip content="Pick tag color">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggle();
+          }}
+          className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-[var(--bg-active)] transition-colors shrink-0"
+          aria-label="Pick tag color"
+        >
+          {currentPreset ? (
+            <span
+              className="h-4 w-4 rounded-full"
+              style={{ backgroundColor: currentPreset.bgCss }}
+            />
+          ) : (
+            <Palette className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+          )}
+        </button>
+      </Tooltip>
 
       {visible && (
         <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 shadow-lg min-w-[180px] space-y-2`}>

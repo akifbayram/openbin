@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { MenuButton } from '@/components/ui/menu-button';
 import { cn } from '@/lib/utils';
 
@@ -19,15 +20,17 @@ export function PageHeader({ title, actions, back, className }: PageHeaderProps)
       <div className="flex items-center gap-2">
         <MenuButton />
         {back && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="rounded-full h-9 w-9 shrink-0"
-            aria-label="Go back"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
+          <Tooltip content="Go back" side="bottom">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="rounded-full h-9 w-9 shrink-0"
+              aria-label="Go back"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          </Tooltip>
         )}
         <h1 className="text-[28px] lg:text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
           {title}

@@ -9,6 +9,7 @@ import {
 
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
@@ -117,35 +118,41 @@ export function BinListPage() {
         actions={activeLocationId ? (
           <div className="flex items-center gap-2">
             <div className="flex items-center">
-              <Button
-                onClick={() => navigate('/scan')}
-                size="icon"
-                variant="ghost"
-                className="h-10 w-10 rounded-full"
-                aria-label="Scan QR code"
-              >
-                <ScanLine className="h-5 w-5" />
-              </Button>
-              {aiEnabled && (
+              <Tooltip content="Scan QR code" side="bottom">
                 <Button
-                  onClick={() => setCommandOpen(true)}
+                  onClick={() => navigate('/scan')}
                   size="icon"
                   variant="ghost"
                   className="h-10 w-10 rounded-full"
-                  aria-label="Ask AI"
+                  aria-label="Scan QR code"
                 >
-                  <Sparkles className="h-5 w-5" />
+                  <ScanLine className="h-5 w-5" />
                 </Button>
+              </Tooltip>
+              {aiEnabled && (
+                <Tooltip content="Ask AI" side="bottom">
+                  <Button
+                    onClick={() => setCommandOpen(true)}
+                    size="icon"
+                    variant="ghost"
+                    className="h-10 w-10 rounded-full"
+                    aria-label="Ask AI"
+                  >
+                    <Sparkles className="h-5 w-5" />
+                  </Button>
+                </Tooltip>
               )}
             </div>
-            <Button
-              onClick={() => setCreateOpen(true)}
-              size="icon"
-              className="h-10 w-10 rounded-full"
-              aria-label={`New ${t.bin}`}
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
+            <Tooltip content={`New ${t.bin}`} side="bottom">
+              <Button
+                onClick={() => setCreateOpen(true)}
+                size="icon"
+                className="h-10 w-10 rounded-full"
+                aria-label={`New ${t.bin}`}
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
+            </Tooltip>
           </div>
         ) : undefined}
       />

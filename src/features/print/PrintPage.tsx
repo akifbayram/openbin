@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Printer, CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical, Download, Search, AlignLeft, AlignCenter } from 'lucide-react';
 import { OptionGroup } from '@/components/ui/option-group';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -440,13 +441,15 @@ export function PrintPage() {
                             </span>
                           </div>
                         </button>
-                        <button
-                          className="shrink-0 p-2 mr-1 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                          onClick={() => handleDeletePreset(fmt.key)}
-                          aria-label={`Delete ${fmt.name}`}
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+                        <Tooltip content={`Delete ${fmt.name}`}>
+                          <button
+                            className="shrink-0 p-2 mr-1 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            onClick={() => handleDeletePreset(fmt.key)}
+                            aria-label={`Delete ${fmt.name}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </Tooltip>
                       </div>
                     ))}
                   </div>

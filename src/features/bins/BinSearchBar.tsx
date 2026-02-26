@@ -1,5 +1,6 @@
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { DismissibleBadge } from '@/components/ui/dismissible-badge';
 import { HUE_RANGES } from '@/lib/colorPalette';
@@ -119,20 +120,22 @@ export function BinSearchBar({
         )}
       </div>
       {viewToggle}
-      <Button
-        variant="secondary"
-        size="icon"
-        onClick={onOpenFilter}
-        className="shrink-0 h-10 w-10 rounded-full relative"
-        aria-label={`Filter ${t.bins}`}
-      >
-        <SlidersHorizontal className="h-4 w-4" />
-        {activeCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 rounded-full bg-[var(--accent)] text-[10px] font-bold text-white flex items-center justify-center px-1">
-            {activeCount}
-          </span>
-        )}
-      </Button>
+      <Tooltip content="Filter" side="bottom">
+        <Button
+          variant="secondary"
+          size="icon"
+          onClick={onOpenFilter}
+          className="shrink-0 h-10 w-10 rounded-full relative"
+          aria-label={`Filter ${t.bins}`}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          {activeCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 rounded-full bg-[var(--accent)] text-[10px] font-bold text-white flex items-center justify-center px-1">
+              {activeCount}
+            </span>
+          )}
+        </Button>
+      </Tooltip>
     </div>
   );
 }

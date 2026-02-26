@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { ChevronLeft, ChevronRight, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip } from '@/components/ui/tooltip';
 import { usePopover } from '@/lib/usePopover';
 import { useClickOutside } from '@/lib/useClickOutside';
 
@@ -111,20 +112,22 @@ export function Pagination({
       {showNav && (
         <div className="flex items-center gap-1">
           {/* Previous */}
-          <button
-            type="button"
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage <= 1}
-            aria-label="Previous page"
-            className={cn(
-              'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
-              currentPage <= 1
-                ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
-                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
-            )}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+          <Tooltip content="Previous page">
+            <button
+              type="button"
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+              aria-label="Previous page"
+              className={cn(
+                'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
+                currentPage <= 1
+                  ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
+              )}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </Tooltip>
 
           {/* Page numbers — full on md+, simplified on mobile */}
           <div className="hidden sm:flex items-center gap-1">
@@ -159,20 +162,22 @@ export function Pagination({
           </span>
 
           {/* Next */}
-          <button
-            type="button"
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-            aria-label="Next page"
-            className={cn(
-              'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
-              currentPage >= totalPages
-                ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
-                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
-            )}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          <Tooltip content="Next page">
+            <button
+              type="button"
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              aria-label="Next page"
+              className={cn(
+                'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
+                currentPage >= totalPages
+                  ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
+              )}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </Tooltip>
         </div>
       )}
 

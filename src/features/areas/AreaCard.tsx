@@ -1,6 +1,7 @@
 import { Check, MoreHorizontal, Plus, X } from 'lucide-react';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
@@ -58,25 +59,29 @@ export function AreaCard({ id, name, binCount, isAdmin, index = 0, onNavigate, o
           className="h-8 text-[14px]"
         />
         <div className="flex gap-1.5 justify-end">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSave}
-            disabled={!editValue.trim() || saving}
-            className="h-8 w-8 rounded-full shrink-0"
-            aria-label="Save"
-          >
-            <Check className="h-4 w-4 text-[var(--accent)]" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={cancelEdit}
-            className="h-8 w-8 rounded-full shrink-0"
-            aria-label="Cancel"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <Tooltip content="Save">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSave}
+              disabled={!editValue.trim() || saving}
+              className="h-8 w-8 rounded-full shrink-0"
+              aria-label="Save"
+            >
+              <Check className="h-4 w-4 text-[var(--accent)]" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Cancel">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={cancelEdit}
+              className="h-8 w-8 rounded-full shrink-0"
+              aria-label="Cancel"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </Tooltip>
         </div>
       </div>
     );
@@ -107,15 +112,17 @@ export function AreaCard({ id, name, binCount, isAdmin, index = 0, onNavigate, o
           className="absolute top-2.5 right-2.5"
           ref={menuRef}
         >
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => { e.stopPropagation(); toggle(); }}
-            className="h-9 w-9 rounded-full [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus:opacity-100 transition-opacity"
-            aria-label="More actions"
-          >
-            <MoreHorizontal className="h-3.5 w-3.5" />
-          </Button>
+          <Tooltip content="More actions" side="bottom">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => { e.stopPropagation(); toggle(); }}
+              className="h-9 w-9 rounded-full [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus:opacity-100 transition-opacity"
+              aria-label="More actions"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </Button>
+          </Tooltip>
           <AreaActionMenu
             visible={visible}
             animating={animating}

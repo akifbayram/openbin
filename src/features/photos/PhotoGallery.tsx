@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
@@ -63,15 +64,17 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
                 className="w-full h-full object-cover"
               />
             </button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleDelete(photo)}
-              className="absolute top-1 right-1 h-7 w-7 rounded-full bg-[var(--overlay-button)] text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
-              aria-label="Delete photo"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            <Tooltip content="Delete photo">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleDelete(photo)}
+                className="absolute top-1 right-1 h-7 w-7 rounded-full bg-[var(--overlay-button)] text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
+                aria-label="Delete photo"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </Tooltip>
           </div>
         ))}
         {/* Add photo button */}

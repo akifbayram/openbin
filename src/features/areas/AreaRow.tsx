@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Check, MoreHorizontal, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
 import { useTerminology } from '@/lib/terminology';
@@ -45,25 +46,29 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
           autoFocus
           className="h-8 text-[14px] flex-1"
         />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleSave}
-          disabled={!editValue.trim() || saving}
-          className="h-8 w-8 rounded-full shrink-0"
-          aria-label="Save"
-        >
-          <Check className="h-4 w-4 text-[var(--accent)]" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={cancelEdit}
-          className="h-8 w-8 rounded-full shrink-0"
-          aria-label="Cancel"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <Tooltip content="Save">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSave}
+            disabled={!editValue.trim() || saving}
+            className="h-8 w-8 rounded-full shrink-0"
+            aria-label="Save"
+          >
+            <Check className="h-4 w-4 text-[var(--accent)]" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Cancel">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={cancelEdit}
+            className="h-8 w-8 rounded-full shrink-0"
+            aria-label="Cancel"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </Tooltip>
       </div>
     );
   }
@@ -83,15 +88,17 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
       </span>
       {isAdmin && (
         <div className="relative" ref={menuRef}>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => { e.stopPropagation(); toggle(); }}
-            className="h-7 w-7 rounded-full"
-            aria-label="More actions"
-          >
-            <MoreHorizontal className="h-3.5 w-3.5" />
-          </Button>
+          <Tooltip content="More actions" side="bottom">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => { e.stopPropagation(); toggle(); }}
+              className="h-7 w-7 rounded-full"
+              aria-label="More actions"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </Button>
+          </Tooltip>
           <AreaActionMenu
             visible={visible}
             animating={animating}

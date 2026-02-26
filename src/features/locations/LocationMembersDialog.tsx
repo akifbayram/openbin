@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Copy, Check, UserMinus, Shield, RefreshCw, LogOut, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
@@ -106,26 +107,30 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
             <span className="flex-1 min-w-0 text-[14px] font-mono text-[var(--text-primary)] tracking-wider truncate">
               {location.invite_code}
             </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleCopyInvite}
-              className="h-8 w-8 rounded-full shrink-0"
-              aria-label="Copy invite code"
-            >
-              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-            </Button>
-            {isAdmin && (
+            <Tooltip content="Copy invite code" side="bottom">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleRegenerate}
-                disabled={regenerating}
+                onClick={handleCopyInvite}
                 className="h-8 w-8 rounded-full shrink-0"
-                aria-label="Regenerate invite code"
+                aria-label="Copy invite code"
               >
-                <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
+                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
               </Button>
+            </Tooltip>
+            {isAdmin && (
+              <Tooltip content="Regenerate invite code" side="bottom">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleRegenerate}
+                  disabled={regenerating}
+                  className="h-8 w-8 rounded-full shrink-0"
+                  aria-label="Regenerate invite code"
+                >
+                  <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
+                </Button>
+              </Tooltip>
             )}
           </div>
         )}
@@ -172,15 +177,17 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                     />
                   )}
                   {isAdmin && !isSelf && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-full text-[var(--destructive)] shrink-0"
-                      onClick={() => handleRemoveMember(member.user_id)}
-                      aria-label="Remove member"
-                    >
-                      <UserMinus className="h-3.5 w-3.5" />
-                    </Button>
+                    <Tooltip content="Remove member" side="bottom">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-full text-[var(--destructive)] shrink-0"
+                        onClick={() => handleRemoveMember(member.user_id)}
+                        aria-label="Remove member"
+                      >
+                        <UserMinus className="h-3.5 w-3.5" />
+                      </Button>
+                    </Tooltip>
                   )}
                 </div>
               );

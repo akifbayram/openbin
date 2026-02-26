@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface PhotoLightboxProps {
@@ -68,24 +69,28 @@ export function PhotoLightbox({ src, filename, onClose, onDelete }: PhotoLightbo
         )}
       >
         <div className="absolute top-2 right-4 flex gap-2 z-10">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onDelete}
-            aria-label="Delete photo"
-            className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
-          >
-            <Trash2 className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            aria-label="Close"
-            className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)]"
-          >
-            <X className="h-5 w-5" />
-          </Button>
+          <Tooltip content="Delete photo" side="bottom">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onDelete}
+              aria-label="Delete photo"
+              className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
+            >
+              <Trash2 className="h-5 w-5" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Close" side="bottom">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClose}
+              aria-label="Close"
+              className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)]"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </Tooltip>
         </div>
         <img
           src={src}

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -141,15 +142,17 @@ export function ProfilePage() {
                 displayName={user.displayName || user.username}
                 size="lg"
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingAvatar}
-                className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-[var(--accent)] text-white flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                aria-label="Change avatar"
-              >
-                <Camera className="h-4 w-4" />
-              </button>
+              <Tooltip content="Change avatar" side="bottom">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-[var(--accent)] text-white flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                  aria-label="Change avatar"
+                >
+                  <Camera className="h-4 w-4" />
+                </button>
+              </Tooltip>
             </div>
             {avatarSrc && (
               <button

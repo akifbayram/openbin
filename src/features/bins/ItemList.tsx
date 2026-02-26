@@ -3,6 +3,7 @@ import { X, ArrowUpDown } from 'lucide-react';
 import { removeItemFromBin, renameItem, reorderItems } from './useBins';
 import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { BinItem } from '@/types';
@@ -132,14 +133,16 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
 
         {/* Desktop delete button */}
         {!isEditing && (
-          <button
-            type="button"
-            onClick={onDelete}
-            className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
-            aria-label="Remove item"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          <Tooltip content="Remove item">
+            <button
+              type="button"
+              onClick={onDelete}
+              className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
+              aria-label="Remove item"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
         )}
       </div>
     </div>
