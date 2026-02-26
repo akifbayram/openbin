@@ -96,84 +96,88 @@ export function Pagination({
   pageSizeOptions,
   onPageSizeChange,
 }: PaginationProps) {
-  if (totalPages <= 1) return null;
-
   const pages = getPageNumbers(currentPage, totalPages);
+  const showNav = totalPages > 1;
 
   const showSummary = totalCount != null && pageSize != null;
   const rangeStart = showSummary ? (currentPage - 1) * pageSize + 1 : 0;
   const rangeEnd = showSummary ? Math.min(currentPage * pageSize, totalCount!) : 0;
+  const showFooter = showSummary || (pageSizeOptions && onPageSizeChange);
+
+  if (!showNav && !showFooter) return null;
 
   return (
     <nav aria-label="Pagination" className="flex flex-col items-center gap-2 pt-4 pb-2">
-      <div className="flex items-center gap-1">
-        {/* Previous */}
-        <button
-          type="button"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage <= 1}
-          aria-label="Previous page"
-          className={cn(
-            'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
-            currentPage <= 1
-              ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
-              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
-          )}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
+      {showNav && (
+        <div className="flex items-center gap-1">
+          {/* Previous */}
+          <button
+            type="button"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage <= 1}
+            aria-label="Previous page"
+            className={cn(
+              'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
+              currentPage <= 1
+                ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
+                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
+            )}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
 
-        {/* Page numbers — full on md+, simplified on mobile */}
-        <div className="hidden sm:flex items-center gap-1">
-          {pages.map((p, i) =>
-            p === 'ellipsis' ? (
-              <span key={`e${i}`} className="flex items-center justify-center h-9 w-9 text-sm text-[var(--text-muted)]">
-                &hellip;
-              </span>
-            ) : (
-              <button
-                key={p}
-                type="button"
-                onClick={() => onPageChange(p)}
-                aria-label={`Page ${p}`}
-                aria-current={p === currentPage ? 'page' : undefined}
-                className={cn(
-                  'flex items-center justify-center h-9 min-w-9 px-2 rounded-[var(--radius-md)] text-sm font-medium transition-colors',
-                  p === currentPage
-                    ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)] font-semibold'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
-                )}
-              >
-                {p}
-              </button>
-            ),
-          )}
+          {/* Page numbers — full on md+, simplified on mobile */}
+          <div className="hidden sm:flex items-center gap-1">
+            {pages.map((p, i) =>
+              p === 'ellipsis' ? (
+                <span key={`e${i}`} className="flex items-center justify-center h-9 w-9 text-sm text-[var(--text-muted)]">
+                  &hellip;
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => onPageChange(p)}
+                  aria-label={`Page ${p}`}
+                  aria-current={p === currentPage ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center justify-center h-9 min-w-9 px-2 rounded-[var(--radius-md)] text-sm font-medium transition-colors',
+                    p === currentPage
+                      ? 'bg-[var(--bg-elevated)] dark:bg-[var(--bg-active)] shadow-sm text-[var(--text-primary)] font-semibold'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
+                  )}
+                >
+                  {p}
+                </button>
+              ),
+            )}
+          </div>
+
+          {/* Mobile: page X of Y */}
+          <span className="flex sm:hidden items-center px-3 text-sm text-[var(--text-secondary)]">
+            {currentPage} / {totalPages}
+          </span>
+
+          {/* Next */}
+          <button
+            type="button"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+            aria-label="Next page"
+            className={cn(
+              'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
+              currentPage >= totalPages
+                ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
+                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
+            )}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
-
-        {/* Mobile: page X of Y */}
-        <span className="flex sm:hidden items-center px-3 text-sm text-[var(--text-secondary)]">
-          {currentPage} / {totalPages}
-        </span>
-
-        {/* Next */}
-        <button
-          type="button"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage >= totalPages}
-          aria-label="Next page"
-          className={cn(
-            'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
-            currentPage >= totalPages
-              ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
-              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
-          )}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
+      )}
 
       {/* Summary + page size */}
-      {(showSummary || (pageSizeOptions && onPageSizeChange)) && (
+      {showFooter && (
         <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
           {showSummary && (
             <span>

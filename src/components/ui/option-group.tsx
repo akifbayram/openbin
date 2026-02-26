@@ -100,7 +100,7 @@ export function OptionGroup<K extends string>({
       {indicator && (
         <div
           aria-hidden
-          className={cn('absolute top-1 bottom-1 bg-[var(--bg-elevated)] shadow-sm', segmentRadius)}
+          className={cn('absolute top-1 bottom-1 bg-[var(--bg-elevated)] dark:bg-[var(--bg-active)] shadow-sm', segmentRadius)}
           style={{
             left: indicator.left,
             width: indicator.width,
