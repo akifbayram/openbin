@@ -14,6 +14,7 @@ const sortLabels: Record<SortOption, string> = {
   updated: 'Recently Updated',
   created: 'Recently Created',
   name: 'Name',
+  area: 'Area',
 };
 
 interface BinFilterDialogProps {
@@ -134,7 +135,7 @@ export function BinFilterDialog({
                     const aSelected = draft.tags.includes(a);
                     const bSelected = draft.tags.includes(b);
                     if (aSelected !== bSelected) return aSelected ? -1 : 1;
-                    return a.localeCompare(b);
+                    return a.localeCompare(b, undefined, { sensitivity: 'base' });
                   });
                   const canCollapse = sorted.length > TAG_LIMIT;
                   const visible = canCollapse && !tagsExpanded ? sorted.slice(0, TAG_LIMIT) : sorted;

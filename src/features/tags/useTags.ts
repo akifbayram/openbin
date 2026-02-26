@@ -7,7 +7,7 @@ export interface TagEntry {
   count: number;
 }
 
-export function usePaginatedTagList(search?: string, pageSize = 40) {
+export function usePaginatedTagList(search?: string, sort?: string, order?: 'asc' | 'desc', pageSize = 40) {
   const { activeLocationId } = useAuth();
 
   let basePath: string | null = null;
@@ -15,6 +15,12 @@ export function usePaginatedTagList(search?: string, pageSize = 40) {
     const params = new URLSearchParams({ location_id: activeLocationId });
     if (search?.trim()) {
       params.set('q', search.trim());
+    }
+    if (sort && sort !== 'alpha') {
+      params.set('sort', sort);
+    }
+    if (order === 'desc') {
+      params.set('sort_dir', 'desc');
     }
     basePath = `/api/tags?${params.toString()}`;
   }

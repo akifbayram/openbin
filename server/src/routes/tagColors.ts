@@ -21,7 +21,7 @@ router.get('/', asyncHandler(async (req, res) => {
   }
 
   const result = await query(
-    'SELECT id, location_id, tag, color, created_at, updated_at FROM tag_colors WHERE location_id = $1 ORDER BY tag',
+    'SELECT id, location_id, tag, color, created_at, updated_at FROM tag_colors WHERE location_id = $1 ORDER BY tag COLLATE NOCASE',
     [locationId]
   );
 

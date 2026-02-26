@@ -14,7 +14,8 @@ import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/usePermissions';
-import { usePaginatedBinList, useAllTags, countActiveFilters, updateBin } from './useBins';
+import type { SortDirection } from '@/components/ui/sort-header';
+import { usePaginatedBinList, useAllTags, countActiveFilters, updateBin, type SortOption } from './useBins';
 import { useBinSearchParams } from './useBinSearchParams';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 
@@ -43,7 +44,7 @@ import { PageHeader } from '@/components/ui/page-header';
 export function BinListPage() {
   const t = useTerminology();
   const location = useLocation();
-  const { search, setSearch, debouncedSearch, sort, setSort, filters, setFilters, page, setPage, clearAll } = useBinSearchParams();
+  const { search, setSearch, debouncedSearch, sort, setSort, sortDir, setSortDir, filters, setFilters, page, setPage, clearAll } = useBinSearchParams();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -61,7 +62,7 @@ export function BinListPage() {
   const { isAdmin } = usePermissions();
   const resetPage = useCallback(() => setPage(1), [setPage]);
   const { pageSize, setPageSize, pageSizeOptions } = usePageSize(resetPage);
-  const { bins, totalCount, totalPages, isLoading } = usePaginatedBinList(debouncedSearch, sort, filters, page, pageSize, setPage);
+  const { bins, totalCount, totalPages, isLoading } = usePaginatedBinList(debouncedSearch, sort, sortDir, filters, page, pageSize, setPage);
   const allTags = useAllTags();
   const activeCount = countActiveFilters(filters);
   const { areas } = useAreaList(activeLocationId);
@@ -75,7 +76,7 @@ export function BinListPage() {
   const hasBadges = activeCount > 0 || !!filters.needsOrganizing;
 
   const bulk = useBulkDialogs();
-  const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(bins, [debouncedSearch, sort, filters]);
+  const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(bins, [debouncedSearch, sort, sortDir, filters]);
   const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(bins, selectedIds, clearSelection, showToast, t);
 
   const [copiedStyle, setCopiedStyle] = useState<{ icon: string; color: string; card_style: string } | null>(null);
@@ -96,6 +97,11 @@ export function BinListPage() {
     clearSelection();
     showToast({ message: `Style applied to ${ids.length} ${ids.length === 1 ? t.bin : t.bins}` });
   }, [copiedStyle, selectedIds, clearSelection, showToast, t]);
+
+  const handleBinSortChange = useCallback((column: SortOption, direction: SortDirection) => {
+    setSort(column);
+    setSortDir(direction);
+  }, [setSort, setSortDir]);
 
   const handleTagClick = useCallback((tag: string) => {
     setFilters((prev) => ({
@@ -223,8 +229,9 @@ export function BinListPage() {
             <div className={cn(selectable && "pb-16")}>
               <BinTableView
                 bins={bins}
-                sort={sort}
-                onSortChange={setSort}
+                sortColumn={sort}
+                sortDirection={sortDir}
+                onSortChange={handleBinSortChange}
                 selectable={selectable}
                 selectedIds={selectedIds}
                 onSelect={toggleSelect}

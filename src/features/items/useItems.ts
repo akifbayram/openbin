@@ -11,7 +11,7 @@ export interface ItemEntry {
   bin_color: string;
 }
 
-export function usePaginatedItemList(search?: string, sort?: string, pageSize = 40) {
+export function usePaginatedItemList(search?: string, sort?: string, order?: 'asc' | 'desc', pageSize = 40) {
   const { activeLocationId } = useAuth();
 
   let basePath: string | null = null;
@@ -22,6 +22,9 @@ export function usePaginatedItemList(search?: string, sort?: string, pageSize = 
     }
     if (sort && sort !== 'alpha') {
       params.set('sort', sort);
+    }
+    if (order === 'desc') {
+      params.set('sort_dir', 'desc');
     }
     basePath = `/api/items?${params.toString()}`;
   }

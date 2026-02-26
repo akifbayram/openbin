@@ -9,7 +9,7 @@ const router = Router();
 
 router.use(authenticate);
 
-// GET /api/tags?location_id=X&q=search&limit=40&offset=0
+// GET /api/tags?location_id=X&q=search&sort=alpha|count&sort_dir=asc|desc&limit=40&offset=0
 router.get('/', asyncHandler(async (req, res) => {
   const locationId = req.query.location_id as string | undefined;
   const searchQuery = req.query.q as string | undefined;
@@ -48,11 +48,19 @@ router.get('/', asyncHandler(async (req, res) => {
   );
   const total = countResult.rows[0]?.total ?? 0;
 
+  // Sort
+  const sortParam = req.query.sort as string | undefined;
+  const orderParam = req.query.sort_dir as string | undefined;
+  const desc = orderParam === 'desc';
+  const orderBy = sortParam === 'count'
+    ? `count ${desc ? 'DESC' : 'ASC'}, jt.value COLLATE NOCASE ASC`
+    : `jt.value COLLATE NOCASE ${desc ? 'DESC' : 'ASC'}`;
+
   // Data query with sort, limit, offset
   params.push(limit, offset);
   const dataResult = await query<{ tag: string; count: number }>(
     `${baseQuery}
-     ORDER BY jt.value COLLATE NOCASE ASC
+     ORDER BY ${orderBy}
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params,
   );

@@ -16,7 +16,7 @@ function matchesSearch(text: string, query: string): boolean {
 /** Notify all useBinList / useBin instances to refetch */
 export const notifyBinsChanged = () => notify(Events.BINS);
 
-export type SortOption = 'updated' | 'created' | 'name';
+export type SortOption = 'updated' | 'created' | 'name' | 'area';
 
 export interface BinFilters {
   tags: string[];
@@ -108,7 +108,16 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
     }
 
     if (sort === 'name') {
-      filtered.sort((a, b) => a.name.localeCompare(b.name));
+      filtered.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    } else if (sort === 'area') {
+      filtered.sort((a, b) => {
+        const aArea = a.area_name || '';
+        const bArea = b.area_name || '';
+        if (!aArea && bArea) return 1;
+        if (aArea && !bArea) return -1;
+        const cmp = aArea.localeCompare(bArea, undefined, { sensitivity: 'base' });
+        return cmp !== 0 ? cmp : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      });
     } else if (sort === 'created') {
       filtered.sort((a, b) => b.created_at.localeCompare(a.created_at));
     } else {
@@ -124,14 +133,15 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
 function buildFilterParams(
   searchQuery: string | undefined,
   sort: SortOption,
+  sortDir: 'asc' | 'desc',
   filters: BinFilters | undefined,
 ): string {
   const p = new URLSearchParams();
   if (searchQuery?.trim()) p.set('q', searchQuery.trim());
 
-  const sortMap: Record<SortOption, string> = { updated: 'updated_at', created: 'created_at', name: 'name' };
+  const sortMap: Record<SortOption, string> = { updated: 'updated_at', created: 'created_at', name: 'name', area: 'area' };
   p.set('sort', sortMap[sort]);
-  p.set('sort_dir', sort === 'name' ? 'asc' : 'desc');
+  p.set('sort_dir', sortDir);
 
   if (filters) {
     if (filters.tags.length > 0) {
@@ -152,6 +162,7 @@ function buildFilterParams(
 export function usePaginatedBinList(
   searchQuery?: string,
   sort: SortOption = 'updated',
+  sortDir: 'asc' | 'desc' = 'desc',
   filters?: BinFilters,
   page = 1,
   pageSize = 24,
@@ -160,7 +171,7 @@ export function usePaginatedBinList(
   const { activeLocationId, token } = useAuth();
 
   const basePath = token && activeLocationId
-    ? `/api/bins?location_id=${encodeURIComponent(activeLocationId)}${buildFilterParams(searchQuery, sort, filters)}`
+    ? `/api/bins?location_id=${encodeURIComponent(activeLocationId)}${buildFilterParams(searchQuery, sort, sortDir, filters)}`
     : null;
 
   const { items, totalCount, totalPages, isLoading, error, goToPage } =
@@ -305,7 +316,7 @@ export function useAllTags(skip?: boolean): string[] {
     !skip && token && activeLocationId ? `/api/tags?location_id=${activeLocationId}&limit=100` : null,
     [Events.BINS],
   );
-  return useMemo(() => data.map((t) => t.tag).sort(), [data]);
+  return useMemo(() => data.map((t) => t.tag).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })), [data]);
 }
 
 export async function moveBin(id: string, locationId: string): Promise<void> {

@@ -9,7 +9,7 @@ const router = Router();
 
 router.use(authenticate);
 
-// GET /api/items?location_id=X&q=search&sort=alpha|bin&limit=40&offset=0
+// GET /api/items?location_id=X&q=search&sort=alpha|bin&sort_dir=asc|desc&limit=40&offset=0
 router.get('/', asyncHandler(async (req, res) => {
   const locationId = req.query.location_id as string | undefined;
   const searchQuery = req.query.q as string | undefined;
@@ -49,9 +49,12 @@ router.get('/', asyncHandler(async (req, res) => {
   const total = countResult.rows[0]?.total ?? 0;
 
   // Sort
+  const orderParam = req.query.sort_dir as string | undefined;
+  const desc = orderParam === 'desc';
+  const dir = desc ? 'DESC' : 'ASC';
   const orderBy = sortParam === 'bin'
-    ? 'b.name COLLATE NOCASE ASC, bi.name COLLATE NOCASE ASC'
-    : 'bi.name COLLATE NOCASE ASC';
+    ? `b.name COLLATE NOCASE ${dir}, bi.name COLLATE NOCASE ${dir}`
+    : `bi.name COLLATE NOCASE ${dir}`;
 
   // Data query
   params.push(limit, offset);

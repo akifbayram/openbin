@@ -1,12 +1,14 @@
 import React from 'react';
-import { Check, ChevronDown, ChevronUp, Lock, Pin } from 'lucide-react';
+import { Check, Lock, Pin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
+import { SortHeader, type SortDirection } from '@/components/ui/sort-header';
+import { Table, TableHeader, TableRow as BaseTableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { resolveIcon } from '@/lib/iconMap';
 import { resolveColor } from '@/lib/colorPalette';
 import { useTagStyle } from '@/features/tags/useTagStyle';
-import { formatTimeAgo } from '@/lib/formatTime';
+import { formatDate } from '@/lib/formatTime';
 import { useBinCardInteraction } from './useBinCardInteraction';
 import { areCommonBinCardPropsEqual } from './binMemoUtils';
 import type { Bin } from '@/types';
@@ -14,8 +16,9 @@ import type { SortOption } from './useBins';
 
 interface BinTableViewProps {
   bins: Bin[];
-  sort: SortOption;
-  onSortChange: (sort: SortOption) => void;
+  sortColumn: SortOption;
+  sortDirection: SortDirection;
+  onSortChange: (column: SortOption, direction: SortDirection) => void;
   selectable: boolean;
   selectedIds: Set<string>;
   onSelect: (id: string, index: number, shiftKey: boolean) => void;
@@ -25,45 +28,10 @@ interface BinTableViewProps {
   onSelectAll?: () => void;
 }
 
-type SortableColumn = 'name' | 'updated' | 'created';
-
-function SortHeader({
-  label,
-  column,
-  currentSort,
-  onSort,
-  className,
-}: {
-  label: string;
-  column: SortableColumn;
-  currentSort: SortOption;
-  onSort: (s: SortOption) => void;
-  className?: string;
-}) {
-  const active = currentSort === column;
-  return (
-    <button
-      type="button"
-      onClick={() => onSort(column)}
-      className={cn(
-        'flex items-center gap-0.5 text-[12px] font-medium uppercase tracking-wide transition-colors',
-        active ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]',
-        className,
-      )}
-    >
-      {label}
-      {active && (column === 'name' ? (
-        <ChevronUp className="h-3 w-3" />
-      ) : (
-        <ChevronDown className="h-3 w-3" />
-      ))}
-    </button>
-  );
-}
-
 export function BinTableView({
   bins,
-  sort,
+  sortColumn,
+  sortDirection,
   onSortChange,
   selectable,
   selectedIds,
@@ -76,9 +44,9 @@ export function BinTableView({
   const allSelected = bins.length > 0 && bins.every((b) => selectedIds.has(b.id));
 
   return (
-    <div className="glass-card rounded-[var(--radius-lg)] overflow-hidden">
+    <Table>
       {/* Header */}
-      <div className="flex items-center gap-3 px-3 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-hover)]">
+      <TableHeader>
         {/* Checkbox */}
         <div className="w-6 shrink-0 flex justify-center">
           {selectable && onSelectAll && (
@@ -94,16 +62,16 @@ export function BinTableView({
             </button>
           )}
         </div>
-        <SortHeader label="Name" column="name" currentSort={sort} onSort={onSortChange} className="flex-[2]" />
-        <span className="hidden md:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Area</span>
-        <span className="hidden lg:block flex-[2] text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Items</span>
+        <SortHeader label="Name" column="name" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="flex-[2]" />
+        <SortHeader label="Area" column="area" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="hidden md:flex flex-1" />
+        <span className="hidden lg:block flex-[1.5] text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Items</span>
         <span className="hidden sm:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Tags</span>
-        <SortHeader label="Updated" column="updated" currentSort={sort} onSort={onSortChange} className="w-16 justify-end" />
-      </div>
+        <SortHeader label="Updated" column="updated" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} defaultDirection="desc" className="w-20 justify-end" />
+      </TableHeader>
 
       {/* Rows */}
       {bins.map((bin, index) => (
-        <TableRow
+        <BinTableRow
           key={bin.id}
           bin={bin}
           index={index}
@@ -115,11 +83,11 @@ export function BinTableView({
           onPinToggle={onPinToggle}
         />
       ))}
-    </div>
+    </Table>
   );
 }
 
-interface TableRowProps {
+interface BinTableRowProps {
   bin: Bin;
   index: number;
   selectable: boolean;
@@ -130,7 +98,7 @@ interface TableRowProps {
   onPinToggle: (id: string, pinned: boolean) => void;
 }
 
-const TableRow = React.memo(function TableRow({
+const BinTableRow = React.memo(function BinTableRow({
   bin,
   index,
   selectable,
@@ -139,7 +107,7 @@ const TableRow = React.memo(function TableRow({
   searchQuery,
   onTagClick,
   onPinToggle,
-}: TableRowProps) {
+}: BinTableRowProps) {
   const getTagStyle = useTagStyle();
   const BinIcon = resolveIcon(bin.icon);
   const colorPreset = resolveColor(bin.color);
@@ -150,14 +118,11 @@ const TableRow = React.memo(function TableRow({
   const hiddenTagCount = bin.tags.length - displayedTags.length;
 
   return (
-    <div
+    <BaseTableRow
       tabIndex={0}
       role="button"
       aria-selected={selectable ? selected : undefined}
-      className={cn(
-        'group flex items-center gap-3 px-3 py-2.5 border-b border-[var(--border-subtle)] cursor-pointer transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] select-none [@media(hover:hover)]:hover:bg-[var(--bg-hover)] last:border-b-0',
-        selected && 'bg-[var(--bg-active)]',
-      )}
+      className={cn('select-none', selected && 'bg-[var(--bg-active)]')}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onTouchStart={longPress.onTouchStart}
@@ -184,7 +149,7 @@ const TableRow = React.memo(function TableRow({
           >
             {/* Color dot + icon — fades out on hover */}
             <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0">
-              <div className="h-2 w-2 rounded-full shrink-0" style={colorPreset ? { backgroundColor: colorPreset.dot } : { backgroundColor: 'var(--text-tertiary)' }} />
+              <div className="h-4 w-4 rounded-full shrink-0" style={colorPreset ? { backgroundColor: colorPreset.dot } : { backgroundColor: 'var(--text-tertiary)' }} />
             </div>
             {/* Checkbox revealed on hover */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100">
@@ -224,7 +189,7 @@ const TableRow = React.memo(function TableRow({
       </div>
 
       {/* Items */}
-      <div className="hidden lg:block flex-[2] min-w-0">
+      <div className="hidden lg:block flex-[1.5] min-w-0">
         {bin.items.length > 0 && (
           <span className="text-[12px] text-[var(--text-tertiary)] truncate block">
             <Highlight text={bin.items.map((i) => i.name).join(', ')} query={searchQuery} />
@@ -233,7 +198,7 @@ const TableRow = React.memo(function TableRow({
       </div>
 
       {/* Tags */}
-      <div className="hidden sm:flex flex-1 items-center gap-1 min-w-0">
+      <div className="hidden sm:flex flex-1 items-center gap-1 min-w-0 overflow-hidden">
         {displayedTags.map((tag) => (
           <Badge
             key={tag}
@@ -253,10 +218,10 @@ const TableRow = React.memo(function TableRow({
       </div>
 
       {/* Updated */}
-      <span className="w-16 shrink-0 text-[12px] text-[var(--text-tertiary)] text-right">
-        {formatTimeAgo(bin.updated_at)}
+      <span className="w-20 shrink-0 text-[12px] text-[var(--text-tertiary)] text-right">
+        {formatDate(bin.updated_at)}
       </span>
-    </div>
+    </BaseTableRow>
   );
 }, (prev, next) => {
   return areCommonBinCardPropsEqual(prev, next);

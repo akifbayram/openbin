@@ -18,7 +18,7 @@ router.get('/:locationId/areas', requireLocationMember('locationId'), asyncHandl
             (SELECT COUNT(*) FROM bins WHERE area_id = a.id AND deleted_at IS NULL AND location_id = a.location_id) AS bin_count
      FROM areas a
      WHERE a.location_id = $1
-     ORDER BY a.name`,
+     ORDER BY a.name COLLATE NOCASE`,
     [locationId]
   );
   const unassignedResult = await query(

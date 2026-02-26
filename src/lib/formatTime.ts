@@ -11,3 +11,8 @@ export function formatTimeAgo(dateStr: string): string {
   if (diffDay < 30) return `${diffDay}d ago`;
   return date.toLocaleDateString();
 }
+
+export function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+}

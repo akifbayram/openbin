@@ -105,14 +105,20 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   }
 
   const validSorts: Record<string, string> = {
-    name: 'b.name',
+    name: 'b.name COLLATE NOCASE',
     created_at: 'b.created_at',
     updated_at: 'b.updated_at',
-    area: 'CASE WHEN a.name IS NULL OR a.name = \'\' THEN 1 ELSE 0 END, a.name, b.name',
   };
   const dir = filters.sortDir === 'asc' ? 'ASC' : 'DESC';
-  const orderBy = validSorts[filters.sort || ''] || 'b.updated_at';
-  const orderClause = `${orderBy} ${dir}`;
+  const sortKey = filters.sort || '';
+
+  let orderClause: string;
+  if (sortKey === 'area') {
+    orderClause = `CASE WHEN a.name IS NULL OR a.name = '' THEN 1 ELSE 0 END ASC, a.name COLLATE NOCASE ${dir}, b.name COLLATE NOCASE ASC`;
+  } else {
+    const orderBy = validSorts[sortKey] || 'b.updated_at';
+    orderClause = `${orderBy} ${dir}`;
+  }
 
   return {
     whereSQL: whereClauses.join(' AND '),
