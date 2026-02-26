@@ -22,8 +22,8 @@ export function areBinsEqual(a: Bin, b: Bin): boolean {
 
 /** Common prop comparisons shared across BinCard, BinCompactCard, and TableRow. */
 export function areCommonBinCardPropsEqual(
-  prev: { bin: Bin; selectable?: boolean; selected?: boolean; index?: number; onSelect?: unknown; onPinToggle?: unknown; searchQuery?: string },
-  next: { bin: Bin; selectable?: boolean; selected?: boolean; index?: number; onSelect?: unknown; onPinToggle?: unknown; searchQuery?: string },
+  prev: { bin: Bin; selectable?: boolean; selected?: boolean; index?: number; onSelect?: unknown; searchQuery?: string },
+  next: { bin: Bin; selectable?: boolean; selected?: boolean; index?: number; onSelect?: unknown; searchQuery?: string },
 ): boolean {
   return (
     areBinsEqual(prev.bin, next.bin) &&
@@ -31,7 +31,6 @@ export function areCommonBinCardPropsEqual(
     prev.selected === next.selected &&
     prev.index === next.index &&
     prev.onSelect === next.onSelect &&
-    prev.onPinToggle === next.onPinToggle &&
     prev.searchQuery === next.searchQuery
   );
 }

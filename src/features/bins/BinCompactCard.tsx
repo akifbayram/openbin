@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Lock, Pin } from 'lucide-react';
+import { Check, Lock } from 'lucide-react';
 import { Highlight } from '@/components/ui/highlight';
 import { cn } from '@/lib/utils';
 import { resolveIcon } from '@/lib/iconMap';
@@ -18,7 +18,6 @@ interface BinCompactCardProps {
   selected?: boolean;
   onSelect?: (id: string, index: number, shiftKey: boolean) => void;
   searchQuery?: string;
-  onPinToggle?: (id: string, pinned: boolean) => void;
 }
 
 export const BinCompactCard = React.memo(function BinCompactCard({
@@ -28,7 +27,6 @@ export const BinCompactCard = React.memo(function BinCompactCard({
   selected,
   onSelect,
   searchQuery = '',
-  onPinToggle,
 }: BinCompactCardProps) {
   const { theme } = useTheme();
   const BinIcon = resolveIcon(bin.icon);
@@ -65,23 +63,6 @@ export const BinCompactCard = React.memo(function BinCompactCard({
           )}
         </h3>
       </div>
-
-      {/* Pin */}
-      {onPinToggle && !selectable && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onPinToggle(bin.id, !bin.is_pinned); }}
-          className={cn(
-            'shrink-0 mt-0.5 h-5 w-5 flex items-center justify-center rounded-full transition-all',
-            bin.is_pinned
-              ? 'text-[var(--accent)]'
-              : 'text-[var(--text-secondary)] opacity-0 group-hover:opacity-100',
-          )}
-          style={isPhoto && bin.is_pinned ? { color: 'white' } : undefined}
-          aria-label={bin.is_pinned ? 'Unpin bin' : 'Pin bin'}
-        >
-          <Pin className="h-3.5 w-3.5" fill={bin.is_pinned ? 'currentColor' : 'none'} />
-        </button>
-      )}
 
       {/* Icon / checkbox */}
       {selectable ? (

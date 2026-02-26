@@ -17,44 +17,12 @@ import { LabelSheet } from './LabelSheet';
 import { getLabelFormat, DEFAULT_LABEL_FORMAT, getOrientation, applyOrientation, computeLabelsPerPage, computePageSize, filterLabelFormats } from './labelFormats';
 import { usePrintSettings } from './usePrintSettings';
 import type { LabelFormat } from './labelFormats';
-import type { LabelOptions, CustomState } from './usePrintSettings';
+import type { LabelOptions, CustomState, DisplayUnit } from './usePrintSettings';
+import { inchesToMm, mmToInches } from './pdfUnits';
+import { computeScaleFactor, applyAutoScale, applyFontScale } from './labelScaling';
 import type { Bin } from '@/types';
 import { PageHeader } from '@/components/ui/page-header';
 import { MenuButton } from '@/components/ui/menu-button';
-
-function computeScaleFactor(base: LabelFormat, custom: LabelFormat): number {
-  const baseW = parseFloat(base.cellWidth);
-  const baseH = parseFloat(base.cellHeight);
-  const customW = parseFloat(custom.cellWidth);
-  const customH = parseFloat(custom.cellHeight);
-  if (!baseW || !baseH) return 1;
-  return Math.min(customW / baseW, customH / baseH);
-}
-
-function scaleValue(value: string, factor: number): string {
-  return value
-    .split(/\s+/)
-    .map((part) => {
-      const num = parseFloat(part);
-      if (isNaN(num)) return part;
-      const unit = part.replace(/^[\d.]+/, '');
-      const scaled = (num * factor).toFixed(2).replace(/\.?0+$/, '');
-      return `${scaled}${unit}`;
-    })
-    .join(' ');
-}
-
-function applyAutoScale(base: LabelFormat, custom: LabelFormat): LabelFormat {
-  const factor = computeScaleFactor(base, custom);
-  if (factor === 1) return custom;
-  return {
-    ...custom,
-    nameFontSize: scaleValue(base.nameFontSize, factor),
-    contentFontSize: scaleValue(base.contentFontSize, factor),
-    codeFontSize: scaleValue(base.codeFontSize, factor),
-    padding: scaleValue(base.padding, factor),
-  };
-}
 
 const FONT_SCALE_PRESETS = [
   { label: 'S', value: 0.75 },
@@ -63,27 +31,17 @@ const FONT_SCALE_PRESETS = [
   { label: 'XL', value: 1.5 },
 ];
 
-function applyFontScale(fmt: LabelFormat, scale: number): LabelFormat {
-  if (scale === 1) return fmt;
-  return {
-    ...fmt,
-    nameFontSize: scaleValue(fmt.nameFontSize, scale),
-    contentFontSize: scaleValue(fmt.contentFontSize, scale),
-    codeFontSize: scaleValue(fmt.codeFontSize, scale),
-  };
-}
-
-const CUSTOM_FIELDS: { label: string; key: keyof LabelFormat; min: string; max?: string; step: string; isNumber?: boolean }[] = [
-  { label: 'Page Width (in)', key: 'pageWidth', min: '1', step: '0.5', isNumber: true },
-  { label: 'Page Height (in)', key: 'pageHeight', min: '1', step: '0.5', isNumber: true },
-  { label: 'Label Width (in)', key: 'cellWidth', min: '0.1', step: '0.0625' },
-  { label: 'Label Height (in)', key: 'cellHeight', min: '0.1', step: '0.0625' },
-  { label: 'Columns', key: 'columns', min: '1', max: '10', step: '1', isNumber: true },
-  { label: 'QR Size (in)', key: 'qrSize', min: '0.1', step: '0.0625' },
-  { label: 'Top Margin (in)', key: 'pageMarginTop', min: '0', step: '0.0625' },
-  { label: 'Bottom Margin (in)', key: 'pageMarginBottom', min: '0', step: '0.0625' },
-  { label: 'Left Margin (in)', key: 'pageMarginLeft', min: '0', step: '0.0625' },
-  { label: 'Right Margin (in)', key: 'pageMarginRight', min: '0', step: '0.0625' },
+const CUSTOM_FIELDS: { label: string; key: keyof LabelFormat; minIn: number; max?: string; stepIn: string; stepMm: string; isNumber?: boolean; isDimensional: boolean }[] = [
+  { label: 'Page Width', key: 'pageWidth', minIn: 1, stepIn: '0.5', stepMm: '10', isNumber: true, isDimensional: true },
+  { label: 'Page Height', key: 'pageHeight', minIn: 1, stepIn: '0.5', stepMm: '10', isNumber: true, isDimensional: true },
+  { label: 'Label Width', key: 'cellWidth', minIn: 0.1, stepIn: '0.0625', stepMm: '1', isDimensional: true },
+  { label: 'Label Height', key: 'cellHeight', minIn: 0.1, stepIn: '0.0625', stepMm: '1', isDimensional: true },
+  { label: 'Columns', key: 'columns', minIn: 1, max: '10', stepIn: '1', stepMm: '1', isNumber: true, isDimensional: false },
+  { label: 'QR Size', key: 'qrSize', minIn: 0.1, stepIn: '0.0625', stepMm: '1', isDimensional: true },
+  { label: 'Top Margin', key: 'pageMarginTop', minIn: 0, stepIn: '0.0625', stepMm: '1', isDimensional: true },
+  { label: 'Bottom Margin', key: 'pageMarginBottom', minIn: 0, stepIn: '0.0625', stepMm: '1', isDimensional: true },
+  { label: 'Left Margin', key: 'pageMarginLeft', minIn: 0, stepIn: '0.0625', stepMm: '1', isDimensional: true },
+  { label: 'Right Margin', key: 'pageMarginRight', minIn: 0, stepIn: '0.0625', stepMm: '1', isDimensional: true },
 ];
 
 export function PrintPage() {
@@ -92,7 +50,7 @@ export function PrintPage() {
   const { activeLocationId } = useAuth();
   const t = useTerminology();
   const { areas } = useAreaList(activeLocationId);
-  const { settings, isLoading: settingsLoading, updateFormatKey, updateCustomState, updateLabelOptions, updateOrientation, addPreset, removePreset } = usePrintSettings();
+  const { settings, isLoading: settingsLoading, updateFormatKey, updateCustomState, updateLabelOptions, updateOrientation, updateDisplayUnit, addPreset, removePreset } = usePrintSettings();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [binsExpanded, setBinsExpanded] = useState(false);
   const [formatExpanded, setFormatExpanded] = useState(true);
@@ -149,13 +107,16 @@ export function PrintPage() {
     updateCustomState(newState);
   }
 
+  const displayUnit: DisplayUnit = settings.displayUnit ?? 'in';
+
   function updateOverride(key: keyof LabelFormat, raw: string) {
     if (!raw.trim()) return;
     const num = parseFloat(raw);
     if (isNaN(num)) return;
     const field = CUSTOM_FIELDS.find((f) => f.key === key);
-    const min = field ? parseFloat(field.min) : 0;
-    const clamped = Math.max(min, num);
+    // Convert mm input to inches for storage
+    const inValue = (displayUnit === 'mm' && field?.isDimensional) ? mmToInches(num) : num;
+    const clamped = Math.max(field?.minIn ?? 0, inValue);
     const value = field?.isNumber ? clamped : `${clamped}in`;
     const newState: CustomState = {
       ...customState,
@@ -167,8 +128,12 @@ export function PrintPage() {
   function getOverrideValue(key: keyof LabelFormat): string {
     const val = customState.overrides[key];
     if (val === undefined) return '';
-    if (typeof val === 'number') return String(val);
-    return String(val).replace(/in$/, '');
+    const field = CUSTOM_FIELDS.find((f) => f.key === key);
+    const inValue = typeof val === 'number' ? val : parseFloat(String(val).replace(/in$/, ''));
+    if (displayUnit === 'mm' && field?.isDimensional) {
+      return String(inchesToMm(inValue));
+    }
+    return String(inValue);
   }
 
   function handleSavePreset() {
@@ -469,7 +434,9 @@ export function PrintPage() {
                           <div className="min-w-0 truncate">
                             <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
                             <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
-                              {fmt.cellWidth} × {fmt.cellHeight}
+                              {displayUnit === 'mm'
+                                ? `${inchesToMm(parseFloat(String(fmt.cellWidth).replace(/in$/, '')))}mm × ${inchesToMm(parseFloat(String(fmt.cellHeight).replace(/in$/, '')))}mm`
+                                : `${fmt.cellWidth} × ${fmt.cellHeight}`}
                             </span>
                           </div>
                         </button>
@@ -511,23 +478,41 @@ export function PrintPage() {
 
                 {customState.customizing && (
                   <>
+                    <div className="flex items-center gap-1 mt-3 px-1">
+                      <span className="text-[12px] text-[var(--text-secondary)] font-medium mr-2">Units</span>
+                      <OptionGroup
+                        options={[
+                          { key: 'in' as const, label: 'Inches' },
+                          { key: 'mm' as const, label: 'mm' },
+                        ]}
+                        value={displayUnit}
+                        onChange={(v) => updateDisplayUnit(v)}
+                        size="sm"
+                      />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3 mt-3 px-1">
-                      {CUSTOM_FIELDS.map((field) => (
-                        <div key={field.key} className="flex flex-col gap-1">
-                          <label className="text-[12px] text-[var(--text-secondary)] font-medium">
-                            {field.label}
-                          </label>
-                          <input
-                            type="number"
-                            step={field.step}
-                            min={field.min}
-                            max={field.max}
-                            value={getOverrideValue(field.key)}
-                            onChange={(e) => updateOverride(field.key, e.target.value)}
-                            className="h-9 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
-                          />
-                        </div>
-                      ))}
+                      {CUSTOM_FIELDS.map((field) => {
+                        const unitSuffix = field.isDimensional ? ` (${displayUnit})` : '';
+                        const step = displayUnit === 'mm' && field.isDimensional ? field.stepMm : field.stepIn;
+                        const min = displayUnit === 'mm' && field.isDimensional ? String(inchesToMm(field.minIn)) : String(field.minIn);
+                        return (
+                          <div key={field.key} className="flex flex-col gap-1">
+                            <label className="text-[12px] text-[var(--text-secondary)] font-medium">
+                              {field.label}{unitSuffix}
+                            </label>
+                            <input
+                              type="number"
+                              step={step}
+                              min={min}
+                              max={field.max}
+                              value={getOverrideValue(field.key)}
+                              onChange={(e) => updateOverride(field.key, e.target.value)}
+                              className="h-9 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
 
                     {showSaveInput ? (

@@ -18,12 +18,15 @@ export interface CustomState {
   overrides: Partial<LabelFormat>;
 }
 
+export type DisplayUnit = 'in' | 'mm';
+
 export interface PrintSettings {
   formatKey: string;
   customState: CustomState;
   labelOptions: LabelOptions;
   presets: LabelFormat[];
   orientation?: 'landscape' | 'portrait';
+  displayUnit?: DisplayUnit;
 }
 
 export const DEFAULT_LABEL_OPTIONS: LabelOptions = {
@@ -132,6 +135,10 @@ export function usePrintSettings() {
     update({ orientation });
   }
 
+  function updateDisplayUnit(displayUnit: DisplayUnit) {
+    update({ displayUnit });
+  }
+
   return {
     settings,
     isLoading,
@@ -139,6 +146,7 @@ export function usePrintSettings() {
     updateCustomState,
     updateLabelOptions,
     updateOrientation,
+    updateDisplayUnit,
     addPreset,
     removePreset,
   };

@@ -17,7 +17,6 @@ import { usePermissions } from '@/lib/usePermissions';
 import type { SortDirection } from '@/components/ui/sort-header';
 import { usePaginatedBinList, useAllTags, countActiveFilters, updateBin, type SortOption } from './useBins';
 import { useBinSearchParams } from './useBinSearchParams';
-import { pinBin, unpinBin } from '@/features/pins/usePins';
 
 import { BinCard } from './BinCard';
 import { BinCompactCard } from './BinCompactCard';
@@ -109,11 +108,6 @@ export function BinListPage() {
       tags: prev.tags.includes(tag) ? prev.tags : [...prev.tags, tag],
     }));
   }, [setFilters]);
-
-  const handlePinToggle = useCallback(async (id: string, pinned: boolean) => {
-    if (pinned) await pinBin(id);
-    else await unpinBin(id);
-  }, []);
 
   return (
     <div className="page-content max-w-none">
@@ -219,7 +213,6 @@ export function BinListPage() {
                     selected={selectedIds.has(bin.id)}
                     onSelect={toggleSelect}
                     searchQuery={debouncedSearch}
-                    onPinToggle={handlePinToggle}
                   />
                 ))}
               </div>
@@ -237,7 +230,6 @@ export function BinListPage() {
                 onSelect={toggleSelect}
                 searchQuery={debouncedSearch}
                 onTagClick={handleTagClick}
-                onPinToggle={handlePinToggle}
               />
               <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalCount={totalCount} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={setPageSize} itemLabel={t.bins} />
             </div>
@@ -254,7 +246,6 @@ export function BinListPage() {
                     selected={selectedIds.has(bin.id)}
                     onSelect={toggleSelect}
                     searchQuery={debouncedSearch}
-                    onPinToggle={handlePinToggle}
                   />
                 ))}
               </div>

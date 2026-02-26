@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Lock, Pin } from 'lucide-react';
+import { Check, Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
 import { SortHeader, type SortDirection } from '@/components/ui/sort-header';
@@ -24,7 +24,6 @@ interface BinTableViewProps {
   onSelect: (id: string, index: number, shiftKey: boolean) => void;
   searchQuery: string;
   onTagClick: (tag: string) => void;
-  onPinToggle: (id: string, pinned: boolean) => void;
   onSelectAll?: () => void;
 }
 
@@ -38,7 +37,6 @@ export function BinTableView({
   onSelect,
   searchQuery,
   onTagClick,
-  onPinToggle,
   onSelectAll,
 }: BinTableViewProps) {
   const allSelected = bins.length > 0 && bins.every((b) => selectedIds.has(b.id));
@@ -80,7 +78,6 @@ export function BinTableView({
           onSelect={onSelect}
           searchQuery={searchQuery}
           onTagClick={onTagClick}
-          onPinToggle={onPinToggle}
         />
       ))}
     </Table>
@@ -95,7 +92,6 @@ interface BinTableRowProps {
   onSelect: (id: string, index: number, shiftKey: boolean) => void;
   searchQuery: string;
   onTagClick: (tag: string) => void;
-  onPinToggle: (id: string, pinned: boolean) => void;
 }
 
 const BinTableRow = React.memo(function BinTableRow({
@@ -106,7 +102,6 @@ const BinTableRow = React.memo(function BinTableRow({
   onSelect,
   searchQuery,
   onTagClick,
-  onPinToggle,
 }: BinTableRowProps) {
   const getTagStyle = useTagStyle();
   const BinIcon = resolveIcon(bin.icon);
@@ -167,15 +162,6 @@ const BinTableRow = React.memo(function BinTableRow({
         </span>
         {bin.visibility === 'private' && (
           <Lock className="h-3 w-3 shrink-0 text-[var(--text-tertiary)]" />
-        )}
-        {!!bin.is_pinned && !selectable && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onPinToggle(bin.id, false); }}
-            className="shrink-0 text-[var(--accent)]"
-            aria-label="Unpin bin"
-          >
-            <Pin className="h-3.5 w-3.5" fill="currentColor" />
-          </button>
         )}
       </div>
 

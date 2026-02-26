@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Check, Lock, Pin } from 'lucide-react';
+import { Check, Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
 import { cn } from '@/lib/utils';
@@ -20,18 +20,15 @@ interface BinCardProps {
   selected?: boolean;
   onSelect?: (id: string, index: number, shiftKey: boolean) => void;
   searchQuery?: string;
-  onPinToggle?: (id: string, pinned: boolean) => void;
 }
 
-export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick, selectable, selected, onSelect, searchQuery = '', onPinToggle }: BinCardProps) {
+export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick, selectable, selected, onSelect, searchQuery = '' }: BinCardProps) {
   const { theme } = useTheme();
   const getTagStyle = useTagStyle();
   const BinIcon = resolveIcon(bin.icon);
 
   const { renderProps, isPhoto, coverPhotoId, secondaryStyle, secondaryBorderStyle, iconStyle, photoTextStyle } =
     computeBinCardStyles(bin.color, bin.card_style, theme);
-
-  const [pinPulseKey, setPinPulseKey] = useState(0);
 
   const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect });
 
@@ -121,10 +118,11 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
     <div className="flex items-start gap-3">
       <div className="min-w-0 flex-1">
         <h3
-          className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug flex items-center gap-1.5"
-          style={photoTextStyle}
+          className="font-semibold text-[15px] text-[var(--text-primary)] leading-snug flex items-center gap-1.5 min-w-0 overflow-hidden"
         >
-          <Highlight text={bin.name} query={searchQuery} />
+          <span className="truncate" style={photoTextStyle}>
+            <Highlight text={bin.name} query={searchQuery} />
+          </span>
           {bin.visibility === 'private' && (
             <Lock
               className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]"
@@ -182,27 +180,6 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           </div>
         )}
       </div>
-      {onPinToggle && !selectable && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setPinPulseKey((k) => k + 1);
-            onPinToggle(bin.id, !bin.is_pinned);
-          }}
-          className={cn(
-            'shrink-0 mt-0.5 rounded-full transition-all',
-            bin.is_pinned
-              ? 'text-[var(--accent)]'
-              : 'text-[var(--text-secondary)] opacity-0 group-hover:opacity-100'
-          )}
-          style={isPhoto && bin.is_pinned ? { color: 'white' } : undefined}
-          aria-label={bin.is_pinned ? 'Unpin bin' : 'Pin bin'}
-        >
-          <span key={pinPulseKey} className={pinPulseKey > 0 ? 'inline-flex animate-success-pulse' : 'inline-flex'}>
-            <Pin className="h-5 w-5" fill={bin.is_pinned ? 'currentColor' : 'none'} />
-          </span>
-        </button>
-      )}
       {selectable ? (
         checkbox
       ) : onSelect ? (
