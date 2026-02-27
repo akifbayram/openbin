@@ -23,11 +23,14 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
   useClickOutside(ref, close);
 
   const parsed = currentColor ? parseColorKey(currentColor) : null;
+  const isBlack = currentColor === 'black';
+  const isWhite = currentColor === 'white';
+  const isFixed = isBlack || isWhite;
   const isNeutral = parsed?.hue === 'neutral';
   const currentHue = parsed && parsed.hue !== 'neutral' ? parsed.hue : null;
   const currentShade = parsed?.shade ?? 2;
   const currentPreset = currentColor ? resolveColor(currentColor) : undefined;
-  const activeHue = isNeutral ? 'neutral' as const : currentHue;
+  const activeHue = isFixed ? null : isNeutral ? 'neutral' as const : currentHue;
 
   const hueFromPointer = useCallback((e: React.PointerEvent) => {
     const rect = barRef.current?.getBoundingClientRect();
@@ -75,7 +78,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
 
       {visible && (
         <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 shadow-lg min-w-[180px] space-y-2`}>
-          {/* None + Gray buttons */}
+          {/* None + Black/White + Gray buttons */}
           <div className="flex gap-1.5">
             <button
               type="button"
@@ -101,6 +104,36 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                onColorChange('black');
+              }}
+              title="Black"
+              className={cn(
+                'h-5 w-5 rounded-full transition-all',
+                isBlack
+                  ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-base)]'
+                  : 'hover:scale-110'
+              )}
+              style={{ backgroundColor: '#1C1C1E' }}
+            />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onColorChange('white');
+              }}
+              title="White"
+              className={cn(
+                'h-5 w-5 rounded-full border border-[var(--border-subtle)] transition-all',
+                isWhite
+                  ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-base)]'
+                  : 'hover:scale-110'
+              )}
+              style={{ backgroundColor: '#F2F2F7' }}
+            />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
                 onColorChange(buildColorKey('neutral', currentShade));
               }}
               title="Gray"
@@ -114,8 +147,8 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
             />
           </div>
 
-          {/* Gradient bar (hidden when neutral) */}
-          {!isNeutral && (
+          {/* Gradient bar (hidden when neutral or fixed) */}
+          {!isNeutral && !isFixed && (
             <div
               ref={barRef}
               className="relative h-5 rounded-md cursor-pointer touch-none"

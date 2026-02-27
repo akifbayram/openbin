@@ -17,7 +17,6 @@ Multi-user web app for organizing physical storage bins with QR codes. Data pers
 
 ## Code Conventions
 
-- **Git commits**: NEVER add "Co-Authored-By" or AI attribution lines. Keep commit messages to less than 2 lines.
 - **Named exports only** — no default exports except `App.tsx`.
 - **Feature hooks pattern**: each feature exposes a hook (e.g. `useBinList`) for data via `apiFetch()` with event-based refresh, and plain async functions (e.g. `addBin`) for mutations. Same file.
 - **Data hooks return `{ data, isLoading }`** — e.g. `useBinList()` → `{ bins, isLoading }`.

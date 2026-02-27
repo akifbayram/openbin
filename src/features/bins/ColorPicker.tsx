@@ -18,6 +18,9 @@ function getShadePreview(hue: number | 'neutral', shade: number): string {
 
 export function HueGradientPicker({ value, onChange }: { value: string; onChange: (color: string) => void }) {
   const parsed = value ? parseColorKey(value) : null;
+  const isBlack = value === 'black';
+  const isWhite = value === 'white';
+  const isFixed = isBlack || isWhite;
   const isNeutral = parsed?.hue === 'neutral';
   const currentHue = parsed && parsed.hue !== 'neutral' ? parsed.hue : null;
   const currentShade = parsed?.shade ?? 2;
@@ -47,11 +50,11 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
     onChange(buildColorKey(hue, shade));
   }, [isNeutral, currentHue, onChange]);
 
-  const activeHue = isNeutral ? 'neutral' as const : currentHue;
+  const activeHue = isFixed ? null : isNeutral ? 'neutral' as const : currentHue;
 
   return (
     <div className="space-y-2.5">
-      {/* None + Gray buttons */}
+      {/* None + Black/White + Gray buttons */}
       <div className="flex gap-2">
         <button
           type="button"
@@ -68,6 +71,30 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
         </button>
         <button
           type="button"
+          onClick={() => onChange('black')}
+          title="Black"
+          className={cn(
+            'h-7 w-7 rounded-full transition-all',
+            isBlack
+              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110'
+              : 'hover:scale-105'
+          )}
+          style={{ backgroundColor: '#1C1C1E' }}
+        />
+        <button
+          type="button"
+          onClick={() => onChange('white')}
+          title="White"
+          className={cn(
+            'h-7 w-7 rounded-full border border-[var(--border-subtle)] transition-all',
+            isWhite
+              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110'
+              : 'hover:scale-105'
+          )}
+          style={{ backgroundColor: '#F2F2F7' }}
+        />
+        <button
+          type="button"
           onClick={() => onChange(buildColorKey('neutral', currentShade))}
           title="Gray"
           className={cn(
@@ -80,8 +107,8 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
         />
       </div>
 
-      {/* Gradient bar (hidden when neutral) */}
-      {!isNeutral && (
+      {/* Gradient bar (hidden when neutral or fixed) */}
+      {!isNeutral && !isFixed && (
         <div
           ref={barRef}
           className="relative h-7 rounded-[var(--radius-sm)] cursor-pointer touch-none"

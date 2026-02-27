@@ -135,6 +135,30 @@ function computePreset(hue: number | 'neutral', shade: number): ColorPreset {
   return { key, label, ref, dot, bg, bgCss };
 }
 
+// Fixed presets for black/white (no color-mix, consistent across themes)
+export const BLACK_PRESET: ColorPreset = {
+  key: 'black',
+  label: 'Black',
+  ref: '#1C1C1E',
+  dot: '#1C1C1E',
+  bg: '#1C1C1E',
+  bgCss: '#1C1C1E',
+};
+
+export const WHITE_PRESET: ColorPreset = {
+  key: 'white',
+  label: 'White',
+  ref: '#F2F2F7',
+  dot: '#F2F2F7',
+  bg: '#F2F2F7',
+  bgCss: '#F2F2F7',
+};
+
+const FIXED_KEY_MAP: Record<string, ColorPreset> = {
+  black: BLACK_PRESET,
+  white: WHITE_PRESET,
+};
+
 // Legacy key → new key map for backward compatibility
 const LEGACY_KEY_MAP: Record<string, string> = {
   'red-light': '0:0', 'red': '0:2', 'red-dark': '0:4',
@@ -159,6 +183,13 @@ export function resolveColor(key: string): ColorPreset | undefined {
   if (!key) return undefined;
   const cached = resolveCache.get(key);
   if (cached !== undefined) return cached;
+
+  // Check fixed presets (black/white)
+  const fixed = FIXED_KEY_MAP[key];
+  if (fixed) {
+    resolveCache.set(key, fixed);
+    return fixed;
+  }
 
   // Try parsing as new hue:shade format
   const parsed = parseColorKey(key);
@@ -216,6 +247,9 @@ export const HUE_RANGES: HueRange[] = [
 
 export function getHueRange(colorKey: string): string | null {
   if (!colorKey) return null;
+
+  // Fixed keys map to neutral (gray filter)
+  if (colorKey in FIXED_KEY_MAP) return 'neutral';
 
   // Resolve legacy keys first
   const effectiveKey = LEGACY_KEY_MAP[colorKey] ?? colorKey;

@@ -142,6 +142,28 @@ describe('colorPalette', () => {
       expect(resolveColor('nonexistent')).toBeUndefined();
     });
 
+    it('resolves "black" to fixed preset', () => {
+      const preset = resolveColor('black');
+      expect(preset).toBeDefined();
+      expect(preset!.key).toBe('black');
+      expect(preset!.label).toBe('Black');
+      expect(preset!.ref).toBe('#1C1C1E');
+      expect(preset!.dot).toBe('#1C1C1E');
+      expect(preset!.bg).toBe('#1C1C1E');
+      expect(preset!.bgCss).toBe('#1C1C1E');
+    });
+
+    it('resolves "white" to fixed preset', () => {
+      const preset = resolveColor('white');
+      expect(preset).toBeDefined();
+      expect(preset!.key).toBe('white');
+      expect(preset!.label).toBe('White');
+      expect(preset!.ref).toBe('#F2F2F7');
+      expect(preset!.dot).toBe('#F2F2F7');
+      expect(preset!.bg).toBe('#F2F2F7');
+      expect(preset!.bgCss).toBe('#F2F2F7');
+    });
+
     it('produces all 5 shades for a hue', () => {
       for (let s = 0; s < SHADE_COUNT; s++) {
         const preset = resolveColor(`180:${s}`);
@@ -182,6 +204,14 @@ describe('colorPalette', () => {
 
     it('returns null for invalid key', () => {
       expect(getHueRange('nonexistent')).toBeNull();
+    });
+
+    it('maps "black" to neutral', () => {
+      expect(getHueRange('black')).toBe('neutral');
+    });
+
+    it('maps "white" to neutral', () => {
+      expect(getHueRange('white')).toBe('neutral');
     });
 
     it('handles red wrap-around', () => {
