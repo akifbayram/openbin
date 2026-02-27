@@ -37,6 +37,12 @@ Rules:
 - For set_color, use one of the available color keys.
 - For set_icon, use one of the available icon names (PascalCase).
 - For create_bin, only include fields that the user explicitly mentioned.
+- For duplicate_bin, optionally provide new_name. Defaults to "Copy of <original>".
+- For pin_bin/unpin_bin, check the is_pinned field to avoid redundant actions.
+- For rename_area/delete_area, use the exact area_id from the areas list.
+- For set_tag_color, use one of the available colors.
+- For reorder_items, provide item_ids from the bin's items list in the desired order.
+- For restore_bin, use bin IDs from the trash_bins list (not the bins list). Trash bins can ONLY be used with restore_bin.
 - Capitalize item names properly.
 - If the command is ambiguous or references a bin that doesn't exist, return an empty actions array with an interpretation explaining the issue.`;
 
@@ -49,7 +55,8 @@ Rules:
 - If nothing matches, say so clearly
 - Always include the "matches" array with relevant bins, even if empty
 - The "relevance" field should briefly explain why each bin matched (e.g., "contains batteries", "tagged as electronics")
-- Sort matches by relevance (most relevant first)`;
+- Sort matches by relevance (most relevant first)
+- Visibility, pin status, photo counts, and trash bins are available in the inventory context — use them to answer questions like "which bins are private?", "what's pinned?", "which bins have photos?", or "what's in the trash?"`;
 
 export const DEFAULT_STRUCTURE_PROMPT = `You are an inventory item extractor. The user will dictate or type a description of items in a storage bin. Your job is to parse this into a clean, structured list of individual items.
 

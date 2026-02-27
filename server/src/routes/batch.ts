@@ -14,6 +14,8 @@ const VALID_TYPES = new Set([
   'add_items', 'remove_items', 'modify_item', 'create_bin', 'delete_bin',
   'add_tags', 'remove_tags', 'modify_tag', 'set_area', 'set_notes',
   'set_icon', 'set_color', 'update_bin', 'restore_bin',
+  'duplicate_bin', 'pin_bin', 'unpin_bin', 'rename_area', 'delete_area',
+  'set_tag_color', 'reorder_items',
 ]);
 
 const MAX_OPS = 50;
@@ -216,6 +218,77 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
           throw new ValidationError(`operations[${i}]: set_color requires "color"`);
         }
         actions.push({ type: 'set_color', bin_id: op.bin_id, bin_name: (op.bin_name as string) || '', color: op.color });
+        break;
+
+      case 'duplicate_bin':
+        if (!op.bin_id || typeof op.bin_id !== 'string') {
+          throw new ValidationError(`operations[${i}]: duplicate_bin requires "bin_id"`);
+        }
+        actions.push({
+          type: 'duplicate_bin',
+          bin_id: op.bin_id,
+          bin_name: (op.bin_name as string) || '',
+          new_name: typeof op.new_name === 'string' ? op.new_name.trim() : undefined,
+        });
+        break;
+
+      case 'pin_bin':
+      case 'unpin_bin':
+        if (!op.bin_id || typeof op.bin_id !== 'string') {
+          throw new ValidationError(`operations[${i}]: ${op.type} requires "bin_id"`);
+        }
+        actions.push({ type: op.type, bin_id: op.bin_id, bin_name: (op.bin_name as string) || '' });
+        break;
+
+      case 'rename_area':
+        if (!op.area_id || typeof op.area_id !== 'string') {
+          throw new ValidationError(`operations[${i}]: rename_area requires "area_id"`);
+        }
+        if (!op.new_name || typeof op.new_name !== 'string') {
+          throw new ValidationError(`operations[${i}]: rename_area requires "new_name"`);
+        }
+        actions.push({
+          type: 'rename_area',
+          area_id: op.area_id,
+          area_name: (op.area_name as string) || '',
+          new_name: op.new_name.trim(),
+        });
+        break;
+
+      case 'delete_area':
+        if (!op.area_id || typeof op.area_id !== 'string') {
+          throw new ValidationError(`operations[${i}]: delete_area requires "area_id"`);
+        }
+        actions.push({
+          type: 'delete_area',
+          area_id: op.area_id,
+          area_name: (op.area_name as string) || '',
+        });
+        break;
+
+      case 'set_tag_color':
+        if (typeof op.tag !== 'string' || !op.tag.trim()) {
+          throw new ValidationError(`operations[${i}]: set_tag_color requires "tag"`);
+        }
+        if (typeof op.color !== 'string') {
+          throw new ValidationError(`operations[${i}]: set_tag_color requires "color"`);
+        }
+        actions.push({ type: 'set_tag_color', tag: op.tag.trim(), color: op.color });
+        break;
+
+      case 'reorder_items':
+        if (!op.bin_id || typeof op.bin_id !== 'string') {
+          throw new ValidationError(`operations[${i}]: reorder_items requires "bin_id"`);
+        }
+        if (!Array.isArray(op.item_ids) || op.item_ids.length === 0) {
+          throw new ValidationError(`operations[${i}]: reorder_items requires non-empty "item_ids" array`);
+        }
+        actions.push({
+          type: 'reorder_items',
+          bin_id: op.bin_id,
+          bin_name: (op.bin_name as string) || '',
+          item_ids: op.item_ids.filter((id: unknown): id is string => typeof id === 'string'),
+        });
         break;
     }
   }

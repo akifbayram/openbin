@@ -309,7 +309,7 @@ router.post('/command', aiLimiter, requireLocationMember(), aiRouteHandler('pars
   const { locationId } = req.body;
   const { config, command_prompt } = await getUserAiSettings(req.user!.id);
 
-  const context = await buildCommandContext(locationId);
+  const context = await buildCommandContext(locationId, req.user!.id);
   const request: CommandRequest = { text, context };
   const result = await parseCommand(config, request, command_prompt || undefined);
   res.json(result);
@@ -321,7 +321,7 @@ router.post('/query', aiLimiter, requireLocationMember(), aiRouteHandler('query 
   const { locationId } = req.body;
   const { config, query_prompt } = await getUserAiSettings(req.user!.id);
 
-  const context = await buildInventoryContext(locationId);
+  const context = await buildInventoryContext(locationId, req.user!.id);
   const result = await queryInventory(config, question, context, query_prompt || undefined);
   res.json(result);
 }));
@@ -332,7 +332,7 @@ router.post('/execute', aiLimiter, requireLocationMember(), aiRouteHandler('exec
   const { locationId } = req.body;
   const { config, command_prompt } = await getUserAiSettings(req.user!.id);
 
-  const context = await buildCommandContext(locationId);
+  const context = await buildCommandContext(locationId, req.user!.id);
   const request: CommandRequest = { text, context };
   const parsed = await parseCommand(config, request, command_prompt || undefined);
 

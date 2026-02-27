@@ -71,7 +71,10 @@ export function CommandIdleInput({
             <p><span className="text-[var(--text-secondary)]">Add/remove items</span> — &quot;Add screwdriver to the tools bin&quot; or &quot;Remove batteries from kitchen box&quot;</p>
             <p><span className="text-[var(--text-secondary)]">Organize</span> — &quot;Move batteries from kitchen to garage&quot; or &quot;Tag tools bin as hardware&quot;</p>
             <p><span className="text-[var(--text-secondary)]">Manage {t.bins}</span> — &quot;Create a {t.bin} called Holiday Decorations in the attic&quot; or &quot;Delete the empty box {t.bin}&quot;</p>
+            <p><span className="text-[var(--text-secondary)]">Quick actions</span> — &quot;Duplicate the tools {t.bin}&quot; or &quot;Pin my kitchen {t.bin}&quot;</p>
+            <p><span className="text-[var(--text-secondary)]">{t.areas}</span> — &quot;Rename the garage {t.area} to workshop&quot; or &quot;Delete the empty attic {t.area}&quot;</p>
             <p><span className="text-[var(--text-secondary)]">Find things</span> — &quot;Where is the glass cleaner?&quot; or &quot;Which {t.bins} have batteries?&quot;</p>
+            <p><span className="text-[var(--text-secondary)]">Search trash</span> — &quot;What&apos;s in my trash?&quot; or &quot;Restore the holiday decorations {t.bin}&quot;</p>
             <p><span className="text-[var(--text-secondary)]">Upload photos</span> — Snap a photo of a {t.bin} and AI will create it for you</p>
           </div>
         )}

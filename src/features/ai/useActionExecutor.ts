@@ -1,8 +1,11 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
-import { useAreaList, createArea } from '@/features/areas/useAreas';
-import { addBin, updateBin, deleteBin, restoreBin, notifyBinsChanged, addItemsToBin } from '@/features/bins/useBins';
+import { useAreaList, createArea, updateArea, deleteArea } from '@/features/areas/useAreas';
+import { addBin, updateBin, deleteBin, restoreBin, notifyBinsChanged, addItemsToBin, reorderItems, restoreBinFromTrash } from '@/features/bins/useBins';
+import { pinBin, unpinBin } from '@/features/pins/usePins';
+import { setTagColor } from '@/features/tags/useTagColors';
+import { notify, Events } from '@/lib/eventBus';
 import { apiFetch } from '@/lib/api';
 import type { CommandAction } from './useCommand';
 import type { Bin } from '@/types';
@@ -136,6 +139,53 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
             break;
           case 'set_color':
             await updateBin(action.bin_id, { color: action.color });
+            break;
+          case 'update_bin': {
+            const updates: Record<string, unknown> = {};
+            if (action.name !== undefined) updates.name = action.name;
+            if (action.notes !== undefined) updates.notes = action.notes;
+            if (action.tags !== undefined) updates.tags = action.tags;
+            if (action.icon !== undefined) updates.icon = action.icon;
+            if (action.color !== undefined) updates.color = action.color;
+            if (action.visibility !== undefined) updates.visibility = action.visibility;
+            if (action.area_name !== undefined) {
+              const areaId = action.area_name ? await resolveAreaId(action.area_name) : null;
+              updates.areaId = areaId;
+            }
+            await updateBin(action.bin_id, updates);
+            break;
+          }
+          case 'restore_bin':
+            await restoreBinFromTrash(action.bin_id);
+            break;
+          case 'duplicate_bin':
+            await apiFetch(`/api/bins/${action.bin_id}/duplicate`, {
+              method: 'POST',
+              body: action.new_name ? { name: action.new_name } : {},
+            });
+            break;
+          case 'pin_bin':
+            await pinBin(action.bin_id);
+            notify(Events.PINS);
+            break;
+          case 'unpin_bin':
+            await unpinBin(action.bin_id);
+            notify(Events.PINS);
+            break;
+          case 'rename_area':
+            await updateArea(activeLocationId!, action.area_id, action.new_name);
+            notify(Events.AREAS);
+            break;
+          case 'delete_area':
+            await deleteArea(activeLocationId!, action.area_id);
+            notify(Events.AREAS);
+            break;
+          case 'set_tag_color':
+            await setTagColor(activeLocationId!, action.tag, action.color);
+            notify(Events.TAG_COLORS);
+            break;
+          case 'reorder_items':
+            await reorderItems(action.bin_id, action.item_ids);
             break;
         }
         completed++;

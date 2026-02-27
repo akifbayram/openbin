@@ -24,8 +24,12 @@ export interface InventoryContext {
     tags: string[];
     area_name: string;
     notes: string;
+    visibility: string;
+    is_pinned: boolean;
+    photo_count: number;
   }>;
   areas: Array<{ id: string; name: string }>;
+  trash_bins: Array<{ id: string; name: string }>;
 }
 
 function buildSystemPrompt(customPrompt?: string): string {
@@ -47,6 +51,9 @@ function buildUserMessage(question: string, context: InventoryContext): string {
     tags: b.tags,
     area_name: b.area_name,
     notes: b.notes.length > 200 ? b.notes.slice(0, 200) + '...' : b.notes,
+    visibility: b.visibility,
+    is_pinned: b.is_pinned,
+    photo_count: b.photo_count,
   }));
 
   const areasContext = context.areas.map((a) => ({
@@ -54,10 +61,12 @@ function buildUserMessage(question: string, context: InventoryContext): string {
     name: a.name,
   }));
 
+  const trashContext = context.trash_bins;
+
   return `Question: ${question}
 
 Inventory:
-${JSON.stringify({ bins: binsContext, areas: areasContext })}`;
+${JSON.stringify({ bins: binsContext, areas: areasContext, trash_bins: trashContext })}`;
 }
 
 function validateQueryResult(raw: unknown, validBinIds: Set<string>): QueryResult {

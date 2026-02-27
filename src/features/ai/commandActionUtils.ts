@@ -1,11 +1,13 @@
 import {
   Plus, Minus, Package, Trash2, Tag, MapPin, FileText, Palette, Image as ImageIcon,
+  Copy, Pin, PinOff, FolderPen, FolderMinus, ArrowUpDown, Undo2, PenLine,
 } from 'lucide-react';
 import type { CommandAction } from './useCommand';
 import type { Terminology } from '@/lib/terminology';
 
 export function isDestructiveAction(action: CommandAction): boolean {
-  return action.type === 'delete_bin' || action.type === 'remove_items' || action.type === 'remove_tags';
+  return action.type === 'delete_bin' || action.type === 'remove_items' || action.type === 'remove_tags'
+    || action.type === 'delete_area' || action.type === 'unpin_bin';
 }
 
 export function getActionIcon(action: CommandAction) {
@@ -22,6 +24,15 @@ export function getActionIcon(action: CommandAction) {
     case 'set_notes': return FileText;
     case 'set_icon': return ImageIcon;
     case 'set_color': return Palette;
+    case 'update_bin': return PenLine;
+    case 'restore_bin': return Undo2;
+    case 'duplicate_bin': return Copy;
+    case 'pin_bin': return Pin;
+    case 'unpin_bin': return PinOff;
+    case 'rename_area': return FolderPen;
+    case 'delete_area': return FolderMinus;
+    case 'set_tag_color': return Palette;
+    case 'reorder_items': return ArrowUpDown;
   }
 }
 
@@ -57,5 +68,25 @@ export function describeAction(action: CommandAction, t: Terminology): string {
       return `Set icon on "${action.bin_name}" to ${action.icon}`;
     case 'set_color':
       return `Set color on "${action.bin_name}" to ${action.color}`;
+    case 'update_bin': {
+      const fields = ['name', 'notes', 'tags', 'area_name', 'icon', 'color', 'visibility'].filter((f) => (action as Record<string, unknown>)[f] !== undefined);
+      return `Update "${action.bin_name}": ${fields.join(', ')}`;
+    }
+    case 'restore_bin':
+      return `Restore "${action.bin_name}" from trash`;
+    case 'duplicate_bin':
+      return action.new_name ? `Duplicate "${action.bin_name}" as "${action.new_name}"` : `Duplicate "${action.bin_name}"`;
+    case 'pin_bin':
+      return `Pin "${action.bin_name}"`;
+    case 'unpin_bin':
+      return `Unpin "${action.bin_name}"`;
+    case 'rename_area':
+      return `Rename ${t.area} "${action.area_name}" to "${action.new_name}"`;
+    case 'delete_area':
+      return `Delete ${t.area} "${action.area_name}"`;
+    case 'set_tag_color':
+      return `Set color of tag "${action.tag}" to ${action.color}`;
+    case 'reorder_items':
+      return `Reorder items in "${action.bin_name}"`;
   }
 }

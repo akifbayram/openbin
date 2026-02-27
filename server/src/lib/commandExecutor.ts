@@ -458,6 +458,112 @@ function executeSingleAction(
       return { type: 'restore_bin', success: true, details: `Restored bin "${action.bin_name}" from trash`, bin_id: action.bin_id, bin_name: action.bin_name };
     }
 
+    case 'duplicate_bin': {
+      const src = querySync<{ id: string; name: string; area_id: string | null; notes: string; tags: string[]; icon: string; color: string; card_style: string; visibility: string }>(
+        'SELECT id, name, area_id, notes, tags, icon, color, card_style, visibility FROM bins WHERE id = $1 AND deleted_at IS NULL',
+        [action.bin_id]
+      );
+      if (src.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+      const s = src.rows[0];
+      const newName = action.new_name || `Copy of ${s.name}`;
+
+      let binId = generateShortCode(newName);
+      const maxRetries = 10;
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const code = attempt === 0 ? binId : generateShortCode(newName);
+        try {
+          querySync(
+            `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, visibility, created_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            [code, locationId, newName, s.area_id, s.notes, s.tags, s.icon, s.color, s.card_style, s.visibility, userId]
+          );
+          binId = code;
+          break;
+        } catch (err: unknown) {
+          const sqliteErr = err as { code?: string };
+          if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && attempt < maxRetries) continue;
+          throw err;
+        }
+      }
+
+      // Copy items
+      const srcItems = querySync<{ name: string }>('SELECT name FROM bin_items WHERE bin_id = $1 ORDER BY position', [action.bin_id]);
+      for (let i = 0; i < srcItems.rows.length; i++) {
+        querySync('INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)', [generateUuid(), binId, srcItems.rows[i].name, i]);
+      }
+
+      pendingActivities.push({
+        locationId, userId, userName, authMethod, apiKeyId,
+        action: 'duplicate', entityType: 'bin', entityId: binId, entityName: newName,
+      });
+      return { type: 'duplicate_bin', success: true, details: `Duplicated "${action.bin_name}" as "${newName}"`, bin_id: binId, bin_name: newName };
+    }
+
+    case 'pin_bin': {
+      const bin = querySync('SELECT id FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+      if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+      querySync(
+        'INSERT OR IGNORE INTO pinned_bins (user_id, bin_id, position) VALUES ($1, $2, (SELECT COALESCE(MAX(position),0)+1 FROM pinned_bins WHERE user_id = $1))',
+        [userId, action.bin_id]
+      );
+      return { type: 'pin_bin', success: true, details: `Pinned "${action.bin_name}"`, bin_id: action.bin_id, bin_name: action.bin_name };
+    }
+
+    case 'unpin_bin': {
+      querySync('DELETE FROM pinned_bins WHERE user_id = $1 AND bin_id = $2', [userId, action.bin_id]);
+      return { type: 'unpin_bin', success: true, details: `Unpinned "${action.bin_name}"`, bin_id: action.bin_id, bin_name: action.bin_name };
+    }
+
+    case 'rename_area': {
+      const area = querySync('SELECT id, name FROM areas WHERE id = $1 AND location_id = $2', [action.area_id, locationId]);
+      if (area.rows.length === 0) throw new Error(`Area not found: ${action.area_name}`);
+      const oldName = area.rows[0].name as string;
+      querySync("UPDATE areas SET name = $1, updated_at = datetime('now') WHERE id = $2 AND location_id = $3", [action.new_name, action.area_id, locationId]);
+      pendingActivities.push({
+        locationId, userId, userName, authMethod, apiKeyId,
+        action: 'update', entityType: 'area', entityId: action.area_id, entityName: action.new_name,
+        changes: { name: { old: oldName, new: action.new_name } },
+      });
+      return { type: 'rename_area', success: true, details: `Renamed area "${oldName}" to "${action.new_name}"` };
+    }
+
+    case 'delete_area': {
+      const area = querySync('SELECT id, name FROM areas WHERE id = $1 AND location_id = $2', [action.area_id, locationId]);
+      if (area.rows.length === 0) throw new Error(`Area not found: ${action.area_name}`);
+      querySync('UPDATE bins SET area_id = NULL WHERE area_id = $1', [action.area_id]);
+      querySync('DELETE FROM areas WHERE id = $1 AND location_id = $2', [action.area_id, locationId]);
+      pendingActivities.push({
+        locationId, userId, userName, authMethod, apiKeyId,
+        action: 'delete', entityType: 'area', entityId: action.area_id, entityName: action.area_name,
+      });
+      return { type: 'delete_area', success: true, details: `Deleted area "${action.area_name}"` };
+    }
+
+    case 'set_tag_color': {
+      const tcId = generateUuid();
+      querySync(
+        `INSERT INTO tag_colors (id, location_id, tag, color) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (location_id, tag) DO UPDATE SET color = $4, updated_at = datetime('now')`,
+        [tcId, locationId, action.tag, action.color]
+      );
+      return { type: 'set_tag_color', success: true, details: `Set color of tag "${action.tag}" to ${action.color}` };
+    }
+
+    case 'reorder_items': {
+      const bin = querySync('SELECT id FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+      if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+      for (let i = 0; i < action.item_ids.length; i++) {
+        querySync('UPDATE bin_items SET position = $1 WHERE id = $2 AND bin_id = $3', [i, action.item_ids[i], action.bin_id]);
+      }
+      querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
+      pendingActivities.push({
+        locationId, userId, userName, authMethod, apiKeyId,
+        action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
+        changes: { items_reordered: { old: null, new: action.item_ids } },
+      });
+      return { type: 'reorder_items', success: true, details: `Reordered items in "${action.bin_name}"`, bin_id: action.bin_id, bin_name: action.bin_name };
+    }
+
     default:
       return { type: (action as { type: string }).type, success: false, details: 'Unknown action type', error: 'Unknown action type' };
   }

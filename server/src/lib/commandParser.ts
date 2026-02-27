@@ -5,13 +5,16 @@ import { DEFAULT_COMMAND_PROMPT } from './defaultPrompts.js';
 export interface BinSummary {
   id: string;
   name: string;
-  items: string[];
+  items: Array<{ id: string; name: string }>;
   tags: string[];
   area_id: string | null;
   area_name: string;
   notes: string;
   icon: string;
   color: string;
+  visibility: string;
+  is_pinned: boolean;
+  photo_count: number;
 }
 
 export interface AreaSummary {
@@ -33,13 +36,21 @@ export type CommandAction =
   | { type: 'set_icon'; bin_id: string; bin_name: string; icon: string }
   | { type: 'set_color'; bin_id: string; bin_name: string; color: string }
   | { type: 'update_bin'; bin_id: string; bin_name: string; name?: string; notes?: string; tags?: string[]; area_name?: string; icon?: string; color?: string; card_style?: string; visibility?: 'location' | 'private' }
-  | { type: 'restore_bin'; bin_id: string; bin_name: string };
+  | { type: 'restore_bin'; bin_id: string; bin_name: string }
+  | { type: 'duplicate_bin'; bin_id: string; bin_name: string; new_name?: string }
+  | { type: 'pin_bin'; bin_id: string; bin_name: string }
+  | { type: 'unpin_bin'; bin_id: string; bin_name: string }
+  | { type: 'rename_area'; area_id: string; area_name: string; new_name: string }
+  | { type: 'delete_area'; area_id: string; area_name: string }
+  | { type: 'set_tag_color'; tag: string; color: string }
+  | { type: 'reorder_items'; bin_id: string; bin_name: string; item_ids: string[] };
 
 export interface CommandRequest {
   text: string;
   context: {
     bins: BinSummary[];
     areas: AreaSummary[];
+    trash_bins: Array<{ id: string; name: string }>;
     availableColors: string[];
     availableIcons: string[];
   };
@@ -68,6 +79,15 @@ Available action types:
 - set_notes: Set/append/clear bin notes. Fields: bin_id, bin_name, notes, mode ("set"|"append"|"clear")
 - set_icon: Set a bin's icon. Fields: bin_id, bin_name, icon
 - set_color: Set a bin's color. Fields: bin_id, bin_name, color
+- update_bin: Update multiple bin fields at once. Fields: bin_id, bin_name, name?, notes?, tags?[], area_name?, icon?, color?, card_style?, visibility?
+- restore_bin: Restore a bin from trash. Fields: bin_id, bin_name (use IDs from trash_bins, not bins)
+- duplicate_bin: Duplicate a bin. Fields: bin_id, bin_name, new_name? (defaults to "Copy of <original>")
+- pin_bin: Pin a bin for quick access. Fields: bin_id, bin_name
+- unpin_bin: Unpin a bin. Fields: bin_id, bin_name
+- rename_area: Rename an area. Fields: area_id, area_name, new_name
+- delete_area: Delete an area (bins become unassigned). Fields: area_id, area_name
+- set_tag_color: Set a tag's display color. Fields: tag, color
+- reorder_items: Reorder items in a bin. Fields: bin_id, bin_name, item_ids[] (item IDs in desired order)
 
 Available colors: ${request.context.availableColors.join(', ')}
 Available icons: ${request.context.availableIcons.join(', ')}
@@ -89,6 +109,9 @@ function buildUserMessage(request: CommandRequest): string {
     notes: b.notes.length > 200 ? b.notes.slice(0, 200) + '...' : b.notes,
     icon: b.icon,
     color: b.color,
+    visibility: b.visibility,
+    is_pinned: b.is_pinned,
+    photo_count: b.photo_count,
   }));
 
   const areasContext = request.context.areas.map((a) => ({
@@ -96,25 +119,34 @@ function buildUserMessage(request: CommandRequest): string {
     name: a.name,
   }));
 
+  const trashContext = request.context.trash_bins;
+
   return `Command: ${request.text}
 
 Current inventory:
-${JSON.stringify({ bins: binsContext, areas: areasContext })}`;
+${JSON.stringify({ bins: binsContext, areas: areasContext, trash_bins: trashContext })}`;
 }
 
 const VALID_ACTION_TYPES = new Set([
   'add_items', 'remove_items', 'modify_item', 'create_bin', 'delete_bin',
   'add_tags', 'remove_tags', 'modify_tag', 'set_area', 'set_notes',
   'set_icon', 'set_color', 'update_bin', 'restore_bin',
+  'duplicate_bin', 'pin_bin', 'unpin_bin', 'rename_area', 'delete_area',
+  'set_tag_color', 'reorder_items',
 ]);
 
-function validateCommandResult(raw: unknown, binIds: Set<string>): CommandResult {
+function validateCommandResult(raw: unknown, binIds: Set<string>, areaIds: Set<string>, trashBinIds: Set<string>): CommandResult {
   const obj = raw as Record<string, unknown>;
   const interpretation = typeof obj.interpretation === 'string' ? obj.interpretation : '';
 
   if (!Array.isArray(obj.actions)) {
     return { actions: [], interpretation: interpretation || 'Could not parse command' };
   }
+
+  // Types that don't reference bins at all
+  const noBinTypes = new Set(['create_bin', 'rename_area', 'delete_area', 'set_tag_color']);
+  // Types that reference trash bins instead of active bins
+  const trashTypes = new Set(['restore_bin']);
 
   const actions: CommandAction[] = [];
   for (const action of obj.actions) {
@@ -126,8 +158,17 @@ function validateCommandResult(raw: unknown, binIds: Set<string>): CommandResult
     if (!VALID_ACTION_TYPES.has(type)) continue;
 
     // Validate bin_id references for actions that require existing bins
-    if (type !== 'create_bin' && typeof a.bin_id === 'string' && !binIds.has(a.bin_id)) {
-      continue; // Skip actions referencing non-existent bins
+    if (!noBinTypes.has(type) && typeof a.bin_id === 'string') {
+      if (trashTypes.has(type)) {
+        if (!trashBinIds.has(a.bin_id)) continue; // Skip trash actions with invalid IDs
+      } else {
+        if (!binIds.has(a.bin_id)) continue; // Skip actions referencing non-existent bins
+      }
+    }
+
+    // Validate area_id references for area actions
+    if ((type === 'rename_area' || type === 'delete_area') && typeof a.area_id === 'string' && !areaIds.has(a.area_id)) {
+      continue;
     }
 
     // Type-specific validation
@@ -257,6 +298,59 @@ function validateCommandResult(raw: unknown, binIds: Set<string>): CommandResult
           bin_name: (a.bin_name as string) || '',
         });
         break;
+      case 'duplicate_bin':
+        if (typeof a.bin_id !== 'string') continue;
+        actions.push({
+          type,
+          bin_id: a.bin_id as string,
+          bin_name: (a.bin_name as string) || '',
+          new_name: typeof a.new_name === 'string' ? a.new_name.trim() : undefined,
+        });
+        break;
+      case 'pin_bin':
+      case 'unpin_bin':
+        if (typeof a.bin_id !== 'string') continue;
+        actions.push({
+          type,
+          bin_id: a.bin_id as string,
+          bin_name: (a.bin_name as string) || '',
+        });
+        break;
+      case 'rename_area':
+        if (typeof a.area_id !== 'string' || typeof a.new_name !== 'string') continue;
+        actions.push({
+          type,
+          area_id: a.area_id as string,
+          area_name: (a.area_name as string) || '',
+          new_name: (a.new_name as string).trim(),
+        });
+        break;
+      case 'delete_area':
+        if (typeof a.area_id !== 'string') continue;
+        actions.push({
+          type,
+          area_id: a.area_id as string,
+          area_name: (a.area_name as string) || '',
+        });
+        break;
+      case 'set_tag_color':
+        if (typeof a.tag !== 'string' || typeof a.color !== 'string') continue;
+        actions.push({
+          type,
+          tag: (a.tag as string).trim(),
+          color: (a.color as string).trim(),
+        });
+        break;
+      case 'reorder_items':
+        if (typeof a.bin_id !== 'string') continue;
+        if (!Array.isArray(a.item_ids) || a.item_ids.length === 0) continue;
+        actions.push({
+          type,
+          bin_id: a.bin_id as string,
+          bin_name: (a.bin_name as string) || '',
+          item_ids: (a.item_ids as unknown[]).filter((i): i is string => typeof i === 'string'),
+        });
+        break;
     }
   }
 
@@ -269,6 +363,8 @@ export async function parseCommand(
   customPrompt?: string
 ): Promise<CommandResult> {
   const binIds = new Set(request.context.bins.map((b) => b.id));
+  const areaIds = new Set(request.context.areas.map((a) => a.id));
+  const trashBinIds = new Set(request.context.trash_bins.map((b) => b.id));
 
   return callAiProvider({
     config,
@@ -276,6 +372,6 @@ export async function parseCommand(
     userContent: buildUserMessage(request),
     temperature: 0.2,
     maxTokens: 2000,
-    validate: (raw) => validateCommandResult(raw, binIds),
+    validate: (raw) => validateCommandResult(raw, binIds, areaIds, trashBinIds),
   });
 }

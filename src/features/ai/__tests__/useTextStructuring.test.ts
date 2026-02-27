@@ -75,7 +75,7 @@ describe('mapStructureErrorMessage', () => {
   });
 
   it('maps unknown error to generic message', () => {
-    expect(mapStructureErrorMessage(new TypeError('oops'))).toBe('Couldn\'t extract items — try describing them differently');
+    expect(mapStructureErrorMessage(new TypeError('oops'))).toBe('Couldn\'t find items — try describing them differently');
   });
 });
 
