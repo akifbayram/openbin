@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { updateBin } from './useBins';
 import { useToast } from '@/components/ui/toast';
+import { useBinFormFields } from './useBinFormFields';
 import type { Bin, BinVisibility } from '@/types';
 
 interface OriginalSnapshot {
@@ -25,15 +26,17 @@ function arraysEqual(a: string[], b: string[]): boolean {
 export function useEditBinForm(id: string | undefined) {
   const { showToast } = useToast();
   const [editing, setEditing] = useState(false);
-  const [name, setName] = useState('');
-  const [areaId, setAreaId] = useState<string | null>(null);
-  const [items, setItems] = useState<string[]>([]);
-  const [notes, setNotes] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [icon, setIcon] = useState('');
-  const [color, setColor] = useState('');
-  const [cardStyle, setCardStyle] = useState('');
-  const [visibility, setVisibility] = useState<BinVisibility>('location');
+  const {
+    name, setName,
+    areaId, setAreaId,
+    items, setItems,
+    notes, setNotes,
+    tags, setTags,
+    icon, setIcon,
+    color, setColor,
+    cardStyle, setCardStyle,
+    visibility, setVisibility,
+  } = useBinFormFields();
   const originalRef = useRef<OriginalSnapshot | null>(null);
 
   const isDirty = useMemo(() => {

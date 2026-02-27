@@ -1,23 +1,37 @@
 import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
-import sharp from 'sharp';
 import { query, getDb } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
-import { logActivity, computeChanges } from '../lib/activityLog.js';
+import { logActivity } from '../lib/activityLog.js';
 import { purgeExpiredTrash } from '../lib/trashPurge.js';
-import { generateShortCode } from '../lib/shortCode.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { ValidationError, NotFoundError, ForbiddenError } from '../lib/httpErrors.js';
 import { validateBinName } from '../lib/validation.js';
 import { binPhotoUpload } from '../lib/uploadConfig.js';
-import { verifyBinAccess, verifyLocationMembership, getMemberRole, isBinCreator, verifyAreaInLocation } from '../lib/binAccess.js';
-import { BIN_SELECT_COLS, buildBinListQuery } from '../lib/binQueries.js';
+import { verifyBinAccess, verifyLocationMembership, getMemberRole, isBinCreator, verifyAreaInLocation, requireAdmin, verifyDeletedBinAccess } from '../lib/binAccess.js';
+import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
 import { validateBinFields } from '../lib/binValidation.js';
-import { buildBinSetClauses, replaceBinItems, resolveAreaNameChanges } from '../lib/binUpdateHelpers.js';
+import { buildBinSetClauses, replaceBinItems, insertBinWithItems, buildBinUpdateDiff } from '../lib/binUpdateHelpers.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
+import { generateThumbnail } from '../lib/photoHelpers.js';
 
 const router = Router();
+
+/** Thin wrapper: fills auth context from req and sets entityType to 'bin'. */
+function logBinActivity(
+  req: Express.Request,
+  opts: { locationId: string; action: string; entityId?: string; entityName?: string; changes?: Record<string, { old: unknown; new: unknown }> },
+): void {
+  logActivity({
+    ...opts,
+    entityType: 'bin',
+    userId: req.user!.id,
+    userName: req.user!.username,
+    authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
+  });
+}
 
 router.use(authenticate);
 
@@ -38,62 +52,23 @@ router.post('/', asyncHandler(async (req, res) => {
 
   if (areaId) await verifyAreaInLocation(areaId, locationId);
 
-  // Generate short code as the bin ID with retry on collision
-  const sc = generateShortCode(name);
-  const maxRetries = 10;
+  const bin = await insertBinWithItems({
+    locationId,
+    name,
+    areaId: areaId || null,
+    notes: notes || '',
+    tags: tags || [],
+    icon: icon || '',
+    color: color || '',
+    cardStyle: cardStyle || '',
+    createdBy: req.user!.id,
+    visibility: visibility || 'location',
+    items: Array.isArray(items) ? items : [],
+  });
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const binId = attempt === 0 ? sc : generateShortCode(name);
+  logBinActivity(req, { locationId, action: 'create', entityId: bin.id, entityName: bin.name });
 
-    try {
-      await query(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [binId, locationId, name.trim(), areaId || null, notes || '', tags || [], icon || '', color || '', cardStyle || '', req.user!.id, visibility || 'location']
-      );
-
-      // Insert items into bin_items
-      const itemsArr: unknown[] = Array.isArray(items) ? items : [];
-      for (let i = 0; i < itemsArr.length; i++) {
-        const itemName = typeof itemsArr[i] === 'string' ? itemsArr[i] : (itemsArr[i] as { name: string })?.name;
-        if (!itemName) continue;
-        await query(
-          'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
-          [crypto.randomUUID(), binId, itemName, i]
-        );
-      }
-
-      // Re-fetch with BIN_SELECT_COLS
-      const result = await query(
-        `SELECT ${BIN_SELECT_COLS} FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE b.id = $1`,
-        [binId]
-      );
-      const bin = result.rows[0];
-
-      logActivity({
-        locationId,
-        userId: req.user!.id,
-        userName: req.user!.username,
-        action: 'create',
-        entityType: 'bin',
-        entityId: bin.id,
-        entityName: bin.name,
-        authMethod: req.authMethod,
-        apiKeyId: req.apiKeyId,
-      });
-
-      res.status(201).json(bin);
-      return;
-    } catch (err: unknown) {
-      const sqliteErr = err as { code?: string };
-      if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && attempt < maxRetries) {
-        continue; // retry with new code
-      }
-      throw err;
-    }
-  }
-
-  res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to generate unique short code' });
+  res.status(201).json(bin);
 }));
 
 // GET /api/bins — list all (non-deleted) bins for a location
@@ -255,19 +230,12 @@ router.get('/:id', asyncHandler(async (req, res) => {
     throw new NotFoundError('Bin not found');
   }
 
-  const result = await query(
-    `SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
-     FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-     LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
-     WHERE b.id = $1 AND b.deleted_at IS NULL`,
-    [id, req.user!.id]
-  );
-
-  if (result.rows.length === 0) {
+  const bin = await fetchBinById(id, { userId: req.user!.id, excludeDeleted: true });
+  if (!bin) {
     throw new NotFoundError('Bin not found');
   }
 
-  res.json(result.rows[0]);
+  res.json(bin);
 }));
 
 // PUT /api/bins/:id — update bin
@@ -320,53 +288,19 @@ router.put('/:id', asyncHandler(async (req, res) => {
     : null;
 
   // Re-fetch with BIN_SELECT_COLS
-  const result = await query(
-    `SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
-     FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-     LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
-     WHERE b.id = $1 AND b.deleted_at IS NULL`,
-    [id, req.user!.id]
-  );
-
-  if (result.rows.length === 0) {
+  const bin = await fetchBinById(id, { userId: req.user!.id, excludeDeleted: true });
+  if (!bin) {
     throw new NotFoundError('Bin not found');
   }
 
-  const bin = result.rows[0];
-
   if (oldBin) {
-    const newObj: Record<string, unknown> = {};
-    if (name !== undefined) newObj.name = name;
-    if (areaId !== undefined) newObj.area_id = areaId || null;
-    if (notes !== undefined) newObj.notes = notes;
-    if (tags !== undefined) newObj.tags = tags;
-    if (icon !== undefined) newObj.icon = icon;
-    if (color !== undefined) newObj.color = color;
-    if (cardStyle !== undefined) newObj.card_style = cardStyle;
-    if (visibility !== undefined) newObj.visibility = visibility;
-
-    const binFieldChanges = computeChanges(oldBin, newObj, Object.keys(newObj));
-
-    await resolveAreaNameChanges(
-      binFieldChanges ?? {},
-      oldBin.area_id as string | null,
-      (newObj.area_id as string | null) ?? null,
+    const changes = await buildBinUpdateDiff(
+      oldBin,
+      { name, areaId, notes, tags, icon, color, cardStyle, visibility },
+      itemChanges,
     );
-
-    const allChanges = { ...(binFieldChanges ?? {}), ...itemChanges };
-    if (Object.keys(allChanges).length > 0) {
-      logActivity({
-        locationId: access.locationId,
-        userId: req.user!.id,
-        userName: req.user!.username,
-        action: 'update',
-        entityType: 'bin',
-        entityId: id,
-        entityName: bin.name,
-        changes: allChanges,
-        authMethod: req.authMethod,
-        apiKeyId: req.apiKeyId,
-      });
+    if (changes) {
+      logBinActivity(req, { locationId: access.locationId, action: 'update', entityId: id, entityName: bin.name, changes });
     }
   }
 
@@ -382,39 +316,18 @@ router.delete('/:id', asyncHandler(async (req, res) => {
     throw new NotFoundError('Bin not found');
   }
 
-  const delRole = await getMemberRole(access.locationId, req.user!.id);
-  if (delRole !== 'admin') {
-    throw new ForbiddenError('Only admins can delete bins');
-  }
+  await requireAdmin(access.locationId, req.user!.id, 'delete bins');
 
   // Fetch bin before soft-deleting for response
-  const binResult = await query(
-    `SELECT ${BIN_SELECT_COLS}
-     FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-     WHERE b.id = $1 AND b.deleted_at IS NULL`,
-    [id]
-  );
-
-  if (binResult.rows.length === 0) {
+  const bin = await fetchBinById(id, { excludeDeleted: true });
+  if (!bin) {
     throw new NotFoundError('Bin not found');
   }
-
-  const bin = binResult.rows[0];
 
   // Soft delete
   await query("UPDATE bins SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = $1", [id]);
 
-  logActivity({
-    locationId: access.locationId,
-    userId: req.user!.id,
-    userName: req.user!.username,
-    action: 'delete',
-    entityType: 'bin',
-    entityId: id,
-    entityName: bin.name,
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
-  });
+  logBinActivity(req, { locationId: access.locationId, action: 'delete', entityId: id, entityName: bin.name });
 
   res.json(bin);
 }));
@@ -423,47 +336,22 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 router.post('/:id/restore', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Check access but for deleted bins (visibility-aware)
-  const accessResult = await query(
-    `SELECT b.location_id FROM bins b
-     JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-     WHERE b.id = $1 AND b.deleted_at IS NOT NULL AND (b.visibility = 'location' OR b.created_by = $2)`,
-    [id, req.user!.id]
-  );
-
-  if (accessResult.rows.length === 0) {
+  const deletedAccess = await verifyDeletedBinAccess(id, req.user!.id);
+  if (!deletedAccess) {
     throw new NotFoundError('Deleted bin not found');
   }
 
-  const locationId = accessResult.rows[0].location_id;
-
-  const restoreRole = await getMemberRole(locationId, req.user!.id);
-  if (restoreRole !== 'admin') {
-    throw new ForbiddenError('Only admins can restore bins');
-  }
+  const { locationId } = deletedAccess;
+  await requireAdmin(locationId, req.user!.id, 'restore bins');
 
   await query(
     `UPDATE bins SET deleted_at = NULL, updated_at = datetime('now') WHERE id = $1`,
     [id]
   );
 
-  const result = await query(
-    `SELECT ${BIN_SELECT_COLS} FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE b.id = $1`,
-    [id]
-  );
-  const bin = result.rows[0];
+  const bin = (await fetchBinById(id))!;
 
-  logActivity({
-    locationId,
-    userId: req.user!.id,
-    userName: req.user!.username,
-    action: 'restore',
-    entityType: 'bin',
-    entityId: id,
-    entityName: bin.name,
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
-  });
+  logBinActivity(req, { locationId, action: 'restore', entityId: id, entityName: bin.name });
 
   res.json(bin);
 }));
@@ -472,24 +360,13 @@ router.post('/:id/restore', asyncHandler(async (req, res) => {
 router.delete('/:id/permanent', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Only allow permanent delete of already soft-deleted bins (visibility-aware)
-  const accessResult = await query(
-    `SELECT b.location_id, b.name FROM bins b
-     JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-     WHERE b.id = $1 AND b.deleted_at IS NOT NULL AND (b.visibility = 'location' OR b.created_by = $2)`,
-    [id, req.user!.id]
-  );
-
-  if (accessResult.rows.length === 0) {
+  const deletedAccess = await verifyDeletedBinAccess(id, req.user!.id);
+  if (!deletedAccess) {
     throw new NotFoundError('Deleted bin not found');
   }
 
-  const { location_id: locationId, name: binName } = accessResult.rows[0];
-
-  const permRole = await getMemberRole(locationId, req.user!.id);
-  if (permRole !== 'admin') {
-    throw new ForbiddenError('Only admins can permanently delete bins');
-  }
+  const { locationId, name: binName } = deletedAccess;
+  await requireAdmin(locationId, req.user!.id, 'permanently delete bins');
 
   // Get photos to delete from disk
   const photosResult = await query<{ storage_path: string; thumb_path: string | null }>(
@@ -502,17 +379,7 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
 
   cleanupBinPhotos(id, photosResult.rows);
 
-  logActivity({
-    locationId,
-    userId: req.user!.id,
-    userName: req.user!.username,
-    action: 'permanent_delete',
-    entityType: 'bin',
-    entityId: id,
-    entityName: binName,
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
-  });
+  logBinActivity(req, { locationId, action: 'permanent_delete', entityId: id, entityName: binName });
 
   res.json({ message: 'Bin permanently deleted' });
 }));
@@ -548,10 +415,7 @@ router.post('/:id/photos', asyncHandler(async (req, res, next) => {
   try {
     const thumbFilename = `${path.basename(file.filename, path.extname(file.filename))}_thumb.webp`;
     const thumbFullPath = path.join(path.dirname(file.path), thumbFilename);
-    await sharp(file.path)
-      .resize(600, undefined, { withoutEnlargement: true })
-      .webp({ quality: 70 })
-      .toFile(thumbFullPath);
+    await generateThumbnail(file.path, thumbFullPath);
     thumbPath = path.join(binId, thumbFilename);
   } catch {
     // Thumbnail generation is non-critical
@@ -570,17 +434,7 @@ router.post('/:id/photos', asyncHandler(async (req, res, next) => {
 
   // Get bin name for activity log
   const binResult = await query('SELECT name FROM bins WHERE id = $1', [binId]);
-  logActivity({
-    locationId: access.locationId,
-    userId: req.user!.id,
-    userName: req.user!.username,
-    action: 'add_photo',
-    entityType: 'bin',
-    entityId: binId,
-    entityName: binResult.rows[0]?.name,
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
-  });
+  logBinActivity(req, { locationId: access.locationId, action: 'add_photo', entityId: binId, entityName: binResult.rows[0]?.name });
 
   res.status(201).json({ id: photo.id });
 }));
@@ -643,10 +497,7 @@ router.post('/:id/move', asyncHandler(async (req, res) => {
     throw new NotFoundError('Bin not found');
   }
 
-  const moveRole = await getMemberRole(access.locationId, req.user!.id);
-  if (moveRole !== 'admin') {
-    throw new ForbiddenError('Only admins can move bins');
-  }
+  await requireAdmin(access.locationId, req.user!.id, 'move bins');
 
   if (access.locationId === targetLocationId) {
     throw new ValidationError('Bin is already in this location');
@@ -669,41 +520,15 @@ router.post('/:id/move', asyncHandler(async (req, res) => {
   );
 
   // Re-fetch updated bin
-  const result = await query(
-    `SELECT ${BIN_SELECT_COLS} FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE b.id = $1`,
-    [id]
-  );
-  const bin = result.rows[0];
+  const bin = (await fetchBinById(id))!;
 
   const changes = { location: { old: sourceName, new: targetName } };
 
   // Log in source location
-  logActivity({
-    locationId: access.locationId,
-    userId: req.user!.id,
-    userName: req.user!.username,
-    action: 'move_out',
-    entityType: 'bin',
-    entityId: id,
-    entityName: bin.name,
-    changes,
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
-  });
+  logBinActivity(req, { locationId: access.locationId, action: 'move_out', entityId: id, entityName: bin.name, changes });
 
   // Log in target location
-  logActivity({
-    locationId: targetLocationId,
-    userId: req.user!.id,
-    userName: req.user!.username,
-    action: 'move_in',
-    entityType: 'bin',
-    entityId: id,
-    entityName: bin.name,
-    changes,
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
-  });
+  logBinActivity(req, { locationId: targetLocationId, action: 'move_in', entityId: id, entityName: bin.name, changes });
 
   res.json(bin);
 }));
@@ -718,75 +543,37 @@ router.post('/:id/duplicate', asyncHandler(async (req, res) => {
   }
 
   // Fetch the source bin
-  const srcResult = await query(
-    `SELECT ${BIN_SELECT_COLS} FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE b.id = $1 AND b.deleted_at IS NULL`,
-    [id]
-  );
-  if (srcResult.rows.length === 0) {
+  const src = await fetchBinById(id, { excludeDeleted: true });
+  if (!src) {
     throw new NotFoundError('Bin not found');
   }
-  const src = srcResult.rows[0];
 
   const newName = req.body.name ? String(req.body.name).trim() : `Copy of ${src.name}`;
   if (req.body.name) validateBinName(req.body.name);
 
-  const sc = generateShortCode(newName);
-  const maxRetries = 10;
+  // Copy items from source
+  const itemsResult = await query<{ name: string; position: number }>(
+    'SELECT name, position FROM bin_items WHERE bin_id = $1 ORDER BY position',
+    [id]
+  );
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const newId = attempt === 0 ? sc : generateShortCode(newName);
+  const newBin = await insertBinWithItems({
+    locationId: src.location_id,
+    name: newName,
+    areaId: src.area_id || null,
+    notes: src.notes || '',
+    tags: src.tags || [],
+    icon: src.icon || '',
+    color: src.color || '',
+    cardStyle: src.card_style || '',
+    createdBy: req.user!.id,
+    visibility: src.visibility || 'location',
+    items: itemsResult.rows,
+  });
 
-    try {
-      await query(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [newId, src.location_id, newName, src.area_id || null, src.notes || '', src.tags || [], src.icon || '', src.color || '', src.card_style || '', req.user!.id, src.visibility || 'location']
-      );
+  logBinActivity(req, { locationId: access.locationId, action: 'duplicate', entityId: newBin.id, entityName: newBin.name });
 
-      // Copy items
-      const itemsResult = await query<{ name: string; position: number }>(
-        'SELECT name, position FROM bin_items WHERE bin_id = $1 ORDER BY position',
-        [id]
-      );
-      for (const item of itemsResult.rows) {
-        await query(
-          'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
-          [crypto.randomUUID(), newId, item.name, item.position]
-        );
-      }
-
-      // Re-fetch the new bin
-      const result = await query(
-        `SELECT ${BIN_SELECT_COLS} FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE b.id = $1`,
-        [newId]
-      );
-
-      const newBin = result.rows[0];
-
-      logActivity({
-        locationId: access.locationId,
-        userId: req.user!.id,
-        userName: req.user!.username,
-        action: 'duplicate',
-        entityType: 'bin',
-        entityId: newId,
-        entityName: newBin.name,
-        authMethod: req.authMethod,
-        apiKeyId: req.apiKeyId,
-      });
-
-      res.status(201).json(newBin);
-      return;
-    } catch (err: unknown) {
-      const sqliteErr = err as { code?: string };
-      if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && attempt < maxRetries) {
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to generate unique short code' });
+  res.status(201).json(newBin);
 }));
 
 // PUT /api/bins/:id/add-tags — add tags to a bin (merge, don't replace)

@@ -4,6 +4,9 @@ import { getOrientation, computeLabelsPerPage, computePageSize, computeCodeFontS
 import { resolveColor } from '@/lib/colorPalette';
 import { toInches, parsePaddingPt } from './pdfUnits';
 import type { LabelOptions } from './usePrintSettings';
+import { MONO_CODE_WIDTH_EMS, SWATCH_BAR_HEIGHT_RATIO, SWATCH_BAR_MIN_PT, CARD_PAD_RATIO, CARD_PAD_MIN_PT, CARD_RADIUS_RATIO } from './pdfConstants';
+
+type JsPDF = import('jspdf').jsPDF;
 
 interface GenerateLabelPDFParams {
   bins: Bin[];
@@ -15,7 +18,7 @@ interface GenerateLabelPDFParams {
 }
 
 /** Truncate text to fit within maxWidth, adding ellipsis if needed. */
-function truncateToWidth(doc: import('jspdf').jsPDF, text: string, maxWidth: number): string {
+function truncateToWidth(doc: JsPDF, text: string, maxWidth: number): string {
   if (doc.getTextWidth(text) <= maxWidth) return text;
   let truncated = text;
   while (truncated.length > 1 && doc.getTextWidth(`${truncated}\u2026`) > maxWidth) {
@@ -34,9 +37,19 @@ function hexToRgb(hex: string): [number, number, number] {
   ];
 }
 
+function setFillHex(doc: JsPDF, hex: string): void {
+  const [r, g, b] = hexToRgb(hex);
+  doc.setFillColor(r, g, b);
+}
+
+function setTextHex(doc: JsPDF, hex: string): void {
+  const [r, g, b] = hexToRgb(hex);
+  doc.setTextColor(r, g, b);
+}
+
 /** Draw icon overlay in the center of a QR code with a circular background. */
 function drawIconOverlay(
-  doc: import('jspdf').jsPDF,
+  doc: JsPDF,
   iconDataUrl: string,
   qrX: number,
   qrY: number,
@@ -47,8 +60,7 @@ function drawIconOverlay(
   const cx = qrX + qrSize / 2;
   const cy = qrY + qrSize / 2;
   if (bgColor) {
-    const [r, g, b] = hexToRgb(bgColor);
-    doc.setFillColor(r, g, b);
+    setFillHex(doc, bgColor);
   } else {
     doc.setFillColor(255, 255, 255);
   }
@@ -90,12 +102,12 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
   const nameFontSizePt = parseFloat(format.nameFontSize);
   const contentFontSizePt = parseFloat(format.contentFontSize);
   const iconSizeIn = toInches(iconSize);
-  const barHeightIn = Math.max(2, nameFontSizePt * 0.45) / 72;
+  const barHeightIn = Math.max(SWATCH_BAR_MIN_PT, nameFontSizePt * SWATCH_BAR_HEIGHT_RATIO) / 72;
   const qrSizePt = qrSize * 72;
-  const cardPadIn = Math.max(3, qrSizePt * 0.07) / 72; // 7% of QR size, min 3pt
+  const cardPadIn = Math.max(CARD_PAD_MIN_PT, qrSizePt * CARD_PAD_RATIO) / 72;
   const cellWPt = cellW * 72;
   const cellHPt = cellH * 72;
-  const cardRadiusIn = (Math.min(cellWPt, cellHPt) * 0.08) / 72;
+  const cardRadiusIn = (Math.min(cellWPt, cellHPt) * CARD_RADIUS_RATIO) / 72;
 
   for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {
     if (pageIdx > 0) doc.addPage([pageWidth, pageHeight], pageWidth > pageHeight ? 'landscape' : 'portrait');
@@ -170,7 +182,7 @@ interface DrawLabelParams {
 }
 
 /** Measure the natural width of text column elements (inches). */
-function measureTextBlockWidth(doc: import('jspdf').jsPDF, p: DrawLabelParams, codeUnderQr: boolean): number {
+function measureTextBlockWidth(doc: JsPDF, p: DrawLabelParams, codeUnderQr: boolean): number {
   let maxW = 0;
   if (p.colorPreset && !p.useColoredCard) {
     // Swatch bar — spans whatever width we give it, not a constraint
@@ -200,7 +212,7 @@ function computeCenterOffset(contentW: number, leftBlockW: number, gap: number, 
   return Math.max(0, (contentW - totalW) / 2);
 }
 
-function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
+function drawLandscapeLabel(doc: JsPDF, p: DrawLabelParams) {
   const codeUnderQr = !!p.qrDataUrl && p.labelOptions.showBinCode && !!p.bin.id;
   const isLeftAligned = p.labelOptions.textAlign === 'left';
 
@@ -222,8 +234,7 @@ function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
 
     // Draw rounded rect fill only if bin has a color
     if (p.colorPreset) {
-      const [r, g, b] = hexToRgb(p.colorPreset.bg);
-      doc.setFillColor(r, g, b);
+      setFillHex(doc, p.colorPreset.bg);
       doc.roundedRect(baseX, cardY, cardW, cardH, p.cardRadiusIn, p.cardRadiusIn, 'F');
     }
 
@@ -301,7 +312,7 @@ function drawLandscapeLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
   }
 }
 
-function drawPortraitLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
+function drawPortraitLabel(doc: JsPDF, p: DrawLabelParams) {
   let currentY = p.contentY;
   const codeUnderQr = !!p.qrDataUrl && p.labelOptions.showBinCode && !!p.bin.id;
   const isLeftAligned = p.labelOptions.textAlign === 'left';
@@ -320,8 +331,7 @@ function drawPortraitLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
 
     // Draw rounded rect fill only if bin has a color
     if (p.colorPreset) {
-      const [r, g, b] = hexToRgb(p.colorPreset.bg);
-      doc.setFillColor(r, g, b);
+      setFillHex(doc, p.colorPreset.bg);
       doc.roundedRect(cardX, currentY, cardW, cardH, p.cardRadiusIn, p.cardRadiusIn, 'F');
     }
 
@@ -385,16 +395,15 @@ function drawPortraitLabel(doc: import('jspdf').jsPDF, p: DrawLabelParams) {
 /** Compute font size (pt) so 6 monospace chars fill the QR width. */
 function computeQrCodeFontSize(qrSizeIn: number): number {
   const qrSizePt = qrSizeIn * 72;
-  return qrSizePt / (6 * 0.6 + 5 * 0.2);
+  return qrSizePt / MONO_CODE_WIDTH_EMS;
 }
 
 /** Draw the short code centered under the QR image. */
-function drawCodeUnderQr(doc: import('jspdf').jsPDF, code: string, qrX: number, codeY: number, qrSizeIn: number, fontSizePt: number, color?: string) {
+function drawCodeUnderQr(doc: JsPDF, code: string, qrX: number, codeY: number, qrSizeIn: number, fontSizePt: number, color?: string) {
   doc.setFont('courier', 'bold');
   doc.setFontSize(fontSizePt);
   if (color) {
-    const [r, g, b] = hexToRgb(color);
-    doc.setTextColor(r, g, b);
+    setTextHex(doc, color);
   } else {
     doc.setTextColor(0, 0, 0);
   }
@@ -410,7 +419,7 @@ function drawCodeUnderQr(doc: import('jspdf').jsPDF, code: string, qrX: number, 
 }
 
 function drawTextColumn(
-  doc: import('jspdf').jsPDF,
+  doc: JsPDF,
   p: DrawLabelParams,
   textX: number,
   textW: number,
@@ -444,8 +453,7 @@ function drawTextColumn(
 
   for (const el of elements) {
     if (el.type === 'swatch' && p.colorPreset) {
-      const [r, g, b] = hexToRgb(p.colorPreset.bg);
-      doc.setFillColor(r, g, b);
+      setFillHex(doc, p.colorPreset.bg);
       const swatchW = Math.min(textW, textW);
       const swatchX = centered ? textX + (textW - swatchW) / 2 : textX;
       doc.roundedRect(swatchX, curY, swatchW, p.barHeightIn, 1 / 72, 1 / 72, 'F');

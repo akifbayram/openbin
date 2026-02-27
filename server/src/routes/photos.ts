@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import fs from 'fs';
-import sharp from 'sharp';
 import { query } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { logActivity } from '../lib/activityLog.js';
@@ -8,6 +7,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { ValidationError, NotFoundError, ForbiddenError } from '../lib/httpErrors.js';
 import { safePath } from '../lib/pathSafety.js';
 import { PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
+import { generateThumbnail } from '../lib/photoHelpers.js';
 import path from 'path';
 
 const router = Router();
@@ -122,10 +122,7 @@ router.get('/:id/thumb', asyncHandler(async (req, res) => {
     const thumbStoragePath = path.join(path.dirname(photo.storage_path), thumbFilename);
     const thumbFullPath = path.join(PHOTO_STORAGE_PATH, thumbStoragePath);
 
-    await sharp(originalFile)
-      .resize(600, undefined, { withoutEnlargement: true })
-      .webp({ quality: 70 })
-      .toFile(thumbFullPath);
+    await generateThumbnail(originalFile, thumbFullPath);
 
     // Update DB with thumb path
     await query('UPDATE photos SET thumb_path = $1 WHERE id = $2', [thumbStoragePath, id]);

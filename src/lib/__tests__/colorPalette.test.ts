@@ -7,6 +7,9 @@ import {
   hexToHsl,
   srgbMix,
   getHueRange,
+  relativeLuminance,
+  needsLightText,
+  getApproxBgHex,
   HUE_RANGES,
   SHADE_COUNT,
 } from '@/lib/colorPalette';
@@ -231,6 +234,77 @@ describe('colorPalette', () => {
         expect(range.label).toBeTruthy();
         expect(range.dot).toMatch(/^#[0-9A-F]{6}$/);
       }
+    });
+  });
+
+  describe('relativeLuminance', () => {
+    it('returns ~0 for black', () => {
+      expect(relativeLuminance('#000000')).toBeCloseTo(0, 2);
+    });
+
+    it('returns ~1 for white', () => {
+      expect(relativeLuminance('#FFFFFF')).toBeCloseTo(1, 2);
+    });
+
+    it('returns < 0.05 for near-black (#1C1C1E)', () => {
+      expect(relativeLuminance('#1C1C1E')).toBeLessThan(0.05);
+    });
+
+    it('returns > 0.85 for near-white (#F2F2F7)', () => {
+      expect(relativeLuminance('#F2F2F7')).toBeGreaterThan(0.85);
+    });
+  });
+
+  describe('needsLightText', () => {
+    it('returns true for black (#1C1C1E)', () => {
+      expect(needsLightText('#1C1C1E')).toBe(true);
+    });
+
+    it('returns false for white (#F2F2F7)', () => {
+      expect(needsLightText('#F2F2F7')).toBe(false);
+    });
+
+    it('returns true for pure black', () => {
+      expect(needsLightText('#000000')).toBe(true);
+    });
+
+    it('returns false for pure white', () => {
+      expect(needsLightText('#FFFFFF')).toBe(false);
+    });
+  });
+
+  describe('getApproxBgHex', () => {
+    it('returns bg for light theme', () => {
+      const preset = resolveColor('220:2')!;
+      expect(getApproxBgHex(preset, 'light')).toBe(preset.bg);
+    });
+
+    it('returns bgDark for dark theme', () => {
+      const preset = resolveColor('220:2')!;
+      expect(getApproxBgHex(preset, 'dark')).toBe(preset.bgDark);
+    });
+
+    it('returns same value for fixed black preset in both themes', () => {
+      const preset = resolveColor('black')!;
+      expect(getApproxBgHex(preset, 'light')).toBe('#1C1C1E');
+      expect(getApproxBgHex(preset, 'dark')).toBe('#1C1C1E');
+    });
+  });
+
+  describe('preset bgDark field', () => {
+    it('computed presets have bgDark as a valid hex', () => {
+      const preset = resolveColor('220:2');
+      expect(preset!.bgDark).toMatch(/^#[0-9A-F]{6}$/);
+    });
+
+    it('bgDark is darker than bg for same preset', () => {
+      const preset = resolveColor('220:2')!;
+      expect(relativeLuminance(preset.bgDark)).toBeLessThan(relativeLuminance(preset.bg));
+    });
+
+    it('fixed presets have bgDark', () => {
+      expect(resolveColor('black')!.bgDark).toBe('#1C1C1E');
+      expect(resolveColor('white')!.bgDark).toBe('#F2F2F7');
     });
   });
 });

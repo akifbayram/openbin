@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, Sparkles, X, Loader2 } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,19 +11,20 @@ import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { StylePicker } from './StylePicker';
 import { BinPreviewCard } from './BinPreviewCard';
+import { PhotoUploadSection } from './PhotoUploadSection';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { VisibilityPicker } from './VisibilityPicker';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAiSettings } from '@/features/ai/useAiSettings';
-import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
 import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
-import { compressImage } from '@/features/photos/compressImage';
 import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
 import { InlineAiSetup, AiConfiguredIndicator } from '@/features/ai/InlineAiSetup';
 import { useTerminology } from '@/lib/terminology';
-import type { AiSuggestions, BinVisibility } from '@/types';
+import { usePhotoAnalysis } from './usePhotoAnalysis';
+import { useBinFormFields } from './useBinFormFields';
+import type { BinVisibility } from '@/types';
 
 export interface BinCreateFormData {
   name: string;
@@ -71,36 +72,53 @@ export function BinCreateForm({
   const { areas } = useAreaList(locationId);
   const { settings: aiSettings, isLoading: aiSettingsLoading } = useAiSettings();
   const { aiEnabled } = useAiEnabled();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  const [name, setName] = useState(prefillName ?? '');
-  const [areaId, setAreaId] = useState<string | null>(null);
-  const [items, setItems] = useState<string[]>([]);
-  const [notes, setNotes] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [icon, setIcon] = useState('');
-  const [color, setColor] = useState('');
-  const [cardStyle, setCardStyle] = useState('');
-  const [visibility, setVisibility] = useState<BinVisibility>('location');
-
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<AiSuggestions | null>(null);
+  const {
+    name, setName,
+    areaId, setAreaId,
+    items, setItems,
+    notes, setNotes,
+    tags, setTags,
+    icon, setIcon,
+    color, setColor,
+    cardStyle, setCardStyle,
+    visibility, setVisibility,
+  } = useBinFormFields({ initialName: prefillName });
 
   // Onboarding-specific: inline AI setup
   const [aiExpanded, setAiExpanded] = useState(false);
   const setup = useAiProviderSetup({ onSaveSuccess: () => setAiExpanded(false) });
   const aiConfiguredInline = setup.configured || (aiSettings !== null && !aiSettingsLoading);
 
-  // Revoke ObjectURLs on cleanup
-  useEffect(() => {
-    return () => {
-      photoPreviews.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [photoPreviews]);
+  const {
+    fileInputRef,
+    photos,
+    photoPreviews,
+    analyzing,
+    analyzeError,
+    suggestions,
+    dismissSuggestions,
+    handlePhotoSelect,
+    handleRemovePhoto,
+    handleAnalyze,
+  } = usePhotoAnalysis({
+    locationId,
+    mode,
+    aiConfigured: mode === 'full' ? !!aiSettings : aiConfiguredInline,
+    onApplyDirect: (result) => {
+      if (result.name) setName(result.name);
+      if (result.items?.length) setItems(result.items);
+      if (result.tags?.length) setTags(result.tags.map(t => t.toLowerCase()));
+    },
+    onAiSetupNeeded: () => {
+      if (mode === 'full') {
+        onAiSetupRedirect?.();
+      } else {
+        setAiExpanded(true);
+      }
+    },
+  });
 
   // Scroll suggestions into view when they appear (full mode)
   useEffect(() => {
@@ -109,76 +127,12 @@ export function BinCreateForm({
     }
   }, [suggestions]);
 
-  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const newFiles = Array.from(files).slice(0, MAX_AI_PHOTOS - photos.length);
-    if (newFiles.length === 0) return;
-    const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
-    setPhotos((prev) => [...prev, ...newFiles]);
-    setPhotoPreviews((prev) => [...prev, ...newPreviews]);
-    setSuggestions(null);
-    setAnalyzeError(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }
-
-  function handleRemovePhoto(index: number) {
-    URL.revokeObjectURL(photoPreviews[index]);
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
-    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
-    setSuggestions(null);
-    setAnalyzeError(null);
-  }
-
-  async function handleAnalyze() {
-    if (photos.length === 0) return;
-    // In full mode, redirect to settings if AI not configured
-    if (mode === 'full') {
-      if (!aiSettings) {
-        onAiSetupRedirect?.();
-        return;
-      }
-    } else {
-      // In onboarding mode, guide to inline setup
-      if (!aiConfiguredInline) {
-        setAiExpanded(true);
-        setAnalyzeError('Configure an AI provider below to analyze photos');
-        return;
-      }
-    }
-    setAnalyzing(true);
-    setAnalyzeError(null);
-    try {
-      const compressedFiles = await Promise.all(
-        photos.map(async (p) => {
-          const compressed = await compressImage(p);
-          return compressed instanceof File
-            ? compressed
-            : new File([compressed], p.name, { type: compressed.type || 'image/jpeg' });
-        })
-      );
-      const result = await analyzeImageFiles(compressedFiles, locationId);
-      if (mode === 'onboarding') {
-        // Directly apply suggestions in onboarding mode
-        if (result.name) setName(result.name);
-        if (result.items?.length) setItems(result.items);
-        if (result.tags?.length) setTags(result.tags.map(t => t.toLowerCase()));
-      } else {
-        setSuggestions(result);
-      }
-    } catch (err) {
-      setAnalyzeError(err instanceof Error ? err.message : 'Failed to analyze photos');
-    } finally {
-      setAnalyzing(false);
-    }
-  }
-
   function handleApplySuggestions(changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string }>) {
     if (changes.name !== undefined) setName(changes.name);
     if (changes.items !== undefined) setItems(changes.items);
     if (changes.tags !== undefined) setTags(changes.tags);
     if (changes.notes !== undefined) setNotes(changes.notes);
-    setSuggestions(null);
+    dismissSuggestions();
   }
 
   function handleFormSubmit(e: React.FormEvent) {
@@ -199,6 +153,7 @@ export function BinCreateForm({
   }
 
   const isFull = mode === 'full';
+  const compactLabel = 'text-[13px] text-[var(--text-tertiary)] mb-1.5 block';
 
   // Determine AI "configured" and "enabled" for ItemsInput
   const aiReady = isFull ? (aiEnabled && !!aiSettings) : aiConfiguredInline;
@@ -209,11 +164,11 @@ export function BinCreateForm({
       onAiSetupRedirect?.();
     } else {
       setAiExpanded(true);
-      setAnalyzeError('Configure an AI provider below to use AI extraction');
     }
   };
 
   const areaName = areas.find(a => a.id === areaId)?.name ?? '';
+  const secondaryInfo = getSecondaryColorInfo(cardStyle);
   const renderedHeader = typeof header === 'function'
     ? header({ name, color, items, tags, icon, cardStyle, areaName })
     : header;
@@ -240,7 +195,7 @@ export function BinCreateForm({
         {isFull ? (
           <Label>Items</Label>
         ) : (
-          <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Items</label>
+          <label className={compactLabel}>Items</label>
         )}
         <ItemsInput
           items={items}
@@ -281,7 +236,7 @@ export function BinCreateForm({
         </div>
       ) : (
         <div className="text-left">
-          <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">{t.Area}</label>
+          <label className={compactLabel}>{t.Area}</label>
           <AreaPicker locationId={locationId} value={areaId} onChange={setAreaId} />
         </div>
       )}
@@ -296,114 +251,24 @@ export function BinCreateForm({
             currentTags={tags}
             currentNotes={notes}
             onApply={handleApplySuggestions}
-            onDismiss={() => setSuggestions(null)}
+            onDismiss={dismissSuggestions}
           />
         </div>
       )}
 
       {/* Photo upload */}
-      <div className={cn(isFull ? 'space-y-2' : 'text-left')}>
-        {isFull && <Label>Photos</Label>}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={isFull ? 'image/*' : 'image/jpeg,image/png,image/webp,image/gif'}
-          {...(!isFull && { capture: 'environment' as const })}
-          multiple
-          className="hidden"
-          onChange={handlePhotoSelect}
-        />
-        {photos.length === 0 ? (
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className={cn(
-              'w-full flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-2 border-dashed text-[14px] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]',
-              isFull
-                ? 'border-[var(--border)] py-4 text-[var(--text-tertiary)]'
-                : 'border-[var(--border-primary)] py-3 text-[var(--text-tertiary)]'
-            )}
-          >
-            <Camera className={cn(isFull ? 'h-5 w-5' : 'h-4 w-4')} />
-            Add Photo
-          </button>
-        ) : (
-          <div className="space-y-2">
-            <div className={cn(
-              'flex items-center gap-2 overflow-x-auto',
-              !isFull && 'rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2'
-            )}>
-              {photoPreviews.map((preview, i) => (
-                <div key={i} className="relative shrink-0">
-                  <img
-                    src={preview}
-                    alt={`Preview ${i + 1}`}
-                    className={cn(
-                      'h-14 w-14 object-cover',
-                      isFull ? 'rounded-[var(--radius-md)]' : 'rounded-[var(--radius-sm)]'
-                    )}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePhoto(i)}
-                    className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-              {photos.length < MAX_AI_PHOTOS && (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className={cn(
-                    'h-14 w-14 shrink-0 flex items-center justify-center border-2 border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors',
-                    isFull ? 'rounded-[var(--radius-md)]' : 'rounded-[var(--radius-sm)]'
-                  )}
-                >
-                  <Camera className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            {isFull ? (
-              aiEnabled && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleAnalyze}
-                  disabled={analyzing}
-                  className="gap-1.5"
-                >
-                  {analyzing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-4 w-4 text-[var(--ai-accent)]" />
-                  )}
-                  {analyzing ? 'Analyzing...' : `Analyze with AI${photos.length > 1 ? ` (${photos.length})` : ''}`}
-                </Button>
-              )
-            ) : (
-              <button
-                type="button"
-                onClick={handleAnalyze}
-                disabled={analyzing}
-                className="flex items-center gap-1.5 text-[13px] text-[var(--ai-accent)] hover:opacity-80 transition-opacity disabled:opacity-50"
-              >
-                {analyzing ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
-                )}
-                {analyzing ? 'Analyzing...' : `Analyze with AI${photos.length > 1 ? ` (${photos.length})` : ''}`}
-              </button>
-            )}
-          </div>
-        )}
-        {analyzeError && (
-          <p className={cn('text-[var(--destructive)]', isFull ? 'text-[13px]' : 'text-[12px] mt-1')}>{analyzeError}</p>
-        )}
-      </div>
+      <PhotoUploadSection
+        isFull={isFull}
+        fileInputRef={fileInputRef}
+        photos={photos}
+        photoPreviews={photoPreviews}
+        onPhotoSelect={handlePhotoSelect}
+        onRemovePhoto={handleRemovePhoto}
+        onAnalyze={handleAnalyze}
+        analyzing={analyzing}
+        analyzeError={analyzeError}
+        aiEnabled={isFull ? aiEnabled : true}
+      />
 
       {/* Appearance */}
       {isFull ? (
@@ -424,18 +289,13 @@ export function BinCreateForm({
           </div>
           <div className="space-y-2">
             <Label>Color</Label>
-            {(() => {
-              const sec = getSecondaryColorInfo(cardStyle);
-              return (
-                <ColorPicker
-                  value={color}
-                  onChange={setColor}
-                  secondaryLabel={sec?.label}
-                  secondaryValue={sec?.value}
-                  onSecondaryChange={sec ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
-                />
-              );
-            })()}
+            <ColorPicker
+              value={color}
+              onChange={setColor}
+              secondaryLabel={secondaryInfo?.label}
+              secondaryValue={secondaryInfo?.value}
+              onSecondaryChange={secondaryInfo ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
+            />
           </div>
           <div className="space-y-2">
             <Label>Style</Label>
@@ -445,26 +305,21 @@ export function BinCreateForm({
       ) : (
         <>
           <div className="text-left">
-            <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Color</label>
-            {(() => {
-              const sec = getSecondaryColorInfo(cardStyle);
-              return (
-                <ColorPicker
-                  value={color}
-                  onChange={setColor}
-                  secondaryLabel={sec?.label}
-                  secondaryValue={sec?.value}
-                  onSecondaryChange={sec ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
-                />
-              );
-            })()}
+            <label className={compactLabel}>Color</label>
+            <ColorPicker
+              value={color}
+              onChange={setColor}
+              secondaryLabel={secondaryInfo?.label}
+              secondaryValue={secondaryInfo?.value}
+              onSecondaryChange={secondaryInfo ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
+            />
           </div>
           <div className="text-left">
-            <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Icon</label>
+            <label className={compactLabel}>Icon</label>
             <IconPicker value={icon} onChange={setIcon} />
           </div>
           <div className="text-left">
-            <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Style</label>
+            <label className={compactLabel}>Style</label>
             <StylePicker value={cardStyle} color={color} onChange={setCardStyle} />
           </div>
         </>

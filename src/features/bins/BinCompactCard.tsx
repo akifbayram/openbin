@@ -31,7 +31,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
   const { theme } = useTheme();
   const BinIcon = resolveIcon(bin.icon);
 
-  const { renderProps, isPhoto, coverPhotoId, secondaryStyle, secondaryBorderStyle, iconStyle, photoTextStyle } =
+  const { renderProps, isPhoto, coverPhotoId, secondaryStyle, secondaryBorderStyle, iconStyle, nameStyle } =
     computeBinCardStyles(bin.color, bin.card_style, theme);
 
   const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect });
@@ -55,7 +55,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
       <div className="min-w-0 flex-1">
         <h3
           className="font-semibold text-[13px] text-[var(--text-primary)] truncate leading-snug flex items-center gap-1"
-          style={photoTextStyle}
+          style={nameStyle}
         >
           <Highlight text={bin.name} query={searchQuery} />
           {bin.visibility === 'private' && (

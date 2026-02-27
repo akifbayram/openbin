@@ -21,7 +21,7 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
   const parsed = parseCardStyle(cardStyle ?? '');
   const isPhoto = renderProps.isPhotoVariant;
   const coverPhotoId = parsed?.coverPhotoId;
-  const { mutedColor } = renderProps;
+  const { mutedColor, primaryColor } = renderProps;
   const BinIcon = resolveIcon(icon ?? '');
 
   const secondaryStyle: CSSProperties | undefined = isPhoto
@@ -30,14 +30,14 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
   const iconStyle: CSSProperties | undefined = isPhoto
     ? { color: 'rgba(255,255,255,0.9)', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }
     : mutedColor ? { color: mutedColor } : undefined;
-  const photoTextStyle: CSSProperties | undefined = isPhoto
+  const nameStyle: CSSProperties | undefined = isPhoto
     ? { color: 'white', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }
-    : undefined;
+    : primaryColor ? { color: primaryColor } : undefined;
 
   const content = (
     <div className="flex items-start gap-3">
       <div className="min-w-0 flex-1">
-        <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug" style={photoTextStyle}>
+        <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug" style={nameStyle}>
           {name || <span>My bin</span>}
         </h3>
         {areaName && (

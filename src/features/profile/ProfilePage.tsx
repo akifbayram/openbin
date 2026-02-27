@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
-import { Camera } from 'lucide-react';
+import { X, Calendar, MapPin, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +30,7 @@ export function ProfilePage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   // Avatar
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -123,59 +123,70 @@ export function ProfilePage() {
   }
 
   const memberSince = user.createdAt
-    ? new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+    ? new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })
     : 'Unknown';
 
   return (
     <div className="page-content">
-      {/* Header */}
       <PageHeader title="Profile" />
 
-      {/* Avatar */}
-      <Card>
-        <CardContent>
-          <Label>Photo</Label>
-          <div className="flex flex-col items-center gap-3 mt-3">
-            <div className="relative">
-              <UserAvatar
-                avatarUrl={avatarSrc}
-                displayName={user.displayName || user.username}
-                size="lg"
-              />
-              <Tooltip content="Change avatar" side="bottom">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingAvatar}
-                  className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-[var(--accent)] text-white flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                  aria-label="Change avatar"
-                >
-                  <Camera className="h-4 w-4" />
-                </button>
-              </Tooltip>
-            </div>
-            {avatarSrc && (
-              <button
-                type="button"
-                onClick={handleRemoveAvatar}
-                disabled={uploadingAvatar}
-                className="text-[13px] text-[var(--destructive)] hover:underline disabled:opacity-50"
-              >
-                Remove photo
-              </button>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={(e) => handleAvatarSelected(e.target.files)}
+      {/* Identity hero */}
+      <div className="flex flex-col items-center py-2">
+        <div className="relative group">
+          {avatarSrc && (
+            <button
+              type="button"
+              onClick={handleRemoveAvatar}
+              disabled={uploadingAvatar}
+              className="absolute -top-1 -right-1 z-10 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100 max-lg:opacity-100"
+              aria-label="Remove avatar"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingAvatar}
+            className="cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-50 rounded-full"
+            aria-label="Change avatar"
+          >
+            <UserAvatar
+              avatarUrl={avatarSrc}
+              displayName={user.displayName || user.username}
+              size="lg"
+              className="h-28 w-28 text-[36px]"
             />
-          </div>
-        </CardContent>
-      </Card>
+          </button>
+        </div>
 
-      {/* Profile Info */}
+        <h2 className="text-[22px] font-bold text-[var(--text-primary)] mt-3 leading-tight">
+          {user.displayName || user.username}
+        </h2>
+        <p className="text-[15px] text-[var(--text-tertiary)]">@{user.username}</p>
+
+        <div className="flex items-center gap-3 mt-3 text-[13px] text-[var(--text-tertiary)]">
+          <span className="flex items-center gap-1.5">
+            <Calendar className="h-3.5 w-3.5" />
+            {memberSince}
+          </span>
+          <span className="h-0.5 w-0.5 rounded-full bg-current opacity-40" />
+          <span className="flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5" />
+            {locations.length} location{locations.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={(e) => handleAvatarSelected(e.target.files)}
+        />
+      </div>
+
+      {/* Profile info */}
       <Card>
         <CardContent>
           <Label>Profile Info</Label>
@@ -209,68 +220,58 @@ export function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Change Password */}
+      {/* Change password */}
       <Card>
         <CardContent>
-          <Label>Change Password</Label>
-          <form onSubmit={handleChangePassword} className="flex flex-col gap-3 mt-3">
-            <FormField label="Current Password" htmlFor="current-password">
-              <Input
-                id="current-password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-              />
-            </FormField>
-            <FormField label="New Password" htmlFor="new-password">
-              <Input
-                id="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Min 8 characters"
-                required
-              />
-            </FormField>
-            <FormField label="Confirm Password" htmlFor="confirm-password">
-              <Input
-                id="confirm-password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </FormField>
-            <Button
-              type="submit"
-              disabled={savingPassword || !currentPassword || !newPassword || !confirmPassword}
-              className="rounded-[var(--radius-sm)] h-11 mt-1"
-            >
-              {savingPassword ? 'Updating...' : 'Update Password'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Account Metadata */}
-      <Card>
-        <CardContent>
-          <Label>Account</Label>
-          <div className="mt-3 space-y-2 text-[15px] text-[var(--text-secondary)]">
-            <div className="flex justify-between">
-              <span className="text-[var(--text-tertiary)]">Username</span>
-              <span className="font-medium text-[var(--text-primary)]">@{user.username}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--text-tertiary)]">Member since</span>
-              <span className="font-medium text-[var(--text-primary)]">{memberSince}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--text-tertiary)]">Locations</span>
-              <span className="font-medium text-[var(--text-primary)]">{locations.length}</span>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => setPasswordOpen((v) => !v)}
+            className="flex items-center justify-between w-full"
+          >
+            <Label className="pointer-events-none">Change Password</Label>
+            <ChevronDown
+              className={`h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200 ${passwordOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {passwordOpen && (
+            <form onSubmit={handleChangePassword} className="flex flex-col gap-3 mt-3">
+              <FormField label="Current Password" htmlFor="current-password">
+                <Input
+                  id="current-password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                />
+              </FormField>
+              <FormField label="New Password" htmlFor="new-password">
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min 8 characters"
+                  required
+                />
+              </FormField>
+              <FormField label="Confirm Password" htmlFor="confirm-password">
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </FormField>
+              <Button
+                type="submit"
+                disabled={savingPassword || !currentPassword || !newPassword || !confirmPassword}
+                className="rounded-[var(--radius-sm)] h-11 mt-1"
+              >
+                {savingPassword ? 'Updating...' : 'Update Password'}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -27,7 +27,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   const getTagStyle = useTagStyle();
   const BinIcon = resolveIcon(bin.icon);
 
-  const { renderProps, isPhoto, coverPhotoId, secondaryStyle, secondaryBorderStyle, iconStyle, photoTextStyle } =
+  const { renderProps, isPhoto, coverPhotoId, secondaryStyle, secondaryBorderStyle, iconStyle, nameStyle, tagDefaultStyle } =
     computeBinCardStyles(bin.color, bin.card_style, theme);
 
   const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect });
@@ -120,7 +120,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
         <h3
           className="font-semibold text-[15px] text-[var(--text-primary)] leading-snug flex items-center gap-1.5 min-w-0 overflow-hidden"
         >
-          <span className="truncate" style={photoTextStyle}>
+          <span className="truncate" style={nameStyle}>
             <Highlight text={bin.name} query={searchQuery} />
           </span>
           {bin.visibility === 'private' && (
@@ -155,7 +155,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
                 className="shrink-0 max-w-[8rem] truncate cursor-pointer text-[11px] hover:bg-[var(--bg-active)] transition-colors"
                 style={isPhoto
                   ? { backgroundColor: 'rgba(0,0,0,0.4)', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }
-                  : getTagStyle(tag)
+                  : getTagStyle(tag) ?? tagDefaultStyle
                 }
                 onClick={(e) => {
                   e.stopPropagation();
@@ -171,7 +171,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
                 className="shrink-0 text-[11px] opacity-70"
                 style={isPhoto
                   ? { backgroundColor: 'rgba(0,0,0,0.4)', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }
-                  : undefined
+                  : tagDefaultStyle
                 }
               >
                 +{hiddenTagCount}

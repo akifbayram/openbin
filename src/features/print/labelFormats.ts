@@ -1,6 +1,7 @@
 import type { Bin } from '@/types';
 import type { QRColorOptions } from '@/lib/qr';
 import { resolveColor } from '@/lib/colorPalette';
+import { MONO_CODE_WIDTH_EMS } from './pdfConstants';
 
 export interface LabelFormat {
   key: string;
@@ -308,7 +309,7 @@ export function computeCodeFontSize(format: LabelFormat): number {
   const availW = isPortrait ? cellW - padH : cellW - qrW - padH - gap;
 
   // 6 monospace chars: each ~0.6em wide + 0.2em letter-spacing per gap (5 gaps)
-  const charWidthEms = 6 * 0.6 + 5 * 0.2;
+  const charWidthEms = MONO_CODE_WIDTH_EMS;
   const computed = availW / charWidthEms;
 
   return Math.max(floor, Math.min(computed, cap));

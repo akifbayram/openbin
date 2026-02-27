@@ -4,6 +4,7 @@ export interface ColorPreset {
   ref: string;
   dot: string;
   bg: string;
+  bgDark: string;
   bgCss: string;
 }
 
@@ -25,6 +26,9 @@ const REF_L = 65;
 
 // Light-mode base for print/PDF hex fallback
 const LIGHT_BASE = '#f2f2f7';
+
+// Dark-mode base for approximate dark bg hex
+const DARK_BASE = '#000000';
 
 /** Linear sRGB interpolation between two hex colors. Returns uppercase hex. */
 export function srgbMix(refHex: string, baseHex: string, percent: number): string {
@@ -131,8 +135,9 @@ function computePreset(hue: number | 'neutral', shade: number): ColorPreset {
   const ref = hslToHex(h, REF_S * s, REF_L);
   const dot = hslToHex(h, dotS * s, dotL);
   const bg = srgbMix(ref, LIGHT_BASE, mixPct);
+  const bgDark = srgbMix(ref, DARK_BASE, mixPct);
   const bgCss = `color-mix(in oklch, ${ref} ${mixPct}%, var(--bg-base))`;
-  return { key, label, ref, dot, bg, bgCss };
+  return { key, label, ref, dot, bg, bgDark, bgCss };
 }
 
 // Fixed presets for black/white (no color-mix, consistent across themes)
@@ -142,6 +147,7 @@ export const BLACK_PRESET: ColorPreset = {
   ref: '#1C1C1E',
   dot: '#1C1C1E',
   bg: '#1C1C1E',
+  bgDark: '#1C1C1E',
   bgCss: '#1C1C1E',
 };
 
@@ -151,6 +157,7 @@ export const WHITE_PRESET: ColorPreset = {
   ref: '#F2F2F7',
   dot: '#F2F2F7',
   bg: '#F2F2F7',
+  bgDark: '#F2F2F7',
   bgCss: '#F2F2F7',
 };
 
@@ -244,6 +251,29 @@ export const HUE_RANGES: HueRange[] = [
   { name: 'rose',   label: 'Rose',   dot: hslToHex(340, 70, 52), minHue: 330, maxHue: 346 },
   { name: 'neutral', label: 'Gray',  dot: hslToHex(0, 0, 52),   minHue: -1,  maxHue: -1 },
 ];
+
+/** WCAG relative luminance (0 = black, 1 = white). */
+export function relativeLuminance(hex: string): number {
+  const raw = hex.replace('#', '');
+  const toLinear = (c: number) => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const r = toLinear(parseInt(raw.substring(0, 2), 16));
+  const g = toLinear(parseInt(raw.substring(2, 4), 16));
+  const b = toLinear(parseInt(raw.substring(4, 6), 16));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** True when the background is dark enough to need light (white) text. */
+export function needsLightText(bgHex: string): boolean {
+  return relativeLuminance(bgHex) < 0.4;
+}
+
+/** Return the approximate background hex for a preset, given the active theme. */
+export function getApproxBgHex(preset: ColorPreset, theme: 'light' | 'dark'): string {
+  return theme === 'dark' ? preset.bgDark : preset.bg;
+}
 
 export function getHueRange(colorKey: string): string | null {
   if (!colorKey) return null;

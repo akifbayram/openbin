@@ -1,5 +1,5 @@
 import { query } from '../db.js';
-import { ValidationError } from './httpErrors.js';
+import { ValidationError, ForbiddenError } from './httpErrors.js';
 
 /** Verify user is a member of the location that owns a non-deleted bin.
  *  Private bins are only accessible to their creator. */
@@ -38,6 +38,29 @@ export async function getMemberRole(locationId: string, userId: string): Promise
 /** Check if a user is an admin of a location */
 export async function isLocationAdmin(locationId: string, userId: string): Promise<boolean> {
   return (await getMemberRole(locationId, userId)) === 'admin';
+}
+
+/** Throw ForbiddenError if the user is not an admin of the location */
+export async function requireAdmin(locationId: string, userId: string, action: string): Promise<void> {
+  const role = await getMemberRole(locationId, userId);
+  if (role !== 'admin') {
+    throw new ForbiddenError(`Only admins can ${action}`);
+  }
+}
+
+/** Verify user has access to a soft-deleted bin (visibility-aware). */
+export async function verifyDeletedBinAccess(
+  binId: string,
+  userId: string,
+): Promise<{ locationId: string; name: string } | null> {
+  const result = await query(
+    `SELECT b.location_id, b.name FROM bins b
+     JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
+     WHERE b.id = $1 AND b.deleted_at IS NOT NULL AND (b.visibility = 'location' OR b.created_by = $2)`,
+    [binId, userId]
+  );
+  if (result.rows.length === 0) return null;
+  return { locationId: result.rows[0].location_id, name: result.rows[0].name };
 }
 
 /** Check if a user created a specific bin */

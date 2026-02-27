@@ -4,6 +4,7 @@ import { resolveColor } from '@/lib/colorPalette';
 import { getOrientation, computeCodeFontSize } from './labelFormats';
 import { parsePaddingPt } from './pdfUnits';
 import type { LabelFormat } from './labelFormats';
+import { MONO_CODE_WIDTH_EMS, SWATCH_BAR_HEIGHT_RATIO, SWATCH_BAR_MIN_PT, CARD_PAD_RATIO, CARD_PAD_MIN_PT, CARD_RADIUS_RATIO } from './pdfConstants';
 
 interface LabelCellProps {
   bin: Bin;
@@ -22,20 +23,20 @@ interface LabelCellProps {
 export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, showQrCode = true, showBinName = true, showIcon = true, showLocation = true, showBinCode = true, textAlign = 'center' }: LabelCellProps) {
   const Icon = resolveIcon(bin.icon);
   const colorPreset = showColorSwatch && bin.color ? resolveColor(bin.color) : null;
-  const barHeight = `${Math.max(2, parseFloat(format.nameFontSize) * 0.45)}pt`;
+  const barHeight = `${Math.max(SWATCH_BAR_MIN_PT, parseFloat(format.nameFontSize) * SWATCH_BAR_HEIGHT_RATIO)}pt`;
   const isPortrait = getOrientation(format) === 'portrait';
   const resolvedIconSize = iconSize ?? '11pt';
   const codeFontSize = `${computeCodeFontSize(format).toFixed(1).replace(/\.0$/, '')}pt`;
   const qrSizePt = parseFloat(format.qrSize) * 72;
   // Font size so 6 monospace chars span the QR width: each ~0.6em + 0.2em letter-spacing × 5 gaps
-  const qrCodeFontSizePt = qrSizePt / (6 * 0.6 + 5 * 0.2);
+  const qrCodeFontSizePt = qrSizePt / MONO_CODE_WIDTH_EMS;
   const qrCodeFontSize = `${qrCodeFontSizePt.toFixed(1).replace(/\.0$/, '')}pt`;
   const codeUnderQr = showQrCode && qrDataUrl && showBinCode && bin.id;
 
   // Colored card mode: QR + short code wrapped in a card layout (with or without bg color)
   const useColoredCard = !!showColorSwatch && showQrCode && !!qrDataUrl;
   // Scale card padding: 7% of QR size, minimum 3pt — clamped to fit within the cell's content area
-  const idealPadPt = Math.max(3, qrSizePt * 0.07);
+  const idealPadPt = Math.max(CARD_PAD_MIN_PT, qrSizePt * CARD_PAD_RATIO);
   const pad = parsePaddingPt(format.padding);
   const contentHeightPt = parseFloat(format.cellHeight) * 72 - pad.top - pad.bottom;
   const codeHeightPt = (showBinCode && bin.id) ? qrCodeFontSizePt : 0;
@@ -44,7 +45,7 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
   const cardPadding = `${cardPaddingPt.toFixed(1).replace(/\.0$/, '')}pt`;
   const cellWPt = parseFloat(format.cellWidth) * 72;
   const cellHPt = parseFloat(format.cellHeight) * 72;
-  const borderRadius = `${(Math.min(cellWPt, cellHPt) * 0.08).toFixed(1)}pt`;
+  const borderRadius = `${(Math.min(cellWPt, cellHPt) * CARD_RADIUS_RATIO).toFixed(1)}pt`;
 
 
   if (useColoredCard) {

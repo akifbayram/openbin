@@ -9,7 +9,9 @@ export interface BinCardComputedStyles {
   secondaryStyle: React.CSSProperties | undefined;
   secondaryBorderStyle: React.CSSProperties | undefined;
   iconStyle: React.CSSProperties | undefined;
-  photoTextStyle: React.CSSProperties | undefined;
+  nameStyle: React.CSSProperties | undefined;
+  /** Fallback style for tags without a custom tag color on dark-bg cards. */
+  tagDefaultStyle: React.CSSProperties | undefined;
 }
 
 /** Compute all derived style objects for BinCard / BinCompactCard. */
@@ -22,7 +24,7 @@ export function computeBinCardStyles(
   const cardStyle = parseCardStyle(cardStyleRaw);
   const isPhoto = renderProps.isPhotoVariant;
   const coverPhotoId = cardStyle?.coverPhotoId;
-  const { mutedColor } = renderProps;
+  const { mutedColor, primaryColor } = renderProps;
 
   const secondaryStyle: React.CSSProperties | undefined = isPhoto
     ? { color: 'rgba(255,255,255,0.8)', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }
@@ -36,9 +38,14 @@ export function computeBinCardStyles(
     ? { color: 'rgba(255,255,255,0.8)' }
     : mutedColor ? { color: mutedColor } : undefined;
 
-  const photoTextStyle: React.CSSProperties | undefined = isPhoto && coverPhotoId
+  const nameStyle: React.CSSProperties | undefined = isPhoto && coverPhotoId
     ? { color: 'white', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }
+    : primaryColor ? { color: primaryColor } : undefined;
+
+  // Tags on dark-bg cards need a light treatment when no custom tag color is set
+  const tagDefaultStyle: React.CSSProperties | undefined = primaryColor && !isPhoto
+    ? { backgroundColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.85)' }
     : undefined;
 
-  return { renderProps, isPhoto, coverPhotoId, mutedColor, secondaryStyle, secondaryBorderStyle, iconStyle, photoTextStyle };
+  return { renderProps, isPhoto, coverPhotoId, mutedColor, secondaryStyle, secondaryBorderStyle, iconStyle, nameStyle, tagDefaultStyle };
 }

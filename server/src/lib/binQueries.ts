@@ -1,5 +1,33 @@
+import { query } from '../db.js';
+
 /** Shared SELECT columns for bin queries (requires b alias for bins, a alias for areas). */
 export const BIN_SELECT_COLS = `b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name)) FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items, b.notes, b.tags, b.icon, b.color, b.card_style, b.created_by, COALESCE((SELECT COALESCE(u.display_name, u.username) FROM users u WHERE u.id = b.created_by), '') AS created_by_name, b.visibility, b.created_at, b.updated_at`;
+
+/**
+ * Fetch a single bin by ID with BIN_SELECT_COLS.
+ * - `userId`: include `is_pinned` column via pinned_bins join
+ * - `excludeDeleted`: add `AND b.deleted_at IS NULL` filter
+ */
+export async function fetchBinById(
+  binId: string,
+  options?: { userId?: string; excludeDeleted?: boolean },
+): Promise<Record<string, any> | null> {
+  const userId = options?.userId;
+  const excludeDeleted = options?.excludeDeleted ?? false;
+
+  const pinnedCol = userId ? ', CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned' : '';
+  const pinnedJoin = userId ? 'LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2' : '';
+  const deletedFilter = excludeDeleted ? ' AND b.deleted_at IS NULL' : '';
+
+  const params: unknown[] = userId ? [binId, userId] : [binId];
+
+  const result = await query(
+    `SELECT ${BIN_SELECT_COLS}${pinnedCol} FROM bins b LEFT JOIN areas a ON a.id = b.area_id ${pinnedJoin} WHERE b.id = $1${deletedFilter}`,
+    params,
+  );
+
+  return result.rows.length > 0 ? result.rows[0] : null;
+}
 
 export interface BinListFilterParams {
   locationId: string;
