@@ -41,6 +41,8 @@ import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import { useEditBinForm } from './useEditBinForm';
 import { QuickAddWidget } from './QuickAddWidget';
 import { BinDetailToolbar } from './BinDetailToolbar';
+import { BinPreviewCard } from './BinPreviewCard';
+import { useAreaList } from '@/features/areas/useAreas';
 import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { DeleteBinDialog } from './DeleteBinDialog';
 import { MoveBinDialog } from './MoveBinDialog';
@@ -68,6 +70,8 @@ export function BinDetailPage() {
   const { tagColors } = useTagColorsContext();
   const { aiEnabled } = useAiEnabled();
   const edit = useEditBinForm(id);
+  const { areas } = useAreaList(activeLocationId);
+  const editAreaName = edit.editing ? areas.find((a) => a.id === edit.areaId)?.name : undefined;
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [unsavedOpen, setUnsavedOpen] = useState(false);
@@ -403,6 +407,18 @@ export function BinDetailPage() {
           {/* Appearance — icon, color, style */}
           <Card>
             <CardContent className="space-y-5 py-5">
+              <div className="space-y-2">
+                <Label>Preview</Label>
+                <BinPreviewCard
+                  name={edit.name}
+                  color={edit.color}
+                  items={edit.items}
+                  tags={edit.tags}
+                  icon={edit.icon}
+                  cardStyle={edit.cardStyle}
+                  areaName={editAreaName}
+                />
+              </div>
               <div className="space-y-2">
                 <Label>Icon</Label>
                 <IconPicker value={edit.icon} onChange={edit.setIcon} />

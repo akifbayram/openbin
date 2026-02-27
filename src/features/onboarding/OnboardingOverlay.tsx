@@ -294,6 +294,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
                     icon={state.icon}
                     cardStyle={state.cardStyle}
                     areaName={state.areaName}
+                    className="mb-5"
                   />
                 )}
                 className="w-full"

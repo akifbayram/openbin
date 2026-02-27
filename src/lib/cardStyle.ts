@@ -121,6 +121,7 @@ function renderGradientProps(cardStyle: CardStyle, colorPreset: ColorPreset | un
     className: '',
     style: {
       background: `linear-gradient(135deg, ${startColor}, ${endColor})`,
+      border: '0.5px solid transparent',
     },
     mutedColor: theme === 'dark' ? MUTED_DARK : MUTED_LIGHT,
     isPhotoVariant: false,
@@ -153,6 +154,7 @@ function renderPhotoProps(): CardRenderProps {
     style: {
       position: 'relative',
       overflow: 'hidden',
+      border: '0.5px solid transparent',
     },
     mutedColor: MUTED_DARK,
     isPhotoVariant: true,
