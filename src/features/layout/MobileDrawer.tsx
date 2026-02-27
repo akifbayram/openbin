@@ -34,7 +34,7 @@ export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
         role="dialog"
         aria-modal="true"
         aria-label="Navigation"
-        className="fixed top-0 left-0 h-dvh w-[260px] bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] flex flex-col overflow-y-auto"
+        className="fixed top-0 left-0 h-dvh w-[260px] bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] flex flex-col overflow-y-auto pt-[var(--safe-top)]"
         style={{
           transform: isEntered ? 'translateX(0)' : 'translateX(-100%)',
           transition: `transform ${duration} cubic-bezier(0.2, 0.9, 0.3, 1)`,

@@ -18,7 +18,7 @@ interface StructureTextResult {
 
 /** @deprecated Use mapAiError from aiErrors.ts instead */
 export function mapStructureErrorMessage(err: unknown): string {
-  return mapAiError(err, 'Couldn\'t extract items — try describing them differently');
+  return mapAiError(err, 'Couldn\'t find items — try describing them differently');
 }
 
 export async function structureTextItems(options: StructureTextOptions): Promise<string[]> {

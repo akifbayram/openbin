@@ -217,12 +217,12 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
             </Tooltip>
           )}
           {showSparkles && (
-            <Tooltip content="AI extract items">
+            <Tooltip content="Add with AI">
               <button
                 type="button"
                 onClick={handleSparklesClick}
                 className="shrink-0 rounded-full p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
-                aria-label="AI extract items"
+                aria-label="Add with AI"
               >
                 <Sparkles className="h-4 w-4" />
               </button>
@@ -267,7 +267,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
               ) : (
                 <Sparkles className="h-3.5 w-3.5" />
               )}
-              {isStructuring ? 'Extracting...' : 'Extract'}
+              {isStructuring ? 'Thinking...' : 'Go'}
             </Button>
           </div>
         </div>

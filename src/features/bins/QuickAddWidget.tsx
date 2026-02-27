@@ -42,12 +42,12 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
             </Tooltip>
           )}
           {aiEnabled && (
-            <Tooltip content="AI extract items">
+            <Tooltip content="Add with AI">
               <button
                 type="button"
                 onClick={quickAdd.handleAiClick}
                 className="shrink-0 rounded-full p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
-                aria-label="AI extract items"
+                aria-label="Add with AI"
               >
                 <Sparkles className="h-4 w-4" />
               </button>
@@ -92,7 +92,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               ) : (
                 <Sparkles className="h-3.5 w-3.5" />
               )}
-              {quickAdd.isStructuring ? 'Extracting...' : 'Extract'}
+              {quickAdd.isStructuring ? 'Thinking...' : 'Go'}
             </Button>
           </div>
         </div>
