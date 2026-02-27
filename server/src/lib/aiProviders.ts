@@ -65,11 +65,19 @@ function validateSuggestions(raw: unknown): AiSuggestionsResult {
   return { name, items, tags, notes };
 }
 
+export interface AiOverrides {
+  temperature?: number | null;
+  max_tokens?: number | null;
+  top_p?: number | null;
+  request_timeout?: number | null;
+}
+
 export async function analyzeImages(
   config: AiProviderConfig,
   images: ImageInput[],
   existingTags?: string[],
-  customPrompt?: string | null
+  customPrompt?: string | null,
+  overrides?: AiOverrides
 ): Promise<AiSuggestionsResult> {
   const userText = images.length > 1
     ? `Catalog the contents of this storage bin. ${images.length} photos attached showing different angles of the same bin.`
@@ -84,8 +92,10 @@ export async function analyzeImages(
     config,
     systemPrompt: buildSystemPrompt(existingTags, customPrompt),
     userContent,
-    temperature: 0.3,
-    maxTokens: images.length > 1 ? 2000 : 1500,
+    temperature: overrides?.temperature ?? 0.3,
+    maxTokens: overrides?.max_tokens ?? (images.length > 1 ? 2000 : 1500),
+    topP: overrides?.top_p ?? undefined,
+    timeoutMs: overrides?.request_timeout ? overrides.request_timeout * 1000 : undefined,
     validate: validateSuggestions,
   });
 }
@@ -95,9 +105,10 @@ export async function analyzeImage(
   imageBase64: string,
   mimeType: string,
   existingTags?: string[],
-  customPrompt?: string | null
+  customPrompt?: string | null,
+  overrides?: AiOverrides
 ): Promise<AiSuggestionsResult> {
-  return analyzeImages(config, [{ base64: imageBase64, mimeType }], existingTags, customPrompt);
+  return analyzeImages(config, [{ base64: imageBase64, mimeType }], existingTags, customPrompt, overrides);
 }
 
 export async function testConnection(config: AiProviderConfig): Promise<void> {

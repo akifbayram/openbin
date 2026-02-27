@@ -119,6 +119,8 @@ export interface AiCallRequest<T> {
   userContent: string | MultimodalContent[];
   temperature: number;
   maxTokens: number;
+  topP?: number;
+  timeoutMs?: number;
   validate: (raw: unknown) => T;
 }
 
@@ -137,7 +139,7 @@ function buildOpenAiBody(req: AiCallRequest<unknown>): object {
     });
   }
 
-  return {
+  const body: Record<string, unknown> = {
     model: req.config.model,
     max_tokens: req.maxTokens,
     temperature: req.temperature,
@@ -146,6 +148,8 @@ function buildOpenAiBody(req: AiCallRequest<unknown>): object {
       { role: 'user', content: userContent },
     ],
   };
+  if (req.topP != null) body.top_p = req.topP;
+  return body;
 }
 
 function buildAnthropicBody(req: AiCallRequest<unknown>): object {
@@ -161,13 +165,15 @@ function buildAnthropicBody(req: AiCallRequest<unknown>): object {
     });
   }
 
-  return {
+  const body: Record<string, unknown> = {
     model: req.config.model,
     max_tokens: req.maxTokens,
     temperature: req.temperature,
     system: req.systemPrompt,
     messages: [{ role: 'user', content: userContent }],
   };
+  if (req.topP != null) body.top_p = req.topP;
+  return body;
 }
 
 function buildGeminiBody(req: AiCallRequest<unknown>): object {
@@ -183,10 +189,12 @@ function buildGeminiBody(req: AiCallRequest<unknown>): object {
     });
   }
 
+  const generationConfig: Record<string, unknown> = { temperature: req.temperature, maxOutputTokens: req.maxTokens };
+  if (req.topP != null) generationConfig.topP = req.topP;
   return {
     systemInstruction: { parts: [{ text: req.systemPrompt }] },
     contents: [{ role: 'user', parts }],
-    generationConfig: { temperature: req.temperature, maxOutputTokens: req.maxTokens },
+    generationConfig,
   };
 }
 
@@ -262,11 +270,19 @@ export async function callAiProvider<T>(request: AiCallRequest<T>): Promise<T> {
 
   const req = getProviderRequest(config, body);
 
+  const fetchOptions: RequestInit = { method: 'POST', headers: req.headers, body: req.body };
+  if (request.timeoutMs) {
+    fetchOptions.signal = AbortSignal.timeout(request.timeoutMs);
+  }
+
   let res: Response;
   try {
-    res = await fetch(req.url, { method: 'POST', headers: req.headers, body: req.body });
+    res = await fetch(req.url, fetchOptions);
   } catch (err) {
-    throw new AiAnalysisError('NETWORK_ERROR', `Failed to connect: ${(err as Error).message}`);
+    const msg = (err as Error).name === 'TimeoutError'
+      ? `Request timed out after ${Math.round((request.timeoutMs || 0) / 1000)}s`
+      : `Failed to connect: ${(err as Error).message}`;
+    throw new AiAnalysisError('NETWORK_ERROR', msg);
   }
 
   if (!res.ok) {

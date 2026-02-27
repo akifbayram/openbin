@@ -42,17 +42,27 @@ function validateItems(raw: unknown): StructureTextResult {
   return { items };
 }
 
+export interface StructureTextOverrides {
+  temperature?: number | null;
+  max_tokens?: number | null;
+  top_p?: number | null;
+  request_timeout?: number | null;
+}
+
 export async function structureText(
   config: AiProviderConfig,
   request: StructureTextRequest,
-  customPrompt?: string
+  customPrompt?: string,
+  overrides?: StructureTextOverrides
 ): Promise<StructureTextResult> {
   return callAiProvider({
     config,
     systemPrompt: buildPrompt(request, customPrompt),
     userContent: request.text,
-    temperature: 0.2,
-    maxTokens: 800,
+    temperature: overrides?.temperature ?? 0.2,
+    maxTokens: overrides?.max_tokens ?? 800,
+    topP: overrides?.top_p ?? undefined,
+    timeoutMs: overrides?.request_timeout ? overrides.request_timeout * 1000 : undefined,
     validate: validateItems,
   });
 }

@@ -357,10 +357,18 @@ function validateCommandResult(raw: unknown, binIds: Set<string>, areaIds: Set<s
   return { actions, interpretation };
 }
 
+export interface CommandOverrides {
+  temperature?: number | null;
+  max_tokens?: number | null;
+  top_p?: number | null;
+  request_timeout?: number | null;
+}
+
 export async function parseCommand(
   config: AiProviderConfig,
   request: CommandRequest,
-  customPrompt?: string
+  customPrompt?: string,
+  overrides?: CommandOverrides
 ): Promise<CommandResult> {
   const binIds = new Set(request.context.bins.map((b) => b.id));
   const areaIds = new Set(request.context.areas.map((a) => a.id));
@@ -370,8 +378,10 @@ export async function parseCommand(
     config,
     systemPrompt: buildSystemPrompt(request, customPrompt),
     userContent: buildUserMessage(request),
-    temperature: 0.2,
-    maxTokens: 2000,
+    temperature: overrides?.temperature ?? 0.2,
+    maxTokens: overrides?.max_tokens ?? 2000,
+    topP: overrides?.top_p ?? undefined,
+    timeoutMs: overrides?.request_timeout ? overrides.request_timeout * 1000 : undefined,
     validate: (raw) => validateCommandResult(raw, binIds, areaIds, trashBinIds),
   });
 }

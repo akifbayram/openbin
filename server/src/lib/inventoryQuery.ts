@@ -93,11 +93,19 @@ function validateQueryResult(raw: unknown, validBinIds: Set<string>): QueryResul
   return { answer, matches };
 }
 
+export interface QueryOverrides {
+  temperature?: number | null;
+  max_tokens?: number | null;
+  top_p?: number | null;
+  request_timeout?: number | null;
+}
+
 export async function queryInventory(
   config: AiProviderConfig,
   question: string,
   context: InventoryContext,
-  customPrompt?: string
+  customPrompt?: string,
+  overrides?: QueryOverrides
 ): Promise<QueryResult> {
   const validBinIds = new Set(context.bins.map((b) => b.id));
 
@@ -105,8 +113,10 @@ export async function queryInventory(
     config,
     systemPrompt: buildSystemPrompt(customPrompt),
     userContent: buildUserMessage(question, context),
-    temperature: 0.3,
-    maxTokens: 2000,
+    temperature: overrides?.temperature ?? 0.3,
+    maxTokens: overrides?.max_tokens ?? 2000,
+    topP: overrides?.top_p ?? undefined,
+    timeoutMs: overrides?.request_timeout ? overrides.request_timeout * 1000 : undefined,
     validate: (raw) => validateQueryResult(raw, validBinIds),
   });
 }

@@ -41,6 +41,10 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
   const [queryPrompt, setQueryPrompt] = useState('');
   const [structurePrompt, setStructurePrompt] = useState('');
   const [activePromptTab, setActivePromptTab] = useState<PromptTab>('analysis');
+  const [temperature, setTemperature] = useState<string>('');
+  const [maxTokens, setMaxTokens] = useState<string>('');
+  const [topP, setTopP] = useState<string>('');
+  const [requestTimeout, setRequestTimeout] = useState<string>('');
   const [testError, setTestError] = useState('');
   const [touched, setTouched] = useState(false);
 
@@ -55,6 +59,10 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setCommandPrompt(settings.commandPrompt || '');
       setQueryPrompt(settings.queryPrompt || '');
       setStructurePrompt(settings.structurePrompt || '');
+      setTemperature(settings.temperature != null ? String(settings.temperature) : '');
+      setMaxTokens(settings.maxTokens != null ? String(settings.maxTokens) : '');
+      setTopP(settings.topP != null ? String(settings.topP) : '');
+      setRequestTimeout(settings.requestTimeout != null ? String(settings.requestTimeout) : '');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
@@ -88,6 +96,10 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
         commandPrompt: commandPrompt.trim() || null,
         queryPrompt: queryPrompt.trim() || null,
         structurePrompt: structurePrompt.trim() || null,
+        temperature: temperature ? Number(temperature) : null,
+        maxTokens: maxTokens ? Number(maxTokens) : null,
+        topP: topP ? Number(topP) : null,
+        requestTimeout: requestTimeout ? Number(requestTimeout) : null,
       });
       setSettings(saved);
       showToast({ message: 'AI settings saved' });
@@ -108,6 +120,10 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setCommandPrompt('');
       setQueryPrompt('');
       setStructurePrompt('');
+      setTemperature('');
+      setMaxTokens('');
+      setTopP('');
+      setRequestTimeout('');
       setup.setTestResult(null);
       showToast({ message: 'AI settings removed' });
     } catch {
@@ -282,6 +298,99 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     </Disclosure>
                   );
                 })()}
+
+                {/* Advanced AI Parameters */}
+                <Disclosure
+                  label="Advanced"
+                  indicator={!!(temperature || maxTokens || topP || requestTimeout)}
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label htmlFor="ai-temperature" className="text-[13px] text-[var(--text-secondary)]">Temperature</label>
+                      <div className="relative">
+                        <Input
+                          id="ai-temperature"
+                          type="number"
+                          min={0}
+                          max={2}
+                          step={0.1}
+                          value={temperature}
+                          onChange={(e) => setTemperature(e.target.value)}
+                          placeholder="Default"
+                        />
+                        {temperature && (
+                          <button type="button" onClick={() => setTemperature('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                            <RotateCcw className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[var(--text-tertiary)]">0.0–2.0</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="ai-max-tokens" className="text-[13px] text-[var(--text-secondary)]">Max Tokens</label>
+                      <div className="relative">
+                        <Input
+                          id="ai-max-tokens"
+                          type="number"
+                          min={100}
+                          max={16000}
+                          step={100}
+                          value={maxTokens}
+                          onChange={(e) => setMaxTokens(e.target.value)}
+                          placeholder="Default"
+                        />
+                        {maxTokens && (
+                          <button type="button" onClick={() => setMaxTokens('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                            <RotateCcw className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[var(--text-tertiary)]">100–16,000</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="ai-top-p" className="text-[13px] text-[var(--text-secondary)]">Top P</label>
+                      <div className="relative">
+                        <Input
+                          id="ai-top-p"
+                          type="number"
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          value={topP}
+                          onChange={(e) => setTopP(e.target.value)}
+                          placeholder="Default"
+                        />
+                        {topP && (
+                          <button type="button" onClick={() => setTopP('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                            <RotateCcw className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[var(--text-tertiary)]">0.0–1.0</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="ai-timeout" className="text-[13px] text-[var(--text-secondary)]">Timeout (s)</label>
+                      <div className="relative">
+                        <Input
+                          id="ai-timeout"
+                          type="number"
+                          min={10}
+                          max={300}
+                          step={5}
+                          value={requestTimeout}
+                          onChange={(e) => setRequestTimeout(e.target.value)}
+                          placeholder="Default (30)"
+                        />
+                        {requestTimeout && (
+                          <button type="button" onClick={() => setRequestTimeout('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                            <RotateCcw className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[var(--text-tertiary)]">10–300 seconds</p>
+                    </div>
+                  </div>
+                </Disclosure>
 
                 {/* Test result */}
                 {setup.testResult === 'success' && (

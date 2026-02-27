@@ -191,6 +191,10 @@ export interface AiSettings {
   commandPrompt: string | null;
   queryPrompt: string | null;
   structurePrompt: string | null;
+  temperature: number | null;
+  maxTokens: number | null;
+  topP: number | null;
+  requestTimeout: number | null;
   providerConfigs?: Partial<Record<AiProvider, {
     apiKey: string;
     model: string;

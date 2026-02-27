@@ -57,6 +57,10 @@ export async function saveAiSettings(opts: {
   commandPrompt?: string | null;
   queryPrompt?: string | null;
   structurePrompt?: string | null;
+  temperature?: number | null;
+  maxTokens?: number | null;
+  topP?: number | null;
+  requestTimeout?: number | null;
 }): Promise<AiSettings> {
   const result = await apiFetch<AiSettings>('/api/ai/settings', {
     method: 'PUT',

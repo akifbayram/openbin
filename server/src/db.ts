@@ -21,6 +21,17 @@ if (fs.existsSync(schemaPath)) {
   db.exec(fs.readFileSync(schemaPath, 'utf-8'));
 }
 
+// Column migrations for existing databases (ALTER TABLE ADD COLUMN errors if column exists)
+const aiSettingsMigrations = [
+  'temperature REAL',
+  'max_tokens INTEGER',
+  'top_p REAL',
+  'request_timeout INTEGER',
+];
+for (const colDef of aiSettingsMigrations) {
+  try { db.exec(`ALTER TABLE user_ai_settings ADD COLUMN ${colDef}`); } catch { /* column already exists */ }
+}
+
 /** Word-boundary search: returns 1 if `term` appears at a word boundary in `text` */
 db.function('word_match', { deterministic: true }, (text: unknown, term: unknown) => {
   if (!text || !term) return 0;

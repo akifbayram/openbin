@@ -16,12 +16,16 @@ export interface UserAiSettings {
   command_prompt: string | null;
   query_prompt: string | null;
   structure_prompt: string | null;
+  temperature: number | null;
+  max_tokens: number | null;
+  top_p: number | null;
+  request_timeout: number | null;
 }
 
 /** Load and decrypt a user's AI settings. Falls back to env config. Throws NoAiSettingsError if neither exist. */
 export async function getUserAiSettings(userId: string): Promise<UserAiSettings> {
   const result = await query(
-    'SELECT provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt FROM user_ai_settings WHERE user_id = $1 AND is_active = 1',
+    'SELECT provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, temperature, max_tokens, top_p, request_timeout FROM user_ai_settings WHERE user_id = $1 AND is_active = 1',
     [userId]
   );
   if (result.rows.length === 0) {
@@ -33,6 +37,10 @@ export async function getUserAiSettings(userId: string): Promise<UserAiSettings>
         command_prompt: null,
         query_prompt: null,
         structure_prompt: null,
+        temperature: null,
+        max_tokens: null,
+        top_p: null,
+        request_timeout: null,
       };
     }
     throw new NoAiSettingsError();
@@ -49,6 +57,10 @@ export async function getUserAiSettings(userId: string): Promise<UserAiSettings>
     command_prompt: row.command_prompt || null,
     query_prompt: row.query_prompt || null,
     structure_prompt: row.structure_prompt || null,
+    temperature: row.temperature ?? null,
+    max_tokens: row.max_tokens ?? null,
+    top_p: row.top_p ?? null,
+    request_timeout: row.request_timeout ?? null,
   };
 }
 

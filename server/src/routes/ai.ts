@@ -53,7 +53,7 @@ router.use(authenticate);
 // GET /api/ai/settings — get user's AI config
 router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
   const result = await query(
-    'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, is_active FROM user_ai_settings WHERE user_id = $1',
+    'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, temperature, max_tokens, top_p, request_timeout, is_active FROM user_ai_settings WHERE user_id = $1',
     [req.user!.id]
   );
 
@@ -71,6 +71,10 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
         commandPrompt: null,
         queryPrompt: null,
         structurePrompt: null,
+        temperature: null,
+        maxTokens: null,
+        topP: null,
+        requestTimeout: null,
         source: 'env' as const,
       });
       return;
@@ -101,6 +105,10 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
     commandPrompt: activeRow.command_prompt || null,
     queryPrompt: activeRow.query_prompt || null,
     structurePrompt: activeRow.structure_prompt || null,
+    temperature: activeRow.temperature ?? null,
+    maxTokens: activeRow.max_tokens ?? null,
+    topP: activeRow.top_p ?? null,
+    requestTimeout: activeRow.request_timeout ?? null,
     providerConfigs,
     source: 'user' as const,
   });
@@ -109,6 +117,7 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
 // PUT /api/ai/settings — upsert AI config
 router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
   const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt } = req.body;
+  const { temperature: rawTemp, maxTokens: rawMaxTokens, topP: rawTopP, requestTimeout: rawTimeout } = req.body;
 
   if (!provider || !apiKey || !model) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'provider, apiKey, and model are required' });
@@ -141,6 +150,31 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
     return;
   }
 
+  // Validate advanced AI parameters
+  const finalTemperature = rawTemp != null ? Number(rawTemp) : null;
+  if (finalTemperature != null && (isNaN(finalTemperature) || finalTemperature < 0 || finalTemperature > 2)) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'temperature must be between 0 and 2' });
+    return;
+  }
+
+  const finalMaxTokens = rawMaxTokens != null ? Math.round(Number(rawMaxTokens)) : null;
+  if (finalMaxTokens != null && (isNaN(finalMaxTokens) || finalMaxTokens < 100 || finalMaxTokens > 16000)) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'maxTokens must be between 100 and 16000' });
+    return;
+  }
+
+  const finalTopP = rawTopP != null ? Number(rawTopP) : null;
+  if (finalTopP != null && (isNaN(finalTopP) || finalTopP < 0 || finalTopP > 1)) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'topP must be between 0 and 1' });
+    return;
+  }
+
+  const finalTimeout = rawTimeout != null ? Math.round(Number(rawTimeout)) : null;
+  if (finalTimeout != null && (isNaN(finalTimeout) || finalTimeout < 10 || finalTimeout > 300)) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'requestTimeout must be between 10 and 300 seconds' });
+    return;
+  }
+
   const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id, provider);
   const encryptedKey = encryptApiKey(finalApiKey);
   const finalCustomPrompt = (customPrompt && typeof customPrompt === 'string' && customPrompt.trim()) ? customPrompt.trim() : null;
@@ -157,12 +191,12 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
   // Upsert the row for this (user, provider) and set it active
   const newId = generateUuid();
   const result = await query(
-    `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, is_active)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1)
+    `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, temperature, max_tokens, top_p, request_timeout, is_active)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 1)
      ON CONFLICT (user_id, provider) DO UPDATE SET
-       api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, is_active = 1, updated_at = datetime('now')
-     RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt`,
-    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt]
+       api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, temperature = $11, max_tokens = $12, top_p = $13, request_timeout = $14, is_active = 1, updated_at = datetime('now')
+     RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, temperature, max_tokens, top_p, request_timeout`,
+    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt, finalTemperature, finalMaxTokens, finalTopP, finalTimeout]
   );
 
   // Fetch all rows to build providerConfigs
@@ -190,6 +224,10 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
     commandPrompt: row.command_prompt || null,
     queryPrompt: row.query_prompt || null,
     structurePrompt: row.structure_prompt || null,
+    temperature: row.temperature ?? null,
+    maxTokens: row.max_tokens ?? null,
+    topP: row.top_p ?? null,
+    requestTimeout: row.request_timeout ?? null,
     providerConfigs,
   });
 }));
@@ -216,7 +254,7 @@ router.post('/analyze-image', aiLimiter, memoryUpload.fields([
     return;
   }
 
-  const { config, custom_prompt } = await getUserAiSettings(req.user!.id);
+  const settings = await getUserAiSettings(req.user!.id);
 
   const images: ImageInput[] = allFiles.map((f) => ({
     base64: f.buffer.toString('base64'),
@@ -226,7 +264,7 @@ router.post('/analyze-image', aiLimiter, memoryUpload.fields([
   const locationId = req.body?.locationId;
   const existingTags = locationId ? await fetchExistingTags(locationId) : undefined;
 
-  const suggestions = await analyzeImages(config, images, existingTags, custom_prompt);
+  const suggestions = await analyzeImages(settings.config, images, existingTags, settings.custom_prompt, settings);
   res.json(suggestions);
 }));
 
@@ -245,7 +283,7 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
     return;
   }
 
-  const { config, custom_prompt } = await getUserAiSettings(req.user!.id);
+  const settings = await getUserAiSettings(req.user!.id);
 
   const images: ImageInput[] = [];
   let locationId: string | null = null;
@@ -280,7 +318,7 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
   }
 
   const existingTags = locationId ? await fetchExistingTags(locationId) : undefined;
-  const suggestions = await analyzeImages(config, images, existingTags, custom_prompt);
+  const suggestions = await analyzeImages(settings.config, images, existingTags, settings.custom_prompt, settings);
   res.json(suggestions);
 }));
 
@@ -288,7 +326,7 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
 router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { mode, context } = req.body;
-  const { config, structure_prompt } = await getUserAiSettings(req.user!.id);
+  const settings = await getUserAiSettings(req.user!.id);
 
   const request: StructureTextRequest = {
     text,
@@ -299,7 +337,7 @@ router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async
     } : undefined,
   };
 
-  const result = await structureText(config, request, structure_prompt || undefined);
+  const result = await structureText(settings.config, request, settings.structure_prompt || undefined, settings);
   res.json(result);
 }));
 
@@ -307,11 +345,11 @@ router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async
 router.post('/command', aiLimiter, requireLocationMember(), aiRouteHandler('parse command', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { locationId } = req.body;
-  const { config, command_prompt } = await getUserAiSettings(req.user!.id);
+  const settings = await getUserAiSettings(req.user!.id);
 
   const context = await buildCommandContext(locationId, req.user!.id);
   const request: CommandRequest = { text, context };
-  const result = await parseCommand(config, request, command_prompt || undefined);
+  const result = await parseCommand(settings.config, request, settings.command_prompt || undefined, settings);
   res.json(result);
 }));
 
@@ -319,10 +357,10 @@ router.post('/command', aiLimiter, requireLocationMember(), aiRouteHandler('pars
 router.post('/query', aiLimiter, requireLocationMember(), aiRouteHandler('query inventory', async (req, res) => {
   const question = validateTextInput(req.body.question, 'question');
   const { locationId } = req.body;
-  const { config, query_prompt } = await getUserAiSettings(req.user!.id);
+  const settings = await getUserAiSettings(req.user!.id);
 
   const context = await buildInventoryContext(locationId, req.user!.id);
-  const result = await queryInventory(config, question, context, query_prompt || undefined);
+  const result = await queryInventory(settings.config, question, context, settings.query_prompt || undefined, settings);
   res.json(result);
 }));
 
@@ -330,11 +368,11 @@ router.post('/query', aiLimiter, requireLocationMember(), aiRouteHandler('query 
 router.post('/execute', aiLimiter, requireLocationMember(), aiRouteHandler('execute command', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { locationId } = req.body;
-  const { config, command_prompt } = await getUserAiSettings(req.user!.id);
+  const settings = await getUserAiSettings(req.user!.id);
 
   const context = await buildCommandContext(locationId, req.user!.id);
   const request: CommandRequest = { text, context };
-  const parsed = await parseCommand(config, request, command_prompt || undefined);
+  const parsed = await parseCommand(settings.config, request, settings.command_prompt || undefined, settings);
 
   if (parsed.actions.length === 0) {
     res.json({

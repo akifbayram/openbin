@@ -5,10 +5,11 @@ import { cn } from '@/lib/utils';
 interface DisclosureProps {
   label: string;
   defaultOpen?: boolean;
+  indicator?: boolean;
   children: ReactNode;
 }
 
-export function Disclosure({ label, defaultOpen = false, children }: DisclosureProps) {
+export function Disclosure({ label, defaultOpen = false, indicator, children }: DisclosureProps) {
   const [open, setOpen] = useState(defaultOpen);
   const contentId = useId();
 
@@ -21,7 +22,10 @@ export function Disclosure({ label, defaultOpen = false, children }: DisclosureP
         aria-controls={contentId}
         className="flex items-center justify-between w-full text-[13px] text-[var(--text-secondary)] font-medium"
       >
-        {label}
+        <span className="flex items-center gap-1.5">
+          {label}
+          {indicator && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
+        </span>
         <ChevronDown className={cn('h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200', open && 'rotate-180')} />
       </button>
       <div
