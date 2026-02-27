@@ -141,7 +141,7 @@ describe('useOnboarding', () => {
     expect(result.current.isOnboarding).toBe(false);
   });
 
-  it('full flow from step 0 through completion', async () => {
+  it('full flow from step 0 through completion (5 steps)', async () => {
     const { result } = renderHook(() => useOnboarding(), { wrapper });
 
     await waitFor(() => {
@@ -161,13 +161,19 @@ describe('useOnboarding', () => {
     });
     expect(result.current.step).toBe(2);
 
-    // Step 2 -> 3: QR preview -> Get Started
+    // Step 2 -> 3: QR preview -> AI showcase
     act(() => {
       result.current.advanceStep();
     });
     expect(result.current.step).toBe(3);
 
-    // Step 3 -> completed (Get Started)
+    // Step 3 -> 4: AI showcase -> Completion
+    act(() => {
+      result.current.advanceStep();
+    });
+    expect(result.current.step).toBe(4);
+
+    // Step 4 -> completed
     act(() => {
       result.current.advanceStep();
     });

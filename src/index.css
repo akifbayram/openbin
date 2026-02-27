@@ -18,8 +18,8 @@
   --text-secondary: #3c3c43;
   --text-tertiary: #6d6d72;
   --text-on-accent: #ffffff;
-  --accent: #007aff;
-  --accent-hover: #0066d6;
+  --accent: #5e2fe0;
+  --accent-hover: #4e1fd0;
   --destructive: #ff3b30;
   --destructive-hover: #d63028;
   --shadow-glass: 0 2px 16px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1);
@@ -39,9 +39,9 @@
   --overlay-heavy: rgba(0, 0, 0, 0.7);
   --overlay-button: rgba(0, 0, 0, 0.5);
   --overlay-button-hover: rgba(0, 0, 0, 0.7);
-  --ai-accent: #007aff;
-  --ai-accent-hover: #0066d6;
-  --accent-glow: rgba(0, 122, 255, 0.15);
+  --ai-accent: #5e2fe0;
+  --ai-accent-hover: #4e1fd0;
+  --accent-glow: rgba(94, 47, 224, 0.15);
   color-scheme: light;
 }
 
@@ -60,8 +60,8 @@
   --text-secondary: #ebebf0;
   --text-tertiary: #98989d;
   --text-on-accent: #ffffff;
-  --accent: #0a84ff;
-  --accent-hover: #409cff;
+  --accent: #7b52f5;
+  --accent-hover: #9b7af7;
   --destructive: #ff453a;
   --destructive-hover: #ff6961;
   --shadow-glass: 0 2px 16px rgba(0, 0, 0, 0.32), 0 0 1px rgba(0, 0, 0, 0.4);
@@ -70,9 +70,9 @@
   --overlay-heavy: rgba(0, 0, 0, 0.8);
   --overlay-button: rgba(0, 0, 0, 0.5);
   --overlay-button-hover: rgba(0, 0, 0, 0.7);
-  --ai-accent: #0a84ff;
-  --ai-accent-hover: #409cff;
-  --accent-glow: rgba(10, 132, 255, 0.2);
+  --ai-accent: #7b52f5;
+  --ai-accent-hover: #9b7af7;
+  --accent-glow: rgba(123, 82, 245, 0.2);
   color-scheme: dark;
 }
 

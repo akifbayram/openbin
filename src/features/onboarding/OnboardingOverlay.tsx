@@ -1,7 +1,7 @@
 import './animations.css';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, X, Sparkles, Plus, Printer } from 'lucide-react';
+import { MapPin, X, Sparkles, Plus, Printer, Camera, MessageSquare, Search, ListChecks, PackagePlus, QrCode, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,17 +11,15 @@ import { cn } from '@/lib/utils';
 import { createLocation } from '@/features/locations/useLocations';
 import { createArea } from '@/features/areas/useAreas';
 import { addBin } from '@/features/bins/useBins';
-import { addPhoto } from '@/features/photos/usePhotos';
-import { compressImage } from '@/features/photos/compressImage';
 import { useTerminology } from '@/lib/terminology';
 import { BinPreviewCard } from '@/features/bins/BinPreviewCard';
-import { BinCreateForm } from '@/features/bins/BinCreateForm';
-import type { BinCreateFormData } from '@/features/bins/BinCreateForm';
+import { ItemsInput } from '@/features/bins/ItemsInput';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
 import { ONBOARDING_TOTAL_STEPS } from './useOnboarding';
 import type { Bin } from '@/types';
 
 const STEPS = Array.from({ length: ONBOARDING_TOTAL_STEPS });
+const BRAND = '#5e2fe0';
 
 export interface OnboardingActions {
   step: number;
@@ -30,6 +28,13 @@ export interface OnboardingActions {
   advanceStep: () => void;
   complete: () => void;
 }
+
+const AI_FEATURES = [
+  { icon: Camera, title: 'Photo Analysis', desc: 'Snap a photo, AI catalogs everything inside' },
+  { icon: MessageSquare, title: 'Natural Language', desc: "'Add screwdriver to the tools bin'" },
+  { icon: Search, title: 'Inventory Search', desc: "'Where is the glass cleaner?'" },
+  { icon: ListChecks, title: 'Smart Lists', desc: 'Dictate items, AI extracts a clean list' },
+] as const;
 
 export function OnboardingOverlay({ step, locationId, advanceWithLocation, advanceStep, complete }: OnboardingActions) {
   const t = useTerminology();
@@ -42,6 +47,9 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
   const [areaNames, setAreaNames] = useState<string[]>([]);
   const [areaInput, setAreaInput] = useState('');
   const [showAreaInput, setShowAreaInput] = useState(false);
+  // Step 1 state
+  const [binName, setBinName] = useState('');
+  const [binItems, setBinItems] = useState<string[]>([]);
   // Loading
   const [loading, setLoading] = useState(false);
   // Created bin for QR preview
@@ -82,6 +90,11 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
     setLoading(true);
     try {
       const loc = await createLocation(locationName.trim());
+      // Advance step BEFORE setting active location — createLocation fires
+      // notifyLocationsChanged() which refetches the location list. If locations.length
+      // becomes > 0 while step is still 0, the overlay's mount condition briefly fails
+      // and causes a white flash.
+      advanceWithLocation(loc.id);
       setActiveLocationId(loc.id);
       // Create areas (best-effort)
       for (const name of areaNames) {
@@ -91,7 +104,6 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
           // Skip failures
         }
       }
-      advanceWithLocation(loc.id);
     } catch (err) {
       showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.location}` });
     } finally {
@@ -99,36 +111,16 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
     }
   }
 
-  async function handleCreateBin(data: BinCreateFormData) {
-    if (!locationId) return;
+  async function handleCreateBin() {
+    if (!locationId || !binName.trim()) return;
     setLoading(true);
     try {
       const bin = await addBin({
-        name: data.name,
+        name: binName.trim(),
         locationId,
-        color: data.color || undefined,
-        tags: data.tags.length > 0 ? data.tags : undefined,
-        items: data.items.length > 0 ? data.items : undefined,
-        icon: data.icon || undefined,
-        cardStyle: data.cardStyle || undefined,
-        areaId: data.areaId,
+        items: binItems.length > 0 ? binItems : undefined,
       });
-
       setCreatedBin(bin);
-
-      // Upload photos if selected (non-blocking — bin already created)
-      for (const p of data.photos) {
-        try {
-          const compressed = await compressImage(p);
-          const file = compressed instanceof File
-            ? compressed
-            : new File([compressed], p.name, { type: compressed.type || 'image/jpeg' });
-          await addPhoto(bin.id, file);
-        } catch {
-          // Photo upload failure is non-blocking
-        }
-      }
-
       advanceStep();
     } catch (err) {
       showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.bin}` });
@@ -174,28 +166,29 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
               className={cn(
                 'h-2 w-2 rounded-full transition-all duration-300',
                 i === step
-                  ? 'bg-[var(--accent)] scale-125'
+                  ? 'scale-125'
                   : i < step
-                    ? 'bg-[var(--accent)] opacity-40'
+                    ? 'opacity-40'
                     : 'bg-[var(--bg-active)]'
               )}
+              style={i <= step ? { backgroundColor: BRAND } : undefined}
             />
           ))}
         </div>
 
         {/* Step content */}
         <div key={animKey} className="onboarding-step-enter">
-          {/* Step 0: Location + Areas */}
+          {/* Step 0: Welcome + Location + Areas */}
           {step === 0 && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full bg-[var(--accent)] bg-opacity-10 flex items-center justify-center mb-5">
-                <MapPin className="h-8 w-8 text-[var(--accent)]" />
+              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: `${BRAND}18` }}>
+                <MapPin className="h-8 w-8" style={{ color: BRAND }} />
               </div>
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                Name your {t.location}
+                Welcome to OpenBin
               </h2>
               <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
-                A {t.location} groups your {t.bins} — it could be your home, a garage, an office, or any space you want to organize.
+                Start by naming your first {t.location} — a space where your {t.bins} live, like your home, garage, or office.
               </p>
               <Input
                 value={locationName}
@@ -271,34 +264,45 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
             </div>
           )}
 
-          {/* Step 1: Bin + Appearance */}
+          {/* Step 1: Create First Bin (simplified) */}
           {step === 1 && locationId && (
             <div className="flex flex-col items-center text-center">
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Create your first {t.bin}
               </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
+              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 A {t.bin} is any container you want to track — a box, drawer, shelf, etc.
               </p>
-              <BinCreateForm
-                mode="onboarding"
-                locationId={locationId}
-                onSubmit={handleCreateBin}
-                submitting={loading}
-                header={(state) => (
-                  <BinPreviewCard
-                    name={state.name}
-                    color={state.color}
-                    items={state.items}
-                    tags={state.tags}
-                    icon={state.icon}
-                    cardStyle={state.cardStyle}
-                    areaName={state.areaName}
-                    className="mb-5"
-                  />
-                )}
-                className="w-full"
+              <BinPreviewCard
+                name={binName || `My ${t.Bin}`}
+                color=""
+                items={binItems}
+                tags={[]}
+                className="mb-5"
               />
+              <div className="w-full space-y-3 text-left">
+                <Input
+                  value={binName}
+                  onChange={(e) => setBinName(e.target.value.slice(0, 100))}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && binName.trim()) handleCreateBin(); }}
+                  placeholder={`${t.Bin} name`}
+                  maxLength={100}
+                  autoFocus
+                />
+                <ItemsInput
+                  items={binItems}
+                  onChange={setBinItems}
+                  showAi={false}
+                />
+              </div>
+              <Button
+                type="button"
+                onClick={handleCreateBin}
+                disabled={!binName.trim() || loading}
+                className="w-full rounded-[var(--radius-md)] h-11 text-[15px] mt-5"
+              >
+                {loading ? 'Creating...' : `Create ${t.Bin}`}
+              </Button>
             </div>
           )}
 
@@ -306,10 +310,10 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
           {step === 2 && createdBin && (
             <div className="flex flex-col items-center text-center">
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                Your first QR label
+                Scan to find anything
               </h2>
               <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-                Print this label and stick it on your {t.bin}. Anyone can scan it to see what's inside.
+                Print this label and stick it on your {t.bin}. Scan with any phone camera to instantly see what's inside.
               </p>
               <QRCodeDisplay binId={createdBin.id} size={160} shortCode={createdBin.id} />
               <div className="flex gap-3 w-full mt-6">
@@ -333,24 +337,85 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
             </div>
           )}
 
-          {/* Step 3: Get Started */}
+          {/* Step 3: AI Feature Showcase */}
           {step === 3 && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full bg-[var(--accent)] bg-opacity-10 flex items-center justify-center mb-5">
-                <Sparkles className="h-8 w-8 text-[var(--accent)]" />
+              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: `${BRAND}18` }}>
+                <Sparkles className="h-8 w-8" style={{ color: BRAND }} />
               </div>
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                You're all set!
+                Supercharge with AI
               </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
-                Create more {t.bins}, organize by {t.area}, add tags, and scan QR labels to find anything instantly.
+              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
+                Bring your own API key from OpenAI, Anthropic, Google, or any compatible provider.
               </p>
+              <div className="w-full space-y-2 mb-6">
+                {AI_FEATURES.map(({ icon: Icon, title, desc }) => (
+                  <div key={title} className="onboarding-feature-card flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 bg-[var(--bg-active)] text-left">
+                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${BRAND}18` }}>
+                      <Icon className="h-4 w-4" style={{ color: BRAND }} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-semibold text-[var(--text-primary)]">{title}</div>
+                      <div className="text-[12px] text-[var(--text-tertiary)] leading-snug">{desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
               <Button
                 type="button"
-                onClick={advanceStep}
+                onClick={() => { complete(); navigate('/settings#ai-settings'); }}
                 className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
               >
-                Get Started
+                Set Up Now
+              </Button>
+              <button
+                type="button"
+                onClick={advanceStep}
+                className="mt-3 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+              >
+                Maybe Later
+              </button>
+            </div>
+          )}
+
+          {/* Step 4: Completion with Next Steps */}
+          {step === 4 && (
+            <div className="flex flex-col items-center text-center">
+              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: `${BRAND}18` }}>
+                <Sparkles className="h-8 w-8" style={{ color: BRAND }} />
+              </div>
+              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
+                You're ready to go
+              </h2>
+              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
+                Here are a few things you can do next.
+              </p>
+              <div className="w-full space-y-2 mb-6">
+                {([
+                  { icon: PackagePlus, label: 'Create more bins', path: '/bins' },
+                  { icon: QrCode, label: 'Scan a QR code', path: '/scan' },
+                  { icon: Settings, label: 'Explore settings', path: '/settings' },
+                ] as const).map(({ icon: Icon, label, path }) => (
+                  <button
+                    key={path}
+                    type="button"
+                    onClick={() => { complete(); navigate(path); }}
+                    className="w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-[var(--bg-active)] hover:bg-[var(--bg-hover)] transition-colors text-left"
+                  >
+                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${BRAND}18` }}>
+                      <Icon className="h-4 w-4" style={{ color: BRAND }} />
+                    </div>
+                    <span className="text-[14px] font-medium text-[var(--text-primary)]">{label}</span>
+                  </button>
+                ))}
+              </div>
+              <Button
+                type="button"
+                onClick={() => { complete(); navigate('/'); }}
+                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+              >
+                Go to Dashboard
               </Button>
             </div>
           )}

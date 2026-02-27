@@ -30,7 +30,7 @@ export function Crossfade({ isLoading, skeleton, children }: CrossfadeProps) {
   }
 
   return (
-    <div className={showContent ? 'animate-fade-in-up' : 'opacity-0'}>
+    <div className={`flex flex-col gap-4 ${showContent ? 'animate-fade-in-up' : 'opacity-0'}`}>
       {children}
     </div>
   );

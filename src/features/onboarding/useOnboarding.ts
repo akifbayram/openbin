@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useUserPreferences } from '@/lib/userPreferences';
 
-export const ONBOARDING_TOTAL_STEPS = 4;
+export const ONBOARDING_TOTAL_STEPS = 5;
 
 export function useOnboarding() {
   const { preferences, isLoading, updatePreferences } = useUserPreferences();

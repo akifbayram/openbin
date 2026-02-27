@@ -94,9 +94,17 @@
 .fade-in-fast { animation: fadeInFast 0.15s ease-out; }
 @keyframes fadeInFast { from { opacity: 0; } to { opacity: 1; } }
 
+/* ─── Onboarding Feature Cards ─── */
+.onboarding-feature-card { opacity: 0; animation: onboardFadeInUp 0.35s ease-out forwards; }
+.onboarding-feature-card:nth-child(1) { animation-delay: 0s; }
+.onboarding-feature-card:nth-child(2) { animation-delay: 0.07s; }
+.onboarding-feature-card:nth-child(3) { animation-delay: 0.14s; }
+.onboarding-feature-card:nth-child(4) { animation-delay: 0.21s; }
+
 /* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
-  .onboarding-step-enter, .scan-success-enter, .scan-check-scale,
+  .onboarding-step-enter, .onboarding-feature-card,
+  .scan-success-enter, .scan-check-scale,
   .scan-check-draw, .scan-ring-1, .scan-ring-2, .scan-ring-3,
   .scan-text-fade, .scan-text-fade-delay, .fade-in-fast {
     animation: none !important;
