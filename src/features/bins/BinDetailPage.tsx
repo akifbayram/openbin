@@ -1,12 +1,12 @@
 import '@/features/onboarding/animations.css';
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronDown, Lock } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useBin, useAllTags } from './useBins';
 import { resolveIcon } from '@/lib/iconMap';
-import { resolveColor } from '@/lib/colorPalette';
+
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { cn } from '@/lib/utils';
 import { useTerminology } from '@/lib/terminology';
@@ -29,8 +29,7 @@ export function BinDetailPage() {
   const { bin, isLoading } = useBin(id);
   const allTags = useAllTags();
   const t = useTerminology();
-  const backState = location.state as { backLabel?: string; backPath?: string } | null;
-  const backLabel = backState?.backLabel || 'Back';
+  const backState = location.state as { backPath?: string } | null;
   const edit = useEditBinForm(id);
   const actions = useBinDetailActions(bin, id, edit.editing);
 
@@ -84,7 +83,6 @@ export function BinDetailPage() {
   }
 
   const HeaderIcon = resolveIcon(edit.editing ? edit.icon : bin.icon);
-  const headerColorPreset = resolveColor(edit.editing ? edit.color : bin.color);
 
   const photosSection = (
     <Card>
@@ -121,7 +119,9 @@ export function BinDetailPage() {
         editing={edit.editing}
         canEdit={actions.canEdit}
         canDelete={actions.canDelete}
-        backLabel={backLabel}
+        binIcon={HeaderIcon}
+        editingName={edit.name}
+        onNameChange={edit.setName}
         showAiButton={actions.showAiButton}
         isAnalyzing={actions.isAnalyzing}
         editNameValid={!!edit.name.trim()}
@@ -158,44 +158,6 @@ export function BinDetailPage() {
         }}
         onDelete={() => actions.setDeleteOpen(true)}
       />
-
-      {/* Unified header — stable across edit/view modes */}
-      <div className="flex items-start gap-2.5">
-        <HeaderIcon className="h-7 w-7 text-[var(--text-secondary)] shrink-0 mt-0.5" />
-        {headerColorPreset && (
-          <span
-            className="h-3.5 w-3.5 rounded-full shrink-0 mt-2"
-            style={{ backgroundColor: headerColorPreset.dot }}
-          />
-        )}
-        <div className="min-w-0 flex-1">
-          {edit.editing ? (
-            <input
-              id="edit-name"
-              value={edit.name}
-              onChange={(e) => edit.setName(e.target.value)}
-              className="w-full bg-transparent text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-tight border-b-2 border-b-transparent outline-none placeholder:text-[var(--text-tertiary)] p-0"
-              placeholder="Name..."
-            />
-          ) : (
-            <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-tight flex items-center gap-2 border-b-2 border-b-transparent">
-              {bin.name}
-              {bin.visibility === 'private' && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-input)] px-2 py-0.5 text-[12px] font-medium text-[var(--text-tertiary)]">
-                  <Lock className="h-3 w-3" />
-                  Private
-                </span>
-              )}
-            </h1>
-          )}
-
-          {!edit.editing && bin.area_name && (
-            <p className="text-[15px] text-[var(--text-secondary)] mt-0.5 truncate">
-              {bin.area_name}
-            </p>
-          )}
-        </div>
-      </div>
 
       {edit.editing ? (
         <BinEditContent

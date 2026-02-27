@@ -126,7 +126,7 @@ export function OptionGroup<K extends string>({
               textSize,
               segmentRadius,
               padding,
-              scrollable ? 'min-w-[100px]' : 'flex-1',
+              scrollable ? 'shrink-0' : 'flex-1 min-w-0',
               iconOnly
                 ? ''
                 : 'flex items-center justify-center gap-1.5',

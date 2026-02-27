@@ -142,6 +142,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
                   options={BORDER_WIDTHS.map((w) => ({ key: w, label: `${w}px` }))}
                   value={(parsed?.borderWidth ?? '2') as BorderWidth}
                   onChange={(borderWidth) => updateStyle({ borderWidth })}
+                  size="sm"
                 />
               </div>
             </div>

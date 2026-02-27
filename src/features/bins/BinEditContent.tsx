@@ -70,7 +70,7 @@ export function BinEditContent({
             id="edit-notes"
             value={edit.notes}
             onChange={(e) => edit.setNotes(e.target.value)}
-            rows={3}
+            rows={1}
           />
         </CardContent>
       </Card>
@@ -94,7 +94,7 @@ export function BinEditContent({
       {/* Appearance — icon, color, style */}
       <Card>
         <CardContent className="space-y-5 py-5">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label>Preview</Label>
             <BinPreviewCard
               name={edit.name}

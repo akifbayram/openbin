@@ -120,8 +120,7 @@ function renderGradientProps(cardStyle: CardStyle, colorPreset: ColorPreset | un
   return {
     className: '',
     style: {
-      background: `linear-gradient(135deg, ${startColor}, ${endColor})`,
-      border: '0.5px solid transparent',
+      background: `linear-gradient(135deg, ${startColor}, ${endColor})`
     },
     mutedColor: theme === 'dark' ? MUTED_DARK : MUTED_LIGHT,
     isPhotoVariant: false,

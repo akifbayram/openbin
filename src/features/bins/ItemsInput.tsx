@@ -177,23 +177,21 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
   return (
     <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 focus-within:ring-2 focus-within:ring-[var(--accent)] transition-all duration-200">
       {items.length > 0 && (
-        <ul className="space-y-1 mb-2">
+        <div className="space-y-0.5 mb-2">
           {items.map((item, index) => (
-            <li
-              key={index}
-              className="flex items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--bg-secondary)] px-2.5 py-1.5 text-[14px] text-[var(--text-primary)]"
-            >
-              <span className="flex-1 min-w-0 truncate">{item}</span>
+            <div key={index} className="flex items-center gap-1.5 bg-[var(--bg-elevated)] px-2 py-1.5 rounded-[var(--radius-sm)]">
+              <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed py-0.5">{item}</span>
               <button
                 type="button"
                 onClick={() => removeItem(index)}
-                className="shrink-0 rounded-full p-0.5 hover:bg-[var(--bg-active)] transition-colors"
+                className="shrink-0 p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                aria-label={`Remove ${item}`}
               >
-                <X className="h-3 w-3 text-[var(--text-tertiary)]" />
+                <X className="h-3.5 w-3.5" />
               </button>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
       {state === 'input' && (
@@ -272,9 +270,6 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
               {isStructuring ? 'Extracting...' : 'Extract'}
             </Button>
           </div>
-          <p className="text-[11px] text-[var(--text-tertiary)]">
-            {navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}+Enter to extract
-          </p>
         </div>
       )}
 

@@ -12,6 +12,7 @@ import { resolveColor } from '@/lib/colorPalette';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/theme';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
+import { useTerminology } from '@/lib/terminology';
 import type { useQuickAdd } from './useQuickAdd';
 import type { AiSuggestions, Bin } from '@/types';
 
@@ -48,6 +49,7 @@ export function BinViewContent({
 }: BinViewContentProps) {
   const { theme } = useTheme();
   const { tagColors } = useTagColorsContext();
+  const t = useTerminology();
   const [qrExpanded, setQrExpanded] = useState(false);
 
   return (
@@ -97,26 +99,38 @@ export function BinViewContent({
         </Card>
       )}
 
-      {/* Tags card */}
-      {hasTags && (
+      {/* Area & Tags card */}
+      {(bin.area_name || hasTags) && (
         <Card>
-          <CardContent>
-            <Label>Tags</Label>
-            <div className="flex flex-wrap gap-2 mt-2.5">
-              {bin.tags.map((tag) => {
-                const tagColorKey = tagColors.get(tag);
-                const tagPreset = tagColorKey ? resolveColor(tagColorKey) : undefined;
-                const tagStyle = tagPreset
-                  ? {
-                      backgroundColor: tagPreset.bgCss,
-                      color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
-                    }
-                  : undefined;
-                return (
-                  <Badge key={tag} variant="secondary" style={tagStyle}>{tag}</Badge>
-                );
-              })}
-            </div>
+          <CardContent className="space-y-4">
+            {bin.area_name && (
+              <div>
+                <Label>{t.Area}</Label>
+                <p className="mt-1.5 text-[15px] text-[var(--text-primary)]">
+                  {bin.area_name}
+                </p>
+              </div>
+            )}
+            {hasTags && (
+              <div>
+                <Label>Tags</Label>
+                <div className="flex flex-wrap gap-2 mt-2.5">
+                  {bin.tags.map((tag) => {
+                    const tagColorKey = tagColors.get(tag);
+                    const tagPreset = tagColorKey ? resolveColor(tagColorKey) : undefined;
+                    const tagStyle = tagPreset
+                      ? {
+                          backgroundColor: tagPreset.bgCss,
+                          color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
+                        }
+                      : undefined;
+                    return (
+                      <Badge key={tag} variant="secondary" style={tagStyle}>{tag}</Badge>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

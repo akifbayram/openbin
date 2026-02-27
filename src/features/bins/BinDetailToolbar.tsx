@@ -1,5 +1,6 @@
 import { useRef } from 'react';
-import { ChevronLeft, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Pin, ArrowRightLeft, Copy, MoreHorizontal } from 'lucide-react';
+import { ChevronLeft, Lock, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Pin, ArrowRightLeft, Copy, MoreHorizontal, X, Check } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
@@ -13,7 +14,9 @@ interface BinDetailToolbarProps {
   editing: boolean;
   canEdit: boolean;
   canDelete: boolean;
-  backLabel: string;
+  binIcon: LucideIcon;
+  editingName: string;
+  onNameChange: (name: string) => void;
   showAiButton: boolean;
   isAnalyzing: boolean;
   editNameValid: boolean;
@@ -35,7 +38,9 @@ export function BinDetailToolbar({
   editing,
   canEdit,
   canDelete,
-  backLabel,
+  binIcon: BinIcon,
+  editingName,
+  onNameChange,
   showAiButton,
   isAnalyzing,
   editNameValid,
@@ -64,34 +69,56 @@ export function BinDetailToolbar({
   return (
     <div className="flex items-center gap-2">
       <MenuButton />
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onBack}
-        className="rounded-[var(--radius-full)] gap-0.5 pl-1.5 pr-3 text-[var(--accent)]"
-      >
-        <ChevronLeft className="h-5 w-5" />
-        <span className="text-[15px]">{backLabel}</span>
-      </Button>
-      <div className="flex-1" />
+      {!editing && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onBack}
+          aria-label="Go back"
+          className="hidden lg:flex rounded-full h-9 w-9 shrink-0 text-[var(--accent)]"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+      )}
+      {!editing && <BinIcon className="hidden lg:block h-5 w-5 text-[var(--text-secondary)] shrink-0" />}
+      <div className="min-w-0 flex-1">
+        {editing ? (
+          <input
+            id="edit-name"
+            value={editingName}
+            onChange={(e) => onNameChange(e.target.value)}
+            className="w-full bg-transparent text-[17px] font-semibold text-[var(--text-primary)] leading-tight border-b border-b-[var(--border-glass)] outline-none placeholder:text-[var(--text-tertiary)] p-0"
+            placeholder="Name..."
+          />
+        ) : (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[17px] font-semibold text-[var(--text-primary)] leading-tight truncate">{bin.name}</span>
+            {bin.visibility === 'private' && (
+              <Lock className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
+            )}
+          </div>
+        )}
+      </div>
       {editing ? (
         <div className="flex gap-1.5">
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={onCancelEdit}
-            className="rounded-[var(--radius-full)]"
+            className="rounded-full h-9 w-9 lg:h-auto lg:w-auto lg:px-3 lg:py-1.5"
           >
-            Cancel
+            <X className="h-4 w-4 lg:hidden" />
+            <span className="hidden lg:inline text-sm">Cancel</span>
           </Button>
           <Button
-            size="sm"
+            size="icon"
             onClick={onSave}
             disabled={!editNameValid}
-            className="rounded-[var(--radius-full)]"
+            className="rounded-full h-9 w-9 lg:h-auto lg:w-auto lg:px-3 lg:py-1.5"
           >
-            <Save className="h-4 w-4 mr-1.5" />
-            Save
+            <Check className="h-4 w-4 lg:hidden" />
+            <Save className="h-4 w-4 mr-1.5 hidden lg:block" />
+            <span className="hidden lg:inline text-sm">Save</span>
           </Button>
         </div>
       ) : (
