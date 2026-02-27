@@ -76,7 +76,10 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
     <>
       <div className="flex-1 flex flex-col px-5 pt-6 pb-4">
         {/* Brand */}
-        <div className="px-3 pt-2 pb-4">
+        <div className="flex items-center gap-2.5 px-3 pt-2 pb-4">
+          <svg viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd" className="h-5.5 w-5.5 text-[var(--text-primary)] shrink-0">
+            <path d="M 4 4 L 10 4 L 10 10 L 4 10 L 4 4 M 20 4 L 20 10 L 14 10 L 14 4 L 20 4 M 14 15 L 16 15 L 16 13 L 14 13 L 14 11 L 16 11 L 16 13 L 18 13 L 18 11 L 20 11 L 20 13 L 18 13 L 18 15 L 20 15 L 20 18 L 18 18 L 18 20 L 16 20 L 16 18 L 13 18 L 13 20 L 11 20 L 11 16 L 14 16 L 14 15 M 16 15 L 16 18 L 18 18 L 18 15 L 16 15 M 4 20 L 4 14 L 10 14 L 10 20 L 4 20 M 6 6 L 6 8 L 8 8 L 8 6 L 6 6 M 16 6 L 16 8 L 18 8 L 18 6 L 16 6 M 6 16 L 6 18 L 8 18 L 8 16 L 6 16 M 4 11 L 6 11 L 6 13 L 4 13 L 4 11 M 9 11 L 13 11 L 13 15 L 11 15 L 11 13 L 9 13 L 9 11 M 11 6 L 13 6 L 13 10 L 11 10 L 11 6 M 2 3 L 2 22 L 22 22 L 22 3 A 1 1 0 0 1 24 3 L 24 22 A 2 2 0 0 1 22 24 L 2 24 A 2 2 0 0 1 0 22 L 0 3 A 1 1 0 0 1 2 3 Z" />
+          </svg>
           <h1 className="text-[22px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
             {settings.appName}
           </h1>
