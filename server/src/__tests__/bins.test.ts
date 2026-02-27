@@ -422,3 +422,169 @@ describe('PUT /api/bins/:id/add-tags', () => {
     expect(res.body.tags).toHaveLength(2);
   });
 });
+
+describe('POST /api/bins/:id/duplicate', () => {
+  it('duplicates a bin copying all properties with a new short code', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const area = await createTestArea(app, token, location.id, 'Garage');
+    const original = await createTestBin(app, token, location.id, {
+      name: 'Electronics',
+      items: ['Cable', 'Adapter'],
+      tags: ['tech', 'office'],
+      notes: 'Spare parts',
+    });
+
+    // Assign area, icon, color, card_style via update
+    await request(app)
+      .put(`/api/bins/${original.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ areaId: area.id, icon: 'box', color: '#ff0000', cardStyle: '{"variant":"border"}' });
+
+    const res = await request(app)
+      .post(`/api/bins/${original.id}/duplicate`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBeDefined();
+    expect(res.body.id).toHaveLength(6);
+    expect(res.body.id).not.toBe(original.id);
+    expect(res.body.name).toBe('Copy of Electronics');
+    expect(res.body.location_id).toBe(location.id);
+    expect(res.body.area_id).toBe(area.id);
+    expect(res.body.tags).toEqual(['tech', 'office']);
+    expect(res.body.notes).toBe('Spare parts');
+    expect(res.body.icon).toBe('box');
+    expect(res.body.color).toBe('#ff0000');
+    expect(res.body.card_style).toBe('{"variant":"border"}');
+
+    // Verify items were copied
+    const detail = await request(app)
+      .get(`/api/bins/${res.body.id}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(detail.body.items).toHaveLength(2);
+    expect(detail.body.items.map((i: { name: string }) => i.name)).toEqual(['Cable', 'Adapter']);
+  });
+
+  it('returns 404 for non-existent bin', async () => {
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .post('/api/bins/ZZZZZZ/duplicate')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 404 for bin in location user is not a member of', async () => {
+    const { token: ownerToken } = await createTestUser(app);
+    const location = await createTestLocation(app, ownerToken);
+    const bin = await createTestBin(app, ownerToken, location.id);
+
+    const { token: otherToken } = await createTestUser(app);
+
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/duplicate`)
+      .set('Authorization', `Bearer ${otherToken}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('allows custom name override', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id, { name: 'Original' });
+
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/duplicate`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Custom Name' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Custom Name');
+  });
+
+  it('logs a duplicate activity entry', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id, { name: 'LogTest' });
+
+    await request(app)
+      .post(`/api/bins/${bin.id}/duplicate`)
+      .set('Authorization', `Bearer ${token}`);
+
+    const activityRes = await request(app)
+      .get(`/api/locations/${location.id}/activity`)
+      .set('Authorization', `Bearer ${token}`);
+
+    const duplicateEntry = activityRes.body.results.find(
+      (e: { action: string; entity_type: string }) => e.action === 'duplicate' && e.entity_type === 'bin',
+    );
+    expect(duplicateEntry).toBeDefined();
+    expect(duplicateEntry.entity_name).toBe('Copy of LogTest');
+  });
+
+  it('sets created_by to the duplicating user, not the original creator', async () => {
+    const { token: ownerToken, user: owner } = await createTestUser(app);
+    const location = await createTestLocation(app, ownerToken);
+    const bin = await createTestBin(app, ownerToken, location.id, { name: 'Owned' });
+
+    // Invite a second user to the location
+    const { token: memberToken, user: member } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ inviteCode: location.invite_code });
+
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/duplicate`)
+      .set('Authorization', `Bearer ${memberToken}`);
+
+    expect(res.status).toBe(201);
+    expect(res.body.created_by).toBe(member.id);
+    expect(res.body.created_by).not.toBe(owner.id);
+  });
+
+  it('returns 404 when duplicating a soft-deleted bin', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    await request(app)
+      .delete(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/duplicate`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 422 for invalid custom name', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/duplicate`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'x'.repeat(256) });
+
+    expect(res.status).toBe(422);
+  });
+
+  it('duplicates a bin with no items', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id, { name: 'Empty Bin' });
+
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/duplicate`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Copy of Empty Bin');
+    expect(res.body.items).toEqual([]);
+  });
+});

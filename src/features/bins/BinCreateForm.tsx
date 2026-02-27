@@ -10,6 +10,7 @@ import { ItemsInput } from './ItemsInput';
 import { IconPicker } from './IconPicker';
 import { ColorPicker } from './ColorPicker';
 import { StylePicker } from './StylePicker';
+import { BinPreviewCard } from './BinPreviewCard';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { VisibilityPicker } from './VisibilityPicker';
 import { AreaPicker } from '@/features/areas/AreaPicker';
@@ -252,19 +253,6 @@ export function BinCreateForm({
         />
       </div>
 
-      {/* Area */}
-      {isFull ? (
-        <div className="space-y-2">
-          <Label>{t.Area}</Label>
-          <AreaPicker locationId={locationId} value={areaId} onChange={setAreaId} />
-        </div>
-      ) : (
-        <div className="text-left">
-          <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">{t.Area}</label>
-          <AreaPicker locationId={locationId} value={areaId} onChange={setAreaId} />
-        </div>
-      )}
-
       {/* Notes (full mode only) */}
       {isFull && (
         <div className="space-y-2">
@@ -279,11 +267,22 @@ export function BinCreateForm({
         </div>
       )}
 
-      {/* Tags (full mode only) */}
-      {isFull && (
-        <div className="space-y-2">
-          <Label>Tags</Label>
-          <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
+      {/* Organization: Area + Tags */}
+      {isFull ? (
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <Label>{t.Area}</Label>
+            <AreaPicker locationId={locationId} value={areaId} onChange={setAreaId} />
+          </div>
+          <div className="space-y-2">
+            <Label>Tags</Label>
+            <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
+          </div>
+        </div>
+      ) : (
+        <div className="text-left">
+          <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">{t.Area}</label>
+          <AreaPicker locationId={locationId} value={areaId} onChange={setAreaId} />
         </div>
       )}
 
@@ -299,53 +298,6 @@ export function BinCreateForm({
             onApply={handleApplySuggestions}
             onDismiss={() => setSuggestions(null)}
           />
-        </div>
-      )}
-
-      {/* Color */}
-      <div className={isFull ? 'space-y-2' : 'text-left'}>
-        {isFull ? (
-          <Label>Color</Label>
-        ) : (
-          <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Color</label>
-        )}
-        {(() => {
-          const sec = getSecondaryColorInfo(cardStyle);
-          return (
-            <ColorPicker
-              value={color}
-              onChange={setColor}
-              secondaryLabel={sec?.label}
-              secondaryValue={sec?.value}
-              onSecondaryChange={sec ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
-            />
-          );
-        })()}
-      </div>
-
-      {/* Icon */}
-      {isFull ? (
-        <div className="space-y-2">
-          <Label>Icon</Label>
-          <IconPicker value={icon} onChange={setIcon} />
-        </div>
-      ) : (
-        <div className="text-left">
-          <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Icon</label>
-          <IconPicker value={icon} onChange={setIcon} />
-        </div>
-      )}
-
-      {/* Style */}
-      {isFull ? (
-        <div className="space-y-2">
-          <Label>Style</Label>
-          <StylePicker value={cardStyle} color={color} onChange={setCardStyle} />
-        </div>
-      ) : (
-        <div className="text-left">
-          <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Style</label>
-          <StylePicker value={cardStyle} color={color} onChange={setCardStyle} />
         </div>
       )}
 
@@ -452,6 +404,71 @@ export function BinCreateForm({
           <p className={cn('text-[var(--destructive)]', isFull ? 'text-[13px]' : 'text-[12px] mt-1')}>{analyzeError}</p>
         )}
       </div>
+
+      {/* Appearance */}
+      {isFull ? (
+        <div className="space-y-5">
+          <Label>Appearance</Label>
+          <BinPreviewCard
+            name={name}
+            color={color}
+            items={items}
+            tags={tags}
+            icon={icon}
+            cardStyle={cardStyle}
+            areaName={areaName}
+          />
+          <div className="space-y-2">
+            <Label>Icon</Label>
+            <IconPicker value={icon} onChange={setIcon} />
+          </div>
+          <div className="space-y-2">
+            <Label>Color</Label>
+            {(() => {
+              const sec = getSecondaryColorInfo(cardStyle);
+              return (
+                <ColorPicker
+                  value={color}
+                  onChange={setColor}
+                  secondaryLabel={sec?.label}
+                  secondaryValue={sec?.value}
+                  onSecondaryChange={sec ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
+                />
+              );
+            })()}
+          </div>
+          <div className="space-y-2">
+            <Label>Style</Label>
+            <StylePicker value={cardStyle} color={color} onChange={setCardStyle} />
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="text-left">
+            <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Color</label>
+            {(() => {
+              const sec = getSecondaryColorInfo(cardStyle);
+              return (
+                <ColorPicker
+                  value={color}
+                  onChange={setColor}
+                  secondaryLabel={sec?.label}
+                  secondaryValue={sec?.value}
+                  onSecondaryChange={sec ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
+                />
+              );
+            })()}
+          </div>
+          <div className="text-left">
+            <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Icon</label>
+            <IconPicker value={icon} onChange={setIcon} />
+          </div>
+          <div className="text-left">
+            <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">Style</label>
+            <StylePicker value={cardStyle} color={color} onChange={setCardStyle} />
+          </div>
+        </>
+      )}
 
       {/* Visibility (full mode only) */}
       {isFull && (

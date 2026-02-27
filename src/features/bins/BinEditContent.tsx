@@ -62,15 +62,34 @@ export function BinEditContent({
         </CardContent>
       </Card>
 
-      {photosSection}
-
-      {/* Area */}
+      {/* Notes */}
       <Card>
         <CardContent className="space-y-2 py-5">
-          <Label>{t.Area}</Label>
-          <AreaPicker locationId={activeLocationId} value={edit.areaId} onChange={edit.setAreaId} />
+          <Label htmlFor="edit-notes">Notes</Label>
+          <Textarea
+            id="edit-notes"
+            value={edit.notes}
+            onChange={(e) => edit.setNotes(e.target.value)}
+            rows={3}
+          />
         </CardContent>
       </Card>
+
+      {/* Organization: Area + Tags */}
+      <Card>
+        <CardContent className="space-y-5 py-5">
+          <div className="space-y-2">
+            <Label>{t.Area}</Label>
+            <AreaPicker locationId={activeLocationId} value={edit.areaId} onChange={edit.setAreaId} />
+          </div>
+          <div className="space-y-2">
+            <Label>Tags</Label>
+            <TagInput tags={edit.tags} onChange={edit.setTags} suggestions={allTags} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {photosSection}
 
       {/* Appearance — icon, color, style */}
       <Card>
@@ -105,27 +124,6 @@ export function BinEditContent({
             <Label>Style</Label>
             <StylePicker value={edit.cardStyle} color={edit.color} onChange={edit.setCardStyle} photos={photos} />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Notes */}
-      <Card>
-        <CardContent className="space-y-2 py-5">
-          <Label htmlFor="edit-notes">Notes</Label>
-          <Textarea
-            id="edit-notes"
-            value={edit.notes}
-            onChange={(e) => edit.setNotes(e.target.value)}
-            rows={3}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Tags */}
-      <Card>
-        <CardContent className="space-y-2 py-5">
-          <Label>Tags</Label>
-          <TagInput tags={edit.tags} onChange={edit.setTags} suggestions={allTags} />
         </CardContent>
       </Card>
 

@@ -85,8 +85,6 @@ export function BinViewContent({
         </CardContent>
       </Card>
 
-      {photosSection}
-
       {/* Notes card */}
       {hasNotes && (
         <Card>
@@ -122,6 +120,8 @@ export function BinViewContent({
           </CardContent>
         </Card>
       )}
+
+      {photosSection}
 
       {/* QR Code & Info */}
       <Card>

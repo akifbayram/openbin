@@ -708,6 +708,87 @@ router.post('/:id/move', asyncHandler(async (req, res) => {
   res.json(bin);
 }));
 
+// POST /api/bins/:id/duplicate — duplicate a bin
+router.post('/:id/duplicate', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const access = await verifyBinAccess(id, req.user!.id);
+  if (!access) {
+    throw new NotFoundError('Bin not found');
+  }
+
+  // Fetch the source bin
+  const srcResult = await query(
+    `SELECT ${BIN_SELECT_COLS} FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE b.id = $1 AND b.deleted_at IS NULL`,
+    [id]
+  );
+  if (srcResult.rows.length === 0) {
+    throw new NotFoundError('Bin not found');
+  }
+  const src = srcResult.rows[0];
+
+  const newName = req.body.name ? String(req.body.name).trim() : `Copy of ${src.name}`;
+  if (req.body.name) validateBinName(req.body.name);
+
+  const sc = generateShortCode(newName);
+  const maxRetries = 10;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const newId = attempt === 0 ? sc : generateShortCode(newName);
+
+    try {
+      await query(
+        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [newId, src.location_id, newName, src.area_id || null, src.notes || '', src.tags || [], src.icon || '', src.color || '', src.card_style || '', req.user!.id, src.visibility || 'location']
+      );
+
+      // Copy items
+      const itemsResult = await query<{ name: string; position: number }>(
+        'SELECT name, position FROM bin_items WHERE bin_id = $1 ORDER BY position',
+        [id]
+      );
+      for (const item of itemsResult.rows) {
+        await query(
+          'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
+          [crypto.randomUUID(), newId, item.name, item.position]
+        );
+      }
+
+      // Re-fetch the new bin
+      const result = await query(
+        `SELECT ${BIN_SELECT_COLS} FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE b.id = $1`,
+        [newId]
+      );
+
+      const newBin = result.rows[0];
+
+      logActivity({
+        locationId: access.locationId,
+        userId: req.user!.id,
+        userName: req.user!.username,
+        action: 'duplicate',
+        entityType: 'bin',
+        entityId: newId,
+        entityName: newBin.name,
+        authMethod: req.authMethod,
+        apiKeyId: req.apiKeyId,
+      });
+
+      res.status(201).json(newBin);
+      return;
+    } catch (err: unknown) {
+      const sqliteErr = err as { code?: string };
+      if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && attempt < maxRetries) {
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to generate unique short code' });
+}));
+
 // PUT /api/bins/:id/add-tags — add tags to a bin (merge, don't replace)
 router.put('/:id/add-tags', asyncHandler(async (req, res) => {
   const { id } = req.params;
