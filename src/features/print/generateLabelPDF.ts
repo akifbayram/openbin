@@ -1,6 +1,6 @@
 import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
-import { getOrientation, computeLabelsPerPage, computePageSize, computeCodeFontSize } from './labelFormats';
+import { isVerticalLayout, computeLabelsPerPage, computePageSize, computeCodeFontSize } from './labelFormats';
 import { resolveColor } from '@/lib/colorPalette';
 import { toInches, parsePaddingPt } from './pdfUnits';
 import type { LabelOptions } from './usePrintSettings';
@@ -73,7 +73,7 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
   const { bins, format, labelOptions, qrMap, iconMap, iconSize } = params;
   const { default: jsPDF } = await import('jspdf');
 
-  const isPortrait = getOrientation(format) === 'portrait';
+  const isPortrait = isVerticalLayout(format, labelOptions.labelDirection);
   const perPage = computeLabelsPerPage(format);
   const { width: pageWidth, height: pageHeight } = computePageSize(format);
 
@@ -98,9 +98,8 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
   // Convert pad from pt to inches
   const padIn = { top: pad.top / 72, right: pad.right / 72, bottom: pad.bottom / 72, left: pad.left / 72 };
   const gapIn = 4 / 72; // 4pt gap in inches
-  const codeFontSizePt = computeCodeFontSize(format);
+  const codeFontSizePt = computeCodeFontSize(format, labelOptions.labelDirection);
   const nameFontSizePt = parseFloat(format.nameFontSize);
-  const contentFontSizePt = parseFloat(format.contentFontSize);
   const iconSizeIn = toInches(iconSize);
   const barHeightIn = Math.max(SWATCH_BAR_MIN_PT, nameFontSizePt * SWATCH_BAR_HEIGHT_RATIO) / 72;
   const qrSizePt = qrSize * 72;
@@ -139,7 +138,7 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
           qrSize, qrDataUrl: hasQr ? qrDataUrl! : null,
           hasIcon, iconMap, iconSizeIn,
           colorPreset, barHeightIn,
-          codeFontSizePt, nameFontSizePt, contentFontSizePt,
+          codeFontSizePt, nameFontSizePt,
           labelOptions, gapIn, useColoredCard, cardPadIn, cardRadiusIn,
         });
       } else {
@@ -148,7 +147,7 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
           qrSize, qrDataUrl: hasQr ? qrDataUrl! : null,
           hasIcon, iconMap, iconSizeIn,
           colorPreset, barHeightIn,
-          codeFontSizePt, nameFontSizePt, contentFontSizePt,
+          codeFontSizePt, nameFontSizePt,
           labelOptions, gapIn, useColoredCard, cardPadIn, cardRadiusIn,
         });
       }
@@ -173,7 +172,6 @@ interface DrawLabelParams {
   barHeightIn: number;
   codeFontSizePt: number;
   nameFontSizePt: number;
-  contentFontSizePt: number;
   labelOptions: LabelOptions;
   gapIn: number;
   useColoredCard: boolean;
@@ -195,11 +193,6 @@ function measureTextBlockWidth(doc: JsPDF, p: DrawLabelParams, codeUnderQr: bool
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(p.nameFontSizePt);
     maxW = Math.max(maxW, doc.getTextWidth(p.bin.name));
-  }
-  if (p.labelOptions.showLocation && p.bin.area_name) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(p.contentFontSizePt);
-    maxW = Math.max(maxW, doc.getTextWidth(p.bin.area_name));
   }
   return maxW;
 }
@@ -428,12 +421,11 @@ function drawTextColumn(
   codeDrawnUnderQr = false,
 ) {
   // Collect text elements to measure total height for vertical centering
-  const elements: { type: 'swatch' | 'code' | 'name' | 'area'; height: number }[] = [];
+  const elements: { type: 'swatch' | 'code' | 'name'; height: number }[] = [];
   // No swatch bar in colored card mode — replaced by the card itself
   if (p.colorPreset && !p.useColoredCard) elements.push({ type: 'swatch', height: p.barHeightIn });
   if (p.labelOptions.showBinCode && p.bin.id && !codeDrawnUnderQr) elements.push({ type: 'code', height: p.codeFontSizePt / 72 });
   if (p.labelOptions.showBinName) elements.push({ type: 'name', height: p.nameFontSizePt / 72 });
-  if (p.labelOptions.showLocation && p.bin.area_name) elements.push({ type: 'area', height: p.contentFontSizePt / 72 });
 
   const lineGap = 1 / 72; // 1pt gap between lines
   const totalHeight = elements.reduce((sum, el) => sum + el.height, 0) + Math.max(0, elements.length - 1) * lineGap;
@@ -482,14 +474,6 @@ function drawTextColumn(
       const name = truncateToWidth(doc, p.bin.name, textW);
       doc.text(name, anchorX, curY + p.nameFontSizePt / 72 * 0.8, { align });
       curY += p.nameFontSizePt / 72 + lineGap;
-    } else if (el.type === 'area') {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(p.contentFontSizePt);
-      doc.setTextColor(100, 100, 100);
-      const area = truncateToWidth(doc, p.bin.area_name, textW);
-      doc.text(area, anchorX, curY + p.contentFontSizePt / 72 * 0.8, { align });
-      doc.setTextColor(0, 0, 0);
-      curY += p.contentFontSizePt / 72 + lineGap;
     }
   }
 }

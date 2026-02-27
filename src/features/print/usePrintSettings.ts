@@ -2,13 +2,15 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import type { LabelFormat } from './labelFormats';
 
+export type LabelDirection = 'auto' | 'horizontal' | 'vertical';
+
 export interface LabelOptions {
   fontScale: number;
   textAlign: 'left' | 'center';
+  labelDirection?: LabelDirection;
   showQrCode: boolean;
   showBinName: boolean;
   showIcon: boolean;
-  showLocation: boolean;
   showBinCode: boolean;
   showColorSwatch: boolean;
 }
@@ -32,10 +34,10 @@ export interface PrintSettings {
 export const DEFAULT_LABEL_OPTIONS: LabelOptions = {
   fontScale: 1,
   textAlign: 'center',
+  labelDirection: 'auto',
   showQrCode: true,
   showBinName: true,
   showIcon: true,
-  showLocation: false,
   showBinCode: true,
   showColorSwatch: false,
 };

@@ -1,11 +1,11 @@
-import { ChevronDown, AlignLeft, AlignCenter } from 'lucide-react';
+import { ChevronDown, AlignLeft, AlignCenter, Columns2, Rows2 } from 'lucide-react';
 import { OptionGroup } from '@/components/ui/option-group';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useTerminology } from '@/lib/terminology';
-import type { LabelOptions } from './usePrintSettings';
+import type { LabelOptions, LabelDirection } from './usePrintSettings';
 
 const FONT_SCALE_PRESETS = [
   { label: 'S', value: 0.75 },
@@ -63,13 +63,26 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
               />
             </div>
 
+            <div className="px-1">
+              <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">Label Direction</span>
+              <OptionGroup
+                options={[
+                  { key: 'auto' as const, label: 'Auto' },
+                  { key: 'horizontal' as const, label: 'Horizontal', icon: Columns2 },
+                  { key: 'vertical' as const, label: 'Vertical', icon: Rows2 },
+                ]}
+                value={labelOptions.labelDirection ?? 'auto'}
+                onChange={(v) => onUpdateOption('labelDirection', v as LabelDirection)}
+                size="sm"
+              />
+            </div>
+
             <div className="space-y-1 px-1">
               <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-1">Visible Elements</span>
               {([
                 { key: 'showQrCode' as const, label: 'QR Code' },
                 { key: 'showBinName' as const, label: `${t.Bin} Name` },
                 { key: 'showIcon' as const, label: `${t.Bin} Icon` },
-                { key: 'showLocation' as const, label: t.Area },
                 { key: 'showBinCode' as const, label: `${t.Bin} Code` },
                 { key: 'showColorSwatch' as const, label: 'Color Background' },
               ]).map(({ key, label }) => (

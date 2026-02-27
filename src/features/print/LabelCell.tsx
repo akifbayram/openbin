@@ -1,32 +1,33 @@
 import type { Bin } from '@/types';
 import { resolveIcon } from '@/lib/iconMap';
 import { resolveColor } from '@/lib/colorPalette';
-import { getOrientation, computeCodeFontSize } from './labelFormats';
+import { isVerticalLayout, computeCodeFontSize } from './labelFormats';
 import { parsePaddingPt } from './pdfUnits';
 import type { LabelFormat } from './labelFormats';
+import type { LabelDirection } from './usePrintSettings';
 import { MONO_CODE_WIDTH_EMS, SWATCH_BAR_HEIGHT_RATIO, SWATCH_BAR_MIN_PT, CARD_PAD_RATIO, CARD_PAD_MIN_PT, CARD_RADIUS_RATIO } from './pdfConstants';
 
 interface LabelCellProps {
   bin: Bin;
   qrDataUrl: string;
   format: LabelFormat;
+  labelDirection?: LabelDirection;
   showColorSwatch?: boolean;
   iconSize?: string;
   showQrCode?: boolean;
   showBinName?: boolean;
   showIcon?: boolean;
-  showLocation?: boolean;
   showBinCode?: boolean;
   textAlign?: 'left' | 'center';
 }
 
-export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, showQrCode = true, showBinName = true, showIcon = true, showLocation = true, showBinCode = true, textAlign = 'center' }: LabelCellProps) {
+export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwatch, iconSize, showQrCode = true, showBinName = true, showIcon = true, showBinCode = true, textAlign = 'center' }: LabelCellProps) {
   const Icon = resolveIcon(bin.icon);
   const colorPreset = showColorSwatch && bin.color ? resolveColor(bin.color) : null;
   const barHeight = `${Math.max(SWATCH_BAR_MIN_PT, parseFloat(format.nameFontSize) * SWATCH_BAR_HEIGHT_RATIO)}pt`;
-  const isPortrait = getOrientation(format) === 'portrait';
+  const isPortrait = isVerticalLayout(format, labelDirection);
   const resolvedIconSize = iconSize ?? '11pt';
-  const codeFontSize = `${computeCodeFontSize(format).toFixed(1).replace(/\.0$/, '')}pt`;
+  const codeFontSize = `${computeCodeFontSize(format, labelDirection).toFixed(1).replace(/\.0$/, '')}pt`;
   const qrSizePt = parseFloat(format.qrSize) * 72;
   // Font size so 6 monospace chars span the QR width: each ~0.6em + 0.2em letter-spacing × 5 gaps
   const qrCodeFontSizePt = qrSizePt / MONO_CODE_WIDTH_EMS;
@@ -52,7 +53,7 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
     // Colored card layout
     return (
       <div
-        className={`label-cell flex overflow-hidden ${textAlign === 'center' ? 'justify-center' : ''} ${isPortrait ? 'flex-col' : 'flex-row items-center gap-[4pt]'} ${isPortrait && textAlign === 'center' ? 'items-center' : ''}`}
+        className={`label-cell flex overflow-hidden ${textAlign === 'center' ? 'justify-center' : ''} ${isPortrait ? 'flex-col' : 'flex-row items-center gap-[4pt]'} ${isPortrait ? (textAlign === 'center' ? 'items-center' : 'items-start') : ''}`}
         style={{ width: format.cellWidth, height: format.cellHeight, padding: format.padding }}
       >
         {/* Colored card wrapping QR + short code */}
@@ -92,11 +93,6 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
               <span className="min-w-0 line-clamp-2">{bin.name}</span>
             </div>
           )}
-          {showLocation && bin.area_name && (
-            <div className="label-contents text-gray-600 line-clamp-1" style={{ fontSize: format.contentFontSize }}>
-              {bin.area_name}
-            </div>
-          )}
         </div>
       </div>
     );
@@ -105,7 +101,7 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
   // Non-colored path: unchanged plain layout
   return (
     <div
-      className={`label-cell flex overflow-hidden ${textAlign === 'center' ? 'justify-center' : ''} ${isPortrait ? 'flex-col' : 'flex-row items-center gap-[4pt]'} ${isPortrait && textAlign === 'center' ? 'items-center' : ''}`}
+      className={`label-cell flex overflow-hidden ${textAlign === 'center' ? 'justify-center' : ''} ${isPortrait ? 'flex-col' : 'flex-row items-center gap-[4pt]'} ${isPortrait ? (textAlign === 'center' ? 'items-center' : 'items-start') : ''}`}
       style={{ width: format.cellWidth, height: format.cellHeight, padding: format.padding }}
     >
       {showQrCode && qrDataUrl ? (
@@ -157,11 +153,6 @@ export function LabelCell({ bin, qrDataUrl, format, showColorSwatch, iconSize, s
             style={{ fontSize: format.nameFontSize }}
           >
             <span className="min-w-0 line-clamp-1">{bin.name}</span>
-          </div>
-        )}
-        {showLocation && bin.area_name && (
-          <div className="label-contents text-gray-600 line-clamp-1" style={{ fontSize: format.contentFontSize }}>
-            {bin.area_name}
           </div>
         )}
       </div>

@@ -8,6 +8,7 @@ import {
   buildColorMap,
   getLabelFormat,
   getOrientation,
+  isVerticalLayout,
   filterLabelFormats,
   LABEL_FORMATS,
 } from '../labelFormats';
@@ -196,6 +197,43 @@ describe('computePageSize', () => {
   });
 });
 
+describe('isVerticalLayout', () => {
+  it('returns false for landscape format with auto direction', () => {
+    const fmt = makeFormat(); // default landscape
+    expect(isVerticalLayout(fmt, 'auto')).toBe(false);
+  });
+
+  it('returns true for portrait format with auto direction', () => {
+    const fmt = makeFormat({ orientation: 'portrait' });
+    expect(isVerticalLayout(fmt, 'auto')).toBe(true);
+  });
+
+  it('defaults to auto when labelDirection is undefined', () => {
+    expect(isVerticalLayout(makeFormat())).toBe(false);
+    expect(isVerticalLayout(makeFormat({ orientation: 'portrait' }))).toBe(true);
+  });
+
+  it('overrides landscape format to vertical', () => {
+    const fmt = makeFormat(); // landscape
+    expect(isVerticalLayout(fmt, 'vertical')).toBe(true);
+  });
+
+  it('overrides portrait format to horizontal', () => {
+    const fmt = makeFormat({ orientation: 'portrait' });
+    expect(isVerticalLayout(fmt, 'horizontal')).toBe(false);
+  });
+
+  it('horizontal on landscape is still horizontal', () => {
+    const fmt = makeFormat();
+    expect(isVerticalLayout(fmt, 'horizontal')).toBe(false);
+  });
+
+  it('vertical on portrait is still vertical', () => {
+    const fmt = makeFormat({ orientation: 'portrait' });
+    expect(isVerticalLayout(fmt, 'vertical')).toBe(true);
+  });
+});
+
 describe('computeCodeFontSize', () => {
   it('returns at least the format codeFontSize', () => {
     const fmt = makeFormat({ codeFontSize: '14pt' });
@@ -212,6 +250,21 @@ describe('computeCodeFontSize', () => {
     const fmt = makeFormat({ cellHeight: '1in', cellWidth: '10in', codeFontSize: '8pt' });
     const cap = 0.25 * parseFloat(fmt.cellHeight) * 72;
     expect(computeCodeFontSize(fmt)).toBeLessThanOrEqual(cap + 0.01);
+  });
+
+  it('uses full cell width when labelDirection is vertical', () => {
+    // Use tall cell (4in → cap = 72pt) so the cap does not mask the difference
+    const fmt = makeFormat({ cellWidth: '2in', cellHeight: '4in', qrSize: '0.75in', codeFontSize: '8pt' });
+    const autoSize = computeCodeFontSize(fmt); // landscape auto — subtracts QR width
+    const verticalSize = computeCodeFontSize(fmt, 'vertical'); // full width available
+    expect(verticalSize).toBeGreaterThan(autoSize);
+  });
+
+  it('subtracts QR width when labelDirection is horizontal on portrait format', () => {
+    const fmt = makeFormat({ orientation: 'portrait', cellWidth: '2in', cellHeight: '4in', qrSize: '0.75in', codeFontSize: '8pt' });
+    const autoSize = computeCodeFontSize(fmt); // portrait auto — full width
+    const horizontalSize = computeCodeFontSize(fmt, 'horizontal'); // subtracts QR
+    expect(horizontalSize).toBeLessThan(autoSize);
   });
 });
 

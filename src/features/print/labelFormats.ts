@@ -2,6 +2,7 @@ import type { Bin } from '@/types';
 import type { QRColorOptions } from '@/lib/qr';
 import { resolveColor } from '@/lib/colorPalette';
 import { MONO_CODE_WIDTH_EMS } from './pdfConstants';
+import type { LabelDirection } from './usePrintSettings';
 
 export interface LabelFormat {
   key: string;
@@ -25,6 +26,14 @@ export interface LabelFormat {
 
 export function getOrientation(fmt: LabelFormat): 'landscape' | 'portrait' {
   return fmt.orientation ?? 'landscape';
+}
+
+/** Resolve whether the label content should use vertical (portrait-style) layout.
+ *  When `labelDirection` is `'auto'` or `undefined`, delegates to page orientation.
+ *  Otherwise uses the explicit override: `'vertical'` → true, `'horizontal'` → false. */
+export function isVerticalLayout(format: LabelFormat, labelDirection?: LabelDirection): boolean {
+  if (!labelDirection || labelDirection === 'auto') return getOrientation(format) === 'portrait';
+  return labelDirection === 'vertical';
 }
 
 export const LABEL_FORMATS: LabelFormat[] = [
@@ -294,7 +303,7 @@ export function computePageSize(format: LabelFormat): { width: number; height: n
 }
 
 /** Compute optimal code font size (pt) to fill available horizontal space. */
-export function computeCodeFontSize(format: LabelFormat): number {
+export function computeCodeFontSize(format: LabelFormat, labelDirection?: LabelDirection): number {
   const cellH = parseFloat(format.cellHeight) * 72; // inches -> pt
   const floor = parseFloat(format.codeFontSize);
   const cap = 0.25 * cellH;
@@ -303,10 +312,10 @@ export function computeCodeFontSize(format: LabelFormat): number {
   const qrW = parseFloat(format.qrSize) * 72;
   const padParts = format.padding.split(/\s+/).map((p) => parseFloat(p));
   const padH = (padParts[1] ?? padParts[0]) * 2; // left + right padding
-  const isPortrait = getOrientation(format) === 'portrait';
+  const vertical = isVerticalLayout(format, labelDirection);
   const gap = 4; // gap between QR and content (pt)
-  // In portrait mode QR is above text, so full cell width is available
-  const availW = isPortrait ? cellW - padH : cellW - qrW - padH - gap;
+  // In vertical mode QR is above text, so full cell width is available
+  const availW = vertical ? cellW - padH : cellW - qrW - padH - gap;
 
   // 6 monospace chars: each ~0.6em wide + 0.2em letter-spacing per gap (5 gaps)
   const charWidthEms = MONO_CODE_WIDTH_EMS;

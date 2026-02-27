@@ -3,22 +3,23 @@ import { batchGenerateQRDataURLs } from '@/lib/qr';
 import type { Bin } from '@/types';
 import { LabelCell } from './LabelCell';
 import type { LabelFormat } from './labelFormats';
+import type { LabelDirection } from './usePrintSettings';
 import { getLabelFormat, DEFAULT_LABEL_FORMAT, computeLabelsPerPage, computePageSize, buildColorMap } from './labelFormats';
 
 interface LabelSheetProps {
   bins: Bin[];
   format?: LabelFormat;
+  labelDirection?: LabelDirection;
   showColorSwatch?: boolean;
   iconSize?: string;
   showQrCode?: boolean;
   showBinName?: boolean;
   showIcon?: boolean;
-  showLocation?: boolean;
   showBinCode?: boolean;
   textAlign?: 'left' | 'center';
 }
 
-export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode, showBinName, showIcon, showLocation, showBinCode, textAlign }: LabelSheetProps) {
+export function LabelSheet({ bins, format, labelDirection, showColorSwatch, iconSize, showQrCode, showBinName, showIcon, showBinCode, textAlign }: LabelSheetProps) {
   const labelFormat = format ?? getLabelFormat(DEFAULT_LABEL_FORMAT);
   const qrPixelSize = Math.round(parseFloat(labelFormat.qrSize) * 150);
   const [qrMap, setQrMap] = useState<Map<string, string>>(new Map());
@@ -102,12 +103,12 @@ export function LabelSheet({ bins, format, showColorSwatch, iconSize, showQrCode
                 bin={bin}
                 qrDataUrl={qrMap.get(bin.id) ?? ''}
                 format={labelFormat}
+                labelDirection={labelDirection}
                 showColorSwatch={showColorSwatch}
                 iconSize={iconSize}
                 showQrCode={showQrCode}
                 showBinName={showBinName}
                 showIcon={showIcon}
-                showLocation={showLocation}
                 showBinCode={showBinCode}
                 textAlign={textAlign}
               />

@@ -151,12 +151,12 @@ export function usePrintPageActions() {
   const labelSheetProps = {
     bins: selectedBins,
     format: labelFormat,
+    labelDirection: labelOptions.labelDirection,
     showColorSwatch: labelOptions.showColorSwatch,
     iconSize,
     showQrCode: labelOptions.showQrCode,
     showBinName: labelOptions.showBinName,
     showIcon: labelOptions.showIcon,
-    showLocation: labelOptions.showLocation,
     showBinCode: labelOptions.showBinCode,
     textAlign: labelOptions.textAlign,
   };
