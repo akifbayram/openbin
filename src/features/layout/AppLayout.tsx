@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Download, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sidebar, SidebarContent } from './Sidebar';
 import { MobileDrawer } from './MobileDrawer';
@@ -13,6 +14,7 @@ import { TagColorsProvider } from '@/features/tags/TagColorsContext';
 import { useOnboarding } from '@/features/onboarding/useOnboarding';
 import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay';
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
+import { useSidebarCollapsed, toggleSidebarCollapsed } from '@/lib/useSidebarCollapsed';
 import { useNavigationGuard } from '@/lib/navigationGuard';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
@@ -30,6 +32,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function AppLayout() {
   useTheme();
+  const { isCollapsed: sidebarCollapsed } = useSidebarCollapsed();
   const { settings } = useAppSettings();
   const { activeLocationId, setActiveLocationId } = useAuth();
   const { locations, isLoading: locationsLoading } = useLocationList();
@@ -70,6 +73,7 @@ export function AppLayout() {
     },
     'command-palette': () => setCommandPaletteOpen(true),
     'shortcuts-help': () => setShortcutsHelpOpen(true),
+    'toggle-sidebar': () => toggleSidebarCollapsed(),
   }), [navigate, openScanDialog]);
 
   useKeyboardShortcuts({ actions: shortcutActions, enabled: !onboarding.isOnboarding });
@@ -139,7 +143,10 @@ export function AppLayout() {
 
       <ScanDialogContext.Provider value={{ openScanDialog }}>
       <DrawerProvider isOnboarding={onboarding.isOnboarding} onOpen={() => setDrawerOpen(true)}>
-      <main id="main-content" className="lg:ml-[260px] pt-[var(--safe-top)] lg:pt-[var(--safe-top)] pb-[calc(16px+var(--safe-bottom))] lg:pb-8">
+      <main id="main-content" className={cn(
+        'pt-[var(--safe-top)] lg:pt-[var(--safe-top)] pb-[calc(16px+var(--safe-bottom))] lg:pb-8 transition-[margin-left] duration-200 ease-in-out',
+        sidebarCollapsed ? 'lg:ml-[var(--sidebar-collapsed-width)]' : 'lg:ml-[var(--sidebar-width)]',
+      )}>
         <div className="mx-auto w-full max-w-7xl">
           <PageTransition>
             <Outlet />

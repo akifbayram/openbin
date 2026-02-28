@@ -32,6 +32,7 @@
   --radius-full: 9999px;
   --nav-height: 52px;
   --sidebar-width: 260px;
+  --sidebar-collapsed-width: 64px;
   --page-px: 20px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);

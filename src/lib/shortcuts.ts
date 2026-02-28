@@ -18,6 +18,7 @@ export const SHORTCUTS: ShortcutDef[] = [
   { id: 'new-bin', label: 'New Bin', category: 'action', keys: 'n' },
   { id: 'focus-search', label: 'Focus Search', category: 'action', keys: '/' },
   { id: 'command-palette', label: 'Command Palette', category: 'general', keys: 'mod+k' },
+  { id: 'toggle-sidebar', label: 'Toggle Sidebar', category: 'general', keys: '[' },
   { id: 'shortcuts-help', label: 'Keyboard Shortcuts', category: 'general', keys: '?' },
 ];
 

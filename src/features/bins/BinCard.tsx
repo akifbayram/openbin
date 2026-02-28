@@ -117,8 +117,8 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   );
 
   const cardContent = (
-    <div className="flex items-start gap-3">
-      <div className="min-w-0 flex-1">
+    <div className="flex items-start gap-3 h-full">
+      <div className="min-w-0 flex-1 flex flex-col self-stretch">
         <h3
           className="font-semibold text-[15px] text-[var(--text-primary)] leading-snug flex items-center gap-1.5 min-w-0 overflow-hidden"
         >
@@ -157,7 +157,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           </p>
         )}
         {isVisible?.('tags') !== false && bin.tags.length > 0 && (
-          <div ref={tagsRef} className="flex flex-nowrap gap-1.5 mt-2 overflow-hidden items-center">
+          <div ref={tagsRef} className="flex flex-nowrap gap-1.5 mt-auto pt-2 overflow-hidden items-center">
             {displayedTags.map((tag) => (
               <Badge
                 key={tag}
@@ -231,7 +231,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       role="button"
       aria-selected={selectable ? selected : undefined}
       className={cn(
-        'group rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none [@media(hover:hover)]:hover:scale-[1.02] [@media(hover:hover)]:hover:shadow-[var(--shadow-elevated)] [@media(hover:hover)]:hover:-translate-y-0.5 animate-stagger-in',
+        'group h-full rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none [@media(hover:hover)]:hover:scale-[1.02] [@media(hover:hover)]:hover:shadow-[var(--shadow-elevated)] [@media(hover:hover)]:hover:-translate-y-0.5 animate-stagger-in',
         renderProps.className,
         selected && 'ring-2 ring-[var(--accent)] scale-[0.97]',
         selectable && !selected && 'active:bg-[var(--bg-active)]'
@@ -269,7 +269,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           {/* Dark scrim overlay for text legibility */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/10" />
           {/* Content on top */}
-          <div className="relative z-10">
+          <div className="relative z-10 h-full">
             {cardContent}
           </div>
         </>

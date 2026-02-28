@@ -38,8 +38,8 @@ export function OptionGroup<K extends string>({
   /** @deprecated use renderContent */
   renderLabel?: (opt: { key: K; label: string }) => string;
 }) {
-  const containerRadius = shape === 'pill' ? 'rounded-full' : 'rounded-[var(--radius-sm)]';
-  const segmentRadius = shape === 'pill' ? 'rounded-full' : 'rounded-[var(--radius-xs)]';
+  const containerRadius = shape === 'pill' ? 'rounded-full' : 'rounded-[var(--radius-md)]';
+  const segmentRadius = shape === 'pill' ? 'rounded-full' : 'rounded-[var(--radius-sm)]';
   const textSize = size === 'sm' ? 'text-[12px]' : 'text-[13px]';
   const padding = iconOnly ? 'p-2' : size === 'sm' ? 'px-2 py-1' : 'px-3 py-1.5';
 

@@ -99,6 +99,12 @@ export function useKeyboardShortcuts({ actions, enabled = true }: Options) {
         acts['focus-search']?.();
         return;
       }
+
+      if (e.key === '[') {
+        e.preventDefault();
+        acts['toggle-sidebar']?.();
+        return;
+      }
     }
 
     document.addEventListener('keydown', handleKeyDown);
