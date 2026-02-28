@@ -1,11 +1,10 @@
 import type { Bin } from '@/types';
 import { resolveIcon } from '@/lib/iconMap';
 import { resolveColor } from '@/lib/colorPalette';
-import { isVerticalLayout, computeCodeFontSize } from './labelFormats';
-import { parsePaddingPt } from './pdfUnits';
+import { computeCodeFontSize } from './labelFormats';
 import type { LabelFormat } from './labelFormats';
 import type { LabelDirection } from './usePrintSettings';
-import { MONO_CODE_WIDTH_EMS, SWATCH_BAR_HEIGHT_RATIO, SWATCH_BAR_MIN_PT, CARD_PAD_RATIO, CARD_PAD_MIN_PT, CARD_RADIUS_RATIO } from './pdfConstants';
+import { computeLabelLayout } from './labelLayout';
 
 interface LabelCellProps {
   bin: Bin;
@@ -24,135 +23,100 @@ interface LabelCellProps {
 export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwatch, iconSize, showQrCode = true, showBinName = true, showIcon = true, showBinCode = true, textAlign = 'center' }: LabelCellProps) {
   const Icon = resolveIcon(bin.icon);
   const colorPreset = showColorSwatch && bin.color ? resolveColor(bin.color) : null;
-  const barHeight = `${Math.max(SWATCH_BAR_MIN_PT, parseFloat(format.nameFontSize) * SWATCH_BAR_HEIGHT_RATIO)}pt`;
-  const isPortrait = isVerticalLayout(format, labelDirection);
   const resolvedIconSize = iconSize ?? '11pt';
   const codeFontSize = `${computeCodeFontSize(format, labelDirection).toFixed(1).replace(/\.0$/, '')}pt`;
-  const qrSizePt = parseFloat(format.qrSize) * 72;
-  // Font size so 6 monospace chars span the QR width: each ~0.6em + 0.2em letter-spacing × 5 gaps
-  const qrCodeFontSizePt = qrSizePt / MONO_CODE_WIDTH_EMS;
-  const qrCodeFontSize = `${qrCodeFontSizePt.toFixed(1).replace(/\.0$/, '')}pt`;
-  const codeUnderQr = showQrCode && qrDataUrl && showBinCode && bin.id;
 
-  // Colored card mode: QR + short code wrapped in a card layout (with or without bg color)
-  const useColoredCard = !!showColorSwatch && showQrCode && !!qrDataUrl;
-  // Scale card padding: 7% of QR size, minimum 3pt — clamped to fit within the cell's content area
-  const idealPadPt = Math.max(CARD_PAD_MIN_PT, qrSizePt * CARD_PAD_RATIO);
-  const pad = parsePaddingPt(format.padding);
-  const contentHeightPt = parseFloat(format.cellHeight) * 72 - pad.top - pad.bottom;
-  const codeHeightPt = (showBinCode && bin.id) ? qrCodeFontSizePt : 0;
-  const maxCardPadPt = Math.max(0, (contentHeightPt - qrSizePt - codeHeightPt) / 2);
-  const cardPaddingPt = Math.min(idealPadPt, maxCardPadPt);
-  const cardPadding = `${cardPaddingPt.toFixed(1).replace(/\.0$/, '')}pt`;
-  const cellWPt = parseFloat(format.cellWidth) * 72;
-  const cellHPt = parseFloat(format.cellHeight) * 72;
-  const borderRadius = `${(Math.min(cellWPt, cellHPt) * CARD_RADIUS_RATIO).toFixed(1)}pt`;
+  const layout = computeLabelLayout({
+    format,
+    hasQrData: !!qrDataUrl,
+    hasColor: !!bin.color,
+    hasCode: !!bin.id,
+    hasIcon: !!bin.icon,
+    labelDirection,
+    showQrCode,
+    showBinName,
+    showIcon,
+    showBinCode,
+    showColorSwatch: !!showColorSwatch,
+  });
 
+  const qrCodeFontSize = `${layout.qrCodeFontSizePt.toFixed(1).replace(/\.0$/, '')}pt`;
+  const cardPadding = `${layout.cardPaddingPt.toFixed(1).replace(/\.0$/, '')}pt`;
+  const borderRadius = `${layout.cardRadiusPt.toFixed(1)}pt`;
+  const barHeight = `${layout.swatchBarHeightPt.toFixed(1).replace(/\.0$/, '')}pt`;
 
-  if (useColoredCard) {
-    // Colored card layout
-    return (
-      <div
-        className={`label-cell flex overflow-hidden ${textAlign === 'center' ? 'justify-center' : ''} ${isPortrait ? 'flex-col' : 'flex-row items-center gap-[4pt]'} ${isPortrait ? (textAlign === 'center' ? 'items-center' : 'items-start') : ''}`}
-        style={{ width: format.cellWidth, height: format.cellHeight, padding: format.padding }}
-      >
-        {/* Colored card wrapping QR + short code */}
-        <div
-          className={`label-qr-card shrink-0 flex flex-col items-center ${isPortrait ? 'mb-[2pt]' : ''}`}
-          style={{
-            ...(colorPreset ? { backgroundColor: colorPreset.bg } : {}),
-            borderRadius,
-            padding: cardPadding,
-          }}
-        >
-          <div className="relative" style={{ width: format.qrSize, height: format.qrSize }}>
-            <img src={qrDataUrl} alt="" style={{ width: '100%', height: '100%' }} />
-            {showIcon && (
-              <div className="qr-icon-overlay" style={{ width: '30%', height: '30%', backgroundColor: colorPreset?.bg ?? 'white' }}>
-                <Icon style={{ width: '100%', height: '100%' }} />
-              </div>
-            )}
+  // QR block: shared structure for both colored-card and plain modes
+  const hasQr = showQrCode && qrDataUrl;
+  let qrSection: React.ReactNode = null;
+
+  if (hasQr) {
+    const qrImage = (
+      <div className="relative" style={{ width: format.qrSize, height: format.qrSize }}>
+        <img src={qrDataUrl} alt="" style={{ width: '100%', height: '100%' }} />
+        {showIcon && (
+          <div
+            className="qr-icon-overlay"
+            style={{ width: '30%', height: '30%', ...(layout.useColoredCard ? { backgroundColor: colorPreset?.bg ?? 'white' } : {}) }}
+          >
+            <Icon style={{ width: '100%', height: '100%' }} />
           </div>
-          {showBinCode && bin.id && (
-            <div
-              className="label-code font-mono font-bold text-center"
-              style={{ fontSize: qrCodeFontSize, width: format.qrSize }}
-            >
-              {bin.id}
-            </div>
-          )}
-        </div>
+        )}
+      </div>
+    );
 
-        {/* Text column — bin name (large), area */}
-        <div className={`min-w-0 flex flex-col ${isPortrait && textAlign === 'center' ? 'items-center text-center w-full' : isPortrait ? 'w-full' : ''}`}>
-          {showBinName && (
-            <div
-              className={`label-name font-semibold ${isPortrait && textAlign === 'center' ? 'text-center' : ''}`}
-              style={{ fontSize: format.nameFontSize }}
-            >
-              <span className="min-w-0 line-clamp-2">{bin.name}</span>
-            </div>
-          )}
-        </div>
+    const codeLabel = layout.codeUnderQr ? (
+      <div
+        className={`label-code font-mono font-bold text-center ${layout.useColoredCard ? '' : 'text-gray-700'}`}
+        style={{ fontSize: qrCodeFontSize, width: format.qrSize }}
+      >
+        {bin.id}
+      </div>
+    ) : null;
+
+    qrSection = (
+      <div
+        className={`${layout.useColoredCard ? 'label-qr-card' : ''} shrink-0 flex flex-col items-center ${layout.isPortrait ? 'mb-[2pt]' : ''}`}
+        style={layout.useColoredCard ? {
+          ...(colorPreset ? { backgroundColor: colorPreset.bg } : {}),
+          borderRadius,
+          padding: cardPadding,
+        } : undefined}
+      >
+        {qrImage}
+        {codeLabel}
+      </div>
+    );
+  } else if (showIcon) {
+    qrSection = (
+      <div className="shrink-0" style={{ lineHeight: 1, ...(layout.isPortrait ? { marginBottom: '2pt' } : {}) }}>
+        <Icon style={{ width: resolvedIconSize, height: resolvedIconSize }} />
       </div>
     );
   }
 
-  // Non-colored path: unchanged plain layout
+  const cellClass = `label-cell flex overflow-hidden ${textAlign === 'center' ? 'justify-center' : ''} ${layout.isPortrait ? 'flex-col' : 'flex-row items-center gap-[4pt]'} ${layout.isPortrait ? (textAlign === 'center' ? 'items-center' : 'items-start') : ''}`;
+
   return (
-    <div
-      className={`label-cell flex overflow-hidden ${textAlign === 'center' ? 'justify-center' : ''} ${isPortrait ? 'flex-col' : 'flex-row items-center gap-[4pt]'} ${isPortrait ? (textAlign === 'center' ? 'items-center' : 'items-start') : ''}`}
-      style={{ width: format.cellWidth, height: format.cellHeight, padding: format.padding }}
-    >
-      {showQrCode && qrDataUrl ? (
-        <div className={`shrink-0 flex flex-col items-center ${isPortrait ? 'mb-[2pt]' : ''}`}>
-          <div className="relative" style={{ width: format.qrSize, height: format.qrSize }}>
-            <img src={qrDataUrl} alt="" style={{ width: '100%', height: '100%' }} />
-            {showIcon && (
-              <div className="qr-icon-overlay" style={{ width: '30%', height: '30%' }}>
-                <Icon style={{ width: '100%', height: '100%' }} />
-              </div>
-            )}
-          </div>
-          {codeUnderQr && (
-            <div
-              className="label-code text-gray-700 font-mono font-bold text-center"
-              style={{ fontSize: qrCodeFontSize, width: format.qrSize }}
-            >
-              {bin.id}
-            </div>
-          )}
-        </div>
-      ) : showIcon ? (
-        <div className="shrink-0" style={{ lineHeight: 1, ...(isPortrait ? { marginBottom: '2pt' } : {}) }}>
-          <Icon style={{ width: resolvedIconSize, height: resolvedIconSize }} />
-        </div>
-      ) : null}
-      <div className={`min-w-0 flex flex-col ${isPortrait && textAlign === 'center' ? 'items-center text-center w-full' : isPortrait ? 'w-full' : ''}`}>
-        {colorPreset && (
+    <div className={cellClass} style={{ width: format.cellWidth, height: format.cellHeight, padding: format.padding }}>
+      {qrSection}
+      <div className={`min-w-0 flex flex-col ${layout.isPortrait && textAlign === 'center' ? 'items-center text-center w-full' : layout.isPortrait ? 'w-full' : ''}`}>
+        {layout.showSwatchBar && colorPreset && (
           <div
             className="color-swatch-print rounded-[1pt] w-full shrink-0"
-            style={{
-              height: barHeight,
-              backgroundColor: colorPreset.bg,
-              marginBottom: '1pt',
-            }}
+            style={{ height: barHeight, backgroundColor: colorPreset.bg, marginBottom: '1pt' }}
           />
         )}
-        {!codeUnderQr && showBinCode && bin.id && (
-          <div
-            className="label-code text-gray-700 font-mono font-bold"
-            style={{ fontSize: codeFontSize }}
-          >
+        {!layout.codeUnderQr && showBinCode && bin.id && (
+          <div className="label-code text-gray-700 font-mono font-bold" style={{ fontSize: codeFontSize }}>
             {bin.id}
           </div>
         )}
         {showBinName && (
           <div
-            className={`label-name font-semibold ${isPortrait && textAlign === 'center' ? 'text-center' : ''}`}
+            className={`label-name font-semibold ${layout.isPortrait && textAlign === 'center' ? 'text-center' : ''}`}
             style={{ fontSize: format.nameFontSize }}
           >
-            <span className="min-w-0 line-clamp-1">{bin.name}</span>
+            <span className={`min-w-0 ${layout.useColoredCard ? 'line-clamp-2' : 'line-clamp-1'}`}>{bin.name}</span>
           </div>
         )}
       </div>
