@@ -235,6 +235,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
         <div className="space-y-2">
           <textarea
             ref={textareaRef}
+            autoComplete="off"
             value={expandedText}
             onChange={(e) => setExpandedText(e.target.value)}
             onKeyDown={handleTextareaKeyDown}

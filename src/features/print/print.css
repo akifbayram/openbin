@@ -30,6 +30,7 @@
 .label-code {
   line-height: 1.1;
   letter-spacing: 0.2em;
+  text-indent: 0.2em;
   font-weight: 700;
 }
 
@@ -55,6 +56,49 @@
 .label-qr-card {
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
+}
+
+/* ─── QR Style Range Slider ─── */
+.qr-range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-input);
+  outline: none;
+  cursor: pointer;
+}
+
+.qr-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  border: 2px solid white;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.qr-range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.qr-range-slider::-webkit-slider-thumb:active {
+  transform: scale(1.05);
+}
+
+.qr-range-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  border: 2px solid white;
+  cursor: pointer;
 }
 
 @media print {

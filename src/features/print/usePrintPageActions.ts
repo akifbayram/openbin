@@ -6,7 +6,8 @@ import { useAuth } from '@/lib/auth';
 import { getLabelFormat, DEFAULT_LABEL_FORMAT, getOrientation, applyOrientation, computePageSize } from './labelFormats';
 import { usePrintSettings } from './usePrintSettings';
 import type { LabelFormat } from './labelFormats';
-import type { LabelOptions, CustomState, DisplayUnit } from './usePrintSettings';
+import type { LabelOptions, CustomState, DisplayUnit, QrStyleOptions } from './usePrintSettings';
+import { DEFAULT_QR_STYLE } from './usePrintSettings';
 import { inchesToMm, mmToInches } from './pdfUnits';
 import { computeScaleFactor, applyAutoScale, applyFontScale } from './labelScaling';
 import type { Bin } from '@/types';
@@ -31,7 +32,7 @@ export function usePrintPageActions() {
   const { bins: allBins, isLoading: binsLoading } = useBinList(undefined, 'name');
   const { activeLocationId } = useAuth();
   const { areas } = useAreaList(activeLocationId);
-  const { settings, isLoading: settingsLoading, updateFormatKey, updateCustomState, updateLabelOptions, updateOrientation, updateDisplayUnit, addPreset, removePreset } = usePrintSettings();
+  const { settings, isLoading: settingsLoading, updateFormatKey, updateCustomState, updateLabelOptions, updateOrientation, updateDisplayUnit, updateQrStyle, addPreset, removePreset } = usePrintSettings();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [binsExpanded, setBinsExpanded] = useState(false);
   const [formatExpanded, setFormatExpanded] = useState(true);
@@ -40,8 +41,10 @@ export function usePrintPageActions() {
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [formatSearch, setFormatSearch] = useState('');
+  const [qrStyleExpanded, setQrStyleExpanded] = useState(false);
 
-  const { formatKey, customState, labelOptions, presets: savedPresets } = settings;
+  const { formatKey, customState, labelOptions, presets: savedPresets, qrStyle: savedQrStyle } = settings;
+  const qrStyle = savedQrStyle ?? DEFAULT_QR_STYLE;
 
   useEffect(() => {
     const idsParam = searchParams.get('ids');
@@ -159,6 +162,7 @@ export function usePrintPageActions() {
     showIcon: labelOptions.showIcon,
     showBinCode: labelOptions.showBinCode,
     textAlign: labelOptions.textAlign,
+    qrStyle,
   };
 
   async function handleDownloadPDF() {
@@ -166,7 +170,7 @@ export function usePrintPageActions() {
     setPdfLoading(true);
     try {
       const { downloadLabelPDF } = await import('./downloadLabelPDF');
-      await downloadLabelPDF({ bins: selectedBins, format: labelFormat, labelOptions, iconSize });
+      await downloadLabelPDF({ bins: selectedBins, format: labelFormat, labelOptions, iconSize, qrStyle });
     } finally {
       setPdfLoading(false);
     }
@@ -209,6 +213,10 @@ export function usePrintPageActions() {
     updateLabelOptions(next);
   }
 
+  function handleUpdateQrStyle(style: QrStyleOptions) {
+    updateQrStyle(style);
+  }
+
   return {
     // Data
     allBins,
@@ -224,7 +232,6 @@ export function usePrintPageActions() {
     // Format
     formatKey,
     baseFormat,
-    labelFormat,
     effectiveOrientation,
     customState,
     displayUnit,
@@ -247,6 +254,11 @@ export function usePrintPageActions() {
     // Options
     labelOptions,
     handleUpdateLabelOption,
+    // QR Style
+    qrStyle,
+    handleUpdateQrStyle,
+    qrStyleExpanded,
+    setQrStyleExpanded,
     // UI expand state
     binsExpanded,
     setBinsExpanded,
@@ -258,6 +270,5 @@ export function usePrintPageActions() {
     pdfLoading,
     handleDownloadPDF,
     labelSheetProps,
-    iconSize,
   };
 }

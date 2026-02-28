@@ -40,6 +40,8 @@ export function getActionIcon(entry: ActivityLogEntry): ReactNode {
   if (action === 'join') return createElement(LogIn, { className: cls });
   if (action === 'leave') return createElement(LogOut, { className: cls });
   if (action === 'remove_member') return createElement(UserMinus, { className: cls });
+  if (action === 'change_role') return createElement(Users, { className: cls });
+  if (action === 'regenerate_invite') return createElement(RotateCcw, { className: cls });
   if (entity_type === 'area') return createElement(MapPin, { className: cls });
   if (entity_type === 'member') return createElement(Users, { className: cls });
   return createElement(Package, { className: cls });
@@ -118,9 +120,12 @@ export function getActionLabel(entry: ActivityLogEntry, t: Terminology): string 
     if (action === 'join') return `joined the ${t.location}`;
     if (action === 'leave') return `left the ${t.location}`;
     if (action === 'remove_member') return `removed ${name}`;
+    if (action === 'change_role') return `changed role for ${name}`;
   }
   if (entity_type === 'location') {
+    if (action === 'create') return `created ${t.location} ${name}`;
     if (action === 'update') return `updated ${t.location} ${name}`;
+    if (action === 'regenerate_invite') return `regenerated invite code`;
   }
 
   return `${action} ${entity_type} ${name}`;

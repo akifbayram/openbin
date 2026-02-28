@@ -3,7 +3,8 @@ import { batchRenderIconDataURLs } from './iconToDataUrl';
 import { generateLabelPDF } from './generateLabelPDF';
 import type { LabelFormat } from './labelFormats';
 import { buildColorMap } from './labelFormats';
-import type { LabelOptions } from './usePrintSettings';
+import type { LabelOptions, QrStyleOptions } from './usePrintSettings';
+import { isDefaultQrStyle } from './usePrintSettings';
 import type { Bin } from '@/types';
 
 interface DownloadLabelPDFParams {
@@ -11,17 +12,24 @@ interface DownloadLabelPDFParams {
   format: LabelFormat;
   labelOptions: LabelOptions;
   iconSize: string;
+  qrStyle?: QrStyleOptions;
 }
 
 export async function downloadLabelPDF(params: DownloadLabelPDFParams): Promise<void> {
-  const { bins, format, labelOptions, iconSize } = params;
+  const { bins, format, labelOptions, iconSize, qrStyle } = params;
 
   // 1. Generate QR data URLs (cache-hit from LRU cache since LabelSheet already generated them)
   const qrPixelSize = Math.round(parseFloat(format.qrSize) * 150);
   const colorMap = buildColorMap(bins, labelOptions.showColorSwatch);
-  const qrMap = labelOptions.showQrCode
-    ? await batchGenerateQRDataURLs(bins.map((b) => b.id), qrPixelSize, undefined, colorMap)
-    : new Map<string, string>();
+  let qrMap: Map<string, string>;
+  if (!labelOptions.showQrCode) {
+    qrMap = new Map();
+  } else if (!isDefaultQrStyle(qrStyle)) {
+    const { batchGenerateStyledQRDataURLs } = await import('@/lib/styledQr');
+    qrMap = await batchGenerateStyledQRDataURLs(bins.map((b) => b.id), qrPixelSize, qrStyle!, colorMap);
+  } else {
+    qrMap = await batchGenerateQRDataURLs(bins.map((b) => b.id), qrPixelSize, undefined, colorMap);
+  }
 
   // 2. Render icon PNGs (if showIcon enabled)
   let iconMap = new Map<string, string>();

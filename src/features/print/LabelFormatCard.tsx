@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical, Search } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical, Search, LayoutGrid } from 'lucide-react';
 import { OptionGroup } from '@/components/ui/option-group';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -69,6 +69,7 @@ export function LabelFormatCard({
           onClick={() => onExpandedChange(!expanded)}
         >
           <div className="flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4 text-[var(--text-tertiary)]" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Format</Label>
             {!expanded && (
               <span className="text-[13px] text-[var(--text-tertiary)]">({baseFormat.name})</span>

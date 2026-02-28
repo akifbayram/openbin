@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Ban } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { resolveColor, parseColorKey, buildColorKey, hslToHex, SHADE_COUNT } from '@/lib/colorPalette';
 import { cn } from '@/lib/utils';
 
@@ -55,20 +55,19 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
   return (
     <div className="space-y-2.5">
       {/* None + Black/White + Gray buttons */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 p-2">
         <button
           type="button"
           onClick={() => onChange('')}
-          title="None"
+          title="Choose a color"
           className={cn(
-            'h-7 w-7 rounded-full border-2 flex items-center justify-center transition-all',
+            'h-7 w-7 rounded-full transition-all',
             !value
-              ? 'border-[var(--accent)] scale-110'
-              : 'border-[var(--text-tertiary)] hover:scale-105'
+              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110'
+              : 'hover:scale-105'
           )}
-        >
-          <Ban className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-        </button>
+          style={{ background: 'conic-gradient(from 0deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)' }}
+        />
         <button
           type="button"
           onClick={() => onChange('black')}
@@ -165,9 +164,10 @@ function ColorDot({ colorKey }: { colorKey: string }) {
     return <span className="h-4 w-4 rounded-full shrink-0" style={{ backgroundColor: preset.bgCss }} />;
   }
   return (
-    <span className="h-4 w-4 rounded-full shrink-0 border-2 border-[var(--text-tertiary)] flex items-center justify-center">
-      <Ban className="h-3 w-3 text-[var(--text-tertiary)]" />
-    </span>
+    <span
+      className="h-4 w-4 rounded-full shrink-0"
+      style={{ background: 'conic-gradient(from 0deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)' }}
+    />
   );
 }
 

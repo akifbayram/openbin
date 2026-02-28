@@ -3,7 +3,8 @@ import { batchGenerateQRDataURLs } from '@/lib/qr';
 import type { Bin } from '@/types';
 import { LabelCell } from './LabelCell';
 import type { LabelFormat } from './labelFormats';
-import type { LabelDirection } from './usePrintSettings';
+import type { LabelDirection, QrStyleOptions } from './usePrintSettings';
+import { isDefaultQrStyle } from './usePrintSettings';
 import { getLabelFormat, DEFAULT_LABEL_FORMAT, computeLabelsPerPage, computePageSize, buildColorMap } from './labelFormats';
 
 interface LabelSheetProps {
@@ -17,9 +18,10 @@ interface LabelSheetProps {
   showIcon?: boolean;
   showBinCode?: boolean;
   textAlign?: 'left' | 'center';
+  qrStyle?: QrStyleOptions;
 }
 
-export function LabelSheet({ bins, format, labelDirection, showColorSwatch, iconSize, showQrCode, showBinName, showIcon, showBinCode, textAlign }: LabelSheetProps) {
+export function LabelSheet({ bins, format, labelDirection, showColorSwatch, iconSize, showQrCode, showBinName, showIcon, showBinCode, textAlign, qrStyle }: LabelSheetProps) {
   const labelFormat = format ?? getLabelFormat(DEFAULT_LABEL_FORMAT);
   const qrPixelSize = Math.round(parseFloat(labelFormat.qrSize) * 150);
   const [qrMap, setQrMap] = useState<Map<string, string>>(new Map());
@@ -27,6 +29,8 @@ export function LabelSheet({ bins, format, labelDirection, showColorSwatch, icon
 
   // Serialize bin colors to a stable string for the dependency array
   const binColorKey = showColorSwatch ? bins.map((b) => `${b.id}:${b.color || ''}`).join(',') : '';
+  const qrStyleKey = qrStyle ? JSON.stringify(qrStyle) : '';
+  const useStyled = !isDefaultQrStyle(qrStyle);
 
   useEffect(() => {
     if (bins.length === 0) {
@@ -39,7 +43,12 @@ export function LabelSheet({ bins, format, labelDirection, showColorSwatch, icon
 
     const binIds = bins.map((b) => b.id);
     const colorMap = buildColorMap(bins, !!showColorSwatch);
-    batchGenerateQRDataURLs(binIds, qrPixelSize, undefined, colorMap).then((result) => {
+
+    const generate = useStyled
+      ? import('@/lib/styledQr').then((mod) => mod.batchGenerateStyledQRDataURLs(binIds, qrPixelSize, qrStyle!, colorMap))
+      : batchGenerateQRDataURLs(binIds, qrPixelSize, undefined, colorMap);
+
+    generate.then((result) => {
       if (!cancelled) {
         setQrMap(result);
         setLoading(false);
@@ -54,7 +63,7 @@ export function LabelSheet({ bins, format, labelDirection, showColorSwatch, icon
     return () => {
       cancelled = true;
     };
-  }, [bins, qrPixelSize, binColorKey]);
+  }, [bins, qrPixelSize, binColorKey, qrStyleKey, useStyled]);
 
   if (loading) {
     return (

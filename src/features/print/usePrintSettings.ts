@@ -4,6 +4,43 @@ import type { LabelFormat } from './labelFormats';
 
 export type LabelDirection = 'auto' | 'horizontal' | 'vertical';
 
+export interface QrStyleOptions {
+  dotType: 'square' | 'rounded' | 'dots' | 'classy' | 'classy-rounded' | 'extra-rounded';
+  dotColor: string;
+  cornerSquareType: '' | 'square' | 'dot' | 'extra-rounded';
+  cornerSquareColor: string;
+  cornerDotType: '' | 'square' | 'dot';
+  cornerDotColor: string;
+  useGradient: boolean;
+  gradientType: 'linear' | 'radial';
+  gradientColor1: string;
+  gradientColor2: string;
+  gradientRotation: number;
+  errorCorrection: 'L' | 'M' | 'Q' | 'H';
+}
+
+export const DEFAULT_QR_STYLE: QrStyleOptions = {
+  dotType: 'square',
+  dotColor: '#000000',
+  cornerSquareType: '',
+  cornerSquareColor: '',
+  cornerDotType: '',
+  cornerDotColor: '',
+  useGradient: false,
+  gradientType: 'linear',
+  gradientColor1: '#000000',
+  gradientColor2: '#333333',
+  gradientRotation: 0,
+  errorCorrection: 'Q',
+};
+
+export function isDefaultQrStyle(style?: QrStyleOptions): boolean {
+  if (!style) return true;
+  return (Object.keys(DEFAULT_QR_STYLE) as (keyof QrStyleOptions)[]).every(
+    (k) => style[k] === DEFAULT_QR_STYLE[k],
+  );
+}
+
 export interface LabelOptions {
   fontScale: number;
   textAlign: 'left' | 'center';
@@ -29,6 +66,7 @@ export interface PrintSettings {
   presets: LabelFormat[];
   orientation?: 'landscape' | 'portrait';
   displayUnit?: DisplayUnit;
+  qrStyle?: QrStyleOptions;
 }
 
 export const DEFAULT_LABEL_OPTIONS: LabelOptions = {
@@ -141,6 +179,10 @@ export function usePrintSettings() {
     update({ displayUnit });
   }
 
+  function updateQrStyle(qrStyle: QrStyleOptions) {
+    update({ qrStyle });
+  }
+
   return {
     settings,
     isLoading,
@@ -149,6 +191,7 @@ export function usePrintSettings() {
     updateLabelOptions,
     updateOrientation,
     updateDisplayUnit,
+    updateQrStyle,
     addPreset,
     removePreset,
   };

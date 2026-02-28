@@ -1,9 +1,10 @@
-import { CheckCircle2, Circle, ChevronDown } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronDown, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useTerminology } from '@/lib/terminology';
+import { resolveColor } from '@/lib/colorPalette';
 import type { Bin, Area } from '@/types';
 
 interface BinSelectorCardProps {
@@ -39,6 +40,7 @@ export function BinSelectorCard({
             className="flex items-center gap-2 flex-1 min-w-0"
             onClick={() => onExpandedChange(!expanded)}
           >
+            <Package className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Select {t.Bins}</Label>
             <span className="text-[13px] text-[var(--text-tertiary)]">({selectedIds.size} selected)</span>
             <ChevronDown className={cn(
@@ -91,6 +93,7 @@ export function BinSelectorCard({
               <div className="space-y-0.5 max-h-80 overflow-y-auto -mx-2">
                 {allBins.map((bin) => {
                   const checked = selectedIds.has(bin.id);
+                  const colorPreset = bin.color ? resolveColor(bin.color) : null;
                   return (
                     <button
                       key={bin.id}
@@ -101,6 +104,12 @@ export function BinSelectorCard({
                         <CheckCircle2 className="h-[22px] w-[22px] text-[var(--accent)] shrink-0" />
                       ) : (
                         <Circle className="h-[22px] w-[22px] text-[var(--text-tertiary)] shrink-0" />
+                      )}
+                      {colorPreset && (
+                        <div
+                          className="h-2.5 w-2.5 rounded-full shrink-0 ring-1 ring-[var(--border-subtle)]"
+                          style={{ backgroundColor: colorPreset.bg }}
+                        />
                       )}
                       <span className="text-[15px] text-[var(--text-primary)] truncate">{bin.name}</span>
                     </button>

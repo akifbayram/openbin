@@ -59,6 +59,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
       {(quickAdd.state === 'expanded' || quickAdd.state === 'processing') && (
         <div className="space-y-2">
           <textarea
+            autoComplete="off"
             value={quickAdd.expandedText}
             onChange={(e) => quickAdd.setExpandedText(e.target.value)}
             onKeyDown={quickAdd.handleExpandedKeyDown}

@@ -1,4 +1,4 @@
-import { ChevronDown, AlignLeft, AlignCenter, Columns2, Rows2 } from 'lucide-react';
+import { ChevronDown, AlignLeft, AlignCenter, Columns2, Rows2, SlidersHorizontal, QrCode, Type, Smile, Hash, Palette } from 'lucide-react';
 import { OptionGroup } from '@/components/ui/option-group';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -31,7 +31,10 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
           className="flex items-center justify-between w-full"
           onClick={() => onExpandedChange(!expanded)}
         >
-          <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Options</Label>
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Options</Label>
+          </div>
           <ChevronDown className={cn(
             'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
             expanded && 'rotate-180'
@@ -80,17 +83,18 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
             <div className="space-y-1 px-1">
               <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-1">Visible Elements</span>
               {([
-                { key: 'showQrCode' as const, label: 'QR Code' },
-                { key: 'showBinName' as const, label: `${t.Bin} Name` },
-                { key: 'showIcon' as const, label: `${t.Bin} Icon` },
-                { key: 'showBinCode' as const, label: `${t.Bin} Code` },
-                { key: 'showColorSwatch' as const, label: 'Color Background' },
-              ]).map(({ key, label }) => (
+                { key: 'showQrCode' as const, label: 'QR Code', icon: QrCode },
+                { key: 'showBinName' as const, label: `${t.Bin} Name`, icon: Type },
+                { key: 'showIcon' as const, label: `${t.Bin} Icon`, icon: Smile },
+                { key: 'showBinCode' as const, label: `${t.Bin} Code`, icon: Hash },
+                { key: 'showColorSwatch' as const, label: 'Color Background', icon: Palette },
+              ] as const).map(({ key, label, icon: Icon }) => (
                 <label key={key} className="flex items-center gap-3 px-2 py-1.5 cursor-pointer rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] transition-colors">
                   <Checkbox
                     checked={labelOptions[key]}
                     onCheckedChange={(checked) => onUpdateOption(key, !!checked)}
                   />
+                  <Icon className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
                   <span className="text-[15px] text-[var(--text-primary)]">{label}</span>
                 </label>
               ))}

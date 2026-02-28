@@ -7,6 +7,7 @@ import { usePrintPageActions } from './usePrintPageActions';
 import { BinSelectorCard } from './BinSelectorCard';
 import { LabelFormatCard } from './LabelFormatCard';
 import { LabelOptionsCard } from './LabelOptionsCard';
+import { QrStyleCard } from './QrStyleCard';
 import { PreviewPanel } from './PreviewPanel';
 
 export function PrintPage() {
@@ -42,6 +43,10 @@ export function PrintPage() {
     handleDeletePreset,
     labelOptions,
     handleUpdateLabelOption,
+    qrStyle,
+    handleUpdateQrStyle,
+    qrStyleExpanded,
+    setQrStyleExpanded,
     binsExpanded,
     setBinsExpanded,
     formatExpanded,
@@ -127,6 +132,13 @@ export function PrintPage() {
             onUpdateOption={handleUpdateLabelOption}
             expanded={optionsExpanded}
             onExpandedChange={setOptionsExpanded}
+          />
+
+          <QrStyleCard
+            qrStyle={qrStyle}
+            onUpdateStyle={handleUpdateQrStyle}
+            expanded={qrStyleExpanded}
+            onExpandedChange={setQrStyleExpanded}
           />
         </div>
 

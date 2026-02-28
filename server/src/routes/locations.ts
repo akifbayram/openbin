@@ -73,6 +73,18 @@ router.post('/', asyncHandler(async (req, res) => {
     [generateUuid(), location.id, req.user!.id, 'admin']
   );
 
+  logActivity({
+    locationId: location.id,
+    userId: req.user!.id,
+    userName: req.user!.username,
+    action: 'create',
+    entityType: 'location',
+    entityId: location.id,
+    entityName: location.name,
+    authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
+  });
+
   res.status(201).json({
     id: location.id,
     name: location.name,
@@ -462,6 +474,17 @@ router.post('/:id/regenerate-invite', asyncHandler(async (req, res) => {
   if (result.rows.length === 0) {
     throw new NotFoundError('Location not found');
   }
+
+  logActivity({
+    locationId: id,
+    userId: req.user!.id,
+    userName: req.user!.username,
+    action: 'regenerate_invite',
+    entityType: 'location',
+    entityId: id,
+    authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
+  });
 
   res.json({ inviteCode: result.rows[0].invite_code });
 }));

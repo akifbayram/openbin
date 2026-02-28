@@ -6,6 +6,7 @@ const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLI
     return (
       <input
         type={type}
+        autoComplete="off"
         className={cn(
           'flex h-11 w-full rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3.5 py-2.5 text-base text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] transition-all duration-200 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40',
           className
