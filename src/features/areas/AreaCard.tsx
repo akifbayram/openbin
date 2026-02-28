@@ -1,4 +1,4 @@
-import { Check, MoreHorizontal, Plus, X } from 'lucide-react';
+import { Check, Folder, Inbox, MoreHorizontal, Plus, X } from 'lucide-react';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -100,12 +100,19 @@ export function AreaCard({ id, name, binCount, isAdmin, index = 0, onNavigate, o
       )}
       style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
     >
-      <span className="text-[15px] font-semibold text-[var(--text-primary)] truncate block pr-7">
-        {name}
-      </span>
-      <span className="text-[13px] text-[var(--text-tertiary)] mt-1 block">
-        {binCount} {binCount !== 1 ? t.bins : t.bin}
-      </span>
+      <div className="flex items-start gap-3">
+        <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 flex items-center justify-center shrink-0 mt-0.5">
+          <Folder className="h-4.5 w-4.5 text-[var(--accent)]" />
+        </div>
+        <div className="flex-1 min-w-0 pr-7">
+          <span className="text-[15px] font-semibold text-[var(--text-primary)] truncate block">
+            {name}
+          </span>
+          <span className="text-[13px] text-[var(--text-tertiary)] mt-0.5 block">
+            {binCount} {binCount !== 1 ? t.bins : t.bin}
+          </span>
+        </div>
+      </div>
 
       {isAdmin && (
         <div
@@ -144,12 +151,19 @@ export function UnassignedAreaCard({ count, index = 0, onNavigate }: UnassignedC
       className="glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-all duration-200 active:scale-[0.98] text-left animate-stagger-in [@media(hover:hover)]:hover:shadow-[var(--shadow-elevated)] [@media(hover:hover)]:hover:-translate-y-0.5"
       style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
     >
-      <span className="text-[15px] font-semibold text-[var(--text-secondary)] truncate block">
-        Unassigned
-      </span>
-      <span className="text-[13px] text-[var(--text-tertiary)] mt-1 block">
-        {count} {count !== 1 ? t.bins : t.bin}
-      </span>
+      <div className="flex items-start gap-3">
+        <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-input)] flex items-center justify-center shrink-0 mt-0.5">
+          <Inbox className="h-4.5 w-4.5 text-[var(--text-tertiary)]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-[15px] font-semibold text-[var(--text-secondary)] truncate block">
+            Unassigned
+          </span>
+          <span className="text-[13px] text-[var(--text-tertiary)] mt-0.5 block">
+            {count} {count !== 1 ? t.bins : t.bin}
+          </span>
+        </div>
+      </div>
     </button>
   );
 }
@@ -160,9 +174,11 @@ export function CreateAreaCard({ onCreate }: CreateCardProps) {
     <button
       type="button"
       onClick={onCreate}
-      className="rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-all duration-200 active:scale-[0.98] border-2 border-dashed border-[var(--border-glass)] bg-transparent flex flex-col items-center justify-center gap-1.5 text-[var(--text-tertiary)]"
+      className="rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-all duration-200 active:scale-[0.98] border-2 border-dashed border-[var(--border-glass)] bg-transparent flex items-center gap-3 text-[var(--text-tertiary)]"
     >
-      <Plus className="h-5 w-5" />
+      <div className="h-9 w-9 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-glass)] flex items-center justify-center shrink-0">
+        <Plus className="h-4 w-4" />
+      </div>
       <span className="text-[13px] font-medium">{`Create ${t.Area}`}</span>
     </button>
   );

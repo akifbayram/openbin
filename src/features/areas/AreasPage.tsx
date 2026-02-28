@@ -1,4 +1,4 @@
-import { LogIn, MapPin, MapPinned, Plus, Shield, Users } from 'lucide-react';
+import { Copy, Check, LogIn, MapPin, MapPinned, Plus, Shield, User, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -52,8 +52,22 @@ export function AreasPage() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteAreaTarget | null>(null);
   const [deletingArea, setDeletingArea] = useState(false);
 
+  // Invite code copy state
+  const [copied, setCopied] = useState(false);
+
   const activeLocation = locations.find((l) => l.id === activeLocationId);
   const isAdmin = activeLocation?.role === 'admin';
+
+  async function handleCopyInvite() {
+    if (!activeLocation?.invite_code) return;
+    try {
+      await navigator.clipboard.writeText(activeLocation.invite_code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      showToast({ message: 'Failed to copy' });
+    }
+  }
 
   function handleAreaClick(areaId: string) {
     navigate(`/bins?areas=${encodeURIComponent(areaId)}`);
@@ -203,50 +217,72 @@ export function AreasPage() {
               />
             )}
 
-            {/* Location meta line */}
-            <div className="flex items-center gap-2 text-[13px] text-[var(--text-tertiary)]">
-              {isAdmin ? (
-                <span className="inline-flex items-center gap-1">
-                  <Shield className="h-3 w-3" />
-                  Admin
-                </span>
-              ) : (
-                <span>Member</span>
-              )}
-              <span className="text-[var(--text-tertiary)] opacity-50">&middot;</span>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                onClick={() => setMembersLocationId(activeLocation.id)}
-              >
-                <Users className="h-3 w-3" />
-                {memberCount} {memberCount !== 1 ? 'members' : 'member'}
-              </button>
-              <div className="flex-1" />
-              <LocationSettingsMenu
-                compact
-                isAdmin={isAdmin}
-                onRename={() => setRenameLocationId(activeLocation.id)}
-                onRetention={() => setRetentionLocationId(activeLocation.id)}
-                onDelete={() => setDeleteLocationId(activeLocation.id)}
-                onLeave={() => handleLeave(activeLocation.id)}
-              />
+            {/* Location info card */}
+            <div className="glass-card rounded-[var(--radius-lg)] p-4 animate-fade-in-up">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium px-2 py-1 rounded-[var(--radius-full)] ${isAdmin ? 'bg-[var(--accent)]/10 text-[var(--accent)]' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}>
+                      {isAdmin ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                      {isAdmin ? 'Admin' : 'Member'}
+                    </span>
+                  </div>
+                  <span className="text-[var(--text-tertiary)] opacity-30">&middot;</span>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                    onClick={() => setMembersLocationId(activeLocation.id)}
+                  >
+                    <Users className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{memberCount} {memberCount !== 1 ? 'members' : 'member'}</span>
+                    <span className="sm:hidden">{memberCount}</span>
+                  </button>
+                  {activeLocation.invite_code && isAdmin && (
+                    <>
+                      <span className="text-[var(--text-tertiary)] opacity-30">&middot;</span>
+                      <button
+                        type="button"
+                        onClick={handleCopyInvite}
+                        className="inline-flex items-center gap-1.5 text-[13px] font-mono text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                        title="Copy invite code"
+                      >
+                        {copied
+                          ? <Check className="h-3.5 w-3.5 text-green-500" />
+                          : <Copy className="h-3.5 w-3.5" />}
+                        <span className="truncate max-w-[120px]">{activeLocation.invite_code}</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+                <LocationSettingsMenu
+                  compact
+                  isAdmin={isAdmin}
+                  onRename={() => setRenameLocationId(activeLocation.id)}
+                  onRetention={() => setRetentionLocationId(activeLocation.id)}
+                  onDelete={() => setDeleteLocationId(activeLocation.id)}
+                  onLeave={() => handleLeave(activeLocation.id)}
+                />
+              </div>
             </div>
 
             {/* Area grid */}
             {areas.length === 0 && unassignedCount === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-12 text-[var(--text-tertiary)]">
-                <MapPinned className="h-10 w-10 opacity-40" />
-                <p className="text-[13px]">{`No ${t.areas} yet`}</p>
+              <EmptyState
+                icon={MapPinned}
+                title={`No ${t.areas} yet`}
+                subtitle={isAdmin ? `Create ${t.areas} to organize your ${t.bins} by zone` : `This ${t.location} has no ${t.areas} yet`}
+              >
                 {isAdmin && (
                   <Button onClick={() => setCreateAreaOpen(true)} variant="outline" size="sm" className="rounded-[var(--radius-full)]">
                     <Plus className="h-3.5 w-3.5 mr-1.5" />
                     {`Create ${t.Area}`}
                   </Button>
                 )}
-              </div>
+              </EmptyState>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="flex flex-col gap-3">
+                <h2 className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{t.Areas}</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {areas.map((area, index) => (
                   <AreaCard
                     key={area.id}
@@ -270,6 +306,7 @@ export function AreasPage() {
                 {isAdmin && (
                   <CreateAreaCard onCreate={() => setCreateAreaOpen(true)} />
                 )}
+                </div>
               </div>
             )}
           </>
