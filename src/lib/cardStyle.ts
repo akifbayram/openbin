@@ -143,23 +143,20 @@ function renderGradientProps(cardStyle: CardStyle, colorPreset: ColorPreset | un
   };
 }
 
-function renderStripeProps(cardStyle: CardStyle, colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): CardRenderProps {
-  const colorBg = getColorBg(colorPreset);
+function renderStripeProps(cardStyle: CardStyle, colorPreset: ColorPreset | undefined, _theme: 'light' | 'dark'): CardRenderProps {
   const stripePreset = resolveColor(cardStyle.secondaryColor ?? '');
   const stripeResolved = stripePreset?.bgCss ?? colorPreset?.bgCss ?? 'var(--accent)';
   const pos = cardStyle.stripePosition ?? 'left';
   const sw = Number(cardStyle.stripeWidth) || 4;
-  const { primary, muted } = getTextColors(colorPreset, theme);
 
   return {
     className: 'glass-card',
     style: {
       position: 'relative',
       overflow: 'hidden',
-      ...(colorBg ? { backgroundColor: colorBg } : {}),
     },
-    mutedColor: muted,
-    primaryColor: primary,
+    mutedColor: undefined,
+    primaryColor: undefined,
     isPhotoVariant: false,
     stripeBar: { color: stripeResolved, position: pos, width: sw },
   };
