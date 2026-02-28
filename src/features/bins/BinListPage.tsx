@@ -27,6 +27,7 @@ import { ViewModeToggle } from './ViewModeToggle';
 import { useViewMode } from './useViewMode';
 import { useColumnVisibility } from './useColumnVisibility';
 import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
+import { SearchBarOverflowMenu } from './SearchBarOverflowMenu';
 import { usePageSize } from './usePageSize';
 import { BulkActionBar } from './BulkActionBar';
 import { Pagination } from '@/components/ui/pagination';
@@ -178,6 +179,15 @@ export function BinListPage() {
           t={t}
           viewToggle={<ViewModeToggle value={viewMode} onChange={setViewMode} />}
           columnPicker={<ColumnVisibilityMenu applicableFields={applicableFields} visibility={visibility} onToggle={toggleField} />}
+          overflowMenu={
+            <SearchBarOverflowMenu
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              applicableFields={applicableFields}
+              visibility={visibility}
+              onColumnToggle={toggleField}
+            />
+          }
         />
       )}
 

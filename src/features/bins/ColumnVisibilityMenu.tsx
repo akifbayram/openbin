@@ -7,6 +7,30 @@ import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
 import { FIELD_LABELS, type FieldKey } from './useColumnVisibility';
 
+/** Shared field toggle list used by both ColumnVisibilityMenu and SearchBarOverflowMenu */
+export function FieldToggleList({ fields, visibility, onToggle }: {
+  fields: FieldKey[];
+  visibility: Record<FieldKey, boolean>;
+  onToggle: (field: FieldKey) => void;
+}) {
+  return (
+    <>
+      {fields.map((field) => (
+        <label
+          key={field}
+          className="w-full flex items-center justify-between px-3.5 py-2 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
+        >
+          {FIELD_LABELS[field]}
+          <Switch
+            checked={visibility[field]}
+            onCheckedChange={() => onToggle(field)}
+          />
+        </label>
+      ))}
+    </>
+  );
+}
+
 interface ColumnVisibilityMenuProps {
   applicableFields: FieldKey[];
   visibility: Record<FieldKey, boolean>;
@@ -37,18 +61,7 @@ export function ColumnVisibilityMenu({ applicableFields, visibility, onToggle }:
           <div className="px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
             Visible Fields
           </div>
-          {applicableFields.map((field) => (
-            <label
-              key={field}
-              className="w-full flex items-center justify-between px-3.5 py-2 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
-            >
-              {FIELD_LABELS[field]}
-              <Switch
-                checked={visibility[field]}
-                onCheckedChange={() => onToggle(field)}
-              />
-            </label>
-          ))}
+          <FieldToggleList fields={applicableFields} visibility={visibility} onToggle={onToggle} />
         </div>
       )}
     </div>

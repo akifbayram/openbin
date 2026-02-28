@@ -127,9 +127,8 @@ export function OptionGroup<K extends string>({
               segmentRadius,
               padding,
               scrollable ? 'shrink-0' : 'flex-1 min-w-0',
-              iconOnly
-                ? ''
-                : 'flex items-center justify-center gap-1.5',
+              'flex items-center justify-center',
+              !iconOnly && 'gap-1.5',
               active
                 ? 'text-[var(--text-primary)]'
                 : disabled

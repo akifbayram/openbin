@@ -23,6 +23,7 @@ interface BinSearchBarProps {
   t: Terminology;
   viewToggle?: React.ReactNode;
   columnPicker?: React.ReactNode;
+  overflowMenu?: React.ReactNode;
 }
 
 export function BinSearchBar({
@@ -39,6 +40,7 @@ export function BinSearchBar({
   t,
   viewToggle,
   columnPicker,
+  overflowMenu,
 }: BinSearchBarProps) {
   return (
     <div className="flex items-center gap-2.5">
@@ -121,8 +123,11 @@ export function BinSearchBar({
           </button>
         )}
       </div>
-      {viewToggle}
-      {columnPicker}
+      <div className="hidden sm:flex items-center gap-2.5">
+        {viewToggle}
+        {columnPicker}
+      </div>
+      {overflowMenu && <div className="sm:hidden">{overflowMenu}</div>}
       <Tooltip content="Filter" side="bottom">
         <Button
           variant="secondary"
