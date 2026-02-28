@@ -37,6 +37,7 @@ import { BinListSkeleton } from './BinListSkeleton';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useTerminology } from '@/lib/terminology';
+import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { useBulkDialogs } from './useBulkDialogs';
 import { useBulkSelection } from './useBulkSelection';
@@ -70,6 +71,7 @@ export function BinListPage() {
   const { areas } = useAreaList(activeLocationId);
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const { openScanDialog } = useScanDialog();
   const { aiEnabled } = useAiEnabled();
   const [commandOpen, setCommandOpen] = useState(false);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
@@ -123,7 +125,7 @@ export function BinListPage() {
             <div className="flex items-center">
               <Tooltip content="Scan QR code" side="bottom">
                 <Button
-                  onClick={() => navigate('/scan')}
+                  onClick={() => openScanDialog()}
                   size="icon"
                   variant="ghost"
                   className="h-10 w-10 rounded-full"

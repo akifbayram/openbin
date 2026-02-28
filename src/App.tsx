@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { ChevronLeft, AlertCircle } from 'lucide-react';
 import { ToastProvider, useToast } from '@/components/ui/toast';
 import { AuthProvider } from '@/lib/auth';
@@ -10,6 +10,7 @@ import { UserPreferencesProvider } from '@/lib/userPreferences';
 import { NavigationGuardProvider } from '@/lib/navigationGuard';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { Button } from '@/components/ui/button';
+import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 
 const BinListPage = lazyWithRetry(() =>
   import('@/features/bins/BinListPage').then((m) => ({ default: m.BinListPage }))
@@ -24,10 +25,6 @@ const LoginPage = lazyWithRetry(() =>
 
 const RegisterPage = lazyWithRetry(() =>
   import('@/features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage }))
-);
-
-const QRScannerPage = lazyWithRetry(() =>
-  import('@/features/qrcode/QRScannerPage').then((m) => ({ default: m.QRScannerPage }))
 );
 
 const PrintPage = lazyWithRetry(() =>
@@ -158,6 +155,12 @@ function SWUpdateNotifier() {
   return null;
 }
 
+function ScanRedirect() {
+  const { openScanDialog } = useScanDialog();
+  useEffect(() => { openScanDialog(); }, [openScanDialog]);
+  return <Navigate to="/" replace />;
+}
+
 function NotFoundPage() {
   const navigate = useNavigate();
   return (
@@ -235,14 +238,7 @@ export default function App() {
                     </Suspense>
                   }
                 />
-                <Route
-                  path="/scan"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <QRScannerPage />
-                    </Suspense>
-                  }
-                />
+                <Route path="/scan" element={<ScanRedirect />} />
                 <Route
                   path="/print"
                   element={

@@ -60,9 +60,10 @@ interface SidebarContentProps {
   activeLocationId: string | null;
   onLocationChange: (id: string) => void;
   onItemClick?: () => void;
+  onScanClick?: () => void;
 }
 
-export function SidebarContent({ locations, activeLocationId, onLocationChange, onItemClick }: SidebarContentProps) {
+export function SidebarContent({ locations, activeLocationId, onLocationChange, onItemClick, onScanClick }: SidebarContentProps) {
   const location = useLocation();
   const rawNavigate = useNavigate();
   const { guardedNavigate } = useNavigationGuard();
@@ -106,9 +107,20 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
           <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
             Manage
           </p>
-          {manageItems.map((item) => (
-            <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate} onClick={onItemClick} />
-          ))}
+          {manageItems.map((item) =>
+            item.path === '/scan' ? (
+              <NavButton
+                key={item.path}
+                {...item}
+                label={item.label}
+                currentPath={location.pathname}
+                navigate={() => { onScanClick?.(); onItemClick?.(); }}
+                onClick={undefined}
+              />
+            ) : (
+              <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate} onClick={onItemClick} />
+            )
+          )}
         </div>
 
         {/* Spacer bottom */}
@@ -159,12 +171,13 @@ interface SidebarProps {
   locations: LocationType[];
   activeLocationId: string | null;
   onLocationChange: (id: string) => void;
+  onScanClick?: () => void;
 }
 
-export function Sidebar({ locations, activeLocationId, onLocationChange }: SidebarProps) {
+export function Sidebar({ locations, activeLocationId, onLocationChange, onScanClick }: SidebarProps) {
   return (
     <aside aria-label="Main navigation" className="hidden lg:flex flex-col w-[260px] h-dvh fixed left-0 top-0 bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] print-hide">
-      <SidebarContent locations={locations} activeLocationId={activeLocationId} onLocationChange={onLocationChange} />
+      <SidebarContent locations={locations} activeLocationId={activeLocationId} onLocationChange={onLocationChange} onScanClick={onScanClick} />
     </aside>
   );
 }

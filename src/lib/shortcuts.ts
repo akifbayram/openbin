@@ -9,7 +9,7 @@ export interface ShortcutDef {
 export const SHORTCUTS: ShortcutDef[] = [
   { id: 'go-home', label: 'Go to Home', category: 'navigation', keys: 'g h' },
   { id: 'go-bins', label: 'Go to Bins', category: 'navigation', keys: 'g b' },
-  { id: 'go-scan', label: 'Go to Scan', category: 'navigation', keys: 'g s' },
+  { id: 'go-scan', label: 'Scan QR Code', category: 'action', keys: 'g s' },
   { id: 'go-print', label: 'Go to Print', category: 'navigation', keys: 'g p' },
   { id: 'go-locations', label: 'Go to Locations', category: 'navigation', keys: 'g l' },
   { id: 'go-items', label: 'Go to Items', category: 'navigation', keys: 'g i' },

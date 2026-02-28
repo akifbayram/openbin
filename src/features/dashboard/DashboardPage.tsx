@@ -17,6 +17,7 @@ import { buildViewSearchParams } from '@/features/bins/useBinSearchParams';
 import { SavedViewChips } from '@/components/saved-view-chips';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
 import { useTerminology } from '@/lib/terminology';
+import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { useDashboard } from './useDashboard';
 import { BinCard } from '@/features/bins/BinCard';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
@@ -113,6 +114,7 @@ export function DashboardPage() {
   const t = useTerminology();
   const navigate = useNavigate();
   const { activeLocationId } = useAuth();
+  const { openScanDialog } = useScanDialog();
   const { aiEnabled } = useAiEnabled();
   const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, recentlyUpdated, pinnedBins, isLoading } =
     useDashboard();
@@ -160,7 +162,7 @@ export function DashboardPage() {
             <div className="flex items-center">
               <Tooltip content="Scan QR code" side="bottom">
                 <Button
-                  onClick={() => navigate('/scan')}
+                  onClick={() => openScanDialog()}
                   size="icon"
                   variant="ghost"
                   className="h-10 w-10 rounded-full"

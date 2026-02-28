@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,12 @@ import { useNavigationGuard } from '@/lib/navigationGuard';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
 import { PageTransition } from '@/components/page-transition';
+import { ScanDialogContext } from '@/features/qrcode/ScanDialogContext';
+
+const ScanDialog = React.lazy(() =>
+  import('@/features/qrcode/ScanDialog').then((m) => ({ default: m.ScanDialog })),
+);
+
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -32,6 +38,8 @@ export function AppLayout() {
   const [dismissed, setDismissed] = useState(() => localStorage.getItem('openbin-install-dismissed') === '1');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
+  const openScanDialog = useCallback(() => setScanDialogOpen(true), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const rawNavigate = useNavigate();
   const location = useLocation();
@@ -49,7 +57,7 @@ export function AppLayout() {
   const shortcutActions = useMemo<Record<string, () => void>>(() => ({
     'go-home': () => navigate('/'),
     'go-bins': () => navigate('/bins'),
-    'go-scan': () => navigate('/scan'),
+    'go-scan': openScanDialog,
     'go-print': () => navigate('/print'),
     'go-locations': () => navigate('/locations'),
     'go-items': () => navigate('/items'),
@@ -62,7 +70,7 @@ export function AppLayout() {
     },
     'command-palette': () => setCommandPaletteOpen(true),
     'shortcuts-help': () => setShortcutsHelpOpen(true),
-  }), [navigate]);
+  }), [navigate, openScanDialog]);
 
   useKeyboardShortcuts({ actions: shortcutActions, enabled: !onboarding.isOnboarding });
 
@@ -117,7 +125,7 @@ export function AppLayout() {
       >
         Skip to main content
       </a>
-      <Sidebar locations={locations} activeLocationId={activeLocationId} onLocationChange={setActiveLocationId} />
+      <Sidebar locations={locations} activeLocationId={activeLocationId} onLocationChange={setActiveLocationId} onScanClick={openScanDialog} />
 
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
         <SidebarContent
@@ -125,9 +133,11 @@ export function AppLayout() {
           activeLocationId={activeLocationId}
           onLocationChange={setActiveLocationId}
           onItemClick={() => setDrawerOpen(false)}
+          onScanClick={openScanDialog}
         />
       </MobileDrawer>
 
+      <ScanDialogContext.Provider value={{ openScanDialog }}>
       <DrawerProvider isOnboarding={onboarding.isOnboarding} onOpen={() => setDrawerOpen(true)}>
       <main id="main-content" className="lg:ml-[260px] pt-[var(--safe-top)] lg:pt-[var(--safe-top)] pb-[calc(16px+var(--safe-bottom))] lg:pb-8">
         <div className="mx-auto w-full max-w-7xl">
@@ -137,12 +147,18 @@ export function AppLayout() {
         </div>
       </main>
       </DrawerProvider>
+      </ScanDialogContext.Provider>
       <CommandPalette
         open={commandPaletteOpen}
         onOpenChange={setCommandPaletteOpen}
         onAction={(id) => shortcutActions[id]?.()}
       />
       <ShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
+      {scanDialogOpen && (
+        <Suspense fallback={null}>
+          <ScanDialog open={scanDialogOpen} onOpenChange={setScanDialogOpen} />
+        </Suspense>
+      )}
       {/* PWA install toast — fixed bottom-left (mobile) / bottom-right (desktop) */}
       {installPrompt && !dismissed && (
         <div className="fixed z-40 bottom-[calc(16px+var(--safe-bottom))] lg:bottom-6 left-4 right-4 lg:left-auto lg:right-6 lg:w-[360px] glass-heavy rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 shadow-lg fade-in-fast">
