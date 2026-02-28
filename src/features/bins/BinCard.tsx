@@ -11,6 +11,7 @@ import { computeBinCardStyles } from './binCardStyles';
 import { useBinCardInteraction } from './useBinCardInteraction';
 import { areCommonBinCardPropsEqual } from './binMemoUtils';
 import type { Bin } from '@/types';
+import type { FieldKey } from './useColumnVisibility';
 
 interface BinCardProps {
   bin: Bin;
@@ -20,9 +21,10 @@ interface BinCardProps {
   selected?: boolean;
   onSelect?: (id: string, index: number, shiftKey: boolean) => void;
   searchQuery?: string;
+  isVisible?: (field: FieldKey) => boolean;
 }
 
-export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick, selectable, selected, onSelect, searchQuery = '' }: BinCardProps) {
+export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick, selectable, selected, onSelect, searchQuery = '', isVisible }: BinCardProps) {
   const { theme } = useTheme();
   const getTagStyle = useTagStyle();
   const BinIcon = resolveIcon(bin.icon);
@@ -130,7 +132,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
             />
           )}
         </h3>
-        {bin.area_name && (
+        {isVisible?.('area') !== false && bin.area_name && (
           <p
             className="text-[12px] text-[var(--text-tertiary)] truncate leading-relaxed"
             style={secondaryStyle}
@@ -138,7 +140,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
             <Highlight text={bin.area_name} query={searchQuery} />
           </p>
         )}
-        {bin.items.length > 0 && (
+        {isVisible?.('items') !== false && bin.items.length > 0 && (
           <p
             className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed"
             style={secondaryStyle}
@@ -146,7 +148,15 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
             <Highlight text={bin.items.map(i => i.name).join(', ')} query={searchQuery} />
           </p>
         )}
-        {bin.tags.length > 0 && (
+        {isVisible?.('notes') && bin.notes && (
+          <p
+            className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed italic"
+            style={secondaryStyle}
+          >
+            <Highlight text={bin.notes} query={searchQuery} />
+          </p>
+        )}
+        {isVisible?.('tags') !== false && bin.tags.length > 0 && (
           <div ref={tagsRef} className="flex flex-nowrap gap-1.5 mt-2 overflow-hidden items-center">
             {displayedTags.map((tag) => (
               <Badge
@@ -189,10 +199,12 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           onClick={handleCheckboxClick}
         >
           {/* Default icon — fades out on hover (hover:hover targets pointer devices only) */}
-          <BinIcon
-            className="absolute inset-0 h-5 w-5 text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
-            style={iconStyle}
-          />
+          {isVisible?.('icon') !== false && (
+            <BinIcon
+              className="absolute inset-0 h-5 w-5 text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
+              style={iconStyle}
+            />
+          )}
           {/* Checkbox — hidden by default, revealed on hover for pointer devices */}
           <div
             className={cn(
@@ -204,12 +216,12 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
             />
           </div>
         </div>
-      ) : (
+      ) : isVisible?.('icon') !== false ? (
         <BinIcon
           className="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-tertiary)]"
           style={iconStyle}
         />
-      )}
+      ) : null}
     </div>
   );
 

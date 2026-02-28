@@ -9,6 +9,7 @@ import { computeBinCardStyles } from './binCardStyles';
 import { useBinCardInteraction } from './useBinCardInteraction';
 import { areCommonBinCardPropsEqual } from './binMemoUtils';
 import type { Bin } from '@/types';
+import type { FieldKey } from './useColumnVisibility';
 
 interface BinCompactCardProps {
   bin: Bin;
@@ -18,6 +19,7 @@ interface BinCompactCardProps {
   selected?: boolean;
   onSelect?: (id: string, index: number, shiftKey: boolean) => void;
   searchQuery?: string;
+  isVisible?: (field: FieldKey) => boolean;
 }
 
 export const BinCompactCard = React.memo(function BinCompactCard({
@@ -27,6 +29,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
   selected,
   onSelect,
   searchQuery = '',
+  isVisible,
 }: BinCompactCardProps) {
   const { theme } = useTheme();
   const BinIcon = resolveIcon(bin.icon);
@@ -62,6 +65,11 @@ export const BinCompactCard = React.memo(function BinCompactCard({
             <Lock className="h-3 w-3 shrink-0 text-[var(--text-tertiary)]" style={secondaryStyle} />
           )}
         </h3>
+        {isVisible?.('area') && bin.area_name && (
+          <p className="text-[11px] text-[var(--text-tertiary)] truncate leading-relaxed" style={secondaryStyle}>
+            <Highlight text={bin.area_name} query={searchQuery} />
+          </p>
+        )}
       </div>
 
       {/* Icon / checkbox */}
@@ -72,19 +80,21 @@ export const BinCompactCard = React.memo(function BinCompactCard({
           className="relative mt-0.5 h-5 w-5 shrink-0"
           onClick={(e) => { e.stopPropagation(); onSelect(bin.id, index, e.shiftKey); }}
         >
-          <BinIcon
-            className="absolute inset-0 h-5 w-5 text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
-            style={iconStyle}
-          />
+          {isVisible?.('icon') !== false && (
+            <BinIcon
+              className="absolute inset-0 h-5 w-5 text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
+              style={iconStyle}
+            />
+          )}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100">
             <div className="h-5 w-5 rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center"
               style={secondaryBorderStyle}
             />
           </div>
         </div>
-      ) : (
+      ) : isVisible?.('icon') !== false ? (
         <BinIcon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-tertiary)]" style={iconStyle} />
-      )}
+      ) : null}
     </div>
   );
 

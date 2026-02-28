@@ -13,6 +13,7 @@ import { useBinCardInteraction } from './useBinCardInteraction';
 import { areCommonBinCardPropsEqual } from './binMemoUtils';
 import type { Bin } from '@/types';
 import type { SortOption } from './useBins';
+import type { FieldKey } from './useColumnVisibility';
 
 interface BinTableViewProps {
   bins: Bin[];
@@ -25,6 +26,7 @@ interface BinTableViewProps {
   searchQuery: string;
   onTagClick: (tag: string) => void;
   onSelectAll?: () => void;
+  isVisible?: (field: FieldKey) => boolean;
 }
 
 export function BinTableView({
@@ -38,6 +40,7 @@ export function BinTableView({
   searchQuery,
   onTagClick,
   onSelectAll,
+  isVisible,
 }: BinTableViewProps) {
   const allSelected = bins.length > 0 && bins.every((b) => selectedIds.has(b.id));
 
@@ -61,10 +64,27 @@ export function BinTableView({
           )}
         </div>
         <SortHeader label="Name" column="name" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="flex-[2]" />
-        <SortHeader label="Area" column="area" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="hidden md:flex flex-1" />
-        <span className="hidden lg:block flex-[1.5] text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Items</span>
-        <span className="hidden sm:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Tags</span>
-        <SortHeader label="Updated" column="updated" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} defaultDirection="desc" className="w-20 justify-end" />
+        {isVisible?.('area') !== false && (
+          <SortHeader label="Area" column="area" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="hidden md:flex flex-1" />
+        )}
+        {isVisible?.('items') !== false && (
+          <span className="hidden lg:block flex-[1.5] text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Items</span>
+        )}
+        {isVisible?.('tags') !== false && (
+          <span className="hidden sm:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Tags</span>
+        )}
+        {isVisible?.('notes') && (
+          <span className="hidden lg:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Notes</span>
+        )}
+        {isVisible?.('createdBy') && (
+          <span className="hidden md:block w-24 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Created By</span>
+        )}
+        {isVisible?.('created') && (
+          <SortHeader label="Created" column="created" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} defaultDirection="desc" className="w-20 justify-end" />
+        )}
+        {isVisible?.('updated') !== false && (
+          <SortHeader label="Updated" column="updated" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} defaultDirection="desc" className="w-20 justify-end" />
+        )}
       </TableHeader>
 
       {/* Rows */}
@@ -78,6 +98,7 @@ export function BinTableView({
           onSelect={onSelect}
           searchQuery={searchQuery}
           onTagClick={onTagClick}
+          isVisible={isVisible}
         />
       ))}
     </Table>
@@ -92,6 +113,7 @@ interface BinTableRowProps {
   onSelect: (id: string, index: number, shiftKey: boolean) => void;
   searchQuery: string;
   onTagClick: (tag: string) => void;
+  isVisible?: (field: FieldKey) => boolean;
 }
 
 const BinTableRow = React.memo(function BinTableRow({
@@ -102,6 +124,7 @@ const BinTableRow = React.memo(function BinTableRow({
   onSelect,
   searchQuery,
   onTagClick,
+  isVisible,
 }: BinTableRowProps) {
   const getTagStyle = useTagStyle();
   const BinIcon = resolveIcon(bin.icon);
@@ -156,7 +179,9 @@ const BinTableRow = React.memo(function BinTableRow({
 
       {/* Name (with icon) */}
       <div className="flex-[2] min-w-0 flex items-center gap-2">
-        <BinIcon className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+        {isVisible?.('icon') !== false && (
+          <BinIcon className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+        )}
         <span className="truncate font-medium text-[14px] text-[var(--text-primary)]">
           <Highlight text={bin.name} query={searchQuery} />
         </span>
@@ -166,47 +191,80 @@ const BinTableRow = React.memo(function BinTableRow({
       </div>
 
       {/* Area */}
-      <div className="hidden md:block flex-1 min-w-0">
-        {bin.area_name && (
-          <Badge variant="outline" className="text-[11px] truncate max-w-full">
-            <Highlight text={bin.area_name} query={searchQuery} />
-          </Badge>
-        )}
-      </div>
+      {isVisible?.('area') !== false && (
+        <div className="hidden md:block flex-1 min-w-0">
+          {bin.area_name && (
+            <Badge variant="outline" className="text-[11px] truncate max-w-full">
+              <Highlight text={bin.area_name} query={searchQuery} />
+            </Badge>
+          )}
+        </div>
+      )}
 
       {/* Items */}
-      <div className="hidden lg:block flex-[1.5] min-w-0">
-        {bin.items.length > 0 && (
-          <span className="text-[12px] text-[var(--text-tertiary)] truncate block">
-            <Highlight text={bin.items.map((i) => i.name).join(', ')} query={searchQuery} />
-          </span>
-        )}
-      </div>
+      {isVisible?.('items') !== false && (
+        <div className="hidden lg:block flex-[1.5] min-w-0">
+          {bin.items.length > 0 && (
+            <span className="text-[12px] text-[var(--text-tertiary)] truncate block">
+              <Highlight text={bin.items.map((i) => i.name).join(', ')} query={searchQuery} />
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Tags */}
-      <div className="hidden sm:flex flex-1 items-center gap-1 min-w-0 overflow-hidden">
-        {displayedTags.map((tag) => (
-          <Badge
-            key={tag}
-            variant="secondary"
-            className="shrink-0 max-w-[5rem] truncate text-[11px] cursor-pointer hover:bg-[var(--bg-active)] transition-colors"
-            style={getTagStyle(tag)}
-            onClick={(e) => { e.stopPropagation(); if (!selectable) onTagClick(tag); }}
-          >
-            {tag}
-          </Badge>
-        ))}
-        {hiddenTagCount > 0 && (
-          <Badge variant="secondary" className="shrink-0 text-[11px] opacity-70">
-            +{hiddenTagCount}
-          </Badge>
-        )}
-      </div>
+      {isVisible?.('tags') !== false && (
+        <div className="hidden sm:flex flex-1 items-center gap-1 min-w-0 overflow-hidden">
+          {displayedTags.map((tag) => (
+            <Badge
+              key={tag}
+              variant="secondary"
+              className="shrink-0 max-w-[5rem] truncate text-[11px] cursor-pointer hover:bg-[var(--bg-active)] transition-colors"
+              style={getTagStyle(tag)}
+              onClick={(e) => { e.stopPropagation(); if (!selectable) onTagClick(tag); }}
+            >
+              {tag}
+            </Badge>
+          ))}
+          {hiddenTagCount > 0 && (
+            <Badge variant="secondary" className="shrink-0 text-[11px] opacity-70">
+              +{hiddenTagCount}
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {/* Notes */}
+      {isVisible?.('notes') && (
+        <div className="hidden lg:block flex-1 min-w-0">
+          {bin.notes && (
+            <span className="text-[12px] text-[var(--text-tertiary)] truncate block italic">
+              {bin.notes}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Created By */}
+      {isVisible?.('createdBy') && (
+        <span className="hidden md:block w-24 shrink-0 text-[12px] text-[var(--text-tertiary)] truncate">
+          {bin.created_by_name}
+        </span>
+      )}
+
+      {/* Created */}
+      {isVisible?.('created') && (
+        <span className="w-20 shrink-0 text-[12px] text-[var(--text-tertiary)] text-right">
+          {formatDate(bin.created_at)}
+        </span>
+      )}
 
       {/* Updated */}
-      <span className="w-20 shrink-0 text-[12px] text-[var(--text-tertiary)] text-right">
-        {formatDate(bin.updated_at)}
-      </span>
+      {isVisible?.('updated') !== false && (
+        <span className="w-20 shrink-0 text-[12px] text-[var(--text-tertiary)] text-right">
+          {formatDate(bin.updated_at)}
+        </span>
+      )}
     </BaseTableRow>
   );
 }, (prev, next) => {

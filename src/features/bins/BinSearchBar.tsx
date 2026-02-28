@@ -22,6 +22,7 @@ interface BinSearchBarProps {
   onOpenFilter: () => void;
   t: Terminology;
   viewToggle?: React.ReactNode;
+  columnPicker?: React.ReactNode;
 }
 
 export function BinSearchBar({
@@ -37,6 +38,7 @@ export function BinSearchBar({
   onOpenFilter,
   t,
   viewToggle,
+  columnPicker,
 }: BinSearchBarProps) {
   return (
     <div className="flex items-center gap-2.5">
@@ -120,6 +122,7 @@ export function BinSearchBar({
         )}
       </div>
       {viewToggle}
+      {columnPicker}
       <Tooltip content="Filter" side="bottom">
         <Button
           variant="secondary"

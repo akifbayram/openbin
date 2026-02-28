@@ -4,4 +4,5 @@ export const STORAGE_KEYS = {
   BIN_SORT: 'openbin-bin-sort',
   BIN_VIEW: 'openbin-bin-view',
   BIN_PAGE_SIZE: 'openbin-bin-page-size',
+  COLUMN_VISIBILITY: 'openbin-column-visibility',
 } as const;

@@ -220,17 +220,17 @@ export function AreasPage() {
             {/* Location info card */}
             <div className="glass-card rounded-[var(--radius-lg)] p-4 animate-fade-in-up">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3 min-w-0 overflow-hidden">
+                  <div className="flex items-center gap-2 shrink-0">
                     <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium px-2 py-1 rounded-[var(--radius-full)] ${isAdmin ? 'bg-[var(--accent)]/10 text-[var(--accent)]' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}>
                       {isAdmin ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
                       {isAdmin ? 'Admin' : 'Member'}
                     </span>
                   </div>
-                  <span className="text-[var(--text-tertiary)] opacity-30">&middot;</span>
+                  <span className="text-[var(--text-tertiary)] opacity-30 shrink-0">&middot;</span>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0"
                     onClick={() => setMembersLocationId(activeLocation.id)}
                   >
                     <Users className="h-3.5 w-3.5" />
@@ -239,17 +239,17 @@ export function AreasPage() {
                   </button>
                   {activeLocation.invite_code && isAdmin && (
                     <>
-                      <span className="text-[var(--text-tertiary)] opacity-30">&middot;</span>
+                      <span className="text-[var(--text-tertiary)] opacity-30 shrink-0">&middot;</span>
                       <button
                         type="button"
                         onClick={handleCopyInvite}
-                        className="inline-flex items-center gap-1.5 text-[13px] font-mono text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 text-[13px] font-mono text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer min-w-0"
                         title="Copy invite code"
                       >
                         {copied
-                          ? <Check className="h-3.5 w-3.5 text-green-500" />
-                          : <Copy className="h-3.5 w-3.5" />}
-                        <span className="truncate max-w-[120px]">{activeLocation.invite_code}</span>
+                          ? <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                          : <Copy className="h-3.5 w-3.5 shrink-0" />}
+                        <span className="truncate">{activeLocation.invite_code}</span>
                       </button>
                     </>
                   )}

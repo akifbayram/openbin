@@ -49,7 +49,7 @@ export function PrintPage() {
   return (
     <>
       <div className="page-content print-hide max-w-6xl">
-        <PageHeader title="Print" className="mb-4" />
+        <PageHeader title="Print" />
 
         <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
         {/* Left column — settings */}

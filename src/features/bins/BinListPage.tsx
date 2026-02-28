@@ -25,6 +25,8 @@ import { BinTableView } from './BinTableView';
 import { BinSearchBar } from './BinSearchBar';
 import { ViewModeToggle } from './ViewModeToggle';
 import { useViewMode } from './useViewMode';
+import { useColumnVisibility } from './useColumnVisibility';
+import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
 import { usePageSize } from './usePageSize';
 import { BulkActionBar } from './BulkActionBar';
 import { Pagination } from '@/components/ui/pagination';
@@ -73,6 +75,7 @@ export function BinListPage() {
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const getTagStyle = useTagStyle();
   const { viewMode, setViewMode } = useViewMode();
+  const { visibility, toggleField, applicableFields, isVisible } = useColumnVisibility(viewMode);
   const hasBadges = activeCount > 0 || !!filters.needsOrganizing;
 
   const bulk = useBulkDialogs();
@@ -172,6 +175,7 @@ export function BinListPage() {
           onOpenFilter={() => setFilterOpen(true)}
           t={t}
           viewToggle={<ViewModeToggle value={viewMode} onChange={setViewMode} />}
+          columnPicker={<ColumnVisibilityMenu applicableFields={applicableFields} visibility={visibility} onToggle={toggleField} />}
         />
       )}
 
@@ -220,6 +224,7 @@ export function BinListPage() {
                     selected={selectedIds.has(bin.id)}
                     onSelect={toggleSelect}
                     searchQuery={debouncedSearch}
+                    isVisible={isVisible}
                   />
                 ))}
               </div>
@@ -237,6 +242,7 @@ export function BinListPage() {
                 onSelect={toggleSelect}
                 searchQuery={debouncedSearch}
                 onTagClick={handleTagClick}
+                isVisible={isVisible}
               />
               <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalCount={totalCount} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={setPageSize} itemLabel={t.bins} />
             </div>
@@ -253,6 +259,7 @@ export function BinListPage() {
                     selected={selectedIds.has(bin.id)}
                     onSelect={toggleSelect}
                     searchQuery={debouncedSearch}
+                    isVisible={isVisible}
                   />
                 ))}
               </div>
