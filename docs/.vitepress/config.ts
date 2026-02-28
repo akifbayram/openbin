@@ -100,6 +100,7 @@ export default defineConfig({
       ]
     },
     socialLinks: [
+      { icon: 'discord', link: 'https://discord.gg/hFjrCCut' },
       { icon: 'github', link: 'https://github.com/akifbayram/openbin' }
     ],
     search: {

@@ -14,7 +14,7 @@ Uncomment only the lines you need to change. The file is loaded automatically by
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HOST_PORT` | `1453` | Externally-exposed port that maps to the container's internal port 3000. Change this to run OpenBin on a different host port. |
+| `HOST_PORT` | `1453` | Externally-exposed port that maps to the container's internal port. Change this to run OpenBin on a different host port. |
 
 ---
 
@@ -22,7 +22,7 @@ Uncomment only the lines you need to change. The file is loaded automatically by
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `3000` | Internal Express server port. Rarely needs changing unless you have a port conflict inside the container. |
+| `PORT` | `1453` | Internal Express server port. Rarely needs changing unless you have a port conflict inside the container. |
 
 ---
 

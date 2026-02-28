@@ -29,5 +29,5 @@ COPY --chown=node:node server/schema.sql ./schema.sql
 COPY --chown=node:node --from=frontend-builder /app/dist ./public
 RUN mkdir -p /data/photos /data/backups && chown -R node:node /data
 USER node
-EXPOSE 3000
+EXPOSE 1453
 CMD ["node", "dist/start.js"]

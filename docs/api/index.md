@@ -12,7 +12,7 @@ OpenBin exposes a REST API under `/api`. The full OpenAPI 3.0 spec is at
 | Environment | URL |
 |---|---|
 | Docker (default) | `http://localhost:1453/api` |
-| Local development | `http://localhost:3000/api` |
+| Local development | `http://localhost:1453/api` |
 | Production | `https://your-domain.com/api` |
 
 ## Authentication

@@ -17,7 +17,7 @@ if (!apiKey) {
   process.exit(1);
 }
 
-const apiUrl = process.env.OPENBIN_API_URL || "http://localhost:3000";
+const apiUrl = process.env.OPENBIN_API_URL || "http://localhost:1453";
 const api = new ApiClient(apiUrl, apiKey);
 
 const server = new McpServer({

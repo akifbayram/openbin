@@ -84,10 +84,10 @@ Use an absolute path in the `args` array for Claude Desktop. Relative paths work
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `OPENBIN_API_KEY` | Yes | -- | API key for authentication (starts with `sk_openbin_...`) |
-| `OPENBIN_API_URL` | No | `http://localhost:3000` | Base URL of your OpenBin server |
+| `OPENBIN_API_URL` | No | `http://localhost:1453` | Base URL of your OpenBin server |
 
 ::: info
-If you run OpenBin via Docker with the default `docker-compose.yml`, the external port is typically `1453`. Set `OPENBIN_API_URL` to `http://localhost:1453` in that case. If the MCP server runs inside the same Docker network, use `http://openbin:3000` instead.
+The default port is `1453` for both Docker and local development. If the MCP server runs inside the same Docker network, use `http://openbin:1453` instead.
 :::
 
 ### 4. Verify connection
@@ -298,7 +298,7 @@ The OpenBin server is not running or the URL is wrong. Verify:
 
 1. OpenBin is running (`docker compose ps` or check `http://localhost:1453` in a browser)
 2. `OPENBIN_API_URL` matches the actual server address and port
-3. If running in Docker, ensure the MCP server can reach the container (use `http://localhost:1453` from the host, or `http://openbin:3000` from within the Docker network)
+3. If running in Docker, ensure the MCP server can reach the container (use `http://localhost:1453` from the host, or `http://openbin:1453` from within the Docker network)
 
 ### "FORBIDDEN" or "UNAUTHORIZED" errors
 

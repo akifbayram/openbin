@@ -58,7 +58,7 @@ cd server && npm install    # Install server dependencies
 ```
 
 ```bash
-cd server && npm run dev   # API server at http://localhost:3000
+cd server && npm run dev   # API server at http://localhost:1453
 npm run dev                 # Frontend dev server at http://localhost:5173
 ```
 
@@ -68,7 +68,7 @@ Optional. Set environment variables or create a `.env` file to override defaults
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PORT` | Express server port | `3000` |
+| `PORT` | Express server port | `1453` |
 | `HOST_PORT` | Docker external port | `1453` |
 | `DATABASE_PATH` | SQLite database file path | `./data/openbin.db` |
 | `PHOTO_STORAGE_PATH` | Photo upload directory | `./data/photos` |

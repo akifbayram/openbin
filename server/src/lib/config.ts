@@ -34,7 +34,7 @@ export const config = Object.freeze({
   // Database & storage
   databasePath: process.env.DATABASE_PATH || './data/openbin.db',
   photoStoragePath,
-  port: parseInt(process.env.PORT || '3000', 10),
+  port: parseInt(process.env.PORT || '1453', 10),
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
 
   // Auth

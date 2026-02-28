@@ -26,7 +26,7 @@ Open two terminal windows.
 cd server && npm run dev
 ```
 
-The Express API starts at `http://localhost:3000`.
+The Express API starts at `http://localhost:1453`.
 
 **Terminal 2 — Frontend dev server:**
 
@@ -37,7 +37,7 @@ npm run dev
 The Vite dev server starts at `http://localhost:5173`. Open this address in your browser.
 
 ::: info How the proxy works
-The Vite dev server proxies all `/api` requests to `http://localhost:3000` automatically. You only ever open `http://localhost:5173` in your browser during development.
+The Vite dev server proxies all `/api` requests to `http://localhost:1453` automatically. You only ever open `http://localhost:5173` in your browser during development.
 :::
 
 ## Environment Variables
@@ -54,7 +54,7 @@ Key variables for local development:
 |----------|---------|-------|
 | `DATABASE_PATH` | `./data/openbin.db` | SQLite file path; created automatically on first run |
 | `CORS_ORIGIN` | `http://localhost:5173` | Must match the Vite dev server URL |
-| `PORT` | `3000` | Express server port |
+| `PORT` | `1453` | Express server port |
 | `REGISTRATION_ENABLED` | `true` | Set to `false` to lock sign-ups |
 
 ::: tip
