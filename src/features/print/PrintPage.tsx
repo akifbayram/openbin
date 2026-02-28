@@ -12,49 +12,13 @@ import { PreviewPanel } from './PreviewPanel';
 
 export function PrintPage() {
   const {
-    allBins,
-    areas,
-    isLoading,
-    selectedIds,
-    selectedBins,
-    toggleBin,
-    selectAll,
-    selectNone,
-    selectByArea,
-    formatKey,
-    baseFormat,
-    effectiveOrientation,
-    customState,
-    displayUnit,
-    savedPresets,
-    formatSearch,
-    setFormatSearch,
-    handleFormatChange,
-    toggleCustomize,
-    updateOverride,
-    getOverrideValue,
-    toggleOrientation,
-    updateDisplayUnit,
-    presetName,
-    setPresetName,
-    showSaveInput,
-    setShowSaveInput,
-    handleSavePreset,
-    handleDeletePreset,
-    labelOptions,
-    handleUpdateLabelOption,
-    qrStyle,
-    handleUpdateQrStyle,
-    qrStyleExpanded,
-    setQrStyleExpanded,
-    binsExpanded,
-    setBinsExpanded,
-    formatExpanded,
-    setFormatExpanded,
-    optionsExpanded,
-    setOptionsExpanded,
-    pdfLoading,
-    handleDownloadPDF,
+    allBins, areas, isLoading,
+    selection,
+    format,
+    labelOptions, handleUpdateLabelOption,
+    qrStyle, handleUpdateQrStyle,
+    ui,
+    pdfLoading, handleDownloadPDF,
     labelSheetProps,
   } = usePrintPageActions();
 
@@ -93,59 +57,40 @@ export function PrintPage() {
           <BinSelectorCard
             allBins={allBins}
             areas={areas}
-            selectedIds={selectedIds}
-            toggleBin={toggleBin}
-            selectAll={selectAll}
-            selectNone={selectNone}
-            selectByArea={selectByArea}
-            expanded={binsExpanded}
-            onExpandedChange={setBinsExpanded}
+            selectedIds={selection.selectedIds}
+            toggleBin={selection.toggleBin}
+            selectAll={selection.selectAll}
+            selectNone={selection.selectNone}
+            selectByArea={selection.selectByArea}
+            expanded={ui.binsExpanded}
+            onExpandedChange={ui.setBinsExpanded}
           />
 
           <LabelFormatCard
-            formatKey={formatKey}
-            baseFormat={baseFormat}
-            effectiveOrientation={effectiveOrientation}
-            customState={customState}
-            displayUnit={displayUnit}
-            savedPresets={savedPresets}
-            formatSearch={formatSearch}
-            setFormatSearch={setFormatSearch}
-            handleFormatChange={handleFormatChange}
-            toggleCustomize={toggleCustomize}
-            updateOverride={updateOverride}
-            getOverrideValue={getOverrideValue}
-            toggleOrientation={toggleOrientation}
-            updateDisplayUnit={updateDisplayUnit}
-            presetName={presetName}
-            setPresetName={setPresetName}
-            showSaveInput={showSaveInput}
-            setShowSaveInput={setShowSaveInput}
-            handleSavePreset={handleSavePreset}
-            handleDeletePreset={handleDeletePreset}
-            expanded={formatExpanded}
-            onExpandedChange={setFormatExpanded}
+            format={format}
+            expanded={ui.formatExpanded}
+            onExpandedChange={ui.setFormatExpanded}
           />
 
           <LabelOptionsCard
             labelOptions={labelOptions}
             onUpdateOption={handleUpdateLabelOption}
-            expanded={optionsExpanded}
-            onExpandedChange={setOptionsExpanded}
+            expanded={ui.optionsExpanded}
+            onExpandedChange={ui.setOptionsExpanded}
           />
 
           <QrStyleCard
             qrStyle={qrStyle}
             onUpdateStyle={handleUpdateQrStyle}
-            expanded={qrStyleExpanded}
-            onExpandedChange={setQrStyleExpanded}
+            expanded={ui.qrStyleExpanded}
+            onExpandedChange={ui.setQrStyleExpanded}
           />
         </div>
 
         {/* Right column — preview (sticky on desktop) */}
         <div className="lg:sticky lg:top-6 flex flex-col gap-4">
           <PreviewPanel
-            selectedBins={selectedBins}
+            selectedBins={selection.selectedBins}
             pdfLoading={pdfLoading}
             onDownloadPDF={handleDownloadPDF}
             labelSheetProps={labelSheetProps}

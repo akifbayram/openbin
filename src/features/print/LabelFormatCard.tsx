@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical, Search, LayoutGrid } from 'lucide-react';
 import { OptionGroup } from '@/components/ui/option-group';
 import { Button } from '@/components/ui/button';
@@ -9,58 +10,25 @@ import { cn } from '@/lib/utils';
 import { computeLabelsPerPage, filterLabelFormats } from './labelFormats';
 import { inchesToMm } from './pdfUnits';
 import { CUSTOM_FIELDS } from './usePrintPageActions';
-import type { LabelFormat } from './labelFormats';
-import type { CustomState, DisplayUnit } from './usePrintSettings';
+import type { FormatState } from './usePrintPageActions';
 
 interface LabelFormatCardProps {
-  formatKey: string;
-  baseFormat: LabelFormat;
-  effectiveOrientation: 'landscape' | 'portrait';
-  customState: CustomState;
-  displayUnit: DisplayUnit;
-  savedPresets: LabelFormat[];
-  formatSearch: string;
-  setFormatSearch: (v: string) => void;
-  handleFormatChange: (key: string) => void;
-  toggleCustomize: () => void;
-  updateOverride: (key: keyof LabelFormat, raw: string) => void;
-  getOverrideValue: (key: keyof LabelFormat) => string;
-  toggleOrientation: () => void;
-  updateDisplayUnit: (unit: DisplayUnit) => void;
-  presetName: string;
-  setPresetName: (v: string) => void;
-  showSaveInput: boolean;
-  setShowSaveInput: (v: boolean) => void;
-  handleSavePreset: () => void;
-  handleDeletePreset: (key: string) => void;
+  format: FormatState;
   expanded: boolean;
   onExpandedChange: (v: boolean) => void;
 }
 
-export function LabelFormatCard({
-  formatKey,
-  baseFormat,
-  effectiveOrientation,
-  customState,
-  displayUnit,
-  savedPresets,
-  formatSearch,
-  setFormatSearch,
-  handleFormatChange,
-  toggleCustomize,
-  updateOverride,
-  getOverrideValue,
-  toggleOrientation,
-  updateDisplayUnit,
-  presetName,
-  setPresetName,
-  showSaveInput,
-  setShowSaveInput,
-  handleSavePreset,
-  handleDeletePreset,
-  expanded,
-  onExpandedChange,
-}: LabelFormatCardProps) {
+export function LabelFormatCard({ format: f, expanded, onExpandedChange }: LabelFormatCardProps) {
+  const [formatSearch, setFormatSearch] = useState('');
+  const [presetName, setPresetName] = useState('');
+  const [showSaveInput, setShowSaveInput] = useState(false);
+
+  function handleSave() {
+    f.handleSavePreset(presetName);
+    setPresetName('');
+    setShowSaveInput(false);
+  }
+
   return (
     <Card>
       <CardContent>
@@ -72,7 +40,7 @@ export function LabelFormatCard({
             <LayoutGrid className="h-4 w-4 text-[var(--text-tertiary)]" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Format</Label>
             {!expanded && (
-              <span className="text-[13px] text-[var(--text-tertiary)]">({baseFormat.name})</span>
+              <span className="text-[13px] text-[var(--text-tertiary)]">({f.baseFormat.name})</span>
             )}
           </div>
           <ChevronDown className={cn(
@@ -111,9 +79,9 @@ export function LabelFormatCard({
                     <button
                       key={fmt.key}
                       className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
-                      onClick={() => handleFormatChange(fmt.key)}
+                      onClick={() => f.handleFormatChange(fmt.key)}
                     >
-                      {formatKey === fmt.key ? (
+                      {f.formatKey === fmt.key ? (
                         <CheckCircle2 className="h-[20px] w-[20px] text-[var(--accent)] shrink-0" />
                       ) : (
                         <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
@@ -134,16 +102,16 @@ export function LabelFormatCard({
               );
             })()}
 
-            {savedPresets.length > 0 && (
+            {f.savedPresets.length > 0 && (
               <div className="space-y-1 mt-2 pt-2 border-t border-[var(--border-subtle)]">
                 <span className="text-[12px] text-[var(--text-tertiary)] font-medium px-3">Saved Presets</span>
-                {savedPresets.map((fmt) => (
+                {f.savedPresets.map((fmt) => (
                   <div key={fmt.key} className="flex items-center group">
                     <button
                       className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 flex-1 min-w-0 text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
-                      onClick={() => handleFormatChange(fmt.key)}
+                      onClick={() => f.handleFormatChange(fmt.key)}
                     >
-                      {formatKey === fmt.key ? (
+                      {f.formatKey === fmt.key ? (
                         <CheckCircle2 className="h-[20px] w-[20px] text-[var(--accent)] shrink-0" />
                       ) : (
                         <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
@@ -151,7 +119,7 @@ export function LabelFormatCard({
                       <div className="min-w-0 truncate">
                         <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
                         <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
-                          {displayUnit === 'mm'
+                          {f.displayUnit === 'mm'
                             ? `${inchesToMm(parseFloat(String(fmt.cellWidth).replace(/in$/, '')))}mm × ${inchesToMm(parseFloat(String(fmt.cellHeight).replace(/in$/, '')))}mm`
                             : `${fmt.cellWidth} × ${fmt.cellHeight}`}
                         </span>
@@ -160,7 +128,7 @@ export function LabelFormatCard({
                     <Tooltip content={`Delete ${fmt.name}`}>
                       <button
                         className="shrink-0 p-2 mr-1 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                        onClick={() => handleDeletePreset(fmt.key)}
+                        onClick={() => f.handleDeletePreset(fmt.key)}
                         aria-label={`Delete ${fmt.name}`}
                       >
                         <X className="h-4 w-4" />
@@ -179,8 +147,8 @@ export function LabelFormatCard({
                   { key: 'landscape' as const, label: 'Landscape', icon: RectangleHorizontal },
                   { key: 'portrait' as const, label: 'Portrait', icon: RectangleVertical },
                 ]}
-                value={effectiveOrientation}
-                onChange={(v) => v !== effectiveOrientation && toggleOrientation()}
+                value={f.effectiveOrientation}
+                onChange={(v) => v !== f.effectiveOrientation && f.toggleOrientation()}
                 renderContent={(opt) => {
                   const Icon = opt.icon;
                   return (
@@ -197,14 +165,14 @@ export function LabelFormatCard({
             <div className="mt-3 pt-3 border-t border-[var(--border-subtle)]">
               <label className="flex items-center gap-3 px-3 py-1 cursor-pointer">
                 <Checkbox
-                  checked={customState.customizing}
-                  onCheckedChange={toggleCustomize}
+                  checked={f.customState.customizing}
+                  onCheckedChange={f.toggleCustomize}
                 />
                 <span className="text-[15px] text-[var(--text-primary)]">Customize dimensions</span>
               </label>
             </div>
 
-            {customState.customizing && (
+            {f.customState.customizing && (
               <>
                 <div className="flex items-center gap-1 mt-3 px-1">
                   <span className="text-[12px] text-[var(--text-secondary)] font-medium mr-2">Units</span>
@@ -213,17 +181,17 @@ export function LabelFormatCard({
                       { key: 'in' as const, label: 'Inches' },
                       { key: 'mm' as const, label: 'mm' },
                     ]}
-                    value={displayUnit}
-                    onChange={(v) => updateDisplayUnit(v)}
+                    value={f.displayUnit}
+                    onChange={(v) => f.updateDisplayUnit(v)}
                     size="sm"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mt-3 px-1">
                   {CUSTOM_FIELDS.map((field) => {
-                    const unitSuffix = field.isDimensional ? ` (${displayUnit})` : '';
-                    const step = displayUnit === 'mm' && field.isDimensional ? field.stepMm : field.stepIn;
-                    const min = displayUnit === 'mm' && field.isDimensional ? String(inchesToMm(field.minIn)) : String(field.minIn);
+                    const unitSuffix = field.isDimensional ? ` (${f.displayUnit})` : '';
+                    const step = f.displayUnit === 'mm' && field.isDimensional ? field.stepMm : field.stepIn;
+                    const min = f.displayUnit === 'mm' && field.isDimensional ? String(inchesToMm(field.minIn)) : String(field.minIn);
                     return (
                       <div key={field.key} className="flex flex-col gap-1">
                         <label className="text-[12px] text-[var(--text-secondary)] font-medium">
@@ -234,8 +202,8 @@ export function LabelFormatCard({
                           step={step}
                           min={min}
                           max={field.max}
-                          value={getOverrideValue(field.key)}
-                          onChange={(e) => updateOverride(field.key, e.target.value)}
+                          value={f.getOverrideValue(field.key)}
+                          onChange={(e) => f.updateOverride(field.key, e.target.value)}
                           className="h-9 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
                         />
                       </div>
@@ -250,11 +218,11 @@ export function LabelFormatCard({
                       placeholder="Preset name"
                       value={presetName}
                       onChange={(e) => setPresetName(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                       autoFocus
                       className="h-9 flex-1 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
                     />
-                    <Button size="sm" onClick={handleSavePreset} disabled={!presetName.trim()} className="h-9 px-3">
+                    <Button size="sm" onClick={handleSave} disabled={!presetName.trim()} className="h-9 px-3">
                       Save
                     </Button>
                     <Button

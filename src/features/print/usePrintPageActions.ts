@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
 import { useBinList } from '@/features/bins/useBins';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAuth } from '@/lib/auth';
@@ -9,8 +8,8 @@ import type { LabelFormat } from './labelFormats';
 import type { LabelOptions, CustomState, DisplayUnit, QrStyleOptions } from './usePrintSettings';
 import { DEFAULT_QR_STYLE } from './usePrintSettings';
 import { inchesToMm, mmToInches } from './pdfUnits';
-import { computeScaleFactor, applyAutoScale, applyFontScale } from './labelScaling';
-import type { Bin } from '@/types';
+import { useBinSelection } from './useBinSelection';
+import { computeEffectiveFormat } from './computeEffectiveFormat';
 
 const CUSTOM_FIELDS: { label: string; key: keyof LabelFormat; minIn: number; max?: string; stepIn: string; stepMm: string; isNumber?: boolean; isDimensional: boolean }[] = [
   { label: 'Page Width', key: 'pageWidth', minIn: 1, stepIn: '0.5', stepMm: '10', isNumber: true, isDimensional: true },
@@ -27,31 +26,54 @@ const CUSTOM_FIELDS: { label: string; key: keyof LabelFormat; minIn: number; max
 
 export { CUSTOM_FIELDS };
 
+export interface SelectionState {
+  selectedIds: Set<string>;
+  selectedBins: import('@/types').Bin[];
+  toggleBin: (id: string) => void;
+  selectAll: () => void;
+  selectNone: () => void;
+  selectByArea: (areaId: string | null) => void;
+}
+
+export interface FormatState {
+  formatKey: string;
+  baseFormat: LabelFormat;
+  effectiveOrientation: 'landscape' | 'portrait';
+  customState: CustomState;
+  displayUnit: DisplayUnit;
+  savedPresets: LabelFormat[];
+  labelFormat: LabelFormat;
+  iconSize: string;
+  handleFormatChange: (key: string) => void;
+  toggleCustomize: () => void;
+  updateOverride: (key: keyof LabelFormat, raw: string) => void;
+  getOverrideValue: (key: keyof LabelFormat) => string;
+  toggleOrientation: () => void;
+  updateDisplayUnit: (unit: DisplayUnit) => void;
+  handleSavePreset: (name: string) => void;
+  handleDeletePreset: (key: string) => void;
+}
+
 export function usePrintPageActions() {
-  const [searchParams] = useSearchParams();
   const { bins: allBins, isLoading: binsLoading } = useBinList(undefined, 'name');
   const { activeLocationId } = useAuth();
   const { areas } = useAreaList(activeLocationId);
   const { settings, isLoading: settingsLoading, updateFormatKey, updateCustomState, updateLabelOptions, updateOrientation, updateDisplayUnit, updateQrStyle, addPreset, removePreset } = usePrintSettings();
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selection = useBinSelection(allBins);
+
   const [binsExpanded, setBinsExpanded] = useState(false);
   const [formatExpanded, setFormatExpanded] = useState(true);
   const [optionsExpanded, setOptionsExpanded] = useState(false);
-  const [presetName, setPresetName] = useState('');
-  const [showSaveInput, setShowSaveInput] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const [formatSearch, setFormatSearch] = useState('');
   const [qrStyleExpanded, setQrStyleExpanded] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const { formatKey, customState, labelOptions, presets: savedPresets, qrStyle: savedQrStyle } = settings;
   const qrStyle = savedQrStyle ?? DEFAULT_QR_STYLE;
+  const displayUnit: DisplayUnit = settings.displayUnit ?? 'in';
 
-  useEffect(() => {
-    const idsParam = searchParams.get('ids');
-    if (idsParam) {
-      setSelectedIds(new Set(idsParam.split(',')));
-    }
-  }, [searchParams]);
+  const { baseFormat, orientedBase, labelFormat, iconSize, effectiveOrientation } = computeEffectiveFormat(
+    formatKey, settings.orientation, customState, labelOptions.fontScale, savedPresets,
+  );
 
   function seedOverrides(fmt: LabelFormat): Partial<LabelFormat> {
     const { width, height } = computePageSize(fmt);
@@ -74,24 +96,17 @@ export function usePrintPageActions() {
     if (customState.customizing) {
       const newBase = getLabelFormat(key, savedPresets);
       const oriented = applyOrientation(newBase, settings.orientation);
-      const newState: CustomState = { customizing: true, overrides: seedOverrides(oriented) };
-      updateCustomState(newState);
+      updateCustomState({ customizing: true, overrides: seedOverrides(oriented) });
     }
   }
 
   function toggleCustomize() {
-    const next = !customState.customizing;
-    let newState: CustomState;
-    if (next) {
-      const oriented = applyOrientation(getLabelFormat(formatKey, savedPresets), settings.orientation);
-      newState = { customizing: true, overrides: seedOverrides(oriented) };
+    if (!customState.customizing) {
+      updateCustomState({ customizing: true, overrides: seedOverrides(orientedBase) });
     } else {
-      newState = { customizing: false, overrides: {} };
+      updateCustomState({ customizing: false, overrides: {} });
     }
-    updateCustomState(newState);
   }
-
-  const displayUnit: DisplayUnit = settings.displayUnit ?? 'in';
 
   function updateOverride(key: keyof LabelFormat, raw: string) {
     if (!raw.trim()) return;
@@ -101,11 +116,7 @@ export function usePrintPageActions() {
     const inValue = (displayUnit === 'mm' && field?.isDimensional) ? mmToInches(num) : num;
     const clamped = Math.max(field?.minIn ?? 0, inValue);
     const value = field?.isNumber ? clamped : `${clamped}in`;
-    const newState: CustomState = {
-      ...customState,
-      overrides: { ...customState.overrides, [key]: value },
-    };
-    updateCustomState(newState);
+    updateCustomState({ ...customState, overrides: { ...customState.overrides, [key]: value } });
   }
 
   function getOverrideValue(key: keyof LabelFormat): string {
@@ -119,60 +130,19 @@ export function usePrintPageActions() {
     return String(inValue);
   }
 
-  function handleSavePreset() {
-    const name = presetName.trim();
-    if (!name) return;
+  function handleSavePreset(name: string) {
+    if (!name.trim()) return;
     const key = `custom-${Date.now()}`;
-    const preset: LabelFormat = { ...labelFormat, key, name };
+    const preset: LabelFormat = { ...labelFormat, key, name: name.trim() };
     addPreset(preset);
     updateFormatKey(key);
     updateCustomState({ customizing: false, overrides: {} });
-    setPresetName('');
-    setShowSaveInput(false);
   }
 
   function handleDeletePreset(key: string) {
     removePreset(key);
     if (formatKey === key) {
       updateFormatKey(DEFAULT_LABEL_FORMAT);
-    }
-  }
-
-  const isLoading = binsLoading || settingsLoading;
-
-  const baseFormat = getLabelFormat(formatKey, savedPresets);
-  const orientedBase = applyOrientation(baseFormat, settings.orientation);
-  const customFormat = customState.customizing ? { ...orientedBase, ...customState.overrides } : orientedBase;
-  const scaledFormat = customState.customizing ? applyAutoScale(orientedBase, customFormat) : customFormat;
-  const labelFormat = applyFontScale(scaledFormat, labelOptions.fontScale);
-  const iconSize = customState.customizing
-    ? `${(11 * computeScaleFactor(orientedBase, customFormat)).toFixed(2).replace(/\.?0+$/, '')}pt`
-    : '11pt';
-  const effectiveOrientation = settings.orientation ?? getOrientation(baseFormat);
-  const selectedBins: Bin[] = allBins.filter((b) => selectedIds.has(b.id));
-
-  const labelSheetProps = {
-    bins: selectedBins,
-    format: labelFormat,
-    labelDirection: labelOptions.labelDirection,
-    showColorSwatch: labelOptions.showColorSwatch,
-    iconSize,
-    showQrCode: labelOptions.showQrCode,
-    showBinName: labelOptions.showBinName,
-    showIcon: labelOptions.showIcon,
-    showBinCode: labelOptions.showBinCode,
-    textAlign: labelOptions.textAlign,
-    qrStyle,
-  };
-
-  async function handleDownloadPDF() {
-    if (pdfLoading || selectedBins.length === 0) return;
-    setPdfLoading(true);
-    try {
-      const { downloadLabelPDF } = await import('./downloadLabelPDF');
-      await downloadLabelPDF({ bins: selectedBins, format: labelFormat, labelOptions, iconSize, qrStyle });
-    } finally {
-      setPdfLoading(false);
     }
   }
 
@@ -186,87 +156,60 @@ export function usePrintPageActions() {
     }
   }
 
-  function toggleBin(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function selectAll() {
-    setSelectedIds(new Set(allBins.map((b) => b.id)));
-  }
-
-  function selectNone() {
-    setSelectedIds(new Set());
-  }
-
-  function selectByArea(areaId: string | null) {
-    const ids = allBins.filter((b) => b.area_id === areaId).map((b) => b.id);
-    setSelectedIds(new Set(ids));
-  }
-
   function handleUpdateLabelOption<K extends keyof LabelOptions>(key: K, value: LabelOptions[K]) {
-    const next = { ...labelOptions, [key]: value };
-    updateLabelOptions(next);
+    updateLabelOptions({ ...labelOptions, [key]: value });
   }
 
   function handleUpdateQrStyle(style: QrStyleOptions) {
     updateQrStyle(style);
   }
 
+  const isLoading = binsLoading || settingsLoading;
+
+  const format: FormatState = {
+    formatKey, baseFormat, effectiveOrientation, customState, displayUnit, savedPresets,
+    labelFormat, iconSize,
+    handleFormatChange, toggleCustomize, updateOverride, getOverrideValue,
+    toggleOrientation, updateDisplayUnit,
+    handleSavePreset, handleDeletePreset,
+  };
+
+  const labelSheetProps = {
+    bins: selection.selectedBins,
+    format: labelFormat,
+    labelDirection: labelOptions.labelDirection,
+    showColorSwatch: labelOptions.showColorSwatch,
+    iconSize,
+    showQrCode: labelOptions.showQrCode,
+    showBinName: labelOptions.showBinName,
+    showIcon: labelOptions.showIcon,
+    showBinCode: labelOptions.showBinCode,
+    textAlign: labelOptions.textAlign,
+    qrStyle,
+  };
+
+  async function handleDownloadPDF() {
+    if (pdfLoading || selection.selectedBins.length === 0) return;
+    setPdfLoading(true);
+    try {
+      const { downloadLabelPDF } = await import('./downloadLabelPDF');
+      await downloadLabelPDF({ bins: selection.selectedBins, format: labelFormat, labelOptions, iconSize, qrStyle });
+    } finally {
+      setPdfLoading(false);
+    }
+  }
+
   return {
-    // Data
     allBins,
     areas,
     isLoading,
-    // Selection
-    selectedIds,
-    selectedBins,
-    toggleBin,
-    selectAll,
-    selectNone,
-    selectByArea,
-    // Format
-    formatKey,
-    baseFormat,
-    effectiveOrientation,
-    customState,
-    displayUnit,
-    savedPresets,
-    formatSearch,
-    setFormatSearch,
-    handleFormatChange,
-    toggleCustomize,
-    updateOverride,
-    getOverrideValue,
-    toggleOrientation,
-    updateDisplayUnit,
-    // Presets
-    presetName,
-    setPresetName,
-    showSaveInput,
-    setShowSaveInput,
-    handleSavePreset,
-    handleDeletePreset,
-    // Options
+    selection,
+    format,
     labelOptions,
     handleUpdateLabelOption,
-    // QR Style
     qrStyle,
     handleUpdateQrStyle,
-    qrStyleExpanded,
-    setQrStyleExpanded,
-    // UI expand state
-    binsExpanded,
-    setBinsExpanded,
-    formatExpanded,
-    setFormatExpanded,
-    optionsExpanded,
-    setOptionsExpanded,
-    // PDF / print
+    ui: { binsExpanded, setBinsExpanded, formatExpanded, setFormatExpanded, optionsExpanded, setOptionsExpanded, qrStyleExpanded, setQrStyleExpanded },
     pdfLoading,
     handleDownloadPDF,
     labelSheetProps,
