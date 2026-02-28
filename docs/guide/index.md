@@ -17,3 +17,4 @@ This guide covers every feature in OpenBin. If you haven't set up OpenBin yet, s
 | [Import & Export](/guide/import-export) | Back up and restore your data as JSON, ZIP, or CSV |
 | [Dashboard](/guide/dashboard) | Overview of stats, pinned bins, recent scans, and saved views |
 | [API Keys](/guide/api-keys) | Create long-lived tokens for scripts and automation |
+| [MCP Server](/guide/mcp-server) | Connect AI assistants like Claude directly to OpenBin via Model Context Protocol |

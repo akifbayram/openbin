@@ -38,7 +38,8 @@ export default defineConfig({
             { text: 'Photos', link: '/guide/photos' },
             { text: 'Import & Export', link: '/guide/import-export' },
             { text: 'Dashboard', link: '/guide/dashboard' },
-            { text: 'API Keys', link: '/guide/api-keys' }
+            { text: 'API Keys', link: '/guide/api-keys' },
+            { text: 'MCP Server', link: '/guide/mcp-server' }
           ]
         }
       ],

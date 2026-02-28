@@ -32,4 +32,7 @@ features:
   - icon: 🔌
     title: REST API
     details: Long-lived API keys for headless access and automation. Full OpenAPI spec included.
+  - icon: 🔗
+    title: MCP Server
+    details: Connect Claude and other AI assistants directly to your inventory via Model Context Protocol.
 ---
