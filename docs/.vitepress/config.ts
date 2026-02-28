@@ -5,7 +5,6 @@ export default defineConfig({
   description: 'Self-hosted bin inventory with QR codes and AI',
   base: '/openbin/',
   themeConfig: {
-    logo: '/logo.png',
     nav: [
       { text: 'Get Started', link: '/getting-started/' },
       { text: 'Guide', link: '/guide/' },
