@@ -1,3 +1,12 @@
+---
+prev:
+  text: 'Bulk Add'
+  link: '/guide/bulk-add'
+next:
+  text: 'Import & Export'
+  link: '/guide/import-export'
+---
+
 # Bulk Operations
 
 Bulk operations let you perform the same action on many bins at once — saving time when reorganizing, retagging, or cleaning up a large collection.
@@ -59,3 +68,8 @@ Bulk delete moves all selected bins to Trash at once. Double-check your selectio
 ## Leaving Multi-Select Mode
 
 Tap **Cancel** in the bulk action bar, or tap an empty area of the screen (mobile), to exit multi-select mode without performing any action.
+
+## Related
+
+- [Bins](/guide/bins) — Create and manage individual bins
+- [Items & Tags](/guide/items-tags) — Browse all items and tags across your location

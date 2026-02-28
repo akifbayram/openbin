@@ -1,3 +1,9 @@
+---
+prev:
+  text: 'API Keys'
+  link: '/guide/api-keys'
+---
+
 # MCP Server
 
 OpenBin includes a standalone MCP (Model Context Protocol) server that connects AI assistants like Claude directly to your inventory. It runs as a separate Node.js process, bridging Claude and the OpenBin REST API so you can manage bins, items, tags, areas, and locations through natural conversation instead of navigating the UI.
@@ -308,3 +314,9 @@ Your API key may be revoked or invalid. Go to **Settings > API Keys** in OpenBin
 ### "No locations found" when you have data
 
 The API key is tied to the user who created it. Make sure you are querying locations that this user belongs to. If you just created a fresh API key for a new account, you may need to create or join a location first.
+
+## Related
+
+- [API Keys](/guide/api-keys) — Create the API keys needed for the MCP server
+- [AI Features](/guide/ai) — OpenBin's built-in AI features
+- [API Overview](/api/) — Full REST API documentation

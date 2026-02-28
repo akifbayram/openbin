@@ -1,3 +1,12 @@
+---
+prev:
+  text: 'Photos'
+  link: '/guide/photos'
+next:
+  text: 'Bulk Add'
+  link: '/guide/bulk-add'
+---
+
 # AI Features
 
 OpenBin's AI features are fully optional. They require connecting your own API key or having an admin configure a server-wide key. Without an AI key, all other features work normally.
@@ -6,17 +15,25 @@ OpenBin's AI features are fully optional. They require connecting your own API k
 
 | Provider | Notes |
 |---|---|
-| **OpenAI** | GPT-4o, GPT-4 Turbo, and other OpenAI models |
-| **Anthropic** | Claude models (e.g. claude-sonnet-4-5) |
-| **Google Gemini** | Gemini 2.0 Flash and other Gemini models |
+| **[OpenAI](https://platform.openai.com/)** | GPT-4o, GPT-4.1, GPT-5, and other OpenAI models |
+| **[Anthropic](https://console.anthropic.com/)** | Claude Haiku, Sonnet, and Opus models |
+| **[Google Gemini](https://aistudio.google.com/)** | Gemini 2.0 Flash, 2.5 Flash/Pro, and other Gemini models |
 | **OpenAI-compatible** | Any endpoint following the OpenAI API format (e.g. Ollama, LM Studio, OpenRouter) |
+
+### Getting an API Key
+
+Each provider requires its own API key. Sign up and create one from their developer platform:
+
+- **OpenAI** — Create an account at [platform.openai.com](https://platform.openai.com/), then go to **API Keys** to generate a key. Requires adding billing credits. [Models & pricing →](https://platform.openai.com/docs/pricing)
+- **Anthropic** — Create an account at [console.anthropic.com](https://console.anthropic.com/), set up billing under **Settings → Billing**, then go to **API Keys → Create Key**. [Models & pricing →](https://docs.anthropic.com/en/docs/about-claude/pricing)
+- **Google Gemini** — Sign in at [aistudio.google.com](https://aistudio.google.com/) with a Google account, then click **Get API key → Create API key**. Includes a free tier with no billing required. [Models & pricing →](https://ai.google.dev/gemini-api/docs/pricing)
 
 ## Per-User Setup
 
 1. Go to **Settings → AI**.
 2. Select your provider.
-3. Enter your API key.
-4. Select or type the model name.
+3. Enter your API key (see [Getting an API Key](#getting-an-api-key) above).
+4. Select or type the model name (see [Recommended Models](#recommended-models) for suggestions).
 5. For OpenAI-compatible endpoints, enter the endpoint URL.
 6. Click **Save**.
 
@@ -102,3 +119,9 @@ The advanced AI settings section exposes fine-tuning parameters:
 | Request timeout | Seconds to wait before aborting an AI request. |
 
 These settings apply per provider configuration.
+
+## Related
+
+- [Bulk Add](/guide/bulk-add) — Create multiple bins from photos using AI
+- [Photos](/guide/photos) — Attach and manage bin photos
+- [Configuration](/getting-started/configuration) — Server-wide AI environment variables

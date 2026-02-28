@@ -1,3 +1,12 @@
+---
+prev:
+  text: 'Search & Filter'
+  link: '/guide/search-filter'
+next:
+  text: 'Photos'
+  link: '/guide/photos'
+---
+
 # Dashboard
 
 The Dashboard is the home screen after login. It provides an at-a-glance overview of your location's inventory and quick access to frequently-used bins and views.
@@ -51,3 +60,8 @@ A summary of how many bins are in each area, sorted by bin count descending. Una
 Saved filter/sort presets (created from the bin list — see [Search & Filter](/guide/search-filter#saved-views)) appear on the dashboard as quick-access buttons. Clicking one opens the bin list with those filters pre-applied.
 
 This is useful for frequently-used queries like "Show all bins in the Garage with the Electronics tag".
+
+## Related
+
+- [Search & Filter](/guide/search-filter) — Create and save the filter views shown here
+- [QR Scanning](/guide/qr-scanning) — Scans appear in "Recently Scanned"

@@ -1,3 +1,12 @@
+---
+prev:
+  text: 'Print Labels'
+  link: '/guide/print-labels'
+next:
+  text: 'Dashboard'
+  link: '/guide/dashboard'
+---
+
 # Search & Filter
 
 OpenBin's search and filter tools let you find bins quickly across large collections. Searches run live as you type, and filters can be combined and saved for reuse.
@@ -84,3 +93,8 @@ Saved views appear on the [Dashboard](/guide/dashboard) as quick-access buttons.
 ::: tip
 Saved views are personal — they are stored per user, not shared across the location.
 :::
+
+## Related
+
+- [Dashboard](/guide/dashboard) — Access saved views and see location stats
+- [Bins](/guide/bins) — The bins you're searching and filtering

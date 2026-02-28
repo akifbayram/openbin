@@ -1,3 +1,12 @@
+---
+prev:
+  text: 'Dashboard'
+  link: '/guide/dashboard'
+next:
+  text: 'AI Features'
+  link: '/guide/ai'
+---
+
 # Photos
 
 Bins can have up to 5 photos attached. Photos are stored on the server and served through the API with authentication — they are never publicly accessible without a valid session.
@@ -64,3 +73,9 @@ Deleting a photo that is set as the `photo` card style cover will revert the car
 ::: warning
 Photo deletion is permanent. There is no trash or recovery for individual photos.
 :::
+
+## Related
+
+- [Bins](/guide/bins) — Photos are attached to bins
+- [AI Features](/guide/ai) — Analyze photos with AI to auto-populate bin details
+- [API: Photos](/api/photos) — Photos REST API reference

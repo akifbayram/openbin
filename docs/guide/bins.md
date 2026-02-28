@@ -1,3 +1,12 @@
+---
+prev:
+  text: 'Locations & Areas'
+  link: '/guide/locations'
+next:
+  text: 'QR Scanning'
+  link: '/guide/qr-scanning'
+---
+
 # Bins
 
 Bins are the core objects in OpenBin. Each bin represents a physical storage container — a box, drawer, shelf, or bin — and holds a structured list of items along with tags, notes, and visual appearance settings.
@@ -94,3 +103,12 @@ Deleting a bin moves it to Trash — it is not permanently removed. From Trash (
 - **Permanently delete** — removes the bin and all its photos. This cannot be undone.
 
 Bins in Trash are automatically purged after the location's configured retention period.
+
+## Related
+
+- [Photos](/guide/photos) — Attach photos to bins and use them with AI
+- [Print Labels](/guide/print-labels) — Generate QR labels for your bins
+- [QR Scanning](/guide/qr-scanning) — Scan bin labels to find contents
+- [AI Features](/guide/ai) — AI photo analysis and natural language commands
+- [Items & Tags](/guide/items-tags) — Browse all items and tags across your location
+- [API: Bins](/api/bins) — Bins REST API reference

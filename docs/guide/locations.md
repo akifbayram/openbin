@@ -1,3 +1,12 @@
+---
+prev:
+  text: 'User Guide'
+  link: '/guide/'
+next:
+  text: 'Bins'
+  link: '/guide/bins'
+---
+
 # Locations & Areas
 
 Locations are the top-level shared workspaces in OpenBin. Everything — bins, areas, members, and settings — lives inside a location. Areas are optional sub-zones within a location that give bins a physical context.
@@ -86,3 +95,10 @@ Deleted bins are not immediately removed — they move to a trash area where the
 - **Restore**: Settings → Trash → find the bin → Restore.
 - **Permanent delete**: Permanently removes the bin and all its photos. Cannot be undone.
 - **Retention period**: Configured in Location Settings. Bins older than this limit in trash are purged automatically.
+
+## Related
+
+- [Bins](/guide/bins) — Create and manage bins within a location
+- [Dashboard](/guide/dashboard) — Location stats, pinned bins, and area breakdown
+- [Import & Export](/guide/import-export) — Back up and restore location data
+- [API: Locations](/api/locations) — Locations REST API reference

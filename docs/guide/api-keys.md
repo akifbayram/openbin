@@ -1,3 +1,12 @@
+---
+prev:
+  text: 'Keyboard Shortcuts'
+  link: '/guide/shortcuts'
+next:
+  text: 'MCP Server'
+  link: '/guide/mcp-server'
+---
+
 # API Keys
 
 API keys let you access OpenBin's API without a browser login session. They are useful for scripts, automation, home integrations, and any headless access to your inventory data.
@@ -84,3 +93,9 @@ The full key value is never shown again after creation.
 - Revoke compromised keys immediately.
 - API keys are long-lived by design — rotate them periodically for sensitive automations.
 :::
+
+## Related
+
+- [API Overview](/api/) — Full REST API documentation
+- [MCP Server](/guide/mcp-server) — Use API keys with the MCP server for AI assistants
+- [API: API Keys](/api/api-keys) — API Keys REST API reference

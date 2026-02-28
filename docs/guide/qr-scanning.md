@@ -1,3 +1,12 @@
+---
+prev:
+  text: 'Bins'
+  link: '/guide/bins'
+next:
+  text: 'Print Labels'
+  link: '/guide/print-labels'
+---
+
 # QR Scanning
 
 Each bin in OpenBin has a unique QR code that encodes its short code. Scanning a label takes you directly to the bin's detail page — no searching required.
@@ -51,3 +60,9 @@ OpenBin can be installed as a Progressive Web App (PWA) on Android and iOS:
 - **iOS**: Open OpenBin in Safari → Share → **Add to Home Screen**.
 
 Once installed, OpenBin behaves like a native app. The QR scanner uses the device camera and works without a browser chrome.
+
+## Related
+
+- [Bins](/guide/bins) — Create and manage bins
+- [Print Labels](/guide/print-labels) — Generate QR label sheets for printing
+- [Dashboard](/guide/dashboard) — View recent scans on the dashboard

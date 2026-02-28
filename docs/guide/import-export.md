@@ -1,3 +1,12 @@
+---
+prev:
+  text: 'Bulk Operations'
+  link: '/guide/bulk-operations'
+next:
+  text: 'Items & Tags'
+  link: '/guide/items-tags'
+---
+
 # Import & Export
 
 OpenBin can export your location's data for backup or migration, and import data from a previous export or a supported external format.
@@ -80,3 +89,9 @@ The maximum import file size is **100 MB**. For larger collections, split the ex
 ::: tip
 Always export a backup before importing. Imports cannot be bulk-undone — you would need to manually delete the imported bins or use bulk delete.
 :::
+
+## Related
+
+- [Bins](/guide/bins) — The bins that are exported and imported
+- [Locations & Areas](/guide/locations) — Exports are scoped to the active location
+- [API: Export](/api/export) — Export REST API reference

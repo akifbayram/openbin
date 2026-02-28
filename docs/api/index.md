@@ -100,20 +100,24 @@ Set the `DISABLE_RATE_LIMIT=true` environment variable to disable all rate limit
 
 ## API Groups
 
-| Tag | Description |
+| Group | Description |
 |---|---|
-| **Auth** | Registration, login, logout, profile management, avatar, token refresh, account deletion |
-| **Locations** | Location CRUD, membership management, and invite codes |
-| **Areas** | Named zones within a location for organizing bins |
-| **Bins** | Bin CRUD, soft deletes, restore, QR lookup, items, tags, pinning, and photo upload |
-| **Photos** | Photo retrieval (file and thumbnail) and deletion |
-| **TagColors** | Per-location color assignments for tags |
-| **PrintSettings** | Per-user label format and custom print dimension settings |
-| **Export** | Export location data as JSON, ZIP, or CSV; import V1/V2 format data |
-| **AI** | AI provider configuration, photo analysis, natural language commands, and inventory queries |
-| **Activity** | Paginated location activity log |
-| **ApiKeys** | API key creation, listing, and revocation for headless access |
-| **UserPreferences** | Arbitrary per-user application preference storage |
-| **SavedViews** | Per-user saved bin list filter and sort views |
-| **ScanHistory** | Per-user QR code scan history |
-| **Batch** | Execute up to 50 bin operations atomically in a single request |
+| **[Auth](/api/auth)** | Registration, login, logout, profile management, avatar, token refresh, account deletion |
+| **[Locations](/api/locations)** | Location CRUD, membership management, and invite codes |
+| **[Areas](/api/areas)** | Named zones within a location for organizing bins |
+| **[Bins](/api/bins)** | Bin CRUD, soft deletes, restore, QR lookup, items, tags, pinning, and photo upload |
+| **[Photos](/api/photos)** | Photo retrieval (file and thumbnail) and deletion |
+| **[Tag Colors](/api/tag-colors)** | Per-location color assignments for tags |
+| **[Print Settings](/api/print-settings)** | Per-user label format and custom print dimension settings |
+| **[Export](/api/export)** | Export location data as JSON, ZIP, or CSV; import V1/V2 format data |
+| **[AI](/api/ai)** | AI provider configuration, photo analysis, natural language commands, and inventory queries |
+| **[Activity](/api/activity)** | Paginated location activity log |
+| **[API Keys](/api/api-keys)** | API key creation, listing, and revocation for headless access |
+| **[User Preferences](/api/preferences)** | Arbitrary per-user application preference storage |
+| **[Saved Views](/api/saved-views)** | Per-user saved bin list filter and sort views |
+| **[Scan History](/api/scan-history)** | Per-user QR code scan history |
+| **[Batch Operations](/api/batch)** | Execute up to 50 bin operations atomically in a single request |
+
+::: tip Getting Started with the API
+To use the API programmatically, create an API key in the OpenBin UI. See the [API Keys guide](/guide/api-keys) for setup instructions.
+:::

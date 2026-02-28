@@ -1,3 +1,12 @@
+---
+prev:
+  text: 'QR Scanning'
+  link: '/guide/qr-scanning'
+next:
+  text: 'Search & Filter'
+  link: '/guide/search-filter'
+---
+
 # Print Labels
 
 OpenBin can generate QR label sheets for any selection of bins, ready to print on standard paper or export as a PDF.
@@ -76,3 +85,9 @@ Click **Print** to open the browser's native print dialog. The print stylesheet 
 ::: tip
 For best results with browser print, set margins to "None" in the print dialog and match the paper size to your selected format.
 :::
+
+## Related
+
+- [Bins](/guide/bins) — Create and manage the bins you're printing labels for
+- [QR Scanning](/guide/qr-scanning) — Scan the labels after printing
+- [API: Print Settings](/api/print-settings) — Print Settings REST API reference

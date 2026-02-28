@@ -25,21 +25,47 @@ export default defineConfig({
       ],
       '/guide/': [
         {
-          text: 'User Guide',
+          text: 'Overview',
+          link: '/guide/'
+        },
+        {
+          text: 'Core Features',
+          collapsed: false,
           items: [
-            { text: 'Overview', link: '/guide/' },
-            { text: 'Locations & Areas', link: '/guide/locations' },
             { text: 'Bins', link: '/guide/bins' },
             { text: 'QR Scanning', link: '/guide/qr-scanning' },
-            { text: 'Print Labels', link: '/guide/print-labels' },
-            { text: 'AI Features', link: '/guide/ai' },
             { text: 'Search & Filter', link: '/guide/search-filter' },
-            { text: 'Bulk Operations', link: '/guide/bulk-operations' },
+            { text: 'Dashboard', link: '/guide/dashboard' }
+          ]
+        },
+        {
+          text: 'Organize & Customize',
+          collapsed: false,
+          items: [
+            { text: 'Locations & Areas', link: '/guide/locations' },
             { text: 'Photos', link: '/guide/photos' },
-            { text: 'Import & Export', link: '/guide/import-export' },
-            { text: 'Dashboard', link: '/guide/dashboard' },
+            { text: 'Print Labels', link: '/guide/print-labels' },
+            { text: 'Bulk Operations', link: '/guide/bulk-operations' }
+          ]
+        },
+        {
+          text: 'AI & Automation',
+          collapsed: false,
+          items: [
+            { text: 'AI Features', link: '/guide/ai' },
+            { text: 'Bulk Add', link: '/guide/bulk-add' },
             { text: 'API Keys', link: '/guide/api-keys' },
             { text: 'MCP Server', link: '/guide/mcp-server' }
+          ]
+        },
+        {
+          text: 'Data Management',
+          collapsed: false,
+          items: [
+            { text: 'Import & Export', link: '/guide/import-export' },
+            { text: 'Items & Tags', link: '/guide/items-tags' },
+            { text: 'Account & Profile', link: '/guide/profile' },
+            { text: 'Keyboard Shortcuts', link: '/guide/shortcuts' }
           ]
         }
       ],
@@ -48,7 +74,27 @@ export default defineConfig({
           text: 'API Reference',
           items: [
             { text: 'Overview', link: '/api/' },
-            { text: 'Endpoints', link: '/api/reference' }
+            { text: 'Auth', link: '/api/auth' },
+            { text: 'Locations', link: '/api/locations' },
+            { text: 'Areas', link: '/api/areas' },
+            { text: 'Bins', link: '/api/bins' },
+            { text: 'Photos', link: '/api/photos' },
+            { text: 'Tag Colors', link: '/api/tag-colors' },
+            { text: 'Print Settings', link: '/api/print-settings' },
+            { text: 'Export', link: '/api/export' },
+            { text: 'AI', link: '/api/ai' },
+            { text: 'Activity', link: '/api/activity' },
+            { text: 'API Keys', link: '/api/api-keys' },
+            { text: 'User Preferences', link: '/api/preferences' },
+            { text: 'Saved Views', link: '/api/saved-views' },
+            { text: 'Scan History', link: '/api/scan-history' },
+            { text: 'Batch Operations', link: '/api/batch' }
+          ]
+        },
+        {
+          text: 'Reference',
+          items: [
+            { text: 'Configuration', link: '/getting-started/configuration' }
           ]
         }
       ]
