@@ -1,12 +1,12 @@
-import { Printer, Download, FileText } from 'lucide-react';
+import { Download, FileText, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import { useTerminology } from '@/lib/terminology';
-import { LabelSheet } from './LabelSheet';
-import { computeLabelsPerPage, getLabelFormat, DEFAULT_LABEL_FORMAT } from './labelFormats';
+import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
+import { LabelSheet } from './LabelSheet';
+import { computeLabelsPerPage, DEFAULT_LABEL_FORMAT, getLabelFormat } from './labelFormats';
 
 interface PreviewPanelProps {
   selectedBins: Bin[];

@@ -3,9 +3,36 @@
   "formatter": { "enabled": false },
   "linter": {
     "enabled": true,
-    "rules": { "recommended": true }
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "useExhaustiveDependencies": "off"
+      }
+    }
+  },
+  "css": {
+    "parser": { "tailwindDirectives": true },
+    "linter": { "enabled": false }
   },
   "files": {
-    "includes": ["src/**"]
-  }
+    "includes": ["src/**", "server/src/**"]
+  },
+  "overrides": [
+    {
+      "includes": ["server/src/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useExhaustiveDependencies": "warn"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
+          },
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    }
+  ]
 }

@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { ChevronDown, Plus, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useAreaList, createArea } from './useAreas';
-import { Input } from '@/components/ui/input';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useDialogPortal } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { createArea, useAreaList } from './useAreas';
 
 interface AreaPickerProps {
   locationId: string | undefined;

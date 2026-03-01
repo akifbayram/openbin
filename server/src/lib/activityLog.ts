@@ -1,4 +1,4 @@
-import { query, querySync, generateUuid } from '../db.js';
+import { generateUuid, query, querySync } from '../db.js';
 
 export interface LogActivityOptions {
   locationId: string;

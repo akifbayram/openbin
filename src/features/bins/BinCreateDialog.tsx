@@ -3,18 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
-import { addBin, useAllTags as useAllTagsFetch } from './useBins';
-import { useAuth } from '@/lib/auth';
-import { useTerminology } from '@/lib/terminology';
+import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
-import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
-import { BinCreateForm } from './BinCreateForm';
+import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
 import type { BinCreateFormData } from './BinCreateForm';
+import { BinCreateForm } from './BinCreateForm';
+import { addBin, useAllTags as useAllTagsFetch } from './useBins';
 
 interface BinCreateDialogProps {
   open: boolean;

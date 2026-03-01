@@ -1,13 +1,13 @@
 import { Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { PhotoBulkAdd } from './PhotoBulkAdd';
-import { AiSetupView } from './InlineAiSetup';
 import { useNavigate } from 'react-router-dom';
-import { useCommandInputState } from './useCommandInputState';
-import { useActionExecutor } from './useActionExecutor';
-import { InventoryQueryResult } from './InventoryQueryResult';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CommandActionPreview } from './CommandActionPreview';
 import { CommandIdleInput } from './CommandIdleInput';
+import { AiSetupView } from './InlineAiSetup';
+import { InventoryQueryResult } from './InventoryQueryResult';
+import { PhotoBulkAdd } from './PhotoBulkAdd';
+import { useActionExecutor } from './useActionExecutor';
+import { useCommandInputState } from './useCommandInputState';
 
 interface CommandInputProps {
   open: boolean;

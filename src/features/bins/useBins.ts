@@ -1,11 +1,11 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { getHueRange } from '@/lib/colorPalette';
 import { Events, notify, useRefreshOn } from '@/lib/eventBus';
 import { useListData } from '@/lib/useListData';
 import { usePagedList } from '@/lib/usePagedList';
 import type { Bin, BinItem, BinVisibility } from '@/types';
-import { getHueRange } from '@/lib/colorPalette';
 
 /** Check if `query` appears at a word boundary in `text` (case-insensitive) */
 function matchesSearch(text: string, query: string): boolean {

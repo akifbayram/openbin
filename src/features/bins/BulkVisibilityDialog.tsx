@@ -3,14 +3,14 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { VisibilityPicker } from './VisibilityPicker';
-import { updateBin } from './useBins';
 import type { BinVisibility } from '@/types';
+import { updateBin } from './useBins';
+import { VisibilityPicker } from './VisibilityPicker';
 
 interface BulkVisibilityDialogProps {
   open: boolean;

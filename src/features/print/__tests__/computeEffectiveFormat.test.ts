@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { computeEffectiveFormat } from '../computeEffectiveFormat';
-import { LABEL_FORMATS, getOrientation } from '../labelFormats';
 import type { LabelFormat } from '../labelFormats';
+import { getOrientation, LABEL_FORMATS } from '../labelFormats';
 import type { CustomState } from '../usePrintSettings';
 
+// biome-ignore lint/style/noNonNullAssertion: test assertion
 const avery5160 = LABEL_FORMATS.find((f) => f.key === 'avery-5160')!;
 
 const NO_CUSTOM: CustomState = { customizing: false, overrides: {} };

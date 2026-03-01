@@ -1,6 +1,6 @@
-import type { Request, Response, NextFunction, RequestHandler } from 'express';
+import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { AiAnalysisError } from './aiCaller.js';
-import { NoAiSettingsError, aiErrorToStatus } from './aiSettings.js';
+import { aiErrorToStatus, NoAiSettingsError } from './aiSettings.js';
 import { ValidationError } from './crypto.js';
 import { HttpError } from './httpErrors.js';
 

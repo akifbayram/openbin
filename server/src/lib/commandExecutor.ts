@@ -1,9 +1,8 @@
-import { getDb } from '../db.js';
-import { querySync, generateUuid } from '../db.js';
-import crypto from 'crypto';
-import { logActivity, computeChanges } from './activityLog.js';
-import { generateShortCode } from './shortCode.js';
+import crypto from 'node:crypto';
+import { generateUuid, getDb, querySync } from '../db.js';
+import { logActivity } from './activityLog.js';
 import type { CommandAction } from './commandParser.js';
+import { generateShortCode } from './shortCode.js';
 
 export interface ActionResult {
   type: string;

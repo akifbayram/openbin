@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/api', () => {
   class ApiError extends Error {
@@ -13,8 +13,8 @@ vi.mock('@/lib/api', () => {
   return { apiFetch: vi.fn(), ApiError };
 });
 
-import { apiFetch, ApiError } from '@/lib/api';
-import { structureTextItems, useTextStructuring, mapStructureErrorMessage } from '../useTextStructuring';
+import { ApiError, apiFetch } from '@/lib/api';
+import { mapStructureErrorMessage, structureTextItems, useTextStructuring } from '../useTextStructuring';
 
 const mockApiFetch = vi.mocked(apiFetch);
 

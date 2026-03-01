@@ -1,12 +1,12 @@
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  resolveSchedule,
   getConfig,
-  runBackup,
   pruneBackups,
+  resolveSchedule,
+  runBackup,
   startBackupScheduler,
   stopBackupScheduler,
 } from '../backup.js';

@@ -1,6 +1,6 @@
-import { useEffect, useCallback, useRef, useState, useContext } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { LocationsContext, updateLocation } from '@/features/locations/useLocations';
+import { useAuth } from '@/lib/auth';
 
 export interface AppSettings {
   appName: string;

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query, generateUuid } from '../db.js';
+import { generateUuid, query } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from './asyncHandler.js';
 import { ValidationError } from './httpErrors.js';
@@ -15,7 +15,7 @@ interface SettingsRouteOptions {
  * Creates a router with GET / PUT endpoints for a per-user JSON blob
  * stored in a table with (id, user_id, settings, updated_at) columns.
  */
-export function createSettingsRouter({ table, label }: SettingsRouteOptions): Router {
+export function createSettingsRouter({ table, label: _label }: SettingsRouteOptions): Router {
   const router = Router();
   router.use(authenticate);
 

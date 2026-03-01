@@ -1,11 +1,11 @@
-import { useRef } from 'react';
 import { Check, MoreHorizontal, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
-import { useTerminology } from '@/lib/terminology';
 import { AreaActionMenu } from './AreaActionMenu';
 import { useInlineEdit } from './useInlineEdit';
 
@@ -76,6 +76,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
   return (
     <div className="group flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--bg-hover)] transition-colors">
       <button
+        type="button"
         className="flex-1 min-w-0 text-left cursor-pointer"
         onClick={() => onNavigate(id)}
       >

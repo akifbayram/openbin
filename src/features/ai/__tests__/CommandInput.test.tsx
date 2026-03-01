@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockNavigate = vi.fn();
 
@@ -56,8 +56,8 @@ vi.mock('@/features/bins/useBins', () => ({
 vi.mock('../PhotoBulkAdd', () => ({
   PhotoBulkAdd: ({ onClose, onBack }: { onClose: () => void; onBack: () => void }) => (
     <div data-testid="photo-bulk-add">
-      <button onClick={onBack}>photo-back</button>
-      <button onClick={onClose}>photo-close</button>
+      <button type="button" onClick={onBack}>photo-back</button>
+      <button type="button" onClick={onClose}>photo-close</button>
     </div>
   ),
 }));

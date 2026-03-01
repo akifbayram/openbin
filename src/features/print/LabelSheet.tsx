@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { batchGenerateQRDataURLs } from '@/lib/qr';
 import type { Bin } from '@/types';
 import { LabelCell } from './LabelCell';
 import type { LabelFormat } from './labelFormats';
+import { buildColorMap, computeLabelsPerPage, computePageSize, DEFAULT_LABEL_FORMAT, getLabelFormat } from './labelFormats';
 import type { LabelDirection, QrStyleOptions } from './usePrintSettings';
 import { isDefaultQrStyle } from './usePrintSettings';
-import { getLabelFormat, DEFAULT_LABEL_FORMAT, computeLabelsPerPage, computePageSize, buildColorMap } from './labelFormats';
 
 interface LabelSheetProps {
   bins: Bin[];
@@ -45,7 +45,7 @@ export function LabelSheet({ bins, format, labelDirection, showColorSwatch, icon
     const colorMap = buildColorMap(bins, !!showColorSwatch);
 
     const generate = useStyled
-      ? import('@/lib/styledQr').then((mod) => mod.batchGenerateStyledQRDataURLs(binIds, qrPixelSize, qrStyle!, colorMap))
+      ? import('@/lib/styledQr').then((mod) => mod.batchGenerateStyledQRDataURLs(binIds, qrPixelSize, qrStyle as QrStyleOptions, colorMap))
       : batchGenerateQRDataURLs(binIds, qrPixelSize, undefined, colorMap);
 
     generate.then((result) => {
@@ -85,8 +85,8 @@ export function LabelSheet({ bins, format, labelDirection, showColorSwatch, icon
     <>
       <style>{`@media print { @page { size: ${pageWidth}in ${pageHeight}in; margin: 0; } }`}</style>
       {pages.map((pageBins, pageIdx) => (
-        <div
-          key={pageIdx}
+        // biome-ignore lint/suspicious/noArrayIndexKey: page order is stable
+        <div key={pageIdx}
           className="label-page"
           style={{
             width: `${pageWidth}in`,

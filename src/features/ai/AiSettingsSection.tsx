@@ -1,18 +1,18 @@
-import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Loader2, RotateCcw } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { OptionGroup } from '@/components/ui/option-group';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
-import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { Disclosure } from '@/components/ui/disclosure';
-import { OptionGroup } from '@/components/ui/option-group';
-import { useAiSettings, saveAiSettings, deleteAiSettings, testAiConnection } from './useAiSettings';
+import { AI_PROVIDERS, KEY_PLACEHOLDERS, MODEL_HINTS } from './aiConstants';
 import { useAiProviderSetup } from './useAiProviderSetup';
-import { AI_PROVIDERS, MODEL_HINTS, KEY_PLACEHOLDERS } from './aiConstants';
+import { deleteAiSettings, saveAiSettings, testAiConnection, useAiSettings } from './useAiSettings';
 import { useDefaultPrompts } from './useDefaultPrompts';
 
 type PromptTab = 'analysis' | 'command' | 'query' | 'structure';
@@ -65,7 +65,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setRequestTimeout(settings.requestTimeout != null ? String(settings.requestTimeout) : '');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings]);
+  }, [settings, setup.setApiKey, setup.setEndpointUrl, setup.setModel, setup.setProvider]);
 
   async function handleTest() {
     setup.setTestResult(null);

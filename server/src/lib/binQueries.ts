@@ -57,7 +57,7 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   const params: unknown[] = [filters.locationId, filters.userId];
   let paramIdx = 3;
 
-  if (filters.q && filters.q.trim()) {
+  if (filters.q?.trim()) {
     const searchTerm = filters.q.trim();
     whereClauses.push(
       `(word_match(b.name, $${paramIdx}) = 1 OR word_match(b.notes, $${paramIdx}) = 1 OR word_match(b.id, $${paramIdx}) = 1 OR word_match(COALESCE(a.name, ''), $${paramIdx}) = 1 OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND word_match(bi.name, $${paramIdx}) = 1) OR EXISTS (SELECT 1 FROM json_each(b.tags) WHERE word_match(value, $${paramIdx}) = 1))`
@@ -77,7 +77,7 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
     }
     params.push(...tagList);
     paramIdx += tagList.length;
-  } else if (filters.tag && filters.tag.trim()) {
+  } else if (filters.tag?.trim()) {
     whereClauses.push(`EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value = $${paramIdx})`);
     params.push(filters.tag.trim());
     paramIdx++;

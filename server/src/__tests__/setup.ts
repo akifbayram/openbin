@@ -1,4 +1,4 @@
-import { beforeAll, afterEach, afterAll } from 'vitest';
+import { afterAll, afterEach, beforeAll } from 'vitest';
 
 // Set env vars BEFORE any app code is imported
 process.env.DATABASE_PATH = ':memory:';

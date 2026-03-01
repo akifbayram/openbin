@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import React from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/auth', () => ({
   useAuth: vi.fn(() => ({
@@ -12,10 +12,10 @@ vi.mock('@/lib/api', () => ({
   apiFetch: vi.fn(),
 }));
 
-import { useAuth } from '@/lib/auth';
 import { apiFetch } from '@/lib/api';
-import { useOnboarding, ONBOARDING_TOTAL_STEPS } from '../useOnboarding';
+import { useAuth } from '@/lib/auth';
 import { UserPreferencesProvider } from '@/lib/userPreferences';
+import { ONBOARDING_TOTAL_STEPS, useOnboarding } from '../useOnboarding';
 
 const mockUseAuth = vi.mocked(useAuth);
 const mockApiFetch = vi.mocked(apiFetch);

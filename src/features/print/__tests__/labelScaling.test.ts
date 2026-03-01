@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { computeScaleFactor, scaleValue, applyAutoScale, applyFontScale } from '../labelScaling';
+import { describe, expect, it } from 'vitest';
 import type { LabelFormat } from '../labelFormats';
+import { applyAutoScale, applyFontScale, computeScaleFactor, scaleValue } from '../labelScaling';
 
 function makeFormat(overrides: Partial<LabelFormat> = {}): LabelFormat {
   return {

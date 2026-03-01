@@ -1,21 +1,21 @@
+import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trash2, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useAuth } from '@/lib/auth';
-import { usePermissions } from '@/lib/usePermissions';
-import { useTerminology } from '@/lib/terminology';
 import { useLocationList } from '@/features/locations/useLocations';
-import { PageHeader } from '@/components/ui/page-header';
+import { useAuth } from '@/lib/auth';
 import { formatTimeAgo } from '@/lib/formatTime';
-import { useTrashBins, restoreBinFromTrash, permanentDeleteBin, notifyBinsChanged } from './useBins';
+import { useTerminology } from '@/lib/terminology';
+import { usePermissions } from '@/lib/usePermissions';
 import type { Bin } from '@/types';
+import { notifyBinsChanged, permanentDeleteBin, restoreBinFromTrash, useTrashBins } from './useBins';
 
 export function TrashPage() {
   const navigate = useNavigate();

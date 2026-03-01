@@ -1,11 +1,11 @@
-import { useMemo, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { haptic } from '@/lib/utils';
-import { deleteBin, restoreBin, addBin } from './useBins';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 import { useAuth } from '@/lib/auth';
-import type { Bin } from '@/types';
 import type { Terminology } from '@/lib/terminology';
+import { haptic } from '@/lib/utils';
+import type { Bin } from '@/types';
+import { addBin, deleteBin, restoreBin } from './useBins';
 
 export function useBulkActions(
   bins: Bin[],

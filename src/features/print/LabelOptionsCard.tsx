@@ -1,11 +1,11 @@
-import { ChevronDown, AlignLeft, AlignCenter, Columns2, Rows2, SlidersHorizontal, QrCode, Type, Smile, Hash, Palette } from 'lucide-react';
-import { OptionGroup } from '@/components/ui/option-group';
+import { AlignCenter, AlignLeft, ChevronDown, Columns2, Hash, Palette, QrCode, Rows2, SlidersHorizontal, Smile, Type } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+import { OptionGroup } from '@/components/ui/option-group';
 import { useTerminology } from '@/lib/terminology';
-import type { LabelOptions, LabelDirection } from './usePrintSettings';
+import { cn } from '@/lib/utils';
+import type { LabelDirection, LabelOptions } from './usePrintSettings';
 
 const FONT_SCALE_PRESETS = [
   { label: 'S', value: 0.75 },
@@ -28,6 +28,7 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
     <Card>
       <CardContent>
         <button
+          type="button"
           className="flex items-center justify-between w-full"
           onClick={() => onExpandedChange(!expanded)}
         >
@@ -89,8 +90,9 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
                 { key: 'showBinCode' as const, label: `${t.Bin} Code`, icon: Hash },
                 { key: 'showColorSwatch' as const, label: 'Color Background', icon: Palette },
               ] as const).map(({ key, label, icon: Icon }) => (
-                <label key={key} className="flex items-center gap-3 px-2 py-1.5 cursor-pointer rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] transition-colors">
+                <label key={key} htmlFor={`label-opt-${key}`} className="flex items-center gap-3 px-2 py-1.5 cursor-pointer rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] transition-colors">
                   <Checkbox
+                    id={`label-opt-${key}`}
                     checked={labelOptions[key]}
                     onCheckedChange={(checked) => onUpdateOption(key, !!checked)}
                   />

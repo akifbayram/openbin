@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface UseOverlayAnimationOptions {
   open: boolean;
@@ -54,7 +54,7 @@ export function useOverlayAnimation({
   useEffect(() => {
     if (!open || !onClose) return;
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose!();
+      if (e.key === 'Escape') onClose?.();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);

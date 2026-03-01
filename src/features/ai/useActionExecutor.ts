@@ -1,14 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
-import { useAuth } from '@/lib/auth';
-import { useAreaList, createArea, updateArea, deleteArea } from '@/features/areas/useAreas';
-import { addBin, updateBin, deleteBin, restoreBin, notifyBinsChanged, addItemsToBin, reorderItems, restoreBinFromTrash } from '@/features/bins/useBins';
+import { createArea, deleteArea, updateArea, useAreaList } from '@/features/areas/useAreas';
+import { addBin, addItemsToBin, deleteBin, notifyBinsChanged, reorderItems, restoreBin, restoreBinFromTrash, updateBin } from '@/features/bins/useBins';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 import { setTagColor } from '@/features/tags/useTagColors';
-import { notify, Events } from '@/lib/eventBus';
 import { apiFetch } from '@/lib/api';
-import type { CommandAction } from './useCommand';
+import { useAuth } from '@/lib/auth';
+import { Events, notify } from '@/lib/eventBus';
 import type { Bin } from '@/types';
+import type { CommandAction } from './useCommand';
 
 interface UseActionExecutorOptions {
   actions: CommandAction[] | null;
@@ -28,7 +28,8 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
       (a) => a.name.toLowerCase() === areaName.toLowerCase()
     );
     if (existing) return existing.id;
-    const newArea = await createArea(activeLocationId!, areaName);
+    if (!activeLocationId) throw new Error('No active location');
+    const newArea = await createArea(activeLocationId, areaName);
     return newArea.id;
   }
 
@@ -173,15 +174,15 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
             notify(Events.PINS);
             break;
           case 'rename_area':
-            await updateArea(activeLocationId!, action.area_id, action.new_name);
+            await updateArea(activeLocationId, action.area_id, action.new_name);
             notify(Events.AREAS);
             break;
           case 'delete_area':
-            await deleteArea(activeLocationId!, action.area_id);
+            await deleteArea(activeLocationId, action.area_id);
             notify(Events.AREAS);
             break;
           case 'set_tag_color':
-            await setTagColor(activeLocationId!, action.tag, action.color);
+            await setTagColor(activeLocationId, action.tag, action.color);
             notify(Events.TAG_COLORS);
             break;
           case 'reorder_items':

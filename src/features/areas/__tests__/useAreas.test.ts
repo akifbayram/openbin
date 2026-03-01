@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/api', () => ({
   apiFetch: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock('@/features/bins/useBins', () => ({
 }));
 
 import { apiFetch } from '@/lib/api';
-import { createArea, updateArea, deleteArea } from '../useAreas';
+import { createArea, deleteArea, updateArea } from '../useAreas';
 
 const mockApiFetch = vi.mocked(apiFetch);
 

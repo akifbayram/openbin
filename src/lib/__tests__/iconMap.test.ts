@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
 import { Package, Wrench } from 'lucide-react';
-import { resolveIcon, ICON_MAP, ICON_NAMES, DEFAULT_ICON } from '@/lib/iconMap';
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_ICON, ICON_MAP, ICON_NAMES, resolveIcon } from '@/lib/iconMap';
 
 describe('iconMap', () => {
   it('resolveIcon returns the correct icon for a known name', () => {

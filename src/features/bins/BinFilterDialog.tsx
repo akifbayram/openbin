@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
-import { HUE_RANGES } from '@/lib/colorPalette';
-import { useTagStyle } from '@/features/tags/useTagStyle';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { OptionGroup } from '@/components/ui/option-group';
+import { useTagStyle } from '@/features/tags/useTagStyle';
+import { HUE_RANGES } from '@/lib/colorPalette';
+import { cn } from '@/lib/utils';
 import type { Area } from '@/types';
 import type { BinFilters, SortOption } from './useBins';
-import { EMPTY_FILTERS, countActiveFilters } from './useBins';
+import { countActiveFilters, EMPTY_FILTERS } from './useBins';
 
 const sortLabels: Record<SortOption, string> = {
   updated: 'Recently Updated',

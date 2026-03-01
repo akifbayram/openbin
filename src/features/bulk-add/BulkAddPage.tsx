@@ -1,19 +1,19 @@
-import { useReducer, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useCallback, useEffect, useReducer } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { MenuButton } from '@/components/ui/menu-button';
 import { useToast } from '@/components/ui/toast';
-import { useAuth } from '@/lib/auth';
 import { addBin } from '@/features/bins/useBins';
-import { addPhoto } from '@/features/photos/usePhotos';
 import { compressImage } from '@/features/photos/compressImage';
-import { bulkAddReducer, initialState, stepIndex } from './useBulkAdd';
-import { BulkAddUploadStep } from './BulkAddUploadStep';
+import { addPhoto } from '@/features/photos/usePhotos';
+import { useAuth } from '@/lib/auth';
+import { cn } from '@/lib/utils';
 import { BulkAddReviewStep } from './BulkAddReviewStep';
 import { BulkAddSummaryStep } from './BulkAddSummaryStep';
-import { MenuButton } from '@/components/ui/menu-button';
+import { BulkAddUploadStep } from './BulkAddUploadStep';
 import type { BulkAddPhoto } from './useBulkAdd';
+import { bulkAddReducer, initialState, stepIndex } from './useBulkAdd';
 
 const STEPS = [
   { key: 'upload', label: 'Upload' },
@@ -36,7 +36,7 @@ export function BulkAddPage() {
   useEffect(() => {
     const photos = state.photos;
     return () => {
-      photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+      for (const p of photos) URL.revokeObjectURL(p.previewUrl);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

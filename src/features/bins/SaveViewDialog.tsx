@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import { saveView } from '@/lib/savedViews';
-import type { SortOption, BinFilters } from './useBins';
+import type { BinFilters, SortOption } from './useBins';
 
 interface SaveViewDialogProps {
   open: boolean;

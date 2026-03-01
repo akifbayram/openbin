@@ -1,49 +1,47 @@
-import { useState, useCallback, useEffect } from 'react';
 import {
-  Plus,
-  PackageOpen,
   MapPin,
-  Sparkles,
+  PackageOpen,
+  Plus,
   ScanLine,
+  Sparkles,
 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
-import { EmptyState } from '@/components/ui/empty-state';
-import { useToast } from '@/components/ui/toast';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/lib/auth';
-import { usePermissions } from '@/lib/usePermissions';
-import type { SortDirection } from '@/components/ui/sort-header';
-import { usePaginatedBinList, useAllTags, countActiveFilters, updateBin, type SortOption } from './useBins';
-import { useBinSearchParams } from './useBinSearchParams';
-
-import { BinCard } from './BinCard';
-import { BinCompactCard } from './BinCompactCard';
-import { BinTableView } from './BinTableView';
-import { BinSearchBar } from './BinSearchBar';
-import { ViewModeToggle } from './ViewModeToggle';
-import { useViewMode } from './useViewMode';
-import { useColumnVisibility } from './useColumnVisibility';
-import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
-import { SearchBarOverflowMenu } from './SearchBarOverflowMenu';
-import { usePageSize } from './usePageSize';
-import { BulkActionBar } from './BulkActionBar';
-import { Pagination } from '@/components/ui/pagination';
 import { Crossfade } from '@/components/ui/crossfade';
-import { BinListDialogs } from './BinListDialogs';
-import { BinListSkeleton } from './BinListSkeleton';
-
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
+import { Pagination } from '@/components/ui/pagination';
+import type { SortDirection } from '@/components/ui/sort-header';
+import { useToast } from '@/components/ui/toast';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useAreaList } from '@/features/areas/useAreas';
-import { useAiEnabled } from '@/lib/aiToggle';
-import { useTerminology } from '@/lib/terminology';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { useTagStyle } from '@/features/tags/useTagStyle';
+import { useAiEnabled } from '@/lib/aiToggle';
+import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
+import { usePermissions } from '@/lib/usePermissions';
+import { cn } from '@/lib/utils';
+import { BinCard } from './BinCard';
+import { BinCompactCard } from './BinCompactCard';
+import { BinListDialogs } from './BinListDialogs';
+import { BinListSkeleton } from './BinListSkeleton';
+import { BinSearchBar } from './BinSearchBar';
+import { BinTableView } from './BinTableView';
+import { BulkActionBar } from './BulkActionBar';
+import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
+import { SearchBarOverflowMenu } from './SearchBarOverflowMenu';
+import { useBinSearchParams } from './useBinSearchParams';
+import { countActiveFilters, type SortOption, updateBin, useAllTags, usePaginatedBinList } from './useBins';
+import { useBulkActions } from './useBulkActions';
 import { useBulkDialogs } from './useBulkDialogs';
 import { useBulkSelection } from './useBulkSelection';
-import { useBulkActions } from './useBulkActions';
-import { PageHeader } from '@/components/ui/page-header';
+import { useColumnVisibility } from './useColumnVisibility';
+import { usePageSize } from './usePageSize';
+import { useViewMode } from './useViewMode';
+import { ViewModeToggle } from './ViewModeToggle';
 
 export function BinListPage() {
   const t = useTerminology();

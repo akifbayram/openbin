@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { mapAiError } from './aiErrors';
 import type { AiSuggestions } from '@/types';
+import { mapAiError } from './aiErrors';
 
 export const MAX_AI_PHOTOS = 5;
 

@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  type BulkAddPhoto,
+  type BulkAddState,
   bulkAddReducer,
+  createBulkAddPhoto,
   initialState,
   stepIndex,
-  createBulkAddPhoto,
-  type BulkAddState,
-  type BulkAddPhoto,
 } from '../useBulkAdd';
 
 function photo(overrides?: Partial<BulkAddPhoto>): BulkAddPhoto {

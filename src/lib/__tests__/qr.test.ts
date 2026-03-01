@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('qrcode', () => ({
   default: {
@@ -7,7 +7,7 @@ vi.mock('qrcode', () => ({
 }));
 
 import QRCode from 'qrcode';
-import { generateQRDataURL, batchGenerateQRDataURLs } from '@/lib/qr';
+import { batchGenerateQRDataURLs, generateQRDataURL } from '@/lib/qr';
 
 describe('generateQRDataURL', () => {
   beforeEach(() => {

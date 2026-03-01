@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { cn } from '@/lib/utils';
-import { SHORTCUTS, formatKeys, type ShortcutDef } from '@/lib/shortcuts';
+import { formatKeys, SHORTCUTS, type ShortcutDef } from '@/lib/shortcuts';
 import { useOverlayAnimation } from '@/lib/useOverlayAnimation';
+import { cn } from '@/lib/utils';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -103,12 +103,16 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
   if (!visible) return null;
 
   return createPortal(
+    // biome-ignore lint/a11y/noStaticElementInteractions: container delegates keyboard events to input
     <div
+      role="presentation"
       className="fixed inset-0 z-[70] flex items-start justify-center pt-[15vh]"
       onKeyDown={handleKeyDown}
     >
       {/* Backdrop */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay dismisses palette on click */}
       <div
+        role="presentation"
         className={cn(
           'fixed inset-0 bg-[var(--overlay-backdrop)] backdrop-blur-sm transition-opacity duration-150',
           isEntered ? 'opacity-100' : 'opacity-0',
@@ -124,7 +128,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
       >
         {/* Search input */}
         <div className="flex items-center gap-3 px-4 border-b border-[var(--border-default)]">
-          <svg className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg aria-hidden="true" className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
           </svg>
@@ -155,6 +159,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
                     const keys = formatKeys(item.keys);
                     return (
                       <button
+                        type="button"
                         key={item.id}
                         data-active={isActive}
                         onClick={() => execute(item.id)}
@@ -170,6 +175,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
                         <div className="flex items-center gap-1">
                           {keys.map((k, i) => (
                             <kbd
+                              // biome-ignore lint/suspicious/noArrayIndexKey: static list of keyboard shortcut keys
                               key={i}
                               className={cn(
                                 'inline-flex items-center justify-center min-w-[22px] h-5 px-1 rounded text-[11px] font-mono leading-none',

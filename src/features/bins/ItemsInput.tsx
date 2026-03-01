@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
-import { X, Sparkles, Loader2, Check, ChevronLeft, Plus } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Check, ChevronLeft, Loader2, Plus, Sparkles, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
 
@@ -36,7 +36,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
   useEffect(() => {
     if (structuredItems && state === 'processing') {
       const initial = new Map<number, boolean>();
-      structuredItems.forEach((_, i) => initial.set(i, true));
+      for (let i = 0; i < structuredItems.length; i++) initial.set(i, true);
       setCheckedItems(initial);
       setState('preview');
     }
@@ -179,6 +179,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
       {items.length > 0 && (
         <div className="space-y-0.5 mb-2">
           {items.map((item, index) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: items may contain duplicates
             <div key={index} className="flex items-center gap-1.5 bg-[var(--bg-elevated)] px-2 py-1.5 rounded-[var(--radius-sm)]">
               <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed py-0.5">{item}</span>
               <button
@@ -280,8 +281,8 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
             {structuredItems.map((item, i) => {
               const checked = checkedItems.get(i) !== false;
               return (
-                <button
-                  key={i}
+                // biome-ignore lint/suspicious/noArrayIndexKey: items identified by index for toggle
+                <button key={i}
                   type="button"
                   onClick={() => toggleItem(i)}
                   className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] transition-all ${

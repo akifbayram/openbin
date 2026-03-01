@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { TagInput } from './TagInput';
+import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
+import { TagInput } from './TagInput';
 
 interface BulkTagDialogProps {
   open: boolean;

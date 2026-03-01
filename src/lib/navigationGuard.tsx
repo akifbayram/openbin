@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { createContext, useCallback, useContext, useRef } from 'react';
 
 interface NavigationGuard {
   /** Return true to block navigation */
@@ -29,7 +29,7 @@ export function NavigationGuardProvider({ children }: { children: ReactNode }) {
 
   const guardedNavigate = useCallback((action: () => void) => {
     const guard = guardRef.current;
-    if (guard && guard.shouldBlock()) {
+    if (guard?.shouldBlock()) {
       guard.onBlocked(action);
     } else {
       action();

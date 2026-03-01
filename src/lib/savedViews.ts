@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { apiFetch } from './api';
-import type { SortOption, BinFilters } from '@/features/bins/useBins';
+import { useCallback, useEffect, useState } from 'react';
+import type { BinFilters, SortOption } from '@/features/bins/useBins';
 import type { ListResponse } from '@/types';
+import { apiFetch } from './api';
 
 export interface SavedView {
   id: string;

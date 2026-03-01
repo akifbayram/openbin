@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import type { CSSProperties } from 'react';
 import { X } from 'lucide-react';
-import { Badge } from './badge';
+import type { CSSProperties } from 'react';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Badge } from './badge';
 
 interface DismissibleBadgeProps {
   children: React.ReactNode;
@@ -32,6 +32,7 @@ export function DismissibleBadge({ children, onDismiss, ariaLabel, style, dot }:
       {dot && <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: dot }} />}
       {children}
       <button
+        type="button"
         onClick={handleDismiss}
         aria-label={ariaLabel}
         className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"

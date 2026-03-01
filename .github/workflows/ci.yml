@@ -31,6 +31,13 @@ jobs:
         run: npm audit --audit-level=moderate
         working-directory: server
 
+      - name: Lint (client)
+        run: npx biome check src/
+
+      - name: Lint (server)
+        run: npx biome check src/
+        working-directory: server
+
       - name: Type check (client)
         run: npx tsc --noEmit
 

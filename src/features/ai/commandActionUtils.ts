@@ -1,9 +1,9 @@
-import {
-  Plus, Minus, Package, Trash2, Tag, MapPin, FileText, Palette, Image as ImageIcon,
-  Copy, Pin, PinOff, FolderPen, FolderMinus, ArrowUpDown, Undo2, PenLine,
+import {ArrowUpDown, 
+  Copy, FileText, FolderMinus, FolderPen, Image as ImageIcon,MapPin, Minus, Package, Palette, PenLine,Pin, PinOff, 
+  Plus, Tag, Trash2, Undo2, 
 } from 'lucide-react';
-import type { CommandAction } from './useCommand';
 import type { Terminology } from '@/lib/terminology';
+import type { CommandAction } from './useCommand';
 
 export function isDestructiveAction(action: CommandAction): boolean {
   return action.type === 'delete_bin' || action.type === 'remove_items' || action.type === 'remove_tags'

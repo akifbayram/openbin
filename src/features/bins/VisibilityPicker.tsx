@@ -1,7 +1,7 @@
 import { Globe, Lock } from 'lucide-react';
-import type { BinVisibility } from '@/types';
-import { OptionGroup } from '@/components/ui/option-group';
 import type { OptionGroupOption } from '@/components/ui/option-group';
+import { OptionGroup } from '@/components/ui/option-group';
+import type { BinVisibility } from '@/types';
 
 const options: OptionGroupOption<BinVisibility>[] = [
   { key: 'location', label: 'Everyone', icon: Globe },

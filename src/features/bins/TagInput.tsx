@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
-import { useTagStyle } from '@/features/tags/useTagStyle';
 import { useDialogPortal } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useTagStyle } from '@/features/tags/useTagStyle';
 
 interface TagInputProps {
   tags: string[];

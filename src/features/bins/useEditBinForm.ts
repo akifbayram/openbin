@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
-import { updateBin } from './useBins';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
-import { useBinFormFields } from './useBinFormFields';
 import type { Bin, BinVisibility } from '@/types';
+import { useBinFormFields } from './useBinFormFields';
+import { updateBin } from './useBins';
 
 interface OriginalSnapshot {
   name: string;

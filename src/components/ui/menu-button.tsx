@@ -8,6 +8,7 @@ export function MenuButton({ className }: { className?: string }) {
 
   return (
     <button
+      type="button"
       onClick={openDrawer}
       aria-label="Open navigation"
       className={cn(

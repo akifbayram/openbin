@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { apiFetch, ApiError, getAvatarUrl } from '@/lib/api';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiError, apiFetch, getAvatarUrl } from '@/lib/api';
 
 function mockFetchResponse(overrides: Partial<Response> = {}, body?: string) {
   const res = {
@@ -43,7 +43,7 @@ describe('apiFetch', () => {
 
     const [, init] = fetchSpy.mock.calls[0];
     const headers = init?.headers as Record<string, string>;
-    expect(headers['Authorization']).toBeUndefined();
+    expect(headers.Authorization).toBeUndefined();
   });
 
   it('sets Content-Type to application/json for object bodies', async () => {

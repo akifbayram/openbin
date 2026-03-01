@@ -38,7 +38,7 @@ async function fetchLocationData(locationId: string, userId: string) {
 }
 
 function truncateNotes(notes: unknown): string {
-  if (typeof notes === 'string' && notes.length > 200) return notes.slice(0, 200) + '...';
+  if (typeof notes === 'string' && notes.length > 200) return `${notes.slice(0, 200)}...`;
   return (notes as string) || '';
 }
 

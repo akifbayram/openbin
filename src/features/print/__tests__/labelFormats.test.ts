@@ -1,19 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import type { Bin } from '@/types';
+import type { LabelFormat } from '../labelFormats';
 import {
   applyOrientation,
-  computeRowsPerPage,
+  buildColorMap,
+  computeCodeFontSize,
   computeLabelsPerPage,
   computePageSize,
-  computeCodeFontSize,
-  buildColorMap,
+  computeRowsPerPage,
+  filterLabelFormats,
   getLabelFormat,
   getOrientation,
   isVerticalLayout,
-  filterLabelFormats,
   LABEL_FORMATS,
 } from '../labelFormats';
-import type { LabelFormat } from '../labelFormats';
-import type { Bin } from '@/types';
 
 /** Minimal label format for testing. */
 function makeFormat(overrides: Partial<LabelFormat> = {}): LabelFormat {
@@ -301,6 +301,7 @@ describe('buildColorMap', () => {
     const map = buildColorMap(bins, true);
     if (map) {
       expect(map.has('abc123')).toBe(true);
+      // biome-ignore lint/style/noNonNullAssertion: test assertion
       const entry = map.get('abc123')!;
       expect(entry.dark).toBe('#000000');
       expect(entry.light).toMatch(/^#[0-9a-fA-F]{6}$/);

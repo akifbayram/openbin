@@ -1,7 +1,7 @@
 import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import type { AiSuggestions, BinItem } from '@/types';
 
@@ -89,6 +89,7 @@ export function AiSuggestionsPanel({
               <p className="text-[13px] font-medium text-[var(--text-secondary)]">Items</p>
               <ul className="mt-1 space-y-0.5">
                 {suggestions.items.map((item, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: items may contain duplicates
                   <li key={i} className="text-[14px] text-[var(--text-primary)] flex items-start gap-1.5">
                     <span className="text-[var(--text-tertiary)]">•</span>
                     {item}

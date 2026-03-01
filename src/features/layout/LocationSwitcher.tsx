@@ -1,9 +1,9 @@
-import { useRef, useEffect } from 'react';
-import { MapPin, ChevronsUpDown, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Check, ChevronsUpDown, MapPin } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
-import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import type { Location } from '@/types';
 
 interface LocationSwitcherProps {
@@ -36,6 +36,7 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
   return (
     <div className="relative" ref={ref}>
       <button
+        type="button"
         onClick={toggle}
         className={cn(
           'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[14px] font-medium transition-colors text-left',
@@ -60,6 +61,7 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
             const isActive = loc.id === activeLocationId;
             return (
               <button
+                type="button"
                 key={loc.id}
                 role="option"
                 aria-selected={isActive}

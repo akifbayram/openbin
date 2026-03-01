@@ -1,20 +1,20 @@
-import { type ReactNode, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
+import { type ReactNode, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ItemList } from './ItemList';
-import { QuickAddWidget } from './QuickAddWidget';
+import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
-import { resolveColor } from '@/lib/colorPalette';
-import { cn } from '@/lib/utils';
-import { useTheme } from '@/lib/theme';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
+import { resolveColor } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
-import type { useQuickAdd } from './useQuickAdd';
+import { useTheme } from '@/lib/theme';
+import { cn } from '@/lib/utils';
 import type { AiSuggestions, Bin } from '@/types';
+import { ItemList } from './ItemList';
+import { QuickAddWidget } from './QuickAddWidget';
+import type { useQuickAdd } from './useQuickAdd';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });

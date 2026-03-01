@@ -1,28 +1,29 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { ChevronRight, Inbox, MapPin, Plus, ScanLine, Settings, Sparkles } from 'lucide-react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ScanLine, MapPin, ChevronRight, Plus, Inbox, Sparkles, Settings } from 'lucide-react';
 
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
-import { Card, CardContent } from '@/components/ui/card';
-import { EmptyState } from '@/components/ui/empty-state';
-import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Crossfade } from '@/components/ui/crossfade';
-import { useDebounce } from '@/lib/useDebounce';
-import { useAuth } from '@/lib/auth';
-import { useAiEnabled } from '@/lib/aiToggle';
-import { useSavedViews, deleteView } from '@/lib/savedViews';
-import { buildViewSearchParams } from '@/features/bins/useBinSearchParams';
+
 import { SavedViewChips } from '@/components/saved-view-chips';
-import { useDashboardSettings } from '@/lib/dashboardSettings';
-import { useTerminology } from '@/lib/terminology';
-import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
-import { useDashboard } from './useDashboard';
-import { BinCard } from '@/features/bins/BinCard';
-import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Crossfade } from '@/components/ui/crossfade';
+import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { SearchInput } from '@/components/ui/search-input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip } from '@/components/ui/tooltip';
+import { BinCard } from '@/features/bins/BinCard';
+import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
+import { buildViewSearchParams } from '@/features/bins/useBinSearchParams';
+import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
+import { useAiEnabled } from '@/lib/aiToggle';
+import { useAuth } from '@/lib/auth';
+import { useDashboardSettings } from '@/lib/dashboardSettings';
+import { deleteView, useSavedViews } from '@/lib/savedViews';
+import { useTerminology } from '@/lib/terminology';
+import { useDebounce } from '@/lib/useDebounce';
+import { useDashboard } from './useDashboard';
 
 function useAnimatedNumber(target: number, duration = 400) {
   const [display, setDisplay] = useState(target);
@@ -42,7 +43,7 @@ function useAnimatedNumber(target: number, duration = 400) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       // Cubic ease-out
-      const eased = 1 - Math.pow(1 - progress, 3);
+      const eased = 1 - (1 - progress) ** 3;
       setDisplay(Math.round(start + delta * eased));
       if (progress < 1) {
         rafRef.current = requestAnimationFrame(tick);
@@ -52,7 +53,7 @@ function useAnimatedNumber(target: number, duration = 400) {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
     // Only re-run when target changes, not display
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target, duration]);
+  }, [target, duration]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return display;
 }
@@ -99,6 +100,7 @@ function SectionHeader({
       </h2>
       {action && (
         <button
+          type="button"
           onClick={action.onClick}
           className="flex items-center gap-0.5 text-[13px] font-medium text-[var(--accent)]"
         >
@@ -284,6 +286,7 @@ export function DashboardPage() {
         {/* Needs Organizing */}
         {dashSettings.showNeedsOrganizing && needsOrganizing > 0 && (
           <button
+            type="button"
             onClick={() => navigate('/bins?needs_organizing=true')}
             className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center justify-between"
           >

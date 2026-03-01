@@ -1,10 +1,10 @@
+import { AlertCircle, Check, ChevronDown, ChevronLeft, ChevronUp, Loader2, Pencil, Plus } from 'lucide-react';
 import { useState } from 'react';
-import { ChevronLeft, ChevronDown, ChevronUp, Pencil, Plus, AlertCircle, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { resolveIcon } from '@/lib/iconMap';
 import { resolveColor } from '@/lib/colorPalette';
+import { resolveIcon } from '@/lib/iconMap';
 import { useTerminology } from '@/lib/terminology';
-import type { BulkAddPhoto, BulkAddAction } from './useBulkAdd';
+import type { BulkAddAction, BulkAddPhoto } from './useBulkAdd';
 
 interface BulkAddSummaryStepProps {
   photos: BulkAddPhoto[];

@@ -1,8 +1,8 @@
-import * as React from 'react';
-import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
-import { useOverlayAnimation } from '@/lib/useOverlayAnimation';
+import * as React from 'react';
 import { useFocusTrap } from '@/lib/useFocusTrap';
+import { useOverlayAnimation } from '@/lib/useOverlayAnimation';
+import { cn } from '@/lib/utils';
 
 interface DialogContextValue {
   open: boolean;
@@ -44,7 +44,7 @@ function DialogTrigger({ children, asChild }: { children: React.ReactNode; asChi
       onClick: () => onOpenChange(true),
     });
   }
-  return <button onClick={() => onOpenChange(true)}>{children}</button>;
+  return <button type="button" onClick={() => onOpenChange(true)}>{children}</button>;
 }
 
 function DialogContent({
@@ -72,7 +72,9 @@ function DialogContent({
     <DialogContext.Provider value={{ open, onOpenChange, titleId }}>
       <DialogPortalContext.Provider value={portalNode}>
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay dismisses dialog on click */}
           <div
+            role="presentation"
             className="fixed inset-0 bg-[var(--overlay-backdrop)] backdrop-blur-sm transition-opacity duration-200"
             style={{ opacity: isEntered ? 1 : 0 }}
             onClick={() => onOpenChange(false)}
@@ -95,6 +97,7 @@ function DialogContent({
             }}
           >
             <button
+              type="button"
               aria-label="Close"
               className="absolute right-5 top-5 z-10 rounded-full p-1.5 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-center"
               onClick={() => onOpenChange(false)}

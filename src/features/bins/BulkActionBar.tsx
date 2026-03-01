@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { CheckCircle2, Tag, MapPin, Trash2, X, MoreHorizontal, Paintbrush, Eye, ArrowRightLeft, Pin, Copy, Clipboard, ClipboardPaste } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle2, Clipboard, ClipboardPaste, Copy, Eye, MapPin, MoreHorizontal, Paintbrush, Pin, Tag, Trash2, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
@@ -110,6 +110,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
           {moreOpen && (
             <div className="absolute bottom-full mb-2 right-0 glass-heavy rounded-[var(--radius-md)] py-1 min-w-[180px] z-50 shadow-lg">
               <button
+                type="button"
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                 onClick={() => handleMoreAction(onAppearance)}
               >
@@ -117,6 +118,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                 Appearance
               </button>
               <button
+                type="button"
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                 onClick={() => handleMoreAction(onVisibility)}
               >
@@ -124,6 +126,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                 Change Visibility
               </button>
               <button
+                type="button"
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                 onClick={() => handleMoreAction(onMoveLocation)}
               >
@@ -131,6 +134,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                 Move to Location
               </button>
               <button
+                type="button"
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                 onClick={() => handleMoreAction(onPin)}
               >
@@ -138,6 +142,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                 {pinLabel}
               </button>
               <button
+                type="button"
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                 onClick={() => handleMoreAction(onDuplicate)}
               >
@@ -149,6 +154,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
               )}
               {canCopyStyle && onCopyStyle && (
                 <button
+                  type="button"
                   className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                   onClick={() => handleMoreAction(onCopyStyle)}
                 >
@@ -158,6 +164,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
               )}
               {canPasteStyle && onPasteStyle && (
                 <button
+                  type="button"
                   className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                   onClick={() => handleMoreAction(onPasteStyle)}
                 >

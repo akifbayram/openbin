@@ -1,12 +1,12 @@
-import { useRef } from 'react';
 import { MoreHorizontal } from 'lucide-react';
+import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
-import { ViewModeToggle } from './ViewModeToggle';
 import { FieldToggleList } from './ColumnVisibilityMenu';
 import type { FieldKey } from './useColumnVisibility';
 import type { ViewMode } from './useViewMode';
+import { ViewModeToggle } from './ViewModeToggle';
 
 interface SearchBarOverflowMenuProps {
   viewMode: ViewMode;

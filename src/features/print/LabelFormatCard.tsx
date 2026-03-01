@@ -1,16 +1,16 @@
+import { CheckCircle2, ChevronDown, Circle, LayoutGrid, RectangleHorizontal, RectangleVertical, Save, Search, X } from 'lucide-react';
 import { useState } from 'react';
-import { CheckCircle2, Circle, ChevronDown, Save, X, RectangleHorizontal, RectangleVertical, Search, LayoutGrid } from 'lucide-react';
-import { OptionGroup } from '@/components/ui/option-group';
 import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { OptionGroup } from '@/components/ui/option-group';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { computeLabelsPerPage, filterLabelFormats } from './labelFormats';
 import { inchesToMm } from './pdfUnits';
-import { CUSTOM_FIELDS } from './usePrintPageActions';
 import type { FormatState } from './usePrintPageActions';
+import { CUSTOM_FIELDS } from './usePrintPageActions';
 
 interface LabelFormatCardProps {
   format: FormatState;
@@ -33,6 +33,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
     <Card>
       <CardContent>
         <button
+          type="button"
           className="flex items-center justify-between w-full"
           onClick={() => onExpandedChange(!expanded)}
         >
@@ -63,6 +64,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
               />
               {formatSearch && (
                 <button
+                  type="button"
                   onClick={() => setFormatSearch('')}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                 >
@@ -77,6 +79,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                 <div className="space-y-1 mt-2">
                   {filteredFormats.map((fmt) => (
                     <button
+                      type="button"
                       key={fmt.key}
                       className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
                       onClick={() => f.handleFormatChange(fmt.key)}
@@ -108,6 +111,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                 {f.savedPresets.map((fmt) => (
                   <div key={fmt.key} className="flex items-center group">
                     <button
+                      type="button"
                       className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 flex-1 min-w-0 text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
                       onClick={() => f.handleFormatChange(fmt.key)}
                     >
@@ -127,6 +131,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                     </button>
                     <Tooltip content={`Delete ${fmt.name}`}>
                       <button
+                        type="button"
                         className="shrink-0 p-2 mr-1 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                         onClick={() => f.handleDeletePreset(fmt.key)}
                         aria-label={`Delete ${fmt.name}`}
@@ -163,8 +168,9 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
 
             {/* Customize toggle */}
             <div className="mt-3 pt-3 border-t border-[var(--border-subtle)]">
-              <label className="flex items-center gap-3 px-3 py-1 cursor-pointer">
+              <label htmlFor="customize-dimensions" className="flex items-center gap-3 px-3 py-1 cursor-pointer">
                 <Checkbox
+                  id="customize-dimensions"
                   checked={f.customState.customizing}
                   onCheckedChange={f.toggleCustomize}
                 />
@@ -194,10 +200,11 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                     const min = f.displayUnit === 'mm' && field.isDimensional ? String(inchesToMm(field.minIn)) : String(field.minIn);
                     return (
                       <div key={field.key} className="flex flex-col gap-1">
-                        <label className="text-[12px] text-[var(--text-secondary)] font-medium">
+                        <label htmlFor={`custom-field-${field.key}`} className="text-[12px] text-[var(--text-secondary)] font-medium">
                           {field.label}{unitSuffix}
                         </label>
                         <input
+                          id={`custom-field-${field.key}`}
                           type="number"
                           step={step}
                           min={min}
@@ -219,7 +226,6 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                       value={presetName}
                       onChange={(e) => setPresetName(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                      autoFocus
                       className="h-9 flex-1 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
                     />
                     <Button size="sm" onClick={handleSave} disabled={!presetName.trim()} className="h-9 px-3">

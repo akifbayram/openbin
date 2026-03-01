@@ -1,5 +1,5 @@
 import type { ColorPreset } from './colorPalette';
-import { resolveColor, getApproxBgHex, needsLightText } from './colorPalette';
+import { getApproxBgHex, needsLightText, resolveColor } from './colorPalette';
 
 const MUTED_DARK = 'rgba(255,255,255,0.7)';
 const MUTED_LIGHT = 'rgba(0,0,0,0.55)';
@@ -190,14 +190,18 @@ export function getCardRenderProps(
     case 'glass':
       return renderGlassProps(colorPreset, theme);
     case 'border':
-      return renderBorderProps(cardStyle!, colorPreset, theme);
+      if (!cardStyle) break;
+      return renderBorderProps(cardStyle, colorPreset, theme);
     case 'gradient':
-      return renderGradientProps(cardStyle!, colorPreset, theme);
+      if (!cardStyle) break;
+      return renderGradientProps(cardStyle, colorPreset, theme);
     case 'stripe':
-      return renderStripeProps(cardStyle!, colorPreset, theme);
+      if (!cardStyle) break;
+      return renderStripeProps(cardStyle, colorPreset, theme);
     case 'photo':
       return renderPhotoProps();
     default:
-      return { className: 'glass-card', style: {}, mutedColor: undefined, primaryColor: undefined, isPhotoVariant: false };
+      break;
   }
+  return { className: 'glass-card', style: {}, mutedColor: undefined, primaryColor: undefined, isPhotoVariant: false };
 }

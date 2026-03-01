@@ -1,19 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
-import { createLocation, joinLocation, updateLocation, deleteLocation, useLocationList } from './useLocations';
+import { createLocation, deleteLocation, joinLocation, updateLocation, useLocationList } from './useLocations';
 
 interface LocationCreateDialogProps {
   open: boolean;

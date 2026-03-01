@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/toast';
-import { addItemsToBin } from './useBins';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
+import { addItemsToBin } from './useBins';
 
 type QuickAddState = 'input' | 'expanded' | 'processing' | 'preview';
 
@@ -49,7 +49,7 @@ export function useQuickAdd(options: UseQuickAddOptions) {
     }).then((items) => {
       if (items) {
         const initial = new Map<number, boolean>();
-        items.forEach((_, i) => initial.set(i, true));
+        for (let i = 0; i < items.length; i++) initial.set(i, true);
         setChecked(initial);
         setState('preview');
       } else {

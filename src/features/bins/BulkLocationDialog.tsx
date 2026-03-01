@@ -3,15 +3,15 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { useLocationList } from '@/features/locations/useLocations';
 import { LocationSelectList } from '@/features/locations/LocationSelectList';
-import { moveBin } from './useBins';
+import { useLocationList } from '@/features/locations/useLocations';
 import { useAuth } from '@/lib/auth';
+import { moveBin } from './useBins';
 
 interface BulkLocationDialogProps {
   open: boolean;

@@ -2,10 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { Table, TableHeader, TableRow } from '@/components/ui/table';
-import { useTerminology } from '@/lib/terminology';
 import { formatTimeAgo } from '@/lib/formatTime';
-import { getActionIcon, getActionColor, getActionLabel, renderChangeDiff } from './activityHelpers';
+import { useTerminology } from '@/lib/terminology';
 import type { ActivityLogEntry } from '@/types';
+import { getActionColor, getActionIcon, getActionLabel, renderChangeDiff } from './activityHelpers';
 
 interface ActivityTableViewProps {
   entries: ActivityLogEntry[];

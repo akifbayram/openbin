@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { query } from '../db.js';
 import { config } from './config.js';
 
@@ -75,7 +75,7 @@ export function decryptApiKey(stored: string): string {
 
 export function maskApiKey(key: string): string {
   if (key.length <= 4) return '****';
-  return '****' + key.slice(-4);
+  return `****${key.slice(-4)}`;
 }
 
 /** If the API key is masked (starts with ****), load the real key from the DB. */

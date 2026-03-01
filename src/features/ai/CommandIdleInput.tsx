@@ -1,9 +1,9 @@
+import { ChevronDown, ImagePlus, Loader2, Sparkles } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
-import { Sparkles, Loader2, ImagePlus, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 
 interface CommandIdleInputProps {
   text: string;

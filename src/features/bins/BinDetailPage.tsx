@@ -1,26 +1,25 @@
 import '@/features/onboarding/animations.css';
-import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useBin, useAllTags } from './useBins';
-import { resolveIcon } from '@/lib/iconMap';
-
+import { Card, CardContent } from '@/components/ui/card';
+import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
-import { cn } from '@/lib/utils';
-import { useTerminology } from '@/lib/terminology';
+import { resolveIcon } from '@/lib/iconMap';
 import { useNavigationGuard } from '@/lib/navigationGuard';
-import { useEditBinForm } from './useEditBinForm';
-import { BinDetailToolbar } from './BinDetailToolbar';
+import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 import { BinDetailSkeleton } from './BinDetailSkeleton';
+import { BinDetailToolbar } from './BinDetailToolbar';
 import { BinEditContent } from './BinEditContent';
 import { BinViewContent } from './BinViewContent';
-import { useBinDetailActions } from './useBinDetailActions';
-import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { DeleteBinDialog } from './DeleteBinDialog';
 import { MoveBinDialog } from './MoveBinDialog';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
+import { useBinDetailActions } from './useBinDetailActions';
+import { useAllTags, useBin } from './useBins';
+import { useEditBinForm } from './useEditBinForm';
 
 export function BinDetailPage() {
   const { id } = useParams<{ id: string }>();

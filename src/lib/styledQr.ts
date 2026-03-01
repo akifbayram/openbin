@@ -1,6 +1,6 @@
 import type { QrStyleOptions } from '@/features/print/usePrintSettings';
-import type { QRColorOptions } from './qr';
 import { getBinUrl } from './constants';
+import type { QRColorOptions } from './qr';
 
 // Module-level import cache — import once, reuse forever
 let QRCodeStylingCtor: typeof import('qr-code-styling').default | null = null;

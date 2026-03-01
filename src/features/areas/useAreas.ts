@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { notifyBinsChanged } from '@/features/bins/useBins';
 import { apiFetch } from '@/lib/api';
 import { Events, notify, useRefreshOn } from '@/lib/eventBus';
-import { notifyBinsChanged } from '@/features/bins/useBins';
 import type { Area, ListResponse } from '@/types';
 
 export const notifyAreasChanged = () => notify(Events.AREAS);

@@ -1,6 +1,6 @@
 import { useRef } from 'react';
-import { useOverlayAnimation } from '@/lib/useOverlayAnimation';
 import { useFocusTrap } from '@/lib/useFocusTrap';
+import { useOverlayAnimation } from '@/lib/useOverlayAnimation';
 
 interface MobileDrawerProps {
   open: boolean;
@@ -20,7 +20,9 @@ export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
       {/* Backdrop */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay dismisses drawer on click */}
       <div
+        role="presentation"
         className="fixed inset-0 bg-[var(--overlay-backdrop)] backdrop-blur-sm"
         style={{
           opacity: isEntered ? 1 : 0,

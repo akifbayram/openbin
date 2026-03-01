@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { useUserPreferences, DEFAULT_PREFERENCES } from './userPreferences';
 import type { UserPreferences } from './userPreferences';
+import { DEFAULT_PREFERENCES, useUserPreferences } from './userPreferences';
 
 export interface DashboardSettings {
   recentBinsCount: number;

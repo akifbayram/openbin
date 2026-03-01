@@ -1,7 +1,7 @@
-import { getLabelFormat, getOrientation, applyOrientation } from './labelFormats';
 import type { LabelFormat } from './labelFormats';
+import { applyOrientation, getLabelFormat, getOrientation } from './labelFormats';
+import { applyAutoScale, applyFontScale, computeScaleFactor } from './labelScaling';
 import type { CustomState } from './usePrintSettings';
-import { computeScaleFactor, applyAutoScale, applyFontScale } from './labelScaling';
 
 export interface EffectiveFormatResult {
   /** The base format before orientation/customization */

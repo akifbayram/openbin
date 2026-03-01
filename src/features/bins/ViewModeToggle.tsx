@@ -1,4 +1,4 @@
-import { LayoutGrid, Grid3x3, Table2 } from 'lucide-react';
+import { Grid3x3, LayoutGrid, Table2 } from 'lucide-react';
 import { OptionGroup, type OptionGroupOption } from '@/components/ui/option-group';
 import type { ViewMode } from './useViewMode';
 

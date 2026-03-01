@@ -57,7 +57,7 @@ async function doFetch<T>(path: string, options: ApiFetchOptions, isRetry: boole
 
   if (options.timeout) {
     controller = new AbortController();
-    timeoutId = setTimeout(() => controller!.abort(), options.timeout);
+    timeoutId = setTimeout(() => controller?.abort(), options.timeout);
   }
 
   const fetchOptions: RequestInit = {

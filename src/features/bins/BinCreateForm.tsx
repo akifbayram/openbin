@@ -1,30 +1,30 @@
-import { useState, useRef, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
-import { TagInput } from './TagInput';
-import { ItemsInput } from './ItemsInput';
-import { IconPicker } from './IconPicker';
-import { ColorPicker } from './ColorPicker';
-import { StylePicker } from './StylePicker';
-import { BinPreviewCard } from './BinPreviewCard';
-import { PhotoUploadSection } from './PhotoUploadSection';
-import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
-import { VisibilityPicker } from './VisibilityPicker';
+import { Textarea } from '@/components/ui/textarea';
+import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
+import { AiConfiguredIndicator, InlineAiSetup } from '@/features/ai/InlineAiSetup';
+import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
+import { useAiSettings } from '@/features/ai/useAiSettings';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAiEnabled } from '@/lib/aiToggle';
-import { useAiSettings } from '@/features/ai/useAiSettings';
-import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
-import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
-import { InlineAiSetup, AiConfiguredIndicator } from '@/features/ai/InlineAiSetup';
+import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { useTerminology } from '@/lib/terminology';
-import { usePhotoAnalysis } from './usePhotoAnalysis';
-import { useBinFormFields } from './useBinFormFields';
+import { cn } from '@/lib/utils';
 import type { BinVisibility } from '@/types';
+import { BinPreviewCard } from './BinPreviewCard';
+import { ColorPicker } from './ColorPicker';
+import { IconPicker } from './IconPicker';
+import { ItemsInput } from './ItemsInput';
+import { PhotoUploadSection } from './PhotoUploadSection';
+import { StylePicker } from './StylePicker';
+import { TagInput } from './TagInput';
+import { useBinFormFields } from './useBinFormFields';
+import { usePhotoAnalysis } from './usePhotoAnalysis';
+import { VisibilityPicker } from './VisibilityPicker';
 
 export interface BinCreateFormData {
   name: string;
@@ -193,9 +193,9 @@ export function BinCreateForm({
       {/* Items */}
       <div className={isFull ? 'space-y-2' : 'text-left'}>
         {isFull ? (
-          <Label>Items</Label>
+          <Label htmlFor="bin-items">Items</Label>
         ) : (
-          <label className={compactLabel}>Items</label>
+          <label htmlFor="bin-items" className={compactLabel}>Items</label>
         )}
         <ItemsInput
           items={items}
@@ -236,7 +236,7 @@ export function BinCreateForm({
         </div>
       ) : (
         <div className="text-left">
-          <label className={compactLabel}>{t.Area}</label>
+          <label htmlFor="bin-area" className={compactLabel}>{t.Area}</label>
           <AreaPicker locationId={locationId} value={areaId} onChange={setAreaId} />
         </div>
       )}
@@ -305,7 +305,7 @@ export function BinCreateForm({
       ) : (
         <>
           <div className="text-left">
-            <label className={compactLabel}>Color</label>
+            <label htmlFor="bin-color" className={compactLabel}>Color</label>
             <ColorPicker
               value={color}
               onChange={setColor}
@@ -315,11 +315,11 @@ export function BinCreateForm({
             />
           </div>
           <div className="text-left">
-            <label className={compactLabel}>Icon</label>
+            <label htmlFor="bin-icon" className={compactLabel}>Icon</label>
             <IconPicker value={icon} onChange={setIcon} />
           </div>
           <div className="text-left">
-            <label className={compactLabel}>Style</label>
+            <label htmlFor="bin-style" className={compactLabel}>Style</label>
             <StylePicker value={cardStyle} color={color} onChange={setCardStyle} />
           </div>
         </>

@@ -1,11 +1,11 @@
-import { CheckCircle2, Circle, ChevronDown, Package } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Circle, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
-import { useTerminology } from '@/lib/terminology';
 import { resolveColor } from '@/lib/colorPalette';
-import type { Bin, Area } from '@/types';
+import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
+import type { Area, Bin } from '@/types';
 
 interface BinSelectorCardProps {
   allBins: Bin[];
@@ -37,6 +37,7 @@ export function BinSelectorCard({
       <CardContent>
         <div className="flex items-center justify-between w-full">
           <button
+            type="button"
             className="flex items-center gap-2 flex-1 min-w-0"
             onClick={() => onExpandedChange(!expanded)}
           >
@@ -96,6 +97,7 @@ export function BinSelectorCard({
                   const colorPreset = bin.color ? resolveColor(bin.color) : null;
                   return (
                     <button
+                      type="button"
                       key={bin.id}
                       className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-3 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
                       onClick={() => toggleBin(bin.id)}

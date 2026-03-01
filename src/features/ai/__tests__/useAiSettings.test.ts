@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/api', () => {
   class ApiError extends Error {
@@ -21,7 +21,7 @@ vi.mock('@/lib/auth', () => ({
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { useAiSettings, saveAiSettings, deleteAiSettings, testAiConnection } from '../useAiSettings';
+import { deleteAiSettings, saveAiSettings, testAiConnection, useAiSettings } from '../useAiSettings';
 
 const mockApiFetch = vi.mocked(apiFetch);
 const mockUseAuth = vi.mocked(useAuth);

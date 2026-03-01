@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { type ReactNode } from 'react';
+import { act, renderHook } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import React from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { mockLocationsContext } = vi.hoisted(() => {
   const { createContext } = require('react');
@@ -27,14 +27,14 @@ vi.mock('@/features/locations/useLocations', () => ({
   LocationsContext: mockLocationsContext,
 }));
 
-import { useAuth } from '@/lib/auth';
 import { updateLocation } from '@/features/locations/useLocations';
 import { useAppSettings } from '@/lib/appSettings';
+import { useAuth } from '@/lib/auth';
 
 const mockUseAuth = vi.mocked(useAuth);
 const mockUpdateLocation = vi.mocked(updateLocation);
 
-function makeWrapper(locations: any[] = [], isLoading = false) {
+function makeWrapper(locations: Record<string, unknown>[] = [], isLoading = false) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return React.createElement(mockLocationsContext.Provider, { value: { locations, isLoading } }, children);
   };

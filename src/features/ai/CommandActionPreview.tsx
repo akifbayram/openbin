@@ -1,9 +1,9 @@
-import { Loader2, ChevronLeft, Check } from 'lucide-react';
+import { Check, ChevronLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
+import { describeAction, getActionIcon, isDestructiveAction } from './commandActionUtils';
 import type { CommandAction } from './useCommand';
-import { isDestructiveAction, getActionIcon, describeAction } from './commandActionUtils';
 
 interface CommandActionPreviewProps {
   actions: CommandAction[];
@@ -49,6 +49,7 @@ export function CommandActionPreview({
             const Icon = getActionIcon(action);
             const destructive = isDestructiveAction(action);
             return (
+              // biome-ignore lint/suspicious/noArrayIndexKey: actions identified by index
               <li key={i}>
                 <button
                   type="button"

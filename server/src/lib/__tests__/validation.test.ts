@@ -1,13 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  validateUsername,
   isStrongPassword,
-  validatePassword,
-  validateEmail,
-  validateDisplayName,
   validateBinName,
-  validateRetentionDays,
+  validateDisplayName,
+  validateEmail,
+  validatePassword,
   validateRequiredString,
+  validateRetentionDays,
+  validateUsername,
 } from '../validation.js';
 
 describe('validateUsername', () => {
@@ -77,7 +77,7 @@ describe('validateEmail', () => {
   });
 
   it('rejects emails exceeding 255 characters', () => {
-    expect(() => validateEmail('a'.repeat(251) + '@b.co')).toThrow();
+    expect(() => validateEmail(`${'a'.repeat(251)}@b.co`)).toThrow();
   });
 });
 

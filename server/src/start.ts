@@ -1,6 +1,6 @@
 import { createApp } from './index.js';
-import { config } from './lib/config.js';
 import { startBackupScheduler } from './lib/backup.js';
+import { config } from './lib/config.js';
 import { purgeExpiredRefreshTokens } from './lib/refreshTokens.js';
 
 const app = createApp();

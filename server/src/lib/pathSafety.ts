@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 
 /**
  * Check if a file path is safely within a base directory (no path traversal).

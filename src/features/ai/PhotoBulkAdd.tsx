@@ -1,21 +1,21 @@
-import { useReducer, useEffect, useCallback, useRef, useState } from 'react';
-import { Camera, X, ChevronLeft } from 'lucide-react';
+import { Camera, ChevronLeft, X } from 'lucide-react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/toast';
 import { OptionGroup } from '@/components/ui/option-group';
-import { useAuth } from '@/lib/auth';
-import { useTerminology } from '@/lib/terminology';
+import { useToast } from '@/components/ui/toast';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { addBin, notifyBinsChanged } from '@/features/bins/useBins';
-import { addPhoto } from '@/features/photos/usePhotos';
-import { compressImage } from '@/features/photos/compressImage';
-import { bulkAddReducer, initialState, createBulkAddPhoto } from '@/features/bulk-add/useBulkAdd';
 import { BulkAddReviewStep } from '@/features/bulk-add/BulkAddReviewStep';
 import { BulkAddSummaryStep } from '@/features/bulk-add/BulkAddSummaryStep';
+import type { BulkAddPhoto, BulkAddState } from '@/features/bulk-add/useBulkAdd';
+import { bulkAddReducer, createBulkAddPhoto, initialState } from '@/features/bulk-add/useBulkAdd';
+import { compressImage } from '@/features/photos/compressImage';
+import { addPhoto } from '@/features/photos/usePhotos';
+import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
 import { SingleBinReview } from './SingleBinReview';
 import { MAX_AI_PHOTOS } from './useAiAnalysis';
-import type { BulkAddPhoto, BulkAddState } from '@/features/bulk-add/useBulkAdd';
 
 const MAX_PHOTOS = 20;
 
@@ -47,7 +47,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   // Cleanup ObjectURLs on unmount
   useEffect(() => {
     return () => {
-      state.photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+      for (const p of state.photos) URL.revokeObjectURL(p.previewUrl);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -129,7 +129,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
         onClose();
       }
     },
-    [activeLocationId, showToast, onClose]
+    [activeLocationId, showToast, onClose, t.bin, t.bins]
   );
 
   const handleCreateAll = useCallback(() => {

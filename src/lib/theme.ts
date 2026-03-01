@@ -32,7 +32,7 @@ let currentTheme: ResolvedTheme = document.documentElement.classList.contains('d
 const listeners = new Set<() => void>();
 
 function notify() {
-  listeners.forEach((l) => l());
+  for (const l of listeners) l();
 }
 
 // Track system theme changes for auto mode

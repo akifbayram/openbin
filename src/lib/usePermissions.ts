@@ -1,5 +1,5 @@
-import { useAuth } from './auth';
 import { useLocationList } from '@/features/locations/useLocations';
+import { useAuth } from './auth';
 
 export function usePermissions() {
   const { user, activeLocationId } = useAuth();

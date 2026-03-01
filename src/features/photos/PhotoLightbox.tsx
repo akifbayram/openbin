@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Trash2 } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -53,7 +53,9 @@ export function PhotoLightbox({ src, filename, onClose, onDelete }: PhotoLightbo
       tabIndex={-1}
       className="fixed inset-0 z-[70] flex items-center justify-center outline-none"
     >
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay dismisses lightbox on click */}
       <div
+        role="presentation"
         className={cn(
           'fixed inset-0 bg-[var(--overlay-heavy)] backdrop-blur-sm transition-opacity',
           duration,

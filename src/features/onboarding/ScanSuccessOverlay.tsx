@@ -14,7 +14,9 @@ export function ScanSuccessOverlay({ onDismiss, title = 'First scan complete!', 
   }, [onDismiss]);
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: overlay dismisses on click
     <div
+      role="presentation"
       className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-[var(--overlay-backdrop)] backdrop-blur-md scan-success-enter"
       onClick={onDismiss}
     >
@@ -27,6 +29,7 @@ export function ScanSuccessOverlay({ onDismiss, title = 'First scan complete!', 
         {/* Checkmark circle */}
         <div className="relative h-24 w-24 rounded-full bg-[var(--accent)] flex items-center justify-center scan-check-scale">
           <svg
+            aria-hidden="true"
             viewBox="0 0 24 24"
             fill="none"
             stroke="white"

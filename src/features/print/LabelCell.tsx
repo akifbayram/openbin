@@ -1,10 +1,10 @@
-import type { Bin } from '@/types';
-import { resolveIcon } from '@/lib/iconMap';
 import { resolveColor } from '@/lib/colorPalette';
-import { computeCodeFontSize } from './labelFormats';
+import { resolveIcon } from '@/lib/iconMap';
+import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
-import type { LabelDirection } from './usePrintSettings';
+import { computeCodeFontSize } from './labelFormats';
 import { computeLabelLayout } from './labelLayout';
+import type { LabelDirection } from './usePrintSettings';
 
 interface LabelCellProps {
   bin: Bin;

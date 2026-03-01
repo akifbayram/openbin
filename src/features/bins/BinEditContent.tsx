@@ -1,20 +1,20 @@
 import type { ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { TagInput } from './TagInput';
-import { ItemsInput } from './ItemsInput';
-import { IconPicker } from './IconPicker';
-import { ColorPicker } from './ColorPicker';
-import { StylePicker } from './StylePicker';
-import { VisibilityPicker } from './VisibilityPicker';
-import { BinPreviewCard } from './BinPreviewCard';
-import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
+import { Textarea } from '@/components/ui/textarea';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
+import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { useTerminology } from '@/lib/terminology';
-import type { useEditBinForm } from './useEditBinForm';
 import type { Photo } from '@/types';
+import { BinPreviewCard } from './BinPreviewCard';
+import { ColorPicker } from './ColorPicker';
+import { IconPicker } from './IconPicker';
+import { ItemsInput } from './ItemsInput';
+import { StylePicker } from './StylePicker';
+import { TagInput } from './TagInput';
+import type { useEditBinForm } from './useEditBinForm';
+import { VisibilityPicker } from './VisibilityPicker';
 
 interface BinEditContentProps {
   edit: ReturnType<typeof useEditBinForm>;

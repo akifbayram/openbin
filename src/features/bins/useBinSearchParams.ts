@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { SortDirection } from '@/components/ui/sort-header';
-import { useDebounce } from '@/lib/useDebounce';
-import { STORAGE_KEYS } from '@/lib/storageKeys';
-import { EMPTY_FILTERS, type SortOption, type BinFilters } from './useBins';
 import type { SavedView } from '@/lib/savedViews';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
+import { useDebounce } from '@/lib/useDebounce';
+import { type BinFilters, EMPTY_FILTERS, type SortOption } from './useBins';
 
 const SORT_TO_API: Record<SortOption, string> = { updated: 'updated_at', created: 'created_at', name: 'name', area: 'area' };
 const API_TO_SORT: Record<string, SortOption> = { updated_at: 'updated', created_at: 'created', name: 'name', area: 'area' };

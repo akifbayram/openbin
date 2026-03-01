@@ -13,7 +13,7 @@ Multi-user web app for organizing physical storage bins with QR codes. Data pers
 - **Docker**: Single container (Express serves static frontend + API), reverse proxy optional
 - Features live in `src/features/`, server code in `server/src/`, shared types in @src/types.ts
 - No external component libraries — build UI primitives in `src/components/ui/`.
-- No ESLint or Prettier — Biome handles linting (`biome.json`).
+- No ESLint or Prettier — single root `biome.json` covers both `src/` and `server/src/`.
 
 ## Code Conventions
 
@@ -48,17 +48,31 @@ OpenAPI spec at `server/openapi.yaml`.
 - **AI API key encryption**: AES-256-GCM when `AI_ENCRYPTION_KEY` env var set. Graceful fallback to plaintext.
 - **Dual auth**: Middleware supports JWT tokens and API keys (`sk_openbin_` prefix). `req.authMethod` is `'jwt' | 'api_key'`.
 
+## Development
+
+```sh
+npm install && cd server && npm install  # Install both client + server deps
+npm run dev:all                           # Start API (port 1453) + Vite dev server concurrently
+npm run dev                               # Vite dev server only (port 5173)
+npm run dev:server                        # API server only (port 1453, tsx watch)
+```
+
+- Path alias: `@/*` → `src/*` (configured in `tsconfig.json`, resolved by Vite).
+- PWA enabled via `vite-plugin-pwa` — service worker registered in production builds.
+
 ## Verification
 
 ```sh
+npx biome check .             # Lint & format check
 npx tsc --noEmit              # Frontend type check
-npx vitest run                # Tests (happy-dom, not jsdom)
+npx vitest run                # Frontend tests (happy-dom, not jsdom)
+cd server && npx vitest run   # Server tests
 npx vite build                # Production build
 cd server && npx tsc --noEmit # Server type check
 docker compose up -d          # Full stack
 ```
 
-- Run `npx tsc --noEmit` before committing. Run `npx vitest run path/to/test` for targeted tests over the full suite.
+- Run `npx biome check .` and `npx tsc --noEmit` before committing. Run `npx vitest run path/to/test` for targeted tests over the full suite.
 - When compacting context, preserve the full list of modified files and any failing test output.
 
 ## Testing

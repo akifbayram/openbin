@@ -1,22 +1,22 @@
 import './animations.css';
-import { useState, useEffect } from 'react';
+import { Camera, ListChecks, MapPin, MessageSquare, PackagePlus, Plus, Printer, QrCode, Search, Settings, Sparkles, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, X, Sparkles, Plus, Printer, Camera, MessageSquare, Search, ListChecks, PackagePlus, QrCode, Settings } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/toast';
-import { cn } from '@/lib/utils';
-import { createLocation } from '@/features/locations/useLocations';
 import { createArea } from '@/features/areas/useAreas';
-import { addBin } from '@/features/bins/useBins';
-import { useTerminology } from '@/lib/terminology';
 import { BinPreviewCard } from '@/features/bins/BinPreviewCard';
 import { ItemsInput } from '@/features/bins/ItemsInput';
+import { addBin } from '@/features/bins/useBins';
+import { createLocation } from '@/features/locations/useLocations';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
-import { ONBOARDING_TOTAL_STEPS } from './useOnboarding';
+import { useAuth } from '@/lib/auth';
+import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
+import { ONBOARDING_TOTAL_STEPS } from './useOnboarding';
 
 const STEPS = Array.from({ length: ONBOARDING_TOTAL_STEPS });
 const BRAND = '#5e2fe0';
@@ -161,8 +161,8 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
         {/* Progress dots */}
         <div className="flex justify-center gap-2 mb-8">
           {STEPS.map((_, i) => (
-            <div
-              key={i}
+            // biome-ignore lint/suspicious/noArrayIndexKey: static progress dots
+            <div key={i}
               className={cn(
                 'h-2 w-2 rounded-full transition-all duration-300',
                 i === step
@@ -211,11 +211,12 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
                 </button>
               ) : (
                 <div className="w-full text-left mb-4 space-y-2">
-                  <label className="text-[13px] text-[var(--text-tertiary)] block">
+                  <label htmlFor="onboarding-area-input" className="text-[13px] text-[var(--text-tertiary)] block">
                     {t.Areas} <span className="text-[var(--text-tertiary)] opacity-60">(optional)</span>
                   </label>
                   <div className="flex gap-2">
                     <Input
+                      id="onboarding-area-input"
                       value={areaInput}
                       onChange={(e) => setAreaInput(e.target.value.slice(0, 50))}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddArea(); } }}

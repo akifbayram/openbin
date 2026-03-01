@@ -1,25 +1,25 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Download, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { PageTransition } from '@/components/page-transition';
 import { Button } from '@/components/ui/button';
-import { Sidebar, SidebarContent } from './Sidebar';
-import { MobileDrawer } from './MobileDrawer';
-import { DrawerProvider } from './DrawerContext';
-import { useTheme } from '@/lib/theme';
-import { useAppSettings } from '@/lib/appSettings';
-import { useAuth } from '@/lib/auth';
-import { useLocationList } from '@/features/locations/useLocations';
-import { TagColorsProvider } from '@/features/tags/TagColorsContext';
-import { useOnboarding } from '@/features/onboarding/useOnboarding';
-import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay';
-import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
-import { useSidebarCollapsed, toggleSidebarCollapsed } from '@/lib/useSidebarCollapsed';
-import { useNavigationGuard } from '@/lib/navigationGuard';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
-import { PageTransition } from '@/components/page-transition';
+import { useLocationList } from '@/features/locations/useLocations';
+import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay';
+import { useOnboarding } from '@/features/onboarding/useOnboarding';
 import { ScanDialogContext } from '@/features/qrcode/ScanDialogContext';
+import { TagColorsProvider } from '@/features/tags/TagColorsContext';
+import { useAppSettings } from '@/lib/appSettings';
+import { useAuth } from '@/lib/auth';
+import { useNavigationGuard } from '@/lib/navigationGuard';
+import { useTheme } from '@/lib/theme';
+import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
+import { toggleSidebarCollapsed, useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
+import { cn } from '@/lib/utils';
+import { DrawerProvider } from './DrawerContext';
+import { MobileDrawer } from './MobileDrawer';
+import { Sidebar, SidebarContent } from './Sidebar';
 
 const ScanDialog = React.lazy(() =>
   import('@/features/qrcode/ScanDialog').then((m) => ({ default: m.ScanDialog })),
@@ -181,6 +181,7 @@ export function AppLayout() {
             Install
           </Button>
           <button
+            type="button"
             onClick={() => { setDismissed(true); localStorage.setItem('openbin-install-dismissed', '1'); }}
             aria-label="Dismiss install prompt"
             className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] p-1"

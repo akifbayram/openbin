@@ -1,16 +1,16 @@
+import { AlertTriangle, Clock, Download, FileArchive, FileSpreadsheet, Trash2, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Download, Upload, AlertTriangle, Clock, Trash2, FileArchive, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import type { useDataSectionActions } from './useDataSectionActions';
 
 interface DataSectionProps {

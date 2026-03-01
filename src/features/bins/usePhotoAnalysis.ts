@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
 import { compressImage } from '@/features/photos/compressImage';
 import type { AiSuggestions } from '@/types';
@@ -27,7 +27,7 @@ export function usePhotoAnalysis({
 
   useEffect(() => {
     return () => {
-      photoPreviews.forEach((url) => URL.revokeObjectURL(url));
+      for (const url of photoPreviews) URL.revokeObjectURL(url);
     };
   }, [photoPreviews]);
 

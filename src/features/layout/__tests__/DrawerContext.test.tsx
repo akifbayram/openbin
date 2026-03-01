@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { useDrawer, DrawerProvider } from '../DrawerContext';
+import { describe, expect, it, vi } from 'vitest';
+import { DrawerProvider, useDrawer } from '../DrawerContext';
 
 describe('useDrawer', () => {
   it('throws when used outside provider', () => {

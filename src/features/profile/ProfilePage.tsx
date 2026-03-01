@@ -1,17 +1,17 @@
-import { useState, useRef } from 'react';
-import { X, Calendar, MapPin, ChevronDown } from 'lucide-react';
+import { Calendar, ChevronDown, MapPin, X } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FormField } from '@/components/ui/form-field';
-import { UserAvatar } from '@/components/ui/user-avatar';
+import { PageHeader } from '@/components/ui/page-header';
 import { useToast } from '@/components/ui/toast';
-import { useAuth } from '@/lib/auth';
-import { apiFetch, getAvatarUrl } from '@/lib/api';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useLocationList } from '@/features/locations/useLocations';
 import { compressImage } from '@/features/photos/compressImage';
-import { PageHeader } from '@/components/ui/page-header';
+import { apiFetch, getAvatarUrl } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import type { User } from '@/types';
 
 export function ProfilePage() {
@@ -99,7 +99,7 @@ export function ProfilePage() {
         method: 'POST',
         body: formData,
       });
-      updateUser({ ...user!, avatarUrl: result.avatarUrl });
+      if (user) updateUser({ ...user, avatarUrl: result.avatarUrl });
       showToast({ message: 'Avatar updated' });
     } catch (err) {
       showToast({ message: err instanceof Error ? err.message : 'Failed to upload avatar' });
@@ -113,7 +113,7 @@ export function ProfilePage() {
     setUploadingAvatar(true);
     try {
       await apiFetch('/api/auth/avatar', { method: 'DELETE' });
-      updateUser({ ...user!, avatarUrl: null });
+      if (user) updateUser({ ...user, avatarUrl: null });
       showToast({ message: 'Avatar removed' });
     } catch (err) {
       showToast({ message: err instanceof Error ? err.message : 'Failed to remove avatar' });

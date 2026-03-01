@@ -1,10 +1,10 @@
 import { Card, CardContent } from '@/components/ui/card';
+import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FormField } from '@/components/ui/form-field';
 import { Switch } from '@/components/ui/switch';
-import { useTerminology } from '@/lib/terminology';
 import { DASHBOARD_LIMITS, type DashboardSettings } from '@/lib/dashboardSettings';
+import { useTerminology } from '@/lib/terminology';
 
 interface DashboardSectionProps {
   settings: DashboardSettings;

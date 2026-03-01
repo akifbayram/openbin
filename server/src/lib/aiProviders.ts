@@ -1,10 +1,10 @@
-import { callAiProvider, testProviderConnection } from './aiCaller.js';
 import type { AiProviderConfig, MultimodalContent } from './aiCaller.js';
+import { callAiProvider, testProviderConnection } from './aiCaller.js';
 import { DEFAULT_AI_PROMPT } from './defaultPrompts.js';
 
+export type { AiProviderConfig, AiProviderType } from './aiCaller.js';
 // Re-export types that other modules import from here
 export { AiAnalysisError, stripCodeFences } from './aiCaller.js';
-export type { AiProviderConfig, AiProviderType } from './aiCaller.js';
 
 export interface AiSuggestionsResult {
   name: string;

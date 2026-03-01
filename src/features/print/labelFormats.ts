@@ -1,6 +1,6 @@
-import type { Bin } from '@/types';
-import type { QRColorOptions } from '@/lib/qr';
 import { resolveColor } from '@/lib/colorPalette';
+import type { QRColorOptions } from '@/lib/qr';
+import type { Bin } from '@/types';
 import { MONO_CODE_WIDTH_EMS } from './pdfConstants';
 import type { LabelDirection } from './usePrintSettings';
 

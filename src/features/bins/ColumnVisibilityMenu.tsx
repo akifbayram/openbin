@@ -1,8 +1,8 @@
-import { useRef } from 'react';
 import { Columns3 } from 'lucide-react';
+import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
 import { FIELD_LABELS, type FieldKey } from './useColumnVisibility';
@@ -18,10 +18,12 @@ export function FieldToggleList({ fields, visibility, onToggle }: {
       {fields.map((field) => (
         <label
           key={field}
+          htmlFor={`field-toggle-${field}`}
           className="w-full flex items-center justify-between px-3.5 py-2 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
         >
           {FIELD_LABELS[field]}
           <Switch
+            id={`field-toggle-${field}`}
             checked={visibility[field]}
             onCheckedChange={() => onToggle(field)}
           />

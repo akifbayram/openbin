@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import request from 'supertest';
 import type { Express } from 'express';
+import request from 'supertest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../index.js';
-import { createTestUser, createTestLocation } from './helpers.js';
+import { createTestLocation, createTestUser } from './helpers.js';
 
 let app: Express;
 

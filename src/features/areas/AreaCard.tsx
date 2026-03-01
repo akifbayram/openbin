@@ -1,11 +1,11 @@
 import { Check, Folder, Inbox, MoreHorizontal, Plus, X } from 'lucide-react';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
+import { Tooltip } from '@/components/ui/tooltip';
+import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
-import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 import { AreaActionMenu } from './AreaActionMenu';
 import { useInlineEdit } from './useInlineEdit';
@@ -88,6 +88,7 @@ export function AreaCard({ id, name, binCount, isAdmin, index = 0, onNavigate, o
   }
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: custom card with contextual menu cannot be a plain button
     <div
       role="button"
       tabIndex={0}

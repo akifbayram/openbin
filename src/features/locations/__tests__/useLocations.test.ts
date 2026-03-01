@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import React from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/api', () => ({
   apiFetch: vi.fn(),
@@ -15,16 +15,16 @@ vi.mock('@/lib/auth', () => ({
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import {
-  LocationProvider,
-  useLocationList,
-  useLocationMembers,
   createLocation,
-  updateLocation,
   deleteLocation,
   joinLocation,
+  LocationProvider,
   leaveLocation,
-  removeMember,
   regenerateInvite,
+  removeMember,
+  updateLocation,
+  useLocationList,
+  useLocationMembers,
 } from '../useLocations';
 
 const mockApiFetch = vi.mocked(apiFetch);

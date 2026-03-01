@@ -1,11 +1,11 @@
+import { resolveColor } from '@/lib/colorPalette';
 import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
 import { computeLabelsPerPage, computePageSize } from './labelFormats';
-import { resolveColor } from '@/lib/colorPalette';
-import { toInches, parsePaddingPt } from './pdfUnits';
-import type { LabelOptions } from './usePrintSettings';
-import { computeLabelLayout } from './labelLayout';
 import type { LabelLayoutResult } from './labelLayout';
+import { computeLabelLayout } from './labelLayout';
+import { parsePaddingPt, toInches } from './pdfUnits';
+import type { LabelOptions } from './usePrintSettings';
 
 type JsPDF = import('jspdf').jsPDF;
 
@@ -77,7 +77,8 @@ function drawQrBlock(
   qrX: number,
   qrY: number,
 ): void {
-  doc.addImage(p.qrDataUrl!, 'PNG', qrX, qrY, p.qrSize, p.qrSize);
+  if (!p.qrDataUrl) return;
+  doc.addImage(p.qrDataUrl, 'PNG', qrX, qrY, p.qrSize, p.qrSize);
 
   if (p.hasIcon) {
     const iconDataUrl = p.iconMap.get(p.bin.icon);

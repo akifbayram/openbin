@@ -1,10 +1,10 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
-import { query, querySync, generateUuid } from '../db.js';
-import { generateShortCode } from './shortCode.js';
-import { isPathSafe } from './pathSafety.js';
+import { generateUuid, query, querySync } from '../db.js';
 import { config } from './config.js';
+import { isPathSafe } from './pathSafety.js';
+import { generateShortCode } from './shortCode.js';
 
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
 

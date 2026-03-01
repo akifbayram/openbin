@@ -1,17 +1,17 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Clock } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
+import { OptionGroup, type OptionGroupOption } from '@/components/ui/option-group';
+import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
-import { Crossfade } from '@/components/ui/crossfade';
-import { OptionGroup, type OptionGroupOption } from '@/components/ui/option-group';
-import { usePermissions } from '@/lib/usePermissions';
 import { useTerminology } from '@/lib/terminology';
-import { PageHeader } from '@/components/ui/page-header';
-import { usePaginatedActivityLog } from './useActivity';
+import { usePermissions } from '@/lib/usePermissions';
 import { ActivityTableView } from './ActivityTableView';
 import { ENTITY_TYPE_FILTERS, type EntityTypeFilter } from './activityHelpers';
+import { usePaginatedActivityLog } from './useActivity';
 
 export function ActivityPage() {
   const navigate = useNavigate();
@@ -51,6 +51,7 @@ export function ActivityPage() {
           <div className="flex flex-col gap-4">
             <div className="flex gap-2">
               {Array.from({ length: 5 }, (_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton placeholders
                 <Skeleton key={i} className="h-7 w-16 rounded-full" />
               ))}
             </div>

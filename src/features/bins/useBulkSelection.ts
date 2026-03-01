@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Bin } from '@/types';
 
 export function useBulkSelection(bins: Bin[], resetDeps: unknown[]) {
@@ -9,7 +9,6 @@ export function useBulkSelection(bins: Bin[], resetDeps: unknown[]) {
   useEffect(() => {
     setSelectedIds(new Set());
     lastSelectedIndex.current = null;
-    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional variable deps from caller
   }, resetDeps);
 
   const selectable = selectedIds.size > 0;

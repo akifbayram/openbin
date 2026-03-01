@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48, 96] as const;

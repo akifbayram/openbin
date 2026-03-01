@@ -1,9 +1,9 @@
+import { Check, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
 import { useRef } from 'react';
-import { ChevronLeft, ChevronRight, Check, ChevronsUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Tooltip } from '@/components/ui/tooltip';
-import { usePopover } from '@/lib/usePopover';
 import { useClickOutside } from '@/lib/useClickOutside';
+import { usePopover } from '@/lib/usePopover';
+import { cn } from '@/lib/utils';
 
 interface PaginationProps {
   currentPage: number;
@@ -102,7 +102,7 @@ export function Pagination({
 
   const showSummary = totalCount != null && pageSize != null;
   const rangeStart = showSummary ? (currentPage - 1) * pageSize + 1 : 0;
-  const rangeEnd = showSummary ? Math.min(currentPage * pageSize, totalCount!) : 0;
+  const rangeEnd = showSummary ? Math.min(currentPage * pageSize, totalCount as number) : 0;
   const showFooter = showSummary || (pageSizeOptions && onPageSizeChange);
 
   if (!showNav && !showFooter) return null;
@@ -133,6 +133,7 @@ export function Pagination({
           <div className="hidden sm:flex items-center gap-1">
             {pages.map((p, i) =>
               p === 'ellipsis' ? (
+                // biome-ignore lint/suspicious/noArrayIndexKey: ellipsis separators have no stable identity
                 <span key={`e${i}`} className="flex items-center justify-center h-9 w-9 text-sm text-[var(--text-muted)]">
                   &hellip;
                 </span>

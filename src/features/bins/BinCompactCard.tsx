@@ -1,14 +1,14 @@
-import React from 'react';
 import { Check, Lock } from 'lucide-react';
+import React from 'react';
 import { Highlight } from '@/components/ui/highlight';
-import { cn } from '@/lib/utils';
+import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
 import { resolveIcon } from '@/lib/iconMap';
 import { useTheme } from '@/lib/theme';
-import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
-import { computeBinCardStyles } from './binCardStyles';
-import { useBinCardInteraction } from './useBinCardInteraction';
-import { areCommonBinCardPropsEqual } from './binMemoUtils';
+import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
+import { computeBinCardStyles } from './binCardStyles';
+import { areCommonBinCardPropsEqual } from './binMemoUtils';
+import { useBinCardInteraction } from './useBinCardInteraction';
 import type { FieldKey } from './useColumnVisibility';
 
 interface BinCompactCardProps {
@@ -76,9 +76,12 @@ export const BinCompactCard = React.memo(function BinCompactCard({
       {selectable ? (
         checkbox
       ) : onSelect ? (
-        <div
-          className="relative mt-0.5 h-5 w-5 shrink-0"
+        <button
+          type="button"
+          tabIndex={0}
+          className="relative mt-0.5 h-5 w-5 shrink-0 appearance-none bg-transparent border-none p-0"
           onClick={(e) => { e.stopPropagation(); onSelect(bin.id, index, e.shiftKey); }}
+          aria-label="Select"
         >
           {isVisible?.('icon') !== false && (
             <BinIcon
@@ -91,7 +94,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
               style={secondaryBorderStyle}
             />
           </div>
-        </div>
+        </button>
       ) : isVisible?.('icon') !== false ? (
         <BinIcon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-tertiary)]" style={iconStyle} />
       ) : null}
@@ -99,10 +102,11 @@ export const BinCompactCard = React.memo(function BinCompactCard({
   );
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: custom card with complex layout cannot be a plain button
     <div
       tabIndex={0}
       role="button"
-      aria-selected={selectable ? selected : undefined}
+      aria-pressed={selectable ? selected : undefined}
       className={cn(
         'group rounded-[var(--radius-md)] px-3 py-2.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none [@media(hover:hover)]:hover:scale-[1.02] [@media(hover:hover)]:hover:shadow-[var(--shadow-elevated)] [@media(hover:hover)]:hover:-translate-y-0.5 animate-stagger-in',
         renderProps.className,

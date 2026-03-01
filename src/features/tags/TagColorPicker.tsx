@@ -1,7 +1,7 @@
-import { useRef, useCallback } from 'react';
 import { Palette } from 'lucide-react';
+import { useCallback, useRef } from 'react';
 import { Tooltip } from '@/components/ui/tooltip';
-import { resolveColor, parseColorKey, buildColorKey, hslToHex, SHADE_COUNT } from '@/lib/colorPalette';
+import { buildColorKey, hslToHex, parseColorKey, resolveColor, SHADE_COUNT } from '@/lib/colorPalette';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
@@ -185,8 +185,8 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               {Array.from({ length: SHADE_COUNT }, (_, i) => {
                 const isActive = currentShade === i;
                 return (
-                  <button
-                    key={i}
+                  // biome-ignore lint/suspicious/noArrayIndexKey: fixed-size shade swatches
+                  <button key={i}
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();

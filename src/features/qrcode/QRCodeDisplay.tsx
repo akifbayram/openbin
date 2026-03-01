@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Copy, Check, Printer } from 'lucide-react';
+import { Check, Copy, Printer } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { generateQRDataURL } from '@/lib/qr';
 import { getBinUrl } from '@/lib/constants';
+import { generateQRDataURL } from '@/lib/qr';
 
 interface QRCodeDisplayProps {
   binId: string;

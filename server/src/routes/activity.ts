@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { query } from '../db.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
-import { asyncHandler } from '../lib/asyncHandler.js';
 
 const router = Router();
 
@@ -11,8 +11,8 @@ router.use(authenticate);
 // GET /api/locations/:locationId/activity — get activity log for a location
 router.get('/:locationId/activity', requireLocationMember('locationId'), asyncHandler(async (req, res) => {
   const { locationId } = req.params;
-  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-  const offset = parseInt(req.query.offset as string) || 0;
+  const limit = Math.min(parseInt(req.query.limit as string, 10) || 50, 100);
+  const offset = parseInt(req.query.offset as string, 10) || 0;
   const entityType = req.query.entity_type as string | undefined;
   const entityId = req.query.entity_id as string | undefined;
 

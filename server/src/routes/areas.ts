@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { query, generateUuid } from '../db.js';
-import { authenticate } from '../middleware/auth.js';
-import { requireLocationMember, requireLocationAdmin } from '../middleware/locationAccess.js';
+import { generateUuid, query } from '../db.js';
 import { logActivity } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { ValidationError, NotFoundError, ConflictError } from '../lib/httpErrors.js';
+import { ConflictError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { authenticate } from '../middleware/auth.js';
+import { requireLocationAdmin, requireLocationMember } from '../middleware/locationAccess.js';
 
 const router = Router();
 

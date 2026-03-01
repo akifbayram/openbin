@@ -1,17 +1,17 @@
-import React from 'react';
 import { Check, Lock } from 'lucide-react';
+import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
-import { SortHeader, type SortDirection } from '@/components/ui/sort-header';
-import { Table, TableHeader, TableRow as BaseTableRow } from '@/components/ui/table';
-import { cn } from '@/lib/utils';
-import { resolveIcon } from '@/lib/iconMap';
-import { resolveColor } from '@/lib/colorPalette';
+import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
+import { TableRow as BaseTableRow, Table, TableHeader } from '@/components/ui/table';
 import { useTagStyle } from '@/features/tags/useTagStyle';
+import { resolveColor } from '@/lib/colorPalette';
 import { formatDate } from '@/lib/formatTime';
-import { useBinCardInteraction } from './useBinCardInteraction';
-import { areCommonBinCardPropsEqual } from './binMemoUtils';
+import { resolveIcon } from '@/lib/iconMap';
+import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
+import { areCommonBinCardPropsEqual } from './binMemoUtils';
+import { useBinCardInteraction } from './useBinCardInteraction';
 import type { SortOption } from './useBins';
 import type { FieldKey } from './useColumnVisibility';
 
@@ -151,19 +151,25 @@ const BinTableRow = React.memo(function BinTableRow({
       {/* Checkbox */}
       <div className="w-6 shrink-0 flex justify-center">
         {selectable ? (
-          <div
+          <button
+            type="button"
+            tabIndex={0}
             className={cn(
-              'h-4 w-4 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
+              'h-4 w-4 rounded-full border-2 transition-all duration-200 flex items-center justify-center appearance-none bg-transparent p-0',
               selected ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)]',
             )}
             onClick={(e) => { e.stopPropagation(); onSelect(bin.id, index, e.shiftKey); }}
+            aria-label="Select"
           >
             {selected && <Check className="h-2.5 w-2.5 text-white animate-check-pop" strokeWidth={3} />}
-          </div>
+          </button>
         ) : (
-          <div
-            className="relative h-5 w-5"
+          <button
+            type="button"
+            tabIndex={0}
+            className="relative h-5 w-5 appearance-none bg-transparent border-none p-0"
             onClick={(e) => { e.stopPropagation(); onSelect(bin.id, index, e.shiftKey); }}
+            aria-label="Select"
           >
             {/* Color dot + icon — fades out on hover */}
             <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0">
@@ -173,7 +179,7 @@ const BinTableRow = React.memo(function BinTableRow({
             <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100">
               <div className="h-4 w-4 rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center" />
             </div>
-          </div>
+          </button>
         )}
       </div>
 

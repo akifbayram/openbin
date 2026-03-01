@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { resolveColor, parseColorKey, buildColorKey, hslToHex, SHADE_COUNT } from '@/lib/colorPalette';
+import { useCallback, useRef, useState } from 'react';
+import { buildColorKey, hslToHex, parseColorKey, resolveColor, SHADE_COUNT } from '@/lib/colorPalette';
 import { cn } from '@/lib/utils';
 
 interface ColorPickerProps {
@@ -138,8 +138,8 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           {Array.from({ length: SHADE_COUNT }, (_, i) => {
             const isActive = currentShade === i;
             return (
-              <button
-                key={i}
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed-size shade swatches
+              <button key={i}
                 type="button"
                 onClick={() => selectShade(i)}
                 className={cn(
@@ -214,7 +214,7 @@ export function ColorPicker({ value, onChange, secondaryLabel, secondaryValue, o
               <p className="text-[12px] text-[var(--text-tertiary)]">{secondaryLabel}</p>
               <HueGradientPicker
                 value={secondaryValue ?? ''}
-                onChange={onSecondaryChange!}
+                onChange={(v) => onSecondaryChange?.(v)}
               />
             </>
           )}

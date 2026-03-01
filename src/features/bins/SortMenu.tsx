@@ -1,10 +1,10 @@
-import { useRef } from 'react';
 import { ArrowUpDown, Check } from 'lucide-react';
+import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
+import { cn } from '@/lib/utils';
 import type { SortOption } from './useBins';
 
 const sortLabels: Record<SortOption, string> = {
@@ -45,6 +45,7 @@ export function SortMenu({ sort, onSortChange }: SortMenuProps) {
         <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg overflow-hidden z-20`}>
           {(Object.keys(sortLabels) as SortOption[]).map((key) => (
             <button
+              type="button"
               key={key}
               onClick={() => { onSortChange(key); close(); }}
               className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"

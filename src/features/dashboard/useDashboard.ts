@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useAreaList } from '@/features/areas/useAreas';
 import { useBinList } from '@/features/bins/useBins';
 import { usePinnedBins } from '@/features/pins/usePins';
-import { useAreaList } from '@/features/areas/useAreas';
+import { useAuth } from '@/lib/auth';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
-import { useScanHistory } from './scanHistory';
 import type { Bin } from '@/types';
+import { useScanHistory } from './scanHistory';
 
 export interface AreaStat {
   id: string | null;

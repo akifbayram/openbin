@@ -1,14 +1,14 @@
-import { useRef, useState, useCallback } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
-import { usePhotos, addPhoto, deletePhoto, getPhotoUrl } from './usePhotos';
+import { Tooltip } from '@/components/ui/tooltip';
+import type { Photo } from '@/types';
 import { compressImage } from './compressImage';
 import { PhotoLightbox } from './PhotoLightbox';
-import type { Photo } from '@/types';
+import { addPhoto, deletePhoto, getPhotoUrl, usePhotos } from './usePhotos';
 
 interface PhotoGalleryProps {
   binId: string;

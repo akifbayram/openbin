@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { AiSettings, AiProvider } from '@/types';
+import type { AiProvider, AiSettings } from '@/types';
 
 export function useAiSettings() {
   const { token } = useAuth();

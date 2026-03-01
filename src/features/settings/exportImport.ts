@@ -67,7 +67,7 @@ export async function exportCsv(locationId: string): Promise<void> {
 }
 
 function isISODate(s: unknown): boolean {
-  return typeof s === 'string' && !isNaN(Date.parse(s));
+  return typeof s === 'string' && !Number.isNaN(Date.parse(s));
 }
 
 export function validateExportData(data: unknown): data is ExportData {

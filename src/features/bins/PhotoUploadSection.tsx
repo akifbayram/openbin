@@ -1,8 +1,8 @@
-import { Camera, Sparkles, X, Loader2 } from 'lucide-react';
+import { Camera, Loader2, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import { MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
+import { cn } from '@/lib/utils';
 
 interface PhotoUploadSectionProps {
   isFull: boolean;
@@ -62,6 +62,7 @@ export function PhotoUploadSection({
             !isFull && 'rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2'
           )}>
             {photoPreviews.map((preview, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: preview blobs have no stable identity
               <div key={i} className="relative shrink-0">
                 <img
                   src={preview}

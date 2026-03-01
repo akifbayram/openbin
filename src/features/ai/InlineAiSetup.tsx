@@ -1,8 +1,8 @@
-import { Sparkles, ChevronRight, Eye, EyeOff, Check } from 'lucide-react';
+import { Check, ChevronRight, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { OptionGroup } from '@/components/ui/option-group';
 import { cn } from '@/lib/utils';
 import { AI_PROVIDERS } from './aiConstants';
 import type { AiProviderSetup } from './useAiProviderSetup';
-import { OptionGroup } from '@/components/ui/option-group';
 
 interface InlineAiSetupProps {
   expanded: boolean;

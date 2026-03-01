@@ -1,6 +1,6 @@
 import { useAuth } from '@/lib/auth';
-import { usePaginatedList } from '@/lib/usePaginatedList';
 import { Events } from '@/lib/eventBus';
+import { usePaginatedList } from '@/lib/usePaginatedList';
 
 export interface TagEntry {
   tag: string;

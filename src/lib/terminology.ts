@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { useAuth } from '@/lib/auth';
 import { useLocationList } from '@/features/locations/useLocations';
+import { useAuth } from '@/lib/auth';
 
 export interface Terminology {
   bin: string;

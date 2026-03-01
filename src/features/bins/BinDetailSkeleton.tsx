@@ -1,5 +1,5 @@
-import { Skeleton } from '@/components/ui/skeleton';
 import { MenuButton } from '@/components/ui/menu-button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function BinDetailSkeleton() {
   return (

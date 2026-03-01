@@ -1,25 +1,25 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { Router } from 'express';
-import fs from 'fs';
-import path from 'path';
-import multer from 'multer';
 import rateLimit from 'express-rate-limit';
-import { query, generateUuid } from '../db.js';
+import multer from 'multer';
+import { generateUuid, query } from '../db.js';
+import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
+import type { ImageInput } from '../lib/aiProviders.js';
+import { analyzeImages, testConnection } from '../lib/aiProviders.js';
+import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
+import { getUserAiSettings } from '../lib/aiSettings.js';
+import { executeActions } from '../lib/commandExecutor.js';
+import type { CommandRequest } from '../lib/commandParser.js';
+import { parseCommand } from '../lib/commandParser.js';
+import { config, getEnvAiConfig } from '../lib/config.js';
+import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
+import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
+import { queryInventory } from '../lib/inventoryQuery.js';
+import type { StructureTextRequest } from '../lib/structureText.js';
+import { structureText } from '../lib/structureText.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
-import { analyzeImages, testConnection } from '../lib/aiProviders.js';
-import type { ImageInput } from '../lib/aiProviders.js';
-import { structureText } from '../lib/structureText.js';
-import type { StructureTextRequest } from '../lib/structureText.js';
-import { parseCommand } from '../lib/commandParser.js';
-import type { CommandRequest } from '../lib/commandParser.js';
-import { queryInventory } from '../lib/inventoryQuery.js';
-import { executeActions } from '../lib/commandExecutor.js';
-import { encryptApiKey, decryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
-import { getUserAiSettings } from '../lib/aiSettings.js';
-import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
-import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
-import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
-import { config, getEnvAiConfig } from '../lib/config.js';
 
 const router = Router();
 
@@ -32,7 +32,7 @@ router.get('/default-prompts', (_req, res) => {
 // API key requests get a higher limit for headless/smart-home integrations
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: (req: import('express').Request) => (req as any).authMethod === 'api_key' ? 1000 : 30,
+  max: (req: import('express').Request) => req.authMethod === 'api_key' ? 1000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'RATE_LIMITED', message: 'Too many AI requests, please try again later' },
@@ -152,25 +152,25 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
 
   // Validate advanced AI parameters
   const finalTemperature = rawTemp != null ? Number(rawTemp) : null;
-  if (finalTemperature != null && (isNaN(finalTemperature) || finalTemperature < 0 || finalTemperature > 2)) {
+  if (finalTemperature != null && (Number.isNaN(finalTemperature) || finalTemperature < 0 || finalTemperature > 2)) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'temperature must be between 0 and 2' });
     return;
   }
 
   const finalMaxTokens = rawMaxTokens != null ? Math.round(Number(rawMaxTokens)) : null;
-  if (finalMaxTokens != null && (isNaN(finalMaxTokens) || finalMaxTokens < 100 || finalMaxTokens > 16000)) {
+  if (finalMaxTokens != null && (Number.isNaN(finalMaxTokens) || finalMaxTokens < 100 || finalMaxTokens > 16000)) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'maxTokens must be between 100 and 16000' });
     return;
   }
 
   const finalTopP = rawTopP != null ? Number(rawTopP) : null;
-  if (finalTopP != null && (isNaN(finalTopP) || finalTopP < 0 || finalTopP > 1)) {
+  if (finalTopP != null && (Number.isNaN(finalTopP) || finalTopP < 0 || finalTopP > 1)) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'topP must be between 0 and 1' });
     return;
   }
 
   const finalTimeout = rawTimeout != null ? Math.round(Number(rawTimeout)) : null;
-  if (finalTimeout != null && (isNaN(finalTimeout) || finalTimeout < 10 || finalTimeout > 300)) {
+  if (finalTimeout != null && (Number.isNaN(finalTimeout) || finalTimeout < 10 || finalTimeout > 300)) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'requestTimeout must be between 10 and 300 seconds' });
     return;
   }

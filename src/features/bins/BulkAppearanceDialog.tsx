@@ -1,19 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { IconPicker } from './IconPicker';
+import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { ColorPicker } from './ColorPicker';
+import { IconPicker } from './IconPicker';
 import { StylePicker } from './StylePicker';
 import { updateBin } from './useBins';
-import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 
 interface BulkAppearanceDialogProps {
   open: boolean;

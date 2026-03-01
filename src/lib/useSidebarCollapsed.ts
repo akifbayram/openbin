@@ -11,7 +11,7 @@ let current = getStoredValue();
 const listeners = new Set<() => void>();
 
 function notify() {
-  listeners.forEach((l) => l());
+  for (const l of listeners) l();
 }
 
 function subscribe(listener: () => void) {

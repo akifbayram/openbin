@@ -1,4 +1,4 @@
-import { LayoutDashboard, ScanLine, Printer, Settings, MapPin, Package } from 'lucide-react';
+import { LayoutDashboard, MapPin, Package, Printer, ScanLine, Settings } from 'lucide-react';
 import type { Terminology } from '@/lib/terminology';
 
 export type TermKey = keyof Terminology;

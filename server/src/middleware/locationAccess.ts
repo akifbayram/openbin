@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { verifyLocationMembership, isLocationAdmin } from '../lib/binAccess.js';
+import type { NextFunction, Request, Response } from 'express';
+import { isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 
 /**
  * Middleware factory to verify user is member of a location.

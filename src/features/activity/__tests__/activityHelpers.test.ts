@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
 import { isValidElement } from 'react';
-import type { ActivityLogEntry } from '@/types';
+import { describe, expect, it } from 'vitest';
 import { DEFAULT_TERMINOLOGY } from '@/lib/terminology';
+import type { ActivityLogEntry } from '@/types';
 import {
   getActionColor,
   getActionIcon,

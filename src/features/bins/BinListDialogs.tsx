@@ -1,14 +1,14 @@
 import { lazy, Suspense } from 'react';
+import type { Area } from '@/types';
 import { BinCreateDialog } from './BinCreateDialog';
 import { BinFilterDialog } from './BinFilterDialog';
-import { SaveViewDialog } from './SaveViewDialog';
-import { BulkTagDialog } from './BulkTagDialog';
-import { BulkAreaDialog } from './BulkAreaDialog';
 import { BulkAppearanceDialog } from './BulkAppearanceDialog';
-import { BulkVisibilityDialog } from './BulkVisibilityDialog';
+import { BulkAreaDialog } from './BulkAreaDialog';
 import { BulkLocationDialog } from './BulkLocationDialog';
-import type { Area } from '@/types';
-import type { SortOption, BinFilters } from './useBins';
+import { BulkTagDialog } from './BulkTagDialog';
+import { BulkVisibilityDialog } from './BulkVisibilityDialog';
+import { SaveViewDialog } from './SaveViewDialog';
+import type { BinFilters, SortOption } from './useBins';
 import type { BulkDialog } from './useBulkDialogs';
 
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));

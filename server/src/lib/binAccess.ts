@@ -1,5 +1,5 @@
 import { query } from '../db.js';
-import { ValidationError, ForbiddenError } from './httpErrors.js';
+import { ForbiddenError, ValidationError } from './httpErrors.js';
 
 /** Verify user is a member of the location that owns a non-deleted bin.
  *  Private bins are only accessible to their creator. */

@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { query, generateUuid } from '../db.js';
-import { authenticate } from '../middleware/auth.js';
+import { generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { ValidationError } from '../lib/httpErrors.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 

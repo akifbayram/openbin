@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { X } from 'lucide-react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface Toast {
@@ -36,11 +36,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div role="status" aria-live="polite" className="fixed bottom-[calc(76px+var(--safe-bottom))] lg:bottom-8 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none print-hide">
+      <output aria-live="polite" className="fixed bottom-[calc(76px+var(--safe-bottom))] lg:bottom-8 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none print-hide">
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} />
         ))}
-      </div>
+      </output>
     </ToastContext.Provider>
   );
 }
@@ -70,6 +70,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
       <span className="text-[15px] flex-1">{toast.message}</span>
       {toast.action && (
         <button
+          type="button"
           onClick={toast.action.onClick}
           className="text-[15px] font-semibold text-[var(--accent)] hover:opacity-80 shrink-0"
         >
@@ -77,6 +78,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
         </button>
       )}
       <button
+        type="button"
         onClick={() => {
           setVisible(false);
           setTimeout(() => onDismiss(toast.id), 300);

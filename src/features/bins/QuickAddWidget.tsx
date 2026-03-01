@@ -1,7 +1,7 @@
-import { ChevronLeft, Check, Plus, Sparkles, Loader2 } from 'lucide-react';
+import { Check, ChevronLeft, Loader2, Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
+import { Tooltip } from '@/components/ui/tooltip';
 import type { useQuickAdd } from './useQuickAdd';
 
 interface QuickAddWidgetProps {
@@ -66,7 +66,6 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
             placeholder="List or describe items, e.g. 'three socks, AA batteries, winter jacket'"
             rows={3}
             disabled={quickAdd.isStructuring}
-            autoFocus
             className="w-full min-h-[80px] bg-[var(--bg-elevated)] rounded-[var(--radius-sm)] px-3 py-2 text-base text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none resize-none disabled:opacity-50"
           />
           {quickAdd.structureError && (
@@ -105,8 +104,8 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
             {quickAdd.structuredItems.map((item, i) => {
               const checked = quickAdd.checked.get(i) !== false;
               return (
-                <button
-                  key={i}
+                // biome-ignore lint/suspicious/noArrayIndexKey: items identified by index for toggle
+                <button key={i}
                   type="button"
                   onClick={() => quickAdd.toggleChecked(i)}
                   className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] transition-all ${

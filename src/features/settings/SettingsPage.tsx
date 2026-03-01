@@ -1,28 +1,28 @@
+import { ChevronRight, ExternalLink, LogOut, Monitor, Moon, Sun } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, Monitor, LogOut, ChevronRight, ExternalLink } from 'lucide-react';
-import { OptionGroup } from '@/components/ui/option-group';
-import { getAvatarUrl } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { UserAvatar } from '@/components/ui/user-avatar';
-import { useTheme } from '@/lib/theme';
-import { useAiEnabled } from '@/lib/aiToggle';
-import { useAppSettings } from '@/lib/appSettings';
-import { useTerminology } from '@/lib/terminology';
-import { useAuth } from '@/lib/auth';
-import { usePermissions } from '@/lib/usePermissions';
-import { useLocationList } from '@/features/locations/useLocations';
-import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
-import { ApiKeysSection } from './ApiKeysSection';
+import { OptionGroup } from '@/components/ui/option-group';
 import { PageHeader } from '@/components/ui/page-header';
+import { UserAvatar } from '@/components/ui/user-avatar';
+import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
+import { useLocationList } from '@/features/locations/useLocations';
+import { useAiEnabled } from '@/lib/aiToggle';
+import { getAvatarUrl } from '@/lib/api';
+import { useAppSettings } from '@/lib/appSettings';
+import { useAuth } from '@/lib/auth';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
-import { useDataSectionActions } from './useDataSectionActions';
-import { PersonalizationSection } from './PersonalizationSection';
+import { useTerminology } from '@/lib/terminology';
+import { useTheme } from '@/lib/theme';
+import { usePermissions } from '@/lib/usePermissions';
+import { ApiKeysSection } from './ApiKeysSection';
+import { DangerZoneSection } from './DangerZoneSection';
 import { DashboardSection } from './DashboardSection';
 import { DataSection } from './DataSection';
-import { DangerZoneSection } from './DangerZoneSection';
+import { PersonalizationSection } from './PersonalizationSection';
+import { useDataSectionActions } from './useDataSectionActions';
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -83,6 +83,7 @@ export function SettingsPage() {
             <Label>Account</Label>
             <div className="flex flex-col gap-3 mt-3">
               <button
+                type="button"
                 onClick={() => navigate('/profile')}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] transition-colors w-full text-left"
               >

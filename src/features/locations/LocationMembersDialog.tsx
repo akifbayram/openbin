@@ -1,22 +1,22 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { Check, ChevronDown, Copy, LogOut, RefreshCw, Shield, UserMinus } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Copy, Check, UserMinus, Shield, RefreshCw, LogOut, ChevronDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { SkeletonList } from '@/components/ui/skeleton-list';
-import { UserAvatar } from '@/components/ui/user-avatar';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
+import { Tooltip } from '@/components/ui/tooltip';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/lib/auth';
-import { useLocationMembers, useLocationList, removeMember, leaveLocation, regenerateInvite, changeMemberRole } from './useLocations';
+import { changeMemberRole, leaveLocation, regenerateInvite, removeMember, useLocationList, useLocationMembers } from './useLocations';
 
 interface LocationMembersDialogProps {
   locationId: string;
@@ -241,6 +241,7 @@ function RoleToggle({ currentRole, onChangeRole }: { currentRole: string; onChan
   return (
     <div className="shrink-0">
       <button
+        type="button"
         ref={triggerRef}
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
@@ -255,12 +256,14 @@ function RoleToggle({ currentRole, onChangeRole }: { currentRole: string; onChan
           style={{ top: pos.top, left: pos.left, transform: 'translateX(-100%)' }}
         >
           <button
+            type="button"
             onClick={() => { setOpen(false); if (currentRole !== 'admin') onChangeRole('admin'); }}
             className={`w-full text-left px-3 py-2 text-[13px] transition-colors ${currentRole === 'admin' ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}
           >
             Admin
           </button>
           <button
+            type="button"
             onClick={() => { setOpen(false); if (currentRole !== 'member') onChangeRole('member'); }}
             className={`w-full text-left px-3 py-2 text-[13px] transition-colors ${currentRole === 'member' ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}
           >

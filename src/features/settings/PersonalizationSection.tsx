@@ -1,10 +1,10 @@
 import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Disclosure } from '@/components/ui/disclosure';
+import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FormField } from '@/components/ui/form-field';
-import { Disclosure } from '@/components/ui/disclosure';
 import type { AppSettings } from '@/lib/appSettings';
 
 interface PersonalizationSectionProps {

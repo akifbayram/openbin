@@ -1,5 +1,5 @@
-import { useState, useId, type ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { type ReactNode, useId, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface DisclosureProps {
@@ -28,9 +28,8 @@ export function Disclosure({ label, defaultOpen = false, indicator, children }: 
         </span>
         <ChevronDown className={cn('h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200', open && 'rotate-180')} />
       </button>
-      <div
+      <section
         id={contentId}
-        role="region"
         aria-hidden={!open}
         className={cn(
           'grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none',
@@ -42,7 +41,7 @@ export function Disclosure({ label, defaultOpen = false, indicator, children }: 
             {children}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

@@ -1,5 +1,5 @@
-import crypto from 'crypto';
-import { query, generateUuid, getDb } from '../db.js';
+import crypto from 'node:crypto';
+import { generateUuid, getDb, query } from '../db.js';
 import { config } from './config.js';
 
 function hashToken(raw: string): string {

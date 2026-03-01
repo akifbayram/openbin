@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock apiFetch
 vi.mock('@/lib/api', () => ({
@@ -21,7 +21,7 @@ vi.mock('@/lib/auth', () => ({
 }));
 
 import { apiFetch } from '@/lib/api';
-import { addBin, updateBin, deleteBin, restoreBin } from '../useBins';
+import { addBin, deleteBin, restoreBin, updateBin } from '../useBins';
 
 const mockApiFetch = vi.mocked(apiFetch);
 

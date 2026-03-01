@@ -1,14 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, RotateCcw, QrCode } from 'lucide-react';
-import { OptionGroup } from '@/components/ui/option-group';
-import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Disclosure } from '@/components/ui/disclosure';
+import { ChevronDown, QrCode, RotateCcw } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
+import { Disclosure } from '@/components/ui/disclosure';
+import { Label } from '@/components/ui/label';
+import { OptionGroup } from '@/components/ui/option-group';
+import { Switch } from '@/components/ui/switch';
 import { HueGradientPicker } from '@/features/bins/ColorPicker';
-import { resolveColor, hexToHsl, buildColorKey, SHADE_COUNT } from '@/lib/colorPalette';
+import { buildColorKey, hexToHsl, resolveColor, SHADE_COUNT } from '@/lib/colorPalette';
+import { cn } from '@/lib/utils';
 import { CARD_PAD_RATIO, CARD_RADIUS_RATIO } from './pdfConstants';
 import type { QrStyleOptions } from './usePrintSettings';
 import { DEFAULT_QR_STYLE, isDefaultQrStyle } from './usePrintSettings';
@@ -207,6 +207,7 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
     <Card>
       <CardContent>
         <button
+          type="button"
           className="flex items-center justify-between w-full"
           onClick={() => onExpandedChange(!expanded)}
         >

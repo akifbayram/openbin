@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 export const Events = {
   BINS: 'bins-changed',
@@ -23,18 +23,20 @@ export function notify(event: EventName) {
  */
 export function useRefreshOn(...events: EventName[]): number {
   const [counter, setCounter] = useState(0);
+  const key = events.join(',');
+  const stableEvents = useMemo(() => events, [key]);
 
   useEffect(() => {
     const handler = () => setCounter((c) => c + 1);
-    for (const event of events) {
+    for (const event of stableEvents) {
       window.addEventListener(event, handler);
     }
     return () => {
-      for (const event of events) {
+      for (const event of stableEvents) {
         window.removeEventListener(event, handler);
       }
     };
-  }, [events.join(',')]);
+  }, [stableEvents]);
 
   return counter;
 }

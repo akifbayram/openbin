@@ -1,10 +1,10 @@
 import type { CSSProperties } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { useTheme } from '@/lib/theme';
-import { resolveIcon } from '@/lib/iconMap';
-import { getCardRenderProps, parseCardStyle } from '@/lib/cardStyle';
 import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
+import { getCardRenderProps, parseCardStyle } from '@/lib/cardStyle';
+import { resolveIcon } from '@/lib/iconMap';
+import { useTheme } from '@/lib/theme';
+import { cn } from '@/lib/utils';
 
 export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, areaName, className }: {
   name: string;

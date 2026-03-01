@@ -1,11 +1,11 @@
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { useAiSettings } from './useAiSettings';
 import { useCommand } from './useCommand';
-import { queryInventoryText, mapCommandErrorMessage, type QueryResult } from './useInventoryQuery';
+import { mapCommandErrorMessage, type QueryResult, queryInventoryText } from './useInventoryQuery';
 
 type State = 'idle' | 'parsing' | 'preview' | 'executing' | 'querying' | 'query-result';
 
@@ -56,7 +56,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
         }
       } else {
         const initial = new Map<number, boolean>();
-        result.actions.forEach((_, i) => initial.set(i, true));
+        for (let i = 0; i < result.actions.length; i++) initial.set(i, true);
         setCheckedActions(initial);
       }
     }

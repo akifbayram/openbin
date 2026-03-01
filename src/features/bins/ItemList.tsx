@@ -1,12 +1,12 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { X, ArrowUpDown } from 'lucide-react';
-import { removeItemFromBin, renameItem, reorderItems } from './useBins';
-import { useToast } from '@/components/ui/toast';
+import { ArrowUpDown, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/components/ui/toast';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { BinItem } from '@/types';
+import { removeItemFromBin, renameItem, reorderItems } from './useBins';
 
 interface ItemListProps {
   items: BinItem[];
@@ -119,7 +119,6 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
             }}
             onBlur={handleSave}
             className="flex-1 min-w-0 bg-transparent text-[15px] text-[var(--text-primary)] outline-none py-0.5"
-            autoFocus
           />
         ) : (
           <button

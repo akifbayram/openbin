@@ -1,6 +1,6 @@
+import { Check } from 'lucide-react';
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { Check } from 'lucide-react';
 
 interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   checked?: boolean;
@@ -10,6 +10,7 @@ interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>
 const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
   ({ className, checked, onCheckedChange, ...props }, ref) => {
     return (
+      // biome-ignore lint/a11y/useSemanticElements: intentional custom checkbox with button for consistent styling
       <button
         type="button"
         role="checkbox"

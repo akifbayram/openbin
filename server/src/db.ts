@@ -1,8 +1,8 @@
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { config } from './lib/config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -60,10 +60,8 @@ function convertParams(text: string, params?: unknown[]): { sql: string; ordered
   }
 
   // Find all $N references in the SQL (outside of string literals)
-  const paramRefs: number[] = [];
+  const _paramRefs: number[] = [];
   const regex = /\$(\d+)/g;
-  let match: RegExpExecArray | null;
-
   // Build the new SQL with ? placeholders
   let sql = '';
   let lastIndex = 0;
@@ -71,8 +69,9 @@ function convertParams(text: string, params?: unknown[]): { sql: string; ordered
 
   // Reset regex
   regex.lastIndex = 0;
-  while ((match = regex.exec(text)) !== null) {
-    sql += text.slice(lastIndex, match.index) + '?';
+  let match = regex.exec(text);
+  while (match) {
+    sql += `${text.slice(lastIndex, match.index)}?`;
     const paramIndex = parseInt(match[1], 10) - 1; // $1 -> index 0
     let value = params[paramIndex];
 
@@ -83,6 +82,7 @@ function convertParams(text: string, params?: unknown[]): { sql: string; ordered
 
     newParams.push(value);
     lastIndex = match.index + match[0].length;
+    match = regex.exec(text);
   }
   sql += text.slice(lastIndex);
 

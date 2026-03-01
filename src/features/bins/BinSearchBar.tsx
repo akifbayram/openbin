@@ -1,13 +1,13 @@
 import { Search, SlidersHorizontal, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
-import { DismissibleBadge } from '@/components/ui/dismissible-badge';
-import { HUE_RANGES } from '@/lib/colorPalette';
 import type { CSSProperties } from 'react';
-import type { BinFilters } from './useBins';
-import type { Area } from '@/types';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DismissibleBadge } from '@/components/ui/dismissible-badge';
+import { Tooltip } from '@/components/ui/tooltip';
+import { HUE_RANGES } from '@/lib/colorPalette';
 import type { Terminology } from '@/lib/terminology';
+import type { Area } from '@/types';
+import type { BinFilters } from './useBins';
 
 interface BinSearchBarProps {
   search: string;
@@ -115,6 +115,7 @@ export function BinSearchBar({
         />
         {(hasBadges || search) && (
           <button
+            type="button"
             onClick={clearAll}
             aria-label="Clear all filters"
             className="p-1 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-active)] shrink-0"

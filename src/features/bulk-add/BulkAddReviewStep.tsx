@@ -1,23 +1,23 @@
+import { AlertCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Loader2, SkipForward, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Sparkles, Loader2, SkipForward, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { TagInput } from '@/features/bins/TagInput';
-import { ItemsInput } from '@/features/bins/ItemsInput';
-import { IconPicker } from '@/features/bins/IconPicker';
-import { ColorPicker } from '@/features/bins/ColorPicker';
-import { AreaPicker } from '@/features/areas/AreaPicker';
+import { Textarea } from '@/components/ui/textarea';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
-import { useAiSettings } from '@/features/ai/useAiSettings';
-import { useAllTags } from '@/features/bins/useBins';
-import { useAuth } from '@/lib/auth';
-import { useAiEnabled } from '@/lib/aiToggle';
 import { analyzeImageFile, mapErrorMessage } from '@/features/ai/useAiAnalysis';
+import { useAiSettings } from '@/features/ai/useAiSettings';
+import { AreaPicker } from '@/features/areas/AreaPicker';
+import { ColorPicker } from '@/features/bins/ColorPicker';
+import { IconPicker } from '@/features/bins/IconPicker';
+import { ItemsInput } from '@/features/bins/ItemsInput';
+import { TagInput } from '@/features/bins/TagInput';
+import { useAllTags } from '@/features/bins/useBins';
 import { compressImage } from '@/features/photos/compressImage';
+import { useAiEnabled } from '@/lib/aiToggle';
+import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
-import type { BulkAddPhoto, BulkAddAction } from './useBulkAdd';
+import type { BulkAddAction, BulkAddPhoto } from './useBulkAdd';
 
 interface BulkAddReviewStepProps {
   photos: BulkAddPhoto[];
@@ -35,19 +35,20 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   const autoAnalyzedRef = useRef<Set<string>>(new Set());
 
   const photo = photos[currentIndex];
+
+  // Auto-analyze on first visit to each photo
+  useEffect(() => {
+    if (photo && photo.status === 'pending' && aiEnabled && aiSettings && !autoAnalyzedRef.current.has(photo.id)) {
+      autoAnalyzedRef.current.add(photo.id);
+      triggerAnalyze(photo);
+    }
+  }, [photo?.id, photo?.status, aiSettings]);
+
   if (!photo) return null;
 
   const isFirst = currentIndex === 0;
   const isLast = currentIndex === photos.length - 1;
   const reviewedCount = photos.filter((p) => p.status === 'reviewed' || p.status === 'skipped').length;
-
-  // Auto-analyze on first visit to each photo
-  useEffect(() => {
-    if (photo.status === 'pending' && aiEnabled && aiSettings && !autoAnalyzedRef.current.has(photo.id)) {
-      autoAnalyzedRef.current.add(photo.id);
-      triggerAnalyze(photo);
-    }
-  }, [photo.id, photo.status, aiSettings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function triggerAnalyze(target: BulkAddPhoto) {
     if (!aiSettings) {
@@ -129,7 +130,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
           <div className="relative">
             <img
               src={photo.previewUrl}
-              alt={`Photo ${currentIndex + 1}`}
+              alt={`Upload ${currentIndex + 1}`}
               className="w-full max-h-64 object-contain rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5"
             />
             {aiEnabled && (

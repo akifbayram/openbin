@@ -1,7 +1,7 @@
-import { query, getDb, generateUuid } from '../db.js';
+import { generateUuid, getDb, query } from '../db.js';
 import { computeChanges } from './activityLog.js';
-import { generateShortCode } from './shortCode.js';
 import { fetchBinById } from './binQueries.js';
+import { generateShortCode } from './shortCode.js';
 
 export function buildBinSetClauses(fields: {
   name?: unknown;

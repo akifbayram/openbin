@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 import {
-  useColumnVisibility,
   ALL_FIELDS,
   FIELD_LABELS,
   type FieldKey,
+  useColumnVisibility,
 } from '../useColumnVisibility';
 
 const KEY = STORAGE_KEYS.COLUMN_VISIBILITY;
@@ -113,6 +113,7 @@ describe('toggleField', () => {
 
     act(() => result.current.toggleField('notes'));
 
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
     const stored = JSON.parse(localStorage.getItem(KEY)!);
     expect(stored.notes).toBe(true);
   });

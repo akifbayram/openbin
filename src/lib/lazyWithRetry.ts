@@ -1,4 +1,4 @@
-import { lazy, type ComponentType } from 'react';
+import { type ComponentType, lazy } from 'react';
 
 const RELOAD_KEY = 'openbin-chunk-reload';
 

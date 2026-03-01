@@ -1,10 +1,12 @@
-import { describe, it, expect } from 'vitest';
-import { computeLabelLayout } from '../labelLayout';
-import type { LabelLayoutInput } from '../labelLayout';
+import { describe, expect, it } from 'vitest';
 import { LABEL_FORMATS } from '../labelFormats';
+import type { LabelLayoutInput } from '../labelLayout';
+import { computeLabelLayout } from '../labelLayout';
 import { CARD_PAD_MIN_PT, CARD_PAD_RATIO, CARD_RADIUS_RATIO, MONO_CODE_WIDTH_EMS, SWATCH_BAR_HEIGHT_RATIO, SWATCH_BAR_MIN_PT } from '../pdfConstants';
 
+// biome-ignore lint/style/noNonNullAssertion: test assertion
 const avery5160 = LABEL_FORMATS.find((f) => f.key === 'avery-5160')!;
+// biome-ignore lint/style/noNonNullAssertion: test assertion
 const avery5168 = LABEL_FORMATS.find((f) => f.key === 'avery-5168')!; // portrait
 
 function makeInput(overrides?: Partial<LabelLayoutInput>): LabelLayoutInput {

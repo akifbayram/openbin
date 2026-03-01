@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/toast';
-import { deleteBin, restoreBin, updateBin, moveBin, addBin } from './useBins';
-import { useQuickAdd } from './useQuickAdd';
+import { useAiAnalysis } from '@/features/ai/useAiAnalysis';
+import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useLocationList } from '@/features/locations/useLocations';
 import { usePhotos } from '@/features/photos/usePhotos';
-import { useAiSettings } from '@/features/ai/useAiSettings';
-import { useAiAnalysis } from '@/features/ai/useAiAnalysis';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
-import { useAuth } from '@/lib/auth';
-import { usePermissions } from '@/lib/usePermissions';
 import { useAiEnabled } from '@/lib/aiToggle';
+import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import { usePermissions } from '@/lib/usePermissions';
 import type { Bin } from '@/types';
+import { addBin, deleteBin, moveBin, restoreBin, updateBin } from './useBins';
+import { useQuickAdd } from './useQuickAdd';
 
 export function useBinDetailActions(bin: Bin | null | undefined, id: string | undefined, editing: boolean) {
   const navigate = useNavigate();
@@ -57,8 +57,8 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
   }
 
   async function handleMove(targetId: string) {
-    if (!id) return;
-    const originalLocationId = bin!.location_id;
+    if (!id || !bin) return;
+    const originalLocationId = bin.location_id;
     const targetLoc = locations.find((l) => l.id === targetId);
     await moveBin(id, targetId);
     setMoveOpen(false);

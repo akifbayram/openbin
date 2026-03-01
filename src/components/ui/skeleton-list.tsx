@@ -10,6 +10,7 @@ export function SkeletonList({ count = 5, children, className }: SkeletonListPro
   return (
     <div className={cn('flex flex-col gap-1', className)}>
       {Array.from({ length: count }, (_, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no stable identity
         <div key={i}>{children(i)}</div>
       ))}
     </div>

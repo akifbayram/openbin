@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import archiver from 'archiver';
 import cron from 'node-cron';
 import { getDb } from '../db.js';

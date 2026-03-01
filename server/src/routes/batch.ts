@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { executeActions } from '../lib/commandExecutor.js';
+import type { CommandAction } from '../lib/commandParser.js';
+import { config } from '../lib/config.js';
+import { ValidationError } from '../lib/httpErrors.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
-import { executeActions } from '../lib/commandExecutor.js';
-import { asyncHandler } from '../lib/asyncHandler.js';
-import { ValidationError } from '../lib/httpErrors.js';
-import { config } from '../lib/config.js';
-import type { CommandAction } from '../lib/commandParser.js';
 
 const router = Router();
 
@@ -24,7 +24,7 @@ const noop = (_req: import('express').Request, _res: import('express').Response,
 
 const batchLimiter = config.disableRateLimit ? noop : rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: (req: import('express').Request) => (req as any).authMethod === 'api_key' ? 600 : 60,
+  max: (req: import('express').Request) => req.authMethod === 'api_key' ? 600 : 60,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'RATE_LIMITED', message: 'Too many batch requests, please try again later' },

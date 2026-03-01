@@ -1,16 +1,16 @@
+import { AlertCircle, ChevronLeft } from 'lucide-react';
 import React, { Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
-import { ChevronLeft, AlertCircle } from 'lucide-react';
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { ToastProvider, useToast } from '@/components/ui/toast';
-import { AuthProvider } from '@/lib/auth';
 import { AuthGuard } from '@/features/auth/AuthGuard';
 import { AppLayout } from '@/features/layout/AppLayout';
 import { LocationProvider } from '@/features/locations/useLocations';
-import { UserPreferencesProvider } from '@/lib/userPreferences';
-import { NavigationGuardProvider } from '@/lib/navigationGuard';
-import { lazyWithRetry } from '@/lib/lazyWithRetry';
-import { Button } from '@/components/ui/button';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
+import { AuthProvider } from '@/lib/auth';
+import { lazyWithRetry } from '@/lib/lazyWithRetry';
+import { NavigationGuardProvider } from '@/lib/navigationGuard';
+import { UserPreferencesProvider } from '@/lib/userPreferences';
 
 const BinListPage = lazyWithRetry(() =>
   import('@/features/bins/BinListPage').then((m) => ({ default: m.BinListPage }))

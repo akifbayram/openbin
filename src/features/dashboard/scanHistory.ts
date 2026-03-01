@@ -23,11 +23,11 @@ export async function recordScan(binId: string): Promise<void> {
   }
 }
 
-const transformScanEntries = (results: any[]): ScanEntry[] =>
-  results.map((e) => ({ binId: e.bin_id, scannedAt: e.scanned_at }));
+const transformScanEntries = (results: Record<string, unknown>[]): ScanEntry[] =>
+  results.map((e) => ({ binId: e.bin_id as string, scannedAt: e.scanned_at as string }));
 
 export function useScanHistory(limit = 20) {
-  const { data: history, isLoading } = useListData<ScanEntry>(
+  const { data: history, isLoading } = useListData<ScanEntry, Record<string, unknown>>(
     `/api/scan-history?limit=${limit}`,
     [Events.SCAN_HISTORY],
     transformScanEntries,

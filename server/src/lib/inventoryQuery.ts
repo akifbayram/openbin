@@ -1,5 +1,5 @@
-import { callAiProvider } from './aiCaller.js';
 import type { AiProviderConfig } from './aiCaller.js';
+import { callAiProvider } from './aiCaller.js';
 import { DEFAULT_QUERY_PROMPT } from './defaultPrompts.js';
 
 export interface QueryMatch {
@@ -50,7 +50,7 @@ function buildUserMessage(question: string, context: InventoryContext): string {
     items: b.items,
     tags: b.tags,
     area_name: b.area_name,
-    notes: b.notes.length > 200 ? b.notes.slice(0, 200) + '...' : b.notes,
+    notes: b.notes.length > 200 ? `${b.notes.slice(0, 200)}...` : b.notes,
     visibility: b.visibility,
     is_pinned: b.is_pinned,
     photo_count: b.photo_count,

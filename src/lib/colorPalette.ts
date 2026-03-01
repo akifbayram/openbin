@@ -115,10 +115,10 @@ export function parseColorKey(key: string): { hue: number | 'neutral'; shade: nu
   const parts = key.split(':');
   if (parts.length !== 2) return null;
   const shade = parseInt(parts[1], 10);
-  if (isNaN(shade) || shade < 0 || shade >= SHADE_COUNT) return null;
+  if (Number.isNaN(shade) || shade < 0 || shade >= SHADE_COUNT) return null;
   if (parts[0] === 'neutral') return { hue: 'neutral', shade };
   const hue = parseInt(parts[0], 10);
-  if (isNaN(hue)) return null;
+  if (Number.isNaN(hue)) return null;
   return { hue, shade };
 }
 

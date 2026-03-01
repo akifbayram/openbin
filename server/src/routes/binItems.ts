@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { query, generateUuid } from '../db.js';
-import { authenticate } from '../middleware/auth.js';
+import { generateUuid, query } from '../db.js';
 import { logActivity } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { ValidationError, NotFoundError, ForbiddenError } from '../lib/httpErrors.js';
-import { verifyBinAccess, isLocationAdmin } from '../lib/binAccess.js';
+import { isLocationAdmin, verifyBinAccess } from '../lib/binAccess.js';
+import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -115,7 +115,7 @@ router.put('/:id/items/reorder', asyncHandler(async (req, res) => {
     throw new ValidationError('item_ids array is required');
   }
 
-  const access = await verifyBinEditAccess(id, req.user!.id);
+  const _access = await verifyBinEditAccess(id, req.user!.id);
 
   for (let i = 0; i < item_ids.length; i++) {
     await query(

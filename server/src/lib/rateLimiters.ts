@@ -1,5 +1,5 @@
-import rateLimit from 'express-rate-limit';
 import type { RequestHandler } from 'express';
+import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
 
 const noop: RequestHandler = (_req, _res, next) => next();

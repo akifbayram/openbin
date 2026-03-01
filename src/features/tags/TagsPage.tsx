@@ -1,21 +1,21 @@
-import { useState, useCallback } from 'react';
 import { Tags as TagsIcon } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
 import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
-import { Crossfade } from '@/components/ui/crossfade';
-import { useAuth } from '@/lib/auth';
-import { useTerminology } from '@/lib/terminology';
-import { useDebounce } from '@/lib/useDebounce';
-import { usePaginatedTagList } from './useTags';
-import { useTagColorsContext } from './TagColorsContext';
-import { setTagColor } from './useTagColors';
-import { TagTableView, type TagSortColumn } from './TagTableView';
 import type { SortDirection } from '@/components/ui/sort-header';
+import { useAuth } from '@/lib/auth';
 import { resolveColor } from '@/lib/colorPalette';
+import { useTerminology } from '@/lib/terminology';
 import { useTheme } from '@/lib/theme';
-import { PageHeader } from '@/components/ui/page-header';
+import { useDebounce } from '@/lib/useDebounce';
+import { useTagColorsContext } from './TagColorsContext';
+import { type TagSortColumn, TagTableView } from './TagTableView';
+import { setTagColor } from './useTagColors';
+import { usePaginatedTagList } from './useTags';
 
 export function TagsPage() {
   const [search, setSearch] = useState('');

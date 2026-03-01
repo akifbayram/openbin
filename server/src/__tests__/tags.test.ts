@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import request from 'supertest';
 import type { Express } from 'express';
+import request from 'supertest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../index.js';
-import { createTestUser, createTestLocation, createTestBin } from './helpers.js';
+import { createTestBin, createTestLocation, createTestUser } from './helpers.js';
 
 let app: Express;
 
@@ -64,9 +64,9 @@ describe('GET /api/tags', () => {
     const tagMap = Object.fromEntries(
       res.body.results.map((r: { tag: string; count: number }) => [r.tag, r.count]),
     );
-    expect(tagMap['tech']).toBe(2);
-    expect(tagMap['office']).toBe(1);
-    expect(tagMap['home']).toBe(1);
+    expect(tagMap.tech).toBe(2);
+    expect(tagMap.office).toBe(1);
+    expect(tagMap.home).toBe(1);
   });
 
   it('filters by q param', async () => {

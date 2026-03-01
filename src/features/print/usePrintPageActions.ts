@@ -1,15 +1,14 @@
 import { useState } from 'react';
-import { useBinList } from '@/features/bins/useBins';
 import { useAreaList } from '@/features/areas/useAreas';
+import { useBinList } from '@/features/bins/useBins';
 import { useAuth } from '@/lib/auth';
-import { getLabelFormat, DEFAULT_LABEL_FORMAT, getOrientation, applyOrientation, computePageSize } from './labelFormats';
-import { usePrintSettings } from './usePrintSettings';
+import { computeEffectiveFormat } from './computeEffectiveFormat';
 import type { LabelFormat } from './labelFormats';
-import type { LabelOptions, CustomState, DisplayUnit, QrStyleOptions } from './usePrintSettings';
-import { DEFAULT_QR_STYLE } from './usePrintSettings';
+import { applyOrientation, computePageSize, DEFAULT_LABEL_FORMAT, getLabelFormat, getOrientation } from './labelFormats';
 import { inchesToMm, mmToInches } from './pdfUnits';
 import { useBinSelection } from './useBinSelection';
-import { computeEffectiveFormat } from './computeEffectiveFormat';
+import type { CustomState, DisplayUnit, LabelOptions, QrStyleOptions } from './usePrintSettings';
+import { DEFAULT_QR_STYLE, usePrintSettings } from './usePrintSettings';
 
 const CUSTOM_FIELDS: { label: string; key: keyof LabelFormat; minIn: number; max?: string; stepIn: string; stepMm: string; isNumber?: boolean; isDimensional: boolean }[] = [
   { label: 'Page Width', key: 'pageWidth', minIn: 1, stepIn: '0.5', stepMm: '10', isNumber: true, isDimensional: true },
@@ -111,7 +110,7 @@ export function usePrintPageActions() {
   function updateOverride(key: keyof LabelFormat, raw: string) {
     if (!raw.trim()) return;
     const num = parseFloat(raw);
-    if (isNaN(num)) return;
+    if (Number.isNaN(num)) return;
     const field = CUSTOM_FIELDS.find((f) => f.key === key);
     const inValue = (displayUnit === 'mm' && field?.isDimensional) ? mmToInches(num) : num;
     const clamped = Math.max(field?.minIn ?? 0, inValue);

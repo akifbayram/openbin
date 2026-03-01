@@ -1,24 +1,24 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronLeft, Sparkles, Loader2, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronLeft, ChevronUp, Loader2, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
-import { TagInput } from '@/features/bins/TagInput';
-import { ItemsInput } from '@/features/bins/ItemsInput';
-import { IconPicker } from '@/features/bins/IconPicker';
-import { ColorPicker } from '@/features/bins/ColorPicker';
 import { AreaPicker } from '@/features/areas/AreaPicker';
-import { AiSettingsSection } from './AiSettingsSection';
-import { useAiSettings } from './useAiSettings';
-import { useAiEnabled } from '@/lib/aiToggle';
-import { analyzeImageFiles, mapErrorMessage, MAX_AI_PHOTOS } from './useAiAnalysis';
+import { ColorPicker } from '@/features/bins/ColorPicker';
+import { IconPicker } from '@/features/bins/IconPicker';
+import { ItemsInput } from '@/features/bins/ItemsInput';
+import { TagInput } from '@/features/bins/TagInput';
 import { addBin, notifyBinsChanged, useAllTags } from '@/features/bins/useBins';
-import { addPhoto } from '@/features/photos/usePhotos';
 import { compressImage } from '@/features/photos/compressImage';
+import { addPhoto } from '@/features/photos/usePhotos';
+import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import { AiSettingsSection } from './AiSettingsSection';
+import { analyzeImageFiles, MAX_AI_PHOTOS, mapErrorMessage } from './useAiAnalysis';
+import { useAiSettings } from './useAiSettings';
 
 interface SingleBinReviewProps {
   files: File[];
@@ -140,10 +140,10 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             <div className="relative w-fit max-w-full mx-auto">
               <div className="flex gap-2 overflow-x-auto">
                 {previewUrls.map((url, i) => (
-                  <img
-                    key={i}
+                  // biome-ignore lint/suspicious/noArrayIndexKey: preview URLs have no stable identity
+                  <img key={i}
                     src={url}
-                    alt={`Photo ${i + 1}`}
+                    alt={`Upload ${i + 1}`}
                     className="max-h-64 shrink-0 rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5"
                   />
                 ))}

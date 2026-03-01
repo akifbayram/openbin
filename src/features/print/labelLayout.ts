@@ -1,15 +1,15 @@
 import type { LabelFormat } from './labelFormats';
-import { isVerticalLayout, computeCodeFontSize } from './labelFormats';
-import { parsePaddingPt } from './pdfUnits';
-import type { LabelDirection } from './usePrintSettings';
+import { computeCodeFontSize, isVerticalLayout } from './labelFormats';
 import {
+  CARD_PAD_MIN_PT,
+  CARD_PAD_RATIO,
+  CARD_RADIUS_RATIO,
   MONO_CODE_WIDTH_EMS,
   SWATCH_BAR_HEIGHT_RATIO,
   SWATCH_BAR_MIN_PT,
-  CARD_PAD_RATIO,
-  CARD_PAD_MIN_PT,
-  CARD_RADIUS_RATIO,
 } from './pdfConstants';
+import { parsePaddingPt } from './pdfUnits';
+import type { LabelDirection } from './usePrintSettings';
 
 /**
  * Rendering mode determined by label options and bin state.

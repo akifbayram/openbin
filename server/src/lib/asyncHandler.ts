@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction, RequestHandler } from 'express';
+import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
 /** Wrap an async route handler so rejected promises are forwarded to next(). */
 export function asyncHandler(

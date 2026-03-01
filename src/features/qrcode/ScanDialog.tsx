@@ -1,22 +1,22 @@
-import { useState, useCallback, useEffect } from 'react';
+import { AlertCircle, Plus, RotateCcw, ScanLine, Search } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { ScanLine, AlertCircle, RotateCcw, Plus, Search } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Html5QrcodePlugin } from './Html5QrcodePlugin';
-import { apiFetch } from '@/lib/api';
-import { haptic } from '@/lib/utils';
-import { useTerminology } from '@/lib/terminology';
-import { lookupBinByCode } from '@/features/bins/useBins';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
+import { lookupBinByCode } from '@/features/bins/useBins';
+import { recordScan } from '@/features/dashboard/scanHistory';
 import { ScanSuccessOverlay } from '@/features/onboarding/ScanSuccessOverlay';
 import { useOnboarding } from '@/features/onboarding/useOnboarding';
-import { recordScan } from '@/features/dashboard/scanHistory';
+import { apiFetch } from '@/lib/api';
 import { BIN_URL_REGEX } from '@/lib/qr';
+import { useTerminology } from '@/lib/terminology';
+import { haptic } from '@/lib/utils';
+import { Html5QrcodePlugin } from './Html5QrcodePlugin';
 
 interface ScanDialogProps {
   open: boolean;

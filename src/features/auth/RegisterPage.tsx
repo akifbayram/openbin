@@ -1,14 +1,14 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, Sun, Moon, Monitor, Check } from 'lucide-react';
+import { Check, Monitor, Moon, Sun, UserPlus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast';
-import { useAuth } from '@/lib/auth';
 import { useAppSettings } from '@/lib/appSettings';
-import { useTheme, cycleThemePreference } from '@/lib/theme';
+import { useAuth } from '@/lib/auth';
+import { cycleThemePreference, useTheme } from '@/lib/theme';
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,50}$/;
 
@@ -36,7 +36,7 @@ export function RegisterPage() {
       })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [navigate, showToast]);
 
   const passwordChecks = useMemo(() => ({
     length: password.length >= 8,
@@ -81,6 +81,7 @@ export function RegisterPage() {
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-[var(--bg-base)] relative">
       <button
+        type="button"
         onClick={() => setThemePreference(cycleThemePreference(preference))}
         aria-label={`Theme: ${preference}`}
         className="absolute top-4 right-4 p-2.5 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"

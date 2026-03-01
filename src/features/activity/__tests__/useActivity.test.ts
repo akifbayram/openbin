@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/usePaginatedList', () => ({
   usePaginatedList: vi.fn(() => ({
@@ -17,8 +17,8 @@ vi.mock('@/lib/auth', () => ({
   useAuth: vi.fn(() => ({ activeLocationId: 'loc-1' })),
 }));
 
-import { usePaginatedList } from '@/lib/usePaginatedList';
 import { useAuth } from '@/lib/auth';
+import { usePaginatedList } from '@/lib/usePaginatedList';
 import { usePaginatedActivityLog } from '../useActivity';
 
 const mockUsePaginatedList = vi.mocked(usePaginatedList);

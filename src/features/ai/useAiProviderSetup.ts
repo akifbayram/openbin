@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/toast';
-import { saveAiSettings, testAiConnection } from './useAiSettings';
-import { DEFAULT_MODELS } from './aiConstants';
 import type { AiProvider, AiSettings } from '@/types';
+import { DEFAULT_MODELS } from './aiConstants';
+import { saveAiSettings, testAiConnection } from './useAiSettings';
 
 export interface AiProviderSetup {
   provider: AiProvider;

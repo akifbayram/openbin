@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { query } from '../db.js';
-import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { ValidationError, ForbiddenError } from '../lib/httpErrors.js';
 import { verifyLocationMembership } from '../lib/binAccess.js';
+import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -13,8 +13,8 @@ router.use(authenticate);
 router.get('/', asyncHandler(async (req, res) => {
   const locationId = req.query.location_id as string | undefined;
   const searchQuery = req.query.q as string | undefined;
-  const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 40, 1), 100);
-  const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+  const limit = Math.min(Math.max(parseInt(req.query.limit as string, 10) || 40, 1), 100);
+  const offset = Math.max(parseInt(req.query.offset as string, 10) || 0, 0);
 
   if (!locationId) {
     throw new ValidationError('location_id is required');

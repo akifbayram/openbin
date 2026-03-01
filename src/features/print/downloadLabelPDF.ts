@@ -1,11 +1,11 @@
 import { batchGenerateQRDataURLs } from '@/lib/qr';
-import { batchRenderIconDataURLs } from './iconToDataUrl';
+import type { Bin } from '@/types';
 import { generateLabelPDF } from './generateLabelPDF';
+import { batchRenderIconDataURLs } from './iconToDataUrl';
 import type { LabelFormat } from './labelFormats';
 import { buildColorMap } from './labelFormats';
 import type { LabelOptions, QrStyleOptions } from './usePrintSettings';
 import { isDefaultQrStyle } from './usePrintSettings';
-import type { Bin } from '@/types';
 
 interface DownloadLabelPDFParams {
   bins: Bin[];
@@ -26,7 +26,7 @@ export async function downloadLabelPDF(params: DownloadLabelPDFParams): Promise<
     qrMap = new Map();
   } else if (!isDefaultQrStyle(qrStyle)) {
     const { batchGenerateStyledQRDataURLs } = await import('@/lib/styledQr');
-    qrMap = await batchGenerateStyledQRDataURLs(bins.map((b) => b.id), qrPixelSize, qrStyle!, colorMap);
+    qrMap = await batchGenerateStyledQRDataURLs(bins.map((b) => b.id), qrPixelSize, qrStyle as QrStyleOptions, colorMap);
   } else {
     qrMap = await batchGenerateQRDataURLs(bins.map((b) => b.id), qrPixelSize, undefined, colorMap);
   }

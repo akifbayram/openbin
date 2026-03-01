@@ -1,5 +1,5 @@
+import { formatKeys, groupedShortcuts } from '@/lib/shortcuts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog';
-import { groupedShortcuts, formatKeys } from '@/lib/shortcuts';
 
 function KeyBadge({ children }: { children: string }) {
   return (
@@ -32,6 +32,7 @@ export function ShortcutsHelp({ open, onOpenChange }: { open: boolean; onOpenCha
                       <span className="text-[14px] text-[var(--text-primary)]">{s.label}</span>
                       <div className="flex items-center gap-1">
                         {keys.map((k, i) => (
+                          // biome-ignore lint/suspicious/noArrayIndexKey: static list of keyboard shortcut keys
                           <span key={i} className="flex items-center gap-1">
                             {i > 0 && <span className="text-[11px] text-[var(--text-tertiary)]">then</span>}
                             <KeyBadge>{k}</KeyBadge>

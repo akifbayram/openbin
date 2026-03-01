@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 export type ViewMode = 'grid' | 'compact' | 'table';

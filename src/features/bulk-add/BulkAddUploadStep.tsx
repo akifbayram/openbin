@@ -1,11 +1,11 @@
+import { Camera, ImagePlus, X } from 'lucide-react';
 import { useRef } from 'react';
-import { Camera, X, ImagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
-import type { BulkAddPhoto, BulkAddAction } from './useBulkAdd';
+import type { BulkAddAction, BulkAddPhoto } from './useBulkAdd';
 import { createBulkAddPhoto } from './useBulkAdd';
 
 const MAX_PHOTOS = 20;

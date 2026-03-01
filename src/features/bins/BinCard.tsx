@@ -1,16 +1,16 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Check, Lock } from 'lucide-react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
-import { cn } from '@/lib/utils';
+import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
+import { useTagStyle } from '@/features/tags/useTagStyle';
 import { resolveIcon } from '@/lib/iconMap';
 import { useTheme } from '@/lib/theme';
-import { useTagStyle } from '@/features/tags/useTagStyle';
-import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
-import { computeBinCardStyles } from './binCardStyles';
-import { useBinCardInteraction } from './useBinCardInteraction';
-import { areCommonBinCardPropsEqual } from './binMemoUtils';
+import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
+import { computeBinCardStyles } from './binCardStyles';
+import { areCommonBinCardPropsEqual } from './binMemoUtils';
+import { useBinCardInteraction } from './useBinCardInteraction';
 import type { FieldKey } from './useColumnVisibility';
 
 interface BinCardProps {
@@ -92,7 +92,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [bin.tags.length]);
+  }, []);
 
   const hiddenTagCount = bin.tags.length - visibleTagCount;
   const displayedTags = hiddenTagCount > 0 ? bin.tags.slice(0, visibleTagCount) : bin.tags;
@@ -194,9 +194,12 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
         checkbox
       ) : onSelect ? (
         /* Layered icon / hover-checkbox for desktop discovery */
-        <div
-          className="relative mt-0.5 h-5 w-5 shrink-0"
+        <button
+          type="button"
+          tabIndex={0}
+          className="relative mt-0.5 h-5 w-5 shrink-0 appearance-none bg-transparent border-none p-0"
           onClick={handleCheckboxClick}
+          aria-label="Select"
         >
           {/* Default icon — fades out on hover (hover:hover targets pointer devices only) */}
           {isVisible?.('icon') !== false && (
@@ -215,7 +218,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
               style={secondaryBorderStyle}
             />
           </div>
-        </div>
+        </button>
       ) : isVisible?.('icon') !== false ? (
         <BinIcon
           className="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-tertiary)]"
@@ -226,10 +229,11 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   );
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: custom card with complex layout cannot be a plain button
     <div
       tabIndex={0}
       role="button"
-      aria-selected={selectable ? selected : undefined}
+      aria-pressed={selectable ? selected : undefined}
       className={cn(
         'group h-full rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none [@media(hover:hover)]:hover:scale-[1.02] [@media(hover:hover)]:hover:shadow-[var(--shadow-elevated)] [@media(hover:hover)]:hover:-translate-y-0.5 animate-stagger-in',
         renderProps.className,

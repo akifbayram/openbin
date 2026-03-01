@@ -1,17 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  resolveColor,
-  parseColorKey,
   buildColorKey,
-  hslToHex,
-  hexToHsl,
-  srgbMix,
-  getHueRange,
-  relativeLuminance,
-  needsLightText,
   getApproxBgHex,
+  getHueRange,
   HUE_RANGES,
+  hexToHsl,
+  hslToHex,
+  needsLightText,
+  parseColorKey,
+  relativeLuminance,
+  resolveColor,
   SHADE_COUNT,
+  srgbMix,
 } from '@/lib/colorPalette';
 
 describe('colorPalette', () => {
@@ -110,31 +110,31 @@ describe('colorPalette', () => {
     it('resolves a new-format key', () => {
       const preset = resolveColor('210:2');
       expect(preset).toBeDefined();
-      expect(preset!.key).toBe('210:2');
-      expect(preset!.label).toBe('Blue');
-      expect(preset!.dot).toMatch(/^#[0-9A-F]{6}$/);
-      expect(preset!.bg).toMatch(/^#[0-9A-F]{6}$/);
-      expect(preset!.ref).toMatch(/^#[0-9A-F]{6}$/);
-      expect(preset!.bgCss).toMatch(/^color-mix\(in oklch,/);
+      expect(preset?.key).toBe('210:2');
+      expect(preset?.label).toBe('Blue');
+      expect(preset?.dot).toMatch(/^#[0-9A-F]{6}$/);
+      expect(preset?.bg).toMatch(/^#[0-9A-F]{6}$/);
+      expect(preset?.ref).toMatch(/^#[0-9A-F]{6}$/);
+      expect(preset?.bgCss).toMatch(/^color-mix\(in oklch,/);
     });
 
     it('resolves neutral key', () => {
       const preset = resolveColor('neutral:2');
       expect(preset).toBeDefined();
-      expect(preset!.label).toBe('Gray');
-      expect(preset!.bgCss).toContain('color-mix(in oklch,');
+      expect(preset?.label).toBe('Gray');
+      expect(preset?.bgCss).toContain('color-mix(in oklch,');
     });
 
     it('resolves legacy key "blue"', () => {
       const preset = resolveColor('blue');
       expect(preset).toBeDefined();
-      expect(preset!.key).toBe('blue');
+      expect(preset?.key).toBe('blue');
     });
 
     it('resolves legacy key "red-light"', () => {
       const preset = resolveColor('red-light');
       expect(preset).toBeDefined();
-      expect(preset!.key).toBe('red-light');
+      expect(preset?.key).toBe('red-light');
     });
 
     it('returns undefined for empty string', () => {
@@ -148,41 +148,42 @@ describe('colorPalette', () => {
     it('resolves "black" to fixed preset', () => {
       const preset = resolveColor('black');
       expect(preset).toBeDefined();
-      expect(preset!.key).toBe('black');
-      expect(preset!.label).toBe('Black');
-      expect(preset!.ref).toBe('#1C1C1E');
-      expect(preset!.dot).toBe('#1C1C1E');
-      expect(preset!.bg).toBe('#1C1C1E');
-      expect(preset!.bgCss).toBe('#1C1C1E');
+      expect(preset?.key).toBe('black');
+      expect(preset?.label).toBe('Black');
+      expect(preset?.ref).toBe('#1C1C1E');
+      expect(preset?.dot).toBe('#1C1C1E');
+      expect(preset?.bg).toBe('#1C1C1E');
+      expect(preset?.bgCss).toBe('#1C1C1E');
     });
 
     it('resolves "white" to fixed preset', () => {
       const preset = resolveColor('white');
       expect(preset).toBeDefined();
-      expect(preset!.key).toBe('white');
-      expect(preset!.label).toBe('White');
-      expect(preset!.ref).toBe('#F2F2F7');
-      expect(preset!.dot).toBe('#F2F2F7');
-      expect(preset!.bg).toBe('#F2F2F7');
-      expect(preset!.bgCss).toBe('#F2F2F7');
+      expect(preset?.key).toBe('white');
+      expect(preset?.label).toBe('White');
+      expect(preset?.ref).toBe('#F2F2F7');
+      expect(preset?.dot).toBe('#F2F2F7');
+      expect(preset?.bg).toBe('#F2F2F7');
+      expect(preset?.bgCss).toBe('#F2F2F7');
     });
 
     it('produces all 5 shades for a hue', () => {
       for (let s = 0; s < SHADE_COUNT; s++) {
         const preset = resolveColor(`180:${s}`);
         expect(preset).toBeDefined();
-        expect(preset!.bgCss).toContain('var(--bg-base)');
+        expect(preset?.bgCss).toContain('var(--bg-base)');
       }
     });
 
     it('bg is a valid hex for print fallback', () => {
       const preset = resolveColor('220:2');
-      expect(preset!.bg).toMatch(/^#[0-9A-F]{6}$/);
+      expect(preset?.bg).toMatch(/^#[0-9A-F]{6}$/);
     });
 
     it('ref is consistent for same hue across shades', () => {
-      const ref0 = resolveColor('220:0')!.ref;
-      const ref4 = resolveColor('220:4')!.ref;
+      const ref0 = resolveColor('220:0')?.ref;
+      const ref4 = resolveColor('220:4')?.ref;
+      expect(ref0).toBeDefined();
       expect(ref0).toBe(ref4);
     });
   });
@@ -275,16 +276,19 @@ describe('colorPalette', () => {
 
   describe('getApproxBgHex', () => {
     it('returns bg for light theme', () => {
+      // biome-ignore lint/style/noNonNullAssertion: test assertion
       const preset = resolveColor('220:2')!;
       expect(getApproxBgHex(preset, 'light')).toBe(preset.bg);
     });
 
     it('returns bgDark for dark theme', () => {
+      // biome-ignore lint/style/noNonNullAssertion: test assertion
       const preset = resolveColor('220:2')!;
       expect(getApproxBgHex(preset, 'dark')).toBe(preset.bgDark);
     });
 
     it('returns same value for fixed black preset in both themes', () => {
+      // biome-ignore lint/style/noNonNullAssertion: test assertion
       const preset = resolveColor('black')!;
       expect(getApproxBgHex(preset, 'light')).toBe('#1C1C1E');
       expect(getApproxBgHex(preset, 'dark')).toBe('#1C1C1E');
@@ -294,17 +298,18 @@ describe('colorPalette', () => {
   describe('preset bgDark field', () => {
     it('computed presets have bgDark as a valid hex', () => {
       const preset = resolveColor('220:2');
-      expect(preset!.bgDark).toMatch(/^#[0-9A-F]{6}$/);
+      expect(preset?.bgDark).toMatch(/^#[0-9A-F]{6}$/);
     });
 
     it('bgDark is darker than bg for same preset', () => {
+      // biome-ignore lint/style/noNonNullAssertion: test assertion
       const preset = resolveColor('220:2')!;
       expect(relativeLuminance(preset.bgDark)).toBeLessThan(relativeLuminance(preset.bg));
     });
 
     it('fixed presets have bgDark', () => {
-      expect(resolveColor('black')!.bgDark).toBe('#1C1C1E');
-      expect(resolveColor('white')!.bgDark).toBe('#F2F2F7');
+      expect(resolveColor('black')?.bgDark).toBe('#1C1C1E');
+      expect(resolveColor('white')?.bgDark).toBe('#F2F2F7');
     });
   });
 });

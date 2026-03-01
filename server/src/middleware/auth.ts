@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
+import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { query } from '../db.js';
 import { config } from '../lib/config.js';

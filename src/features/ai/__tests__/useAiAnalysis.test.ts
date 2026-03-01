@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/api', () => {
   class ApiError extends Error {
@@ -13,8 +13,8 @@ vi.mock('@/lib/api', () => {
   return { apiFetch: vi.fn(), ApiError };
 });
 
-import { apiFetch, ApiError } from '@/lib/api';
-import { analyzeImageFile, analyzeImageFiles, useAiAnalysis, MAX_AI_PHOTOS } from '../useAiAnalysis';
+import { ApiError, apiFetch } from '@/lib/api';
+import { analyzeImageFile, analyzeImageFiles, MAX_AI_PHOTOS, useAiAnalysis } from '../useAiAnalysis';
 
 const mockApiFetch = vi.mocked(apiFetch);
 
@@ -36,7 +36,7 @@ describe('analyzeImageFile', () => {
       body: expect.any(FormData),
     });
 
-    const formData = mockApiFetch.mock.calls[0][1]!.body as FormData;
+    const formData = mockApiFetch.mock.calls[0][1]?.body as FormData;
     expect(formData.get('photo')).toBe(file);
   });
 });
@@ -54,7 +54,7 @@ describe('analyzeImageFiles', () => {
 
     expect(result).toEqual(suggestions);
 
-    const formData = mockApiFetch.mock.calls[0][1]!.body as FormData;
+    const formData = mockApiFetch.mock.calls[0][1]?.body as FormData;
     expect(formData.getAll('photos')).toHaveLength(2);
   });
 
@@ -66,7 +66,7 @@ describe('analyzeImageFiles', () => {
     );
     await analyzeImageFiles(files);
 
-    const formData = mockApiFetch.mock.calls[0][1]!.body as FormData;
+    const formData = mockApiFetch.mock.calls[0][1]?.body as FormData;
     expect(formData.getAll('photos')).toHaveLength(MAX_AI_PHOTOS);
   });
 });

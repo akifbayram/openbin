@@ -1,14 +1,14 @@
 import './print.css';
-import { Skeleton } from '@/components/ui/skeleton';
-import { PageHeader } from '@/components/ui/page-header';
 import { MenuButton } from '@/components/ui/menu-button';
-import { LabelSheet } from './LabelSheet';
-import { usePrintPageActions } from './usePrintPageActions';
+import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
 import { BinSelectorCard } from './BinSelectorCard';
 import { LabelFormatCard } from './LabelFormatCard';
 import { LabelOptionsCard } from './LabelOptionsCard';
-import { QrStyleCard } from './QrStyleCard';
+import { LabelSheet } from './LabelSheet';
 import { PreviewPanel } from './PreviewPanel';
+import { QrStyleCard } from './QrStyleCard';
+import { usePrintPageActions } from './usePrintPageActions';
 
 export function PrintPage() {
   const {

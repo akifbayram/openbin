@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 vi.mock('@/lib/api', () => ({
@@ -15,8 +15,8 @@ vi.mock('@/lib/api', () => ({
 }));
 
 import { apiFetch } from '@/lib/api';
-import { useAuth, AuthProvider } from '../auth';
 import type { User } from '@/types';
+import { AuthProvider, useAuth } from '../auth';
 
 const mockApiFetch = vi.mocked(apiFetch);
 

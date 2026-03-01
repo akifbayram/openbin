@@ -1,11 +1,13 @@
-import { Copy, Check, LogIn, MapPin, MapPinned, Plus, Shield, User, Users } from 'lucide-react';
+import { Check, Copy, LogIn, MapPin, MapPinned, Plus, Shield, User, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Crossfade } from '@/components/ui/crossfade';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { LocationCreateDialog, LocationDeleteDialog, LocationJoinDialog, LocationRenameDialog } from '@/features/locations/LocationDialogs';
 import { LocationMembersDialog } from '@/features/locations/LocationMembersDialog';
@@ -14,12 +16,10 @@ import { leaveLocation, useLocationList } from '@/features/locations/useLocation
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
-import { EmptyState } from '@/components/ui/empty-state';
 import { AreaCard, CreateAreaCard, UnassignedAreaCard } from './AreaCard';
 import { LocationSettingsMenu } from './LocationSettingsMenu';
 import { LocationTabs } from './LocationTabs';
 import { createArea, deleteArea, updateArea, useAreaList } from './useAreas';
-import { PageHeader } from '@/components/ui/page-header';
 
 interface DeleteAreaTarget {
   id: string;

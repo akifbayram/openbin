@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { useTerminology } from '@/lib/terminology';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LocationSelectList } from '@/features/locations/LocationSelectList';
+import { useTerminology } from '@/lib/terminology';
 import type { Location } from '@/types';
 
 interface MoveBinDialogProps {

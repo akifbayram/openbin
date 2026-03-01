@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { Highlight } from '@/components/ui/highlight';
 import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
-import { SortHeader, type SortDirection } from '@/components/ui/sort-header';
+import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { Table, TableHeader, TableRow } from '@/components/ui/table';
-import { resolveIcon } from '@/lib/iconMap';
 import { resolveColor } from '@/lib/colorPalette';
+import { resolveIcon } from '@/lib/iconMap';
 import { useTerminology } from '@/lib/terminology';
 import type { ItemEntry } from './useItems';
 

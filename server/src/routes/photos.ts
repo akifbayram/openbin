@@ -1,14 +1,14 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { Router } from 'express';
-import fs from 'fs';
 import { query } from '../db.js';
-import { authenticate } from '../middleware/auth.js';
 import { logActivity } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { ValidationError, NotFoundError, ForbiddenError } from '../lib/httpErrors.js';
+import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { safePath } from '../lib/pathSafety.js';
-import { PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
-import path from 'path';
+import { PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 

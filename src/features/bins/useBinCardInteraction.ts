@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { haptic } from '@/lib/utils';
-import { useLongPress } from '@/lib/useLongPress';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTerminology } from '@/lib/terminology';
+import { useLongPress } from '@/lib/useLongPress';
+import { haptic } from '@/lib/utils';
 
 interface UseBinCardInteractionOptions {
   binId: string;

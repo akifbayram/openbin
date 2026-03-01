@@ -1,12 +1,12 @@
-import { useRef } from 'react';
-import { ChevronLeft, Lock, Pencil, Trash2, Printer, Save, Sparkles, Loader2, Pin, ArrowRightLeft, Copy, MoreHorizontal, X, Check } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { ArrowRightLeft, Check, ChevronLeft, Copy, Loader2, Lock, MoreHorizontal, Pencil, Pin, Printer, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { MenuButton } from '@/components/ui/menu-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
-import { MenuButton } from '@/components/ui/menu-button';
-import { usePopover } from '@/lib/usePopover';
 import { useClickOutside } from '@/lib/useClickOutside';
+import { usePopover } from '@/lib/usePopover';
 import type { Bin, Location } from '@/types';
 
 interface BinDetailToolbarProps {
@@ -180,6 +180,7 @@ export function BinDetailToolbar({
             {visible && (
               <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1.5 z-50 min-w-[180px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]`}>
                 <button
+                  type="button"
                   className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                   onClick={() => handleItem(onDuplicate)}
                 >
@@ -187,6 +188,7 @@ export function BinDetailToolbar({
                   Duplicate
                 </button>
                 <button
+                  type="button"
                   className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                   onClick={() => handleItem(onPrint)}
                 >
@@ -195,6 +197,7 @@ export function BinDetailToolbar({
                 </button>
                 {otherLocations.length > 0 && (
                   <button
+                    type="button"
                     className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                     onClick={() => handleItem(onMove)}
                   >
@@ -206,6 +209,7 @@ export function BinDetailToolbar({
                   <>
                     <div className="my-1 border-t border-[var(--border-glass)]" />
                     <button
+                      type="button"
                       className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors"
                       onClick={() => handleItem(onDelete)}
                     >

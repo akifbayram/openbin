@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
 import { ICON_MAP, ICON_NAMES, resolveIcon } from '@/lib/iconMap';
 import { cn } from '@/lib/utils';
 

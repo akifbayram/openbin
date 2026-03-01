@@ -1,17 +1,17 @@
-import { Router } from 'express';
+import fs from 'node:fs';
+import path from 'node:path';
 import bcrypt from 'bcrypt';
-import fs from 'fs';
-import path from 'path';
-import { query, generateUuid } from '../db.js';
-import { authenticate, signToken } from '../middleware/auth.js';
+import { Router } from 'express';
+import { generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { ValidationError, NotFoundError, UnauthorizedError, ConflictError, ForbiddenError } from '../lib/httpErrors.js';
-import { validateUsername, validatePassword, validateEmail, validateDisplayName } from '../lib/validation.js';
-import { isPathSafe } from '../lib/pathSafety.js';
-import { avatarUpload, AVATAR_STORAGE_PATH } from '../lib/uploadConfig.js';
 import { config } from '../lib/config.js';
-import { setAccessTokenCookie, setRefreshTokenCookie, clearAuthCookies } from '../lib/cookies.js';
-import { createRefreshToken, rotateRefreshToken, revokeAllUserTokens, revokeSingleToken } from '../lib/refreshTokens.js';
+import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '../lib/cookies.js';
+import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
+import { isPathSafe } from '../lib/pathSafety.js';
+import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
+import { AVATAR_STORAGE_PATH, avatarUpload } from '../lib/uploadConfig.js';
+import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
+import { authenticate, signToken } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -34,7 +34,7 @@ router.post('/register', asyncHandler(async (req, res) => {
 
   const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
   const userId = generateUuid();
-  let result;
+  let result: import('../db.js').QueryResult<Record<string, unknown>>;
   try {
     result = await query(
       'INSERT INTO users (id, username, password_hash, display_name) VALUES ($1, $2, $3, $4) RETURNING id, username, display_name, created_at',
@@ -48,7 +48,7 @@ router.post('/register', asyncHandler(async (req, res) => {
     throw err;
   }
 
-  const user = result.rows[0];
+  const user = result.rows[0] as { id: string; username: string; display_name: string; created_at: string };
   const token = signToken({ id: user.id, username: user.username });
   const refresh = await createRefreshToken(user.id);
 

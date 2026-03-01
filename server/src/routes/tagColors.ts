@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { query, generateUuid } from '../db.js';
-import { authenticate } from '../middleware/auth.js';
+import { generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { ValidationError, ForbiddenError } from '../lib/httpErrors.js';
 import { verifyLocationMembership } from '../lib/binAccess.js';
+import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 

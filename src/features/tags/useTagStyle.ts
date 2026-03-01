@@ -1,8 +1,8 @@
-import { useCallback } from 'react';
 import type { CSSProperties } from 'react';
-import { useTagColorsContext } from './TagColorsContext';
+import { useCallback } from 'react';
 import { resolveColor } from '@/lib/colorPalette';
 import { useTheme } from '@/lib/theme';
+import { useTagColorsContext } from './TagColorsContext';
 
 export function useTagStyle(): (tag: string) => CSSProperties | undefined {
   const { tagColors } = useTagColorsContext();

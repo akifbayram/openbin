@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { toInches, toPoints, inchesToMm, mmToInches, parsePaddingPt } from '../pdfUnits';
+import { describe, expect, it } from 'vitest';
+import { inchesToMm, mmToInches, parsePaddingPt, toInches, toPoints } from '../pdfUnits';
 
 describe('toInches', () => {
   it('parses inches (bare number)', () => {

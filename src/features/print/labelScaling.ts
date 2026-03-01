@@ -16,7 +16,7 @@ export function scaleValue(value: string, factor: number): string {
     .split(/\s+/)
     .map((part) => {
       const num = parseFloat(part);
-      if (isNaN(num)) return part;
+      if (Number.isNaN(num)) return part;
       const unit = part.replace(/^[\d.]+/, '');
       const scaled = (num * factor).toFixed(2).replace(/\.?0+$/, '');
       return `${scaled}${unit}`;

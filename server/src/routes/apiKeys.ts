@@ -1,10 +1,10 @@
+import crypto from 'node:crypto';
 import { Router } from 'express';
-import crypto from 'crypto';
-import { query, generateUuid } from '../db.js';
-import { authenticate } from '../middleware/auth.js';
-import { enforceCountLimit } from '../lib/countLimiter.js';
+import { generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { enforceCountLimit } from '../lib/countLimiter.js';
 import { NotFoundError } from '../lib/httpErrors.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 router.use(authenticate);
@@ -12,7 +12,7 @@ router.use(authenticate);
 const MAX_KEYS_PER_USER = 10;
 
 function generateApiKey(): string {
-  return 'sk_openbin_' + crypto.randomBytes(32).toString('hex');
+  return `sk_openbin_${crypto.randomBytes(32).toString('hex')}`;
 }
 
 function hashKey(key: string): string {

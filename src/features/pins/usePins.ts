@@ -1,8 +1,8 @@
+import { notifyBinsChanged } from '@/features/bins/useBins';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Events, notify } from '@/lib/eventBus';
 import { useListData } from '@/lib/useListData';
-import { notifyBinsChanged } from '@/features/bins/useBins';
 import type { Bin } from '@/types';
 
 export const notifyPinsChanged = () => notify(Events.PINS);

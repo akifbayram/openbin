@@ -1,11 +1,11 @@
-import { useState } from 'react';
 import { ChevronDown, ChevronUp, ImageIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
-import type { CardStyleVariant, CardStyle, StripePosition, BorderStyle, BorderWidth, StripeWidth } from '@/lib/cardStyle';
-import { parseCardStyle, serializeCardStyle } from '@/lib/cardStyle';
-import type { Photo } from '@/types';
+import { useState } from 'react';
 import { OptionGroup } from '@/components/ui/option-group';
+import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
+import type { BorderStyle, BorderWidth, CardStyle, CardStyleVariant, StripePosition, StripeWidth } from '@/lib/cardStyle';
+import { parseCardStyle, serializeCardStyle } from '@/lib/cardStyle';
+import { cn } from '@/lib/utils';
+import type { Photo } from '@/types';
 
 interface StylePickerProps {
   value: string; // raw card_style JSON string
@@ -86,7 +86,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
       onChange('');
     } else if (variant === 'photo') {
       if (!hasPhotos) return;
-      onChange(serializeCardStyle({ variant: 'photo', coverPhotoId: parsed?.coverPhotoId ?? photos![0].id }));
+      onChange(serializeCardStyle({ variant: 'photo', coverPhotoId: parsed?.coverPhotoId ?? photos?.[0].id }));
     } else {
       onChange(serializeCardStyle({ ...parsed, variant, secondaryColor: parsed?.secondaryColor }));
     }

@@ -1,5 +1,5 @@
-import { callAiProvider } from './aiCaller.js';
 import type { AiProviderConfig } from './aiCaller.js';
+import { callAiProvider } from './aiCaller.js';
 import { DEFAULT_STRUCTURE_PROMPT } from './defaultPrompts.js';
 
 export interface StructureTextRequest {

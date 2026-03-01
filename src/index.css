@@ -207,7 +207,7 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .animate-popover-enter,
-  .animate-popover-exit { animation: none; }
+  .animate-popover-exit { animation: none !important; }
 }
 
 /* ─── Skeleton Shimmer ─── */
@@ -221,7 +221,7 @@ body {
   animation: shimmer 1.5s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .animate-shimmer { animation: none; }
+  .animate-shimmer { animation: none !important; }
 }
 
 /* ─── Fade In Up ─── */
@@ -273,5 +273,5 @@ body {
   .animate-check-pop,
   .animate-stagger-in,
   .animate-shrink-out,
-  .animate-success-pulse { animation: none; }
+  .animate-success-pulse { animation: none !important; }
 }
