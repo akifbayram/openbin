@@ -36,8 +36,13 @@ export function createApp(): express.Express {
   if (config.trustProxy) app.set('trust proxy', 1);
   app.disable('x-powered-by');
 
-  // Compression
-  app.use(compression());
+  // Compression (skip SSE streams — buffering breaks event delivery)
+  app.use(compression({
+    filter: (req, res) => {
+      if (req.headers.accept === 'text/event-stream') return false;
+      return compression.filter(req, res);
+    },
+  }));
 
   // Security headers
   app.use((_req, res, next) => {
