@@ -71,6 +71,7 @@ export function createApp(): express.Express {
 
   // Routes
   app.use('/api/auth/login', authLimiter);
+  app.use('/api/auth/demo-login', authLimiter);
   app.use('/api/auth/register', registerLimiter);
   app.use('/api/auth/refresh', sensitiveAuthLimiter);
   app.use('/api/auth/password', sensitiveAuthLimiter);

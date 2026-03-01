@@ -147,9 +147,7 @@ export function DashboardPage() {
         }
       })
       .catch(() => {});
-    // Run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     if (debouncedSearch.trim()) {
