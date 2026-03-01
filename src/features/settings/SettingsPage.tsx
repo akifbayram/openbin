@@ -133,7 +133,14 @@ export function SettingsPage() {
 
       {/* Data (admin only) */}
       {(isAdmin || permissionsLoading) && (
-        <DataSection activeLocationId={activeLocationId} actions={dataActions} />
+        <DataSection
+          activeLocationId={activeLocationId}
+          actions={dataActions}
+          binCount={activeLocation?.bin_count ?? undefined}
+          areaCount={activeLocation?.area_count ?? undefined}
+          binLabel={binCount !== 1 ? t.bins : t.bin}
+          areaLabel={(activeLocation?.area_count ?? 0) !== 1 ? t.areas : t.area}
+        />
       )}
 
       {/* About */}

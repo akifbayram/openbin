@@ -1,4 +1,13 @@
-import { AlertTriangle, Clock, Download, FileArchive, FileSpreadsheet, Trash2, Upload } from 'lucide-react';
+import {
+  AlertTriangle,
+  ChevronRight,
+  Clock,
+  Download,
+  FileArchive,
+  FileSpreadsheet,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,9 +25,68 @@ import type { useDataSectionActions } from './useDataSectionActions';
 interface DataSectionProps {
   activeLocationId: string | null | undefined;
   actions: ReturnType<typeof useDataSectionActions>;
+  binCount?: number;
+  areaCount?: number;
+  binLabel?: string;
+  areaLabel?: string;
 }
 
-export function DataSection({ activeLocationId, actions }: DataSectionProps) {
+function SubLabel({ children, trailing }: { children: React.ReactNode; trailing?: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between mt-5 mb-2 first:mt-0">
+      <span className="text-[13px] font-medium text-[var(--text-tertiary)]">
+        {children}
+      </span>
+      {trailing && (
+        <span className="text-[12px] text-[var(--text-tertiary)]">{trailing}</span>
+      )}
+    </div>
+  );
+}
+
+function ActionRow({
+  icon: Icon,
+  label,
+  description,
+  onClick,
+  disabled,
+  loading,
+  loadingLabel,
+  destructive,
+  chevron,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  description: string;
+  onClick: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
+  destructive?: boolean;
+  chevron?: boolean;
+}) {
+  return (
+    <Button
+      variant="outline"
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={`justify-start rounded-[var(--radius-sm)] h-auto py-2.5 px-3.5 ${destructive ? 'text-[var(--destructive)] border-[var(--destructive)]/20' : ''}`}
+    >
+      <Icon className="h-4 w-4 mr-2.5 shrink-0 mt-0.5 self-start" />
+      <div className="flex flex-col items-start gap-0.5 flex-1 min-w-0">
+        <span className="text-[14px] font-medium leading-snug">
+          {loading ? loadingLabel : label}
+        </span>
+        <span className={`text-[12px] leading-snug ${destructive ? 'text-[var(--destructive)]/70' : 'text-[var(--text-tertiary)]'}`}>
+          {description}
+        </span>
+      </div>
+      {chevron && <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0 ml-2" />}
+    </Button>
+  );
+}
+
+export function DataSection({ activeLocationId, actions, binCount, areaCount, binLabel = 'bins', areaLabel = 'areas' }: DataSectionProps) {
   const navigate = useNavigate();
   const {
     fileInputRef,
@@ -38,74 +106,90 @@ export function DataSection({ activeLocationId, actions }: DataSectionProps) {
     handleReplaceImport,
   } = actions;
 
+  const statsText =
+    binCount != null || areaCount != null
+      ? [binCount != null ? `${binCount} ${binLabel}` : null, areaCount != null ? `${areaCount} ${areaLabel}` : null]
+          .filter(Boolean)
+          .join(' \u00b7 ')
+      : undefined;
+
   return (
     <>
       <Card>
         <CardContent>
           <Label>Data</Label>
-          <div className="flex flex-col gap-2 mt-3">
-            <Button
-              variant="outline"
+
+          {/* ── Navigation ── */}
+          <SubLabel>Navigation</SubLabel>
+          <div className="flex flex-col gap-2">
+            <ActionRow
+              icon={Clock}
+              label="Activity Log"
+              description="View changes and actions"
               onClick={() => navigate('/activity')}
-              className="justify-start rounded-[var(--radius-sm)] h-11"
-            >
-              <Clock className="h-4 w-4 mr-2.5" />
-              Activity Log
-            </Button>
-            <Button
-              variant="outline"
+              chevron
+            />
+            <ActionRow
+              icon={Trash2}
+              label="Trash"
+              description="Restore or permanently delete bins"
               onClick={() => navigate('/trash')}
-              className="justify-start rounded-[var(--radius-sm)] h-11"
-            >
-              <Trash2 className="h-4 w-4 mr-2.5" />
-              Trash
-            </Button>
-            <Button
-              variant="outline"
+              chevron
+            />
+          </div>
+
+          {/* ── Export ── */}
+          <SubLabel trailing={statsText}>Export</SubLabel>
+          <div className="flex flex-col gap-2">
+            <ActionRow
+              icon={FileArchive}
+              label="Backup (ZIP)"
+              description="All data including photos"
               onClick={handleExportZip}
-              disabled={exportingZip || !activeLocationId}
-              className="justify-start rounded-[var(--radius-sm)] h-11"
-            >
-              <FileArchive className="h-4 w-4 mr-2.5" />
-              {exportingZip ? 'Exporting...' : 'Export Backup (ZIP)'}
-            </Button>
-            <Button
-              variant="outline"
+              disabled={!activeLocationId}
+              loading={exportingZip}
+              loadingLabel="Exporting..."
+            />
+            <ActionRow
+              icon={Download}
+              label="Backup (JSON)"
+              description="Data without photos"
               onClick={handleExport}
-              disabled={exporting || !activeLocationId}
-              className="justify-start rounded-[var(--radius-sm)] h-11"
-            >
-              <Download className="h-4 w-4 mr-2.5" />
-              {exporting ? 'Exporting...' : 'Export Backup (JSON)'}
-            </Button>
-            <Button
-              variant="outline"
+              disabled={!activeLocationId}
+              loading={exporting}
+              loadingLabel="Exporting..."
+            />
+            <ActionRow
+              icon={FileSpreadsheet}
+              label="Spreadsheet (CSV)"
+              description="Flat table for spreadsheets"
               onClick={handleExportCsv}
-              disabled={exportingCsv || !activeLocationId}
-              className="justify-start rounded-[var(--radius-sm)] h-11"
-            >
-              <FileSpreadsheet className="h-4 w-4 mr-2.5" />
-              {exportingCsv ? 'Exporting...' : 'Export Spreadsheet (CSV)'}
-            </Button>
-            <Button
-              variant="outline"
+              disabled={!activeLocationId}
+              loading={exportingCsv}
+              loadingLabel="Exporting..."
+            />
+          </div>
+
+          {/* ── Import ── */}
+          <SubLabel>Import</SubLabel>
+          <div className="flex flex-col gap-2">
+            <ActionRow
+              icon={Upload}
+              label="Import Backup"
+              description="Merge with existing data"
               onClick={handleImportClick}
               disabled={!activeLocationId}
-              className="justify-start rounded-[var(--radius-sm)] h-11"
-            >
-              <Upload className="h-4 w-4 mr-2.5" />
-              Import Backup (Merge)
-            </Button>
-            <Button
-              variant="outline"
+            />
+            <ActionRow
+              icon={AlertTriangle}
+              label="Replace All Data"
+              description="Deletes everything, then imports from file"
               onClick={() => replaceInputRef.current?.click()}
               disabled={!activeLocationId}
-              className="justify-start rounded-[var(--radius-sm)] h-11 text-[var(--destructive)]"
-            >
-              <AlertTriangle className="h-4 w-4 mr-2.5" />
-              Import Backup (Replace All)
-            </Button>
+              destructive
+            />
           </div>
+
           <input
             ref={fileInputRef}
             type="file"
