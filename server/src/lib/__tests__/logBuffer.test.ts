@@ -38,8 +38,9 @@ describe('logBuffer', () => {
       pushLog({ level: 'info', message: `msg-${i}` });
     }
     const entries = getEntries();
-    expect(entries.length).toBeLessThanOrEqual(1000);
+    expect(entries.length).toBe(1000);
     expect(entries[0].message).toBe('msg-5');
+    expect(entries[entries.length - 1].message).toBe('msg-1004');
   });
 
   it('notifies subscribers on pushLog', () => {

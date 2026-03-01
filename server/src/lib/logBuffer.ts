@@ -24,7 +24,7 @@ export function pushLog(input: LogInput): void {
   const entry: LogEntry = { ...input, id: nextId++, timestamp: new Date().toISOString() };
   buffer.push(entry);
   if (buffer.length > MAX_ENTRIES) {
-    buffer.splice(0, buffer.length - MAX_ENTRIES);
+    buffer.shift();
   }
   for (const cb of subscribers) {
     try {
