@@ -6,7 +6,9 @@ import cors from 'cors';
 import express from 'express';
 import { config } from './lib/config.js';
 import { HttpError } from './lib/httpErrors.js';
+import { pushLog } from './lib/logBuffer.js';
 import { authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
+import { requestLogger } from './middleware/requestLogger.js';
 import activityRoutes from './routes/activity.js';
 import aiRoutes from './routes/ai.js';
 import apiKeysRoutes from './routes/apiKeys.js';
@@ -59,6 +61,7 @@ export function createApp(): express.Express {
   }));
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
+  app.use(requestLogger);
 
   // Routes
   app.use('/api/auth/login', authLimiter);
@@ -92,6 +95,7 @@ export function createApp(): express.Express {
       res.status(err.statusCode).json({ error: err.code, message: err.message });
       return;
     }
+    pushLog({ level: 'error', message: `${err.name}: ${err.message}` });
     console.error(err.stack);
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
   });
