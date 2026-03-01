@@ -8,16 +8,16 @@ export const AI_PROVIDERS: { key: AiProvider; label: string }[] = [
 ];
 
 export const DEFAULT_MODELS: Record<AiProvider, string> = {
-  openai: 'gpt-4o',
-  anthropic: 'claude-sonnet-4-5-20250929',
-  gemini: 'gemini-2.0-flash',
+  openai: 'gpt-5-mini',
+  anthropic: 'claude-sonnet-4-6',
+  gemini: 'gemini-3-flash-preview',
   'openai-compatible': '',
 };
 
 export const MODEL_HINTS: Record<AiProvider, string> = {
-  openai: 'e.g., gpt-4o, gpt-4o-mini',
-  anthropic: 'e.g., claude-sonnet-4-5-20250929, claude-haiku-4-5-20251001',
-  gemini: 'e.g., gemini-2.0-flash, gemini-2.5-pro',
+  openai: 'e.g., gpt-5-mini, gpt-5',
+  anthropic: 'e.g., claude-sonnet-4-6, claude-haiku-4-5-20251001',
+  gemini: 'e.g., gemini-3-flash-preview, gemini-2.5-pro',
   'openai-compatible': 'e.g., llava, llama3.2-vision',
 };
 

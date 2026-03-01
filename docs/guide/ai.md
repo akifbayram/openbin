@@ -13,12 +13,12 @@ OpenBin's AI features are fully optional. They require connecting your own API k
 
 ## Supported Providers
 
-| Provider | Recommended Model | Notes |
-|---|---|---|
-| **[OpenAI](https://platform.openai.com/)** | `gpt-5-mini` | GPT-5, GPT-5 Mini, and other OpenAI models |
-| **[Anthropic](https://console.anthropic.com/)** | `claude-sonnet-4-6` | Claude Haiku, Sonnet, and Opus models |
-| **[Google Gemini](https://aistudio.google.com/)** | `gemini-3-flash-preview` | Gemini 3 Flash, 2.5 Pro, and other Gemini models |
-| **OpenAI-compatible** | — | Any endpoint following the OpenAI API format (e.g. Ollama, LM Studio, OpenRouter) |
+| Provider | Recommended Model |
+|---|---|
+| **[OpenAI](https://platform.openai.com/)** | `gpt-5-mini` |
+| **[Anthropic](https://console.anthropic.com/)** | `claude-sonnet-4-6` |
+| **[Google Gemini](https://aistudio.google.com/)** | `gemini-3-flash-preview` |
+| **OpenAI-compatible** | — |
 
 ### Getting an API Key
 
