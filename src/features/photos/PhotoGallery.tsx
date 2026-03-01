@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { Photo } from '@/types';
 import { compressImage } from './compressImage';
+import { DeletePhotoDialog } from './DeletePhotoDialog';
 import { PhotoLightbox } from './PhotoLightbox';
 import { addPhoto, deletePhoto, getPhotoUrl, usePhotos } from './usePhotos';
 
@@ -20,6 +21,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
   const { showToast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<Photo | null>(null);
+  const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
 
   const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files) return;
@@ -68,7 +70,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => handleDelete(photo)}
+                onClick={() => setPhotoToDelete(photo)}
                 className="absolute top-1 right-1 h-7 w-7 rounded-full bg-[var(--overlay-button)] text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
                 aria-label="Delete photo"
               >
@@ -101,9 +103,17 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
           src={lightboxUrl}
           filename={lightboxPhoto.filename}
           onClose={() => setLightboxPhoto(null)}
-          onDelete={() => handleDelete(lightboxPhoto)}
+          onDelete={() => setPhotoToDelete(lightboxPhoto)}
         />
       )}
+      <DeletePhotoDialog
+        open={photoToDelete !== null}
+        onOpenChange={(open) => { if (!open) setPhotoToDelete(null); }}
+        onConfirm={() => {
+          if (photoToDelete) handleDelete(photoToDelete);
+          setPhotoToDelete(null);
+        }}
+      />
     </>
   );
 

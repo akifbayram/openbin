@@ -20,6 +20,7 @@ import binsRoutes from './routes/bins.js';
 import exportRoutes from './routes/export.js';
 import itemsRoutes from './routes/items.js';
 import locationsRoutes from './routes/locations.js';
+import logsRoutes from './routes/logs.js';
 import photosRoutes from './routes/photos.js';
 import printSettingsRoutes from './routes/printSettings.js';
 import savedViewsRoutes from './routes/savedViews.js';
@@ -88,6 +89,7 @@ export function createApp(): express.Express {
   app.use('/api/tags', tagsRoutes);
   app.use('/api/items', itemsRoutes);
   app.use('/api', batchRoutes);
+  app.use('/api/admin/logs', logsRoutes);
 
   // Global error handler
   app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
