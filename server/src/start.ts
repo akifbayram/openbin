@@ -1,10 +1,15 @@
 import { createApp } from './index.js';
 import { startBackupScheduler } from './lib/backup.js';
 import { config } from './lib/config.js';
+import { seedDemoData } from './lib/demoSeed.js';
 import { pushLog } from './lib/logBuffer.js';
 import { purgeExpiredRefreshTokens } from './lib/refreshTokens.js';
 
 const app = createApp();
+
+if (config.demoMode) {
+  seedDemoData();
+}
 
 app.listen(config.port, () => {
   console.log(`API server listening on port ${config.port}`);

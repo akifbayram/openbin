@@ -17,8 +17,43 @@ const router = Router();
 
 // GET /api/auth/status — public (no auth required)
 router.get('/status', (_req, res) => {
-  res.json({ registrationEnabled: config.registrationEnabled });
+  res.json({ registrationEnabled: config.registrationEnabled, demoMode: config.demoMode });
 });
+
+// POST /api/auth/demo-login — log in as demo user (only when DEMO_MODE is enabled)
+router.post('/demo-login', asyncHandler(async (_req, res) => {
+  if (!config.demoMode) {
+    throw new ForbiddenError('Demo mode is not enabled');
+  }
+
+  const result = await query(
+    'SELECT id, username, display_name, email, avatar_path, active_location_id FROM users WHERE username = $1',
+    ['demo'],
+  );
+
+  if (result.rows.length === 0) {
+    throw new NotFoundError('Demo user not found');
+  }
+
+  const user = result.rows[0];
+  const token = signToken({ id: user.id, username: user.username });
+  const refresh = await createRefreshToken(user.id);
+
+  setAccessTokenCookie(res, token);
+  setRefreshTokenCookie(res, refresh.rawToken);
+
+  res.json({
+    token,
+    user: {
+      id: user.id,
+      username: user.username,
+      displayName: user.display_name,
+      email: user.email || null,
+      avatarUrl: user.avatar_path ? `/api/auth/avatar/${user.id}` : null,
+    },
+    activeLocationId: user.active_location_id || null,
+  });
+}));
 
 // POST /api/auth/register
 router.post('/register', asyncHandler(async (req, res) => {
