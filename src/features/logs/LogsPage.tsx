@@ -98,12 +98,18 @@ export function LogsPage() {
       })
     : entries;
 
-  // Auto-scroll to bottom when new entries arrive
+  // Auto-scroll to bottom when new entries arrive.
+  // Use rAF so the scroll happens after the browser paints the new DOM content.
+  const lastEntryId = filteredEntries[filteredEntries.length - 1]?.id;
   useEffect(() => {
-    if (!paused && isAtBottomRef.current && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [filteredEntries.length, paused]);
+    if (paused || !isAtBottomRef.current || !scrollRef.current) return;
+    const frame = requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [lastEntryId, paused]);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
