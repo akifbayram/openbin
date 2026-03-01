@@ -56,7 +56,8 @@ export function LoginPage() {
         <ThemeIcon className="h-5 w-5" />
       </button>
       <div className="w-full max-w-sm space-y-8">
-        <div className="text-center">
+        <div className="text-center space-y-3">
+          <img src="/favicon.svg" alt="" className="h-16 w-16 mx-auto" />
           <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight">
             {settings.appName}
           </h1>
