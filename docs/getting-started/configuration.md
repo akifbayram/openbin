@@ -57,7 +57,7 @@ When set, all users get AI features without needing to configure their own API k
 |----------|---------|-------------|
 | `AI_PROVIDER` | _(unset)_ | AI provider to use. Accepted values: `openai`, `anthropic`, `gemini`, `openai-compatible`. |
 | `AI_API_KEY` | _(unset)_ | API key for the configured provider. |
-| `AI_MODEL` | _(unset)_ | Model name to use. Examples: `gpt-4o`, `claude-sonnet-4-5-20250514`, `gemini-2.0-flash`. |
+| `AI_MODEL` | _(unset)_ | Model name to use. Examples: `gpt-5-mini`, `claude-sonnet-4-6`, `gemini-3-flash-preview`. |
 | `AI_ENDPOINT_URL` | _(unset)_ | Custom endpoint URL. Required only when `AI_PROVIDER=openai-compatible` (e.g. `http://localhost:11434/v1` for Ollama). |
 
 ::: info Supported providers

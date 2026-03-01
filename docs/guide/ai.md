@@ -13,12 +13,12 @@ OpenBin's AI features are fully optional. They require connecting your own API k
 
 ## Supported Providers
 
-| Provider | Notes |
-|---|---|
-| **[OpenAI](https://platform.openai.com/)** | GPT-4o, GPT-4.1, GPT-5, and other OpenAI models |
-| **[Anthropic](https://console.anthropic.com/)** | Claude Haiku, Sonnet, and Opus models |
-| **[Google Gemini](https://aistudio.google.com/)** | Gemini 2.0 Flash, 2.5 Flash/Pro, and other Gemini models |
-| **OpenAI-compatible** | Any endpoint following the OpenAI API format (e.g. Ollama, LM Studio, OpenRouter) |
+| Provider | Recommended Model | Notes |
+|---|---|---|
+| **[OpenAI](https://platform.openai.com/)** | `gpt-5-mini` | GPT-5, GPT-5 Mini, and other OpenAI models |
+| **[Anthropic](https://console.anthropic.com/)** | `claude-sonnet-4-6` | Claude Haiku, Sonnet, and Opus models |
+| **[Google Gemini](https://aistudio.google.com/)** | `gemini-3-flash-preview` | Gemini 3 Flash, 2.5 Pro, and other Gemini models |
+| **OpenAI-compatible** | — | Any endpoint following the OpenAI API format (e.g. Ollama, LM Studio, OpenRouter) |
 
 ### Getting an API Key
 
@@ -46,7 +46,7 @@ Admins can configure a shared AI key via environment variables so all users get 
 ```ini
 AI_PROVIDER=openai
 AI_API_KEY=sk-...
-AI_MODEL=gpt-4o
+AI_MODEL=gpt-5-mini
 # For OpenAI-compatible endpoints:
 AI_ENDPOINT_URL=https://your-endpoint.example.com/v1
 ```
