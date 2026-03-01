@@ -18,8 +18,10 @@ const photoStoragePath = process.env.PHOTO_STORAGE_PATH || './uploads';
 function resolveJwtSecret(): string {
   if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
 
-  // Auto-generate and persist to disk so tokens survive restarts
-  const secretPath = path.join(photoStoragePath, '..', '.jwt_secret');
+  // Auto-generate and persist to disk so tokens survive restarts.
+  // Use the database directory (writable volume) rather than app root.
+  const dbDir = path.dirname(process.env.DATABASE_PATH || './data/openbin.db');
+  const secretPath = path.join(dbDir, '.jwt_secret');
   try {
     return fs.readFileSync(secretPath, 'utf-8').trim();
   } catch {

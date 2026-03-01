@@ -48,8 +48,7 @@ export function BinEditContent({
     <div className="fade-in-fast contents">
       {/* Items */}
       <Card>
-        <CardContent className="space-y-2 py-5">
-          <Label>Items</Label>
+        <CardContent>
           <ItemsInput
             items={edit.items}
             onChange={edit.setItems}

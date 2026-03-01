@@ -289,6 +289,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
                   placeholder={`${t.Bin} name`}
                   maxLength={100}
                   autoFocus
+                  className="rounded-[var(--radius-md)]"
                 />
                 <ItemsInput
                   items={binItems}
@@ -316,7 +317,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
               <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 Print this label and stick it on your {t.bin}. Scan with any phone camera to instantly see what's inside.
               </p>
-              <QRCodeDisplay binId={createdBin.id} size={160} shortCode={createdBin.id} />
+              <QRCodeDisplay binId={createdBin.id} size={160} shortCode={createdBin.id} hideActions />
               <div className="flex gap-3 w-full mt-6">
                 <Button
                   type="button"

@@ -95,7 +95,7 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
       {/* Foreground row */}
       <div
         className={cn(
-          'relative flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-[var(--bg-hover)] transition-colors',
+          'relative flex items-center gap-1.5 px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors',
           !isEditing && 'group'
         )}
         style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 0.2s ease' : 'none' }}
@@ -232,7 +232,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
               {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
               <div
                 className={cn(
-                  'flex items-center gap-1.5 px-3.5 py-2.5',
+                  'flex items-center gap-1.5 px-3.5 py-1',
                   newIds.has(item.id) && 'animate-fade-in-up',
                 )}
               >
