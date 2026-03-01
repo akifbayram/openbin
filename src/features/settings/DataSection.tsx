@@ -31,10 +31,10 @@ interface DataSectionProps {
   areaLabel?: string;
 }
 
-function SubLabel({ children, trailing }: { children: React.ReactNode; trailing?: React.ReactNode }) {
+function SectionLabel({ children, trailing }: { children: React.ReactNode; trailing?: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between mt-5 mb-2 first:mt-0">
-      <span className="text-[13px] font-medium text-[var(--text-tertiary)]">
+    <div className="flex items-baseline justify-between mt-5 mb-2">
+      <span className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
         {children}
       </span>
       {trailing && (
@@ -44,7 +44,19 @@ function SubLabel({ children, trailing }: { children: React.ReactNode; trailing?
   );
 }
 
-function ActionRow({
+function RowGroup({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-[var(--radius-sm)] bg-[var(--bg-input)] overflow-hidden">
+      {children}
+    </div>
+  );
+}
+
+function RowDivider() {
+  return <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />;
+}
+
+function SettingsRow({
   icon: Icon,
   label,
   description,
@@ -66,27 +78,48 @@ function ActionRow({
   chevron?: boolean;
 }) {
   return (
-    <Button
-      variant="outline"
+    <button
+      type="button"
       onClick={onClick}
       disabled={disabled || loading}
-      className={`justify-start rounded-[var(--radius-sm)] h-auto py-2.5 px-3.5 ${destructive ? 'text-[var(--destructive)] border-[var(--destructive)]/20' : ''}`}
+      className={`flex items-center gap-3 px-3.5 py-3 hover:bg-[var(--bg-hover)] transition-colors w-full text-left disabled:opacity-40 disabled:pointer-events-none ${destructive ? 'text-[var(--destructive)]' : ''}`}
     >
-      <Icon className="h-4 w-4 mr-2.5 shrink-0 mt-0.5 self-start" />
-      <div className="flex flex-col items-start gap-0.5 flex-1 min-w-0">
-        <span className="text-[14px] font-medium leading-snug">
+      <Icon
+        className={`h-[18px] w-[18px] shrink-0 ${
+          destructive ? 'text-[var(--destructive)]' : 'text-[var(--text-tertiary)]'
+        }`}
+      />
+      <div className="flex-1 min-w-0">
+        <p
+          className={`text-[15px] font-medium leading-snug ${
+            destructive ? 'text-[var(--destructive)]' : 'text-[var(--text-primary)]'
+          }`}
+        >
           {loading ? loadingLabel : label}
-        </span>
-        <span className={`text-[12px] leading-snug ${destructive ? 'text-[var(--destructive)]/70' : 'text-[var(--text-tertiary)]'}`}>
+        </p>
+        <p
+          className={`text-[13px] leading-snug ${
+            destructive ? 'text-[var(--destructive)]/60' : 'text-[var(--text-tertiary)]'
+          }`}
+        >
           {description}
-        </span>
+        </p>
       </div>
-      {chevron && <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0 ml-2" />}
-    </Button>
+      {chevron && (
+        <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+      )}
+    </button>
   );
 }
 
-export function DataSection({ activeLocationId, actions, binCount, areaCount, binLabel = 'bins', areaLabel = 'areas' }: DataSectionProps) {
+export function DataSection({
+  activeLocationId,
+  actions,
+  binCount,
+  areaCount,
+  binLabel = 'bins',
+  areaLabel = 'areas',
+}: DataSectionProps) {
   const navigate = useNavigate();
   const {
     fileInputRef,
@@ -119,29 +152,30 @@ export function DataSection({ activeLocationId, actions, binCount, areaCount, bi
         <CardContent>
           <Label>Data</Label>
 
-          {/* ── Navigation ── */}
-          <SubLabel>Navigation</SubLabel>
-          <div className="flex flex-col gap-2">
-            <ActionRow
+          {/* Navigation */}
+          <SectionLabel>Navigation</SectionLabel>
+          <RowGroup>
+            <SettingsRow
               icon={Clock}
               label="Activity Log"
               description="View changes and actions"
               onClick={() => navigate('/activity')}
               chevron
             />
-            <ActionRow
+            <RowDivider />
+            <SettingsRow
               icon={Trash2}
               label="Trash"
-              description="Restore or permanently delete bins"
+              description="Restore or permanently delete"
               onClick={() => navigate('/trash')}
               chevron
             />
-          </div>
+          </RowGroup>
 
-          {/* ── Export ── */}
-          <SubLabel trailing={statsText}>Export</SubLabel>
-          <div className="flex flex-col gap-2">
-            <ActionRow
+          {/* Export */}
+          <SectionLabel trailing={statsText}>Export</SectionLabel>
+          <RowGroup>
+            <SettingsRow
               icon={FileArchive}
               label="Backup (ZIP)"
               description="All data including photos"
@@ -150,7 +184,8 @@ export function DataSection({ activeLocationId, actions, binCount, areaCount, bi
               loading={exportingZip}
               loadingLabel="Exporting..."
             />
-            <ActionRow
+            <RowDivider />
+            <SettingsRow
               icon={Download}
               label="Backup (JSON)"
               description="Data without photos"
@@ -159,7 +194,8 @@ export function DataSection({ activeLocationId, actions, binCount, areaCount, bi
               loading={exporting}
               loadingLabel="Exporting..."
             />
-            <ActionRow
+            <RowDivider />
+            <SettingsRow
               icon={FileSpreadsheet}
               label="Spreadsheet (CSV)"
               description="Flat table for spreadsheets"
@@ -168,19 +204,20 @@ export function DataSection({ activeLocationId, actions, binCount, areaCount, bi
               loading={exportingCsv}
               loadingLabel="Exporting..."
             />
-          </div>
+          </RowGroup>
 
-          {/* ── Import ── */}
-          <SubLabel>Import</SubLabel>
-          <div className="flex flex-col gap-2">
-            <ActionRow
+          {/* Import */}
+          <SectionLabel>Import</SectionLabel>
+          <RowGroup>
+            <SettingsRow
               icon={Upload}
               label="Import Backup"
               description="Merge with existing data"
               onClick={handleImportClick}
               disabled={!activeLocationId}
             />
-            <ActionRow
+            <RowDivider />
+            <SettingsRow
               icon={AlertTriangle}
               label="Replace All Data"
               description="Deletes everything, then imports from file"
@@ -188,7 +225,7 @@ export function DataSection({ activeLocationId, actions, binCount, areaCount, bi
               disabled={!activeLocationId}
               destructive
             />
-          </div>
+          </RowGroup>
 
           <input
             ref={fileInputRef}
