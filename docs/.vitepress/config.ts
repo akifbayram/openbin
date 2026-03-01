@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'OpenBin',
   description: 'Self-hosted bin inventory with QR codes and AI',
-  base: '/openbin/',
+  base: '/',
   themeConfig: {
     nav: [
       { text: 'Get Started', link: '/getting-started/' },
