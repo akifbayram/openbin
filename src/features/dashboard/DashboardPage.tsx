@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { BinCard } from '@/features/bins/BinCard';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
@@ -118,6 +119,7 @@ export function DashboardPage() {
   const { activeLocationId } = useAuth();
   const { openScanDialog } = useScanDialog();
   const { aiEnabled } = useAiEnabled();
+  const { showToast } = useToast();
   const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, recentlyUpdated, pinnedBins, isLoading } =
     useDashboard();
   const { settings: dashSettings } = useDashboardSettings();
@@ -126,6 +128,28 @@ export function DashboardPage() {
   const { views: savedViews } = useSavedViews();
   const [createOpen, setCreateOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem('openbin-demo-toast')) return;
+    fetch('/api/auth/status')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.demoMode) {
+          sessionStorage.setItem('openbin-demo-toast', '1');
+          showToast({
+            message: 'This is a demo — data resets periodically.',
+            action: {
+              label: 'Self-host',
+              onClick: () => window.open('https://github.com/openbin-app/openbin', '_blank'),
+            },
+            duration: 8000,
+          });
+        }
+      })
+      .catch(() => {});
+    // Run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (debouncedSearch.trim()) {
