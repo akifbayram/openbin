@@ -4,6 +4,9 @@ export default defineConfig({
   title: 'OpenBin',
   description: 'Self-hosted bin inventory with QR codes and AI',
   base: '/',
+  head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }]
+  ],
   themeConfig: {
     nav: [
       { text: 'Get Started', link: '/getting-started/' },
@@ -100,7 +103,7 @@ export default defineConfig({
       ]
     },
     socialLinks: [
-      { icon: 'discord', link: 'https://discord.gg/hFjrCCut' },
+      { icon: 'discord', link: 'https://discord.gg/W6JPZCqqx9' },
       { icon: 'github', link: 'https://github.com/akifbayram/openbin' }
     ],
     search: {

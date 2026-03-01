@@ -14,7 +14,7 @@ hero:
       link: https://github.com/akifbayram/openbin
     - theme: alt
       text: Discord
-      link: https://discord.gg/hFjrCCut
+      link: https://discord.gg/W6JPZCqqx9
 
 features:
   - icon: 📦
