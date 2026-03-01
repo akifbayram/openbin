@@ -67,6 +67,10 @@ const BulkAddPage = lazyWithRetry(() =>
   import('@/features/bulk-add/BulkAddPage').then((m) => ({ default: m.BulkAddPage }))
 );
 
+const LogsPage = lazyWithRetry(() =>
+  import('@/features/logs/LogsPage').then((m) => ({ default: m.LogsPage }))
+);
+
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
@@ -308,6 +312,14 @@ export default function App() {
                   element={
                     <Suspense fallback={<LoadingFallback />}>
                       <ProfilePage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/logs"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <LogsPage />
                     </Suspense>
                   }
                 />

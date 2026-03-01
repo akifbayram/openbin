@@ -1,4 +1,4 @@
-import { ClipboardList, Clock, LayoutDashboard, LogOut, MapPin, Package, PanelLeftClose, PanelLeftOpen, Printer, ScanLine, Settings, Tags } from
+import { ClipboardList, Clock, LayoutDashboard, LogOut, MapPin, Package, PanelLeftClose, PanelLeftOpen, Printer, ScanLine, Settings, Tags, Terminal } from
   'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -204,6 +204,8 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
             </button>
           )}
           {isAdmin && <NavButton path="/activity" label="Activity" icon={Clock} currentPath={location.pathname} navigate={navigate} onClick={onItemClick}
+            collapsed={collapsed} />}
+          {isAdmin && <NavButton path="/logs" label="Server Logs" icon={Terminal} currentPath={location.pathname} navigate={navigate} onClick={onItemClick}
             collapsed={collapsed} />}
           <NavButton path="/settings" label="Settings" icon={Settings} currentPath={location.pathname} navigate={navigate} onClick={onItemClick}
             collapsed={collapsed} />
