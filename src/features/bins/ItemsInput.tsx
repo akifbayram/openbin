@@ -175,21 +175,24 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
   const showSparkles = showAi;
 
   return (
-    <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 focus-within:ring-2 focus-within:ring-[var(--accent)] transition-all duration-200">
+    <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] p-1 focus-within:ring-2 focus-within:ring-[var(--accent)] transition-all duration-200">
       {items.length > 0 && (
-        <div className="space-y-0.5 mb-2">
+        <div className="rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] overflow-hidden mb-2">
           {items.map((item, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: items may contain duplicates
-            <div key={index} className="flex items-center gap-1.5 bg-[var(--bg-elevated)] px-2 py-1.5 rounded-[var(--radius-sm)]">
-              <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed py-0.5">{item}</span>
-              <button
-                type="button"
-                onClick={() => removeItem(index)}
-                className="shrink-0 p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-                aria-label={`Remove ${item}`}
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+            <div key={index}>
+              {index > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+              <div className="group flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-[var(--bg-hover)] transition-colors">
+                <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">{item}</span>
+                <button
+                  type="button"
+                  onClick={() => removeItem(index)}
+                  className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
+                  aria-label={`Remove ${item}`}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           ))}
         </div>

@@ -83,7 +83,7 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[var(--radius-sm)]">
+    <div className="relative overflow-hidden">
       {/* Delete zone behind */}
       <div
         className="absolute inset-y-0 right-0 flex items-center justify-end px-4 text-[var(--text-tertiary)] text-[13px] font-medium"
@@ -95,7 +95,7 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
       {/* Foreground row */}
       <div
         className={cn(
-          'relative flex items-center gap-1.5 bg-[var(--bg-elevated)] px-2 py-1.5 transition-shadow',
+          'relative flex items-center gap-1.5 px-3.5 py-2.5 hover:bg-[var(--bg-hover)] transition-colors',
           !isEditing && 'group'
         )}
         style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 0.2s ease' : 'none' }}
@@ -196,10 +196,10 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
   function handleDelete(itemId: string) {
     setExitingIds((prev) => new Set(prev).add(itemId));
     setTimeout(async () => {
-      setExitingIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
       try {
         await removeItemFromBin(binId, itemId);
       } catch {
+        setExitingIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
         showToast({ message: 'Failed to delete item' });
       }
     }, 200);
@@ -226,35 +226,39 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
       {items.length === 0 ? (
         <p className="text-[15px] text-[var(--text-tertiary)] italic">No items yet</p>
       ) : (
-        <div className="space-y-0.5">
-          {items.map((item) => readOnly ? (
-            <div
-              key={item.id}
-              className={cn(
-                'flex items-center gap-1.5 bg-[var(--bg-elevated)] px-2 py-1.5 rounded-[var(--radius-sm)]',
-                newIds.has(item.id) && 'animate-fade-in-up',
-              )}
-            >
-              <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed py-0.5">
-                {item.name}
-              </span>
+        <div className="rounded-[var(--radius-sm)] bg-[var(--bg-input)] overflow-hidden">
+          {items.map((item, i) => readOnly ? (
+            <div key={item.id}>
+              {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+              <div
+                className={cn(
+                  'flex items-center gap-1.5 px-3.5 py-2.5',
+                  newIds.has(item.id) && 'animate-fade-in-up',
+                )}
+              >
+                <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
+                  {item.name}
+                </span>
+              </div>
             </div>
           ) : (
-            <div
-              key={item.id}
-              className={cn(
-                exitingIds.has(item.id) && 'animate-shrink-out',
-                newIds.has(item.id) && !exitingIds.has(item.id) && 'animate-fade-in-up',
-              )}
-            >
-              <ItemRow
-                text={item.name}
-                isEditing={editingId === item.id}
-                onStartEdit={() => setEditingId(item.id)}
-                onSave={(value) => handleSaveEdit(item.id, value)}
-                onCancel={() => setEditingId(null)}
-                onDelete={() => handleDelete(item.id)}
-              />
+            <div key={item.id}>
+              {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+              <div
+                className={cn(
+                  exitingIds.has(item.id) && 'animate-shrink-out',
+                  newIds.has(item.id) && !exitingIds.has(item.id) && 'animate-fade-in-up',
+                )}
+              >
+                <ItemRow
+                  text={item.name}
+                  isEditing={editingId === item.id}
+                  onStartEdit={() => setEditingId(item.id)}
+                  onSave={(value) => handleSaveEdit(item.id, value)}
+                  onCancel={() => setEditingId(null)}
+                  onDelete={() => handleDelete(item.id)}
+                />
+              </div>
             </div>
           ))}
         </div>
