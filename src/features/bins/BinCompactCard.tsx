@@ -1,7 +1,6 @@
 import { Check, Lock } from 'lucide-react';
 import React from 'react';
 import { Highlight } from '@/components/ui/highlight';
-import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
 import { resolveIcon } from '@/lib/iconMap';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
@@ -34,7 +33,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
   const { theme } = useTheme();
   const BinIcon = resolveIcon(bin.icon);
 
-  const { renderProps, isPhoto, coverPhotoId, secondaryStyle, secondaryBorderStyle, iconStyle, nameStyle } =
+  const { renderProps, isPhoto, coverImageSrc, secondaryStyle, secondaryBorderStyle, iconStyle, nameStyle } =
     computeBinCardStyles(bin.color, bin.card_style, theme);
 
   const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect });
@@ -134,10 +133,10 @@ export const BinCompactCard = React.memo(function BinCompactCard({
           }}
         />
       )}
-      {isPhoto && coverPhotoId ? (
+      {isPhoto && coverImageSrc ? (
         <>
           <img
-            src={getPhotoThumbUrl(coverPhotoId)}
+            src={coverImageSrc}
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"

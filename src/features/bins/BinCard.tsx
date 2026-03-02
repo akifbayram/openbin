@@ -2,7 +2,6 @@ import { Check, Lock } from 'lucide-react';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
-import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { resolveIcon } from '@/lib/iconMap';
 import { useTheme } from '@/lib/theme';
@@ -29,7 +28,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   const getTagStyle = useTagStyle();
   const BinIcon = resolveIcon(bin.icon);
 
-  const { renderProps, isPhoto, coverPhotoId, secondaryStyle, secondaryBorderStyle, iconStyle, nameStyle, tagDefaultStyle } =
+  const { renderProps, isPhoto, coverImageSrc, secondaryStyle, secondaryBorderStyle, iconStyle, nameStyle, tagDefaultStyle } =
     computeBinCardStyles(bin.color, bin.card_style, theme);
 
   const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect });
@@ -261,11 +260,11 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           }}
         />
       )}
-      {isPhoto && coverPhotoId ? (
+      {isPhoto && coverImageSrc ? (
         <>
           {/* Background image */}
           <img
-            src={getPhotoThumbUrl(coverPhotoId)}
+            src={coverImageSrc}
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"

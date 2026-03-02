@@ -16,6 +16,7 @@ export interface CardStyle {
   variant: CardStyleVariant;
   secondaryColor?: string;
   coverPhotoId?: string;
+  coverAssetId?: string;
   borderWidth?: BorderWidth;
   borderStyle?: BorderStyle;
   stripePosition?: StripePosition;

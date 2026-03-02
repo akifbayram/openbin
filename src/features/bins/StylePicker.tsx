@@ -4,6 +4,7 @@ import { OptionGroup } from '@/components/ui/option-group';
 import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
 import type { BorderStyle, BorderWidth, CardStyle, CardStyleVariant, StripePosition, StripeWidth } from '@/lib/cardStyle';
 import { parseCardStyle, serializeCardStyle } from '@/lib/cardStyle';
+import { PREMADE_BACKGROUNDS } from '@/lib/premadeBackgrounds';
 import { cn } from '@/lib/utils';
 import type { Photo } from '@/types';
 
@@ -85,8 +86,15 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
     if (variant === 'glass') {
       onChange('');
     } else if (variant === 'photo') {
-      if (!hasPhotos) return;
-      onChange(serializeCardStyle({ variant: 'photo', coverPhotoId: parsed?.coverPhotoId ?? photos?.[0].id }));
+      const existingAssetId = parsed?.coverAssetId;
+      const existingPhotoId = parsed?.coverPhotoId;
+      if (existingAssetId || existingPhotoId) {
+        onChange(serializeCardStyle({ variant: 'photo', coverAssetId: existingAssetId, coverPhotoId: existingPhotoId }));
+      } else if (hasPhotos) {
+        onChange(serializeCardStyle({ variant: 'photo', coverPhotoId: photos?.[0].id }));
+      } else {
+        onChange(serializeCardStyle({ variant: 'photo', coverAssetId: PREMADE_BACKGROUNDS[0]?.id }));
+      }
     } else {
       onChange(serializeCardStyle({ ...parsed, variant, secondaryColor: parsed?.secondaryColor }));
     }
@@ -111,8 +119,6 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
           <OptionGroup
             options={VARIANTS.map((v) => ({
               ...v,
-              disabled: v.key === 'photo' && !hasPhotos,
-              disabledTitle: 'Add photos first',
             }))}
             value={currentVariant}
             onChange={selectVariant}
@@ -171,35 +177,73 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
             </div>
           )}
 
-          {/* Photo selector */}
-          {currentVariant === 'photo' && hasPhotos && (
-            <div className="space-y-1.5">
-              <p className="text-[12px] text-[var(--text-tertiary)]">Cover photo</p>
-              <div className="grid grid-cols-4 gap-1.5">
-                {photos.map((photo) => {
-                  const isSelected = parsed?.coverPhotoId === photo.id;
-                  return (
-                    <button
-                      key={photo.id}
-                      type="button"
-                      onClick={() => updateStyle({ variant: 'photo', coverPhotoId: photo.id })}
-                      className={cn(
-                        'relative aspect-[16/9] rounded-[var(--radius-sm)] overflow-hidden transition-all',
-                        isSelected
-                          ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-elevated)]'
-                          : 'hover:opacity-80'
-                      )}
-                    >
-                      <img
-                        src={getPhotoThumbUrl(photo.id)}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    </button>
-                  );
-                })}
-              </div>
+          {/* Premade + photo selectors */}
+          {currentVariant === 'photo' && (
+            <div className="space-y-3">
+              {/* Premade backgrounds — always visible when assets have src */}
+              {PREMADE_BACKGROUNDS.some((bg) => bg.src) && (
+                <div className="space-y-1.5">
+                  <p className="text-[12px] text-[var(--text-tertiary)]">Backgrounds</p>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {PREMADE_BACKGROUNDS.filter((bg) => bg.src).map((bg) => {
+                      const isSelected = parsed?.coverAssetId === bg.id;
+                      return (
+                        <button
+                          key={bg.id}
+                          type="button"
+                          onClick={() => onChange(serializeCardStyle({ variant: 'photo', coverAssetId: bg.id }))}
+                          className={cn(
+                            'relative aspect-[16/9] rounded-[var(--radius-sm)] overflow-hidden transition-all',
+                            isSelected
+                              ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-elevated)]'
+                              : 'hover:opacity-80'
+                          )}
+                          title={bg.label}
+                        >
+                          <img
+                            src={bg.src}
+                            alt={bg.label}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* User-uploaded photos */}
+              {hasPhotos && (
+                <div className="space-y-1.5">
+                  <p className="text-[12px] text-[var(--text-tertiary)]">Your photos</p>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {photos?.map((photo) => {
+                      const isSelected = !parsed?.coverAssetId && parsed?.coverPhotoId === photo.id;
+                      return (
+                        <button
+                          key={photo.id}
+                          type="button"
+                          onClick={() => onChange(serializeCardStyle({ variant: 'photo', coverPhotoId: photo.id }))}
+                          className={cn(
+                            'relative aspect-[16/9] rounded-[var(--radius-sm)] overflow-hidden transition-all',
+                            isSelected
+                              ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-elevated)]'
+                              : 'hover:opacity-80'
+                          )}
+                        >
+                          <img
+                            src={getPhotoThumbUrl(photo.id)}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

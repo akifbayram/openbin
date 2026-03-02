@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
 import { getCardRenderProps, parseCardStyle } from '@/lib/cardStyle';
 import { resolveIcon } from '@/lib/iconMap';
+import { getPremadeUrl } from '@/lib/premadeBackgrounds';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +22,12 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
   const parsed = parseCardStyle(cardStyle ?? '');
   const isPhoto = renderProps.isPhotoVariant;
   const coverPhotoId = parsed?.coverPhotoId;
+  const coverAssetId = parsed?.coverAssetId;
+  const coverImageSrc = coverAssetId
+    ? getPremadeUrl(coverAssetId)
+    : coverPhotoId
+      ? getPhotoThumbUrl(coverPhotoId)
+      : undefined;
   const { mutedColor, primaryColor } = renderProps;
   const BinIcon = resolveIcon(icon ?? '');
 
@@ -30,7 +37,7 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
   const iconStyle: CSSProperties | undefined = isPhoto
     ? { color: 'rgba(255,255,255,0.9)', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }
     : mutedColor ? { color: mutedColor } : undefined;
-  const nameStyle: CSSProperties | undefined = isPhoto
+  const nameStyle: CSSProperties | undefined = isPhoto && coverImageSrc
     ? { color: 'white', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }
     : primaryColor ? { color: primaryColor } : undefined;
 
@@ -69,10 +76,10 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
       className={cn('max-w-[280px] w-full mx-auto relative overflow-hidden rounded-[var(--radius-lg)] px-4 py-3 text-left min-h-[72px] transition-[background-color,box-shadow] duration-200', renderProps.className, className)}
       style={renderProps.style}
     >
-      {isPhoto && coverPhotoId ? (
+      {isPhoto && coverImageSrc ? (
         <>
           <img
-            src={getPhotoThumbUrl(coverPhotoId)}
+            src={coverImageSrc}
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
