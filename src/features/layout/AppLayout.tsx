@@ -34,7 +34,7 @@ export function AppLayout() {
   useTheme();
   const { isCollapsed: sidebarCollapsed } = useSidebarCollapsed();
   const { settings } = useAppSettings();
-  const { activeLocationId, setActiveLocationId } = useAuth();
+  const { activeLocationId, setActiveLocationId, demoMode } = useAuth();
   const { locations, isLoading: locationsLoading } = useLocationList();
   const onboarding = useOnboarding();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -88,7 +88,7 @@ export function AppLayout() {
     if (didAutoCompleteCheck.current) return;
     if (locationsLoading || onboarding.isLoading) return;
     didAutoCompleteCheck.current = true;
-    if (locations.length > 0 && onboarding.isOnboarding && onboarding.step === 0) {
+    if (!demoMode && locations.length > 0 && onboarding.isOnboarding && onboarding.step === 0) {
       onboarding.complete();
     }
   }, [locationsLoading, locations.length, onboarding, onboarding.isLoading]);
@@ -190,13 +190,15 @@ export function AppLayout() {
           </button>
         </div>
       )}
-      {onboarding.isOnboarding && !onboarding.isLoading && !locationsLoading && (locations.length === 0 || onboarding.step > 0) && (
+      {onboarding.isOnboarding && !onboarding.isLoading && !locationsLoading && (locations.length === 0 || onboarding.step > 0 || demoMode) && (
         <OnboardingOverlay
           step={onboarding.step}
           locationId={onboarding.locationId ?? undefined}
           advanceWithLocation={onboarding.advanceWithLocation}
           advanceStep={onboarding.advanceStep}
           complete={onboarding.complete}
+          demoMode={demoMode}
+          activeLocationId={activeLocationId ?? undefined}
         />
       )}
     </div>

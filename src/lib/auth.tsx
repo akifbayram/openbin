@@ -7,6 +7,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   activeLocationId: string | null;
+  demoMode: boolean;
   loading: boolean;
 }
 
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: null,
     token: null,
     activeLocationId: localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION),
+    demoMode: false,
     loading: true,
   });
 
@@ -50,8 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const hadSession = !!localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION);
 
-    function setUser(data: User & { activeLocationId?: string | null }) {
-      const { activeLocationId: serverLocationId, ...user } = data;
+    function setUser(data: User & { activeLocationId?: string | null; demoMode?: boolean }) {
+      const { activeLocationId: serverLocationId, demoMode: dm, ...user } = data;
       if (serverLocationId) {
         localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, serverLocationId);
       }
@@ -60,13 +62,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         token: 'cookie',
         activeLocationId: serverLocationId ?? s.activeLocationId,
+        demoMode: dm ?? false,
         loading: false,
       }));
     }
 
     async function checkSession() {
       try {
-        const data = await apiFetch<User & { activeLocationId?: string | null }>(
+        const data = await apiFetch<User & { activeLocationId?: string | null; demoMode?: boolean }>(
           '/api/auth/me',
           { timeout: 8000, skipRefresh: true },
         );
@@ -78,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' });
             if (!cancelled && res.ok) {
-              const data = await apiFetch<User & { activeLocationId?: string | null }>(
+              const data = await apiFetch<User & { activeLocationId?: string | null; demoMode?: boolean }>(
                 '/api/auth/me',
                 { timeout: 8000, skipRefresh: true },
               );
@@ -104,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handler = () => {
       localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
-      setState({ user: null, token: null, activeLocationId: null, loading: false });
+      setState({ user: null, token: null, activeLocationId: null, demoMode: false, loading: false });
     };
     window.addEventListener('openbin-auth-expired', handler);
     return () => window.removeEventListener('openbin-auth-expired', handler);
@@ -148,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Best-effort — clear local state even if server call fails
     }
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
-    setState({ user: null, token: null, activeLocationId: null, loading: false });
+    setState({ user: null, token: null, activeLocationId: null, demoMode: false, loading: false });
   }, []);
 
   const setActiveLocationId = useCallback((id: string | null) => {
@@ -170,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const deleteAccount = useCallback(async (password: string) => {
     await apiFetch('/api/auth/account', { method: 'DELETE', body: { password } });
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
-    setState({ user: null, token: null, activeLocationId: null, loading: false });
+    setState({ user: null, token: null, activeLocationId: null, demoMode: false, loading: false });
   }, []);
 
   return (

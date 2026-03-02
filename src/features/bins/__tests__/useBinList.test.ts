@@ -52,6 +52,7 @@ function authWith(token: string | null, activeLocationId: string | null) {
     token,
     activeLocationId,
     user: null,
+    demoMode: false,
     loading: false,
     login: vi.fn(),
     register: vi.fn(),

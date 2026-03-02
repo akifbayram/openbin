@@ -27,6 +27,8 @@ export interface OnboardingActions {
   advanceWithLocation: (id: string) => void;
   advanceStep: () => void;
   complete: () => void;
+  demoMode?: boolean;
+  activeLocationId?: string;
 }
 
 const AI_FEATURES = [
@@ -36,7 +38,7 @@ const AI_FEATURES = [
   { icon: ListChecks, title: 'Smart Lists', desc: 'Dictate items, AI extracts a clean list' },
 ] as const;
 
-export function OnboardingOverlay({ step, locationId, advanceWithLocation, advanceStep, complete }: OnboardingActions) {
+export function OnboardingOverlay({ step, locationId, advanceWithLocation, advanceStep, complete, demoMode, activeLocationId }: OnboardingActions) {
   const t = useTerminology();
   const navigate = useNavigate();
   const { setActiveLocationId } = useAuth();
@@ -179,7 +181,27 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
         {/* Step content */}
         <div key={animKey} className="onboarding-step-enter">
           {/* Step 0: Welcome + Location + Areas */}
-          {step === 0 && (
+          {step === 0 && demoMode && activeLocationId && (
+            <div className="flex flex-col items-center text-center">
+              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: `${BRAND}18` }}>
+                <MapPin className="h-8 w-8" style={{ color: BRAND }} />
+              </div>
+              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
+                Welcome to OpenBin
+              </h2>
+              <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
+                We've set up a demo home with real-world data. Let's take a quick tour.
+              </p>
+              <Button
+                type="button"
+                onClick={() => advanceWithLocation(activeLocationId)}
+                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+              >
+                Get Started
+              </Button>
+            </div>
+          )}
+          {step === 0 && !demoMode && (
             <div className="flex flex-col items-center text-center">
               <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: `${BRAND}18` }}>
                 <MapPin className="h-8 w-8" style={{ color: BRAND }} />

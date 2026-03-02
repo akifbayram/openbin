@@ -36,6 +36,17 @@ router.post('/demo-login', asyncHandler(async (_req, res) => {
   }
 
   const user = result.rows[0];
+
+  // Reset onboarding so every new demo session starts fresh
+  const existingPrefs = await query('SELECT settings FROM user_preferences WHERE user_id = $1', [user.id]);
+  const currentSettings = existingPrefs.rows.length > 0 ? (existingPrefs.rows[0].settings as Record<string, unknown>) : {};
+  const resetSettings = JSON.stringify({ ...currentSettings, onboarding_completed: false, onboarding_step: 0, onboarding_location_id: null });
+  if (existingPrefs.rows.length > 0) {
+    await query('UPDATE user_preferences SET settings = $1 WHERE user_id = $2', [resetSettings, user.id]);
+  } else {
+    await query('INSERT INTO user_preferences (id, user_id, settings) VALUES ($1, $2, $3)', [generateUuid(), user.id, resetSettings]);
+  }
+
   const token = signToken({ id: user.id, username: user.username });
   const refresh = await createRefreshToken(user.id);
 
@@ -253,6 +264,7 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
     email: user.email || null,
     avatarUrl: user.avatar_path ? `/api/auth/avatar/${user.id}` : null,
     activeLocationId,
+    demoMode: config.demoMode,
     createdAt: user.created_at,
     updatedAt: user.updated_at,
   });
