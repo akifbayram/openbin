@@ -42,6 +42,7 @@ export function LoginPage() {
     apiFetch('/api/auth/demo-login', { method: 'POST' })
       .then(() => {
         if (!cancelled) {
+          localStorage.setItem('openbin-theme', 'light');
           window.location.href = '/';
         }
       })

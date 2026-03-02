@@ -61,7 +61,7 @@ export const LABEL_FORMATS: LabelFormat[] = [
     columns: 3,
     cellWidth: '2.633in',
     cellHeight: '1in',
-    qrSize: '0.75in',
+    qrSize: '0.66in',
     padding: '2pt 4pt',
     nameFontSize: '8pt',
     contentFontSize: '6.5pt',
