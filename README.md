@@ -2,7 +2,7 @@
 
 Self-hosted inventory system for organizing physical storage bins with QR codes. Print labels, scan to find contents, and optionally connect your own AI to do the heavy lifting: snap a photo and it names the bin, lists every item, and tags it for search. Ask "where are the batteries?" and get an answer.
 
-**[Documentation](https://akifbayram.github.io/openbin/)** | **[Discord](https://discord.gg/W6JPZCqqx9)**
+**[Demo](https://demo.openbin.app)** | **[Documentation](https://akifbayram.github.io/openbin/)** | **[Discord](https://discord.gg/W6JPZCqqx9)**
 
 ## Features
 
