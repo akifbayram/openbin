@@ -1,36 +1,16 @@
 # OpenBin
 
-[![CI/CD](https://github.com/akifbayram/openbin/actions/workflows/ci.yml/badge.svg)](https://github.com/akifbayram/openbin/actions/workflows/ci.yml)
-[![Docker Image](https://github.com/akifbayram/openbin/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/akifbayram/openbin/pkgs/container/openbin)
-[![License: GPL-3.0](https://img.shields.io/github/license/akifbayram/openbin)](LICENSE)
-[![Discord](https://img.shields.io/discord/1353217919498424380?logo=discord&label=Discord)](https://discord.gg/W6JPZCqqx9)
-
 Self-hosted inventory system for organizing physical storage bins with QR codes. Print labels, scan to find contents, and optionally connect your own AI to do the heavy lifting: snap a photo and it names the bin, lists every item, and tags it for search. Ask "where are the batteries?" and get an answer.
 
 **[Documentation](https://akifbayram.github.io/openbin/)** | **[Discord](https://discord.gg/W6JPZCqqx9)**
 
 ## Features
 
-- **Scan to find** — Camera-based QR scanner or manual short code lookup
-- **QR labels** — Generate and print label sheets
-- **AI photo analysis** — Snap a photo of a bin and AI names it, lists every item, suggests tags, and adds notes
-- **Natural language commands** — "Add screwdriver to the tools bin" or "Move batteries to the garage"
-- **Inventory search** — Ask "Where did I put the holiday lights?" and get matching bins with explanations
-- **BYO API key** — Connects to OpenAI, Anthropic, Gemini, or any OpenAI-compatible endpoint. Customizable prompts. Fully optional
-- **Photo attachments** — Attach up to 5 photos per bin
-- **Shared locations** — Multi-user with invite codes and per-location areas
-- **Dashboard** — Stats, saved searches, pinned bins, recently scanned/updated bins, needs-organizing queue
-- **Search & filter** — By name, items, tags, areas, colors; saved views for quick access
-- **Bulk add** — Batch bin creation from photos or CSV
-- **Bulk operations** — Long-press multi-select for batch tagging, moving, or deleting
-- **Export/Import** — JSON or ZIP backup with photos, CSV export
-- **Activity log** — Per-location event tracking for bins, photos, and membership changes
-- **Trash & recovery** — Soft deletes with restore; automatic purge after retention period
-- **API keys** — Long-lived tokens for headless or automation access
-- **Customizable terminology** — Rename "Bins", "Areas", etc. to match your use case
-- **Saved views** — Persistent filter/sort presets on the dashboard
-- **MCP Server** — Connect Claude and other AI assistants directly to your inventory via Model Context Protocol
-- **PWA** — Installable, add to home screen
+- **AI-powered cataloging** - Snap a photo and AI names the bin, lists every item, and tags it. Ask "where are the batteries?" or say "move the drill to the garage." Fully optional
+- **Print & scan QR labels** - Generate label sheets, stick them on bins, scan with your phone camera to instantly see contents
+- **Multi-user locations** - Share a location with invite codes, split bins into areas, track all changes in the activity log
+- **MCP server included** - Connect Claude and other AI assistants directly to your inventory via Model Context Protocol
+- **Your data, your server** - Single Docker container, single SQLite file, full JSON/ZIP export with photos. BYO AI.
 
 ## Tech Stack
 
@@ -38,9 +18,6 @@ Self-hosted inventory system for organizing physical storage bins with QR codes.
 |-------|------------|
 | Frontend | React 18, TypeScript, Vite 5, Tailwind CSS 4 |
 | Backend | Express 4, SQLite (better-sqlite3), JWT auth |
-| QR | `qrcode` + `html5-qrcode` |
-| AI | Self-Hosted, OpenAI, Anthropic, Gemini, or any OpenAI-compatible provider (per-user config) |
-| Infra | Docker Compose (single container) |
 
 ## Quick Start
 
@@ -70,8 +47,6 @@ docker compose up -d
 ```
 
 Open `http://localhost:1453`. Register an account, create a location, and start adding bins.
-
-No configuration needed — the database is a single file on the Docker volume and JWT secrets are auto-generated and persisted.
 
 ### Local Development
 
@@ -136,6 +111,12 @@ The database schema is auto-migrated on startup. Your data volume is preserved a
 OpenAPI spec at [`server/openapi.yaml`](server/openapi.yaml). Swagger UI available at `/api-docs/` when running behind Nginx.
 
 See the full [API reference](https://akifbayram.github.io/openbin/api/) in the docs.
+
+## AI Disclosure
+
+The majority of this codebase, including features, tests, and documentation, was written by AI ([Claude Code](https://docs.anthropic.com/en/docs/claude-code)). A human directs architecture, priorities, and design decisions but has not reviewed most code line-by-line. Type checking, linting, and an automated test suite serve as the primary quality gates.
+
+The full source is available for you to audit. If you find a bug or security issue, please [open an issue](https://github.com/akifbayram/openbin/issues).
 
 ## License
 

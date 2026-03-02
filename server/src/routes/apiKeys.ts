@@ -35,13 +35,7 @@ router.get('/', asyncHandler(async (req, res) => {
 router.post('/', asyncHandler(async (req, res) => {
   const { name } = req.body;
 
-  await enforceCountLimit(
-    'api_keys',
-    'user_id = $1 AND revoked_at IS NULL',
-    [req.user!.id],
-    MAX_KEYS_PER_USER,
-    'active API keys',
-  );
+  await enforceCountLimit('api_keys', req.user!.id, MAX_KEYS_PER_USER, 'active API keys');
 
   const key = generateApiKey();
   const keyHash = hashKey(key);

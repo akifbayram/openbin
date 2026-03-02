@@ -12,7 +12,7 @@ import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpError
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
 import { purgeExpiredTrash } from '../lib/trashPurge.js';
-import { binPhotoUpload } from '../lib/uploadConfig.js';
+import { binPhotoUpload, validateFileType } from '../lib/uploadConfig.js';
 import { validateBinName } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -400,6 +400,8 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
   if (!file) {
     throw new ValidationError('No photo uploaded');
   }
+
+  await validateFileType(file.path);
 
   const access = await verifyBinAccess(binId, req.user!.id);
   if (!access) {

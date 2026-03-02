@@ -3,6 +3,17 @@ import request from 'supertest';
 
 let userCounter = 0;
 
+function extractAccessToken(res: request.Response): string {
+  const setCookie = res.headers['set-cookie'];
+  const arr = Array.isArray(setCookie) ? setCookie : [setCookie];
+  for (const c of arr) {
+    const [nameVal] = c.split(';');
+    const [name, ...rest] = nameVal.split('=');
+    if (name.trim() === 'openbin-access') return rest.join('=');
+  }
+  throw new Error('openbin-access cookie not found in response');
+}
+
 export async function createTestUser(app: Express, overrides?: { username?: string; password?: string }) {
   userCounter++;
   const username = overrides?.username ?? `testuser${userCounter}_${Date.now()}`;
@@ -13,7 +24,7 @@ export async function createTestUser(app: Express, overrides?: { username?: stri
     .send({ username, password });
 
   return {
-    token: res.body.token as string,
+    token: extractAccessToken(res),
     user: res.body.user as { id: string; username: string; displayName: string },
     password,
   };

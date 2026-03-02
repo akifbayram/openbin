@@ -38,7 +38,7 @@ describe('POST /api/auth/register', () => {
       .send({ username: 'newuser', password: 'StrongPass1!' });
 
     expect(res.status).toBe(201);
-    expect(res.body.token).toBeDefined();
+    expect(getAccessCookie(res)).toBeDefined();
     expect(res.body.user.username).toBe('newuser');
     expect(res.body.user.id).toBeDefined();
   });
@@ -113,7 +113,7 @@ describe('POST /api/auth/login', () => {
       .send({ username: 'logintest', password: 'StrongPass1!' });
 
     expect(res.status).toBe(200);
-    expect(res.body.token).toBeDefined();
+    expect(getAccessCookie(res)).toBeDefined();
     expect(res.body.user.username).toBe('logintest');
   });
 
@@ -319,7 +319,7 @@ describe('POST /api/auth/logout-all', () => {
       .post('/api/auth/register')
       .send({ username: 'logoutall', password: 'StrongPass1!' });
 
-    const token = regRes.body.token;
+    const token = getAccessCookie(regRes)!;
 
     // Login again to create a second refresh token
     const loginRes = await request(app)
@@ -386,7 +386,7 @@ describe('PUT /api/auth/password', () => {
       .post('/api/auth/register')
       .send({ username: 'pwchangeuser', password: 'StrongPass1!' });
 
-    const token = regRes.body.token;
+    const token = getAccessCookie(regRes)!;
     const refreshCookie = getRefreshCookie(regRes)!;
 
     const res = await request(app)

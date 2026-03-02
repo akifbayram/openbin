@@ -9,18 +9,18 @@ export function requireLocationMember(paramName = 'id') {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: 'Not authenticated' });
+      res.status(401).json({ error: 'UNAUTHORIZED', message: 'Not authenticated' });
       return;
     }
 
     const locationId = req.params[paramName] || req.body?.locationId || req.query.location_id;
     if (!locationId) {
-      res.status(400).json({ error: 'Location ID required' });
+      res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Location ID required' });
       return;
     }
 
     if (!await verifyLocationMembership(locationId as string, userId)) {
-      res.status(403).json({ error: 'Not a member of this location' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
       return;
     }
 
@@ -35,18 +35,18 @@ export function requireLocationAdmin(paramName = 'id') {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: 'Not authenticated' });
+      res.status(401).json({ error: 'UNAUTHORIZED', message: 'Not authenticated' });
       return;
     }
 
     const locationId = req.params[paramName] || req.body?.locationId || req.query.location_id;
     if (!locationId) {
-      res.status(400).json({ error: 'Location ID required' });
+      res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Location ID required' });
       return;
     }
 
     if (!await isLocationAdmin(locationId as string, userId)) {
-      res.status(403).json({ error: 'Only admins can perform this action' });
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Only admins can perform this action' });
       return;
     }
 

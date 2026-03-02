@@ -7,7 +7,6 @@ info:
 
     **Authentication**: Most endpoints require authentication via one of:
     - **httpOnly cookies** (primary) — `openbin-access` (15 min) + `openbin-refresh` (7 days), set automatically on login/register. Browsers send these with every request.
-    - **JWT Bearer token** via `Authorization: Bearer <token>` header (backward compat, also set on login/register response body)
     - **API key** created via `POST /api-keys` (long-lived, format: `sk_openbin_...`) — `Authorization: Bearer <key>`
 
     **Response envelopes**: All list endpoints return `{ results: T[], count: number }`.
@@ -49,6 +48,10 @@ tags:
     description: Per-user saved bin list filter/sort views
   - name: ScanHistory
     description: Per-user QR scan history
+  - name: Tags
+    description: Tag listing and search across a location
+  - name: Items
+    description: Item search across all bins in a location
   - name: Batch
     description: Execute multiple bin operations in a single transaction
 
@@ -59,7 +62,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token from POST /auth/login. Expires after 7 days.
+      description: API key (sk_openbin_...) via Authorization header. Cookies are the primary auth method for browsers.
 
   schemas:
     # ── Error ──────────────────────────────────────────────
@@ -71,6 +74,7 @@ components:
           type: string
           enum:
             - VALIDATION_ERROR
+            - UNAUTHORIZED
             - NOT_FOUND
             - FORBIDDEN
             - CONFLICT
@@ -118,8 +122,6 @@ components:
     LoginResponse:
       type: object
       properties:
-        token:
-          type: string
         user:
           $ref: '#/components/schemas/User'
         activeLocationId:
@@ -203,6 +205,18 @@ components:
           type: string
           default: OpenBin
           description: Custom display name for this location's app instance
+        term_bin:
+          type: string
+          default: bin
+          description: Custom terminology for 'bin'
+        term_location:
+          type: string
+          default: location
+          description: Custom terminology for 'location'
+        term_area:
+          type: string
+          default: area
+          description: Custom terminology for 'area'
         created_at:
           type: string
           format: date-time
@@ -237,6 +251,15 @@ components:
         app_name:
           type: string
           default: OpenBin
+        term_bin:
+          type: string
+          default: bin
+        term_location:
+          type: string
+          default: location
+        term_area:
+          type: string
+          default: area
         created_at:
           type: string
           format: date-time
@@ -370,6 +393,9 @@ components:
           type: string
           format: uuid
           nullable: true
+        created_by_name:
+          type: string
+          description: Display name of the user who created this bin
         created_at:
           type: string
           format: date-time
@@ -501,6 +527,10 @@ components:
           type: integer
         storage_path:
           type: string
+        thumb_path:
+          type: string
+          nullable: true
+          description: Path to the generated WebP thumbnail (null if not yet generated)
         created_by:
           type: string
           format: uuid
@@ -632,6 +662,30 @@ components:
           nullable: true
           maxLength: 10000
           description: "Custom system prompt for AI item extraction from text/voice. Null uses the default prompt."
+        temperature:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 2
+          description: Sampling temperature for AI requests
+        maxTokens:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 32768
+          description: Maximum tokens in AI response
+        topP:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+          description: Top-p (nucleus) sampling parameter
+        requestTimeout:
+          type: integer
+          nullable: true
+          minimum: 5
+          maximum: 300
+          description: Request timeout in seconds
         providerConfigs:
           type: object
           description: "Per-provider saved credentials (apiKey is masked). Keys are provider names."
@@ -684,6 +738,27 @@ components:
           nullable: true
           maxLength: 10000
           description: "Custom system prompt for AI item extraction from text/voice. Null uses the default prompt."
+        temperature:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 2
+        maxTokens:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 32768
+        topP:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+        requestTimeout:
+          type: integer
+          nullable: true
+          minimum: 5
+          maximum: 300
+          description: Request timeout in seconds
 
     AiSuggestions:
       type: object
@@ -940,6 +1015,9 @@ components:
                 type: string
               color:
                 type: string
+              cardStyle:
+                type: string
+                description: JSON-encoded card style configuration
               shortCode:
                 type: string
                 description: Same as id (kept for export format compatibility)
@@ -991,14 +1069,14 @@ components:
 
   responses:
     Unauthorized:
-      description: Missing or invalid JWT token
+      description: Missing or invalid authentication
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            error: FORBIDDEN
-            message: Authentication required
+            error: UNAUTHORIZED
+            message: Not authenticated
     Forbidden:
       description: Insufficient permissions
       content:
@@ -1057,6 +1135,45 @@ paths:
                   registrationEnabled:
                     type: boolean
                     description: Whether new user registration is allowed
+                  demoMode:
+                    type: boolean
+                    description: Whether demo mode is enabled (shows demo login button)
+
+  /auth/demo-login:
+    post:
+      tags: [Auth]
+      summary: Log in as demo user
+      description: |
+        Authenticates as the pre-seeded demo user. Only available when DEMO_MODE is enabled.
+        Rate limited to 5 per 15 minutes.
+      security: []
+      responses:
+        '200':
+          description: Demo login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '403':
+          description: Demo mode is not enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: FORBIDDEN
+                message: Demo mode is not enabled
+        '404':
+          description: Demo user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: NOT_FOUND
+                message: Demo user not found
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /auth/register:
     post:
@@ -1126,7 +1243,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-                error: FORBIDDEN
+                error: UNAUTHORIZED
                 message: Invalid username or password
         '429':
           $ref: '#/components/responses/RateLimited'
@@ -1505,7 +1622,7 @@ paths:
     put:
       tags: [Locations]
       summary: Update a location
-      description: Admin only. Can update name, activity retention, trash retention, and app name.
+      description: Admin only. Can update name, retention settings, app name, and custom terminology.
       parameters:
         - name: id
           in: path
@@ -1536,6 +1653,18 @@ paths:
                 app_name:
                   type: string
                   description: Custom display name for this location's app instance
+                term_bin:
+                  type: string
+                  maxLength: 50
+                  description: "Custom term for 'bin' (e.g. 'box', 'container')"
+                term_location:
+                  type: string
+                  maxLength: 50
+                  description: "Custom term for 'location'"
+                term_area:
+                  type: string
+                  maxLength: 50
+                  description: "Custom term for 'area'"
       responses:
         '200':
           description: Location updated
@@ -2320,6 +2449,43 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /bins/{id}/duplicate:
+    post:
+      tags: [Bins]
+      summary: Duplicate a bin
+      description: |
+        Creates a copy of an existing bin including items, tags, notes, icon, color, area,
+        card style, and visibility. Photos are not copied. The new bin gets a fresh auto-generated ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                  description: "Custom name for the copy. Defaults to 'Copy of {original name}'."
+      responses:
+        '201':
+          description: Bin duplicated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /bins/{id}/permanent:
     delete:
       tags: [Bins]
@@ -2627,6 +2793,34 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /photos/{id}/thumb:
+    get:
+      tags: [Photos]
+      summary: Serve photo thumbnail
+      description: |
+        Returns a WebP thumbnail (600px wide, 70% quality). Generated lazily on first request
+        and cached for subsequent requests. Falls back to original file if generation fails.
+        Uses immutable 1-year cache headers.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Thumbnail image (WebP)
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /photos/{id}:
     delete:
       tags: [Photos]
@@ -2746,6 +2940,166 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  # ════════════════════════════════════════════════════════
+  # Tags
+  # ════════════════════════════════════════════════════════
+  /tags:
+    get:
+      tags: [Tags]
+      summary: List tags with usage counts
+      description: |
+        Returns all tags used in a location with the number of (non-deleted, visible) bins
+        each tag appears on. Supports search, sorting, and pagination.
+      parameters:
+        - name: location_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Filter tags by name (case-insensitive substring match)
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [alpha, count]
+            default: alpha
+          description: Sort by tag name or usage count
+        - name: sort_dir
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 40
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of tags with counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tag:
+                          type: string
+                        count:
+                          type: integer
+                          description: Number of bins using this tag
+                  count:
+                    type: integer
+                    description: Total number of matching tags
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # ════════════════════════════════════════════════════════
+  # Items
+  # ════════════════════════════════════════════════════════
+  /items:
+    get:
+      tags: [Items]
+      summary: Search items across all bins
+      description: |
+        Searches items across all non-deleted, visible bins in a location.
+        Returns each item with its parent bin metadata.
+      parameters:
+        - name: location_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search text (word-match across item and bin names)
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [alpha, bin]
+            default: alpha
+          description: Sort by item name or bin name
+        - name: sort_dir
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 40
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of items with bin metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        bin_id:
+                          type: string
+                        bin_name:
+                          type: string
+                        bin_icon:
+                          type: string
+                        bin_color:
+                          type: string
+                  count:
+                    type: integer
+                    description: Total number of matching items
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   # ════════════════════════════════════════════════════════
   # Print Settings
@@ -3166,6 +3520,33 @@ paths:
   # ════════════════════════════════════════════════════════
   # AI
   # ════════════════════════════════════════════════════════
+  /ai/default-prompts:
+    get:
+      tags: [AI]
+      summary: Get default AI prompts
+      description: Returns the built-in default prompt strings for all AI features. No authentication required.
+      security: []
+      responses:
+        '200':
+          description: Default prompt strings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  analysis:
+                    type: string
+                    description: Default prompt for image analysis
+                  command:
+                    type: string
+                    description: Default prompt for natural language commands
+                  query:
+                    type: string
+                    description: Default prompt for inventory queries
+                  structure:
+                    type: string
+                    description: Default prompt for text/voice item extraction
+
   /ai/settings:
     get:
       tags: [AI]

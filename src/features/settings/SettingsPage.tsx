@@ -1,4 +1,4 @@
-import { ChevronRight, ExternalLink, LogOut, Monitor, Moon, Sun, Terminal } from 'lucide-react';
+import { ChevronRight, ExternalLink, LogOut, Monitor, Moon, Sun } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -141,31 +141,6 @@ export function SettingsPage() {
           binLabel={binCount !== 1 ? t.bins : t.bin}
           areaLabel={(activeLocation?.area_count ?? 0) !== 1 ? t.areas : t.area}
         />
-      )}
-
-      {/* Server (admin only) */}
-      {(isAdmin || permissionsLoading) && (
-        <Card>
-          <CardContent>
-            <Label>Server</Label>
-            <div className="mt-3">
-              <div className="rounded-[var(--radius-sm)] bg-[var(--bg-input)] overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => navigate('/logs')}
-                  className="flex items-center gap-3 px-3.5 py-3 hover:bg-[var(--bg-hover)] transition-colors w-full text-left"
-                >
-                  <Terminal className="h-[18px] w-[18px] text-[var(--text-tertiary)] shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-medium text-[var(--text-primary)]">Server Logs</p>
-                    <p className="text-[13px] text-[var(--text-tertiary)]">View live request and error logs</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
-                </button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       )}
 
       {/* About */}

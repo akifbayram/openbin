@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileTypeFromFile } from 'file-type';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from './config.js';
+import { ValidationError } from './httpErrors.js';
 
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
@@ -68,5 +70,16 @@ export const avatarUpload = multer({
     }
   },
 });
+
+const ALLOWED_MIME_TYPES = new Set([...PHOTO_MIME_TYPES, ...AVATAR_MIME_TYPES]);
+
+/** Verify file content matches an allowed image type using magic bytes. Deletes and throws if invalid. */
+export async function validateFileType(filePath: string): Promise<void> {
+  const detected = await fileTypeFromFile(filePath);
+  if (!detected || !ALLOWED_MIME_TYPES.has(detected.mime)) {
+    fs.unlinkSync(filePath);
+    throw new ValidationError('File content does not match an allowed image type');
+  }
+}
 
 export { PHOTO_STORAGE_PATH, AVATAR_STORAGE_PATH };

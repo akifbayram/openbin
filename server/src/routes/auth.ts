@@ -9,7 +9,7 @@ import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '.
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
 import { isPathSafe } from '../lib/pathSafety.js';
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
-import { AVATAR_STORAGE_PATH, avatarUpload } from '../lib/uploadConfig.js';
+import { AVATAR_STORAGE_PATH, avatarUpload, validateFileType } from '../lib/uploadConfig.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, signToken } from '../middleware/auth.js';
 
@@ -43,7 +43,6 @@ router.post('/demo-login', asyncHandler(async (_req, res) => {
   setRefreshTokenCookie(res, refresh.rawToken);
 
   res.json({
-    token,
     user: {
       id: user.id,
       username: user.username,
@@ -91,7 +90,6 @@ router.post('/register', asyncHandler(async (req, res) => {
   setRefreshTokenCookie(res, refresh.rawToken);
 
   res.status(201).json({
-    token,
     user: {
       id: user.id,
       username: user.username,
@@ -160,7 +158,6 @@ router.post('/login', asyncHandler(async (req, res) => {
   }
 
   res.json({
-    token,
     user: {
       id: user.id,
       username: user.username,
@@ -366,6 +363,8 @@ router.post('/avatar', authenticate, avatarUpload.single('avatar'), asyncHandler
   if (!req.file) {
     throw new ValidationError('No file uploaded');
   }
+
+  await validateFileType(req.file.path);
 
   // Delete old avatar file if exists
   const existing = await query('SELECT avatar_path FROM users WHERE id = $1', [req.user!.id]);

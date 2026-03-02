@@ -32,13 +32,7 @@ router.post('/', asyncHandler(async (req, res) => {
     throw new ValidationError('name is required');
   }
 
-  await enforceCountLimit(
-    'saved_views',
-    'user_id = $1',
-    [req.user!.id],
-    MAX_VIEWS,
-    'saved views',
-  );
+  await enforceCountLimit('saved_views', req.user!.id, MAX_VIEWS, 'saved views');
 
   const id = generateUuid();
   const result = await query(
