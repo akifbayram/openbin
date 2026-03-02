@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { getPremadeUrl, isPremadeAsset, PREMADE_BACKGROUNDS } from '../premadeBackgrounds';
 
 describe('premadeBackgrounds', () => {
-  it('registry has 6 entries', () => {
-    expect(PREMADE_BACKGROUNDS).toHaveLength(6);
+  it('registry has 4 entries', () => {
+    expect(PREMADE_BACKGROUNDS).toHaveLength(4);
   });
 
   it('each entry has id, label, and src', () => {
@@ -20,8 +20,8 @@ describe('premadeBackgrounds', () => {
   });
 
   it('isPremadeAsset returns true for known IDs', () => {
-    expect(isPremadeAsset('tote-blue')).toBe(true);
-    expect(isPremadeAsset('tote-black')).toBe(true);
+    expect(isPremadeAsset('bin-blue')).toBe(true);
+    expect(isPremadeAsset('bin-gray')).toBe(true);
   });
 
   it('isPremadeAsset returns false for unknown IDs', () => {
