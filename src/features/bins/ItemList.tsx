@@ -226,7 +226,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
       {items.length === 0 ? (
         <p className="text-[15px] text-[var(--text-tertiary)] italic">No items yet</p>
       ) : (
-        <div className="rounded-[var(--radius-sm)] bg-[var(--bg-input)] overflow-hidden">
+        <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden">
           {items.map((item, i) => readOnly ? (
             <div key={item.id}>
               {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}

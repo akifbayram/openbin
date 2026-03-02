@@ -14,8 +14,8 @@ export function OptionGroup<K extends string>({
   options,
   value,
   onChange,
-  shape = 'rounded',
-  size = 'md',
+  shape = 'pill',
+  size = 'lg',
   scrollable,
   iconOnly,
   renderContent,
@@ -28,7 +28,7 @@ export function OptionGroup<K extends string>({
   value: K;
   onChange: (key: K) => void;
   shape?: 'pill' | 'rounded';
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   scrollable?: boolean;
   iconOnly?: boolean;
   renderContent?: (opt: OptionGroupOption<K>, active: boolean) => ReactNode;

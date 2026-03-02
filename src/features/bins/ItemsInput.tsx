@@ -182,7 +182,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
       </div>
 
       {items.length > 0 && (
-        <div className="rounded-[var(--radius-sm)] bg-[var(--bg-input)] overflow-hidden">
+        <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden">
           {items.map((item, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: items may contain duplicates
             <div key={index}>
