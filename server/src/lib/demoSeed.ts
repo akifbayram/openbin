@@ -5,6 +5,8 @@ import { config } from './config.js';
 import { pushLog } from './logBuffer.js';
 import { generateShortCode } from './shortCode.js';
 
+type DemoMember = 'demo' | 'sarah' | 'alex' | 'jordan';
+
 interface DemoBin {
   name: string;
   location: 'home' | 'storage';
@@ -15,6 +17,7 @@ interface DemoBin {
   color: string;
   cardStyle: string;
   notes: string;
+  createdBy?: DemoMember;
 }
 
 const HOME_AREAS = ['Garage', 'Kitchen', "Kids' Room", 'Basement', 'Closet'];
@@ -31,6 +34,7 @@ const DEMO_BINS: DemoBin[] = [
     color: '0:3',
     cardStyle: '',
     notes: 'Keep batteries charged. Drill bit set is metric.',
+    createdBy: 'demo',
   },
   {
     name: 'Camping Gear',
@@ -42,6 +46,7 @@ const DEMO_BINS: DemoBin[] = [
     color: '140:3',
     cardStyle: '',
     notes: 'Dry tent completely before storing to prevent mildew.',
+    createdBy: 'sarah',
   },
   {
     name: 'Bike Gear',
@@ -53,6 +58,7 @@ const DEMO_BINS: DemoBin[] = [
     color: '45:2',
     cardStyle: JSON.stringify({ variant: 'stripe', secondaryColor: 'neutral:3', stripePosition: 'top', stripeWidth: 3 }),
     notes: 'Check tire pressure before each ride. Training wheels fit 16" bike.',
+    createdBy: 'alex',
   },
   {
     name: 'Sports Equipment',
@@ -64,6 +70,7 @@ const DEMO_BINS: DemoBin[] = [
     color: '200:2',
     cardStyle: '',
     notes: 'Deflate balls slightly for storage. Pump in bike gear bin.',
+    createdBy: 'alex',
   },
   {
     name: 'Gardening',
@@ -75,6 +82,7 @@ const DEMO_BINS: DemoBin[] = [
     color: '80:2',
     cardStyle: '',
     notes: 'Start seeds indoors in March. Tomato cages in shed.',
+    createdBy: 'sarah',
   },
   {
     name: 'Car Supplies',
@@ -110,6 +118,7 @@ const DEMO_BINS: DemoBin[] = [
     color: '25:1',
     cardStyle: '',
     notes: 'Check expiration dates quarterly.',
+    createdBy: 'sarah',
   },
   {
     name: 'First Aid Kit',
@@ -121,6 +130,7 @@ const DEMO_BINS: DemoBin[] = [
     color: '0:4',
     cardStyle: '',
     notes: "Restock after use. Check medication expiry dates. Children's dosage chart taped inside lid.",
+    createdBy: 'sarah',
   },
   {
     name: 'Dog Supplies',
@@ -143,6 +153,7 @@ const DEMO_BINS: DemoBin[] = [
     color: '140:1',
     cardStyle: '',
     notes: 'Keep out of reach of children.',
+    createdBy: 'sarah',
   },
   {
     name: 'Coffee & Tea',
@@ -178,6 +189,7 @@ const DEMO_BINS: DemoBin[] = [
     color: '220:2',
     cardStyle: '',
     notes: 'Restock at back-to-school sales in August.',
+    createdBy: 'alex',
   },
   {
     name: 'Art & Craft Supplies',
@@ -189,6 +201,7 @@ const DEMO_BINS: DemoBin[] = [
     color: '280:1',
     cardStyle: JSON.stringify({ variant: 'gradient', secondaryColor: '320:1' }),
     notes: 'Washable markers only! Keep paint lids sealed tight.',
+    createdBy: 'alex',
   },
   {
     name: 'Baby & Toddler',
@@ -222,6 +235,7 @@ const DEMO_BINS: DemoBin[] = [
     color: '45:1',
     cardStyle: '',
     notes: 'Sort by color or set. Small pieces — keep away from baby.',
+    createdBy: 'alex',
   },
   {
     name: 'Stuffed Animals & Dolls',
@@ -349,6 +363,7 @@ const DEMO_BINS: DemoBin[] = [
     color: '25:3',
     cardStyle: '',
     notes: 'Bring out patio furniture in April. Store after Labor Day.',
+    createdBy: 'jordan',
   },
   {
     name: 'Keepsakes & Memories',
@@ -418,32 +433,75 @@ export function seedDemoData(): void {
   const startTime = Date.now();
   const db = getDb();
 
+  // Demo household members: username -> display name
+  const DEMO_USERS: Record<DemoMember, string> = {
+    demo: 'Demo User',
+    sarah: 'Sarah',
+    alex: 'Alex',
+    jordan: 'Jordan',
+  };
+  const DEMO_USERNAMES = Object.keys(DEMO_USERS) as DemoMember[];
+
   const runSeed = db.transaction(() => {
-    // Delete existing demo user (cascade deletes all related data)
-    const existing = querySync<{ id: string }>(
-      'SELECT id FROM users WHERE username = $1',
-      ['demo'],
-    );
-    if (existing.rows.length > 0) {
-      querySync('DELETE FROM users WHERE id = $1', [existing.rows[0].id]);
+    // Delete existing demo users and their orphaned locations
+    for (const username of DEMO_USERNAMES) {
+      const existing = querySync<{ id: string }>(
+        'SELECT id FROM users WHERE username = $1',
+        [username],
+      );
+      if (existing.rows.length > 0) {
+        // Delete locations created by this user (CASCADE cleans up bins, items, etc.)
+        querySync('DELETE FROM locations WHERE created_by = $1', [existing.rows[0].id]);
+        querySync('DELETE FROM users WHERE id = $1', [existing.rows[0].id]);
+      }
     }
 
-    // Create demo user with random password (nobody needs credentials)
-    const userId = generateUuid();
+    // Create all demo users with random passwords (nobody needs credentials)
     const randomPassword = crypto.randomBytes(32).toString('hex');
     const passwordHash = bcrypt.hashSync(randomPassword, 4);
 
-    querySync(
-      'INSERT INTO users (id, username, password_hash, display_name) VALUES ($1, $2, $3, $4)',
-      [userId, 'demo', passwordHash, 'Demo User'],
-    );
+    const userIdMap = new Map<DemoMember, string>();
+    for (const [username, displayName] of Object.entries(DEMO_USERS)) {
+      const id = generateUuid();
+      userIdMap.set(username as DemoMember, id);
+      querySync(
+        'INSERT INTO users (id, username, password_hash, display_name) VALUES ($1, $2, $3, $4)',
+        [id, username, passwordHash, displayName],
+      );
+    }
 
-    // Create locations
+    const userId = userIdMap.get('demo')!;
+
+    // Create locations (owned by primary demo user)
     const homeLocationId = createLocation(userId, 'Our House');
     const storageLocationId = createLocation(userId, 'Self Storage Unit');
 
-    // Set active location to home
+    // Add household members to locations
+    // Sarah: admin of both locations (partner)
+    querySync(
+      'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
+      [generateUuid(), homeLocationId, userIdMap.get('sarah')!, 'admin'],
+    );
+    querySync(
+      'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
+      [generateUuid(), storageLocationId, userIdMap.get('sarah')!, 'admin'],
+    );
+    // Alex: member of home (teen)
+    querySync(
+      'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
+      [generateUuid(), homeLocationId, userIdMap.get('alex')!, 'member'],
+    );
+    // Jordan: member of storage unit only (friend helping with storage)
+    querySync(
+      'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
+      [generateUuid(), storageLocationId, userIdMap.get('jordan')!, 'member'],
+    );
+
+    // Set active location to home for all users who have access
     querySync('UPDATE users SET active_location_id = $1 WHERE id = $2', [homeLocationId, userId]);
+    querySync('UPDATE users SET active_location_id = $1 WHERE id = $2', [homeLocationId, userIdMap.get('sarah')!]);
+    querySync('UPDATE users SET active_location_id = $1 WHERE id = $2', [homeLocationId, userIdMap.get('alex')!]);
+    querySync('UPDATE users SET active_location_id = $1 WHERE id = $2', [storageLocationId, userIdMap.get('jordan')!]);
 
     // Create areas for home location only (storage has no areas)
     const areaMap = new Map<string, string>();
@@ -458,19 +516,18 @@ export function seedDemoData(): void {
 
     // Create bins with items
     const binIdMap = new Map<string, string>();
-    const homeBinCount = DEMO_BINS.filter((b) => b.location === 'home').length;
-    const storageBinCount = DEMO_BINS.filter((b) => b.location === 'storage').length;
 
     for (const bin of DEMO_BINS) {
       const binId = generateShortCode(bin.name);
       binIdMap.set(bin.name, binId);
       const locationId = bin.location === 'home' ? homeLocationId : storageLocationId;
       const areaId = bin.area ? (areaMap.get(bin.area) ?? null) : null;
+      const creatorId = userIdMap.get(bin.createdBy ?? 'demo')!;
 
       querySync(
         `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [binId, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle, userId],
+        [binId, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle, creatorId],
       );
 
       for (let i = 0; i < bin.items.length; i++) {
@@ -532,11 +589,13 @@ export function seedDemoData(): void {
       }
     }
 
-    // Mark onboarding completed
-    querySync(
-      'INSERT INTO user_preferences (id, user_id, settings) VALUES ($1, $2, $3)',
-      [generateUuid(), userId, JSON.stringify({ onboarding_completed: true })],
-    );
+    // Mark onboarding completed for all demo users
+    for (const id of userIdMap.values()) {
+      querySync(
+        'INSERT INTO user_preferences (id, user_id, settings) VALUES ($1, $2, $3)',
+        [generateUuid(), id, JSON.stringify({ onboarding_completed: true })],
+      );
+    }
   });
 
   try {
@@ -544,7 +603,7 @@ export function seedDemoData(): void {
     const elapsed = Date.now() - startTime;
     const homeBins = DEMO_BINS.filter((b) => b.location === 'home').length;
     const storageBins = DEMO_BINS.filter((b) => b.location === 'storage').length;
-    const message = `Demo data seeded in ${elapsed}ms (${homeBins} + ${storageBins} bins across 2 locations, ${HOME_AREAS.length} areas)`;
+    const message = `Demo data seeded in ${elapsed}ms (${DEMO_USERNAMES.length} users, ${homeBins} + ${storageBins} bins across 2 locations, ${HOME_AREAS.length} areas)`;
     console.log(message);
     pushLog({ level: 'info', message });
   } catch (err) {
