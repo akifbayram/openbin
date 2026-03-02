@@ -7,7 +7,7 @@ import express from 'express';
 import { config } from './lib/config.js';
 import { HttpError } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
-import { authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
+import { apiLimiter, authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import activityRoutes from './routes/activity.js';
 import aiRoutes from './routes/ai.js';
@@ -69,6 +69,7 @@ export function createApp(): express.Express {
   app.use(requestLogger);
 
   // Routes
+  app.use('/api', apiLimiter);
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/demo-login', authLimiter);
   app.use('/api/auth/register', registerLimiter);

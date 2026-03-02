@@ -1,7 +1,7 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import { query } from '../db.js';
 import { config } from './config.js';
+import { safePath } from './pathSafety.js';
 
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
@@ -43,8 +43,8 @@ export async function purgeExpiredTrash(locationId: string): Promise<void> {
     // Clean up photo files from disk
     for (const photo of allPhotos) {
       try {
-        const filePath = path.join(PHOTO_STORAGE_PATH, photo.storage_path);
-        if (fs.existsSync(filePath)) {
+        const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
+        if (filePath && fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
       } catch {
@@ -55,8 +55,8 @@ export async function purgeExpiredTrash(locationId: string): Promise<void> {
     // Clean up empty bin directories
     for (const binId of binIds) {
       try {
-        const binDir = path.join(PHOTO_STORAGE_PATH, binId);
-        if (fs.existsSync(binDir)) {
+        const binDir = safePath(PHOTO_STORAGE_PATH, binId);
+        if (binDir && fs.existsSync(binDir)) {
           fs.rmdirSync(binDir);
         }
       } catch {

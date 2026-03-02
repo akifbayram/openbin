@@ -21,6 +21,7 @@ import {
   resolveAreaSync,
 } from '../lib/exportHelpers.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { safePath } from '../lib/pathSafety.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 
@@ -169,7 +170,8 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
   archive.append(JSON.stringify(bins, null, 2), { name: 'bins.json' });
 
   for (const photo of photosToInclude) {
-    const filePath = path.join(PHOTO_STORAGE_PATH, photo.storagePath);
+    const filePath = safePath(PHOTO_STORAGE_PATH, photo.storagePath);
+    if (!filePath) continue;
     try {
       if (fs.existsSync(filePath)) {
         archive.file(filePath, { name: `photos/${photo.filename}` });
@@ -250,8 +252,8 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
       querySync('DELETE FROM bins WHERE location_id = $1', [locationId]);
       for (const photo of existingPhotos.rows) {
         try {
-          const filePath = path.join(PHOTO_STORAGE_PATH, photo.storage_path);
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
+          if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
         } catch { /* ignore */ }
       }
     }

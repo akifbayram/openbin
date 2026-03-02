@@ -3,7 +3,7 @@ import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 import { generateUuid, query, querySync } from '../db.js';
 import { config } from './config.js';
-import { isPathSafe } from './pathSafety.js';
+import { isPathSafe, safePath } from './pathSafety.js';
 import { generateShortCode } from './shortCode.js';
 
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
@@ -74,7 +74,8 @@ export async function loadBinPhotosBase64(binId: string): Promise<ExportPhoto[]>
 
   const exportPhotos: ExportPhoto[] = [];
   for (const photo of photosResult.rows) {
-    const filePath = path.join(PHOTO_STORAGE_PATH, photo.storage_path);
+    const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
+    if (!filePath) continue;
     try {
       if (fs.existsSync(filePath)) {
         const data = fs.readFileSync(filePath);
@@ -133,8 +134,9 @@ export function insertBinWithShortCode(
   areaId: string | null,
   userId: string,
 ): string {
+  const validCode = bin.shortCode && /^[A-Z0-9]{6}$/.test(bin.shortCode) ? bin.shortCode : undefined;
   for (let attempt = 0; attempt <= 10; attempt++) {
-    const id = attempt === 0 && bin.shortCode ? bin.shortCode : generateShortCode(bin.name);
+    const id = attempt === 0 && validCode ? validCode : generateShortCode(bin.name);
     try {
       querySync(
         `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, created_at, updated_at)
@@ -179,7 +181,8 @@ export function importPhotosSync(binId: string, photos: ExportPhoto[], userId: s
     const fullPath = path.join(PHOTO_STORAGE_PATH, storagePath);
     if (!isPathSafe(fullPath, PHOTO_STORAGE_PATH)) continue;
 
-    const dir = path.join(PHOTO_STORAGE_PATH, binId);
+    const dir = safePath(PHOTO_STORAGE_PATH, binId);
+    if (!dir) continue;
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(fullPath, buffer);
 

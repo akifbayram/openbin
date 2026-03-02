@@ -50,7 +50,7 @@ router.get('/', asyncHandler(async (req, res) => {
   }
 
   const result = await query(
-    `SELECT id, bin_id, filename, mime_type, size, storage_path, created_by, created_at
+    `SELECT id, bin_id, filename, mime_type, size, created_by, created_at
      FROM photos WHERE bin_id = $1 ORDER BY created_at ASC`,
     [binId]
   );
@@ -80,7 +80,7 @@ router.get('/:id/file', asyncHandler(async (req, res) => {
   const mimeType = photoResult.rows[0]?.mime_type || 'application/octet-stream';
 
   res.setHeader('Content-Type', mimeType);
-  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
   fs.createReadStream(filePath).pipe(res);
 }));
 
@@ -105,7 +105,7 @@ router.get('/:id/thumb', asyncHandler(async (req, res) => {
     const thumbFile = safePath(PHOTO_STORAGE_PATH, photo.thumb_path);
     if (thumbFile && fs.existsSync(thumbFile)) {
       res.setHeader('Content-Type', 'image/webp');
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
       fs.createReadStream(thumbFile).pipe(res);
       return;
     }
@@ -128,14 +128,14 @@ router.get('/:id/thumb', asyncHandler(async (req, res) => {
     await query('UPDATE photos SET thumb_path = $1 WHERE id = $2', [thumbStoragePath, id]);
 
     res.setHeader('Content-Type', 'image/webp');
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
     fs.createReadStream(thumbFullPath).pipe(res);
   } catch {
     // Fallback to original
     const photoResult = await query('SELECT mime_type FROM photos WHERE id = $1', [id]);
     const mimeType = photoResult.rows[0]?.mime_type || 'application/octet-stream';
     res.setHeader('Content-Type', mimeType);
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
     fs.createReadStream(originalFile).pipe(res);
   }
 }));

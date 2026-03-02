@@ -7,6 +7,13 @@ import { purgeExpiredRefreshTokens } from './lib/refreshTokens.js';
 
 const app = createApp();
 
+if (!config.aiEncryptionKey) {
+  console.warn('WARNING: AI_ENCRYPTION_KEY is not set — AI API keys will be stored in plaintext');
+}
+if (config.disableRateLimit && process.env.NODE_ENV !== 'test') {
+  console.warn('WARNING: Rate limiting is disabled (DISABLE_RATE_LIMIT=true)');
+}
+
 if (config.demoMode) {
   seedDemoData();
 }

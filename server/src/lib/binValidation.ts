@@ -22,7 +22,8 @@ export function validateBinFields(fields: {
   }
   if (items !== undefined && Array.isArray(items)) {
     for (const item of items) {
-      if (typeof item === 'string' && item.length > 500) {
+      const name = typeof item === 'string' ? item : (item as { name: string })?.name;
+      if (typeof name === 'string' && name.length > 500) {
         throw new ValidationError('Item name too long (max 500 characters)');
       }
     }

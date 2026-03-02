@@ -102,8 +102,6 @@ export interface Photo {
   filename: string;
   mime_type: string;
   size: number;
-  storage_path: string;
-  thumb_path: string | null;
   created_by: string;
   created_at: string;
 }

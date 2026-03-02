@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import path from 'node:path';
+import { safePath } from './pathSafety.js';
 import { PHOTO_STORAGE_PATH } from './uploadConfig.js';
 
 export function cleanupBinPhotos(
@@ -8,13 +8,13 @@ export function cleanupBinPhotos(
 ): void {
   for (const photo of photos) {
     try {
-      const filePath = path.join(PHOTO_STORAGE_PATH, photo.storage_path);
-      if (fs.existsSync(filePath)) {
+      const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
+      if (filePath && fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
       if (photo.thumb_path) {
-        const thumbFilePath = path.join(PHOTO_STORAGE_PATH, photo.thumb_path);
-        if (fs.existsSync(thumbFilePath)) {
+        const thumbFilePath = safePath(PHOTO_STORAGE_PATH, photo.thumb_path);
+        if (thumbFilePath && fs.existsSync(thumbFilePath)) {
           fs.unlinkSync(thumbFilePath);
         }
       }
@@ -24,8 +24,8 @@ export function cleanupBinPhotos(
   }
 
   try {
-    const binDir = path.join(PHOTO_STORAGE_PATH, binId);
-    if (fs.existsSync(binDir)) {
+    const binDir = safePath(PHOTO_STORAGE_PATH, binId);
+    if (binDir && fs.existsSync(binDir)) {
       fs.rmdirSync(binDir);
     }
   } catch {

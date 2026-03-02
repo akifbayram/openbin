@@ -18,6 +18,9 @@ export function validatePassword(password: unknown): string {
   if (!password || typeof password !== 'string' || !isStrongPassword(password)) {
     throw new ValidationError('Password must be at least 8 characters with uppercase, lowercase, and a number');
   }
+  if (password.length > 72) {
+    throw new ValidationError('Password must be at most 72 characters');
+  }
   return password;
 }
 

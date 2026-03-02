@@ -206,7 +206,7 @@ export const LABEL_FORMATS: LabelFormat[] = [
   },
 ];
 
-export const DEFAULT_LABEL_FORMAT = 'avery-5160';
+export const DEFAULT_LABEL_FORMAT = 'avery-5163';
 
 /**
  * Cross-reference of compatible Avery product numbers per format key.

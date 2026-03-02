@@ -7,7 +7,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '../lib/cookies.js';
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
-import { isPathSafe } from '../lib/pathSafety.js';
+import { isPathSafe, safePath } from '../lib/pathSafety.js';
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
 import { AVATAR_STORAGE_PATH, avatarUpload, validateFileType } from '../lib/uploadConfig.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
@@ -413,7 +413,7 @@ router.get('/avatar/:userId', authenticate, asyncHandler(async (req, res) => {
   const ext = path.extname(avatarPath).toLowerCase();
   const mimeMap: Record<string, string> = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' };
   res.setHeader('Content-Type', mimeMap[ext] || 'image/jpeg');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.setHeader('Cache-Control', 'private, max-age=3600');
   fs.createReadStream(avatarPath).pipe(res);
 }));
 
@@ -458,13 +458,18 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
         [location.id]
       );
       for (const photo of photosResult.rows) {
-        try { fs.unlinkSync(path.join(PHOTO_STORAGE, photo.storage_path)); } catch { /* ignore */ }
+        const photoPath = safePath(PHOTO_STORAGE, photo.storage_path);
+        if (photoPath) {
+          try { fs.unlinkSync(photoPath); } catch { /* ignore */ }
+        }
       }
       // Delete bin directories
       const binsResult = await query('SELECT id FROM bins WHERE location_id = $1', [location.id]);
       for (const bin of binsResult.rows) {
-        const binDir = path.join(PHOTO_STORAGE, bin.id);
-        try { fs.rmSync(binDir, { recursive: true, force: true }); } catch { /* ignore */ }
+        const binDir = safePath(PHOTO_STORAGE, bin.id);
+        if (binDir) {
+          try { fs.rmSync(binDir, { recursive: true, force: true }); } catch { /* ignore */ }
+        }
       }
       // Cascade deletes bins, photos, tag_colors, location_members
       await query('DELETE FROM locations WHERE id = $1', [location.id]);

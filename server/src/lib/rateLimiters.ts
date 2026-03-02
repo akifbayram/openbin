@@ -10,7 +10,6 @@ export const authLimiter: RequestHandler = isTest ? noop : rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true,
   message: { error: 'RATE_LIMITED', message: 'Too many attempts, please try again later' },
 });
 
@@ -36,4 +35,12 @@ export const sensitiveAuthLimiter: RequestHandler = isTest ? noop : rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'RATE_LIMITED', message: 'Too many attempts, please try again later' },
+});
+
+export const apiLimiter: RequestHandler = isTest ? noop : rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'RATE_LIMITED', message: 'Too many requests, please try again later' },
 });

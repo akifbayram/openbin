@@ -34,7 +34,7 @@ router.get('/', asyncHandler(async (req, res) => {
     id: row.id,
     name: row.name,
     created_by: row.created_by,
-    invite_code: row.invite_code,
+    invite_code: row.role === 'admin' ? row.invite_code : undefined,
     activity_retention_days: row.activity_retention_days,
     trash_retention_days: row.trash_retention_days,
     app_name: row.app_name,
