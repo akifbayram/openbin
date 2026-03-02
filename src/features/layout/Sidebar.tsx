@@ -1,4 +1,4 @@
-import { ClipboardList, Clock, LayoutDashboard, LogOut, MapPin, Package, PanelLeftClose, PanelLeftOpen, Printer, ScanLine, Settings, Tags } from
+import { BookOpen, ClipboardList, Github, LayoutDashboard, LogOut, MapPin, Package, PanelLeftClose, PanelLeftOpen, Printer, ScanLine, Settings, Tags } from
   'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -8,7 +8,6 @@ import { useAuth } from '@/lib/auth';
 import type { TermKey } from '@/lib/navItems';
 import { useNavigationGuard } from '@/lib/navigationGuard';
 import { useTerminology } from '@/lib/terminology';
-import { usePermissions } from '@/lib/usePermissions';
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
 import { cn } from '@/lib/utils';
 import type { Location as LocationType } from '@/types';
@@ -39,6 +38,12 @@ const brandIcon = (
    15 L 16 15 M 4 20 L 4 14 L 10 14 L 10 20 L 4 20 M 6 6 L 6 8 L 8 8 L 8 6 L 6 6 M 16 6 L 16 8 L 18 8 L 18 6 L 16 6 M 6 16 L 6 18 L 8 18 L 8 16 L 6 16 M 4 11
   L 6 11 L 6 13 L 4 13 L 4 11 M 9 11 L 13 11 L 13 15 L 11 15 L 11 13 L 9 13 L 9 11 M 11 6 L 13 6 L 13 10 L 11 10 L 11 6 M 2 3 L 2 22 L 22 22 L 22 3 A 1 1 0 0
   1 24 3 L 24 22 A 2 2 0 0 1 22 24 L 2 24 A 2 2 0 0 1 0 22 L 0 3 A 1 1 0 0 1 2 3 Z" />
+  </svg>
+);
+
+const discordIcon = (
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z" />
   </svg>
 );
 
@@ -93,7 +98,6 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
   const { settings } = useAppSettings();
   const t = useTerminology();
   const { user, logout } = useAuth();
-  const { isAdmin } = usePermissions();
 
   return (
     <>
@@ -203,8 +207,6 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
               </span>
             </button>
           )}
-          {isAdmin && <NavButton path="/activity" label="Activity" icon={Clock} currentPath={location.pathname} navigate={navigate} onClick={onItemClick}
-            collapsed={collapsed} />}
           <NavButton path="/settings" label="Settings" icon={Settings} currentPath={location.pathname} navigate={navigate} onClick={onItemClick}
             collapsed={collapsed} />
           <button
@@ -220,6 +222,28 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
             </span>
           </button>
         </div>
+      </div>
+
+      {/* External links + version */}
+      <div className="flex items-center gap-3 px-5 py-3 border-t border-[var(--border-subtle)]">
+        <a href="https://docs.openbin.app/" target="_blank" rel="noopener noreferrer" title="Documentation"
+          className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
+          <BookOpen className="h-4 w-4" />
+        </a>
+        <a href="https://discord.gg/W6JPZCqqx9" target="_blank" rel="noopener noreferrer" title="Discord"
+          className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
+          {discordIcon}
+        </a>
+        <a href="https://github.com/akifbayram/openbin" target="_blank" rel="noopener noreferrer" title="GitHub"
+          className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
+          <Github className="h-4 w-4" />
+        </a>
+        <span className={cn(
+          'ml-auto text-xs text-[var(--text-tertiary)] tabular-nums',
+          collapsed && 'w-0 opacity-0 overflow-hidden'
+        )} aria-hidden={collapsed || undefined}>
+          v{__APP_VERSION__}
+        </span>
       </div>
     </>
   );
