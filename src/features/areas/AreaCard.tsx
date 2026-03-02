@@ -15,7 +15,6 @@ interface AreaCardProps {
   name: string;
   binCount: number;
   isAdmin: boolean;
-  index?: number;
   onNavigate: (areaId: string) => void;
   onRename: (id: string, newName: string) => Promise<void>;
   onDelete: (id: string, name: string, binCount: number) => void;
@@ -23,7 +22,6 @@ interface AreaCardProps {
 
 interface UnassignedCardProps {
   count: number;
-  index?: number;
   onNavigate: () => void;
 }
 
@@ -31,7 +29,7 @@ interface CreateCardProps {
   onCreate: () => void;
 }
 
-export function AreaCard({ id, name, binCount, isAdmin, index = 0, onNavigate, onRename, onDelete }: AreaCardProps) {
+export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, onDelete }: AreaCardProps) {
   const t = useTerminology();
   const { visible, animating, isOpen, close, toggle } = usePopover();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -95,11 +93,10 @@ export function AreaCard({ id, name, binCount, isAdmin, index = 0, onNavigate, o
       onClick={() => onNavigate(id)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(id); } }}
       className={cn(
-        "glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-all duration-200 active:scale-[0.98] text-left relative group animate-stagger-in",
-        "[@media(hover:hover)]:hover:shadow-[var(--shadow-elevated)] [@media(hover:hover)]:hover:-translate-y-0.5",
+        "glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-all duration-200 active:scale-[0.98] text-left relative group",
+        "[@media(hover:hover)]:hover:-translate-y-0.5",
         isOpen && "z-10"
       )}
-      style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
     >
       <div className="flex items-start gap-3">
         <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 flex items-center justify-center shrink-0 mt-0.5">
@@ -143,14 +140,13 @@ export function AreaCard({ id, name, binCount, isAdmin, index = 0, onNavigate, o
   );
 }
 
-export function UnassignedAreaCard({ count, index = 0, onNavigate }: UnassignedCardProps) {
+export function UnassignedAreaCard({ count, onNavigate }: UnassignedCardProps) {
   const t = useTerminology();
   return (
     <button
       type="button"
       onClick={onNavigate}
-      className="glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-all duration-200 active:scale-[0.98] text-left animate-stagger-in [@media(hover:hover)]:hover:shadow-[var(--shadow-elevated)] [@media(hover:hover)]:hover:-translate-y-0.5"
-      style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
+      className="glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-all duration-200 active:scale-[0.98] text-left [@media(hover:hover)]:hover:-translate-y-0.5"
     >
       <div className="flex items-start gap-3">
         <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-input)] flex items-center justify-center shrink-0 mt-0.5">

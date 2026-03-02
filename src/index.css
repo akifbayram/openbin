@@ -122,6 +122,16 @@ body {
   box-shadow: var(--shadow-glass);
 }
 
+/* ─── Bin Card: no base shadow, shadow on hover ─── */
+.bin-card-shadow {
+  box-shadow: none;
+}
+@media (hover: hover) {
+  .bin-card-shadow:hover {
+    box-shadow: var(--shadow-elevated);
+  }
+}
+
 /* ─── Scrollbar (Webkit) ─── */
 ::-webkit-scrollbar {
   width: 6px;
@@ -224,14 +234,6 @@ body {
   .animate-shimmer { animation: none !important; }
 }
 
-/* ─── Fade In Up ─── */
-@keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(12px); }
-}
-.animate-fade-in-up {
-  animation: fade-in-up 300ms ease-out;
-}
-
 /* ─── Check Pop ─── */
 @keyframes check-pop {
   0% { transform: scale(0); }
@@ -240,14 +242,6 @@ body {
 }
 .animate-check-pop {
   animation: check-pop 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* ─── Stagger In ─── */
-@keyframes stagger-in {
-  from { opacity: 0; transform: translateY(8px); }
-}
-.animate-stagger-in {
-  animation: stagger-in 250ms ease-out both;
 }
 
 /* ─── Shrink Out ─── */
@@ -269,9 +263,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in-up,
   .animate-check-pop,
-  .animate-stagger-in,
   .animate-shrink-out,
   .animate-success-pulse { animation: none !important; }
 }

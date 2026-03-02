@@ -128,7 +128,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
           <Badge
             key={tag}
             variant="secondary"
-            className={`gap-1 pl-1.5 ${exitingTags.has(tag) ? 'animate-shrink-out' : newTags.has(tag) ? 'animate-fade-in-up' : ''}`}
+            className={`gap-1 pl-1.5 ${exitingTags.has(tag) ? 'animate-shrink-out' : ''}`}
             style={getTagStyle(tag)}
           >
             <button

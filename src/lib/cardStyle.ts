@@ -136,7 +136,7 @@ function renderGradientProps(cardStyle: CardStyle, colorPreset: ColorPreset | un
   return {
     className: '',
     style: {
-      background: `linear-gradient(135deg, ${startColor}, ${endColor})`
+      background: `linear-gradient(135deg, ${startColor}, ${endColor})`,
     },
     mutedColor: muted ?? (theme === 'dark' ? MUTED_DARK : MUTED_LIGHT),
     primaryColor: primary,
@@ -144,20 +144,23 @@ function renderGradientProps(cardStyle: CardStyle, colorPreset: ColorPreset | un
   };
 }
 
-function renderStripeProps(cardStyle: CardStyle, colorPreset: ColorPreset | undefined, _theme: 'light' | 'dark'): CardRenderProps {
+function renderStripeProps(cardStyle: CardStyle, colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): CardRenderProps {
   const stripePreset = resolveColor(cardStyle.secondaryColor ?? '');
   const stripeResolved = stripePreset?.bgCss ?? colorPreset?.bgCss ?? 'var(--accent)';
   const pos = cardStyle.stripePosition ?? 'left';
   const sw = Number(cardStyle.stripeWidth) || 4;
+  const colorBg = getColorBg(colorPreset);
+  const { primary, muted } = getTextColors(colorPreset, theme);
 
   return {
     className: 'glass-card',
     style: {
       position: 'relative',
       overflow: 'hidden',
+      ...(colorBg ? { backgroundColor: colorBg } : {}),
     },
-    mutedColor: undefined,
-    primaryColor: undefined,
+    mutedColor: muted,
+    primaryColor: primary,
     isPhotoVariant: false,
     stripeBar: { color: stripeResolved, position: pos, width: sw },
   };

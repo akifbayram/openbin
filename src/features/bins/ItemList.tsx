@@ -233,7 +233,6 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
               <div
                 className={cn(
                   'flex items-center gap-1.5 px-3.5 py-1',
-                  newIds.has(item.id) && 'animate-fade-in-up',
                 )}
               >
                 <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
@@ -247,7 +246,6 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
               <div
                 className={cn(
                   exitingIds.has(item.id) && 'animate-shrink-out',
-                  newIds.has(item.id) && !exitingIds.has(item.id) && 'animate-fade-in-up',
                 )}
               >
                 <ItemRow

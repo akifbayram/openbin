@@ -25,7 +25,7 @@ export function DismissibleBadge({ children, onDismiss, ariaLabel, style, dot }:
       variant="outline"
       className={cn(
         `${dot ? 'gap-1.5' : 'gap-1'} pr-1.5 py-0.5 shrink-0 text-[11px]`,
-        exiting ? 'animate-shrink-out' : 'animate-fade-in-up',
+        exiting && 'animate-shrink-out',
       )}
       style={style}
     >

@@ -283,14 +283,13 @@ export function AreasPage() {
               <div className="flex flex-col gap-3">
                 <h2 className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{t.Areas}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {areas.map((area, index) => (
+                {areas.map((area) => (
                   <AreaCard
                     key={area.id}
                     id={area.id}
                     name={area.name}
                     binCount={area.bin_count}
                     isAdmin={isAdmin}
-                    index={index}
                     onNavigate={handleAreaClick}
                     onRename={handleRenameArea}
                     onDelete={handleDeleteAreaRequest}
@@ -299,7 +298,6 @@ export function AreasPage() {
                 {unassignedCount > 0 && (
                   <UnassignedAreaCard
                     count={unassignedCount}
-                    index={areas.length}
                     onNavigate={handleUnassignedClick}
                   />
                 )}
