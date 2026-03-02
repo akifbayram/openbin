@@ -1,6 +1,10 @@
 node_modules/
 dist/
+data/
+server/data/
+server/uploads/
 *.local
+*.log
 .env
 .env.*
 !.env.example

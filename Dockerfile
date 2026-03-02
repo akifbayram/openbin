@@ -3,7 +3,7 @@ FROM node:22-alpine AS frontend-builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
-COPY index.html vite.config.ts tsconfig*.json biome.json ./
+COPY index.html vite.config.ts tsconfig*.json ./
 COPY src ./src
 COPY public ./public
 COPY server/openapi.yaml ./server/openapi.yaml
