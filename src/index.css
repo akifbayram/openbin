@@ -132,6 +132,17 @@ body {
   }
 }
 
+/* ─── Selected Bin Ring + Glow ───
+   Uses outline (not box-shadow ring) so .bin-card-shadow can't clobber it. */
+.bin-selected-ring {
+  outline: 3px solid var(--accent);
+  outline-offset: -1px;
+  box-shadow: 0 0 12px rgba(94, 47, 224, 0.35);
+}
+.dark .bin-selected-ring {
+  box-shadow: 0 0 12px rgba(123, 82, 245, 0.4);
+}
+
 /* ─── Scrollbar (Webkit) ─── */
 ::-webkit-scrollbar {
   width: 6px;

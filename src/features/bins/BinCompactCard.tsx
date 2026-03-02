@@ -109,7 +109,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
       className={cn(
         'group rounded-[var(--radius-md)] px-3 py-2.5 cursor-pointer transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none bin-card-shadow [@media(hover:hover)]:hover:scale-[1.02] [@media(hover:hover)]:hover:-translate-y-0.5',
         renderProps.className,
-        selected && 'ring-2 ring-[var(--accent)] scale-[0.97]',
+        selected && 'bin-selected-ring',
         selectable && !selected && 'active:bg-[var(--bg-active)]',
       )}
       style={renderProps.style}
