@@ -7,147 +7,410 @@ import { generateShortCode } from './shortCode.js';
 
 interface DemoBin {
   name: string;
+  location: 'home' | 'storage';
   area: string;
   items: string[];
   tags: string[];
   icon: string;
   color: string;
+  cardStyle: string;
   notes: string;
 }
 
+const HOME_AREAS = ['Garage', 'Kitchen', "Kids' Room", 'Basement', 'Closet'];
+
 const DEMO_BINS: DemoBin[] = [
+  // ── Garage ──
   {
     name: 'Power Tools',
+    location: 'home',
     area: 'Garage',
     items: ['Cordless drill', 'Circular saw', 'Jigsaw', 'Orbital sander', 'Drill bit set'],
-    tags: ['tools', 'electric'],
-    icon: '🔧',
-    color: '#e74c3c',
+    tags: ['tools', 'dad'],
+    icon: 'Wrench',
+    color: '0:3',
+    cardStyle: '',
     notes: 'Keep batteries charged. Drill bit set is metric.',
   },
   {
-    name: 'Holiday Decorations',
-    area: 'Storage Room',
-    items: ['String lights', 'Ornaments box', 'Wreath', 'Tree stand', 'Stockings'],
-    tags: ['seasonal', 'holiday'],
-    icon: '🎄',
-    color: '#2ecc71',
-    notes: 'Fragile ornaments wrapped in tissue paper.',
+    name: 'Camping Gear',
+    location: 'home',
+    area: 'Garage',
+    items: ['Tent', 'Sleeping bags (x4)', 'Headlamps', 'Camping stove', 'Water filter', 'Tarp'],
+    tags: ['outdoor', 'seasonal', 'family'],
+    icon: 'Leaf',
+    color: '140:3',
+    cardStyle: '',
+    notes: 'Dry tent completely before storing to prevent mildew.',
   },
   {
+    name: 'Bike Gear',
+    location: 'home',
+    area: 'Garage',
+    items: ['Helmets (x3)', 'Bike pump', 'Tire patch kit', 'Bike lock', 'Training wheels'],
+    tags: ['outdoor', 'sports'],
+    icon: 'Bike',
+    color: '45:2',
+    cardStyle: JSON.stringify({ variant: 'stripe', secondaryColor: 'neutral:3', stripePosition: 'top', stripeWidth: 3 }),
+    notes: 'Check tire pressure before each ride. Training wheels fit 16" bike.',
+  },
+  {
+    name: 'Sports Equipment',
+    location: 'home',
+    area: 'Garage',
+    items: ['Soccer ball', 'Baseball gloves', 'Basketball', 'Jump ropes', 'Frisbee', 'Badminton set'],
+    tags: ['sports', 'kids', 'outdoor'],
+    icon: 'Star',
+    color: '200:2',
+    cardStyle: '',
+    notes: 'Deflate balls slightly for storage. Pump in bike gear bin.',
+  },
+  {
+    name: 'Gardening',
+    location: 'home',
+    area: 'Garage',
+    items: ['Trowel', 'Pruning shears', 'Garden gloves', 'Seed packets', 'Plant food', 'Watering can'],
+    tags: ['outdoor', 'garden'],
+    icon: 'Leaf',
+    color: '80:2',
+    cardStyle: '',
+    notes: 'Start seeds indoors in March. Tomato cages in shed.',
+  },
+  {
+    name: 'Car Supplies',
+    location: 'home',
+    area: 'Garage',
+    items: ['Jumper cables', 'Tire pressure gauge', 'Windshield washer fluid', 'Ice scraper', 'Emergency flares', 'First aid kit (car)'],
+    tags: ['tools', 'emergency'],
+    icon: 'Car',
+    color: 'neutral:2',
+    cardStyle: '',
+    notes: 'Check emergency kit every spring. Washer fluid freezes below -20F.',
+  },
+  {
+    name: 'Paint & Stain',
+    location: 'home',
+    area: 'Garage',
+    items: ['Interior paint (eggshell white)', 'Deck stain', 'Paint rollers', 'Drop cloths', 'Painter tape', 'Brushes'],
+    tags: ['tools', 'supplies'],
+    icon: 'Paintbrush',
+    color: '25:2',
+    cardStyle: '',
+    notes: 'Leftover paint colors noted on lids. Deck stain is semi-transparent cedar.',
+  },
+
+  // ── Kitchen ──
+  {
     name: 'Baking Supplies',
+    location: 'home',
     area: 'Kitchen',
     items: ['Flour', 'Sugar', 'Baking powder', 'Vanilla extract', 'Cupcake liners', 'Rolling pin'],
     tags: ['food', 'baking'],
-    icon: '🧁',
-    color: '#f39c12',
+    icon: 'Utensils',
+    color: '25:1',
+    cardStyle: '',
     notes: 'Check expiration dates quarterly.',
   },
   {
-    name: 'Office Supplies',
-    area: 'Office',
-    items: ['Stapler', 'Paper clips', 'Sticky notes', 'Pens', 'Highlighters', 'Tape dispenser'],
-    tags: ['office', 'supplies'],
-    icon: '📎',
-    color: '#3498db',
-    notes: '',
-  },
-  {
     name: 'First Aid Kit',
+    location: 'home',
     area: 'Kitchen',
-    items: ['Bandages', 'Antiseptic wipes', 'Gauze pads', 'Medical tape', 'Tweezers', 'Ibuprofen'],
+    items: ['Bandages', 'Antiseptic wipes', 'Gauze pads', 'Medical tape', 'Tweezers', 'Ibuprofen', "Children's Tylenol"],
     tags: ['medical', 'emergency'],
-    icon: '🩹',
-    color: '#e74c3c',
-    notes: 'Restock after use. Check medication expiry dates.',
+    icon: 'Heart',
+    color: '0:4',
+    cardStyle: '',
+    notes: "Restock after use. Check medication expiry dates. Children's dosage chart taped inside lid.",
   },
   {
-    name: 'Winter Gear',
-    area: 'Closet',
-    items: ['Snow boots', 'Thermal gloves', 'Wool scarf', 'Beanie', 'Hand warmers'],
-    tags: ['seasonal', 'clothing'],
-    icon: '🧤',
-    color: '#9b59b6',
-    notes: '',
-  },
-  {
-    name: 'Cables & Adapters',
-    area: 'Office',
-    items: ['USB-C cables', 'HDMI cable', 'Ethernet cable', 'Power strip', 'USB hub', 'Lightning cable'],
-    tags: ['electronics', 'cables'],
-    icon: '🔌',
-    color: '#1abc9c',
-    notes: 'Labeled by type with colored tape.',
-  },
-  {
-    name: 'Paint Supplies',
-    area: 'Garage',
-    items: ['Paint rollers', 'Drop cloth', 'Painter tape', 'Brushes', 'Paint tray'],
-    tags: ['tools', 'home improvement'],
-    icon: '🎨',
-    color: '#e67e22',
-    notes: 'Leftover wall paint colors noted on lids.',
-  },
-  {
-    name: 'Board Games',
-    area: 'Closet',
-    items: ['Catan', 'Ticket to Ride', 'Codenames', 'Uno', 'Playing cards'],
-    tags: ['games', 'entertainment'],
-    icon: '🎲',
-    color: '#8e44ad',
-    notes: 'Check for missing pieces periodically.',
+    name: 'Dog Supplies',
+    location: 'home',
+    area: 'Kitchen',
+    items: ['Kibble', 'Treats', 'Leash', 'Poop bags', 'Chew toys', 'Flea medicine'],
+    tags: ['pets', 'dog'],
+    icon: 'Dog',
+    color: '25:3',
+    cardStyle: '',
+    notes: 'Flea medicine due on the 1st of each month.',
   },
   {
     name: 'Cleaning Supplies',
-    area: 'Storage Room',
+    location: 'home',
+    area: 'Kitchen',
     items: ['All-purpose cleaner', 'Sponges', 'Microfiber cloths', 'Glass cleaner', 'Rubber gloves'],
     tags: ['cleaning', 'supplies'],
-    icon: '🧹',
-    color: '#27ae60',
-    notes: '',
+    icon: 'Home',
+    color: '140:1',
+    cardStyle: '',
+    notes: 'Keep out of reach of children.',
   },
   {
-    name: 'Tax Documents',
-    area: 'Office',
-    items: ['W-2 forms', 'Receipts folder', 'Tax returns 2024', 'Tax returns 2025', 'Property tax records'],
+    name: 'Coffee & Tea',
+    location: 'home',
+    area: 'Kitchen',
+    items: ['Coffee beans', 'Filters', 'Loose leaf tea', 'Honey', 'Travel mugs'],
+    tags: ['food', 'beverages'],
+    icon: 'Coffee',
+    color: '25:4',
+    cardStyle: '',
+    notes: 'Beans stay fresh 2 weeks after opening. Grinder on counter.',
+  },
+  {
+    name: 'Lunch Boxes & Bottles',
+    location: 'home',
+    area: 'Kitchen',
+    items: ['Lunch boxes (x3)', 'Water bottles (x4)', 'Ice packs', 'Reusable snack bags', 'Thermos'],
+    tags: ['kids', 'school'],
+    icon: 'Box',
+    color: '200:1',
+    cardStyle: '',
+    notes: 'Label everything with names. Replace ice packs each fall.',
+  },
+
+  // ── Kids' Room ──
+  {
+    name: 'School Supplies',
+    location: 'home',
+    area: "Kids' Room",
+    items: ['Pencils', 'Crayons', 'Notebooks', 'Glue sticks', 'Safety scissors', 'Rulers'],
+    tags: ['school', 'kids'],
+    icon: 'Book',
+    color: '220:2',
+    cardStyle: '',
+    notes: 'Restock at back-to-school sales in August.',
+  },
+  {
+    name: 'Art & Craft Supplies',
+    location: 'home',
+    area: "Kids' Room",
+    items: ['Watercolor paints', 'Construction paper', 'Pipe cleaners', 'Googly eyes', 'Pom poms', 'Markers', 'Sticker sheets'],
+    tags: ['art', 'kids', 'hobbies'],
+    icon: 'Paintbrush',
+    color: '280:1',
+    cardStyle: JSON.stringify({ variant: 'gradient', secondaryColor: '320:1' }),
+    notes: 'Washable markers only! Keep paint lids sealed tight.',
+  },
+  {
+    name: 'Baby & Toddler',
+    location: 'home',
+    area: "Kids' Room",
+    items: ['Diapers', 'Wipes', 'Bottles', 'Pacifiers', 'Burp cloths', 'Teething rings'],
+    tags: ['baby', 'kids'],
+    icon: 'Baby',
+    color: '320:1',
+    cardStyle: '',
+    notes: 'Rotate out items as baby grows. Size 3 diapers currently.',
+  },
+  {
+    name: 'Costumes & Dress-Up',
+    location: 'home',
+    area: "Kids' Room",
+    items: ['Princess dresses', 'Superhero capes', 'Pirate hat', 'Fairy wings', 'Face paint', 'Wigs'],
+    tags: ['kids', 'costumes', 'seasonal'],
+    icon: 'Scissors',
+    color: '280:2',
+    cardStyle: JSON.stringify({ variant: 'stripe', secondaryColor: '45:1', stripePosition: 'left', stripeWidth: 3 }),
+    notes: 'Halloween costumes on top. Wash face paint brushes after use.',
+  },
+  {
+    name: 'LEGO & Building Toys',
+    location: 'home',
+    area: "Kids' Room",
+    items: ['LEGO Classic bucket', 'LEGO City set', 'Magna-Tiles', 'Lincoln Logs', 'Instruction booklets'],
+    tags: ['kids', 'games'],
+    icon: 'Blocks',
+    color: '45:1',
+    cardStyle: '',
+    notes: 'Sort by color or set. Small pieces — keep away from baby.',
+  },
+  {
+    name: 'Stuffed Animals & Dolls',
+    location: 'home',
+    area: "Kids' Room",
+    items: ['Teddy bear', 'Bunny plush', 'Dinosaur collection', 'Baby dolls (x2)', 'Doll clothes'],
+    tags: ['kids', 'toys'],
+    icon: 'Heart',
+    color: '340:1',
+    cardStyle: '',
+    notes: 'Machine wash on gentle cycle. Air dry.',
+  },
+
+  // ── Basement ──
+  {
+    name: 'Holiday Decorations',
+    location: 'home',
+    area: 'Basement',
+    items: ['String lights', 'Ornaments box', 'Wreath', 'Tree stand', 'Stockings', 'Advent calendar'],
+    tags: ['seasonal', 'holiday'],
+    icon: 'Gift',
+    color: '140:2',
+    cardStyle: JSON.stringify({ variant: 'stripe', secondaryColor: '0:3', stripePosition: 'left', stripeWidth: 4 }),
+    notes: 'Fragile ornaments wrapped in tissue paper. Lights tested and working.',
+  },
+  {
+    name: 'Important Documents',
+    location: 'home',
+    area: 'Basement',
+    items: ['Birth certificates', 'Passports', 'Insurance policies', 'Property deed', 'Tax returns'],
     tags: ['documents', 'financial'],
-    icon: '📁',
-    color: '#2c3e50',
-    notes: 'Shred documents older than 7 years.',
+    icon: 'Briefcase',
+    color: 'neutral:3',
+    cardStyle: JSON.stringify({ variant: 'border', secondaryColor: 'neutral:4', borderWidth: 2, borderStyle: 'solid' }),
+    notes: 'Shred documents older than 7 years. Originals in fireproof safe.',
   },
   {
-    name: 'Camping Gear',
-    area: 'Garage',
-    items: ['Tent', 'Sleeping bag', 'Headlamp', 'Camping stove', 'Water filter', 'Tarp'],
+    name: 'Board Games',
+    location: 'home',
+    area: 'Basement',
+    items: ['Candy Land', 'Uno', 'Sorry!', 'Jenga', 'Playing cards', 'Puzzles'],
+    tags: ['games', 'family'],
+    icon: 'Star',
+    color: '280:3',
+    cardStyle: '',
+    notes: 'Check for missing pieces periodically.',
+  },
+  {
+    name: 'Cables & Chargers',
+    location: 'home',
+    area: 'Basement',
+    items: ['USB-C cables', 'HDMI cable', 'Lightning cable', 'Power strip', 'USB hub', 'Laptop charger'],
+    tags: ['electronics', 'cables'],
+    icon: 'Laptop',
+    color: '170:2',
+    cardStyle: '',
+    notes: 'Labeled by type with colored tape.',
+  },
+
+  // ── Closet ──
+  {
+    name: 'Winter Gear',
+    location: 'home',
+    area: 'Closet',
+    items: ['Snow boots', 'Thermal gloves', 'Wool scarf', 'Beanie', 'Hand warmers'],
+    tags: ['seasonal', 'clothing'],
+    icon: 'Shirt',
+    color: '245:2',
+    cardStyle: '',
+    notes: 'Kids outgrow boots yearly — check sizes in October.',
+  },
+  {
+    name: 'Gift Wrap',
+    location: 'home',
+    area: 'Closet',
+    items: ['Wrapping paper rolls', 'Gift bags', 'Ribbon', 'Tissue paper', 'Gift tags', 'Tape'],
+    tags: ['holiday', 'supplies'],
+    icon: 'Gift',
+    color: '340:2',
+    cardStyle: JSON.stringify({ variant: 'gradient', secondaryColor: '25:1' }),
+    notes: 'Birthday and holiday patterns sorted separately.',
+  },
+  {
+    name: 'Backpacks & Bags',
+    location: 'home',
+    area: 'Closet',
+    items: ['School backpacks (x2)', 'Gym bag', 'Reusable grocery bags', 'Diaper bag', 'Beach tote'],
+    tags: ['kids', 'supplies'],
+    icon: 'Backpack',
+    color: '200:3',
+    cardStyle: '',
+    notes: 'Wash backpacks at end of school year.',
+  },
+
+  // ── Self Storage (no areas) ──
+  {
+    name: 'Outgrown Kids Clothes',
+    location: 'storage',
+    area: '',
+    items: ['0-3 month onesies', '6-12 month outfits', '2T winter jackets', '3T shoes', 'Newborn hats'],
+    tags: ['kids', 'clothing'],
+    icon: 'Shirt',
+    color: '320:2',
+    cardStyle: '',
+    notes: 'Sorted by size. Save for next baby or donate.',
+  },
+  {
+    name: 'Old Electronics',
+    location: 'storage',
+    area: '',
+    items: ['iPad (2nd gen)', 'Old laptop', 'Kindle', 'Phone chargers', 'Camera', 'External hard drive'],
+    tags: ['electronics'],
+    icon: 'Laptop',
+    color: 'neutral:2',
+    cardStyle: '',
+    notes: 'Wipe data before donating. Hard drive has family photos backup.',
+  },
+  {
+    name: 'Seasonal Furniture',
+    location: 'storage',
+    area: '',
+    items: ['Patio cushions', 'Folding table', 'Camp chairs (x4)', 'Patio umbrella'],
     tags: ['outdoor', 'seasonal'],
-    icon: '⛺',
-    color: '#16a085',
-    notes: 'Dry tent completely before storing to prevent mildew.',
+    icon: 'Armchair',
+    color: '25:3',
+    cardStyle: '',
+    notes: 'Bring out patio furniture in April. Store after Labor Day.',
+  },
+  {
+    name: 'Keepsakes & Memories',
+    location: 'storage',
+    area: '',
+    items: ['Wedding album', 'Baby books (x2)', 'Kids artwork portfolio', 'Family photo prints', 'Childhood trophies'],
+    tags: ['family', 'documents'],
+    icon: 'Heart',
+    color: '340:1',
+    cardStyle: JSON.stringify({ variant: 'stripe', secondaryColor: '280:1', stripePosition: 'left', stripeWidth: 3 }),
+    notes: 'Handle with care. Consider digitizing photos.',
   },
 ];
 
 const TAG_COLORS: Record<string, string> = {
-  tools: '#e74c3c',
-  electric: '#e67e22',
-  seasonal: '#f1c40f',
-  holiday: '#2ecc71',
-  food: '#e67e22',
-  baking: '#f39c12',
-  office: '#3498db',
-  supplies: '#2980b9',
-  medical: '#c0392b',
-  emergency: '#e74c3c',
-  clothing: '#9b59b6',
-  electronics: '#1abc9c',
-  cables: '#16a085',
-  'home improvement': '#d35400',
-  games: '#8e44ad',
-  entertainment: '#9b59b6',
-  cleaning: '#27ae60',
-  documents: '#34495e',
-  financial: '#2c3e50',
-  outdoor: '#16a085',
+  tools: '0:3',
+  dad: '25:3',
+  seasonal: '45:1',
+  holiday: '140:2',
+  food: '25:1',
+  baking: '25:2',
+  school: '220:2',
+  kids: '280:1',
+  medical: '0:4',
+  emergency: '0:3',
+  clothing: '245:2',
+  electronics: '170:2',
+  cables: '170:3',
+  art: '280:2',
+  hobbies: '320:1',
+  games: '280:3',
+  family: '200:1',
+  pets: '25:3',
+  dog: '25:4',
+  outdoor: '140:3',
+  sports: '200:2',
+  baby: '320:1',
+  costumes: '280:2',
+  supplies: '200:3',
+  cleaning: '140:1',
+  documents: 'neutral:3',
+  financial: 'neutral:4',
+  beverages: '25:4',
+  garden: '80:2',
+  toys: '340:1',
 };
+
+function createLocation(userId: string, name: string): string {
+  const locationId = generateUuid();
+  const inviteCode = crypto.randomBytes(16).toString('hex');
+
+  querySync(
+    'INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4)',
+    [locationId, name, userId, inviteCode],
+  );
+  querySync(
+    'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
+    [generateUuid(), locationId, userId, 'admin'],
+  );
+
+  return locationId;
+}
 
 export function seedDemoData(): void {
   if (!config.demoMode) return;
@@ -175,46 +438,39 @@ export function seedDemoData(): void {
       [userId, 'demo', passwordHash, 'Demo User'],
     );
 
-    // Create demo location
-    const locationId = generateUuid();
-    const inviteCode = crypto.randomBytes(16).toString('hex');
+    // Create locations
+    const homeLocationId = createLocation(userId, 'Our House');
+    const storageLocationId = createLocation(userId, 'Self Storage Unit');
 
-    querySync(
-      'INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4)',
-      [locationId, 'Demo Location', userId, inviteCode],
-    );
+    // Set active location to home
+    querySync('UPDATE users SET active_location_id = $1 WHERE id = $2', [homeLocationId, userId]);
 
-    // Add user as admin
-    querySync(
-      'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
-      [generateUuid(), locationId, userId, 'admin'],
-    );
-
-    // Set active location
-    querySync('UPDATE users SET active_location_id = $1 WHERE id = $2', [locationId, userId]);
-
-    // Create areas
-    const areaNames = ['Garage', 'Kitchen', 'Office', 'Closet', 'Storage Room'];
+    // Create areas for home location only (storage has no areas)
     const areaMap = new Map<string, string>();
-
-    for (const areaName of areaNames) {
+    for (const areaName of HOME_AREAS) {
       const areaId = generateUuid();
       areaMap.set(areaName, areaId);
       querySync(
         'INSERT INTO areas (id, location_id, name, created_by) VALUES ($1, $2, $3, $4)',
-        [areaId, locationId, areaName, userId],
+        [areaId, homeLocationId, areaName, userId],
       );
     }
 
     // Create bins with items
+    const binIdMap = new Map<string, string>();
+    const homeBinCount = DEMO_BINS.filter((b) => b.location === 'home').length;
+    const storageBinCount = DEMO_BINS.filter((b) => b.location === 'storage').length;
+
     for (const bin of DEMO_BINS) {
       const binId = generateShortCode(bin.name);
-      const areaId = areaMap.get(bin.area) ?? null;
+      binIdMap.set(bin.name, binId);
+      const locationId = bin.location === 'home' ? homeLocationId : storageLocationId;
+      const areaId = bin.area ? (areaMap.get(bin.area) ?? null) : null;
 
       querySync(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [binId, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, userId],
+        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [binId, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle, userId],
       );
 
       for (let i = 0; i < bin.items.length; i++) {
@@ -225,12 +481,55 @@ export function seedDemoData(): void {
       }
     }
 
-    // Add tag colors
-    for (const [tag, color] of Object.entries(TAG_COLORS)) {
+    // Add tag colors to both locations
+    for (const locId of [homeLocationId, storageLocationId]) {
+      for (const [tag, color] of Object.entries(TAG_COLORS)) {
+        querySync(
+          'INSERT INTO tag_colors (id, location_id, tag, color) VALUES ($1, $2, $3, $4)',
+          [generateUuid(), locId, tag, color],
+        );
+      }
+    }
+
+    // Pin frequently accessed bins
+    const pinnedBinNames = ['First Aid Kit', 'School Supplies', 'Dog Supplies', 'Cables & Chargers', 'Coffee & Tea'];
+    for (let i = 0; i < pinnedBinNames.length; i++) {
+      const binId = binIdMap.get(pinnedBinNames[i]);
+      if (binId) {
+        querySync(
+          'INSERT INTO pinned_bins (user_id, bin_id, position) VALUES ($1, $2, $3)',
+          [userId, binId, i],
+        );
+      }
+    }
+
+    // Add saved searches (saved views)
+    const savedViews = [
+      { name: 'Kids stuff', search_query: '', sort: 'name', filters: JSON.stringify({ tags: ['kids'], tagMode: 'any', colors: [], areas: [], hasItems: false, hasNotes: false }) },
+      { name: 'Outdoor & sports', search_query: '', sort: 'updated', filters: JSON.stringify({ tags: ['outdoor', 'sports'], tagMode: 'any', colors: [], areas: [], hasItems: false, hasNotes: false }) },
+      { name: 'Everything in the garage', search_query: '', sort: 'name', filters: JSON.stringify({ tags: [], tagMode: 'any', colors: [], areas: [areaMap.get('Garage')!], hasItems: false, hasNotes: false }) },
+      { name: 'Holiday & seasonal', search_query: '', sort: 'updated', filters: JSON.stringify({ tags: ['seasonal', 'holiday'], tagMode: 'any', colors: [], areas: [], hasItems: false, hasNotes: false }) },
+    ];
+    for (const view of savedViews) {
       querySync(
-        'INSERT INTO tag_colors (id, location_id, tag, color) VALUES ($1, $2, $3, $4)',
-        [generateUuid(), locationId, tag, color],
+        'INSERT INTO saved_views (id, user_id, name, search_query, sort, filters) VALUES ($1, $2, $3, $4, $5, $6)',
+        [generateUuid(), userId, view.name, view.search_query, view.sort, view.filters],
       );
+    }
+
+    // Seed scan history (simulate recent QR scans)
+    const scannedBinNames = [
+      'Dog Supplies', 'Coffee & Tea', 'School Supplies', 'First Aid Kit',
+      'Baking Supplies', 'Board Games', 'Cleaning Supplies', 'Baby & Toddler',
+    ];
+    for (const name of scannedBinNames) {
+      const binId = binIdMap.get(name);
+      if (binId) {
+        querySync(
+          'INSERT INTO scan_history (id, user_id, bin_id) VALUES ($1, $2, $3)',
+          [generateUuid(), userId, binId],
+        );
+      }
     }
 
     // Mark onboarding completed
@@ -243,7 +542,9 @@ export function seedDemoData(): void {
   try {
     runSeed();
     const elapsed = Date.now() - startTime;
-    const message = `Demo data seeded in ${elapsed}ms (${DEMO_BINS.length} bins, 5 areas)`;
+    const homeBins = DEMO_BINS.filter((b) => b.location === 'home').length;
+    const storageBins = DEMO_BINS.filter((b) => b.location === 'storage').length;
+    const message = `Demo data seeded in ${elapsed}ms (${homeBins} + ${storageBins} bins across 2 locations, ${HOME_AREAS.length} areas)`;
     console.log(message);
     pushLog({ level: 'info', message });
   } catch (err) {

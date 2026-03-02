@@ -77,7 +77,7 @@ export const DEFAULT_LABEL_OPTIONS: LabelOptions = {
   showBinName: true,
   showIcon: true,
   showBinCode: true,
-  showColorSwatch: false,
+  showColorSwatch: true,
 };
 
 const DEFAULT_CUSTOM_STATE: CustomState = { customizing: false, overrides: {} };
