@@ -768,7 +768,7 @@ export function seedDemoData(): void {
     }
 
     // Pin frequently accessed bins
-    const pinnedBinNames = ['Dog Supplies', 'Networking Gear', 'Brewing Equipment', 'Board Games', 'Yarn Stash'];
+    const pinnedBinNames = ['Networking Gear', 'Brewing Equipment','Yarn Stash'];
     for (let i = 0; i < pinnedBinNames.length; i++) {
       const binId = binIdMap.get(pinnedBinNames[i]);
       if (binId) {

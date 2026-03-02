@@ -105,9 +105,8 @@ export function decryptApiKey(stored: string): string {
   }
 }
 
-export function maskApiKey(key: string): string {
-  if (key.length <= 4) return '****';
-  return `****${key.slice(-4)}`;
+export function maskApiKey(_key: string): string {
+  return '****';
 }
 
 /** If the API key is masked (starts with ****), load the real key from the DB. */

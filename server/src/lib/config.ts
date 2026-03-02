@@ -72,6 +72,8 @@ export const config = Object.freeze({
 
   // Rate limiting
   disableRateLimit: process.env.NODE_ENV === 'test' || parseBool(process.env.DISABLE_RATE_LIMIT, false),
+  aiRateLimit: clamp(parseInt(process.env.AI_RATE_LIMIT || '30', 10), 1, 10000, 30),
+  aiRateLimitApiKey: clamp(parseInt(process.env.AI_RATE_LIMIT_API_KEY || '1000', 10), 1, 100000, 1000),
 });
 
 /** Returns true if all required env vars for AI are set. */
