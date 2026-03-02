@@ -103,7 +103,7 @@ export function BinDetailPage() {
           />
         </button>
         {photosExpanded && (
-          <div className="pb-4 animate-fade-in-up">
+          <div className="pb-4">
             <PhotoGallery binId={bin.id} variant="inline" />
           </div>
         )}

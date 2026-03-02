@@ -1,4 +1,5 @@
 import './print.css';
+import { Card, CardContent } from '@/components/ui/card';
 import { MenuButton } from '@/components/ui/menu-button';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,19 +28,28 @@ export function PrintPage() {
       <div className="page-content print-hide max-w-6xl">
         <div className="flex items-center gap-2 mb-4">
           <MenuButton />
-          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-9 w-16" />
         </div>
         <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
-          <div className="glass-card rounded-[var(--radius-lg)] p-4 space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-3 px-3 py-3">
-                <Skeleton className="h-[22px] w-[22px] rounded-full shrink-0" />
-                <Skeleton className="h-4 flex-1" />
-              </div>
+          <div className="flex flex-col gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i}>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-4 rounded shrink-0" />
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
           <div className="hidden lg:block">
-            <Skeleton className="h-64 w-full rounded-[var(--radius-lg)]" />
+            <Card>
+              <CardContent className="flex flex-col items-center gap-3 py-8">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-4 w-40" />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

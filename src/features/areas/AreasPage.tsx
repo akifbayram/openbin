@@ -218,7 +218,7 @@ export function AreasPage() {
             )}
 
             {/* Location info card */}
-            <div className="glass-card rounded-[var(--radius-lg)] p-4 animate-fade-in-up">
+            <div className="glass-card rounded-[var(--radius-lg)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2 shrink-0">
