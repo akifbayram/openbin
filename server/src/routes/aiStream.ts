@@ -5,12 +5,12 @@ import { validateEndpointUrl } from '../lib/aiCaller.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
 import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
+import { CommandResultSchema, QueryResultSchema } from '../lib/aiSchemas.js';
 import type { UserAiSettings } from '../lib/aiSettings.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
-import { initSseResponse, pipeAiStreamToResponse } from '../lib/aiStream.js';
-import { executeActions } from '../lib/commandExecutor.js';
+import { pipeAiStreamToResponse } from '../lib/aiStream.js';
 import type { CommandRequest } from '../lib/commandParser.js';
-import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg, parseCommand } from '../lib/commandParser.js';
+import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
 import { safePath } from '../lib/pathSafety.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
@@ -53,6 +53,7 @@ streamRouter.post('/query/stream', aiLimiter, requireLocationMember(), aiRouteHa
   ]);
 
   await pipeAiStreamToResponse(res, model, {
+    schema: QueryResultSchema,
     system: buildQuerySysPrompt(settings.query_prompt ?? undefined),
     userContent: buildQueryUserMsg(question, context),
     ...streamOpts(settings),
@@ -70,6 +71,7 @@ streamRouter.post('/command/stream', aiLimiter, requireLocationMember(), aiRoute
   const request: CommandRequest = { text, context };
 
   await pipeAiStreamToResponse(res, model, {
+    schema: CommandResultSchema,
     system: buildCommandSysPrompt(request, settings.command_prompt ?? undefined),
     userContent: buildCommandUserMsg(request),
     ...streamOpts(settings, { temperature: 0.2 }),
@@ -202,40 +204,6 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
     userContent: [...imageParts, { type: 'text' as const, text: buildAnalysisUserText(imageBuffers.length) }],
     ...streamOpts(settings, { maxTokens: imageBuffers.length > 1 ? 2000 : 1500 }),
   });
-}));
-
-// POST /api/ai/execute/stream — parse + execute, return result as SSE
-streamRouter.post('/execute/stream', aiLimiter, requireLocationMember(), aiRouteHandler('stream execute', async (req, res) => {
-  const text = validateTextInput(req.body.text, 'text');
-  const { locationId } = req.body;
-  const settings = await getUserAiSettings(req.user!.id);
-
-  // Step 1: parse (blocking — needs validate() with live DB ids)
-  const context = await buildCommandContext(locationId, req.user!.id);
-  const request: CommandRequest = { text, context };
-  const parsed = await parseCommand(settings.config, request, settings.command_prompt ?? undefined, settings);
-
-  const writeEvent = initSseResponse(res);
-
-  try {
-    if (parsed.actions.length === 0) {
-      writeEvent({ type: 'done', text: JSON.stringify({ executed: [], interpretation: parsed.interpretation, errors: [] }) });
-      return;
-    }
-
-    // Step 2: execute
-    const result = await executeActions(parsed.actions, locationId, req.user!.id, req.user!.username, req.authMethod, req.apiKeyId);
-    writeEvent({
-      type: 'done',
-      text: JSON.stringify({
-        executed: result.executed,
-        interpretation: parsed.interpretation,
-        errors: result.errors,
-      }),
-    });
-  } finally {
-    res.end();
-  }
 }));
 
 export { streamRouter };

@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import { mapAiError } from './aiErrors';
 import { useAiSettings } from './useAiSettings';
-import { useCommand } from './useCommand';
-import { mapCommandErrorMessage, type QueryResult, queryInventoryText } from './useInventoryQuery';
+import type { QueryResult } from './useInventoryQuery';
+import { useStreamingCommand } from './useStreamingCommand';
+import { useStreamingQuery } from './useStreamingQuery';
 
 type State = 'idle' | 'parsing' | 'preview' | 'executing' | 'querying' | 'query-result';
 
@@ -15,7 +17,8 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
   const navigate = useNavigate();
   const { settings, isLoading: aiSettingsLoading } = useAiSettings();
   const { showToast } = useToast();
-  const { actions, interpretation, isParsing, error, parse, clearCommand } = useCommand();
+  const { actions, interpretation, isStreaming: isParsing, error, parse, clear: clearCommand } = useStreamingCommand();
+  const { query, isStreaming: isQueryStreaming, error: queryError, clear: clearQuery } = useStreamingQuery();
   const [text, setText] = useState('');
   const [checkedActions, setCheckedActions] = useState<Map<number, boolean>>(new Map());
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
@@ -29,7 +32,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
 
   const state: State = checkedActions.size > 0 && actions ? 'preview'
     : isParsing ? 'parsing'
-    : isQuerying ? 'querying'
+    : (isQuerying || isQueryStreaming) ? 'querying'
     : queryResult ? 'query-result'
     : actions ? 'preview'
     : 'idle';
@@ -46,11 +49,11 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
         clearCommand();
         setIsQuerying(true);
         try {
-          const qr = await queryInventoryText({ question: text.trim(), locationId: activeLocationId });
+          const qr = await query({ question: text.trim(), locationId: activeLocationId });
           setQueryResult(qr);
         } catch (err) {
           setQueryResult(null);
-          showToast({ message: mapCommandErrorMessage(err) });
+          showToast({ message: mapAiError(err, 'Query failed') });
         } finally {
           setIsQuerying(false);
         }
@@ -64,6 +67,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
 
   function handleBack() {
     clearCommand();
+    clearQuery();
     setCheckedActions(new Map());
     setQueryResult(null);
   }
@@ -80,6 +84,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     if (!v) {
       setText('');
       clearCommand();
+      clearQuery();
       setCheckedActions(new Map());
       setQueryResult(null);
       setPhotoMode(false);
@@ -129,7 +134,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     // Command
     actions,
     interpretation,
-    error,
+    error: error || queryError,
     // Handlers
     handleParse,
     handleBack,

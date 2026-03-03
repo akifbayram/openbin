@@ -2,24 +2,19 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 import { generateUuid, query } from '../db.js';
-import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
+import { fetchExistingTags } from '../lib/aiContext.js';
 import type { ImageInput } from '../lib/aiProviders.js';
 import { analyzeImages, testConnection } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
-import { executeActions } from '../lib/commandExecutor.js';
-import type { CommandRequest } from '../lib/commandParser.js';
-import { parseCommand } from '../lib/commandParser.js';
 import { getEnvAiConfig } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
 import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
-import { queryInventory } from '../lib/inventoryQuery.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
 import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
 import { memoryPhotoUpload, PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
-import { requireLocationMember } from '../middleware/locationAccess.js';
 
 const router = Router();
 
@@ -327,56 +322,6 @@ router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async
 
   const result = await structureText(settings.config, request, settings.structure_prompt || undefined, settings);
   res.json(result);
-}));
-
-// POST /api/ai/command — parse natural language command into structured actions
-router.post('/command', aiLimiter, requireLocationMember(), aiRouteHandler('parse command', async (req, res) => {
-  const text = validateTextInput(req.body.text, 'text');
-  const { locationId } = req.body;
-  const settings = await getUserAiSettings(req.user!.id);
-
-  const context = await buildCommandContext(locationId, req.user!.id);
-  const request: CommandRequest = { text, context };
-  const result = await parseCommand(settings.config, request, settings.command_prompt || undefined, settings);
-  res.json(result);
-}));
-
-// POST /api/ai/query — query inventory with natural language (read-only AI endpoint)
-router.post('/query', aiLimiter, requireLocationMember(), aiRouteHandler('query inventory', async (req, res) => {
-  const question = validateTextInput(req.body.question, 'question');
-  const { locationId } = req.body;
-  const settings = await getUserAiSettings(req.user!.id);
-
-  const context = await buildInventoryContext(locationId, req.user!.id);
-  const result = await queryInventory(settings.config, question, context, settings.query_prompt || undefined, settings);
-  res.json(result);
-}));
-
-// POST /api/ai/execute — parse and execute a natural language command server-side
-router.post('/execute', aiLimiter, requireLocationMember(), aiRouteHandler('execute command', async (req, res) => {
-  const text = validateTextInput(req.body.text, 'text');
-  const { locationId } = req.body;
-  const settings = await getUserAiSettings(req.user!.id);
-
-  const context = await buildCommandContext(locationId, req.user!.id);
-  const request: CommandRequest = { text, context };
-  const parsed = await parseCommand(settings.config, request, settings.command_prompt || undefined, settings);
-
-  if (parsed.actions.length === 0) {
-    res.json({
-      executed: [],
-      interpretation: parsed.interpretation,
-      errors: [],
-    });
-    return;
-  }
-
-  const result = await executeActions(parsed.actions, locationId, req.user!.id, req.user!.username, req.authMethod, req.apiKeyId);
-  res.json({
-    executed: result.executed,
-    interpretation: parsed.interpretation,
-    errors: result.errors,
-  });
 }));
 
 // POST /api/ai/test — test connection with provided credentials

@@ -19,6 +19,10 @@ vi.mock('@/lib/api', () => {
   return { apiFetch: vi.fn(), ApiError };
 });
 
+vi.mock('@/lib/apiStream', () => ({
+  apiStream: vi.fn(),
+}));
+
 vi.mock('@/lib/auth', () => ({
   useAuth: () => ({ activeLocationId: 'loc-1', token: 'tok', user: { id: 'u1' } }),
 }));
@@ -62,10 +66,24 @@ vi.mock('../PhotoBulkAdd', () => ({
   ),
 }));
 
-import { apiFetch } from '@/lib/api';
+import { apiStream } from '@/lib/apiStream';
 import { CommandInput } from '../CommandInput';
 
-const mockApiFetch = vi.mocked(apiFetch);
+const mockApiStream = vi.mocked(apiStream);
+
+/** Helper to create a mock async generator that yields a done event with JSON data. */
+function mockStreamDone(data: unknown) {
+  return async function* () {
+    yield { type: 'done' as const, text: JSON.stringify(data) };
+  };
+}
+
+/** Helper to create a mock async generator that yields an error event. */
+function mockStreamError(message: string, code = 'PROVIDER_ERROR') {
+  return async function* () {
+    yield { type: 'error' as const, message, code };
+  };
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -92,12 +110,12 @@ describe('CommandInput', () => {
   });
 
   it('transitions to preview state on successful parsing', async () => {
-    mockApiFetch.mockResolvedValue({
+    mockApiStream.mockReturnValue(mockStreamDone({
       actions: [
         { type: 'add_items', bin_id: 'b1', bin_name: 'Tools', items: ['Hammer'] },
       ],
       interpretation: 'Add hammer to Tools',
-    });
+    })());
 
     render(<CommandInput {...defaultProps} />);
 
@@ -115,12 +133,12 @@ describe('CommandInput', () => {
   });
 
   it('back button returns to idle state', async () => {
-    mockApiFetch.mockResolvedValue({
+    mockApiStream.mockReturnValue(mockStreamDone({
       actions: [
         { type: 'add_items', bin_id: 'b1', bin_name: 'Tools', items: ['Hammer'] },
       ],
       interpretation: 'Add hammer to Tools',
-    });
+    })());
 
     render(<CommandInput {...defaultProps} />);
 
@@ -138,7 +156,7 @@ describe('CommandInput', () => {
   });
 
   it('shows error message on failure', async () => {
-    mockApiFetch.mockRejectedValue(new Error('Network failed'));
+    mockApiStream.mockReturnValue(mockStreamError("Couldn't understand that command")());
 
     render(<CommandInput {...defaultProps} />);
 
@@ -147,18 +165,19 @@ describe('CommandInput', () => {
     fireEvent.click(screen.getByText('Send'));
 
     await waitFor(() => {
-      expect(screen.getByText("Couldn't understand that command — try rephrasing")).toBeDefined();
+      expect(screen.getByText("Couldn't understand that command")).toBeDefined();
     });
   });
 
   it('falls back to inventory query when command returns zero actions', async () => {
-    // First call: command returns 0 actions. Second call: query returns result.
-    mockApiFetch
-      .mockResolvedValueOnce({
+    // First call: command stream returns 0 actions
+    // Second call: query stream returns result
+    mockApiStream
+      .mockReturnValueOnce(mockStreamDone({
         actions: [],
         interpretation: '',
-      })
-      .mockResolvedValueOnce({
+      })())
+      .mockReturnValueOnce(mockStreamDone({
         answer: 'Glass cleaner is in the Kitchen bin.',
         matches: [
           {
@@ -170,7 +189,7 @@ describe('CommandInput', () => {
             relevance: 'Contains glass cleaner',
           },
         ],
-      });
+      })());
 
     render(<CommandInput {...defaultProps} />);
 
@@ -190,9 +209,9 @@ describe('CommandInput', () => {
   });
 
   it('navigates to bin on match click', async () => {
-    mockApiFetch
-      .mockResolvedValueOnce({ actions: [], interpretation: '' })
-      .mockResolvedValueOnce({
+    mockApiStream
+      .mockReturnValueOnce(mockStreamDone({ actions: [], interpretation: '' })())
+      .mockReturnValueOnce(mockStreamDone({
         answer: 'Found it in Kitchen.',
         matches: [
           {
@@ -204,7 +223,7 @@ describe('CommandInput', () => {
             relevance: 'Match',
           },
         ],
-      });
+      })());
 
     const onOpenChange = vi.fn();
     render(<CommandInput open={true} onOpenChange={onOpenChange} />);
@@ -227,12 +246,12 @@ describe('CommandInput', () => {
   });
 
   it('back from query result returns to idle', async () => {
-    mockApiFetch
-      .mockResolvedValueOnce({ actions: [], interpretation: '' })
-      .mockResolvedValueOnce({
+    mockApiStream
+      .mockReturnValueOnce(mockStreamDone({ actions: [], interpretation: '' })())
+      .mockReturnValueOnce(mockStreamDone({
         answer: 'Found it.',
         matches: [],
-      });
+      })());
 
     render(<CommandInput {...defaultProps} />);
 
@@ -251,12 +270,12 @@ describe('CommandInput', () => {
   });
 
   it('shows answer even with zero matches', async () => {
-    mockApiFetch
-      .mockResolvedValueOnce({ actions: [], interpretation: '' })
-      .mockResolvedValueOnce({
+    mockApiStream
+      .mockReturnValueOnce(mockStreamDone({ actions: [], interpretation: '' })())
+      .mockReturnValueOnce(mockStreamDone({
         answer: "I couldn't find any bins containing that item.",
         matches: [],
-      });
+      })());
 
     render(<CommandInput {...defaultProps} />);
 

@@ -1,5 +1,3 @@
-import { useCallback, useState } from 'react';
-import { apiFetch } from '@/lib/api';
 import { mapAiError } from './aiErrors';
 
 export type CommandAction =
@@ -33,50 +31,4 @@ export interface CommandResult {
 /** @deprecated Use mapAiError from aiErrors.ts instead */
 export function mapCommandErrorMessage(err: unknown): string {
   return mapAiError(err, 'Couldn\'t understand that command — try rephrasing');
-}
-
-export async function parseCommandText(options: {
-  text: string;
-  locationId: string;
-}): Promise<CommandResult> {
-  return apiFetch<CommandResult>('/api/ai/command', {
-    method: 'POST',
-    body: {
-      text: options.text,
-      locationId: options.locationId,
-    },
-  });
-}
-
-export function useCommand() {
-  const [actions, setActions] = useState<CommandAction[] | null>(null);
-  const [interpretation, setInterpretation] = useState<string | null>(null);
-  const [isParsing, setIsParsing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const parse = useCallback(async (options: { text: string; locationId: string }) => {
-    setIsParsing(true);
-    setError(null);
-    setActions(null);
-    setInterpretation(null);
-    try {
-      const result = await parseCommandText(options);
-      setActions(result.actions);
-      setInterpretation(result.interpretation);
-      return result;
-    } catch (err) {
-      setError(mapAiError(err, 'Couldn\'t understand that command — try rephrasing'));
-      return null;
-    } finally {
-      setIsParsing(false);
-    }
-  }, []);
-
-  const clearCommand = useCallback(() => {
-    setActions(null);
-    setInterpretation(null);
-    setError(null);
-  }, []);
-
-  return { actions, interpretation, isParsing, error, parse, clearCommand };
 }

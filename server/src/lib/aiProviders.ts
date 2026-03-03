@@ -7,7 +7,7 @@ import { createSdkModel } from './sdkProviderFactory.js';
 
 export type { AiProviderConfig, AiProviderType } from './aiCaller.js';
 // Re-export types that other modules import from here
-export { AiAnalysisError, stripCodeFences } from './aiCaller.js';
+export { AiAnalysisError } from './aiCaller.js';
 
 export interface AiSuggestionsResult {
   name: string;

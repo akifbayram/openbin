@@ -12,3 +12,22 @@ export const AiSuggestionsSchema = z.object({
 export const StructureTextSchema = z.object({
   items: z.array(z.string()),
 });
+
+/** Schema for command parser results. Used with Output.object() in aiStream.ts. */
+export const CommandResultSchema = z.object({
+  actions: z.array(z.record(z.string(), z.unknown())),
+  interpretation: z.string(),
+});
+
+/** Schema for inventory query results. Used with Output.object() in aiStream.ts. */
+export const QueryResultSchema = z.object({
+  answer: z.string(),
+  matches: z.array(z.object({
+    bin_id: z.string(),
+    name: z.string(),
+    area_name: z.string(),
+    items: z.array(z.string()),
+    tags: z.array(z.string()),
+    relevance: z.string(),
+  })),
+});

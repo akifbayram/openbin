@@ -1,5 +1,5 @@
 import type { LanguageModel, UserContent } from 'ai';
-import { streamText } from 'ai';
+import { Output, streamText } from 'ai';
 import type { Response } from 'express';
 import type { AiErrorCode } from './aiCaller.js';
 import { mapSdkError } from './aiCaller.js';
@@ -7,6 +7,8 @@ import { mapSdkError } from './aiCaller.js';
 export interface StreamOptions {
   system: string;
   userContent: UserContent;
+  /** Zod schema — when provided, constrains the model to output valid JSON matching this shape. */
+  schema?: Parameters<typeof Output.object>[0]['schema'];
   maxTokens?: number;
   temperature?: number;
   topP?: number;
@@ -32,7 +34,10 @@ const SAFE_MESSAGES: Partial<Record<AiErrorCode, string>> = {
 };
 
 /**
- * Stream AI text output as SSE to an Express response.
+ * Stream AI output as SSE to an Express response.
+ *
+ * When `opts.schema` is provided, uses Output.object() to constrain the model
+ * to valid JSON matching the given Zod schema.
  *
  * Protocol: each SSE `data:` event carries one of:
  *   { type: 'delta', text: string }   — incremental text chunk
@@ -49,6 +54,7 @@ export async function pipeAiStreamToResponse(
   try {
     const { textStream, text: textPromise } = streamText({
       model,
+      ...(opts.schema ? { output: Output.object({ schema: opts.schema }) } : {}),
       system: opts.system,
       messages: [{ role: 'user' as const, content: opts.userContent }],
       maxOutputTokens: opts.maxTokens,

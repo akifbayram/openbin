@@ -85,40 +85,6 @@ export class AiAnalysisError extends Error {
   }
 }
 
-export function stripCodeFences(text: string): string {
-  let s = text.trim();
-  if (s.startsWith('```json')) s = s.slice(7);
-  else if (s.startsWith('```')) s = s.slice(3);
-  if (s.endsWith('```')) s = s.slice(0, -3);
-  return s.trim();
-}
-
-// -- Multimodal content types --
-
-export interface ImageContent {
-  type: 'image';
-  base64: string;
-  mimeType: string;
-}
-
-export interface TextContent {
-  type: 'text';
-  text: string;
-}
-
-export type MultimodalContent = ImageContent | TextContent;
-
-export interface AiCallRequest<T> {
-  config: AiProviderConfig;
-  systemPrompt: string;
-  userContent: string | MultimodalContent[];
-  temperature: number;
-  maxTokens: number;
-  topP?: number;
-  timeoutMs?: number;
-  validate: (raw: unknown) => T;
-}
-
 /** Map Vercel AI SDK errors to AiAnalysisError. */
 export function mapSdkError(err: unknown): AiAnalysisError {
   const e = err as { name?: string; status?: number; statusCode?: number; message?: string };
@@ -136,66 +102,6 @@ export function mapSdkError(err: unknown): AiAnalysisError {
     return new AiAnalysisError('NETWORK_ERROR', msg);
   }
   return new AiAnalysisError('PROVIDER_ERROR', msg.slice(0, 200));
-}
-
-/** Build SDK user message content from MultimodalContent or string. */
-function buildUserContent(userContent: string | MultimodalContent[]): import('ai').UserContent {
-  if (typeof userContent === 'string') {
-    return userContent;
-  }
-  return userContent.map((c) => {
-    if (c.type === 'image') {
-      return {
-        type: 'image' as const,
-        image: Buffer.from(c.base64, 'base64'),
-        mimeType: c.mimeType,
-      };
-    }
-    return { type: 'text' as const, text: c.text };
-  });
-}
-
-/**
- * Core AI call using Vercel AI SDK generateText().
- * Public interface identical to the original fetch()-based version.
- */
-export async function callAiProvider<T>(request: AiCallRequest<T>): Promise<T> {
-  const { config } = request;
-
-  // SSRF protection: validate user-supplied endpoint URLs before making requests
-  if (config.endpointUrl) {
-    await validateEndpointUrl(config.endpointUrl);
-  }
-
-  const model = createSdkModel(config);
-
-  let result: Awaited<ReturnType<typeof generateText>>;
-  try {
-    result = await generateText({
-      model,
-      system: request.systemPrompt,
-      messages: [{ role: 'user' as const, content: buildUserContent(request.userContent) }],
-      maxOutputTokens: request.maxTokens,
-      temperature: request.temperature,
-      topP: request.topP,
-      abortSignal: request.timeoutMs ? AbortSignal.timeout(request.timeoutMs) : undefined,
-    });
-  } catch (err) {
-    throw mapSdkError(err);
-  }
-
-  const content = result.text;
-  if (!content) {
-    throw new AiAnalysisError('INVALID_RESPONSE', 'No content in provider response');
-  }
-
-  try {
-    const parsed = JSON.parse(stripCodeFences(content));
-    return request.validate(parsed);
-  } catch (err) {
-    if (err instanceof AiAnalysisError) throw err;
-    throw new AiAnalysisError('INVALID_RESPONSE', `Failed to parse response as JSON: ${content.slice(0, 200)}`);
-  }
 }
 
 export async function testProviderConnection(config: AiProviderConfig): Promise<void> {
