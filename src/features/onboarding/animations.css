@@ -3,6 +3,21 @@
   animation: onboardFadeInUp 0.35s ease-out;
 }
 
+.onboarding-step-exit {
+  animation: onboardFadeOut 0.2s ease-in forwards;
+}
+
+@keyframes onboardFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
 @keyframes onboardFadeInUp {
   from {
     opacity: 0;
@@ -127,30 +142,32 @@
 
 .ai-item-reveal {
   opacity: 0;
-  animation: aiFadeIn 0.3s ease-out forwards;
+  max-height: 0;
+  overflow: hidden;
+  animation: aiFadeIn 0.35s ease-out forwards;
 }
 
 @keyframes aiFadeIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    max-height: 0;
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    max-height: 2.5rem;
   }
 }
 
 /* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
-  .onboarding-step-enter, .onboarding-feature-card,
+  .onboarding-step-enter, .onboarding-step-exit, .onboarding-feature-card,
   .scan-success-enter, .scan-check-scale,
   .scan-check-draw, .scan-ring-1, .scan-ring-2, .scan-ring-3,
   .scan-text-fade, .scan-text-fade-delay, .fade-in-fast,
   .ai-photo-shimmer::after, .ai-item-reveal {
     animation: none !important;
   }
-  .ai-item-reveal { opacity: 1 !important; }
+  .ai-item-reveal { opacity: 1 !important; max-height: none !important; }
   .scan-check-draw { stroke-dashoffset: 0 !important; }
   .scan-ring { opacity: 0 !important; }
 }

@@ -71,7 +71,7 @@ function StatCard({
   const animatedValue = useAnimatedNumber(value);
   const Wrapper = onClick ? 'button' : 'div';
   return (
-    <Card className="flex-1">
+    <Card className="flex-1 shadow-none">
       <Wrapper
         className="w-full text-left"
         {...(onClick ? { onClick } : {})}

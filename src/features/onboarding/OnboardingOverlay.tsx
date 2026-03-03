@@ -1,7 +1,8 @@
 import './animations.css';
-import { Camera, ListChecks, MapPin, MessageSquare, PackagePlus, Plus, Printer, QrCode, Search, Settings, Sparkles, X } from 'lucide-react';
+import { Camera, ListChecks, MessageSquare, PackagePlus, Plus, Printer, QrCode, Search, Settings, Sparkles, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BrandIcon } from '@/components/BrandIcon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,6 @@ import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 
-const BRAND = '#5e2fe0';
 
 export interface OnboardingActions {
   step: number;
@@ -40,6 +40,7 @@ const AI_FEATURES = [
 /** Hardcoded Camping Gear bin data shared by demo steps 1 (AI) and 2 (browse). */
 const DEMO_BIN = {
   name: 'Camping Gear',
+  shortCode: 'CMPTCK',
   icon: 'Leaf',
   color: '140:3',
   items: ['Tent', 'Sleeping bags (x4)', 'Headlamps', 'Camping stove', 'Water filter', 'Tarp', 'Cooler (hard shell)', 'Fire starters'],
@@ -49,10 +50,14 @@ const DEMO_BIN = {
 
 function DemoAiShowcase({ onNext }: { onNext: () => void }) {
   const [visibleCount, setVisibleCount] = useState(0);
+  const [photoCollapsed, setPhotoCollapsed] = useState(false);
 
   useEffect(() => {
+    // Collapse photo just before items start appearing
+    const collapseTimeout = setTimeout(() => setPhotoCollapsed(true), 2500);
+    let interval: ReturnType<typeof setInterval> | undefined;
     const startTimeout = setTimeout(() => {
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         setVisibleCount((c) => {
           if (c >= DEMO_BIN.items.length) {
             clearInterval(interval);
@@ -61,15 +66,18 @@ function DemoAiShowcase({ onNext }: { onNext: () => void }) {
           return c + 1;
         });
       }, 300);
-      return () => clearInterval(interval);
-    }, 800);
-    return () => clearTimeout(startTimeout);
+    }, 3000);
+    return () => {
+      clearTimeout(collapseTimeout);
+      clearTimeout(startTimeout);
+      if (interval !== undefined) clearInterval(interval);
+    };
   }, []);
 
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: `${BRAND}18` }}>
-        <Sparkles className="h-8 w-8" style={{ color: BRAND }} />
+      <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
+        <Sparkles className="h-8 w-8 text-[var(--accent)]" />
       </div>
       <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
         AI-powered organization
@@ -78,20 +86,24 @@ function DemoAiShowcase({ onNext }: { onNext: () => void }) {
         Snap a photo, and AI catalogs everything inside.
       </p>
       {/* Mock photo area */}
-      <div className="ai-photo-shimmer w-full h-32 rounded-[var(--radius-md)] bg-[var(--bg-active)] flex items-center justify-center mb-4">
-        <Camera className="h-10 w-10 text-[var(--text-tertiary)] opacity-40" />
+      <div className={cn(
+        'w-full rounded-[var(--radius-md)] bg-[var(--bg-active)] flex items-center justify-center overflow-hidden transition-all duration-500 ease-in-out',
+        photoCollapsed ? 'max-h-0 opacity-0 mb-0' : 'ai-photo-shimmer max-h-32 opacity-100 mb-4'
+      )}>
+        <Camera className="h-10 w-10 text-[var(--text-tertiary)] opacity-40 my-[2.75rem]" />
       </div>
       {/* Revealed items */}
       {visibleCount > 0 && (
-        <div className="w-full flex flex-wrap gap-1.5 justify-center mb-5">
+        <div className="w-full rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden mb-5">
           {DEMO_BIN.items.slice(0, visibleCount).map((item, i) => (
-            <span
-              key={item}
-              className="ai-item-reveal inline-flex items-center rounded-full bg-[var(--bg-active)] px-2.5 py-1 text-[12px] text-[var(--text-secondary)]"
-              style={{ animationDelay: `${i * 0.05}s` }}
-            >
-              {item}
-            </span>
+            <div key={item} className="ai-item-reveal" style={{ animationDelay: `${i * 0.05}s` }}>
+              {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+              <div className="px-3.5 py-1">
+                <span className="text-[15px] text-[var(--text-primary)] leading-relaxed">
+                  {item}
+                </span>
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -102,6 +114,16 @@ function DemoAiShowcase({ onNext }: { onNext: () => void }) {
       >
         Next
       </Button>
+    </div>
+  );
+}
+
+function DemoQrPreview({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn('rounded-[var(--radius-lg)] p-3 flex flex-col items-center', className)}
+    >
+      <QRCodeDisplay binId={DEMO_BIN.shortCode} size={120} shortCode={DEMO_BIN.shortCode} hideActions />
     </div>
   );
 }
@@ -125,12 +147,15 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
   const [loading, setLoading] = useState(false);
   // Created bin for QR preview
   const [createdBin, setCreatedBin] = useState<Bin | null>(null);
-  // Animation key to retrigger on step change
-  const [animKey, setAnimKey] = useState(0);
+  // Step transition: fade out old content, then fade in new
+  const [displayedStep, setDisplayedStep] = useState(step);
+  const transitioning = step !== displayedStep;
 
   useEffect(() => {
-    setAnimKey((k) => k + 1);
-  }, [step]);
+    if (step === displayedStep) return;
+    const timer = setTimeout(() => setDisplayedStep(step), 200);
+    return () => clearTimeout(timer);
+  }, [step, displayedStep]);
 
   // Lock body scroll
   useEffect(() => {
@@ -236,24 +261,27 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
             <div key={i}
               className={cn(
                 'h-2 w-2 rounded-full transition-all duration-300',
+                i <= step ? 'bg-[var(--accent)]' : 'bg-[var(--bg-active)]',
                 i === step
                   ? 'scale-125'
                   : i < step
                     ? 'opacity-40'
-                    : 'bg-[var(--bg-active)]'
+                    : ''
               )}
-              style={i <= step ? { backgroundColor: BRAND } : undefined}
             />
           ))}
         </div>
 
         {/* Step content */}
-        <div key={animKey} className="onboarding-step-enter">
+        <div
+          key={displayedStep}
+          className={cn('onboarding-step-enter', transitioning && 'onboarding-step-exit')}
+        >
           {/* Step 0: Welcome (demo) */}
-          {step === 0 && demoMode && activeLocationId && (
+          {displayedStep === 0 && demoMode && activeLocationId && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: `${BRAND}18` }}>
-                <MapPin className="h-8 w-8" style={{ color: BRAND }} />
+              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
+                <BrandIcon className="h-8 w-8 text-[var(--accent)]" />
               </div>
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Welcome to OpenBin
@@ -271,10 +299,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
             </div>
           )}
           {/* Step 0: Welcome + Location + Areas (production) */}
-          {step === 0 && !demoMode && (
+          {displayedStep === 0 && !demoMode && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: `${BRAND}18` }}>
-                <MapPin className="h-8 w-8" style={{ color: BRAND }} />
+              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
+                <BrandIcon className="h-8 w-8 text-[var(--accent)]" />
               </div>
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Welcome to OpenBin
@@ -358,12 +386,12 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           )}
 
           {/* Demo Step 1: AI Showcase */}
-          {step === 1 && demoMode && (
+          {displayedStep === 1 && demoMode && (
             <DemoAiShowcase onNext={advanceStep} />
           )}
 
           {/* Step 1: Create First Bin (production) */}
-          {step === 1 && !demoMode && locationId && (
+          {displayedStep === 1 && !demoMode && locationId && (
             <div className="flex flex-col items-center text-center">
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Create your first {t.bin}
@@ -406,13 +434,13 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           )}
 
           {/* Demo Step 2: Browse bin preview */}
-          {step === 2 && demoMode && (
+          {displayedStep === 2 && demoMode && (
             <div className="flex flex-col items-center text-center">
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Everything in its place
               </h2>
               <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-                Items, tags, area, and a QR code — all tracked automatically.
+                Items, tags, area, notes, and a QR code.
               </p>
               <BinPreviewCard
                 name={DEMO_BIN.name}
@@ -423,13 +451,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                 areaName={DEMO_BIN.areaName}
                 className="mb-4"
               />
-              <div className="flex gap-2 mb-5">
-                {['Items', 'Tags', 'QR Code'].map((label) => (
-                  <span key={label} className="text-[11px] text-[var(--text-tertiary)] bg-[var(--bg-active)] rounded-full px-2.5 py-1">
-                    {label}
-                  </span>
-                ))}
-              </div>
+              <DemoQrPreview className="mb-5" />
               <Button
                 type="button"
                 onClick={advanceStep}
@@ -441,7 +463,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           )}
 
           {/* Step 2: QR Preview (production) */}
-          {step === 2 && !demoMode && createdBin && (
+          {displayedStep === 2 && !demoMode && createdBin && (
             <div className="flex flex-col items-center text-center">
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Scan to find anything
@@ -472,10 +494,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           )}
 
           {/* Demo Step 3: Ready to go */}
-          {step === 3 && demoMode && (
+          {displayedStep === 3 && demoMode && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: `${BRAND}18` }}>
-                <Sparkles className="h-8 w-8" style={{ color: BRAND }} />
+              <div className="h-24 w-24 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
+                <BrandIcon className="h-14 w-14 text-[var(--accent)]" />
               </div>
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 You're ready to go
@@ -486,6 +508,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <div className="w-full space-y-2 mb-6">
                 {([
                   { icon: PackagePlus, label: 'Browse all bins', path: '/bins' },
+                  { icon: Printer, label: 'Print labels', path: '/print' },
                   { icon: QrCode, label: 'Scan a QR code', path: '/scan' },
                   { icon: Settings, label: 'Explore settings', path: '/settings' },
                 ] as const).map(({ icon: Icon, label, path }) => (
@@ -495,8 +518,8 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                     onClick={() => { complete(); navigate(path); }}
                     className="w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-[var(--bg-active)] hover:bg-[var(--bg-hover)] transition-colors text-left"
                   >
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${BRAND}18` }}>
-                      <Icon className="h-4 w-4" style={{ color: BRAND }} />
+                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
+                      <Icon className="h-4 w-4 text-[var(--accent)]" />
                     </div>
                     <span className="text-[14px] font-medium text-[var(--text-primary)]">{label}</span>
                   </button>
@@ -513,10 +536,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           )}
 
           {/* Step 3: AI Feature Showcase (production) */}
-          {step === 3 && !demoMode && (
+          {displayedStep === 3 && !demoMode && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: `${BRAND}18` }}>
-                <Sparkles className="h-8 w-8" style={{ color: BRAND }} />
+              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
+                <Sparkles className="h-8 w-8 text-[var(--accent)]" />
               </div>
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Supercharge with AI
@@ -527,8 +550,8 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <div className="w-full space-y-2 mb-6">
                 {AI_FEATURES.map(({ icon: Icon, title, desc }) => (
                   <div key={title} className="onboarding-feature-card flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 bg-[var(--bg-active)] text-left">
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${BRAND}18` }}>
-                      <Icon className="h-4 w-4" style={{ color: BRAND }} />
+                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
+                      <Icon className="h-4 w-4 text-[var(--accent)]" />
                     </div>
                     <div className="min-w-0">
                       <div className="text-[13px] font-semibold text-[var(--text-primary)]">{title}</div>
@@ -555,10 +578,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           )}
 
           {/* Step 4: Completion with Next Steps (production) */}
-          {step === 4 && !demoMode && (
+          {displayedStep === 4 && !demoMode && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: `${BRAND}18` }}>
-                <Sparkles className="h-8 w-8" style={{ color: BRAND }} />
+              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
+                <Sparkles className="h-8 w-8 text-[var(--accent)]" />
               </div>
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 You're ready to go
@@ -578,8 +601,8 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                     onClick={() => { complete(); navigate(path); }}
                     className="w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-[var(--bg-active)] hover:bg-[var(--bg-hover)] transition-colors text-left"
                   >
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${BRAND}18` }}>
-                      <Icon className="h-4 w-4" style={{ color: BRAND }} />
+                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
+                      <Icon className="h-4 w-4 text-[var(--accent)]" />
                     </div>
                     <span className="text-[14px] font-medium text-[var(--text-primary)]">{label}</span>
                   </button>

@@ -20,7 +20,7 @@ export interface UserPreferences {
 export const DEFAULT_PREFERENCES: UserPreferences = {
   dashboard_recent_bins_count: 5,
   dashboard_scan_history_max: 20,
-  dashboard_show_stats: true,
+  dashboard_show_stats: false,
   dashboard_show_needs_organizing: true,
   dashboard_show_saved_views: true,
   dashboard_show_pinned_bins: true,
