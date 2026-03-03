@@ -15,7 +15,7 @@ vi.mock('@/lib/api', () => ({
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { UserPreferencesProvider } from '@/lib/userPreferences';
-import { ONBOARDING_TOTAL_STEPS, useOnboarding } from '../useOnboarding';
+import { DEMO_ONBOARDING_TOTAL_STEPS, ONBOARDING_TOTAL_STEPS, useOnboarding } from '../useOnboarding';
 
 const mockUseAuth = vi.mocked(useAuth);
 const mockApiFetch = vi.mocked(apiFetch);
@@ -132,6 +132,25 @@ describe('useOnboarding', () => {
 
     await waitFor(() => {
       expect(result.current.step).toBe(ONBOARDING_TOTAL_STEPS - 1);
+    });
+
+    act(() => {
+      result.current.advanceStep();
+    });
+
+    expect(result.current.isOnboarding).toBe(false);
+  });
+
+  it('advanceStep on last demo step (3) completes onboarding in demo mode', async () => {
+    mockApiFetch.mockResolvedValue({
+      onboarding_completed: false,
+      onboarding_step: DEMO_ONBOARDING_TOTAL_STEPS - 1,
+    });
+
+    const { result } = renderHook(() => useOnboarding(true), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.step).toBe(DEMO_ONBOARDING_TOTAL_STEPS - 1);
     });
 
     act(() => {

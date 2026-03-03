@@ -36,7 +36,7 @@ export function AppLayout() {
   const { settings } = useAppSettings();
   const { activeLocationId, setActiveLocationId, demoMode } = useAuth();
   const { locations, isLoading: locationsLoading } = useLocationList();
-  const onboarding = useOnboarding();
+  const onboarding = useOnboarding(demoMode);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(() => localStorage.getItem('openbin-install-dismissed') === '1');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -193,6 +193,7 @@ export function AppLayout() {
       {onboarding.isOnboarding && !onboarding.isLoading && !locationsLoading && (locations.length === 0 || onboarding.step > 0 || demoMode) && (
         <OnboardingOverlay
           step={onboarding.step}
+          totalSteps={onboarding.totalSteps}
           locationId={onboarding.locationId ?? undefined}
           advanceWithLocation={onboarding.advanceWithLocation}
           advanceStep={onboarding.advanceStep}

@@ -2,14 +2,17 @@ import { useCallback } from 'react';
 import { useUserPreferences } from '@/lib/userPreferences';
 
 export const ONBOARDING_TOTAL_STEPS = 5;
+export const DEMO_ONBOARDING_TOTAL_STEPS = 4;
 
-export function useOnboarding() {
+export function useOnboarding(demoMode?: boolean) {
   const { preferences, isLoading, updatePreferences } = useUserPreferences();
+  const totalSteps = demoMode ? DEMO_ONBOARDING_TOTAL_STEPS : ONBOARDING_TOTAL_STEPS;
 
   return {
     isOnboarding: isLoading ? false : !preferences.onboarding_completed,
     isLoading,
     step: preferences.onboarding_step,
+    totalSteps,
     locationId: preferences.onboarding_location_id ?? undefined,
     firstScanDone: preferences.first_scan_done,
     advanceWithLocation: useCallback((id: string) => {
@@ -20,12 +23,12 @@ export function useOnboarding() {
     }, [updatePreferences, preferences.onboarding_step]),
     advanceStep: useCallback(() => {
       const next = preferences.onboarding_step + 1;
-      if (next >= ONBOARDING_TOTAL_STEPS) {
+      if (next >= totalSteps) {
         updatePreferences({ onboarding_completed: true });
       } else {
         updatePreferences({ onboarding_step: next });
       }
-    }, [updatePreferences, preferences.onboarding_step]),
+    }, [updatePreferences, preferences.onboarding_step, totalSteps]),
     complete: useCallback(() => {
       updatePreferences({ onboarding_completed: true });
     }, [updatePreferences]),

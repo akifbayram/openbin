@@ -16,13 +16,12 @@ import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
-import { ONBOARDING_TOTAL_STEPS } from './useOnboarding';
 
-const STEPS = Array.from({ length: ONBOARDING_TOTAL_STEPS });
 const BRAND = '#5e2fe0';
 
 export interface OnboardingActions {
   step: number;
+  totalSteps: number;
   locationId?: string;
   advanceWithLocation: (id: string) => void;
   advanceStep: () => void;
@@ -38,8 +37,9 @@ const AI_FEATURES = [
   { icon: ListChecks, title: 'Smart Lists', desc: 'Dictate items, AI extracts a clean list' },
 ] as const;
 
-export function OnboardingOverlay({ step, locationId, advanceWithLocation, advanceStep, complete, demoMode, activeLocationId }: OnboardingActions) {
+export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLocation, advanceStep, complete, demoMode, activeLocationId }: OnboardingActions) {
   const t = useTerminology();
+  const dots = Array.from({ length: totalSteps });
   const navigate = useNavigate();
   const { setActiveLocationId } = useAuth();
   const { showToast } = useToast();
@@ -162,7 +162,7 @@ export function OnboardingOverlay({ step, locationId, advanceWithLocation, advan
         </button>
         {/* Progress dots */}
         <div className="flex justify-center gap-2 mb-8">
-          {STEPS.map((_, i) => (
+          {dots.map((_, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: static progress dots
             <div key={i}
               className={cn(
