@@ -1,3 +1,5 @@
+import { cn } from '@/lib/utils';
+
 interface StreamingTextProps {
   text: string;
   isStreaming: boolean;
@@ -6,7 +8,7 @@ interface StreamingTextProps {
 
 export function StreamingText({ text, isStreaming, className }: StreamingTextProps) {
   return (
-    <p className={className} style={{ whiteSpace: 'pre-wrap' }}>
+    <p className={cn('whitespace-pre-wrap', className)}>
       {text}
       {isStreaming && (
         <span

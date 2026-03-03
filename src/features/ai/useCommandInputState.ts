@@ -18,7 +18,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
   const { settings, isLoading: aiSettingsLoading } = useAiSettings();
   const { showToast } = useToast();
   const { actions, interpretation, isStreaming: isParsing, error, parse, clear: clearCommand } = useStreamingCommand();
-  const { partialText: queryPartialText, query, isStreaming: isQueryStreaming, error: queryError, clear: clearQuery } = useStreamingQuery();
+  const { partialText: queryPartialText, query, isStreaming: isQueryStreaming, error: queryError, cancel: cancelQuery, clear: clearQuery } = useStreamingQuery();
   const [text, setText] = useState('');
   const [checkedActions, setCheckedActions] = useState<Map<number, boolean>>(new Map());
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
@@ -32,8 +32,8 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
 
   const state: State = checkedActions.size > 0 && actions ? 'preview'
     : isParsing ? 'parsing'
-    : (isQuerying || isQueryStreaming) && !queryPartialText ? 'querying'
-    : (isQueryStreaming && queryPartialText) ? 'query-result'
+    : (isQuerying || isQueryStreaming) && queryPartialText.length === 0 ? 'querying'
+    : (isQueryStreaming && queryPartialText.length > 0) ? 'query-result'
     : queryResult ? 'query-result'
     : actions ? 'preview'
     : 'idle';
@@ -68,6 +68,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
 
   function handleBack() {
     clearCommand();
+    cancelQuery();
     clearQuery();
     setCheckedActions(new Map());
     setQueryResult(null);
@@ -85,6 +86,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     if (!v) {
       setText('');
       clearCommand();
+      cancelQuery();
       clearQuery();
       setCheckedActions(new Map());
       setQueryResult(null);
