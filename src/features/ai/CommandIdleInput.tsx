@@ -1,9 +1,16 @@
 import { ChevronDown, ImagePlus, Loader2, Sparkles } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
+
+const PARSE_MESSAGES = [
+  'Reading your request...',
+  'Analyzing inventory...',
+  'Building actions...',
+];
 
 interface CommandIdleInputProps {
   text: string;
@@ -27,6 +34,25 @@ export function CommandIdleInput({
   onPhotoClick,
 }: CommandIdleInputProps) {
   const t = useTerminology();
+
+  const [parseMessageIndex, setParseMessageIndex] = useState(0);
+
+  useEffect(() => {
+    if (effectiveState !== 'parsing') {
+      setParseMessageIndex(0);
+      return;
+    }
+    const id = setInterval(() => {
+      setParseMessageIndex(prev => (prev + 1) % PARSE_MESSAGES.length);
+    }, 2000);
+    return () => clearInterval(id);
+  }, [effectiveState]);
+
+  const buttonLabel = effectiveState === 'parsing'
+    ? PARSE_MESSAGES[parseMessageIndex]
+    : effectiveState === 'executing'
+      ? 'Executing...'
+      : 'Send';
 
   return (
     <div className="space-y-3">
@@ -95,7 +121,7 @@ export function CommandIdleInput({
         ) : (
           <Sparkles className="h-4 w-4 mr-1.5" />
         )}
-        {effectiveState === 'parsing' ? 'Understanding...' : effectiveState === 'executing' ? 'Executing...' : 'Send'}
+        {buttonLabel}
       </Button>
     </div>
   );
