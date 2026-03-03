@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { StepIndicator } from '@/components/ui/stepper';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { AreaPicker } from '@/features/areas/AreaPicker';
@@ -28,6 +29,17 @@ interface SingleBinReviewProps {
   onClose: () => void;
 }
 
+const STEPS_WITH_AI = [
+  { id: 'analyze', label: 'Analyze' },
+  { id: 'edit', label: 'Edit' },
+  { id: 'create', label: 'Create' },
+];
+
+const STEPS_NO_AI = [
+  { id: 'edit', label: 'Edit' },
+  { id: 'create', label: 'Create' },
+];
+
 export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onClose }: SingleBinReviewProps) {
   const t = useTerminology();
   const { activeLocationId } = useAuth();
@@ -49,6 +61,11 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+
+  const steps = aiEnabled ? STEPS_WITH_AI : STEPS_NO_AI;
+  const currentStepIndex = aiEnabled
+    ? (isAnalyzing ? 0 : isCreating ? 2 : 1)
+    : (isCreating ? 1 : 0);
 
   const autoAnalyzedRef = useRef(false);
 
@@ -126,6 +143,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
   return (
     <div className="space-y-5">
+      <StepIndicator steps={steps} currentStepIndex={currentStepIndex} />
       {isAnalyzing ? (
         <div className="flex flex-col items-center justify-center py-8 gap-3">
           <Loader2 className="h-6 w-6 animate-spin text-[var(--accent)]" />

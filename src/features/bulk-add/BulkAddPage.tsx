@@ -3,12 +3,12 @@ import { useCallback, useEffect, useReducer } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { MenuButton } from '@/components/ui/menu-button';
+import { StepIndicator } from '@/components/ui/stepper';
 import { useToast } from '@/components/ui/toast';
 import { addBin } from '@/features/bins/useBins';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { useAuth } from '@/lib/auth';
-import { cn } from '@/lib/utils';
 import { BulkAddReviewStep } from './BulkAddReviewStep';
 import { BulkAddSummaryStep } from './BulkAddSummaryStep';
 import { BulkAddUploadStep } from './BulkAddUploadStep';
@@ -16,10 +16,10 @@ import type { BulkAddPhoto } from './useBulkAdd';
 import { bulkAddReducer, initialState, stepIndex } from './useBulkAdd';
 
 const STEPS = [
-  { key: 'upload', label: 'Upload' },
-  { key: 'review', label: 'Review' },
-  { key: 'summary', label: 'Confirm' },
-] as const;
+  { id: 'upload', label: 'Upload' },
+  { id: 'review', label: 'Review' },
+  { id: 'summary', label: 'Create' },
+];
 
 export function BulkAddPage() {
   const navigate = useNavigate();
@@ -131,23 +131,7 @@ export function BulkAddPage() {
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-6">
         {state.step !== 'upload' && <MenuButton />}
-        {STEPS.map((step, i) => (
-          <div key={step.key} className="flex items-center gap-2">
-            {i > 0 && <div className="h-px w-6 bg-[var(--border)]" />}
-            <div
-              className={cn(
-                'h-7 px-3 rounded-[var(--radius-full)] flex items-center text-[13px] font-medium',
-                currentStepIndex === i
-                  ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
-                  : currentStepIndex > i
-                    ? 'bg-[var(--bg-active)] text-[var(--text-secondary)]'
-                    : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)]'
-              )}
-            >
-              {step.label}
-            </div>
-          </div>
-        ))}
+        <StepIndicator steps={STEPS} currentStepIndex={currentStepIndex} className="flex-1" />
       </div>
 
       {state.step === 'upload' && (
