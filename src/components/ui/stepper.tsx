@@ -102,15 +102,19 @@ function StepperBody({
               <div className="flex w-full items-center">
                 <Stepper.Trigger
                   className={cn(
-                    'flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-medium transition-colors duration-200',
+                    'flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-semibold',
                     'border-0 cursor-default outline-none',
-                    status === 'active' && 'bg-[var(--accent)] text-[var(--text-on-accent)]',
-                    status === 'success' && 'bg-[var(--accent)] text-[var(--text-on-accent)]',
-                    status === 'inactive' && 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)]',
+                    'transition-all duration-300 ease-out',
+                    status === 'active' &&
+                      'bg-[var(--accent)] text-[var(--text-on-accent)] shadow-[0_0_12px_var(--accent-glow),0_2px_8px_rgba(0,0,0,0.1)] scale-110',
+                    status === 'success' &&
+                      'bg-[var(--accent)] text-[var(--text-on-accent)] opacity-70',
+                    status === 'inactive' &&
+                      'bg-[var(--bg-input)] text-[var(--text-tertiary)] border border-[var(--border-glass)]',
                   )}
                 >
                   {status === 'success' ? (
-                    <Check className="h-4 w-4" data-testid="step-check" />
+                    <Check className="h-3.5 w-3.5" data-testid="step-check" />
                   ) : (
                     <span>{index + 1}</span>
                   )}
@@ -119,8 +123,10 @@ function StepperBody({
                 {!isLast && (
                   <Stepper.Separator
                     className={cn(
-                      'mx-1 h-0.5 flex-1 border-0 transition-colors duration-200',
-                      status === 'success' ? 'bg-[var(--accent)]' : 'bg-[var(--border)]',
+                      'mx-2 h-px flex-1 border-0 transition-all duration-300 ease-out',
+                      status === 'success'
+                        ? 'bg-[var(--accent)] opacity-40'
+                        : 'bg-[var(--border-glass)]',
                     )}
                   />
                 )}
@@ -128,9 +134,9 @@ function StepperBody({
 
               <Stepper.Title
                 className={cn(
-                  'mt-1.5 text-center text-[12px] leading-tight transition-colors duration-200',
-                  status === 'active' && 'font-semibold text-[var(--text-primary)]',
-                  status === 'success' && 'font-normal text-[var(--text-secondary)]',
+                  'mt-1.5 text-center text-[11px] leading-tight transition-all duration-300 ease-out',
+                  status === 'active' && 'font-semibold text-[var(--accent)]',
+                  status === 'success' && 'font-normal text-[var(--text-tertiary)]',
                   status === 'inactive' && 'font-normal text-[var(--text-tertiary)]',
                 )}
               >

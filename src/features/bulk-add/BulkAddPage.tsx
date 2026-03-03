@@ -13,13 +13,7 @@ import { BulkAddReviewStep } from './BulkAddReviewStep';
 import { BulkAddSummaryStep } from './BulkAddSummaryStep';
 import { BulkAddUploadStep } from './BulkAddUploadStep';
 import type { BulkAddPhoto } from './useBulkAdd';
-import { bulkAddReducer, initialState, stepIndex } from './useBulkAdd';
-
-const STEPS = [
-  { id: 'upload', label: 'Upload' },
-  { id: 'review', label: 'Review' },
-  { id: 'summary', label: 'Create' },
-];
+import { BULK_ADD_STEPS, bulkAddReducer, initialState, stepIndex } from './useBulkAdd';
 
 export function BulkAddPage() {
   const navigate = useNavigate();
@@ -131,7 +125,7 @@ export function BulkAddPage() {
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-6">
         {state.step !== 'upload' && <MenuButton />}
-        <StepIndicator steps={STEPS} currentStepIndex={currentStepIndex} className="flex-1" />
+        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={currentStepIndex} className="flex-1" />
       </div>
 
       {state.step === 'upload' && (

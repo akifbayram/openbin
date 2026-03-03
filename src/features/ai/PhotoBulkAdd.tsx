@@ -10,7 +10,7 @@ import { addBin, notifyBinsChanged } from '@/features/bins/useBins';
 import { BulkAddReviewStep } from '@/features/bulk-add/BulkAddReviewStep';
 import { BulkAddSummaryStep } from '@/features/bulk-add/BulkAddSummaryStep';
 import type { BulkAddPhoto, BulkAddState } from '@/features/bulk-add/useBulkAdd';
-import { bulkAddReducer, createBulkAddPhoto, initialState, stepIndex } from '@/features/bulk-add/useBulkAdd';
+import { BULK_ADD_STEPS, bulkAddReducer, createBulkAddPhoto, initialState, stepIndex } from '@/features/bulk-add/useBulkAdd';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { useAuth } from '@/lib/auth';
@@ -19,12 +19,6 @@ import { SingleBinReview } from './SingleBinReview';
 import { MAX_AI_PHOTOS } from './useAiAnalysis';
 
 const MAX_PHOTOS = 20;
-
-const PHOTO_BULK_STEPS = [
-  { id: 'upload', label: 'Upload' },
-  { id: 'review', label: 'Review' },
-  { id: 'summary', label: 'Create' },
-];
 
 interface PhotoBulkAddProps {
   initialFiles: File[];
@@ -166,7 +160,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   if (state.step === 'review') {
     return (
       <div className="space-y-4">
-        <StepIndicator steps={PHOTO_BULK_STEPS} currentStepIndex={stepIndex(state.step)} />
+        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex(state.step)} />
         <BulkAddReviewStep
           photos={state.photos}
           currentIndex={state.currentIndex}
@@ -179,7 +173,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   if (state.step === 'summary') {
     return (
       <div className="space-y-4">
-        <StepIndicator steps={PHOTO_BULK_STEPS} currentStepIndex={stepIndex(state.step)} />
+        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex(state.step)} />
         <BulkAddSummaryStep
           photos={state.photos}
           isCreating={state.isCreating}
@@ -197,7 +191,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
 
   return (
     <div className="space-y-4">
-      <StepIndicator steps={PHOTO_BULK_STEPS} currentStepIndex={stepIndex(state.step)} className="mb-2" />
+      <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex(state.step)} className="mb-2" />
       {/* Mode toggle */}
       <OptionGroup
         options={[

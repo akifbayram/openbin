@@ -202,6 +202,12 @@ export function createBulkAddPhoto(file: File, sharedAreaId: string | null): Bul
 
 const STEP_ORDER: BulkAddStep[] = ['upload', 'review', 'summary'];
 
+export const BULK_ADD_STEPS: { id: BulkAddStep; label: string }[] = [
+  { id: 'upload', label: 'Upload' },
+  { id: 'review', label: 'Review' },
+  { id: 'summary', label: 'Create' },
+];
+
 export function stepIndex(step: BulkAddStep): number {
   return STEP_ORDER.indexOf(step);
 }

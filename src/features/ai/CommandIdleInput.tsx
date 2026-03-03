@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
+import type { State } from './useCommandInputState';
 
 const PARSE_MESSAGES = [
   'Reading your request...',
@@ -15,7 +16,7 @@ const PARSE_MESSAGES = [
 interface CommandIdleInputProps {
   text: string;
   setText: (v: string) => void;
-  effectiveState: string;
+  effectiveState: State;
   examplesOpen: boolean;
   setExamplesOpen: Dispatch<SetStateAction<boolean>>;
   error: string | null;

@@ -18,17 +18,11 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
 
   return (
     <div className="space-y-4">
-      {showStreaming ? (
-        <StreamingText
-          text={answer}
-          isStreaming
-          className="text-[14px] text-[var(--text-primary)] leading-relaxed"
-        />
-      ) : (
-        <p className="text-[14px] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">
-          {answer}
-        </p>
-      )}
+      <StreamingText
+        text={answer}
+        isStreaming={!!showStreaming}
+        className="text-[14px] text-[var(--text-primary)] leading-relaxed"
+      />
 
       {matches.length > 0 && (
         <div className="space-y-2">
