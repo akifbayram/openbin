@@ -13,7 +13,7 @@ import { BulkAddReviewStep } from './BulkAddReviewStep';
 import { BulkAddSummaryStep } from './BulkAddSummaryStep';
 import { BulkAddUploadStep } from './BulkAddUploadStep';
 import type { BulkAddPhoto } from './useBulkAdd';
-import { BULK_ADD_STEPS, bulkAddReducer, initialState, stepIndex } from './useBulkAdd';
+import { BULK_ADD_STEPS, bulkAddReducer, bulkAddStepIndex, initialState } from './useBulkAdd';
 
 export function BulkAddPage() {
   const navigate = useNavigate();
@@ -103,7 +103,7 @@ export function BulkAddPage() {
 
   if (!activeLocationId) return null;
 
-  const currentStepIndex = stepIndex(state.step);
+  const currentStepIndex = bulkAddStepIndex(state);
 
   return (
     <div className="page-content pb-8">

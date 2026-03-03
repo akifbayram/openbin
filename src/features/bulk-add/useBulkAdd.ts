@@ -200,14 +200,19 @@ export function createBulkAddPhoto(file: File, sharedAreaId: string | null): Bul
   };
 }
 
-const STEP_ORDER: BulkAddStep[] = ['upload', 'review', 'summary'];
-
-export const BULK_ADD_STEPS: { id: BulkAddStep; label: string }[] = [
+export const BULK_ADD_STEPS = [
   { id: 'upload', label: 'Upload' },
+  { id: 'analyze', label: 'Analyze' },
   { id: 'review', label: 'Review' },
-  { id: 'summary', label: 'Create' },
+  { id: 'create', label: 'Create' },
 ];
 
-export function stepIndex(step: BulkAddStep): number {
-  return STEP_ORDER.indexOf(step);
+/** Map reducer state to the 4-step visual indicator index. */
+export function bulkAddStepIndex(state: BulkAddState): number {
+  if (state.step === 'upload') return 0;
+  if (state.step === 'summary') return 3;
+  // 'review' step: Analyze(1) while current photo is pending/analyzing, Review(2) otherwise
+  const photo = state.photos[state.currentIndex];
+  if (photo && (photo.status === 'pending' || photo.status === 'analyzing')) return 1;
+  return 2;
 }

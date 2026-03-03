@@ -3,9 +3,9 @@ import {
   type BulkAddPhoto,
   type BulkAddState,
   bulkAddReducer,
+  bulkAddStepIndex,
   createBulkAddPhoto,
   initialState,
-  stepIndex,
 } from '../useBulkAdd';
 
 function photo(overrides?: Partial<BulkAddPhoto>): BulkAddPhoto {
@@ -211,17 +211,29 @@ describe('bulkAddReducer', () => {
   });
 });
 
-describe('stepIndex', () => {
+describe('bulkAddStepIndex', () => {
   it('returns 0 for upload', () => {
-    expect(stepIndex('upload')).toBe(0);
+    expect(bulkAddStepIndex(initialState)).toBe(0);
   });
 
-  it('returns 1 for review', () => {
-    expect(stepIndex('review')).toBe(1);
+  it('returns 1 for review when current photo is pending (analyze phase)', () => {
+    const state: BulkAddState = { ...initialState, step: 'review', photos: [photo({ status: 'pending' })], currentIndex: 0 };
+    expect(bulkAddStepIndex(state)).toBe(1);
   });
 
-  it('returns 2 for summary', () => {
-    expect(stepIndex('summary')).toBe(2);
+  it('returns 1 for review when current photo is analyzing', () => {
+    const state: BulkAddState = { ...initialState, step: 'review', photos: [photo({ status: 'analyzing' })], currentIndex: 0 };
+    expect(bulkAddStepIndex(state)).toBe(1);
+  });
+
+  it('returns 2 for review when current photo is reviewed', () => {
+    const state: BulkAddState = { ...initialState, step: 'review', photos: [photo({ status: 'reviewed' })], currentIndex: 0 };
+    expect(bulkAddStepIndex(state)).toBe(2);
+  });
+
+  it('returns 3 for summary', () => {
+    const state: BulkAddState = { ...initialState, step: 'summary' };
+    expect(bulkAddStepIndex(state)).toBe(3);
   });
 });
 

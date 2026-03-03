@@ -10,7 +10,7 @@ import { addBin, notifyBinsChanged } from '@/features/bins/useBins';
 import { BulkAddReviewStep } from '@/features/bulk-add/BulkAddReviewStep';
 import { BulkAddSummaryStep } from '@/features/bulk-add/BulkAddSummaryStep';
 import type { BulkAddPhoto, BulkAddState } from '@/features/bulk-add/useBulkAdd';
-import { BULK_ADD_STEPS, bulkAddReducer, createBulkAddPhoto, initialState, stepIndex } from '@/features/bulk-add/useBulkAdd';
+import { BULK_ADD_STEPS, bulkAddReducer, bulkAddStepIndex, createBulkAddPhoto, initialState } from '@/features/bulk-add/useBulkAdd';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { useAuth } from '@/lib/auth';
@@ -160,7 +160,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   if (state.step === 'review') {
     return (
       <div className="space-y-4">
-        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex(state.step)} />
+        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={bulkAddStepIndex(state)} />
         <BulkAddReviewStep
           photos={state.photos}
           currentIndex={state.currentIndex}
@@ -173,7 +173,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   if (state.step === 'summary') {
     return (
       <div className="space-y-4">
-        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex(state.step)} />
+        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={bulkAddStepIndex(state)} />
         <BulkAddSummaryStep
           photos={state.photos}
           isCreating={state.isCreating}
@@ -191,7 +191,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
 
   return (
     <div className="space-y-4">
-      <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex(state.step)} className="mb-2" />
+      <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={bulkAddStepIndex(state)} className="mb-2" />
       {/* Mode toggle */}
       <OptionGroup
         options={[

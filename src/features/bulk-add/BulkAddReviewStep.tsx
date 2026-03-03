@@ -105,18 +105,10 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
 
   return (
     <div className="space-y-5">
-      {/* Progress */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-[13px] text-[var(--text-secondary)]">
-          <span>Photo {currentIndex + 1} of {photos.length}</span>
-          <span>{reviewedCount}/{photos.length} reviewed</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-[var(--bg-active)] overflow-hidden">
-          <div
-            className="h-full rounded-full bg-[var(--accent)] transition-all"
-            style={{ width: `${(reviewedCount / photos.length) * 100}%` }}
-          />
-        </div>
+      {/* Photo counter */}
+      <div className="flex items-center justify-between text-[13px] text-[var(--text-secondary)]">
+        <span>Photo {currentIndex + 1} of {photos.length}</span>
+        <span>{reviewedCount}/{photos.length} reviewed</span>
       </div>
 
       {photo.status === 'analyzing' ? (

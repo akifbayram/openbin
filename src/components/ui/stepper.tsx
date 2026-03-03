@@ -86,7 +86,7 @@ function StepperBody({
   }, [currentStepIndex, steps, stepper]);
 
   return (
-    <Stepper.List className="flex items-start justify-center gap-0" orientation="horizontal">
+    <Stepper.List className="flex items-start" orientation="horizontal">
       {steps.map((step, index) => {
         const isLast = index === steps.length - 1;
         const status =
@@ -98,39 +98,27 @@ function StepperBody({
             step={step.id}
             className={cn('flex items-start', isLast ? 'flex-shrink-0' : 'flex-1')}
           >
-            <div className="flex flex-col items-center">
-              <div className="flex w-full items-center">
-                <Stepper.Trigger
-                  className={cn(
-                    'flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-semibold',
-                    'border-0 cursor-default outline-none',
-                    'transition-all duration-300 ease-out',
-                    status === 'active' &&
-                      'bg-[var(--accent)] text-[var(--text-on-accent)] shadow-[0_0_12px_var(--accent-glow),0_2px_8px_rgba(0,0,0,0.1)] scale-110',
-                    status === 'success' &&
-                      'bg-[var(--accent)] text-[var(--text-on-accent)] opacity-70',
-                    status === 'inactive' &&
-                      'bg-[var(--bg-input)] text-[var(--text-tertiary)] border border-[var(--border-glass)]',
-                  )}
-                >
-                  {status === 'success' ? (
-                    <Check className="h-3.5 w-3.5" data-testid="step-check" />
-                  ) : (
-                    <span>{index + 1}</span>
-                  )}
-                </Stepper.Trigger>
-
-                {!isLast && (
-                  <Stepper.Separator
-                    className={cn(
-                      'mx-2 h-px flex-1 border-0 transition-all duration-300 ease-out',
-                      status === 'success'
-                        ? 'bg-[var(--accent)] opacity-40'
-                        : 'bg-[var(--border-glass)]',
-                    )}
-                  />
+            {/* Circle + label column — shrink-0 so separator never compresses it */}
+            <div className="flex flex-col items-center flex-shrink-0">
+              <Stepper.Trigger
+                className={cn(
+                  'flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-semibold',
+                  'border-0 cursor-default outline-none',
+                  'transition-all duration-300 ease-out',
+                  status === 'active' &&
+                    'bg-[var(--accent)] text-[var(--text-on-accent)] shadow-[0_0_12px_var(--accent-glow),0_2px_8px_rgba(0,0,0,0.1)] scale-110',
+                  status === 'success' &&
+                    'bg-[var(--accent)] text-[var(--text-on-accent)] opacity-70',
+                  status === 'inactive' &&
+                    'bg-[var(--bg-input)] text-[var(--text-tertiary)] border border-[var(--border-glass)]',
                 )}
-              </div>
+              >
+                {status === 'success' ? (
+                  <Check className="h-3.5 w-3.5" data-testid="step-check" />
+                ) : (
+                  <span>{index + 1}</span>
+                )}
+              </Stepper.Trigger>
 
               <Stepper.Title
                 className={cn(
@@ -143,6 +131,18 @@ function StepperBody({
                 {step.label}
               </Stepper.Title>
             </div>
+
+            {/* Separator — outside the column so labels center under their circle */}
+            {!isLast && (
+              <Stepper.Separator
+                className={cn(
+                  'mt-[13px] mx-2 h-px flex-1 border-0 transition-all duration-300 ease-out',
+                  status === 'success'
+                    ? 'bg-[var(--accent)] opacity-40'
+                    : 'bg-[var(--border-glass)]',
+                )}
+              />
+            )}
           </Stepper.Item>
         );
       })}
