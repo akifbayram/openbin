@@ -16,6 +16,7 @@ export function useAiStream<T>(
   const [result, setResult] = useState<T | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [partialText, setPartialText] = useState('');
   const abortRef = useRef<AbortController | null>(null);
 
   const stream = useCallback(async (body: object): Promise<T | null> => {
@@ -26,13 +27,16 @@ export function useAiStream<T>(
     setIsStreaming(true);
     setError(null);
     setResult(null);
+    setPartialText('');
 
     try {
       for await (const event of apiStream(endpoint, {
         body,
         signal: controller.signal,
       })) {
-        if (event.type === 'done') {
+        if (event.type === 'delta') {
+          setPartialText(prev => prev + event.text);
+        } else if (event.type === 'done') {
           try {
             const parsed = JSON.parse(event.text) as T;
             setResult(parsed);
@@ -60,7 +64,8 @@ export function useAiStream<T>(
   const clear = useCallback(() => {
     setResult(null);
     setError(null);
+    setPartialText('');
   }, []);
 
-  return { result, isStreaming, error, stream, cancel, clear };
+  return { result, isStreaming, error, partialText, stream, cancel, clear };
 }
