@@ -2,8 +2,6 @@ import { ChevronRight, Inbox, MapPin, Plus, ScanLine, Settings, Sparkles } from 
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
-
 import { SavedViewChips } from '@/components/saved-view-chips';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,6 +23,8 @@ import { deleteView, useSavedViews } from '@/lib/savedViews';
 import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';
 import { useDashboard } from './useDashboard';
+
+const ChatPanel = lazy(() => import('@/features/ai/ChatPanel').then((m) => ({ default: m.ChatPanel })));
 
 function useAnimatedNumber(target: number, duration = 400) {
   const [display, setDisplay] = useState(target);
@@ -407,7 +407,7 @@ export function DashboardPage() {
       <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
       {aiEnabled && (
         <Suspense fallback={null}>
-          {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
+          {commandOpen && <ChatPanel open={commandOpen} onOpenChange={setCommandOpen} />}
         </Suspense>
       )}
     </div>

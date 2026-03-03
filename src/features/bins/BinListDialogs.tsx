@@ -11,7 +11,7 @@ import { SaveViewDialog } from './SaveViewDialog';
 import type { BinFilters, SortOption } from './useBins';
 import type { BulkDialog } from './useBulkDialogs';
 
-const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
+const ChatPanel = lazy(() => import('@/features/ai/ChatPanel').then((m) => ({ default: m.ChatPanel })));
 
 interface BinListDialogsProps {
   createOpen: boolean;
@@ -100,7 +100,7 @@ export function BinListDialogs({
       />
       {aiEnabled && (
         <Suspense fallback={null}>
-          {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
+          {commandOpen && <ChatPanel open={commandOpen} onOpenChange={setCommandOpen} />}
         </Suspense>
       )}
     </>
