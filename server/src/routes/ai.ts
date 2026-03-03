@@ -11,7 +11,7 @@ import { analyzeImages, testConnection } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
 import type { ChatMessage } from '../lib/aiStreamingCaller.js';
-import { callAiProviderStreaming } from '../lib/aiStreamingCaller.js';
+import { callAiProviderStreaming, consumeGeminiRawParts } from '../lib/aiStreamingCaller.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { executeCreateArea, executeReadOnlyTool, executeWriteActions, getChatToolDefinitions, isReadOnlyTool, toolCallToCommandAction } from '../lib/chatTools.js';
 import { executeActions } from '../lib/commandExecutor.js';
@@ -420,7 +420,7 @@ router.post('/test', aiLimiter, aiRouteHandler('test connection', async (req, re
 // ---------------------------------------------------------------------------
 
 /** In-memory store for pending write-action confirmations */
-const pendingConfirmations = new Map<string, { resolve: (accepted: boolean) => void; timeout: ReturnType<typeof setTimeout> }>();
+const pendingConfirmations = new Map<string, { userId: string; resolve: (accepted: boolean) => void; timeout: ReturnType<typeof setTimeout> }>();
 
 /** Build a human-readable description of a tool call for action previews */
 function describeToolCall(name: string, args: Record<string, unknown>): string {
@@ -460,6 +460,10 @@ router.post('/chat', aiLimiter, requireLocationMember(), aiRouteHandler('chat', 
   // Validate inputs
   if (!Array.isArray(clientMessages) || clientMessages.length === 0) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'messages array is required and must not be empty' });
+    return;
+  }
+  if (clientMessages.length > 100) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Too many messages (max 100)' });
     return;
   }
   if (!locationId || typeof locationId !== 'string') {
@@ -541,6 +545,10 @@ Guidelines:
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
+  // Abort on client disconnect
+  const abortController = new AbortController();
+  req.on('close', () => abortController.abort());
+
   const tools = getChatToolDefinitions();
   const userId = req.user!.id;
   const userName = req.user!.username;
@@ -551,6 +559,8 @@ Guidelines:
 
   try {
     for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+      if (abortController.signal.aborted) break;
+
       // Call AI provider with streaming
       const stream = callAiProviderStreaming({
         config: settings.config,
@@ -560,6 +570,7 @@ Guidelines:
         maxTokens: settings.max_tokens ?? undefined,
         topP: settings.top_p ?? undefined,
         timeoutMs: (settings.request_timeout ?? 120) * 1000,
+        signal: abortController.signal,
       });
 
       const toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }> = [];
@@ -594,6 +605,10 @@ Guidelines:
         id: tc.id,
         function: { name: tc.name, arguments: JSON.stringify(tc.arguments) },
       }));
+      // For Gemini: attach raw response parts to preserve thoughtSignature
+      if (settings.config.provider === 'gemini') {
+        assistantMsg._geminiParts = consumeGeminiRawParts();
+      }
       providerMessages.push(assistantMsg);
 
       // Separate read-only vs write tool calls
@@ -612,7 +627,7 @@ Guidelines:
       for (const tc of readCalls) {
         const result = await executeReadOnlyTool(tc.name, tc.arguments, locationId, userId);
         sendSSE(res, 'tool_result', { toolCallId: tc.id, name: tc.name, result });
-        providerMessages.push({ role: 'tool', content: result, tool_call_id: tc.id });
+        providerMessages.push({ role: 'tool', content: result, tool_call_id: tc.id, name: tc.name });
       }
 
       // Handle write tool calls — need user confirmation
@@ -637,7 +652,7 @@ Guidelines:
             pendingConfirmations.delete(confirmationId);
             resolve(false);
           }, 5 * 60 * 1000);
-          pendingConfirmations.set(confirmationId, { resolve, timeout });
+          pendingConfirmations.set(confirmationId, { userId, resolve, timeout });
         });
 
         if (accepted) {
@@ -660,12 +675,12 @@ Guidelines:
               }
 
               sendSSE(res, 'action_executed', { toolCallId: tc.id, success: true, details: resultText });
-              providerMessages.push({ role: 'tool', content: resultText, tool_call_id: tc.id });
+              providerMessages.push({ role: 'tool', content: resultText, tool_call_id: tc.id, name: tc.name });
             } catch (err) {
               const errorMsg = err instanceof Error ? err.message : 'Unknown error';
               const errorResult = JSON.stringify({ error: errorMsg });
               sendSSE(res, 'action_executed', { toolCallId: tc.id, success: false, details: errorResult });
-              providerMessages.push({ role: 'tool', content: errorResult, tool_call_id: tc.id });
+              providerMessages.push({ role: 'tool', content: errorResult, tool_call_id: tc.id, name: tc.name });
             }
           }
         } else {
@@ -673,7 +688,7 @@ Guidelines:
           sendSSE(res, 'action_rejected', { confirmationId });
           for (const tc of writeCalls) {
             const rejectionResult = JSON.stringify({ error: 'Action rejected by user' });
-            providerMessages.push({ role: 'tool', content: rejectionResult, tool_call_id: tc.id });
+            providerMessages.push({ role: 'tool', content: rejectionResult, tool_call_id: tc.id, name: tc.name });
           }
         }
       }
@@ -710,6 +725,11 @@ router.post('/chat/confirm', asyncHandler(async (req, res) => {
   const pending = pendingConfirmations.get(confirmationId);
   if (!pending) {
     res.status(404).json({ error: 'NOT_FOUND', message: 'Confirmation not found or already expired' });
+    return;
+  }
+
+  if (pending.userId !== req.user!.id) {
+    res.status(403).json({ error: 'FORBIDDEN', message: 'Not authorized to confirm this action' });
     return;
   }
 

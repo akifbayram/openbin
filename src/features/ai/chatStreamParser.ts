@@ -1,5 +1,3 @@
-import type { CommandAction } from './useCommand';
-
 // ---------------------------------------------------------------------------
 // SSE event types from POST /api/ai/chat
 // ---------------------------------------------------------------------------
@@ -19,7 +17,7 @@ export interface ToolResultEvent {
 export interface ActionPreviewEvent {
   type: 'action_preview';
   confirmationId: string;
-  actions: CommandAction[];
+  actions: Array<{ id: string; toolName: string; args: Record<string, unknown>; description: string }>;
 }
 
 export interface ActionExecutedEvent {

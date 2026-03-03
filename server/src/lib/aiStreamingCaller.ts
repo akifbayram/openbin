@@ -23,6 +23,9 @@ export interface ChatMessage {
     function: { name: string; arguments: string };
   }>;
   tool_call_id?: string;
+  name?: string; // Function name for tool responses (needed by Gemini)
+  /** Raw Gemini parts from model response — preserved to echo back thought signatures faithfully. */
+  _geminiParts?: unknown[];
 }
 
 export type StreamEvent =
@@ -204,26 +207,31 @@ function buildGeminiContents(messages: ChatMessage[]): { systemInstruction: unkn
       continue;
     }
     if (m.role === 'assistant') {
-      const parts: unknown[] = [];
-      if (m.content) parts.push({ text: m.content });
-      if (m.tool_calls) {
-        for (const tc of m.tool_calls) {
-          let parsedArgs: unknown;
-          try {
-            parsedArgs = JSON.parse(tc.function.arguments);
-          } catch {
-            parsedArgs = {};
+      // Use raw Gemini parts if available — preserves thoughtSignature and other fields
+      if (m._geminiParts?.length) {
+        contents.push({ role: 'model', parts: m._geminiParts });
+      } else {
+        const parts: unknown[] = [];
+        if (m.content) parts.push({ text: m.content });
+        if (m.tool_calls) {
+          for (const tc of m.tool_calls) {
+            let parsedArgs: unknown;
+            try {
+              parsedArgs = JSON.parse(tc.function.arguments);
+            } catch {
+              parsedArgs = {};
+            }
+            parts.push({ functionCall: { name: tc.function.name, args: parsedArgs } });
           }
-          parts.push({ functionCall: { name: tc.function.name, args: parsedArgs } });
         }
+        contents.push({ role: 'model', parts });
       }
-      contents.push({ role: 'model', parts });
       continue;
     }
     if (m.role === 'tool') {
       contents.push({
         role: 'function',
-        parts: [{ functionResponse: { name: '', response: { result: m.content ?? '' } } }],
+        parts: [{ functionResponse: { name: m.name ?? '', response: { result: m.content ?? '' } } }],
       });
       continue;
     }
@@ -519,7 +527,20 @@ async function* parseAnthropicStream(body: ReadableStream<Uint8Array>, signal?: 
   }
 }
 
+/** Accumulated raw Gemini parts from the current model response turn.
+ *  Stored here so the route handler can attach them to the ChatMessage for faithful replay. */
+let _lastGeminiRawParts: unknown[] = [];
+
+/** Get and clear the accumulated raw Gemini parts from the last streaming call. */
+export function consumeGeminiRawParts(): unknown[] {
+  const parts = _lastGeminiRawParts;
+  _lastGeminiRawParts = [];
+  return parts;
+}
+
 async function* parseGeminiStream(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncGenerator<StreamEvent> {
+  _lastGeminiRawParts = [];
+
   for await (const line of iterateSSELines(body, signal)) {
     if (signal?.aborted) return;
     if (!line.startsWith('data: ')) continue;
@@ -542,6 +563,9 @@ async function* parseGeminiStream(body: ReadableStream<Uint8Array>, signal?: Abo
     const parts = content?.parts as Array<Record<string, unknown>> | undefined;
 
     if (parts) {
+      // Accumulate ALL raw parts for faithful replay (preserves thoughtSignature etc.)
+      _lastGeminiRawParts.push(...parts);
+
       for (const part of parts) {
         if (typeof part.text === 'string' && part.text.length > 0) {
           yield { type: 'text_delta', delta: part.text };

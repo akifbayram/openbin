@@ -16,7 +16,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         role="checkbox"
         aria-checked={checked}
         className={cn(
-          'h-[22px] w-[22px] shrink-0 rounded-[6px] border-2 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center',
+          'h-[22px] w-[22px] shrink-0 rounded-[6px] border-2 transition-all duration-200 focus-ring disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center',
           checked
             ? 'bg-[var(--accent)] border-[var(--accent)]'
             : 'border-[var(--text-tertiary)] bg-transparent',

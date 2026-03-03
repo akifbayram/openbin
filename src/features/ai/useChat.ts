@@ -4,7 +4,6 @@ import { useAuth } from '@/lib/auth';
 import { Events, notify } from '@/lib/eventBus';
 import { mapAiError } from './aiErrors';
 import { parseChatStream } from './chatStreamParser';
-import type { CommandAction } from './useCommand';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -41,22 +40,33 @@ export interface ChatMessageContent {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Map CommandAction from stream into ActionPreview shape. */
-function toActionPreview(action: CommandAction, index: number): ActionPreview {
-  const { type, ...args } = action;
-  return {
-    id: `${type}-${index}`,
-    toolName: type,
-    args: args as Record<string, unknown>,
-    description: `${type}: ${JSON.stringify(args)}`,
-  };
-}
-
-/** Build the API message array from conversation history. */
+/** Build the API message array from conversation history, including tool result context. */
 function buildApiMessages(messages: ChatMessageContent[]): Array<{ role: string; content: string }> {
-  return messages
-    .filter((m) => m.role === 'user' || (m.role === 'assistant' && m.text.length > 0))
-    .map((m) => ({ role: m.role, content: m.text }));
+  const result: Array<{ role: string; content: string }> = [];
+  for (const m of messages) {
+    if (m.role === 'user') {
+      result.push({ role: 'user', content: m.text });
+    } else if (m.role === 'assistant') {
+      let content = m.text;
+      // Include tool result summaries for multi-turn context
+      if (m.toolResults?.length) {
+        const summaries = m.toolResults.map(
+          (tr) => `[Tool ${tr.name}: ${typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result)}]`,
+        );
+        content += `\n${summaries.join('\n')}`;
+      }
+      if (m.executedActions?.length) {
+        const summaries = m.executedActions.map(
+          (ea) => `[Action ${ea.success ? 'succeeded' : 'failed'}: ${ea.details}]`,
+        );
+        content += `\n${summaries.join('\n')}`;
+      }
+      if (content.length > 0) {
+        result.push({ role: 'assistant', content });
+      }
+    }
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,6 +82,9 @@ export function useChat() {
     actions: ActionPreview[];
   } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Ref to always have latest messages available (avoids stale closures & React batching issues)
+  const messagesRef = useRef<ChatMessageContent[]>(messages);
+  messagesRef.current = messages;
 
   // -----------------------------------------------------------------------
   // sendMessage
@@ -90,15 +103,9 @@ export function useChat() {
     abortRef.current = controller;
 
     try {
-      // Build API messages from current conversation + the new user message.
-      // We read from state via functional update pattern to capture the latest messages,
-      // but we need the value synchronously here, so we construct from what we know.
-      let apiMessages: Array<{ role: string; content: string }> = [];
-      setMessages((prev) => {
-        // Use prev to capture current state; compute apiMessages as side-effect
-        apiMessages = buildApiMessages(prev);
-        return prev; // no-op state update
-      });
+      // Build API messages from conversation history + the new user message.
+      // Use ref to get latest messages synchronously (avoids React batching issues).
+      const apiMessages = buildApiMessages([...messagesRef.current, userMsg]);
 
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -150,7 +157,7 @@ export function useChat() {
           }
 
           case 'action_preview': {
-            const actions = event.actions.map(toActionPreview);
+            const actions: ActionPreview[] = event.actions;
             const confirmation = { confirmationId: event.confirmationId, actions };
             setPendingConfirmation(confirmation);
             setMessages((prev) => {
@@ -166,7 +173,9 @@ export function useChat() {
               return updated;
             });
             setIsStreaming(false);
-            return; // Pause for user confirmation
+            // Don't return — the server is waiting for confirmation.
+            // When the user confirms/rejects, more SSE events will arrive.
+            break;
           }
 
           case 'action_executed': {
@@ -277,6 +286,14 @@ export function useChat() {
 
     if (accepted) {
       setIsStreaming(true);
+      setMessages((prev) => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last?.role === 'assistant') {
+          updated[updated.length - 1] = { ...last, isStreaming: true };
+        }
+        return updated;
+      });
     }
   }, []);
 
