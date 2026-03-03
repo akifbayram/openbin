@@ -1,23 +1,38 @@
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StreamingText } from './StreamingText';
 import type { QueryResult } from './useInventoryQuery';
 
 interface InventoryQueryResultProps {
-  queryResult: QueryResult;
+  queryResult: QueryResult | null;
+  streamingText?: string;
+  isStreaming?: boolean;
   onBinClick: (binId: string) => void;
   onBack: () => void;
 }
 
-export function InventoryQueryResult({ queryResult, onBinClick, onBack }: InventoryQueryResultProps) {
+export function InventoryQueryResult({ queryResult, streamingText, isStreaming, onBinClick, onBack }: InventoryQueryResultProps) {
+  const showStreaming = isStreaming && !queryResult;
+  const answer = queryResult?.answer ?? streamingText ?? '';
+  const matches = queryResult?.matches ?? [];
+
   return (
     <div className="space-y-4">
-      <p className="text-[14px] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">
-        {queryResult.answer}
-      </p>
+      {showStreaming ? (
+        <StreamingText
+          text={answer}
+          isStreaming
+          className="text-[14px] text-[var(--text-primary)] leading-relaxed"
+        />
+      ) : (
+        <p className="text-[14px] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">
+          {answer}
+        </p>
+      )}
 
-      {queryResult.matches.length > 0 && (
+      {matches.length > 0 && (
         <div className="space-y-2">
-          {queryResult.matches.map((match) => (
+          {matches.map((match) => (
             <button
               key={match.bin_id}
               type="button"
@@ -43,10 +58,12 @@ export function InventoryQueryResult({ queryResult, onBinClick, onBack }: Invent
         </div>
       )}
 
-      <Button type="button" variant="ghost" size="sm" onClick={onBack} className="rounded-[var(--radius-full)]">
-        <ChevronLeft className="h-4 w-4 mr-0.5" />
-        Back
-      </Button>
+      {!isStreaming && (
+        <Button type="button" variant="ghost" size="sm" onClick={onBack} className="rounded-[var(--radius-full)]">
+          <ChevronLeft className="h-4 w-4 mr-0.5" />
+          Back
+        </Button>
+      )}
     </div>
   );
 }
