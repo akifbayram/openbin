@@ -18,7 +18,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
   const { settings, isLoading: aiSettingsLoading } = useAiSettings();
   const { showToast } = useToast();
   const { actions, interpretation, isStreaming: isParsing, error, parse, clear: clearCommand } = useStreamingCommand();
-  const { query, isStreaming: isQueryStreaming, error: queryError, clear: clearQuery } = useStreamingQuery();
+  const { partialText: queryPartialText, query, isStreaming: isQueryStreaming, error: queryError, clear: clearQuery } = useStreamingQuery();
   const [text, setText] = useState('');
   const [checkedActions, setCheckedActions] = useState<Map<number, boolean>>(new Map());
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
@@ -32,7 +32,8 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
 
   const state: State = checkedActions.size > 0 && actions ? 'preview'
     : isParsing ? 'parsing'
-    : (isQuerying || isQueryStreaming) ? 'querying'
+    : (isQuerying || isQueryStreaming) && !queryPartialText ? 'querying'
+    : (isQueryStreaming && queryPartialText) ? 'query-result'
     : queryResult ? 'query-result'
     : actions ? 'preview'
     : 'idle';
@@ -119,6 +120,8 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     setText,
     checkedActions,
     queryResult,
+    queryPartialText,
+    isQueryStreaming,
     photoMode,
     setPhotoMode,
     initialFiles,

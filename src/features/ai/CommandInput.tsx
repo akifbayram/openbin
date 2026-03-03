@@ -21,6 +21,8 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
     text, setText,
     checkedActions,
     queryResult,
+    queryPartialText,
+    isQueryStreaming,
     photoMode, setPhotoMode,
     initialFiles, setInitialFiles,
     examplesOpen, setExamplesOpen,
@@ -61,9 +63,11 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
             <Loader2 className="h-6 w-6 animate-spin text-[var(--accent)]" />
             <p className="text-[14px] text-[var(--text-secondary)]">Searching your inventory...</p>
           </div>
-        ) : effectiveState === 'query-result' && queryResult ? (
+        ) : effectiveState === 'query-result' ? (
           <InventoryQueryResult
             queryResult={queryResult}
+            streamingText={queryPartialText}
+            isStreaming={isQueryStreaming}
             onBinClick={handleBinClick}
             onBack={handleBack}
           />
