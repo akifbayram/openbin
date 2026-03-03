@@ -1,8 +1,17 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
+import type { AiErrorCode } from './aiCaller.js';
 import { AiAnalysisError } from './aiCaller.js';
 import { aiErrorToStatus, NoAiSettingsError } from './aiSettings.js';
 import { ValidationError } from './crypto.js';
 import { HttpError } from './httpErrors.js';
+
+/** Safe client-facing messages keyed by AI error code (avoids leaking provider internals). */
+const SAFE_AI_MESSAGES: Partial<Record<AiErrorCode, string>> = {
+  INVALID_KEY: 'Invalid API key — check your AI provider settings',
+  RATE_LIMITED: 'Rate limited by provider — try again later',
+  MODEL_NOT_FOUND: 'Model not found — check your AI provider settings',
+  INVALID_RESPONSE: 'Provider returned an invalid response',
+};
 
 /** Wrap an async AI route handler with standard error handling. */
 export function aiRouteHandler(
@@ -18,7 +27,14 @@ export function aiRouteHandler(
         return;
       }
       if (err instanceof AiAnalysisError) {
-        res.status(aiErrorToStatus(err.code)).json({ error: err.message, code: err.code });
+        // Use safe messages for codes that might contain provider internals;
+        // let NETWORK_ERROR through (contains user-actionable info like hostname resolution)
+        const message = (err.code === 'NETWORK_ERROR' ? err.message : SAFE_AI_MESSAGES[err.code]) ?? err.message;
+        if (err.code === 'PROVIDER_ERROR') {
+          const safeErr = { message: err.message, name: err.name, code: err.code };
+          console.error(`AI ${action} provider error:`, safeErr);
+        }
+        res.status(aiErrorToStatus(err.code)).json({ error: message, code: err.code });
         return;
       }
       if (err instanceof NoAiSettingsError) {

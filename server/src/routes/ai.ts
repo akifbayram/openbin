@@ -1,8 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
-import multer from 'multer';
 import { generateUuid, query } from '../db.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
 import type { ImageInput } from '../lib/aiProviders.js';
@@ -12,12 +10,14 @@ import { getUserAiSettings } from '../lib/aiSettings.js';
 import { executeActions } from '../lib/commandExecutor.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { parseCommand } from '../lib/commandParser.js';
-import { config, getEnvAiConfig } from '../lib/config.js';
+import { getEnvAiConfig } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
 import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
 import { queryInventory } from '../lib/inventoryQuery.js';
+import { aiLimiter } from '../lib/rateLimiters.js';
 import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
+import { memoryPhotoUpload, PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 
@@ -26,26 +26,6 @@ const router = Router();
 // GET /api/ai/default-prompts — public (no auth), returns default prompt strings
 router.get('/default-prompts', (_req, res) => {
   res.json(ALL_DEFAULT_PROMPTS);
-});
-
-// Rate-limit only endpoints that call external AI providers (not settings CRUD)
-// API key requests get a higher limit for headless/smart-home integrations
-const aiLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: (req: import('express').Request) => req.authMethod === 'api_key' ? config.aiRateLimitApiKey : config.aiRateLimit,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'RATE_LIMITED', message: 'Too many AI requests, please try again later' },
-});
-
-const PHOTO_STORAGE_PATH = config.photoStoragePath;
-const memoryUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: config.maxPhotoSizeMb * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    cb(null, allowed.includes(file.mimetype));
-  },
 });
 
 router.use(authenticate);
@@ -239,7 +219,7 @@ router.delete('/settings', aiRouteHandler('delete AI settings', async (req, res)
 }));
 
 // POST /api/ai/analyze-image — analyze raw uploaded image(s) (no stored photo required)
-router.post('/analyze-image', aiLimiter, memoryUpload.fields([
+router.post('/analyze-image', aiLimiter, memoryPhotoUpload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'photos', maxCount: 5 },
 ]), aiRouteHandler('analyze image', async (req, res) => {
@@ -262,6 +242,14 @@ router.post('/analyze-image', aiLimiter, memoryUpload.fields([
   }));
 
   const locationId = req.body?.locationId;
+  // Verify location membership if locationId is provided (prevents tag enumeration from other locations)
+  if (locationId) {
+    const { verifyLocationMembership } = await import('../lib/binAccess.js');
+    if (!await verifyLocationMembership(locationId, req.user!.id)) {
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
+      return;
+    }
+  }
   const existingTags = locationId ? await fetchExistingTags(locationId) : undefined;
 
   const suggestions = await analyzeImages(settings.config, images, existingTags, settings.custom_prompt, settings);
@@ -273,8 +261,8 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
   const { photoId, photoIds } = req.body;
   let ids: string[] = [];
   if (Array.isArray(photoIds) && photoIds.length > 0) {
-    ids = photoIds.slice(0, 5);
-  } else if (photoId) {
+    ids = photoIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, 5);
+  } else if (typeof photoId === 'string') {
     ids = [photoId];
   }
 

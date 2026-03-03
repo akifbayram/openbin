@@ -82,4 +82,17 @@ export async function validateFileType(filePath: string): Promise<void> {
   }
 }
 
+/** Multer config for in-memory photo uploads (AI analysis endpoints). */
+export const memoryPhotoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: config.maxPhotoSizeMb * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (PHOTO_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPEG, PNG, WebP, and GIF images are allowed'));
+    }
+  },
+});
+
 export { PHOTO_STORAGE_PATH, AVATAR_STORAGE_PATH };

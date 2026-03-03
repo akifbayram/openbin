@@ -32,7 +32,7 @@ export interface InventoryContext {
   trash_bins: Array<{ id: string; name: string }>;
 }
 
-function buildSystemPrompt(customPrompt?: string): string {
+export function buildSystemPrompt(customPrompt?: string): string {
   const basePrompt = customPrompt || DEFAULT_QUERY_PROMPT;
 
   return `${basePrompt}
@@ -43,7 +43,7 @@ Respond with ONLY valid JSON, no markdown fences, no extra text. Format:
 IMPORTANT: The "answer" and "matches" fields are both REQUIRED. If no bins match, return an empty matches array.`;
 }
 
-function buildUserMessage(question: string, context: InventoryContext): string {
+export function buildUserMessage(question: string, context: InventoryContext): string {
   const binsContext = context.bins.map((b) => ({
     id: b.id,
     name: b.name,

@@ -11,6 +11,7 @@ import { apiLimiter, authLimiter, joinLimiter, registerLimiter, sensitiveAuthLim
 import { requestLogger } from './middleware/requestLogger.js';
 import activityRoutes from './routes/activity.js';
 import aiRoutes from './routes/ai.js';
+import { streamRouter as aiStreamRoutes } from './routes/aiStream.js';
 import apiKeysRoutes from './routes/apiKeys.js';
 import areasRoutes from './routes/areas.js';
 import authRoutes from './routes/auth.js';
@@ -91,6 +92,7 @@ export function createApp(): express.Express {
   app.use('/api/scan-history', scanHistoryRoutes);
   app.use('/api', exportRoutes);
   app.use('/api/ai', aiRoutes);
+  app.use('/api/ai', aiStreamRoutes);
   app.use('/api/api-keys', apiKeysRoutes);
   app.use('/api/tags', tagsRoutes);
   app.use('/api/items', itemsRoutes);

@@ -1,5 +1,7 @@
 import dns from 'node:dns';
 import { promisify } from 'node:util';
+import { generateText } from 'ai';
+import { createSdkModel } from './sdkProviderFactory.js';
 
 const dnsLookup = promisify(dns.lookup);
 
@@ -12,7 +14,7 @@ export interface AiProviderConfig {
   endpointUrl: string | null;
 }
 
-type AiErrorCode = 'INVALID_KEY' | 'RATE_LIMITED' | 'MODEL_NOT_FOUND' | 'INVALID_RESPONSE' | 'NETWORK_ERROR' | 'PROVIDER_ERROR';
+export type AiErrorCode = 'INVALID_KEY' | 'RATE_LIMITED' | 'MODEL_NOT_FOUND' | 'INVALID_RESPONSE' | 'NETWORK_ERROR' | 'PROVIDER_ERROR';
 
 /** Known AI provider hostnames that are always allowed. */
 const ALLOWED_AI_HOSTS = new Set([
@@ -47,7 +49,7 @@ function isPrivateIp(ip: string): boolean {
 }
 
 /** Validate an AI endpoint URL to prevent SSRF attacks. */
-async function validateEndpointUrl(url: string): Promise<void> {
+export async function validateEndpointUrl(url: string): Promise<void> {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -91,13 +93,6 @@ export function stripCodeFences(text: string): string {
   return s.trim();
 }
 
-function mapHttpStatus(status: number): AiErrorCode {
-  if (status === 401 || status === 403) return 'INVALID_KEY';
-  if (status === 429) return 'RATE_LIMITED';
-  if (status === 404) return 'MODEL_NOT_FOUND';
-  return 'PROVIDER_ERROR';
-}
-
 // -- Multimodal content types --
 
 export interface ImageContent {
@@ -124,133 +119,46 @@ export interface AiCallRequest<T> {
   validate: (raw: unknown) => T;
 }
 
-// -- Per-provider body builders --
+/** Map Vercel AI SDK errors to AiAnalysisError. */
+export function mapSdkError(err: unknown): AiAnalysisError {
+  const e = err as { name?: string; status?: number; statusCode?: number; message?: string };
+  const msg = e.message ?? 'Unknown provider error';
+  const status = e.status ?? e.statusCode ?? 0;
 
-function buildOpenAiBody(req: AiCallRequest<unknown>): object {
-  let userContent: unknown;
-  if (typeof req.userContent === 'string') {
-    userContent = req.userContent;
-  } else {
-    userContent = req.userContent.map((c) => {
-      if (c.type === 'image') {
-        return { type: 'image_url' as const, image_url: { url: `data:${c.mimeType};base64,${c.base64}` } };
-      }
-      return { type: 'text' as const, text: c.text };
-    });
+  if (e.name === 'AI_APICallError' || e.name === 'APICallError') {
+    if (status === 401 || status === 403) return new AiAnalysisError('INVALID_KEY', msg);
+    if (status === 429) return new AiAnalysisError('RATE_LIMITED', msg);
+    if (status === 404) return new AiAnalysisError('MODEL_NOT_FOUND', msg);
+    return new AiAnalysisError('PROVIDER_ERROR', `Provider returned ${status}: ${msg.slice(0, 200)}`);
   }
-
-  const body: Record<string, unknown> = {
-    model: req.config.model,
-    max_tokens: req.maxTokens,
-    temperature: req.temperature,
-    messages: [
-      { role: 'system', content: req.systemPrompt },
-      { role: 'user', content: userContent },
-    ],
-  };
-  if (req.topP != null) body.top_p = req.topP;
-  return body;
+  if (e.name === 'AI_LoadAPIKeyError') return new AiAnalysisError('INVALID_KEY', msg);
+  if (e.name === 'AbortError' || e.name === 'TimeoutError' || msg.includes('timed out') || msg.includes('timeout')) {
+    return new AiAnalysisError('NETWORK_ERROR', msg);
+  }
+  return new AiAnalysisError('PROVIDER_ERROR', msg.slice(0, 200));
 }
 
-function buildAnthropicBody(req: AiCallRequest<unknown>): object {
-  let userContent: unknown;
-  if (typeof req.userContent === 'string') {
-    userContent = req.userContent;
-  } else {
-    userContent = req.userContent.map((c) => {
-      if (c.type === 'image') {
-        return { type: 'image' as const, source: { type: 'base64' as const, media_type: c.mimeType, data: c.base64 } };
-      }
-      return { type: 'text' as const, text: c.text };
-    });
+/** Build SDK user message content from MultimodalContent or string. */
+function buildUserContent(userContent: string | MultimodalContent[]): import('ai').UserContent {
+  if (typeof userContent === 'string') {
+    return userContent;
   }
-
-  const body: Record<string, unknown> = {
-    model: req.config.model,
-    max_tokens: req.maxTokens,
-    temperature: req.temperature,
-    system: req.systemPrompt,
-    messages: [{ role: 'user', content: userContent }],
-  };
-  if (req.topP != null) body.top_p = req.topP;
-  return body;
+  return userContent.map((c) => {
+    if (c.type === 'image') {
+      return {
+        type: 'image' as const,
+        image: Buffer.from(c.base64, 'base64'),
+        mimeType: c.mimeType,
+      };
+    }
+    return { type: 'text' as const, text: c.text };
+  });
 }
 
-function buildGeminiBody(req: AiCallRequest<unknown>): object {
-  let parts: unknown[];
-  if (typeof req.userContent === 'string') {
-    parts = [{ text: req.userContent }];
-  } else {
-    parts = req.userContent.map((c) => {
-      if (c.type === 'image') {
-        return { inlineData: { mimeType: c.mimeType, data: c.base64 } };
-      }
-      return { text: c.text };
-    });
-  }
-
-  const generationConfig: Record<string, unknown> = { temperature: req.temperature, maxOutputTokens: req.maxTokens };
-  if (req.topP != null) generationConfig.topP = req.topP;
-  return {
-    systemInstruction: { parts: [{ text: req.systemPrompt }] },
-    contents: [{ role: 'user', parts }],
-    generationConfig,
-  };
-}
-
-// -- Per-provider response extraction --
-
-function extractTextContent(provider: AiProviderType, data: unknown): string | undefined {
-  if (provider === 'anthropic') {
-    const d = data as { content?: Array<{ type: string; text?: string }> };
-    return d.content?.find((b) => b.type === 'text')?.text;
-  }
-  if (provider === 'gemini') {
-    const d = data as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-    return d.candidates?.[0]?.content?.parts?.[0]?.text;
-  }
-  const d = data as { choices?: Array<{ message?: { content?: string } }> };
-  return d.choices?.[0]?.message?.content;
-}
-
-// -- Per-provider URL + headers --
-
-function getProviderRequest(config: AiProviderConfig, body: object): { url: string; headers: Record<string, string>; body: string } {
-  if (config.provider === 'anthropic') {
-    const baseUrl = config.endpointUrl || 'https://api.anthropic.com';
-    return {
-      url: `${baseUrl.replace(/\/+$/, '')}/v1/messages`,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': config.apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify(body),
-    };
-  }
-  if (config.provider === 'gemini') {
-    return {
-      url: `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent`,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': config.apiKey,
-      },
-      body: JSON.stringify(body),
-    };
-  }
-  const baseUrl = config.endpointUrl || 'https://api.openai.com/v1';
-  return {
-    url: `${baseUrl.replace(/\/+$/, '')}/chat/completions`,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify(body),
-  };
-}
-
-// -- Main entry points --
-
+/**
+ * Core AI call using Vercel AI SDK generateText().
+ * Public interface identical to the original fetch()-based version.
+ */
 export async function callAiProvider<T>(request: AiCallRequest<T>): Promise<T> {
   const { config } = request;
 
@@ -259,38 +167,24 @@ export async function callAiProvider<T>(request: AiCallRequest<T>): Promise<T> {
     await validateEndpointUrl(config.endpointUrl);
   }
 
-  let body: object;
-  if (config.provider === 'anthropic') {
-    body = buildAnthropicBody(request);
-  } else if (config.provider === 'gemini') {
-    body = buildGeminiBody(request);
-  } else {
-    body = buildOpenAiBody(request);
-  }
+  const model = createSdkModel(config);
 
-  const req = getProviderRequest(config, body);
-
-  const fetchOptions: RequestInit = { method: 'POST', headers: req.headers, body: req.body };
-  if (request.timeoutMs) {
-    fetchOptions.signal = AbortSignal.timeout(request.timeoutMs);
-  }
-
-  let res: Response;
+  let result: Awaited<ReturnType<typeof generateText>>;
   try {
-    res = await fetch(req.url, fetchOptions);
+    result = await generateText({
+      model,
+      system: request.systemPrompt,
+      messages: [{ role: 'user' as const, content: buildUserContent(request.userContent) }],
+      maxOutputTokens: request.maxTokens,
+      temperature: request.temperature,
+      topP: request.topP,
+      abortSignal: request.timeoutMs ? AbortSignal.timeout(request.timeoutMs) : undefined,
+    });
   } catch (err) {
-    const msg = (err as Error).name === 'TimeoutError'
-      ? `Request timed out after ${Math.round((request.timeoutMs || 0) / 1000)}s`
-      : `Failed to connect: ${(err as Error).message}`;
-    throw new AiAnalysisError('NETWORK_ERROR', msg);
+    throw mapSdkError(err);
   }
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new AiAnalysisError(mapHttpStatus(res.status), `Provider returned ${res.status}: ${text.slice(0, 200)}`);
-  }
-
-  const content = extractTextContent(config.provider, await res.json());
+  const content = result.text;
   if (!content) {
     throw new AiAnalysisError('INVALID_RESPONSE', 'No content in provider response');
   }
@@ -298,7 +192,8 @@ export async function callAiProvider<T>(request: AiCallRequest<T>): Promise<T> {
   try {
     const parsed = JSON.parse(stripCodeFences(content));
     return request.validate(parsed);
-  } catch {
+  } catch (err) {
+    if (err instanceof AiAnalysisError) throw err;
     throw new AiAnalysisError('INVALID_RESPONSE', `Failed to parse response as JSON: ${content.slice(0, 200)}`);
   }
 }
@@ -309,26 +204,14 @@ export async function testProviderConnection(config: AiProviderConfig): Promise<
     await validateEndpointUrl(config.endpointUrl);
   }
 
-  let body: object;
-  if (config.provider === 'anthropic') {
-    body = { model: config.model, max_tokens: 10, messages: [{ role: 'user', content: 'Reply with OK' }] };
-  } else if (config.provider === 'gemini') {
-    body = { contents: [{ role: 'user', parts: [{ text: 'Reply with OK' }] }], generationConfig: { maxOutputTokens: 10 } };
-  } else {
-    body = { model: config.model, max_tokens: 10, messages: [{ role: 'user', content: 'Reply with OK' }] };
-  }
-
-  const req = getProviderRequest(config, body);
-
-  let res: Response;
+  const model = createSdkModel(config);
   try {
-    res = await fetch(req.url, { method: 'POST', headers: req.headers, body: req.body });
+    await generateText({
+      model,
+      messages: [{ role: 'user' as const, content: 'Reply with OK' }],
+      maxOutputTokens: 10,
+    });
   } catch (err) {
-    throw new AiAnalysisError('NETWORK_ERROR', `Failed to connect: ${(err as Error).message}`);
-  }
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new AiAnalysisError(mapHttpStatus(res.status), `Provider returned ${res.status}: ${text.slice(0, 200)}`);
+    throw mapSdkError(err);
   }
 }

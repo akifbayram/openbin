@@ -61,7 +61,7 @@ export interface CommandResult {
   interpretation: string;
 }
 
-function buildSystemPrompt(request: CommandRequest, customPrompt?: string): string {
+export function buildSystemPrompt(request: CommandRequest, customPrompt?: string): string {
   const basePrompt = customPrompt || DEFAULT_COMMAND_PROMPT;
 
   return `${basePrompt}
@@ -98,7 +98,7 @@ Respond with ONLY valid JSON, no markdown fences, no extra text. Example respons
 {"actions":[{"type":"remove_items","bin_id":"abc","bin_name":"Tools","items":["Hammer"]},{"type":"add_items","bin_id":"def","bin_name":"Garage","items":["Hammer"]}],"interpretation":"Move hammer from Tools to Garage"}`;
 }
 
-function buildUserMessage(request: CommandRequest): string {
+export function buildUserMessage(request: CommandRequest): string {
   const binsContext = request.context.bins.map((b) => ({
     id: b.id,
     name: b.name,
