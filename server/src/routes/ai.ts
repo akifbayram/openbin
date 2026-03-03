@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
@@ -9,6 +10,10 @@ import type { ImageInput } from '../lib/aiProviders.js';
 import { analyzeImages, testConnection } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
+import type { ChatMessage } from '../lib/aiStreamingCaller.js';
+import { callAiProviderStreaming } from '../lib/aiStreamingCaller.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { executeCreateArea, executeReadOnlyTool, executeWriteActions, getChatToolDefinitions, isReadOnlyTool, toolCallToCommandAction } from '../lib/chatTools.js';
 import { executeActions } from '../lib/commandExecutor.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { parseCommand } from '../lib/commandParser.js';
@@ -408,6 +413,311 @@ router.post('/test', aiLimiter, aiRouteHandler('test connection', async (req, re
     endpointUrl: endpointUrl || null,
   });
   res.json({ success: true });
+}));
+
+// ---------------------------------------------------------------------------
+// Streaming Chat with Tool Calling
+// ---------------------------------------------------------------------------
+
+/** In-memory store for pending write-action confirmations */
+const pendingConfirmations = new Map<string, { resolve: (accepted: boolean) => void; timeout: ReturnType<typeof setTimeout> }>();
+
+/** Build a human-readable description of a tool call for action previews */
+function describeToolCall(name: string, args: Record<string, unknown>): string {
+  switch (name) {
+    case 'create_bin':
+      return `Create bin "${args.name}"${args.area_name ? ` in ${args.area_name}` : ''}`;
+    case 'update_bin':
+      return `Update bin "${args.bin_name}"`;
+    case 'delete_bin':
+      return `Delete bin "${args.bin_name}"`;
+    case 'add_items':
+      return `Add ${(args.items as string[])?.length ?? 0} item(s) to "${args.bin_name}"`;
+    case 'remove_items':
+      return `Remove ${(args.items as string[])?.length ?? 0} item(s) from "${args.bin_name}"`;
+    case 'set_area':
+      return `Move "${args.bin_name}" to ${args.area_name}`;
+    case 'add_tags':
+      return `Add tags [${(args.tags as string[])?.join(', ')}] to "${args.bin_name}"`;
+    case 'remove_tags':
+      return `Remove tags [${(args.tags as string[])?.join(', ')}] from "${args.bin_name}"`;
+    case 'create_area':
+      return `Create area "${args.name}"`;
+    default:
+      return `${name} on "${args.bin_name || args.name}"`;
+  }
+}
+
+/** Send an SSE event to the response stream */
+function sendSSE(res: import('express').Response, event: string, data: unknown): void {
+  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+// POST /api/ai/chat — streaming chat with tool calling
+router.post('/chat', aiLimiter, requireLocationMember(), aiRouteHandler('chat', async (req, res) => {
+  const { messages: clientMessages, locationId } = req.body;
+
+  // Validate inputs
+  if (!Array.isArray(clientMessages) || clientMessages.length === 0) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'messages array is required and must not be empty' });
+    return;
+  }
+  if (!locationId || typeof locationId !== 'string') {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'locationId is required' });
+    return;
+  }
+
+  // Get user AI settings
+  const settings = await getUserAiSettings(req.user!.id);
+
+  // Query location context for system prompt
+  const [locationResult, areasResult, tagsResult] = await Promise.all([
+    query('SELECT name, term_bin, term_location, term_area FROM locations WHERE id = $1', [locationId]),
+    query('SELECT name FROM areas WHERE location_id = $1 ORDER BY name COLLATE NOCASE ASC', [locationId]),
+    query(
+      `SELECT DISTINCT je.value AS tag FROM bins, json_each(bins.tags) je WHERE bins.location_id = $1 AND bins.deleted_at IS NULL ORDER BY je.value COLLATE NOCASE ASC`,
+      [locationId],
+    ),
+  ]);
+
+  if (locationResult.rows.length === 0) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Location not found' });
+    return;
+  }
+
+  const loc = locationResult.rows[0];
+  const locationName = loc.name as string;
+  const termBin = (loc.term_bin as string) || 'bin';
+  const termLocation = (loc.term_location as string) || 'location';
+  const termArea = (loc.term_area as string) || 'area';
+  const areaNames = areasResult.rows.map((r) => r.name as string);
+  const tagNames = tagsResult.rows.map((r) => r.tag as string);
+
+  // Build system prompt
+  const systemPrompt = `You are the OpenBin assistant. You help users manage their physical storage inventory.
+You have access to tools to search, create, and modify ${termBin}s, items, ${termArea}s, and tags.
+
+Current ${termLocation}: ${locationName}
+Available ${termArea}s: ${areaNames.length > 0 ? areaNames.join(', ') : 'none yet'}
+Existing tags: ${tagNames.length > 0 ? tagNames.join(', ') : 'none yet'}
+Terminology: "${termBin}" means a storage container, "${termArea}" means a room or zone, "${termLocation}" means the overall space.
+
+Guidelines:
+- Use search tools before making changes to verify you're acting on the right ${termBin}s.
+- When suggesting changes, be specific about what will change.
+- After completing actions, summarize what was done.
+- If the user's request is ambiguous, ask for clarification.
+- Keep responses concise and helpful.`;
+
+  // Convert client messages to provider format (ChatMessage[])
+  const providerMessages: ChatMessage[] = [{ role: 'system', content: systemPrompt }];
+
+  for (const msg of clientMessages) {
+    if (msg.role === 'user') {
+      providerMessages.push({ role: 'user', content: msg.content ?? '' });
+    } else if (msg.role === 'assistant') {
+      const chatMsg: ChatMessage = { role: 'assistant' };
+      if (msg.content) chatMsg.content = msg.content;
+      if (Array.isArray(msg.toolCalls) && msg.toolCalls.length > 0) {
+        chatMsg.tool_calls = msg.toolCalls.map((tc: { id: string; name: string; arguments: Record<string, unknown> }) => ({
+          id: tc.id,
+          function: { name: tc.name, arguments: JSON.stringify(tc.arguments) },
+        }));
+      }
+      providerMessages.push(chatMsg);
+    } else if (msg.role === 'tool') {
+      providerMessages.push({
+        role: 'tool',
+        content: msg.content ?? '',
+        tool_call_id: msg.toolCallId,
+      });
+    }
+  }
+
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const tools = getChatToolDefinitions();
+  const userId = req.user!.id;
+  const userName = req.user!.username;
+  const authMethod = req.authMethod;
+  const apiKeyId = req.apiKeyId;
+
+  const MAX_ITERATIONS = 10;
+
+  try {
+    for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+      // Call AI provider with streaming
+      const stream = callAiProviderStreaming({
+        config: settings.config,
+        messages: providerMessages,
+        tools,
+        temperature: settings.temperature ?? undefined,
+        maxTokens: settings.max_tokens ?? undefined,
+        topP: settings.top_p ?? undefined,
+        timeoutMs: (settings.request_timeout ?? 120) * 1000,
+      });
+
+      const toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }> = [];
+      let assistantText = '';
+
+      for await (const event of stream) {
+        if (event.type === 'text_delta') {
+          assistantText += event.delta;
+          sendSSE(res, 'text_delta', { delta: event.delta });
+        } else if (event.type === 'tool_call') {
+          toolCalls.push({ id: event.id, name: event.name, arguments: event.arguments });
+        } else if (event.type === 'error') {
+          sendSSE(res, 'error', { message: event.message, code: event.code });
+          sendSSE(res, 'done', {});
+          res.end();
+          return;
+        }
+        // 'done' from provider stream is handled after loop
+      }
+
+      // No tool calls — we're done
+      if (toolCalls.length === 0) {
+        sendSSE(res, 'done', {});
+        res.end();
+        return;
+      }
+
+      // Add assistant message with tool calls to history
+      const assistantMsg: ChatMessage = { role: 'assistant' };
+      if (assistantText) assistantMsg.content = assistantText;
+      assistantMsg.tool_calls = toolCalls.map((tc) => ({
+        id: tc.id,
+        function: { name: tc.name, arguments: JSON.stringify(tc.arguments) },
+      }));
+      providerMessages.push(assistantMsg);
+
+      // Separate read-only vs write tool calls
+      const readCalls: typeof toolCalls = [];
+      const writeCalls: typeof toolCalls = [];
+
+      for (const tc of toolCalls) {
+        if (isReadOnlyTool(tc.name)) {
+          readCalls.push(tc);
+        } else {
+          writeCalls.push(tc);
+        }
+      }
+
+      // Execute read-only tools immediately
+      for (const tc of readCalls) {
+        const result = await executeReadOnlyTool(tc.name, tc.arguments, locationId, userId);
+        sendSSE(res, 'tool_result', { toolCallId: tc.id, name: tc.name, result });
+        providerMessages.push({ role: 'tool', content: result, tool_call_id: tc.id });
+      }
+
+      // Handle write tool calls — need user confirmation
+      if (writeCalls.length > 0) {
+        const confirmationId = crypto.randomUUID();
+        const actions: Array<{ id: string; toolName: string; args: Record<string, unknown>; description: string }> = [];
+
+        for (const tc of writeCalls) {
+          actions.push({
+            id: tc.id,
+            toolName: tc.name,
+            args: tc.arguments,
+            description: describeToolCall(tc.name, tc.arguments),
+          });
+        }
+
+        sendSSE(res, 'action_preview', { confirmationId, actions });
+
+        // Wait for user confirmation with 5-minute timeout
+        const accepted = await new Promise<boolean>((resolve) => {
+          const timeout = setTimeout(() => {
+            pendingConfirmations.delete(confirmationId);
+            resolve(false);
+          }, 5 * 60 * 1000);
+          pendingConfirmations.set(confirmationId, { resolve, timeout });
+        });
+
+        if (accepted) {
+          // Execute each write tool call
+          for (const tc of writeCalls) {
+            try {
+              let resultText: string;
+
+              if (tc.name === 'create_area') {
+                resultText = await executeCreateArea(tc.arguments, locationId, userId);
+              } else {
+                const action = toolCallToCommandAction(tc.name, tc.arguments);
+                if (!action) {
+                  resultText = JSON.stringify({ error: `Could not convert ${tc.name} to action` });
+                } else {
+                  const execResult = await executeWriteActions([action], locationId, userId, userName, authMethod, apiKeyId);
+                  const actionResult = execResult.executed[0];
+                  resultText = JSON.stringify(actionResult ?? { error: 'No result' });
+                }
+              }
+
+              sendSSE(res, 'action_executed', { toolCallId: tc.id, success: true, details: resultText });
+              providerMessages.push({ role: 'tool', content: resultText, tool_call_id: tc.id });
+            } catch (err) {
+              const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+              const errorResult = JSON.stringify({ error: errorMsg });
+              sendSSE(res, 'action_executed', { toolCallId: tc.id, success: false, details: errorResult });
+              providerMessages.push({ role: 'tool', content: errorResult, tool_call_id: tc.id });
+            }
+          }
+        } else {
+          // Rejected or timed out
+          sendSSE(res, 'action_rejected', { confirmationId });
+          for (const tc of writeCalls) {
+            const rejectionResult = JSON.stringify({ error: 'Action rejected by user' });
+            providerMessages.push({ role: 'tool', content: rejectionResult, tool_call_id: tc.id });
+          }
+        }
+      }
+
+      // Continue loop — AI will generate follow-up based on tool results
+    }
+
+    // Exceeded max iterations
+    sendSSE(res, 'error', { message: 'Maximum tool-calling iterations reached', code: 'MAX_ITERATIONS' });
+    sendSSE(res, 'done', {});
+    res.end();
+  } catch (err) {
+    // If headers already sent (streaming started), send as SSE error event
+    const message = err instanceof Error ? err.message : 'Internal server error';
+    sendSSE(res, 'error', { message, code: 'INTERNAL_ERROR' });
+    sendSSE(res, 'done', {});
+    res.end();
+  }
+}));
+
+// POST /api/ai/chat/confirm — confirm or reject pending write actions
+router.post('/chat/confirm', asyncHandler(async (req, res) => {
+  const { confirmationId, accepted } = req.body;
+
+  if (!confirmationId || typeof confirmationId !== 'string') {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'confirmationId is required' });
+    return;
+  }
+  if (typeof accepted !== 'boolean') {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'accepted must be a boolean' });
+    return;
+  }
+
+  const pending = pendingConfirmations.get(confirmationId);
+  if (!pending) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Confirmation not found or already expired' });
+    return;
+  }
+
+  clearTimeout(pending.timeout);
+  pendingConfirmations.delete(confirmationId);
+  pending.resolve(accepted);
+
+  res.json({ ok: true });
 }));
 
 export default router;
