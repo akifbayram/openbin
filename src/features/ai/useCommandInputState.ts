@@ -4,12 +4,13 @@ import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { mapAiError } from './aiErrors';
+import type { ExecutionResult } from './useActionExecutor';
 import { useAiSettings } from './useAiSettings';
 import type { QueryResult } from './useInventoryQuery';
 import { useStreamingCommand } from './useStreamingCommand';
 import { useStreamingQuery } from './useStreamingQuery';
 
-type State = 'idle' | 'parsing' | 'preview' | 'executing' | 'querying' | 'query-result';
+type State = 'idle' | 'parsing' | 'preview' | 'executing' | 'querying' | 'query-result' | 'success';
 
 export function useCommandInputState(onOpenChange: (open: boolean) => void) {
   const t = useTerminology();
@@ -26,11 +27,13 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
   const [photoMode, setPhotoMode] = useState(false);
   const [initialFiles, setInitialFiles] = useState<File[]>([]);
   const [examplesOpen, setExamplesOpen] = useState(false);
+  const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isAiReady = settings !== null;
 
-  const state: State = checkedActions.size > 0 && actions ? 'preview'
+  const state: State = executionResult ? 'success'
+    : checkedActions.size > 0 && actions ? 'preview'
     : isParsing ? 'parsing'
     : (isQuerying || isQueryStreaming) && queryPartialText.length === 0 ? 'querying'
     : (isQueryStreaming && queryPartialText.length > 0) ? 'query-result'
@@ -72,6 +75,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     clearQuery();
     setCheckedActions(new Map());
     setQueryResult(null);
+    setExecutionResult(null);
   }
 
   function toggleAction(index: number) {
@@ -90,6 +94,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
       clearQuery();
       setCheckedActions(new Map());
       setQueryResult(null);
+      setExecutionResult(null);
       setPhotoMode(false);
       setInitialFiles([]);
     }
@@ -109,11 +114,17 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     navigate(`/bin/${binId}`, { state: { backLabel: t.Bins, backPath: '/bins' } });
   }
 
-  function handleExecuteComplete() {
+  function handleExecuteComplete(result: ExecutionResult) {
     setText('');
     clearCommand();
     setCheckedActions(new Map());
-    onOpenChange(false);
+    setExecutionResult(result);
+  }
+
+  function handleAskAnother() {
+    setText('');
+    clearCommand();
+    setExecutionResult(null);
   }
 
   return {
@@ -130,6 +141,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     setInitialFiles,
     examplesOpen,
     setExamplesOpen,
+    executionResult,
     fileInputRef,
     // Derived
     state,
@@ -148,6 +160,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     handlePhotoSelect,
     handleBinClick,
     handleExecuteComplete,
+    handleAskAnother,
   };
 }
 

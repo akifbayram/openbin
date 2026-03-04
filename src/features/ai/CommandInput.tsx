@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CommandActionPreview } from './CommandActionPreview';
 import { CommandIdleInput } from './CommandIdleInput';
+import { CommandSuccess } from './CommandSuccess';
 import { AiSetupView } from './InlineAiSetup';
 import { InventoryQueryResult } from './InventoryQueryResult';
 import { PhotoBulkAdd } from './PhotoBulkAdd';
@@ -28,12 +29,13 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
     photoMode, setPhotoMode,
     initialFiles, setInitialFiles,
     examplesOpen, setExamplesOpen,
+    executionResult,
     fileInputRef,
     state, isAiReady, aiSettingsLoading, selectedCount,
     actions, interpretation, error,
     handleParse, handleBack, toggleAction,
     handleClose, handlePhotoSelect, handleBinClick,
-    handleExecuteComplete,
+    handleExecuteComplete, handleAskAnother,
   } = useCommandInputState(onOpenChange);
 
   const { isExecuting, executingProgress, executeActions } = useActionExecutor({
@@ -69,6 +71,13 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
             initialFiles={initialFiles}
             onClose={() => handleClose(false)}
             onBack={() => { setPhotoMode(false); setInitialFiles([]); }}
+          />
+        ) : effectiveState === 'success' && executionResult ? (
+          <CommandSuccess
+            result={executionResult}
+            onAskAnother={handleAskAnother}
+            onClose={() => handleClose(false)}
+            onBinClick={handleBinClick}
           />
         ) : effectiveState === 'querying' ? (
           <div className="flex flex-col items-center justify-center py-8 gap-3">

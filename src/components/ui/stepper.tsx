@@ -30,6 +30,7 @@ function StepIndicator({ steps, currentStepIndex, className }: StepIndicatorProp
               <div className="flex flex-col items-center shrink-0">
                 <span
                   role="tab"
+                  tabIndex={-1}
                   aria-current={status === 'active' ? 'step' : undefined}
                   className={cn(
                     'flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-semibold',

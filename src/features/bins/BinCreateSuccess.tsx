@@ -13,7 +13,7 @@ export interface CreatedBinInfo {
   name: string;
   icon: string;
   color: string;
-  itemCount: number;
+  itemCount?: number;
 }
 
 interface BinCreateSuccessProps {
@@ -24,7 +24,7 @@ interface BinCreateSuccessProps {
 
 function StatsLine({ createdBins, binsLabel }: { createdBins: CreatedBinInfo[]; binsLabel: string }) {
   const count = createdBins.length;
-  const totalItems = createdBins.reduce((sum, b) => sum + b.itemCount, 0);
+  const totalItems = createdBins.reduce((sum, b) => sum + (b.itemCount ?? 0), 0);
 
   if (count === 1) {
     const bin = createdBins[0];
@@ -92,7 +92,7 @@ export function BinCreateSuccess({ createdBins, onCreateAnother, onClose }: BinC
   );
 }
 
-function BinRow({ bin, showColor, onViewBin }: { bin: CreatedBinInfo; showColor: boolean; onViewBin: (id: string) => void }) {
+export function BinRow({ bin, showColor, onViewBin }: { bin: CreatedBinInfo; showColor: boolean; onViewBin: (id: string) => void }) {
   const Icon = resolveIcon(bin.icon);
   const colorPreset = showColor ? resolveColor(bin.color) : null;
 
@@ -100,13 +100,13 @@ function BinRow({ bin, showColor, onViewBin }: { bin: CreatedBinInfo; showColor:
     <ListItem
       interactive
       onClick={() => onViewBin(bin.id)}
-      style={colorPreset ? { background: colorPreset.bgCss } : undefined}
+      style={colorPreset ? { background: colorPreset.bgCss, boxShadow: 'none' } : { boxShadow: 'none' }}
     >
       <Icon className="h-5 w-5 shrink-0 text-[var(--text-secondary)]" />
       <span className="flex-1 truncate text-[var(--text-primary)] font-medium">{bin.name}</span>
-      {showColor && bin.itemCount > 0 && (
+      {showColor && (bin.itemCount ?? 0) > 0 && (
         <span className="text-xs text-[var(--text-tertiary)]">
-          {bin.itemCount} {plural(bin.itemCount, 'item')}
+          {bin.itemCount} {plural(bin.itemCount ?? 0, 'item')}
         </span>
       )}
       <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />

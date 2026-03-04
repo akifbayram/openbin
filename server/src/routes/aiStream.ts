@@ -5,7 +5,7 @@ import { validateEndpointUrl } from '../lib/aiCaller.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
 import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
-import { CommandResultSchema, QueryResultSchema } from '../lib/aiSchemas.js';
+import { QueryResultSchema } from '../lib/aiSchemas.js';
 import type { UserAiSettings } from '../lib/aiSettings.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
 import { initSseResponse, pipeAiStreamToResponse } from '../lib/aiStream.js';
@@ -91,8 +91,10 @@ streamRouter.post('/command/stream', aiLimiter, requireLocationMember(), aiRoute
   ]);
   const request: CommandRequest = { text, context };
 
+  // No schema constraint — the prompt's examples and instructions produce
+  // reliable JSON, and structured-output mode causes providers like Gemini
+  // to aggressively omit optional fields (items, area_name in create_bin).
   await pipeAiStreamToResponse(res, model, {
-    schema: CommandResultSchema,
     system: buildCommandSysPrompt(request, settings.command_prompt ?? undefined),
     userContent: buildCommandUserMsg(request),
     ...streamOpts(settings, { temperature: 0.2 }),

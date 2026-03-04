@@ -15,7 +15,7 @@ export function SavedViewChips({ views, onApply, onDelete }: SavedViewChipsProps
       <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
         Saved Searches
       </h2>
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-5 px-5 pt-1 pb-3">
         {views.map((view) => (
           // biome-ignore lint/a11y/useSemanticElements: container with nested interactive delete button cannot be a plain button
           <div
@@ -24,9 +24,9 @@ export function SavedViewChips({ views, onApply, onDelete }: SavedViewChipsProps
             tabIndex={0}
             onClick={() => onApply(view)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onApply(view); } }}
-            className="group/chip shrink-0 rounded-[var(--radius-lg)] px-3.5 py-2.5 flex items-center gap-2.5 max-w-[200px] active:scale-[0.98] transition-all duration-200 cursor-pointer bg-[var(--accent)]/18 bin-card-shadow [@media(hover:hover)]:hover:scale-[1.02] [@media(hover:hover)]:hover:-translate-y-0.5"
+            className="group/chip shrink-0 rounded-[var(--radius-lg)] px-3.5 py-2.5 flex items-center gap-2.5 max-w-[200px] active:scale-[0.98] transition-all duration-200 cursor-pointer bg-[var(--accent)]/18 [@media(hover:hover)]:hover:bg-[var(--accent)]/28 [@media(hover:hover)]:hover:scale-[1.02]"
           >
-            <Bookmark className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
+            <Bookmark className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" strokeWidth={2.5} />
             <span className="text-[14px] font-medium text-[var(--text-primary)] truncate">{view.name}</span>
             <button
               type="button"

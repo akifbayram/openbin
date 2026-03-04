@@ -1,6 +1,10 @@
 import { useCallback, useMemo } from 'react';
 import { useAiStream } from './useAiStream';
-import type { CommandResult } from './useCommand';
+import type { CommandAction, CommandResult } from './useCommand';
+
+function isValidAction(a: unknown): a is CommandAction {
+  return typeof a === 'object' && a !== null && typeof (a as Record<string, unknown>).type === 'string';
+}
 
 export function useStreamingCommand() {
   const { result, isStreaming, error, stream, cancel, clear: clearStream } = useAiStream<CommandResult>(
@@ -13,7 +17,11 @@ export function useStreamingCommand() {
     [stream]
   );
 
-  const actions = result?.actions ?? null;
+  // Filter out malformed actions (e.g. empty objects from AI)
+  const actions = useMemo(
+    () => result?.actions?.filter(isValidAction) ?? null,
+    [result],
+  );
   const interpretation = result?.interpretation ?? '';
 
   const clear = useCallback(() => {

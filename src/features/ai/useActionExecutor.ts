@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { createArea, deleteArea, updateArea, useAreaList } from '@/features/areas/useAreas';
+import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
 import { addBin, addItemsToBin, deleteBin, notifyBinsChanged, reorderItems, restoreBin, restoreBinFromTrash, updateBin } from '@/features/bins/useBins';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 import { setTagColor } from '@/features/tags/useTagColors';
@@ -10,10 +11,16 @@ import { Events, notify } from '@/lib/eventBus';
 import type { Bin } from '@/types';
 import type { CommandAction } from './useCommand';
 
+export interface ExecutionResult {
+  completedActions: CommandAction[];
+  createdBins: CreatedBinInfo[];
+  failedCount: number;
+}
+
 interface UseActionExecutorOptions {
   actions: CommandAction[] | null;
   checkedActions: Map<number, boolean>;
-  onComplete: () => void;
+  onComplete: (result: ExecutionResult) => void;
 }
 
 export function useActionExecutor({ actions, checkedActions, onComplete }: UseActionExecutorOptions) {
@@ -41,7 +48,8 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
 
     setIsExecuting(true);
     setExecutingProgress({ current: 0, total: selected.length });
-    let completed = 0;
+    const completedActions: CommandAction[] = [];
+    const createdBins: CreatedBinInfo[] = [];
 
     for (let idx = 0; idx < selected.length; idx++) {
       const action = selected[idx];
@@ -70,7 +78,7 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
           }
           case 'create_bin': {
             const areaId = action.area_name ? await resolveAreaId(action.area_name) : null;
-            await addBin({
+            const created = await addBin({
               name: action.name,
               locationId: activeLocationId,
               items: action.items,
@@ -80,6 +88,7 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
               icon: action.icon,
               color: action.color,
             });
+            createdBins.push({ id: created.id, name: created.name, icon: created.icon, color: created.color });
             break;
           }
           case 'delete_bin': {
@@ -159,12 +168,14 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
           case 'restore_bin':
             await restoreBinFromTrash(action.bin_id);
             break;
-          case 'duplicate_bin':
-            await apiFetch(`/api/bins/${action.bin_id}/duplicate`, {
+          case 'duplicate_bin': {
+            const duped = await apiFetch<Bin>(`/api/bins/${action.bin_id}/duplicate`, {
               method: 'POST',
               body: action.new_name ? { name: action.new_name } : {},
             });
+            createdBins.push({ id: duped.id, name: duped.name, icon: duped.icon, color: duped.color });
             break;
+          }
           case 'pin_bin':
             await pinBin(action.bin_id);
             notify(Events.PINS);
@@ -189,7 +200,7 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
             await reorderItems(action.bin_id, action.item_ids);
             break;
         }
-        completed++;
+        completedActions.push(action);
       } catch (err) {
         console.error(`Failed to execute action ${action.type}:`, err);
       }
@@ -199,13 +210,17 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
     setExecutingProgress({ current: 0, total: 0 });
     notifyBinsChanged();
 
-    if (completed === selected.length) {
-      showToast({ message: `${completed} action${completed !== 1 ? 's' : ''} completed` });
-    } else {
-      showToast({ message: `${completed} of ${selected.length} actions completed` });
+    const result: ExecutionResult = {
+      completedActions,
+      createdBins,
+      failedCount: selected.length - completedActions.length,
+    };
+
+    if (result.failedCount > 0) {
+      showToast({ message: `${completedActions.length} of ${selected.length} actions completed` });
     }
 
-    onComplete();
+    onComplete(result);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actions, checkedActions, activeLocationId, areas, onComplete, showToast]);
 

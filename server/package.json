@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/start.ts",
+    "dev": "tsx watch --env-file=../.env src/start.ts",
     "build": "tsc",
     "start": "node dist/start.js",
     "lint": "npx biome check src/",

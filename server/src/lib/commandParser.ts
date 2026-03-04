@@ -68,7 +68,7 @@ Available action types:
 - add_items: Add items to an existing bin. Fields: bin_id, bin_name, items[]
 - remove_items: Remove items from an existing bin. Fields: bin_id, bin_name, items[]
 - modify_item: Change an item's name in a bin. Fields: bin_id, bin_name, old_item, new_item
-- create_bin: Create a new bin. Fields: name, area_name?, tags?[], items?[], color?, icon?, notes?
+- create_bin: Create a new bin. Fields: name, area_name (include when user specifies a location/area), tags[], items[] (ALWAYS include items when user mentions contents), color?, icon?, notes?
 - delete_bin: Delete a bin. Fields: bin_id, bin_name
 - add_tags: Add tags to a bin. Fields: bin_id, bin_name, tags[]
 - remove_tags: Remove tags from a bin. Fields: bin_id, bin_name, tags[]
@@ -90,10 +90,14 @@ Available action types:
 Available colors: ${request.context.availableColors.join(', ')}
 Available icons: ${request.context.availableIcons.join(', ')}
 
-IMPORTANT: Each action object MUST have a "type" field as a top-level property. All other fields are also top-level properties of the action object (NOT nested). The "interpretation" field is REQUIRED and must always be present.
+IMPORTANT RULES:
+1. Each action object MUST have a "type" field as a top-level property. All other fields are also top-level properties of the action object (NOT nested).
+2. The "interpretation" field is REQUIRED and must always be present.
+3. For create_bin: You MUST include "items" array when the user mentions any contents/items. You MUST include "area_name" when the user mentions a location/room/area. Do NOT put this information only in the interpretation — it must be in the action fields.
 
-Example response format:
-{"actions":[{"type":"remove_items","bin_id":"abc","bin_name":"Tools","items":["Hammer"]},{"type":"add_items","bin_id":"def","bin_name":"Garage","items":["Hammer"]}],"interpretation":"Move hammer from Tools to Garage"}`;
+Example responses:
+{"actions":[{"type":"remove_items","bin_id":"abc","bin_name":"Tools","items":["Hammer"]},{"type":"add_items","bin_id":"def","bin_name":"Garage","items":["Hammer"]}],"interpretation":"Move hammer from Tools to Garage"}
+{"actions":[{"type":"create_bin","name":"Holiday Lights","area_name":"Garage","items":["LED string lights","Extension cord","Light clips"],"tags":["seasonal","holiday"]}],"interpretation":"Create a Holiday Lights bin in the Garage with 3 items."}`;
 }
 
 export function buildUserMessage(request: CommandRequest): string {
