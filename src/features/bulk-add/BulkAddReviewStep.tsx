@@ -136,6 +136,8 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   }
 
   async function triggerCorrection(target: BulkAddPhoto, text: string) {
+    // Abort any pending analyze stream for this photo
+    abortRef.current.get(target.id)?.abort();
     dispatch({ type: 'SET_ANALYZING', id: target.id });
 
     const previousResult = {
@@ -169,6 +171,8 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   function handleCorrectionSubmit() {
     const trimmed = correctionText.trim();
     if (!trimmed) {
+      cancelCorrection();
+      dispatch({ type: 'RESET_CORRECTION_COUNT', id: photo.id });
       triggerAnalyze(photo);
       setCorrectionText('');
       setCorrectionOpen(false);

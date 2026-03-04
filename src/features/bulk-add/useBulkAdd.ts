@@ -49,6 +49,7 @@ export type BulkAddAction =
   | { type: 'SET_CREATED'; id: string; binId: string }
   | { type: 'SET_CREATE_ERROR'; id: string; error: string }
   | { type: 'INCREMENT_CORRECTION'; id: string }
+  | { type: 'RESET_CORRECTION_COUNT'; id: string }
   | { type: 'DONE_CREATING' };
 
 export const initialState: BulkAddState = {
@@ -101,7 +102,7 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
       return {
         ...state,
         photos: state.photos.map((p) =>
-          p.id === action.id ? { ...p, status: 'analyzing', analyzeError: null, streamedItems: [], streamedName: '', correctionCount: 0 } : p
+          p.id === action.id ? { ...p, status: 'analyzing', analyzeError: null, streamedItems: [], streamedName: '' } : p
         ),
       };
 
@@ -193,6 +194,14 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
         ...state,
         photos: state.photos.map((p) =>
           p.id === action.id ? { ...p, correctionCount: p.correctionCount + 1 } : p
+        ),
+      };
+
+    case 'RESET_CORRECTION_COUNT':
+      return {
+        ...state,
+        photos: state.photos.map((p) =>
+          p.id === action.id ? { ...p, correctionCount: 0 } : p
         ),
       };
 

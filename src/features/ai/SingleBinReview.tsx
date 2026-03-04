@@ -138,6 +138,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   function handleCorrectionSubmit() {
     const trimmed = correctionText.trim();
     if (!trimmed) {
+      cancelCorrection();
       setCorrectionCount(0);
       triggerAnalyze();
       setCorrectionText('');

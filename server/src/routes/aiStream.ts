@@ -250,13 +250,26 @@ streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correctio
 
   const correctionText = validateTextInput(correction, 'correction', 1000);
 
+  // Sanitize previousResult to prevent oversized prompts
+  const safePrevious = {
+    name: String(previousResult.name).slice(0, 255),
+    items: (previousResult.items as unknown[])
+      .filter((i): i is string => typeof i === 'string')
+      .slice(0, 100)
+      .map((i) => i.slice(0, 500)),
+    tags: Array.isArray(previousResult.tags)
+      ? (previousResult.tags as unknown[]).filter((t): t is string => typeof t === 'string').slice(0, 20)
+      : [],
+    notes: typeof previousResult.notes === 'string' ? previousResult.notes.slice(0, 2000) : '',
+  };
+
   // Mock mode
   if (config.aiMock) {
     const writeEvent = initSseResponse(res);
     const mockResult = {
-      name: previousResult.name,
-      items: [...(previousResult.items as string[]).slice(0, -1), 'Corrected item'],
-      tags: previousResult.tags || [],
+      name: safePrevious.name,
+      items: [...safePrevious.items.slice(0, -1), 'Corrected item'],
+      tags: safePrevious.tags,
       notes: `Corrected: ${correctionText.slice(0, 50)}`,
     };
     const json = JSON.stringify(mockResult);
@@ -286,7 +299,7 @@ streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correctio
   const basePrompt = buildAnalysisPrompt(existingTags, settings.custom_prompt);
   const system = `${basePrompt}\n\n${AI_CORRECTION_PREAMBLE}`;
 
-  const userMessage = `Previous analysis result:\n${JSON.stringify(previousResult, null, 2)}\n\nUser correction: ${correctionText}`;
+  const userMessage = `Previous analysis result:\n${JSON.stringify(safePrevious, null, 2)}\n\nUser correction: ${correctionText}`;
 
   await pipeAiStreamToResponse(res, model, {
     system,
