@@ -12,6 +12,7 @@ import { initSseResponse, pipeAiStreamToResponse } from '../lib/aiStream.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg } from '../lib/commandParser.js';
 import { config } from '../lib/config.js';
+import { AI_CORRECTION_PREAMBLE } from '../lib/defaultPrompts.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
 import { safePath } from '../lib/pathSafety.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
@@ -229,6 +230,68 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
     system: buildAnalysisPrompt(existingTags, settings.custom_prompt),
     userContent: [...imageParts, { type: 'text' as const, text: buildAnalysisUserText(imageBuffers.length) }],
     ...streamOpts(settings, { maxTokens: imageBuffers.length > 1 ? 2000 : 1500 }),
+  });
+}));
+
+// POST /api/ai/correct/stream — correct a previous analysis result
+streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correction', async (req, res) => {
+  const { previousResult, correction, locationId } = req.body;
+
+  // Validate previousResult shape
+  if (
+    !previousResult ||
+    typeof previousResult !== 'object' ||
+    typeof previousResult.name !== 'string' ||
+    !Array.isArray(previousResult.items)
+  ) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'previousResult must have name (string) and items (array)' });
+    return;
+  }
+
+  const correctionText = validateTextInput(correction, 'correction', 1000);
+
+  // Mock mode
+  if (config.aiMock) {
+    const writeEvent = initSseResponse(res);
+    const mockResult = {
+      name: previousResult.name,
+      items: [...(previousResult.items as string[]).slice(0, -1), 'Corrected item'],
+      tags: previousResult.tags || [],
+      notes: `Corrected: ${correctionText.slice(0, 50)}`,
+    };
+    const json = JSON.stringify(mockResult);
+    const chunkSize = 20;
+    for (let i = 0; i < json.length; i += chunkSize) {
+      writeEvent({ type: 'delta', text: json.slice(i, i + chunkSize) });
+      await new Promise((r) => setTimeout(r, 30));
+    }
+    writeEvent({ type: 'done', text: json });
+    res.end();
+    return;
+  }
+
+  const { settings, model } = await resolveUserModel(req.user!.id);
+
+  // Optional location membership check + tag fetch
+  let existingTags: string[] | undefined;
+  if (locationId) {
+    const { verifyLocationMembership } = await import('../lib/binAccess.js');
+    if (!await verifyLocationMembership(locationId, req.user!.id)) {
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
+      return;
+    }
+    existingTags = await fetchExistingTags(locationId);
+  }
+
+  const basePrompt = buildAnalysisPrompt(existingTags, settings.custom_prompt);
+  const system = `${basePrompt}\n\n${AI_CORRECTION_PREAMBLE}`;
+
+  const userMessage = `Previous analysis result:\n${JSON.stringify(previousResult, null, 2)}\n\nUser correction: ${correctionText}`;
+
+  await pipeAiStreamToResponse(res, model, {
+    system,
+    userContent: userMessage,
+    ...streamOpts(settings, { maxTokens: 1500 }),
   });
 }));
 
