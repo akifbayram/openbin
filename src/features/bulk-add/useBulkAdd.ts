@@ -15,6 +15,7 @@ export interface BulkAddPhoto {
   createdBinId?: string;
   streamedItems: string[];
   streamedName: string;
+  correctionCount: number;
 }
 
 export type BulkAddStep = 'upload' | 'review' | 'summary';
@@ -47,6 +48,7 @@ export type BulkAddAction =
   | { type: 'SET_CREATING'; id: string }
   | { type: 'SET_CREATED'; id: string; binId: string }
   | { type: 'SET_CREATE_ERROR'; id: string; error: string }
+  | { type: 'INCREMENT_CORRECTION'; id: string }
   | { type: 'DONE_CREATING' };
 
 export const initialState: BulkAddState = {
@@ -99,7 +101,7 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
       return {
         ...state,
         photos: state.photos.map((p) =>
-          p.id === action.id ? { ...p, status: 'analyzing', analyzeError: null, streamedItems: [], streamedName: '' } : p
+          p.id === action.id ? { ...p, status: 'analyzing', analyzeError: null, streamedItems: [], streamedName: '', correctionCount: 0 } : p
         ),
       };
 
@@ -186,6 +188,14 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
     case 'DONE_CREATING':
       return { ...state, isCreating: false };
 
+    case 'INCREMENT_CORRECTION':
+      return {
+        ...state,
+        photos: state.photos.map((p) =>
+          p.id === action.id ? { ...p, correctionCount: p.correctionCount + 1 } : p
+        ),
+      };
+
     default:
       return state;
   }
@@ -220,6 +230,7 @@ export function createBulkAddPhoto(file: File, sharedAreaId: string | null): Bul
     analyzeError: null,
     streamedItems: [],
     streamedName: '',
+    correctionCount: 0,
   };
 }
 

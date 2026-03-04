@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SkipForward, Sparkles } from 'lucide-react';
+import { ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SkipForward, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { AiAnalyzeError, AiStreamingPreview } from '@/features/ai/AiStreamingPre
 import { parsePartialAnalysis } from '@/features/ai/parsePartialAnalysis';
 import { mapErrorMessage } from '@/features/ai/useAiAnalysis';
 import { useAiSettings } from '@/features/ai/useAiSettings';
+import { useAiStream } from '@/features/ai/useAiStream';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { ColorPicker } from '@/features/bins/ColorPicker';
 import { IconPicker } from '@/features/bins/IconPicker';
@@ -38,6 +39,17 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const autoAnalyzedRef = useRef<Set<string>>(new Set());
   const abortRef = useRef<Map<string, AbortController>>(new Map());
+  const [correctionOpen, setCorrectionOpen] = useState(false);
+  const [correctionText, setCorrectionText] = useState('');
+  const MAX_CORRECTIONS = 3;
+
+  const {
+    isStreaming: isCorrecting,
+    partialText: correctionPartialText,
+    stream: streamCorrection,
+    cancel: cancelCorrection,
+  } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
+  const { name: correctionStreamedName, items: correctionStreamedItems } = parsePartialAnalysis(correctionPartialText);
 
   const photo = photos[currentIndex];
 
@@ -46,8 +58,15 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
     return () => {
       for (const ctrl of abortRef.current.values()) ctrl.abort();
       abortRef.current.clear();
+      cancelCorrection();
     };
   }, []);
+
+  // Reset correction state when navigating between photos
+  useEffect(() => {
+    setCorrectionOpen(false);
+    setCorrectionText('');
+  }, [currentIndex]);
 
   // Auto-analyze on first visit to each photo
   useEffect(() => {
@@ -116,6 +135,48 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
     }
   }
 
+  async function triggerCorrection(target: BulkAddPhoto, text: string) {
+    dispatch({ type: 'SET_ANALYZING', id: target.id });
+
+    const previousResult = {
+      name: target.name,
+      items: target.items,
+      tags: target.tags,
+      notes: target.notes,
+    };
+
+    const result = await streamCorrection({
+      previousResult,
+      correction: text,
+      locationId: activeLocationId || undefined,
+    });
+
+    if (result) {
+      dispatch({
+        type: 'SET_ANALYZE_RESULT',
+        id: target.id,
+        name: result.name,
+        items: result.items,
+        tags: result.tags,
+        notes: result.notes,
+      });
+      dispatch({ type: 'INCREMENT_CORRECTION', id: target.id });
+      setCorrectionText('');
+      setCorrectionOpen(false);
+    }
+  }
+
+  function handleCorrectionSubmit() {
+    const trimmed = correctionText.trim();
+    if (!trimmed) {
+      triggerAnalyze(photo);
+      setCorrectionText('');
+      setCorrectionOpen(false);
+      return;
+    }
+    triggerCorrection(photo, trimmed);
+  }
+
   function handleNext() {
     abortRef.current.get(photo.id)?.abort();
     if (photo.status === 'pending' || photo.status === 'analyzing') {
@@ -155,12 +216,12 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
         <span>{reviewedCount}/{photos.length} reviewed</span>
       </div>
 
-      {isStreaming ? (
+      {(isStreaming || isCorrecting) ? (
         <AiStreamingPreview
           previewUrls={[photo.previewUrl]}
-          streamedName={photo.streamedName}
-          streamedItems={photo.streamedItems}
-          initialStatusLabel="Analyzing photo..."
+          streamedName={isCorrecting ? correctionStreamedName : photo.streamedName}
+          streamedItems={isCorrecting ? correctionStreamedItems : photo.streamedItems}
+          initialStatusLabel={isCorrecting ? 'Applying correction...' : 'Analyzing photo...'}
         />
       ) : (
         <>
@@ -174,17 +235,54 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                 photo.status === 'reviewed' ? 'max-h-20 object-cover opacity-80' : 'aspect-square object-cover'
               }`}
             />
-            {aiEnabled && (
+            {aiEnabled && photo.status === 'reviewed' && (
               <button
                 type="button"
-                onClick={() => triggerAnalyze(photo)}
-                title="Rescan"
-                className="absolute top-2 right-2 p-1.5 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                onClick={() => setCorrectionOpen(!correctionOpen)}
+                title="Correct AI result"
+                className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${
+                  correctionOpen
+                    ? 'bg-[var(--ai-accent)] text-white'
+                    : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]'
+                }`}
               >
                 <Sparkles className="h-4 w-4" />
               </button>
             )}
           </div>
+
+          {/* Correction bar */}
+          {correctionOpen && photo.status === 'reviewed' && (
+            <div className="space-y-1.5">
+              {photo.correctionCount >= MAX_CORRECTIONS ? (
+                <p className="text-[12px] text-[var(--text-tertiary)] italic">
+                  Correction limit reached — edit fields directly.
+                </p>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={correctionText}
+                    onChange={(e) => setCorrectionText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCorrectionSubmit(); } }}
+                    placeholder="Tell AI what's wrong..."
+                    className="flex-1 h-9 text-[13px]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCorrectionSubmit}
+                    className="shrink-0 p-2 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              {photo.correctionCount > 0 && photo.correctionCount < MAX_CORRECTIONS && (
+                <p className="text-[11px] text-[var(--text-tertiary)]">
+                  {MAX_CORRECTIONS - photo.correctionCount} correction{MAX_CORRECTIONS - photo.correctionCount !== 1 ? 's' : ''} remaining
+                </p>
+              )}
+            </div>
+          )}
 
           {/* AI Error */}
           {photo.analyzeError && (

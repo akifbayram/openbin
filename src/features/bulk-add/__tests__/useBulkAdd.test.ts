@@ -24,6 +24,7 @@ function photo(overrides?: Partial<BulkAddPhoto>): BulkAddPhoto {
     analyzeError: null,
     streamedItems: [],
     streamedName: '',
+    correctionCount: 0,
     ...overrides,
   };
 }
