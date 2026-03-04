@@ -145,6 +145,8 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
     createBins(failed);
   }, [state.photos, createBins]);
 
+  const stepIndex = bulkAddStepIndex(state);
+
   if (singleBinReview) {
     return (
       <SingleBinReview
@@ -160,7 +162,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   if (state.step === 'review') {
     return (
       <div className="space-y-4">
-        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={bulkAddStepIndex(state)} />
+        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
         <BulkAddReviewStep
           photos={state.photos}
           currentIndex={state.currentIndex}
@@ -173,7 +175,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   if (state.step === 'summary') {
     return (
       <div className="space-y-4">
-        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={bulkAddStepIndex(state)} />
+        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
         <BulkAddSummaryStep
           photos={state.photos}
           isCreating={state.isCreating}
@@ -191,7 +193,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
 
   return (
     <div className="space-y-4">
-      <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={bulkAddStepIndex(state)} className="mb-2" />
+      <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} className="mb-2" />
       {/* Mode toggle */}
       <OptionGroup
         options={[

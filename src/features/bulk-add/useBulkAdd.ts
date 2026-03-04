@@ -13,6 +13,8 @@ export interface BulkAddPhoto {
   analyzeError: string | null;
   createError?: string;
   createdBinId?: string;
+  streamedItems: string[];
+  streamedName: string;
 }
 
 export type BulkAddStep = 'upload' | 'review' | 'summary';
@@ -36,6 +38,7 @@ export type BulkAddAction =
   | { type: 'SET_CURRENT_INDEX'; index: number }
   | { type: 'UPDATE_PHOTO'; id: string; changes: Partial<BulkAddPhoto> }
   | { type: 'SET_ANALYZING'; id: string }
+  | { type: 'UPDATE_STREAM'; id: string; name: string; items: string[] }
   | { type: 'SET_ANALYZE_RESULT'; id: string; name: string; items: string[]; tags: string[]; notes: string }
   | { type: 'SET_ANALYZE_ERROR'; id: string; error: string }
   | { type: 'SKIP_PHOTO'; id: string }
@@ -96,16 +99,34 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
       return {
         ...state,
         photos: state.photos.map((p) =>
-          p.id === action.id ? { ...p, status: 'analyzing', analyzeError: null } : p
+          p.id === action.id ? { ...p, status: 'analyzing', analyzeError: null, streamedItems: [], streamedName: '' } : p
         ),
       };
+
+    case 'UPDATE_STREAM': {
+      const target = state.photos.find((p) => p.id === action.id);
+      if (
+        !target ||
+        (target.streamedName === action.name &&
+          target.streamedItems.length === action.items.length &&
+          target.streamedItems.every((v, i) => v === action.items[i]))
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        photos: state.photos.map((p) =>
+          p.id === action.id ? { ...p, streamedName: action.name, streamedItems: action.items } : p
+        ),
+      };
+    }
 
     case 'SET_ANALYZE_RESULT':
       return {
         ...state,
         photos: state.photos.map((p) =>
           p.id === action.id
-            ? { ...p, status: 'reviewed', name: action.name, items: action.items, tags: action.tags, notes: action.notes, analyzeError: null }
+            ? { ...p, status: 'reviewed', name: action.name, items: action.items, tags: action.tags, notes: action.notes, analyzeError: null, streamedItems: [], streamedName: '' }
             : p
         ),
       };
@@ -197,6 +218,8 @@ export function createBulkAddPhoto(file: File, sharedAreaId: string | null): Bul
     icon: '',
     color: '',
     analyzeError: null,
+    streamedItems: [],
+    streamedName: '',
   };
 }
 

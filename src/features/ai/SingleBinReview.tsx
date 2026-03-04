@@ -1,4 +1,4 @@
-import { AlertCircle, ChevronDown, ChevronLeft, ChevronUp, Loader2, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronUp, Loader2, Sparkles } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,14 +12,19 @@ import { IconPicker } from '@/features/bins/IconPicker';
 import { ItemsInput } from '@/features/bins/ItemsInput';
 import { TagInput } from '@/features/bins/TagInput';
 import { addBin, notifyBinsChanged, useAllTags } from '@/features/bins/useBins';
+import { BULK_ADD_STEPS } from '@/features/bulk-add/useBulkAdd';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import type { AiSuggestions } from '@/types';
 import { AiSettingsSection } from './AiSettingsSection';
-import { analyzeImageFiles, MAX_AI_PHOTOS, mapErrorMessage } from './useAiAnalysis';
+import { AiAnalyzeError, AiStreamingPreview } from './AiStreamingPreview';
+import { parsePartialAnalysis } from './parsePartialAnalysis';
+import { MAX_AI_PHOTOS } from './useAiAnalysis';
 import { useAiSettings } from './useAiSettings';
+import { useAiStream } from './useAiStream';
 
 interface SingleBinReviewProps {
   files: File[];
@@ -28,17 +33,6 @@ interface SingleBinReviewProps {
   onBack: () => void;
   onClose: () => void;
 }
-
-const STEPS_WITH_AI = [
-  { id: 'analyze', label: 'Analyze' },
-  { id: 'edit', label: 'Edit' },
-  { id: 'create', label: 'Create' },
-];
-
-const STEPS_NO_AI = [
-  { id: 'edit', label: 'Edit' },
-  { id: 'create', label: 'Create' },
-];
 
 export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onClose }: SingleBinReviewProps) {
   const t = useTerminology();
@@ -56,47 +50,54 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   const [icon, setIcon] = useState('');
   const [color, setColor] = useState('');
 
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const {
+    isStreaming: isAnalyzing,
+    error: analyzeError,
+    partialText,
+    stream: streamAnalyze,
+    cancel: cancelAnalyze,
+  } = useAiStream<AiSuggestions>('/api/ai/analyze-image/stream', "Couldn't analyze — try again");
+  const { name: streamedName, items: streamedItems } = parsePartialAnalysis(partialText);
 
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  const steps = aiEnabled ? STEPS_WITH_AI : STEPS_NO_AI;
-  const currentStepIndex = aiEnabled
-    ? (isAnalyzing ? 0 : isCreating ? 2 : 1)
-    : (isCreating ? 1 : 0);
+  const steps = BULK_ADD_STEPS;
+  const currentStepIndex = isAnalyzing ? 1 : isCreating ? 3 : 2;
 
   const autoAnalyzedRef = useRef(false);
+
+  // Abort stream on unmount
+  useEffect(() => cancelAnalyze, [cancelAnalyze]);
 
   const triggerAnalyze = useCallback(async () => {
     if (!aiSettings) {
       setAiSetupExpanded(true);
       return;
     }
-    setIsAnalyzing(true);
-    setAnalyzeError(null);
-    try {
-      const compressed = await Promise.all(
-        files.slice(0, MAX_AI_PHOTOS).map(async (f) => {
-          const blob = await compressImage(f);
-          return blob instanceof File
-            ? blob
-            : new File([blob], f.name, { type: blob.type || 'image/jpeg' });
-        })
-      );
-      const result = await analyzeImageFiles(compressed, activeLocationId || undefined);
+    const compressed = await Promise.all(
+      files.slice(0, MAX_AI_PHOTOS).map(async (f) => {
+        const blob = await compressImage(f);
+        return blob instanceof File
+          ? blob
+          : new File([blob], f.name, { type: blob.type || 'image/jpeg' });
+      })
+    );
+    const formData = new FormData();
+    if (compressed.length === 1) {
+      formData.append('photo', compressed[0]);
+    } else {
+      for (const file of compressed) formData.append('photos', file);
+    }
+    if (activeLocationId) formData.append('locationId', activeLocationId);
+    const result = await streamAnalyze(formData);
+    if (result) {
       setName(result.name);
       setItems(result.items);
       setTags(result.tags);
       setNotes(result.notes);
-
-    } catch (err) {
-      setAnalyzeError(mapErrorMessage(err));
-    } finally {
-      setIsAnalyzing(false);
     }
-  }, [files, aiSettings, activeLocationId]);
+  }, [files, aiSettings, activeLocationId, streamAnalyze]);
 
   // Auto-analyze on mount
   useEffect(() => {
@@ -105,6 +106,11 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
       triggerAnalyze();
     }
   }, [aiEnabled, aiSettings, triggerAnalyze]);
+
+  function handleBack() {
+    cancelAnalyze();
+    onBack();
+  }
 
   async function handleCreate() {
     if (!name.trim() || !activeLocationId) return;
@@ -144,57 +150,53 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   return (
     <div className="space-y-5">
       <StepIndicator steps={steps} currentStepIndex={currentStepIndex} />
+
       {isAnalyzing ? (
-        <div className="flex flex-col items-center justify-center py-8 gap-3">
-          <Loader2 className="h-6 w-6 animate-spin text-[var(--accent)]" />
-          <p className="text-[14px] text-[var(--text-secondary)]">
-            Analyzing {Math.min(files.length, MAX_AI_PHOTOS)} photo{Math.min(files.length, MAX_AI_PHOTOS) !== 1 ? 's' : ''}...
-          </p>
-        </div>
+        <AiStreamingPreview
+          previewUrls={previewUrls}
+          streamedName={streamedName}
+          streamedItems={streamedItems}
+          initialStatusLabel={`Analyzing ${Math.min(files.length, MAX_AI_PHOTOS)} photo${Math.min(files.length, MAX_AI_PHOTOS) !== 1 ? 's' : ''}...`}
+        />
       ) : (
         <>
-          {/* Photo preview */}
-          <div className="pb-1">
-            <div className="relative w-fit max-w-full mx-auto">
+          {/* Photo preview (compact if reviewed) */}
+          <div className="relative">
+            {previewUrls.length === 1 ? (
+              <img
+                src={previewUrls[0]}
+                alt="Upload 1"
+                className={`w-full rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out ${
+                  name ? 'max-h-20 opacity-80' : 'max-h-64'
+                }`}
+              />
+            ) : (
               <div className="flex gap-2 overflow-x-auto">
                 {previewUrls.map((url, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: preview URLs have no stable identity
                   <img key={i}
                     src={url}
                     alt={`Upload ${i + 1}`}
-                    className="max-h-64 shrink-0 rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5"
+                    className={`shrink-0 flex-1 min-w-0 rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out ${
+                      name ? 'max-h-20 opacity-80' : 'max-h-64'
+                    }`}
                   />
                 ))}
               </div>
-              {aiEnabled && (
-                <button
-                  type="button"
-                  onClick={triggerAnalyze}
-                  title="Rescan"
-                  className="absolute top-2 right-2 p-1.5 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
-                >
-                  <Sparkles className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+            )}
+            {aiEnabled && (
+              <button
+                type="button"
+                onClick={triggerAnalyze}
+                title="Rescan"
+                className="absolute top-2 right-2 p-1.5 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+              >
+                <Sparkles className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
-          {analyzeError && (
-            <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-red-500/10 px-3 py-2.5">
-              <AlertCircle className="h-4 w-4 text-[var(--destructive)] shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-[13px] text-[var(--destructive)]">{analyzeError}</p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={triggerAnalyze}
-                  className="mt-1 h-7 px-2 text-[12px]"
-                >
-                  Retry
-                </Button>
-              </div>
-            </div>
-          )}
+          {analyzeError && <AiAnalyzeError error={analyzeError} onRetry={triggerAnalyze} />}
 
           {/* Configure AI provider */}
           {aiEnabled && !aiSettings && (
@@ -228,7 +230,6 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             </div>
 
             <div className="space-y-2">
-              <Label>Items</Label>
               <ItemsInput items={items} onChange={setItems} />
             </div>
 
@@ -272,7 +273,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
           <div className="flex items-center justify-between pt-2">
             <Button
               variant="ghost"
-              onClick={onBack}
+              onClick={handleBack}
               className="rounded-[var(--radius-full)]"
             >
               <ChevronLeft className="h-4 w-4 mr-1" />

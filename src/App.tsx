@@ -63,10 +63,6 @@ const ActivityPage = lazyWithRetry(() =>
   import('@/features/activity/ActivityPage').then((m) => ({ default: m.ActivityPage }))
 );
 
-const BulkAddPage = lazyWithRetry(() =>
-  import('@/features/bulk-add/BulkAddPage').then((m) => ({ default: m.BulkAddPage }))
-);
-
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
@@ -292,14 +288,6 @@ export default function App() {
                   element={
                     <Suspense fallback={<LoadingFallback />}>
                       <ActivityPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/bulk-add"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <BulkAddPage />
                     </Suspense>
                   }
                 />

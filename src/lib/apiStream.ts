@@ -31,10 +31,14 @@ export async function* apiStream(
   options: { body: unknown; signal?: AbortSignal },
   isRetry = false
 ): AsyncGenerator<StreamEvent> {
+  const isFormData = options.body instanceof FormData;
+  const headers: Record<string, string> = { Accept: 'text/event-stream' };
+  if (!isFormData) headers['Content-Type'] = 'application/json';
+
   const res = await fetch(path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-    body: JSON.stringify(options.body),
+    headers,
+    body: isFormData ? (options.body as FormData) : JSON.stringify(options.body),
     credentials: 'same-origin',
     signal: options.signal,
   });

@@ -36,7 +36,7 @@ export function Disclosure({ label, defaultOpen = false, indicator, children }: 
           open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
         )}
       >
-        <div className="overflow-hidden min-h-0">
+        <div className="overflow-hidden min-h-0 -mx-1.5 px-1.5">
           <div className={cn('mt-2 transition-opacity duration-200 motion-reduce:transition-none', open ? 'opacity-100' : 'opacity-0')}>
             {children}
           </div>

@@ -284,3 +284,66 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
+
+/* ─── AI Photo Analysis Animations ─── */
+.ai-photo-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Dark tint overlay */
+.ai-photo-shimmer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1;
+  border-radius: inherit;
+}
+
+/* Horizontal scan line that sweeps top → bottom */
+.ai-photo-shimmer::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 2;
+  background: linear-gradient(90deg, transparent 0%, var(--accent) 30%, var(--ai-accent) 50%, var(--accent) 70%, transparent 100%);
+  box-shadow: 0 0 12px 2px var(--accent-glow), 0 0 24px 4px var(--accent-glow);
+  animation: aiScanLine 2s ease-in-out infinite;
+}
+
+@keyframes aiScanLine {
+  0% { top: 0%; opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.ai-item-reveal {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  animation: aiFadeIn 0.35s ease-out forwards;
+}
+
+@keyframes aiFadeIn {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 2.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-photo-shimmer::before { background: rgba(0, 0, 0, 0.25); }
+  .ai-photo-shimmer::after, .ai-item-reveal {
+    animation: none !important;
+  }
+  .ai-item-reveal { opacity: 1 !important; max-height: none !important; }
+  .ai-photo-shrink { transition: none !important; }
+}

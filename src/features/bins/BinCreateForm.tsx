@@ -192,11 +192,6 @@ export function BinCreateForm({
 
       {/* Items */}
       <div className={isFull ? 'space-y-2' : 'text-left'}>
-        {isFull ? (
-          <Label htmlFor="bin-items">Items</Label>
-        ) : (
-          <label htmlFor="bin-items" className={compactLabel}>Items</label>
-        )}
         <ItemsInput
           items={items}
           onChange={setItems}
