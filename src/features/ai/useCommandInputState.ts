@@ -35,8 +35,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
   const state: State = executionResult ? 'success'
     : checkedActions.size > 0 && actions ? 'preview'
     : isParsing ? 'parsing'
-    : (isQuerying || isQueryStreaming) && queryPartialText.length === 0 ? 'querying'
-    : (isQueryStreaming && queryPartialText.length > 0) ? 'query-result'
+    : (isQuerying || isQueryStreaming) ? 'querying'
     : queryResult ? 'query-result'
     : actions ? 'preview'
     : 'idle';

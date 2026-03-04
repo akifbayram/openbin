@@ -77,7 +77,7 @@ streamRouter.post('/query/stream', aiLimiter, requireLocationMember(), aiRouteHa
     schema: QueryResultSchema,
     system: buildQuerySysPrompt(settings.query_prompt ?? undefined),
     userContent: buildQueryUserMsg(question, context),
-    ...streamOpts(settings),
+    ...streamOpts(settings, { maxTokens: Math.max(settings.max_tokens ?? 4096, 4096) }),
   });
 }));
 

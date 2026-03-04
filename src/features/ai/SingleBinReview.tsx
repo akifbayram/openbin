@@ -266,7 +266,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
           </div>
 
           {/* Correction bar */}
-          {correctionOpen && name && (
+          <div className={correctionOpen && name ? 'ai-correction-enter' : 'hidden'}>
             <div className="space-y-1.5">
               {correctionCount >= MAX_CORRECTIONS ? (
                 <p className="text-[12px] text-[var(--text-tertiary)] italic">
@@ -296,7 +296,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                 </p>
               )}
             </div>
-          )}
+          </div>
 
           {analyzeError && <AiAnalyzeError error={analyzeError} onRetry={triggerAnalyze} />}
 

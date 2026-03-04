@@ -1,4 +1,3 @@
-import { Loader2 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -67,56 +66,63 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
         <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
 
         {photoMode ? (
-          <PhotoBulkAdd
-            initialFiles={initialFiles}
-            onClose={() => handleClose(false)}
-            onBack={() => { setPhotoMode(false); setInitialFiles([]); }}
-          />
+          <div key="photo" className="ai-content-enter">
+            <PhotoBulkAdd
+              initialFiles={initialFiles}
+              onClose={() => handleClose(false)}
+              onBack={() => { setPhotoMode(false); setInitialFiles([]); }}
+            />
+          </div>
         ) : effectiveState === 'success' && executionResult ? (
-          <CommandSuccess
-            result={executionResult}
-            onAskAnother={handleAskAnother}
-            onClose={() => handleClose(false)}
-            onBinClick={handleBinClick}
-          />
-        ) : effectiveState === 'querying' ? (
-          <div className="flex flex-col items-center justify-center py-8 gap-3">
-            <Loader2 className="h-6 w-6 animate-spin text-[var(--accent)]" />
-            <p className="text-[14px] text-[var(--text-secondary)]">Searching your inventory...</p>
+          <div key="success" className="ai-content-enter">
+            <CommandSuccess
+              result={executionResult}
+              onAskAnother={handleAskAnother}
+              onClose={() => handleClose(false)}
+              onBinClick={handleBinClick}
+            />
           </div>
         ) : effectiveState === 'query-result' ? (
-          <InventoryQueryResult
-            queryResult={queryResult}
-            streamingText={queryPartialText}
-            isStreaming={isQueryStreaming}
-            onBinClick={handleBinClick}
-            onBack={handleBack}
-          />
+          <div key="query-result" className="ai-content-enter">
+            <InventoryQueryResult
+              queryResult={queryResult}
+              streamingText={queryPartialText}
+              isStreaming={isQueryStreaming}
+              onBinClick={handleBinClick}
+              onBack={handleBack}
+            />
+          </div>
         ) : effectiveState === 'preview' && actions ? (
-          <CommandActionPreview
-            actions={actions}
-            interpretation={interpretation}
-            checkedActions={checkedActions}
-            toggleAction={toggleAction}
-            selectedCount={selectedCount}
-            isExecuting={isExecuting}
-            executingProgress={executingProgress}
-            onBack={handleBack}
-            onExecute={executeActions}
-          />
+          <div key="preview" className="ai-content-enter">
+            <CommandActionPreview
+              actions={actions}
+              interpretation={interpretation}
+              checkedActions={checkedActions}
+              toggleAction={toggleAction}
+              selectedCount={selectedCount}
+              isExecuting={isExecuting}
+              executingProgress={executingProgress}
+              onBack={handleBack}
+              onExecute={executeActions}
+            />
+          </div>
         ) : !aiSettingsLoading && !isAiReady ? (
-          <AiSetupView onNavigate={() => { handleClose(false); navigate('/settings#ai-settings'); }} />
+          <div key="setup" className="ai-content-enter">
+            <AiSetupView onNavigate={() => { handleClose(false); navigate('/settings#ai-settings'); }} />
+          </div>
         ) : (
-          <CommandIdleInput
-            text={text}
-            setText={setText}
-            effectiveState={effectiveState}
-            examplesOpen={examplesOpen}
-            setExamplesOpen={setExamplesOpen}
-            error={error}
-            onParse={handleParse}
-            onPhotoClick={() => fileInputRef.current?.click()}
-          />
+          <div key="idle" className="ai-content-enter">
+            <CommandIdleInput
+              text={text}
+              setText={setText}
+              isLoading={effectiveState === 'parsing' || effectiveState === 'querying' || effectiveState === 'executing'}
+              examplesOpen={examplesOpen}
+              setExamplesOpen={setExamplesOpen}
+              error={error}
+              onParse={handleParse}
+              onPhotoClick={() => fileInputRef.current?.click()}
+            />
+          </div>
         )}
       </DialogContent>
     </Dialog>

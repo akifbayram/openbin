@@ -1,22 +1,14 @@
-import { ChevronDown, ImagePlus, Loader2, Sparkles } from 'lucide-react';
+import { ChevronDown, ImagePlus, Sparkles } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
-import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
-import type { State } from './useCommandInputState';
-
-const PARSE_MESSAGES = [
-  'Reading your request...',
-  'Analyzing inventory...',
-  'Building actions...',
-];
 
 interface CommandIdleInputProps {
   text: string;
   setText: (v: string) => void;
-  effectiveState: State;
+  isLoading: boolean;
   examplesOpen: boolean;
   setExamplesOpen: Dispatch<SetStateAction<boolean>>;
   error: string | null;
@@ -27,7 +19,7 @@ interface CommandIdleInputProps {
 export function CommandIdleInput({
   text,
   setText,
-  effectiveState,
+  isLoading,
   examplesOpen,
   setExamplesOpen,
   error,
@@ -35,25 +27,6 @@ export function CommandIdleInput({
   onPhotoClick,
 }: CommandIdleInputProps) {
   const t = useTerminology();
-
-  const [parseMessageIndex, setParseMessageIndex] = useState(0);
-
-  useEffect(() => {
-    if (effectiveState !== 'parsing') {
-      setParseMessageIndex(0);
-      return;
-    }
-    const id = setInterval(() => {
-      setParseMessageIndex(prev => (prev + 1) % PARSE_MESSAGES.length);
-    }, 2000);
-    return () => clearInterval(id);
-  }, [effectiveState]);
-
-  const buttonLabel = effectiveState === 'parsing'
-    ? PARSE_MESSAGES[parseMessageIndex]
-    : effectiveState === 'executing'
-      ? 'Executing...'
-      : 'Send';
 
   return (
     <div className="space-y-3">
@@ -64,7 +37,7 @@ export function CommandIdleInput({
           placeholder="What would you like to do?"
           rows={3}
           className="min-h-[80px] bg-[var(--bg-elevated)] pr-12"
-          disabled={effectiveState === 'parsing' || effectiveState === 'executing'}
+          disabled={isLoading}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
@@ -114,15 +87,11 @@ export function CommandIdleInput({
       <Button
         type="button"
         onClick={onParse}
-        disabled={!text.trim() || effectiveState === 'parsing' || effectiveState === 'executing'}
+        disabled={!text.trim() || isLoading}
         className="w-full rounded-[var(--radius-full)] bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
       >
-        {effectiveState === 'parsing' || effectiveState === 'executing' ? (
-          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-        ) : (
-          <Sparkles className="h-4 w-4 mr-1.5" />
-        )}
-        {buttonLabel}
+        <Sparkles className="h-4 w-4 mr-1.5" />
+        {isLoading ? 'Processing...' : 'Send'}
       </Button>
     </div>
   );

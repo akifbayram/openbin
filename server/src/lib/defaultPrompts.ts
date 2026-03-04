@@ -56,6 +56,7 @@ Rules:
 - Always include the "matches" array with relevant bins, even if empty
 - The "relevance" field should briefly explain why each bin matched (e.g., "contains batteries", "tagged as electronics")
 - Sort matches by relevance (most relevant first)
+- Return at most 8 matching bins. For each bin, include only the most relevant items (up to 10), not the entire list.
 - Visibility, pin status, photo counts, and trash bins are available in the inventory context — use them to answer questions like "which bins are private?", "what's pinned?", "which bins have photos?", or "what's in the trash?"`;
 
 export const DEFAULT_STRUCTURE_PROMPT = `You are an inventory item extractor. The user will dictate or type a description of items in a storage bin. Your job is to parse this into a clean, structured list of individual items.

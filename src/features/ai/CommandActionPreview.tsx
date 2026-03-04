@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, Loader2 } from 'lucide-react';
+import { Check, ChevronLeft, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
@@ -33,9 +33,12 @@ export function CommandActionPreview({
   return (
     <div className="space-y-4">
       {interpretation && (
-        <p className="text-[13px] text-[var(--text-secondary)] italic">
-          {interpretation}
-        </p>
+        <div className="flex items-start gap-2 rounded-[var(--radius-sm)] bg-[var(--accent)]/5 px-3 py-2">
+          <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-[var(--accent)]" />
+          <p className="text-[13px] text-[var(--text-secondary)] italic">
+            {interpretation}
+          </p>
+        </div>
       )}
 
       {actions.length === 0 ? (
@@ -50,20 +53,22 @@ export function CommandActionPreview({
             const destructive = isDestructiveAction(action);
             return (
               // biome-ignore lint/suspicious/noArrayIndexKey: actions identified by index
-              <li key={i}>
+              <li key={i} className="ai-stagger-item" style={{ animationDelay: `${Math.min(i * 50, 500)}ms` }}>
                 <button
                   type="button"
                   onClick={() => toggleAction(i)}
                   className="flex items-start gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 hover:bg-[var(--bg-active)] transition-colors cursor-pointer w-full text-left"
                 >
                   <span
-                    className={`shrink-0 mt-0.5 h-4.5 w-4.5 rounded border flex items-center justify-center transition-colors ${
+                    key={`check-${i}-${checked}`}
+                    className={cn(
+                      'shrink-0 mt-0.5 h-4.5 w-4.5 rounded border flex items-center justify-center transition-colors',
                       checked
                         ? destructive
                           ? 'bg-[var(--destructive)] border-[var(--destructive)]'
-                          : 'bg-[var(--accent)] border-[var(--accent)]'
-                        : 'border-[var(--border-primary)] bg-transparent'
-                    }`}
+                          : 'bg-[var(--accent)] border-[var(--accent)] ai-check-pop'
+                        : 'border-[var(--border-primary)] bg-transparent',
+                    )}
                   >
                     {checked && <Check className="h-3 w-3 text-white" />}
                   </span>
@@ -92,6 +97,15 @@ export function CommandActionPreview({
         </ul>
       )}
 
+      {isExecuting && (
+        <div className="ai-progress-track">
+          <div
+            className="ai-progress-fill"
+            style={{ width: `${executingProgress.total > 0 ? (executingProgress.current / executingProgress.total) * 100 : 0}%` }}
+          />
+        </div>
+      )}
+
       <div className="flex gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onBack} className="rounded-[var(--radius-full)]">
           <ChevronLeft className="h-4 w-4 mr-0.5" />
@@ -107,10 +121,10 @@ export function CommandActionPreview({
           {isExecuting ? (
             <>
               <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              Executing {executingProgress.current} of {executingProgress.total}...
+              Applying {executingProgress.current} of {executingProgress.total}...
             </>
           ) : (
-            <>Execute {selectedCount} Action{selectedCount !== 1 ? 's' : ''}</>
+            <>Apply {selectedCount} Change{selectedCount !== 1 ? 's' : ''}</>
           )}
         </Button>
       </div>

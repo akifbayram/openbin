@@ -18,20 +18,23 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
 
   return (
     <div className="space-y-4">
-      <StreamingText
-        text={answer}
-        isStreaming={!!showStreaming}
-        className="text-[14px] text-[var(--text-primary)] leading-relaxed"
-      />
+      <div className="ai-content-enter">
+        <StreamingText
+          text={answer}
+          isStreaming={!!showStreaming}
+          className="text-[14px] text-[var(--text-primary)] leading-relaxed"
+        />
+      </div>
 
       {matches.length > 0 && (
         <div className="space-y-2">
-          {matches.map((match) => (
+          {matches.map((match, i) => (
             <button
               key={match.bin_id}
+              className="ai-stagger-item glass-card w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-[var(--bg-active)] transition-colors cursor-pointer rounded-[var(--radius-sm)]"
+              style={{ animationDelay: `${Math.min(i * 60, 500)}ms` }}
               type="button"
               onClick={() => onBinClick(match.bin_id)}
-              className="glass-card w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-[var(--bg-active)] transition-colors cursor-pointer rounded-[var(--radius-sm)]"
             >
               <Search className="h-4 w-4 shrink-0 text-[var(--accent)]" />
               <div className="flex-1 min-w-0">

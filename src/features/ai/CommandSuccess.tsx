@@ -40,8 +40,10 @@ export function CommandSuccess({ result, onAskAnother, onClose, onBinClick }: Co
             className="flex flex-col gap-2 overflow-y-auto"
             style={{ maxHeight: 200 }}
           >
-            {createdBins.map((bin) => (
-              <BinRow key={bin.id} bin={bin} showColor={createdBins.length > 1} onViewBin={onBinClick} />
+            {createdBins.map((bin, idx) => (
+              <div key={bin.id} className="ai-stagger-item" style={{ animationDelay: `${idx * 60}ms` }}>
+                <BinRow bin={bin} showColor={createdBins.length > 1} onViewBin={onBinClick} />
+              </div>
             ))}
             {nonBinActions.map((action, idx) => {
               const Icon = getActionIcon(action);
@@ -49,7 +51,8 @@ export function CommandSuccess({ result, onAskAnother, onClose, onBinClick }: Co
               return (
                 <div
                   key={key}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-primary)]"
+                  className="ai-stagger-item flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-primary)]"
+                  style={{ animationDelay: `${(createdBins.length + idx) * 60}ms` }}
                 >
                   <Check className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
                   <Icon className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" />
