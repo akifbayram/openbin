@@ -1,4 +1,4 @@
-import './animations.css';
+import '@/components/ui/animations.css';
 import { Camera, ListChecks, MessageSquare, PackagePlus, Plus, Printer, QrCode, Search, Settings, Sparkles, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';

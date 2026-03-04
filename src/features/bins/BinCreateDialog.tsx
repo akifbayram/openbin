@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +13,8 @@ import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import type { BinCreateFormData } from './BinCreateForm';
 import { BinCreateForm } from './BinCreateForm';
+import type { CreatedBinInfo } from './BinCreateSuccess';
+import { BinCreateSuccess } from './BinCreateSuccess';
 import { addBin, useAllTags as useAllTagsFetch } from './useBins';
 
 interface BinCreateDialogProps {
@@ -24,7 +25,6 @@ interface BinCreateDialogProps {
 }
 
 export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allTagsProp }: BinCreateDialogProps) {
-  const navigate = useNavigate();
   const { activeLocationId } = useAuth();
   const t = useTerminology();
   const allTagsFetched = useAllTagsFetch(allTagsProp !== undefined);
@@ -32,6 +32,12 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
 
   const [loading, setLoading] = useState(false);
   const [aiSetupOpen, setAiSetupOpen] = useState(false);
+  const [successInfo, setSuccessInfo] = useState<CreatedBinInfo[] | null>(null);
+
+  function handleOpenChange(open: boolean) {
+    if (!open) setSuccessInfo(null);
+    onOpenChange(open);
+  }
 
   async function handleSubmit(data: BinCreateFormData) {
     if (!activeLocationId) return;
@@ -61,8 +67,13 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
           )
         ).catch(() => { /* ignore */ });
       }
-      onOpenChange(false);
-      navigate(`/bin/${id}`, { state: { backLabel: t.Bins, backPath: '/bins' } });
+      setSuccessInfo([{
+        id,
+        name: data.name,
+        icon: data.icon,
+        color: data.color,
+        itemCount: data.items.length,
+      }]);
     } finally {
       setLoading(false);
     }
@@ -70,29 +81,39 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>New {t.Bin}</DialogTitle>
-            <DialogDescription>Add a new storage {t.bin} to your inventory.</DialogDescription>
+            {!successInfo && <DialogTitle>New {t.Bin}</DialogTitle>}
+            {!successInfo && (
+              <DialogDescription>Add a new storage {t.bin} to your inventory.</DialogDescription>
+            )}
           </DialogHeader>
           {activeLocationId && (
-            <BinCreateForm
-              mode="full"
-              locationId={activeLocationId}
-              onSubmit={handleSubmit}
-              submitting={loading}
-              showCancel
-              onCancel={() => onOpenChange(false)}
-              onAiSetupRedirect={() => setAiSetupOpen(true)}
-              prefillName={prefillName}
-              allTags={allTags}
-            />
+            successInfo ? (
+              <BinCreateSuccess
+                createdBins={successInfo}
+                onCreateAnother={() => setSuccessInfo(null)}
+                onClose={() => handleOpenChange(false)}
+              />
+            ) : (
+              <BinCreateForm
+                mode="full"
+                locationId={activeLocationId}
+                onSubmit={handleSubmit}
+                submitting={loading}
+                showCancel
+                onCancel={() => handleOpenChange(false)}
+                onAiSetupRedirect={() => setAiSetupOpen(true)}
+                prefillName={prefillName}
+                allTags={allTags}
+              />
+            )
           )}
         </DialogContent>
       </Dialog>
 
-      <AiSetupDialog open={aiSetupOpen} onOpenChange={setAiSetupOpen} onNavigate={() => onOpenChange(false)} />
+      <AiSetupDialog open={aiSetupOpen} onOpenChange={setAiSetupOpen} onNavigate={() => handleOpenChange(false)} />
     </>
   );
 }

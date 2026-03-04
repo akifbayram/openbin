@@ -7,6 +7,8 @@ import { StepIndicator } from '@/components/ui/stepper';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { AreaPicker } from '@/features/areas/AreaPicker';
+import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
+import { BinCreateSuccess } from '@/features/bins/BinCreateSuccess';
 import { ColorPicker } from '@/features/bins/ColorPicker';
 import { IconPicker } from '@/features/bins/IconPicker';
 import { ItemsInput } from '@/features/bins/ItemsInput';
@@ -32,9 +34,10 @@ interface SingleBinReviewProps {
   sharedAreaId: string | null;
   onBack: () => void;
   onClose: () => void;
+  onRestart: () => void;
 }
 
-export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onClose }: SingleBinReviewProps) {
+export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onClose, onRestart }: SingleBinReviewProps) {
   const t = useTerminology();
   const { activeLocationId } = useAuth();
   const { settings: aiSettings } = useAiSettings();
@@ -49,6 +52,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   const [areaId, setAreaId] = useState<string | null>(sharedAreaId);
   const [icon, setIcon] = useState('');
   const [color, setColor] = useState('');
+  const [successBin, setSuccessBin] = useState<CreatedBinInfo | null>(null);
 
   const {
     isStreaming: isAnalyzing,
@@ -139,12 +143,27 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
           .catch(() => {});
       }
       notifyBinsChanged();
-      showToast({ message: `Created ${t.bin} with ${files.length} photo${files.length !== 1 ? 's' : ''}` });
-      onClose();
+      setSuccessBin({
+        id: createdBin.id,
+        name: name.trim(),
+        icon,
+        color,
+        itemCount: items.length,
+      });
     } catch (err) {
       showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.bin}` });
       setIsCreating(false);
     }
+  }
+
+  if (successBin) {
+    return (
+      <BinCreateSuccess
+        createdBins={[successBin]}
+        onCreateAnother={onRestart}
+        onClose={onClose}
+      />
+    );
   }
 
   return (
@@ -167,7 +186,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                 src={previewUrls[0]}
                 alt="Upload 1"
                 className={`w-full rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out ${
-                  name ? 'max-h-20 opacity-80' : 'max-h-64'
+                  name ? 'max-h-20 opacity-80' : 'aspect-square'
                 }`}
               />
             ) : (
@@ -178,7 +197,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                     src={url}
                     alt={`Upload ${i + 1}`}
                     className={`shrink-0 flex-1 min-w-0 rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out ${
-                      name ? 'max-h-20 opacity-80' : 'max-h-64'
+                      name ? 'max-h-20 opacity-80' : 'aspect-square'
                     }`}
                   />
                 ))}

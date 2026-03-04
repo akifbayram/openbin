@@ -7,7 +7,7 @@ import type { ImageInput } from '../lib/aiProviders.js';
 import { analyzeImages, testConnection } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
-import { getEnvAiConfig } from '../lib/config.js';
+import { config, getEnvAiConfig } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
 import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
@@ -15,6 +15,23 @@ import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
 import { memoryPhotoUpload, PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
+
+const MOCK_AI_SETTINGS = {
+  id: null,
+  provider: 'openai',
+  apiKey: '***mock',
+  model: 'mock',
+  endpointUrl: null,
+  customPrompt: null,
+  commandPrompt: null,
+  queryPrompt: null,
+  structurePrompt: null,
+  temperature: null,
+  maxTokens: null,
+  topP: null,
+  requestTimeout: null,
+  source: 'env' as const,
+} as const;
 
 const router = Router();
 
@@ -52,6 +69,11 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
         requestTimeout: null,
         source: 'env' as const,
       });
+      return;
+    }
+    // In mock mode, return fake settings so the client enables AI features
+    if (config.aiMock) {
+      res.json(MOCK_AI_SETTINGS);
       return;
     }
     res.json(null);

@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CommandActionPreview } from './CommandActionPreview';
@@ -12,9 +13,10 @@ import { useCommandInputState } from './useCommandInputState';
 interface CommandInputProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  autoTriggerPhoto?: boolean;
 }
 
-export function CommandInput({ open, onOpenChange }: CommandInputProps) {
+export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandInputProps) {
   const navigate = useNavigate();
 
   const {
@@ -39,6 +41,16 @@ export function CommandInput({ open, onOpenChange }: CommandInputProps) {
     checkedActions,
     onComplete: handleExecuteComplete,
   });
+
+  // Auto-trigger photo picker when opened via "Scan more"
+  const autoTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (open && autoTriggerPhoto && !autoTriggeredRef.current) {
+      autoTriggeredRef.current = true;
+      setTimeout(() => fileInputRef.current?.click(), 100);
+    }
+    if (!open) autoTriggeredRef.current = false;
+  }, [open, autoTriggerPhoto]);
 
   // Augment state with executor state
   const effectiveState = isExecuting ? 'executing' : state;

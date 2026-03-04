@@ -8,9 +8,10 @@ import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { CommandResultSchema, QueryResultSchema } from '../lib/aiSchemas.js';
 import type { UserAiSettings } from '../lib/aiSettings.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
-import { pipeAiStreamToResponse } from '../lib/aiStream.js';
+import { initSseResponse, pipeAiStreamToResponse } from '../lib/aiStream.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg } from '../lib/commandParser.js';
+import { config } from '../lib/config.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
 import { safePath } from '../lib/pathSafety.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
@@ -22,6 +23,25 @@ import { requireLocationMember } from '../middleware/locationAccess.js';
 
 const streamRouter = Router();
 streamRouter.use(authenticate);
+
+/** Send a fake SSE analysis response (mock mode). */
+async function sendMockAnalysisStream(res: import('express').Response): Promise<void> {
+  const writeEvent = initSseResponse(res);
+  const mockResult = {
+    name: `Test Bin ${Date.now().toString(36).slice(-4).toUpperCase()}`,
+    items: ['Screwdriver', 'Wrench set', 'Duct tape', 'Cable ties'],
+    tags: ['tools', 'hardware'],
+    notes: 'Mock AI analysis — generated without an API call.',
+  };
+  const json = JSON.stringify(mockResult);
+  const chunkSize = 20;
+  for (let i = 0; i < json.length; i += chunkSize) {
+    writeEvent({ type: 'delta', text: json.slice(i, i + chunkSize) });
+    await new Promise((r) => setTimeout(r, 30));
+  }
+  writeEvent({ type: 'done', text: json });
+  res.end();
+}
 
 /** Resolve a user's AI model (settings + SSRF check + SDK model). */
 async function resolveUserModel(userId: string) {
@@ -107,6 +127,9 @@ streamRouter.post('/analyze-image/stream', aiLimiter, memoryPhotoUpload.fields([
     return;
   }
 
+  // Mock mode: return fake AI response without calling any provider
+  if (config.aiMock) { await sendMockAnalysisStream(res); return; }
+
   const { settings, model } = await resolveUserModel(req.user!.id);
 
   const locationId = req.body?.locationId;
@@ -148,6 +171,9 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photoId or photoIds is required' });
     return;
   }
+
+  // Mock mode: return fake AI response without calling any provider
+  if (config.aiMock) { await sendMockAnalysisStream(res); return; }
 
   const { settings, model } = await resolveUserModel(req.user!.id);
 

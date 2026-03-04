@@ -1,5 +1,5 @@
-import './animations.css';
 import { useEffect } from 'react';
+import { AnimatedCheckmark } from '@/components/ui/animated-checkmark';
 
 interface ScanSuccessOverlayProps {
   onDismiss: () => void;
@@ -27,19 +27,8 @@ export function ScanSuccessOverlay({ onDismiss, title = 'First scan complete!', 
         <div className="absolute h-24 w-24 rounded-full border-2 border-[var(--accent)] scan-ring scan-ring-3" />
 
         {/* Checkmark circle */}
-        <div className="relative h-24 w-24 rounded-full bg-[var(--accent)] flex items-center justify-center scan-check-scale">
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-12 w-12 scan-check-draw"
-          >
-            <polyline points="4 12 10 18 20 6" />
-          </svg>
+        <div className="relative">
+          <AnimatedCheckmark size="lg" />
         </div>
       </div>
 

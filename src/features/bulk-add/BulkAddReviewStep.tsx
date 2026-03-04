@@ -171,7 +171,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               src={photo.previewUrl}
               alt={`Upload ${currentIndex + 1}`}
               className={`w-full rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out ${
-                photo.status === 'reviewed' ? 'max-h-20 object-cover opacity-80' : 'max-h-64 object-contain'
+                photo.status === 'reviewed' ? 'max-h-20 object-cover opacity-80' : 'aspect-square object-cover'
               }`}
             />
             {aiEnabled && (
