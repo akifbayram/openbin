@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, ChevronUp, Loader2, Sparkles } from 'lucide-react';
+import { ArrowUp, ChevronDown, ChevronLeft, ChevronUp, Loader2, Sparkles } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +53,10 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   const [icon, setIcon] = useState('');
   const [color, setColor] = useState('');
   const [successBin, setSuccessBin] = useState<CreatedBinInfo | null>(null);
+  const [correctionOpen, setCorrectionOpen] = useState(false);
+  const [correctionText, setCorrectionText] = useState('');
+  const [correctionCount, setCorrectionCount] = useState(0);
+  const MAX_CORRECTIONS = 3;
 
   const {
     isStreaming: isAnalyzing,
@@ -63,16 +67,26 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   } = useAiStream<AiSuggestions>('/api/ai/analyze-image/stream', "Couldn't analyze — try again");
   const { name: streamedName, items: streamedItems } = parsePartialAnalysis(partialText);
 
+  const {
+    isStreaming: isCorrecting,
+    partialText: correctionPartialText,
+    stream: streamCorrection,
+    cancel: cancelCorrection,
+  } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
+  const { name: correctionStreamedName, items: correctionStreamedItems } = parsePartialAnalysis(correctionPartialText);
+
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const steps = BULK_ADD_STEPS;
-  const currentStepIndex = isAnalyzing ? 1 : isCreating ? 3 : 2;
+  const currentStepIndex = (isAnalyzing || isCorrecting) ? 1 : isCreating ? 3 : 2;
 
   const autoAnalyzedRef = useRef(false);
 
-  // Abort stream on unmount
-  useEffect(() => cancelAnalyze, [cancelAnalyze]);
+  // Abort streams on unmount
+  useEffect(() => {
+    return () => { cancelAnalyze(); cancelCorrection(); };
+  }, [cancelAnalyze, cancelCorrection]);
 
   const triggerAnalyze = useCallback(async () => {
     if (!aiSettings) {
@@ -103,6 +117,36 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     }
   }, [files, aiSettings, activeLocationId, streamAnalyze]);
 
+  const triggerCorrection = useCallback(async (text: string) => {
+    const previousResult = { name, items, tags, notes };
+    const result = await streamCorrection({
+      previousResult,
+      correction: text,
+      locationId: activeLocationId || undefined,
+    });
+    if (result) {
+      setName(result.name);
+      setItems(result.items);
+      setTags(result.tags);
+      setNotes(result.notes);
+      setCorrectionCount((c) => c + 1);
+      setCorrectionText('');
+      setCorrectionOpen(false);
+    }
+  }, [name, items, tags, notes, activeLocationId, streamCorrection]);
+
+  function handleCorrectionSubmit() {
+    const trimmed = correctionText.trim();
+    if (!trimmed) {
+      setCorrectionCount(0);
+      triggerAnalyze();
+      setCorrectionText('');
+      setCorrectionOpen(false);
+      return;
+    }
+    triggerCorrection(trimmed);
+  }
+
   // Auto-analyze on mount
   useEffect(() => {
     if (aiEnabled && aiSettings && !autoAnalyzedRef.current) {
@@ -113,6 +157,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
   function handleBack() {
     cancelAnalyze();
+    cancelCorrection();
     onBack();
   }
 
@@ -170,12 +215,12 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     <div className="space-y-5">
       <StepIndicator steps={steps} currentStepIndex={currentStepIndex} />
 
-      {isAnalyzing ? (
+      {(isAnalyzing || isCorrecting) ? (
         <AiStreamingPreview
           previewUrls={previewUrls}
-          streamedName={streamedName}
-          streamedItems={streamedItems}
-          initialStatusLabel={`Analyzing ${Math.min(files.length, MAX_AI_PHOTOS)} photo${Math.min(files.length, MAX_AI_PHOTOS) !== 1 ? 's' : ''}...`}
+          streamedName={isCorrecting ? correctionStreamedName : streamedName}
+          streamedItems={isCorrecting ? correctionStreamedItems : streamedItems}
+          initialStatusLabel={isCorrecting ? 'Applying correction...' : `Analyzing ${Math.min(files.length, MAX_AI_PHOTOS)} photo${Math.min(files.length, MAX_AI_PHOTOS) !== 1 ? 's' : ''}...`}
         />
       ) : (
         <>
@@ -203,17 +248,54 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                 ))}
               </div>
             )}
-            {aiEnabled && (
+            {aiEnabled && name && (
               <button
                 type="button"
-                onClick={triggerAnalyze}
-                title="Rescan"
-                className="absolute top-2 right-2 p-1.5 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                onClick={() => setCorrectionOpen(!correctionOpen)}
+                title="Correct AI result"
+                className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${
+                  correctionOpen
+                    ? 'bg-[var(--ai-accent)] text-white'
+                    : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]'
+                }`}
               >
                 <Sparkles className="h-4 w-4" />
               </button>
             )}
           </div>
+
+          {/* Correction bar */}
+          {correctionOpen && name && (
+            <div className="space-y-1.5">
+              {correctionCount >= MAX_CORRECTIONS ? (
+                <p className="text-[12px] text-[var(--text-tertiary)] italic">
+                  Correction limit reached — edit fields directly.
+                </p>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={correctionText}
+                    onChange={(e) => setCorrectionText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCorrectionSubmit(); } }}
+                    placeholder="Tell AI what's wrong..."
+                    className="flex-1 h-9 text-[13px]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCorrectionSubmit}
+                    className="shrink-0 p-2 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              {correctionCount > 0 && correctionCount < MAX_CORRECTIONS && (
+                <p className="text-[11px] text-[var(--text-tertiary)]">
+                  {MAX_CORRECTIONS - correctionCount} correction{MAX_CORRECTIONS - correctionCount !== 1 ? 's' : ''} remaining
+                </p>
+              )}
+            </div>
+          )}
 
           {analyzeError && <AiAnalyzeError error={analyzeError} onRetry={triggerAnalyze} />}
 
@@ -300,7 +382,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             </Button>
             <Button
               onClick={handleCreate}
-              disabled={!name.trim() || isAnalyzing || isCreating}
+              disabled={!name.trim() || isAnalyzing || isCorrecting || isCreating}
               className="rounded-[var(--radius-full)]"
             >
               {isCreating ? (
