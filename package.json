@@ -15,7 +15,6 @@
     "check": "tsc --noEmit && cd server && npx tsc --noEmit"
   },
   "dependencies": {
-    "@stepperize/react": "^6.1.0",
     "clsx": "^2.1.1",
     "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.0",

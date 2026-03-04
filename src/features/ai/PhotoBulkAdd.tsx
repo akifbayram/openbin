@@ -214,15 +214,6 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   return (
     <div className="space-y-4">
       <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} className="mb-2" />
-      {/* Mode toggle */}
-      <OptionGroup
-        options={[
-          { key: 'per-photo' as const, label: `Separate ${t.bins}` },
-          { key: 'single-bin' as const, label: `Same ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Max ${MAX_AI_PHOTOS} photos for single ${t.bin}` },
-        ]}
-        value={mode}
-        onChange={setMode}
-      />
 
       <input
         ref={fileInputRef}
@@ -262,6 +253,16 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           </button>
         )}
       </div>
+
+      {/* Mode toggle */}
+      <OptionGroup
+        options={[
+          { key: 'per-photo' as const, label: `Separate ${t.bins}` },
+          { key: 'single-bin' as const, label: `Same ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Max ${MAX_AI_PHOTOS} photos for single ${t.bin}` },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
 
       {/* Helper text */}
       <p className="text-[12px] text-[var(--text-tertiary)]">

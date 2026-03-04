@@ -76,9 +76,14 @@ Rules:
 Respond with ONLY valid JSON, no markdown fences, no extra text. Example:
 {"items":["Winter jacket","Socks","Old t-shirts","Scarf","Wool gloves"]}`;
 
+export const AI_CORRECTION_PREAMBLE = `You previously analyzed a photo of a storage bin and produced the JSON result shown below. The user says your output needs correction. Apply their feedback and return a corrected JSON object with the same four fields (name, items, tags, notes). Only change what the user explicitly mentions — keep everything else intact.
+
+Respond with ONLY valid JSON, no markdown fences, no extra text.`;
+
 export const ALL_DEFAULT_PROMPTS = {
   analysis: DEFAULT_AI_PROMPT,
   command: DEFAULT_COMMAND_PROMPT,
   query: DEFAULT_QUERY_PROMPT,
   structure: DEFAULT_STRUCTURE_PROMPT,
+  correction: AI_CORRECTION_PREAMBLE,
 };
