@@ -11,6 +11,7 @@ export interface BinFormFields {
   color: string; setColor: (v: string) => void;
   cardStyle: string; setCardStyle: (v: string) => void;
   visibility: BinVisibility; setVisibility: (v: BinVisibility) => void;
+  customFields: Record<string, string>; setCustomFields: (v: Record<string, string>) => void;
 }
 
 interface UseBinFormFieldsOptions {
@@ -27,6 +28,7 @@ export function useBinFormFields(options?: UseBinFormFieldsOptions): BinFormFiel
   const [color, setColor] = useState('');
   const [cardStyle, setCardStyle] = useState('');
   const [visibility, setVisibility] = useState<BinVisibility>('location');
+  const [customFields, setCustomFields] = useState<Record<string, string>>({});
 
   return {
     name, setName,
@@ -38,5 +40,6 @@ export function useBinFormFields(options?: UseBinFormFieldsOptions): BinFormFiel
     color, setColor,
     cardStyle, setCardStyle,
     visibility, setVisibility,
+    customFields, setCustomFields,
   };
 }

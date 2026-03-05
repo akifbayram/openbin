@@ -57,6 +57,7 @@ describe('addBin', () => {
         color: 'blue',
         cardStyle: '',
         visibility: 'location',
+        customFields: {},
       },
     });
   });
@@ -79,6 +80,7 @@ describe('addBin', () => {
         color: '',
         cardStyle: '',
         visibility: 'location',
+        customFields: {},
       },
     });
   });
@@ -154,6 +156,7 @@ describe('restoreBin', () => {
       created_by: 'user-1',
       created_by_name: '',
       visibility: 'location',
+      custom_fields: {},
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
     });

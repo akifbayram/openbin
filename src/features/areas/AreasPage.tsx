@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
+import { CustomFieldsDialog } from '@/features/bins/CustomFieldsDialog';
 import { LocationCreateDialog, LocationDeleteDialog, LocationJoinDialog, LocationRenameDialog } from '@/features/locations/LocationDialogs';
 import { LocationMembersDialog } from '@/features/locations/LocationMembersDialog';
 import { LocationRetentionDialog } from '@/features/locations/LocationRetentionDialog';
@@ -42,6 +43,7 @@ export function AreasPage() {
   const [renameLocationId, setRenameLocationId] = useState<string | null>(null);
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
   const [retentionLocationId, setRetentionLocationId] = useState<string | null>(null);
+  const [customFieldsLocationId, setCustomFieldsLocationId] = useState<string | null>(null);
 
   // Create area state
   const [createAreaOpen, setCreateAreaOpen] = useState(false);
@@ -259,6 +261,7 @@ export function AreasPage() {
                   isAdmin={isAdmin}
                   onRename={() => setRenameLocationId(activeLocation.id)}
                   onRetention={() => setRetentionLocationId(activeLocation.id)}
+                  onCustomFields={() => setCustomFieldsLocationId(activeLocation.id)}
                   onDelete={() => setDeleteLocationId(activeLocation.id)}
                   onLeave={() => handleLeave(activeLocation.id)}
                 />
@@ -394,6 +397,11 @@ export function AreasPage() {
         location={locations.find((l) => l.id === retentionLocationId)}
         open={!!retentionLocationId}
         onOpenChange={(open) => !open && setRetentionLocationId(null)}
+      />
+      <CustomFieldsDialog
+        locationId={customFieldsLocationId}
+        open={!!customFieldsLocationId}
+        onOpenChange={(open) => !open && setCustomFieldsLocationId(null)}
       />
     </div>
   );

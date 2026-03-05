@@ -3,6 +3,7 @@ import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 import { generateUuid, query, querySync } from '../db.js';
 import { config } from './config.js';
+import { replaceCustomFieldValuesSync } from './customFieldHelpers.js';
 import { isPathSafe, safePath } from './pathSafety.js';
 import { generateShortCode } from './shortCode.js';
 
@@ -21,6 +22,7 @@ export interface ExportBin {
   icon: string;
   color: string;
   cardStyle?: string;
+  customFields?: Record<string, string>;
   shortCode?: string;
   createdAt: string;
   updatedAt: string;
@@ -50,7 +52,9 @@ export async function fetchLocationBins(locationId: string) {
     `SELECT b.id, b.name, COALESCE(a.name, '') AS area_name,
        COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name))
          FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
-       b.notes, b.tags, b.icon, b.color, b.card_style, b.created_at, b.updated_at
+       b.notes, b.tags, b.icon, b.color, b.card_style,
+       COALESCE((SELECT json_group_object(bcfv.field_id, bcfv.value) FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
+       b.created_at, b.updated_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
      WHERE b.location_id = $1 AND b.deleted_at IS NULL
      ORDER BY b.updated_at DESC`,
@@ -130,7 +134,7 @@ export function resolveAreaSync(locationId: string, areaName: string, userId: st
 export function insertBinWithShortCode(
   _binId: string,
   locationId: string,
-  bin: { name: string; notes: string; tags: string[]; icon: string; color: string; cardStyle?: string; shortCode?: string; createdAt: string; updatedAt: string },
+  bin: { name: string; notes: string; tags: string[]; icon: string; color: string; cardStyle?: string; customFields?: Record<string, string>; shortCode?: string; createdAt: string; updatedAt: string },
   areaId: string | null,
   userId: string,
 ): string {
@@ -143,6 +147,9 @@ export function insertBinWithShortCode(
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [id, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle || '', userId, bin.createdAt, bin.updatedAt]
       );
+      if (bin.customFields && Object.keys(bin.customFields).length > 0) {
+        replaceCustomFieldValuesSync(id, bin.customFields, locationId);
+      }
       return id;
     } catch (err: unknown) {
       const sqliteErr = err as { code?: string };

@@ -1,4 +1,4 @@
-import { ChevronRight, Clock, LogOut, Pencil, Settings, Trash2 } from 'lucide-react';
+import { ChevronRight, Clock, List, LogOut, Pencil, Settings, Trash2 } from 'lucide-react';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -9,12 +9,13 @@ interface LocationSettingsMenuProps {
   isAdmin: boolean;
   onRename: () => void;
   onRetention: () => void;
+  onCustomFields: () => void;
   onDelete: () => void;
   onLeave: () => void;
   compact?: boolean;
 }
 
-export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onDelete, onLeave, compact }: LocationSettingsMenuProps) {
+export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomFields, onDelete, onLeave, compact }: LocationSettingsMenuProps) {
   const { visible, animating, isOpen, close, toggle } = usePopover();
   const menuRef = useRef<HTMLDivElement>(null);
   useClickOutside(menuRef, close);
@@ -83,6 +84,14 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onDelete,
           >
             <Clock className="h-4 w-4 text-[var(--text-tertiary)]" />
             Data Retention
+          </button>
+          <button
+            type="button"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+            onClick={() => handleItem(onCustomFields)}
+          >
+            <List className="h-4 w-4 text-[var(--text-tertiary)]" />
+            Custom Fields
           </button>
           <div className="my-1 border-t border-[var(--border-glass)]" />
           <button

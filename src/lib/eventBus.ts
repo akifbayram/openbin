@@ -8,6 +8,7 @@ export const Events = {
   AREAS: 'areas-changed',
   TAG_COLORS: 'tag-colors-changed',
   SCAN_HISTORY: 'scan-history-changed',
+  CUSTOM_FIELDS: 'custom-fields-changed',
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];

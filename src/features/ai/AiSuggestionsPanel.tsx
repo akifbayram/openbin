@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import type { AiSuggestions, BinItem } from '@/types';
+import type { AiSuggestions, BinItem, CustomField } from '@/types';
 
 interface AiSuggestionsPanelProps {
   suggestions: AiSuggestions;
@@ -11,7 +11,9 @@ interface AiSuggestionsPanelProps {
   currentItems: BinItem[];
   currentTags: string[];
   currentNotes: string;
-  onApply: (changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string }>) => void;
+  customFieldDefs?: CustomField[];
+  currentCustomFields?: Record<string, string>;
+  onApply: (changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string; customFields: Record<string, string> }>) => void;
   onDismiss: () => void;
 }
 
@@ -21,6 +23,8 @@ export function AiSuggestionsPanel({
   currentItems,
   currentTags,
   currentNotes,
+  customFieldDefs,
+  currentCustomFields,
   onApply,
   onDismiss,
 }: AiSuggestionsPanelProps) {
@@ -28,26 +32,46 @@ export function AiSuggestionsPanel({
   const [acceptItems, setAcceptItems] = useState(true);
   const [acceptTags, setAcceptTags] = useState(true);
   const [acceptNotes, setAcceptNotes] = useState(true);
+  const [acceptCustomFields, setAcceptCustomFields] = useState(true);
 
   const hasName = !!suggestions.name;
   const hasItems = suggestions.items.length > 0;
   const hasTags = suggestions.tags.length > 0;
   const hasNotes = !!suggestions.notes;
 
+  // Map AI-suggested custom fields (by name) to field IDs
+  const suggestedCfEntries = (() => {
+    if (!suggestions.customFields || !customFieldDefs?.length) return [];
+    const nameToField = new Map(customFieldDefs.map((f) => [f.name.toLowerCase(), f]));
+    return Object.entries(suggestions.customFields)
+      .map(([name, value]) => {
+        const field = nameToField.get(name.toLowerCase());
+        return field && value ? { field, value } : null;
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null);
+  })();
+  const hasCustomFields = suggestedCfEntries.length > 0;
+
   function handleApply() {
-    const changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string }> = {};
+    const changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string; customFields: Record<string, string> }> = {};
     if (acceptName && hasName) changes.name = suggestions.name;
     if (acceptItems && hasItems) changes.items = suggestions.items;
     if (acceptTags && hasTags) {
-      // Merge: union of existing + suggested
       const merged = Array.from(new Set([...currentTags, ...suggestions.tags]));
       changes.tags = merged;
     }
     if (acceptNotes && hasNotes) changes.notes = suggestions.notes;
+    if (acceptCustomFields && hasCustomFields) {
+      const merged = { ...(currentCustomFields ?? {}) };
+      for (const entry of suggestedCfEntries) {
+        merged[entry.field.id] = entry.value;
+      }
+      changes.customFields = merged;
+    }
     onApply(changes);
   }
 
-  const anySelected = (acceptName && hasName) || (acceptItems && hasItems) || (acceptTags && hasTags) || (acceptNotes && hasNotes);
+  const anySelected = (acceptName && hasName) || (acceptItems && hasItems) || (acceptTags && hasTags) || (acceptNotes && hasNotes) || (acceptCustomFields && hasCustomFields);
 
   return (
     <Card className="border-t-2 border-t-[var(--accent)]">
@@ -145,6 +169,29 @@ export function AiSuggestionsPanel({
               {currentNotes && (
                 <p className="text-[12px] text-[var(--text-tertiary)] mt-1">Will replace current notes</p>
               )}
+            </div>
+          </label>
+        )}
+
+        {/* Custom Fields */}
+        {hasCustomFields && (
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={acceptCustomFields}
+              onChange={(e) => setAcceptCustomFields(e.target.checked)}
+              className="mt-1 accent-[var(--accent)]"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-medium text-[var(--text-secondary)]">Custom Fields</p>
+              <div className="mt-1 space-y-1">
+                {suggestedCfEntries.map((entry) => (
+                  <p key={entry.field.id} className="text-[14px] text-[var(--text-primary)]">
+                    <span className="text-[var(--text-tertiary)]">{entry.field.name}:</span>{' '}
+                    {entry.value}
+                  </p>
+                ))}
+              </div>
             </div>
           </label>
         )}

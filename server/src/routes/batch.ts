@@ -72,6 +72,7 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
           icon: typeof op.icon === 'string' ? op.icon : undefined,
           notes: typeof op.notes === 'string' ? op.notes : undefined,
           card_style: typeof op.card_style === 'string' ? op.card_style : undefined,
+          custom_fields: op.custom_fields && typeof op.custom_fields === 'object' ? op.custom_fields : undefined,
         });
         break;
 
@@ -91,6 +92,7 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
           color: typeof op.color === 'string' ? op.color : undefined,
           card_style: typeof op.card_style === 'string' ? op.card_style : undefined,
           visibility: op.visibility === 'location' || op.visibility === 'private' ? op.visibility : undefined,
+          custom_fields: op.custom_fields && typeof op.custom_fields === 'object' ? op.custom_fields : undefined,
         });
         break;
 

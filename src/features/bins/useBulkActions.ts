@@ -70,6 +70,7 @@ export function useBulkActions(
         color: bin.color,
         cardStyle: bin.card_style,
         visibility: bin.visibility,
+        customFields: bin.custom_fields ? { ...bin.custom_fields } : undefined,
       });
       ids.push(newBin.id);
     }

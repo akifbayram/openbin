@@ -1,7 +1,7 @@
 import { query } from '../db.js';
 
 /** Shared SELECT columns for bin queries (requires b alias for bins, a alias for areas). */
-export const BIN_SELECT_COLS = `b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name)) FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items, b.notes, b.tags, b.icon, b.color, b.card_style, b.created_by, COALESCE((SELECT COALESCE(u.display_name, u.username) FROM users u WHERE u.id = b.created_by), '') AS created_by_name, b.visibility, b.created_at, b.updated_at`;
+export const BIN_SELECT_COLS = `b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name)) FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items, b.notes, b.tags, b.icon, b.color, b.card_style, b.created_by, COALESCE((SELECT COALESCE(u.display_name, u.username) FROM users u WHERE u.id = b.created_by), '') AS created_by_name, b.visibility, b.created_at, b.updated_at, COALESCE((SELECT json_group_object(bcfv.field_id, bcfv.value) FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields`;
 
 /**
  * Fetch a single bin by ID with BIN_SELECT_COLS.
@@ -60,7 +60,7 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   if (filters.q?.trim()) {
     const searchTerm = filters.q.trim();
     whereClauses.push(
-      `(word_match(b.name, $${paramIdx}) = 1 OR word_match(b.notes, $${paramIdx}) = 1 OR word_match(b.id, $${paramIdx}) = 1 OR word_match(COALESCE(a.name, ''), $${paramIdx}) = 1 OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND word_match(bi.name, $${paramIdx}) = 1) OR EXISTS (SELECT 1 FROM json_each(b.tags) WHERE word_match(value, $${paramIdx}) = 1))`
+      `(word_match(b.name, $${paramIdx}) = 1 OR word_match(b.notes, $${paramIdx}) = 1 OR word_match(b.id, $${paramIdx}) = 1 OR word_match(COALESCE(a.name, ''), $${paramIdx}) = 1 OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND word_match(bi.name, $${paramIdx}) = 1) OR EXISTS (SELECT 1 FROM json_each(b.tags) WHERE word_match(value, $${paramIdx}) = 1) OR EXISTS (SELECT 1 FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id AND word_match(bcfv.value, $${paramIdx}) = 1))`
     );
     params.push(searchTerm);
     paramIdx++;

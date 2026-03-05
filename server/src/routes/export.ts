@@ -69,6 +69,12 @@ router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async 
   const exportBins: ExportBin[] = [];
   for (const bin of bins) {
     const photos = await loadBinPhotosBase64(bin.id);
+    // custom_fields is already deserialized by db.ts JSON_COLUMNS
+    const customFields =
+      bin.custom_fields && typeof bin.custom_fields === 'object' && Object.keys(bin.custom_fields).length > 0
+        ? (bin.custom_fields as Record<string, string>)
+        : undefined;
+
     exportBins.push({
       id: bin.id,
       name: bin.name,
@@ -79,6 +85,7 @@ router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async 
       icon: bin.icon,
       color: bin.color,
       cardStyle: bin.card_style || undefined,
+      customFields,
       shortCode: bin.id,
       createdAt: bin.created_at,
       updatedAt: bin.updated_at,
@@ -280,6 +287,7 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
         icon: bin.icon || '',
         color: bin.color || '',
         cardStyle: bin.cardStyle,
+        customFields: bin.customFields,
         shortCode: bin.shortCode,
         createdAt: bin.createdAt || new Date().toISOString(),
         updatedAt: bin.updatedAt || new Date().toISOString(),

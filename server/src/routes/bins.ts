@@ -8,6 +8,7 @@ import { getMemberRole, isBinCreator, requireAdmin, verifyAreaInLocation, verify
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
 import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinItems } from '../lib/binUpdateHelpers.js';
 import { validateBinFields } from '../lib/binValidation.js';
+import { replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
@@ -37,14 +38,14 @@ router.use(authenticate);
 
 // POST /api/bins — create bin
 router.post('/', asyncHandler(async (req, res) => {
-  const { locationId, name, areaId, items, notes, tags, icon, color, visibility, cardStyle } = req.body;
+  const { locationId, name, areaId, items, notes, tags, icon, color, visibility, cardStyle, customFields } = req.body;
 
   if (!locationId) {
     throw new ValidationError('locationId is required');
   }
 
   validateBinName(name);
-  validateBinFields({ items, tags, notes, icon, color, cardStyle, visibility });
+  validateBinFields({ items, tags, notes, icon, color, cardStyle, visibility, customFields });
 
   if (!await verifyLocationMembership(locationId, req.user!.id)) {
     throw new ForbiddenError('Not a member of this location');
@@ -64,6 +65,7 @@ router.post('/', asyncHandler(async (req, res) => {
     createdBy: req.user!.id,
     visibility: visibility || 'location',
     items: Array.isArray(items) ? items : [],
+    customFields: customFields || undefined,
   });
 
   logBinActivity(req, { locationId, action: 'create', entityId: bin.id, entityName: bin.name });
@@ -253,12 +255,12 @@ router.put('/:id', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Only admins or the bin creator can edit this bin');
   }
 
-  const { name, areaId, items, notes, tags, icon, color, cardStyle, visibility } = req.body;
+  const { name, areaId, items, notes, tags, icon, color, cardStyle, visibility, customFields } = req.body;
 
   if (name !== undefined) {
     validateBinName(name);
   }
-  validateBinFields({ items, tags, notes, icon, color, cardStyle, visibility });
+  validateBinFields({ items, tags, notes, icon, color, cardStyle, visibility, customFields });
   if (visibility === 'private' && access.createdBy !== req.user!.id) {
     throw new ForbiddenError('Only the bin creator can set visibility to private');
   }
@@ -286,6 +288,11 @@ router.put('/:id', asyncHandler(async (req, res) => {
   const itemChanges = items !== undefined && Array.isArray(items)
     ? await replaceBinItems(id, items)
     : null;
+
+  // Handle custom fields separately — full replacement
+  if (customFields !== undefined && typeof customFields === 'object' && customFields !== null) {
+    await replaceCustomFieldValues(id, customFields, access.locationId);
+  }
 
   // Re-fetch with BIN_SELECT_COLS
   const bin = await fetchBinById(id, { userId: req.user!.id, excludeDeleted: true });
@@ -559,6 +566,12 @@ router.post('/:id/duplicate', asyncHandler(async (req, res) => {
     [id]
   );
 
+  // custom_fields is already deserialized by db.ts JSON_COLUMNS
+  const srcCustomFields =
+    src.custom_fields && typeof src.custom_fields === 'object' && Object.keys(src.custom_fields).length > 0
+      ? (src.custom_fields as Record<string, string>)
+      : undefined;
+
   const newBin = await insertBinWithItems({
     locationId: src.location_id,
     name: newName,
@@ -571,6 +584,7 @@ router.post('/:id/duplicate', asyncHandler(async (req, res) => {
     createdBy: req.user!.id,
     visibility: src.visibility || 'location',
     items: itemsResult.rows,
+    customFields: srcCustomFields,
   });
 
   logBinActivity(req, { locationId: access.locationId, action: 'duplicate', entityId: newBin.id, entityName: newBin.name });

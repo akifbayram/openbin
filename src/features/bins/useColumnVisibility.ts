@@ -2,13 +2,13 @@ import { useCallback, useMemo, useState } from 'react';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 import type { ViewMode } from './useViewMode';
 
-export type FieldKey = 'icon' | 'area' | 'items' | 'tags' | 'updated' | 'created' | 'notes' | 'createdBy';
+export type FieldKey = 'icon' | 'area' | 'items' | 'tags' | 'updated' | 'created' | 'notes' | 'createdBy' | 'customFields';
 
 /** Which fields are toggleable per view mode */
 const FIELD_APPLICABILITY: Record<ViewMode, Set<FieldKey>> = {
-  grid: new Set(['icon', 'area', 'items', 'tags', 'notes']),
+  grid: new Set(['icon', 'area', 'items', 'tags', 'notes', 'customFields']),
   compact: new Set(['icon', 'area']),
-  table: new Set(['icon', 'area', 'items', 'tags', 'updated', 'created', 'notes', 'createdBy']),
+  table: new Set(['icon', 'area', 'items', 'tags', 'updated', 'created', 'notes', 'createdBy', 'customFields']),
 };
 
 const DEFAULT_VISIBILITY: Record<FieldKey, boolean> = {
@@ -20,6 +20,7 @@ const DEFAULT_VISIBILITY: Record<FieldKey, boolean> = {
   created: false,
   notes: false,
   createdBy: false,
+  customFields: false,
 };
 
 export const FIELD_LABELS: Record<FieldKey, string> = {
@@ -31,9 +32,10 @@ export const FIELD_LABELS: Record<FieldKey, string> = {
   created: 'Created',
   notes: 'Notes',
   createdBy: 'Created By',
+  customFields: 'Custom Fields',
 };
 
-export const ALL_FIELDS: FieldKey[] = ['icon', 'area', 'items', 'tags', 'updated', 'created', 'notes', 'createdBy'];
+export const ALL_FIELDS: FieldKey[] = ['icon', 'area', 'items', 'tags', 'updated', 'created', 'notes', 'createdBy', 'customFields'];
 
 function readStored(): Record<FieldKey, boolean> {
   try {

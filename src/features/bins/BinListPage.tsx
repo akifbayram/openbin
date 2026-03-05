@@ -319,6 +319,7 @@ export function BinListPage() {
           onPin={bulkPinToggle}
           onDuplicate={bulkDuplicate}
           pinLabel={pinLabel}
+          onCustomFields={() => bulk.open('customFields')}
           onCopyStyle={handleCopyStyle}
           onPasteStyle={handlePasteStyle}
           canCopyStyle={selectedIds.size === 1}

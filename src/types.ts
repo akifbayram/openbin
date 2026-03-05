@@ -84,10 +84,20 @@ export interface Bin {
   created_by: string;
   created_by_name: string;
   visibility: BinVisibility;
+  custom_fields: Record<string, string>;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
   is_pinned?: boolean;
+}
+
+export interface CustomField {
+  id: string;
+  location_id: string;
+  name: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
 }
 
 /** Generic list response envelope from API */
@@ -146,6 +156,7 @@ export interface ExportBinV2 {
   icon?: string;
   color?: string;
   cardStyle?: string;
+  customFields?: Record<string, string>;
   shortCode?: string;
   createdAt: string;
   updatedAt: string;
@@ -215,4 +226,5 @@ export interface AiSuggestions {
   items: string[];
   tags: string[];
   notes: string;
+  customFields?: Record<string, string>;
 }

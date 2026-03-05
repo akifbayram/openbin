@@ -2,18 +2,21 @@ import { generateObject } from 'ai';
 import type { AiProviderConfig } from './aiCaller.js';
 import { mapSdkError, validateEndpointUrl } from './aiCaller.js';
 import { AiSuggestionsSchema } from './aiSchemas.js';
+import type { CustomFieldDef } from './customFieldHelpers.js';
 import { DEFAULT_AI_PROMPT } from './defaultPrompts.js';
 import { createSdkModel } from './sdkProviderFactory.js';
 
 export type { AiProviderConfig, AiProviderType } from './aiCaller.js';
 // Re-export types that other modules import from here
 export { AiAnalysisError } from './aiCaller.js';
+export type { CustomFieldDef } from './customFieldHelpers.js';
 
 export interface AiSuggestionsResult {
   name: string;
   items: string[];
   tags: string[];
   notes: string;
+  customFields?: Record<string, string>;
 }
 
 export interface ImageInput {
@@ -21,21 +24,30 @@ export interface ImageInput {
   mimeType: string;
 }
 
-export function buildSystemPrompt(existingTags?: string[], customPrompt?: string | null): string {
+export function buildSystemPrompt(existingTags?: string[], customPrompt?: string | null, customFieldDefs?: CustomFieldDef[]): string {
   const basePrompt = customPrompt || DEFAULT_AI_PROMPT;
 
+  let prompt: string;
   if (!existingTags || existingTags.length === 0) {
-    return basePrompt.replace(/\{available_tags\}/g, '');
-  }
-
-  const tagBlock = `EXISTING TAGS in this inventory: [${existingTags.join(', ')}]
+    prompt = basePrompt.replace(/\{available_tags\}/g, '');
+  } else {
+    const tagBlock = `EXISTING TAGS in this inventory: [${existingTags.join(', ')}]
 When a relevant existing tag fits the bin's contents, reuse it instead of creating a new synonym. Only create new tags when no existing tag is appropriate.`;
 
-  if (basePrompt.includes('{available_tags}')) {
-    return basePrompt.replace(/\{available_tags\}/g, tagBlock);
+    if (basePrompt.includes('{available_tags}')) {
+      prompt = basePrompt.replace(/\{available_tags\}/g, tagBlock);
+    } else {
+      prompt = `${basePrompt}\n\n${tagBlock}`;
+    }
   }
 
-  return `${basePrompt}\n\n${tagBlock}`;
+  if (customFieldDefs && customFieldDefs.length > 0) {
+    const fieldList = customFieldDefs.map((f) => `"${f.name}" (id: ${f.id})`).join(', ');
+    prompt += `\n\nCUSTOM FIELDS defined for this location: [${fieldList}]
+If any of these fields are relevant to the bin's contents, include a "customFields" object in your response mapping field IDs to suggested values. Only include fields where you can provide a meaningful value.`;
+  }
+
+  return prompt;
 }
 
 function validateSuggestions(raw: unknown): AiSuggestionsResult {
@@ -65,7 +77,18 @@ function validateSuggestions(raw: unknown): AiSuggestionsResult {
   let notes = typeof obj.notes === 'string' ? obj.notes.trim() : '';
   if (notes.length > 2000) notes = notes.slice(0, 2000);
 
-  return { name, items, tags, notes };
+  let customFields: Record<string, string> | undefined;
+  if (obj.customFields && typeof obj.customFields === 'object' && !Array.isArray(obj.customFields)) {
+    customFields = {};
+    for (const [key, value] of Object.entries(obj.customFields as Record<string, unknown>)) {
+      if (typeof value === 'string' && value.trim()) {
+        customFields[key] = value.trim().slice(0, 2000);
+      }
+    }
+    if (Object.keys(customFields).length === 0) customFields = undefined;
+  }
+
+  return { name, items, tags, notes, customFields };
 }
 
 export interface AiOverrides {

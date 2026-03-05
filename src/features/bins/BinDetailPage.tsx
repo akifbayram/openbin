@@ -19,6 +19,7 @@ import { MoveBinDialog } from './MoveBinDialog';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 import { useBinDetailActions } from './useBinDetailActions';
 import { useAllTags, useBin } from './useBins';
+import { useCustomFields } from './useCustomFields';
 import { useEditBinForm } from './useEditBinForm';
 
 export function BinDetailPage() {
@@ -31,6 +32,7 @@ export function BinDetailPage() {
   const backState = location.state as { backPath?: string } | null;
   const edit = useEditBinForm(id);
   const actions = useBinDetailActions(bin, id, edit.editing);
+  const { fields: customFieldDefs } = useCustomFields(bin?.location_id);
 
   const [unsavedOpen, setUnsavedOpen] = useState(false);
   const [photosExpanded, setPhotosExpanded] = useState(false);
@@ -168,6 +170,7 @@ export function BinDetailPage() {
           aiConfigured={actions.aiEnabled && !!actions.aiSettings}
           activeLocationId={actions.activeLocationId ?? undefined}
           canChangeVisibility={actions.canChangeVisibility(bin.created_by)}
+          customFields={customFieldDefs}
           onAiSetupNeeded={() => actions.setAiSetupOpen(true)}
         />
       ) : (
@@ -181,6 +184,7 @@ export function BinDetailPage() {
           suggestions={actions.suggestions}
           hasNotes={actions.hasNotes}
           hasTags={actions.hasTags}
+          customFields={customFieldDefs}
           onApplySuggestions={actions.handleApplySuggestions}
           onClearSuggestions={actions.clearSuggestions}
         />

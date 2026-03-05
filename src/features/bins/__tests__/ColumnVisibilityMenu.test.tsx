@@ -5,7 +5,7 @@ import { FIELD_LABELS, type FieldKey } from '../useColumnVisibility';
 
 const DEFAULT_VIS: Record<FieldKey, boolean> = {
   icon: true, area: true, items: true, tags: true,
-  updated: true, created: false, notes: false, createdBy: false,
+  updated: true, created: false, notes: false, createdBy: false, customFields: false,
 };
 
 function renderMenu(overrides: {

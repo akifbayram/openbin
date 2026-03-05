@@ -13,6 +13,7 @@ import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg } from '../lib/commandParser.js';
 import { config } from '../lib/config.js';
+import { fetchCustomFieldDefs } from '../lib/customFieldHelpers.js';
 import { AI_CORRECTION_PREAMBLE } from '../lib/defaultPrompts.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
 import { safePath } from '../lib/pathSafety.js';
@@ -145,7 +146,10 @@ streamRouter.post('/analyze-image/stream', aiLimiter, memoryPhotoUpload.fields([
     res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
     return;
   }
-  const existingTags = locationId ? await fetchExistingTags(locationId) : undefined;
+  const [existingTags, customFieldDefs] = await Promise.all([
+    locationId ? fetchExistingTags(locationId) : Promise.resolve(undefined),
+    locationId ? fetchCustomFieldDefs(locationId) : Promise.resolve(undefined),
+  ]);
 
   const imageParts = allFiles.map((f) => ({
     type: 'image' as const,
@@ -154,7 +158,7 @@ streamRouter.post('/analyze-image/stream', aiLimiter, memoryPhotoUpload.fields([
   }));
 
   await pipeAiStreamToResponse(res, model, {
-    system: buildAnalysisPrompt(existingTags, settings.custom_prompt),
+    system: buildAnalysisPrompt(existingTags, settings.custom_prompt, customFieldDefs),
     userContent: [...imageParts, { type: 'text' as const, text: buildAnalysisUserText(allFiles.length) }],
     ...streamOpts(settings, { maxTokens: allFiles.length > 1 ? 2000 : 1500 }),
   });
@@ -198,8 +202,8 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
 
   const locationId: string = photoResult.rows[0].location_id;
 
-  // Read files + fetch tags in parallel
-  const [imageBuffers, existingTags] = await Promise.all([
+  // Read files + fetch tags + field defs in parallel
+  const [imageBuffers, existingTags, customFieldDefs] = await Promise.all([
     Promise.all(
       photoResult.rows.map(async (row) => {
         const filePath = safePath(PHOTO_STORAGE_PATH, row.storage_path);
@@ -216,6 +220,7 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
       throw err;
     }),
     fetchExistingTags(locationId),
+    fetchCustomFieldDefs(locationId),
   ]);
 
   if (!imageBuffers) {
@@ -230,7 +235,7 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
   }));
 
   await pipeAiStreamToResponse(res, model, {
-    system: buildAnalysisPrompt(existingTags, settings.custom_prompt),
+    system: buildAnalysisPrompt(existingTags, settings.custom_prompt, customFieldDefs),
     userContent: [...imageParts, { type: 'text' as const, text: buildAnalysisUserText(imageBuffers.length) }],
     ...streamOpts(settings, { maxTokens: imageBuffers.length > 1 ? 2000 : 1500 }),
   });

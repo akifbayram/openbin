@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { generateUuid, getDb, querySync } from '../db.js';
 import { logActivity } from './activityLog.js';
 import type { CommandAction } from './commandParser.js';
+import { replaceCustomFieldValuesSync } from './customFieldHelpers.js';
 import { generateShortCode } from './shortCode.js';
 
 export interface ActionResult {
@@ -186,6 +187,11 @@ function executeSingleAction(
       if (createItems.length > MAX_ITEMS_PER_ACTION) throw new Error('Too many items per action (max 500)');
       for (let i = 0; i < createItems.length; i++) {
         querySync('INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)', [crypto.randomUUID(), binId, createItems[i], i]);
+      }
+
+      // Insert custom field values
+      if (action.custom_fields && typeof action.custom_fields === 'object') {
+        replaceCustomFieldValuesSync(binId, action.custom_fields as Record<string, string>, locationId);
       }
 
       pendingActivities.push({
@@ -429,6 +435,11 @@ function executeSingleAction(
         updates.push(`updated_at = datetime('now')`);
         params.push(action.bin_id);
         querySync(`UPDATE bins SET ${updates.join(', ')} WHERE id = $${paramIdx}`, params);
+      }
+
+      // Handle custom fields
+      if (action.custom_fields && typeof action.custom_fields === 'object') {
+        replaceCustomFieldValuesSync(action.bin_id, action.custom_fields as Record<string, string>, locationId);
       }
 
       if (Object.keys(changes).length > 0) {

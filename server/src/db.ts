@@ -48,7 +48,7 @@ export function generateUuid(): string {
 }
 
 /** Columns whose TEXT values should be parsed as JSON when returned */
-const JSON_COLUMNS = new Set(['items', 'tags', 'changes', 'settings', 'filters']);
+const JSON_COLUMNS = new Set(['items', 'tags', 'changes', 'settings', 'filters', 'custom_fields']);
 
 /**
  * Convert PostgreSQL-style `$1, $2, ...` placeholders to SQLite `?` placeholders.

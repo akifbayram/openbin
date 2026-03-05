@@ -1,6 +1,7 @@
 import { generateUuid, getDb, query } from '../db.js';
 import { computeChanges } from './activityLog.js';
 import { fetchBinById } from './binQueries.js';
+import { replaceCustomFieldValues } from './customFieldHelpers.js';
 import { generateShortCode } from './shortCode.js';
 
 export function buildBinSetClauses(fields: {
@@ -117,7 +118,7 @@ export async function resolveAreaNameChanges(
  */
 export async function buildBinUpdateDiff(
   oldBin: Record<string, unknown>,
-  updates: { name?: unknown; areaId?: unknown; notes?: unknown; tags?: unknown; icon?: unknown; color?: unknown; cardStyle?: unknown; visibility?: unknown },
+  updates: { name?: unknown; areaId?: unknown; notes?: unknown; tags?: unknown; icon?: unknown; color?: unknown; cardStyle?: unknown; visibility?: unknown; customFields?: Record<string, string> },
   itemChanges: ItemChanges | null,
 ): Promise<Record<string, { old: unknown; new: unknown }> | null> {
   const newObj: Record<string, unknown> = {};
@@ -154,6 +155,7 @@ export interface InsertBinFields {
   createdBy: string;
   visibility: string;
   items: unknown[];
+  customFields?: Record<string, string>;
 }
 
 /**
@@ -183,6 +185,11 @@ export async function insertBinWithItems(fields: InsertBinFields): Promise<Recor
           'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
           [generateUuid(), binId, itemName, i]
         );
+      }
+
+      // Insert custom field values
+      if (fields.customFields && Object.keys(fields.customFields).length > 0) {
+        await replaceCustomFieldValues(binId, fields.customFields, fields.locationId);
       }
 
       return (await fetchBinById(binId))!;

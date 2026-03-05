@@ -63,7 +63,8 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
           (Array.isArray(bin.items) ? bin.items : []).some((item) => matchesSearch(item.name, q)) ||
           matchesSearch(bin.notes, q) ||
           (Array.isArray(bin.tags) ? bin.tags : []).some((tag: string) => matchesSearch(tag, q)) ||
-          matchesSearch(bin.id, q)
+          matchesSearch(bin.id, q) ||
+          (bin.custom_fields && Object.values(bin.custom_fields).some((v) => matchesSearch(v, q)))
       );
     }
 
@@ -233,6 +234,7 @@ export interface AddBinOptions {
   color?: string;
   cardStyle?: string;
   visibility?: BinVisibility;
+  customFields?: Record<string, string>;
 }
 
 export async function addBin(options: AddBinOptions): Promise<Bin> {
@@ -247,6 +249,7 @@ export async function addBin(options: AddBinOptions): Promise<Bin> {
     color: options.color ?? '',
     cardStyle: options.cardStyle ?? '',
     visibility: options.visibility ?? 'location',
+    customFields: options.customFields ?? {},
   };
   const result = await apiFetch<Bin>('/api/bins', {
     method: 'POST',
@@ -258,7 +261,7 @@ export async function addBin(options: AddBinOptions): Promise<Bin> {
 
 export async function updateBin(
   id: string,
-  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color' | 'card_style' | 'visibility'>> & { areaId?: string | null; items?: string[]; cardStyle?: string }
+  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color' | 'card_style' | 'visibility'>> & { areaId?: string | null; items?: string[]; cardStyle?: string; customFields?: Record<string, string> }
 ): Promise<void> {
   await apiFetch(`/api/bins/${id}`, {
     method: 'PUT',

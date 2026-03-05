@@ -155,6 +155,14 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
             <Highlight text={bin.notes} query={searchQuery} />
           </p>
         )}
+        {isVisible?.('customFields') && bin.custom_fields && Object.keys(bin.custom_fields).length > 0 && (
+          <p
+            className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed"
+            style={secondaryStyle}
+          >
+            {Object.values(bin.custom_fields).filter(Boolean).join(' · ')}
+          </p>
+        )}
         {isVisible?.('tags') !== false && bin.tags.length > 0 && (
           <div ref={tagsRef} className="flex flex-nowrap gap-1.5 mt-auto pt-2 overflow-hidden items-center">
             {displayedTags.map((tag) => (

@@ -8,8 +8,9 @@ export function validateBinFields(fields: {
   color?: unknown;
   cardStyle?: unknown;
   visibility?: unknown;
+  customFields?: unknown;
 }): void {
-  const { items, tags, notes, icon, color, cardStyle, visibility } = fields;
+  const { items, tags, notes, icon, color, cardStyle, visibility, customFields } = fields;
 
   if (items !== undefined && Array.isArray(items) && items.length > 500) {
     throw new ValidationError('Too many items (max 500)');
@@ -46,5 +47,25 @@ export function validateBinFields(fields: {
   }
   if (visibility !== undefined && visibility !== 'location' && visibility !== 'private') {
     throw new ValidationError('visibility must be "location" or "private"');
+  }
+  if (customFields !== undefined) {
+    if (typeof customFields !== 'object' || customFields === null || Array.isArray(customFields)) {
+      throw new ValidationError('customFields must be an object');
+    }
+    const entries = Object.entries(customFields as Record<string, unknown>);
+    if (entries.length > 50) {
+      throw new ValidationError('Too many custom fields (max 50)');
+    }
+    for (const [key, value] of entries) {
+      if (typeof key !== 'string' || key.length > 100) {
+        throw new ValidationError('Custom field key too long (max 100 characters)');
+      }
+      if (typeof value !== 'string') {
+        throw new ValidationError('Custom field values must be strings');
+      }
+      if (value.length > 2000) {
+        throw new ValidationError('Custom field value too long (max 2000 characters)');
+      }
+    }
   }
 }

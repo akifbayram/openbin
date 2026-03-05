@@ -4,6 +4,7 @@ import { BinCreateDialog } from './BinCreateDialog';
 import { BinFilterDialog } from './BinFilterDialog';
 import { BulkAppearanceDialog } from './BulkAppearanceDialog';
 import { BulkAreaDialog } from './BulkAreaDialog';
+import { BulkCustomFieldsDialog } from './BulkCustomFieldsDialog';
 import { BulkLocationDialog } from './BulkLocationDialog';
 import { BulkTagDialog } from './BulkTagDialog';
 import { BulkVisibilityDialog } from './BulkVisibilityDialog';
@@ -86,6 +87,12 @@ export function BinListDialogs({
       <BulkVisibilityDialog
         open={bulk.isOpen('visibility')}
         onOpenChange={(v) => v ? bulk.open('visibility') : bulk.close()}
+        binIds={[...selectedIds]}
+        onDone={clearSelection}
+      />
+      <BulkCustomFieldsDialog
+        open={bulk.isOpen('customFields')}
+        onOpenChange={(v) => v ? bulk.open('customFields') : bulk.close()}
         binIds={[...selectedIds]}
         onDone={clearSelection}
       />

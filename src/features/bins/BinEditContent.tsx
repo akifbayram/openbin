@@ -6,9 +6,10 @@ import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { useTerminology } from '@/lib/terminology';
-import type { Photo } from '@/types';
+import type { CustomField, Photo } from '@/types';
 import { BinPreviewCard } from './BinPreviewCard';
 import { ColorPicker } from './ColorPicker';
+import { CustomFieldsEditCard } from './CustomFieldsEditCard';
 import { IconPicker } from './IconPicker';
 import { ItemsInput } from './ItemsInput';
 import { StylePicker } from './StylePicker';
@@ -25,6 +26,7 @@ interface BinEditContentProps {
   aiConfigured: boolean;
   activeLocationId: string | undefined;
   canChangeVisibility: boolean;
+  customFields: CustomField[];
   onAiSetupNeeded: () => void;
 }
 
@@ -37,6 +39,7 @@ export function BinEditContent({
   aiConfigured,
   activeLocationId,
   canChangeVisibility,
+  customFields,
   onAiSetupNeeded,
 }: BinEditContentProps) {
   const t = useTerminology();
@@ -87,6 +90,13 @@ export function BinEditContent({
           </div>
         </CardContent>
       </Card>
+
+      {/* Custom Fields */}
+      <CustomFieldsEditCard
+        fields={customFields}
+        values={edit.customFields}
+        onChange={edit.setCustomFields}
+      />
 
       {photosSection}
 

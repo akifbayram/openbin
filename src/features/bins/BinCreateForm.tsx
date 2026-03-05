@@ -17,12 +17,14 @@ import { cn } from '@/lib/utils';
 import type { BinVisibility } from '@/types';
 import { BinPreviewCard } from './BinPreviewCard';
 import { ColorPicker } from './ColorPicker';
+import { CustomFieldsEditCard } from './CustomFieldsEditCard';
 import { IconPicker } from './IconPicker';
 import { ItemsInput } from './ItemsInput';
 import { PhotoUploadSection } from './PhotoUploadSection';
 import { StylePicker } from './StylePicker';
 import { TagInput } from './TagInput';
 import { useBinFormFields } from './useBinFormFields';
+import { useCustomFields } from './useCustomFields';
 import { usePhotoAnalysis } from './usePhotoAnalysis';
 import { VisibilityPicker } from './VisibilityPicker';
 
@@ -36,6 +38,7 @@ export interface BinCreateFormData {
   color: string;
   cardStyle: string;
   visibility: BinVisibility;
+  customFields: Record<string, string>;
   photos: File[];
 }
 
@@ -84,7 +87,10 @@ export function BinCreateForm({
     color, setColor,
     cardStyle, setCardStyle,
     visibility, setVisibility,
+    customFields, setCustomFields,
   } = useBinFormFields({ initialName: prefillName });
+
+  const { fields: customFieldDefs } = useCustomFields(locationId);
 
   // Onboarding-specific: inline AI setup
   const [aiExpanded, setAiExpanded] = useState(false);
@@ -127,11 +133,12 @@ export function BinCreateForm({
     }
   }, [suggestions]);
 
-  function handleApplySuggestions(changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string }>) {
+  function handleApplySuggestions(changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string; customFields: Record<string, string> }>) {
     if (changes.name !== undefined) setName(changes.name);
     if (changes.items !== undefined) setItems(changes.items);
     if (changes.tags !== undefined) setTags(changes.tags);
     if (changes.notes !== undefined) setNotes(changes.notes);
+    if (changes.customFields !== undefined) setCustomFields(changes.customFields);
     dismissSuggestions();
   }
 
@@ -148,6 +155,7 @@ export function BinCreateForm({
       color,
       cardStyle: cardStyle || '',
       visibility,
+      customFields,
       photos,
     });
   }
@@ -236,6 +244,15 @@ export function BinCreateForm({
         </div>
       )}
 
+      {/* Custom Fields (full mode only) */}
+      {isFull && customFieldDefs.length > 0 && (
+        <CustomFieldsEditCard
+          fields={customFieldDefs}
+          values={customFields}
+          onChange={setCustomFields}
+        />
+      )}
+
       {/* AI Suggestions (full mode only) */}
       {isFull && aiEnabled && suggestions && (
         <div ref={suggestionsRef}>
@@ -245,6 +262,8 @@ export function BinCreateForm({
             currentItems={items.map((name, i) => ({ id: String(i), name }))}
             currentTags={tags}
             currentNotes={notes}
+            customFieldDefs={customFieldDefs}
+            currentCustomFields={customFields}
             onApply={handleApplySuggestions}
             onDismiss={dismissSuggestions}
           />

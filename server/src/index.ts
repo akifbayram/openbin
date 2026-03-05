@@ -18,6 +18,7 @@ import authRoutes from './routes/auth.js';
 import { batchRoutes } from './routes/batch.js';
 import binItemsRoutes from './routes/binItems.js';
 import binsRoutes from './routes/bins.js';
+import customFieldsRoutes from './routes/customFields.js';
 import exportRoutes from './routes/export.js';
 import itemsRoutes from './routes/items.js';
 import locationsRoutes from './routes/locations.js';
@@ -82,6 +83,7 @@ export function createApp(): express.Express {
   app.use('/api/locations', locationsRoutes);
   app.use('/api/locations', areasRoutes);
   app.use('/api/locations', activityRoutes);
+  app.use('/api/locations', customFieldsRoutes);
   app.use('/api/bins', binsRoutes);
   app.use('/api/bins', binItemsRoutes);
   app.use('/api/photos', photosRoutes);

@@ -204,6 +204,30 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_family ON refresh_tokens(family_id);
 
+CREATE TABLE IF NOT EXISTS location_custom_fields (
+  id          TEXT PRIMARY KEY,
+  location_id TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  position    INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(location_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_location_custom_fields_loc
+  ON location_custom_fields(location_id, position);
+
+CREATE TABLE IF NOT EXISTS bin_custom_field_values (
+  id         TEXT PRIMARY KEY,
+  bin_id     TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE,
+  field_id   TEXT NOT NULL REFERENCES location_custom_fields(id) ON DELETE CASCADE,
+  value      TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(bin_id, field_id)
+);
+CREATE INDEX IF NOT EXISTS idx_bin_cfv_bin ON bin_custom_field_values(bin_id);
+CREATE INDEX IF NOT EXISTS idx_bin_cfv_field ON bin_custom_field_values(field_id);
+
 CREATE INDEX IF NOT EXISTS idx_bins_location_id ON bins(location_id);
 CREATE INDEX IF NOT EXISTS idx_bins_location_updated ON bins(location_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bins_area_id ON bins(area_id);

@@ -1,4 +1,4 @@
-import { ArrowRightLeft, CheckCircle2, Clipboard, ClipboardPaste, Copy, Eye, MapPin, MoreHorizontal, Paintbrush, Pin, Tag, Trash2, X } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle2, Clipboard, ClipboardPaste, Copy, Eye, List, MapPin, MoreHorizontal, Paintbrush, Pin, Tag, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -20,11 +20,12 @@ interface BulkActionBarProps {
   pinLabel: string;
   onCopyStyle?: () => void;
   onPasteStyle?: () => void;
+  onCustomFields?: () => void;
   canCopyStyle?: boolean;
   canPasteStyle?: boolean;
 }
 
-export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel, onCopyStyle, onPasteStyle, canCopyStyle, canPasteStyle }: BulkActionBarProps) {
+export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel, onCustomFields, onCopyStyle, onPasteStyle, canCopyStyle, canPasteStyle }: BulkActionBarProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -149,6 +150,16 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                 <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
                 Duplicate
               </button>
+              {onCustomFields && (
+                <button
+                  type="button"
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  onClick={() => handleMoreAction(onCustomFields)}
+                >
+                  <List className="h-4 w-4 text-[var(--text-tertiary)]" />
+                  Custom Fields
+                </button>
+              )}
               {(canCopyStyle || canPasteStyle) && (
                 <div className="my-1 border-t border-[var(--border-primary)]" />
               )}

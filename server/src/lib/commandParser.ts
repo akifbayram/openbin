@@ -24,7 +24,7 @@ export type CommandAction =
   | { type: 'add_items'; bin_id: string; bin_name: string; items: string[] }
   | { type: 'remove_items'; bin_id: string; bin_name: string; items: string[] }
   | { type: 'modify_item'; bin_id: string; bin_name: string; old_item: string; new_item: string }
-  | { type: 'create_bin'; name: string; area_name?: string; tags?: string[]; items?: string[]; color?: string; icon?: string; notes?: string; card_style?: string }
+  | { type: 'create_bin'; name: string; area_name?: string; tags?: string[]; items?: string[]; color?: string; icon?: string; notes?: string; card_style?: string; custom_fields?: Record<string, string> }
   | { type: 'delete_bin'; bin_id: string; bin_name: string }
   | { type: 'add_tags'; bin_id: string; bin_name: string; tags: string[] }
   | { type: 'remove_tags'; bin_id: string; bin_name: string; tags: string[] }
@@ -33,7 +33,7 @@ export type CommandAction =
   | { type: 'set_notes'; bin_id: string; bin_name: string; notes: string; mode: 'set' | 'append' | 'clear' }
   | { type: 'set_icon'; bin_id: string; bin_name: string; icon: string }
   | { type: 'set_color'; bin_id: string; bin_name: string; color: string }
-  | { type: 'update_bin'; bin_id: string; bin_name: string; name?: string; notes?: string; tags?: string[]; area_name?: string; icon?: string; color?: string; card_style?: string; visibility?: 'location' | 'private' }
+  | { type: 'update_bin'; bin_id: string; bin_name: string; name?: string; notes?: string; tags?: string[]; area_name?: string; icon?: string; color?: string; card_style?: string; visibility?: 'location' | 'private'; custom_fields?: Record<string, string> }
   | { type: 'restore_bin'; bin_id: string; bin_name: string }
   | { type: 'duplicate_bin'; bin_id: string; bin_name: string; new_name?: string }
   | { type: 'pin_bin'; bin_id: string; bin_name: string }

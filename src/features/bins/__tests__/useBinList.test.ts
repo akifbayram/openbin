@@ -41,6 +41,7 @@ function makeBin(overrides: Partial<Bin> = {}): Bin {
     created_by: 'user-1',
     created_by_name: '',
     visibility: 'location',
+    custom_fields: {},
     created_at: '2024-06-01T00:00:00Z',
     updated_at: '2024-06-01T00:00:00Z',
     ...overrides,

@@ -29,6 +29,7 @@ describe('default state', () => {
       created: false,
       notes: false,
       createdBy: false,
+      customFields: false,
     });
   });
 
@@ -52,7 +53,7 @@ describe('localStorage hydration', () => {
   it('reads persisted state from localStorage', () => {
     const stored: Record<FieldKey, boolean> = {
       icon: false, area: false, items: false, tags: false,
-      updated: false, created: true, notes: true, createdBy: true,
+      updated: false, created: true, notes: true, createdBy: true, customFields: false,
     };
     localStorage.setItem(KEY, JSON.stringify(stored));
 
@@ -137,9 +138,9 @@ describe('toggleField', () => {
 // applicableFields per view mode
 // ---------------------------------------------------------------------------
 describe('applicableFields per view mode', () => {
-  it('grid returns 5 fields', () => {
+  it('grid returns 6 fields', () => {
     const { result } = renderHook(() => useColumnVisibility('grid'));
-    expect(result.current.applicableFields).toEqual(['icon', 'area', 'items', 'tags', 'notes']);
+    expect(result.current.applicableFields).toEqual(['icon', 'area', 'items', 'tags', 'notes', 'customFields']);
   });
 
   it('compact returns 2 fields', () => {
@@ -147,10 +148,10 @@ describe('applicableFields per view mode', () => {
     expect(result.current.applicableFields).toEqual(['icon', 'area']);
   });
 
-  it('table returns all 8 fields', () => {
+  it('table returns all 9 fields', () => {
     const { result } = renderHook(() => useColumnVisibility('table'));
     expect(result.current.applicableFields).toEqual(ALL_FIELDS);
-    expect(result.current.applicableFields).toHaveLength(8);
+    expect(result.current.applicableFields).toHaveLength(9);
   });
 });
 
@@ -186,8 +187,8 @@ describe('isVisible respects applicability', () => {
 // Exports
 // ---------------------------------------------------------------------------
 describe('exports', () => {
-  it('ALL_FIELDS has 8 entries', () => {
-    expect(ALL_FIELDS).toHaveLength(8);
+  it('ALL_FIELDS has 9 entries', () => {
+    expect(ALL_FIELDS).toHaveLength(9);
   });
 
   it('FIELD_LABELS maps every field in ALL_FIELDS', () => {

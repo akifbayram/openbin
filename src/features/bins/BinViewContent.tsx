@@ -11,7 +11,8 @@ import { resolveColor } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
-import type { AiSuggestions, Bin } from '@/types';
+import type { AiSuggestions, Bin, CustomField } from '@/types';
+import { CustomFieldsViewCard } from './CustomFieldsViewCard';
 import { ItemList } from './ItemList';
 import { QuickAddWidget } from './QuickAddWidget';
 import type { useQuickAdd } from './useQuickAdd';
@@ -30,7 +31,8 @@ interface BinViewContentProps {
   suggestions: AiSuggestions | null;
   hasNotes: boolean;
   hasTags: boolean;
-  onApplySuggestions: (changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string }>) => void;
+  customFields: CustomField[];
+  onApplySuggestions: (changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string; customFields: Record<string, string> }>) => void;
   onClearSuggestions: () => void;
 }
 
@@ -44,6 +46,7 @@ export function BinViewContent({
   suggestions,
   hasNotes,
   hasTags,
+  customFields,
   onApplySuggestions,
   onClearSuggestions,
 }: BinViewContentProps) {
@@ -74,6 +77,8 @@ export function BinViewContent({
           currentItems={bin.items}
           currentTags={bin.tags}
           currentNotes={bin.notes}
+          customFieldDefs={customFields}
+          currentCustomFields={bin.custom_fields}
           onApply={onApplySuggestions}
           onDismiss={onClearSuggestions}
         />
@@ -134,6 +139,9 @@ export function BinViewContent({
           </CardContent>
         </Card>
       )}
+
+      {/* Custom Fields */}
+      <CustomFieldsViewCard fields={customFields} values={bin.custom_fields} />
 
       {photosSection}
 

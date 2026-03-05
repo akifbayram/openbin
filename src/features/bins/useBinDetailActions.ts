@@ -84,7 +84,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     }
   }
 
-  async function handleApplySuggestions(changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string }>) {
+  async function handleApplySuggestions(changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string; customFields: Record<string, string> }>) {
     if (!id || Object.keys(changes).length === 0) return;
     try {
       await updateBin(id, changes);
@@ -109,6 +109,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
         color: bin.color,
         cardStyle: bin.card_style,
         visibility: bin.visibility,
+        customFields: bin.custom_fields ? { ...bin.custom_fields } : undefined,
       });
       navigate(`/bin/${newBin.id}`);
       showToast({ message: `Duplicated "${bin.name}"` });

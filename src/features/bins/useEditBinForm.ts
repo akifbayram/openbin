@@ -14,6 +14,7 @@ interface OriginalSnapshot {
   color: string;
   cardStyle: string;
   visibility: BinVisibility;
+  customFields: Record<string, string>;
 }
 
 function arraysEqual(a: string[], b: string[]): boolean {
@@ -21,6 +22,12 @@ function arraysEqual(a: string[], b: string[]): boolean {
   const sortedA = [...a].sort();
   const sortedB = [...b].sort();
   return sortedA.every((v, i) => v === sortedB[i]);
+}
+
+function recordsEqual(a: Record<string, string>, b: Record<string, string>): boolean {
+  const aKeys = Object.keys(a);
+  if (aKeys.length !== Object.keys(b).length) return false;
+  return aKeys.every((k) => a[k] === b[k]);
 }
 
 export function useEditBinForm(id: string | undefined) {
@@ -36,6 +43,7 @@ export function useEditBinForm(id: string | undefined) {
     color, setColor,
     cardStyle, setCardStyle,
     visibility, setVisibility,
+    customFields, setCustomFields,
   } = useBinFormFields();
   const originalRef = useRef<OriginalSnapshot | null>(null);
 
@@ -51,9 +59,10 @@ export function useEditBinForm(id: string | undefined) {
       icon !== o.icon ||
       color !== o.color ||
       cardStyle !== o.cardStyle ||
-      visibility !== o.visibility
+      visibility !== o.visibility ||
+      !recordsEqual(customFields, o.customFields)
     );
-  }, [editing, name, areaId, items, notes, tags, icon, color, cardStyle, visibility]);
+  }, [editing, name, areaId, items, notes, tags, icon, color, cardStyle, visibility, customFields]);
 
   // beforeunload warning when dirty
   useEffect(() => {
@@ -76,6 +85,7 @@ export function useEditBinForm(id: string | undefined) {
     setColor(bin.color);
     setCardStyle(bin.card_style);
     setVisibility(bin.visibility);
+    setCustomFields(bin.custom_fields || {});
     originalRef.current = {
       name: bin.name,
       areaId: bin.area_id,
@@ -86,6 +96,7 @@ export function useEditBinForm(id: string | undefined) {
       color: bin.color,
       cardStyle: bin.card_style,
       visibility: bin.visibility,
+      customFields: { ...(bin.custom_fields || {}) },
     };
     setEditing(true);
   }
@@ -103,6 +114,7 @@ export function useEditBinForm(id: string | undefined) {
         color,
         cardStyle,
         visibility,
+        customFields,
       });
       setEditing(false);
       originalRef.current = null;
@@ -128,6 +140,7 @@ export function useEditBinForm(id: string | undefined) {
     color, setColor,
     cardStyle, setCardStyle,
     visibility, setVisibility,
+    customFields, setCustomFields,
     startEdit,
     saveEdit,
     cancelEdit,

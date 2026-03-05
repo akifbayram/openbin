@@ -76,6 +76,9 @@ export function BinTableView({
         {isVisible?.('notes') && (
           <span className="hidden lg:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Notes</span>
         )}
+        {isVisible?.('customFields') && (
+          <span className="hidden lg:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Custom Fields</span>
+        )}
         {isVisible?.('createdBy') && (
           <span className="hidden md:block w-24 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Created By</span>
         )}
@@ -246,6 +249,17 @@ const BinTableRow = React.memo(function BinTableRow({
           {bin.notes && (
             <span className="text-[12px] text-[var(--text-tertiary)] truncate block italic">
               {bin.notes}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Custom Fields */}
+      {isVisible?.('customFields') && (
+        <div className="hidden lg:block flex-1 min-w-0">
+          {bin.custom_fields && Object.keys(bin.custom_fields).length > 0 && (
+            <span className="text-[12px] text-[var(--text-tertiary)] truncate block">
+              {Object.values(bin.custom_fields).filter(Boolean).join(' · ')}
             </span>
           )}
         </div>
