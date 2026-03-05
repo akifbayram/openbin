@@ -108,10 +108,10 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               }}
               title="Black"
               className={cn(
-                'h-5 w-5 rounded-full transition-all',
+                'h-5 w-5 rounded-full transition-colors',
                 isBlack
                   ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-base)]'
-                  : 'hover:scale-110'
+                  : 'hover:opacity-80'
               )}
               style={{ backgroundColor: '#1C1C1E' }}
             />
@@ -123,10 +123,10 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               }}
               title="White"
               className={cn(
-                'h-5 w-5 rounded-full border border-[var(--border-subtle)] transition-all',
+                'h-5 w-5 rounded-full border border-[var(--border-subtle)] transition-colors',
                 isWhite
                   ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-base)]'
-                  : 'hover:scale-110'
+                  : 'hover:opacity-80'
               )}
               style={{ backgroundColor: '#F2F2F7' }}
             />
@@ -138,10 +138,10 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               }}
               title="Gray"
               className={cn(
-                'h-5 w-5 rounded-full transition-all',
+                'h-5 w-5 rounded-full transition-colors',
                 isNeutral
                   ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-base)]'
-                  : 'hover:scale-110'
+                  : 'hover:opacity-80'
               )}
               style={{ backgroundColor: hslToHex(0, 0, 52) }}
             />

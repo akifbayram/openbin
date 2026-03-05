@@ -118,13 +118,13 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
               }
             }}
             onBlur={handleSave}
-            className="flex-1 min-w-0 bg-transparent text-[15px] text-[var(--text-primary)] outline-none py-0.5"
+            className="flex-1 min-w-0 bg-transparent text-[15px] text-[var(--text-primary)] outline-none"
           />
         ) : (
           <button
             type="button"
             onClick={handleStartEdit}
-            className="flex-1 min-w-0 text-left text-[15px] text-[var(--text-primary)] leading-relaxed py-0.5 cursor-text"
+            className="flex-1 min-w-0 text-left text-[15px] text-[var(--text-primary)] leading-relaxed cursor-text"
           >
             {text}
           </button>
@@ -209,7 +209,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 min-h-8">
         <Label>{items.length} {items.length === 1 ? 'Item' : 'Items'}</Label>
         {!readOnly && items.length >= 2 && (
           <Button

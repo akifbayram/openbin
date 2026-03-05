@@ -3,11 +3,11 @@ import { cn } from '@/lib/utils';
 
 const variants = {
   default:
-    'bg-[var(--accent)] text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] active:scale-[0.97]',
+    'bg-[var(--accent)] text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)]',
   destructive:
-    'bg-[var(--destructive)] text-[var(--text-on-accent)] hover:bg-[var(--destructive-hover)] active:scale-[0.97]',
+    'bg-[var(--destructive)] text-[var(--text-on-accent)] hover:bg-[var(--destructive-hover)] active:bg-[var(--destructive-active)]',
   outline:
-    'glass-card text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
+    'bg-[var(--bg-input)] border border-[var(--border-glass)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
   secondary:
     'bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-active)]',
   ghost:
@@ -21,6 +21,7 @@ const sizes = {
   sm: 'h-9 px-3.5 text-[13px]',
   lg: 'h-12 px-8',
   icon: 'h-10 w-10',
+  'icon-sm': 'h-8 w-8',
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -33,7 +34,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         className={cn(
-          'inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] text-[15px] font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40',
+          'inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] text-[15px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40',
           variants[variant],
           sizes[size],
           className

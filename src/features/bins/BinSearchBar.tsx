@@ -134,7 +134,7 @@ export function BinSearchBar({
           variant="secondary"
           size="icon"
           onClick={onOpenFilter}
-          className="shrink-0 h-10 w-10 rounded-full relative"
+          className="shrink-0 relative"
           aria-label={`Filter ${t.bins}`}
         >
           <SlidersHorizontal className="h-4 w-4" />

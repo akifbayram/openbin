@@ -49,10 +49,10 @@ export function BulkVisibilityDialog({ open, onOpenChange, binIds, onDone }: Bul
           <VisibilityPicker value={visibility} onChange={setVisibility} />
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleApply} disabled={loading} className="rounded-[var(--radius-full)]">
+          <Button onClick={handleApply} disabled={loading}>
             {loading ? 'Applying...' : 'Apply'}
           </Button>
         </DialogFooter>

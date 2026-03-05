@@ -93,8 +93,7 @@ export function ApiKeysSection() {
             <Tooltip content="Create API key" side="bottom">
               <Button
                 onClick={() => setCreateOpen(true)}
-                size="icon"
-                className="h-8 w-8 rounded-full"
+                size="icon-sm"
                 aria-label="Create API key"
               >
                 <Plus className="h-4 w-4" />
@@ -129,8 +128,8 @@ export function ApiKeysSection() {
                   <Tooltip content="Revoke API key" side="bottom">
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="rounded-full h-8 w-8 text-[var(--destructive)] shrink-0"
+                      size="icon-sm"
+                      className="text-[var(--destructive)] shrink-0"
                       onClick={() => setRevokeId(k.id)}
                       aria-label="Revoke API key"
                     >
@@ -163,15 +162,15 @@ export function ApiKeysSection() {
                 </code>
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="shrink-0 rounded-full h-9 w-9"
+                  size="icon-sm"
+                  className="shrink-0"
                   onClick={handleCopy}
                 >
                   {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
               <DialogFooter>
-                <Button onClick={handleCloseCreate} className="rounded-[var(--radius-full)]">
+                <Button onClick={handleCloseCreate}>
                   Done
                 </Button>
               </DialogFooter>
@@ -189,10 +188,10 @@ export function ApiKeysSection() {
                 />
               </div>
               <DialogFooter>
-                <Button type="button" variant="ghost" onClick={handleCloseCreate} className="rounded-[var(--radius-full)]">
+                <Button type="button" variant="ghost" onClick={handleCloseCreate}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={creating} className="rounded-[var(--radius-full)]">
+                <Button type="submit" disabled={creating}>
                   {creating ? 'Creating...' : 'Create'}
                 </Button>
               </DialogFooter>
@@ -211,13 +210,13 @@ export function ApiKeysSection() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setRevokeId(null)} className="rounded-[var(--radius-full)]">
+            <Button variant="ghost" onClick={() => setRevokeId(null)}>
               Cancel
             </Button>
             <Button
               onClick={handleRevoke}
               disabled={revoking}
-              className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:opacity-90"
+              className="bg-[var(--destructive)] hover:opacity-90"
             >
               {revoking ? 'Revoking...' : 'Revoke'}
             </Button>

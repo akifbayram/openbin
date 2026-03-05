@@ -177,7 +177,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 min-h-8">
         <Label>{items.length} {items.length === 1 ? 'Item' : 'Items'}</Label>
       </div>
 

@@ -49,10 +49,10 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
         <Tooltip content="Save">
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             onClick={handleSave}
             disabled={!editValue.trim() || saving}
-            className="h-8 w-8 rounded-full shrink-0"
+            className="shrink-0"
             aria-label="Save"
           >
             <Check className="h-4 w-4 text-[var(--accent)]" />
@@ -61,9 +61,9 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
         <Tooltip content="Cancel">
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             onClick={cancelEdit}
-            className="h-8 w-8 rounded-full shrink-0"
+            className="shrink-0"
             aria-label="Cancel"
           >
             <X className="h-4 w-4" />
@@ -92,9 +92,8 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
           <Tooltip content="More actions" side="bottom">
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={(e) => { e.stopPropagation(); toggle(); }}
-              className="h-7 w-7 rounded-full"
               aria-label="More actions"
             >
               <MoreHorizontal className="h-3.5 w-3.5" />

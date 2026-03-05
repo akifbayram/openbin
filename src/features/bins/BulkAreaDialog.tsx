@@ -55,10 +55,10 @@ export function BulkAreaDialog({ open, onOpenChange, binIds, onDone }: BulkAreaD
           />
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleApply} disabled={loading} className="rounded-[var(--radius-full)]">
+          <Button onClick={handleApply} disabled={loading}>
             {loading ? 'Moving...' : 'Apply'}
           </Button>
         </DialogFooter>

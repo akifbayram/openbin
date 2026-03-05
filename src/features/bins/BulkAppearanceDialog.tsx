@@ -105,10 +105,10 @@ export function BulkAppearanceDialog({ open, onOpenChange, binIds, onDone }: Bul
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleApply} disabled={loading || !anyDirty} className="rounded-[var(--radius-full)]">
+          <Button onClick={handleApply} disabled={loading || !anyDirty}>
             {loading ? 'Applying...' : 'Apply'}
           </Button>
         </DialogFooter>

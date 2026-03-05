@@ -56,7 +56,7 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
       )}
 
       {!isStreaming && (
-        <Button type="button" variant="ghost" size="sm" onClick={onBack} className="rounded-[var(--radius-full)]">
+        <Button type="button" variant="ghost" size="sm" onClick={onBack}>
           <ChevronLeft className="h-4 w-4 mr-0.5" />
           Back
         </Button>

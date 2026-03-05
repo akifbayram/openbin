@@ -56,10 +56,10 @@ export function BulkLocationDialog({ open, onOpenChange, binIds, onDone }: BulkL
           emptyMessage="No other locations available."
         />
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleApply} disabled={!targetId || loading} className="rounded-[var(--radius-full)]">
+          <Button onClick={handleApply} disabled={!targetId || loading}>
             {loading ? 'Moving...' : 'Move'}
           </Button>
         </DialogFooter>

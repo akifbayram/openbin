@@ -76,7 +76,7 @@ export function BinDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
         <p className="text-[17px] font-semibold text-[var(--text-secondary)]">{t.Bin} not found</p>
-        <Button variant="outline" onClick={() => navigate('/bins')} className="rounded-[var(--radius-full)]">
+        <Button variant="outline" onClick={() => navigate('/bins')}>
           Back to {t.bins}
         </Button>
       </div>

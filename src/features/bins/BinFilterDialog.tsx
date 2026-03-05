@@ -240,10 +240,10 @@ export function BinFilterDialog({
                     onClick={() => toggleHueRange(range.name)}
                     title={range.label}
                     className={cn(
-                      'h-8 w-8 rounded-full transition-all',
+                      'h-8 w-8 rounded-full transition-colors',
                       selected
-                        ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110'
-                        : 'hover:scale-105'
+                        ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+                        : 'hover:opacity-80'
                     )}
                     style={{ backgroundColor: range.dot }}
                   />
@@ -277,7 +277,7 @@ export function BinFilterDialog({
         <DialogFooter>
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
-              <Button variant="ghost" onClick={reset} className="rounded-[var(--radius-full)]">
+              <Button variant="ghost" onClick={reset}>
                 Reset
               </Button>
             </div>
@@ -286,12 +286,11 @@ export function BinFilterDialog({
                 <Button
                   variant="ghost"
                   onClick={() => { onSaveView(); onOpenChange(false); }}
-                  className="rounded-[var(--radius-full)]"
                 >
                   Save View
                 </Button>
               )}
-              <Button onClick={apply} className="rounded-[var(--radius-full)]">
+              <Button onClick={apply}>
                 Apply
               </Button>
             </div>

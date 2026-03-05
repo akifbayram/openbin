@@ -406,7 +406,6 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     variant="outline"
                     onClick={handleTest}
                     disabled={setup.testing || !setup.apiKey || !setup.model}
-                    className="rounded-[var(--radius-full)]"
                   >
                     {setup.testing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
                     Test Connection
@@ -414,7 +413,6 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                   <Button
                     onClick={handleSave}
                     disabled={setup.saving || !setup.apiKey || !setup.model}
-                    className="rounded-[var(--radius-full)]"
                   >
                     {setup.saving ? 'Saving...' : 'Save'}
                   </Button>
@@ -422,7 +420,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     <Button
                       variant="ghost"
                       onClick={handleRemove}
-                      className="rounded-[var(--radius-full)] text-[var(--destructive)]"
+                      className="text-[var(--destructive)]"
                     >
                       Remove AI Settings
                     </Button>

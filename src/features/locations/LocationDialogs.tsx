@@ -72,10 +72,10 @@ export function LocationCreateDialog({ open, onOpenChange }: LocationCreateDialo
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!name.trim() || creating} className="rounded-[var(--radius-full)]">
+            <Button type="submit" disabled={!name.trim() || creating}>
               {creating ? 'Creating...' : 'Create'}
             </Button>
           </DialogFooter>
@@ -142,10 +142,10 @@ export function LocationJoinDialog({ open, onOpenChange }: LocationJoinDialogPro
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!inviteCode.trim() || joining} className="rounded-[var(--radius-full)]">
+            <Button type="submit" disabled={!inviteCode.trim() || joining}>
               {joining ? 'Joining...' : 'Join'}
             </Button>
           </DialogFooter>
@@ -211,10 +211,10 @@ export function LocationRenameDialog({ locationId, currentName, open, onOpenChan
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!name.trim() || renaming} className="rounded-[var(--radius-full)]">
+            <Button type="submit" disabled={!name.trim() || renaming}>
               {renaming ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>
@@ -266,13 +266,13 @@ export function LocationDeleteDialog({ locationId, locationName, open, onOpenCha
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
             onClick={handleDelete}
             disabled={deleting}
-            className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:bg-[var(--destructive-hover)] text-[var(--text-on-accent)]"
+            className="bg-[var(--destructive)] hover:bg-[var(--destructive-hover)] text-[var(--text-on-accent)]"
           >
             {deleting ? 'Deleting...' : 'Delete'}
           </Button>

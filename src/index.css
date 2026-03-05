@@ -42,6 +42,8 @@
   --overlay-button-hover: rgba(0, 0, 0, 0.7);
   --ai-accent: #5e2fe0;
   --ai-accent-hover: #4e1fd0;
+  --accent-active: #4520b8;
+  --destructive-active: #b52a22;
   --accent-glow: rgba(94, 47, 224, 0.15);
   color-scheme: light;
 }
@@ -73,6 +75,8 @@
   --overlay-button-hover: rgba(0, 0, 0, 0.7);
   --ai-accent: #7b52f5;
   --ai-accent-hover: #9b7af7;
+  --accent-active: #6842d4;
+  --destructive-active: #d63a32;
   --accent-glow: rgba(123, 82, 245, 0.2);
   color-scheme: dark;
 }

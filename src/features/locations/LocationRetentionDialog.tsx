@@ -89,13 +89,12 @@ export function LocationRetentionDialog({ location, open, onOpenChange }: Locati
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={saving || activityRetention < 7 || activityRetention > 365 || trashRetention < 7 || trashRetention > 365}
-            className="rounded-[var(--radius-full)]"
           >
             {saving ? 'Saving...' : 'Save'}
           </Button>

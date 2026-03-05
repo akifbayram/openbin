@@ -72,10 +72,10 @@ export function BinDetailToolbar({
       {!editing && (
         <Button
           variant="ghost"
-          size="icon"
+          size="icon-sm"
           onClick={onBack}
           aria-label="Go back"
-          className="hidden lg:flex rounded-full h-9 w-9 shrink-0 text-[var(--accent)]"
+          className="hidden lg:flex shrink-0 text-[var(--accent)]"
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
@@ -105,7 +105,7 @@ export function BinDetailToolbar({
             variant="ghost"
             size="icon"
             onClick={onCancelEdit}
-            className="rounded-full h-9 w-9 lg:h-auto lg:w-auto lg:px-3 lg:py-1.5"
+            className="lg:w-auto lg:px-3"
           >
             <X className="h-4 w-4 lg:hidden" />
             <span className="hidden lg:inline text-sm">Cancel</span>
@@ -114,7 +114,7 @@ export function BinDetailToolbar({
             size="icon"
             onClick={onSave}
             disabled={!editNameValid}
-            className="rounded-full h-9 w-9 lg:h-auto lg:w-auto lg:px-3 lg:py-1.5"
+            className="lg:w-auto lg:px-3"
           >
             <Check className="h-4 w-4 lg:hidden" />
             <Save className="h-4 w-4 mr-1.5 hidden lg:block" />
@@ -131,7 +131,6 @@ export function BinDetailToolbar({
                 disabled={isAnalyzing}
                 aria-label="Analyze with AI"
                 variant="ghost"
-                className="rounded-full h-9 w-9"
               >
                 {isAnalyzing ? (
                   <Loader2 className="h-[18px] w-[18px] animate-spin" />
@@ -147,7 +146,6 @@ export function BinDetailToolbar({
               size="icon"
               onClick={onTogglePin}
               aria-label={bin.is_pinned ? `Unpin ${t.bin}` : `Pin ${t.bin}`}
-              className="rounded-full h-9 w-9"
             >
               <Pin className="h-[18px] w-[18px]" fill={bin.is_pinned ? 'currentColor' : 'none'} />
             </Button>
@@ -159,7 +157,6 @@ export function BinDetailToolbar({
                 size="icon"
                 onClick={onStartEdit}
                 aria-label={`Edit ${t.bin}`}
-                className="rounded-full h-9 w-9"
               >
                 <Pencil className="h-[18px] w-[18px]" />
               </Button>
@@ -172,7 +169,6 @@ export function BinDetailToolbar({
                 size="icon"
                 onClick={toggle}
                 aria-label="More actions"
-                className="rounded-full h-9 w-9"
               >
                 <MoreHorizontal className="h-[18px] w-[18px]" />
               </Button>
@@ -181,7 +177,7 @@ export function BinDetailToolbar({
               <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1.5 z-50 min-w-[180px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]`}>
                 <button
                   type="button"
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
                   onClick={() => handleItem(onDuplicate)}
                 >
                   <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -189,7 +185,7 @@ export function BinDetailToolbar({
                 </button>
                 <button
                   type="button"
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
                   onClick={() => handleItem(onPrint)}
                 >
                   <Printer className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -198,7 +194,7 @@ export function BinDetailToolbar({
                 {otherLocations.length > 0 && (
                   <button
                     type="button"
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
                     onClick={() => handleItem(onMove)}
                   >
                     <ArrowRightLeft className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -210,7 +206,7 @@ export function BinDetailToolbar({
                     <div className="my-1 border-t border-[var(--border-glass)]" />
                     <button
                       type="button"
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors"
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
                       onClick={() => handleItem(onDelete)}
                     >
                       <Trash2 className="h-4 w-4" />

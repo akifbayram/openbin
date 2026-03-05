@@ -60,10 +60,10 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
           <Tooltip content="Save">
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={handleSave}
               disabled={!editValue.trim() || saving}
-              className="h-8 w-8 rounded-full shrink-0"
+              className="shrink-0"
               aria-label="Save"
             >
               <Check className="h-4 w-4 text-[var(--accent)]" />
@@ -72,9 +72,9 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
           <Tooltip content="Cancel">
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={cancelEdit}
-              className="h-8 w-8 rounded-full shrink-0"
+              className="shrink-0"
               aria-label="Cancel"
             >
               <X className="h-4 w-4" />
@@ -93,8 +93,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
       onClick={() => onNavigate(id)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(id); } }}
       className={cn(
-        "glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-all duration-200 active:scale-[0.98] text-left relative group",
-        "[@media(hover:hover)]:hover:-translate-y-0.5",
+        "glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] text-left relative group",
         isOpen && "z-10"
       )}
     >
@@ -122,7 +121,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
               variant="ghost"
               size="icon"
               onClick={(e) => { e.stopPropagation(); toggle(); }}
-              className="h-9 w-9 rounded-full [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus:opacity-100 transition-opacity"
+              className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus:opacity-100 transition-opacity"
               aria-label="More actions"
             >
               <MoreHorizontal className="h-3.5 w-3.5" />
@@ -146,7 +145,7 @@ export function UnassignedAreaCard({ count, onNavigate }: UnassignedCardProps) {
     <button
       type="button"
       onClick={onNavigate}
-      className="glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-all duration-200 active:scale-[0.98] text-left [@media(hover:hover)]:hover:-translate-y-0.5"
+      className="glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] text-left"
     >
       <div className="flex items-start gap-3">
         <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-input)] flex items-center justify-center shrink-0 mt-0.5">
@@ -171,7 +170,7 @@ export function CreateAreaCard({ onCreate }: CreateCardProps) {
     <button
       type="button"
       onClick={onCreate}
-      className="rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-all duration-200 active:scale-[0.98] border-2 border-dashed border-[var(--border-glass)] bg-transparent flex items-center gap-3 text-[var(--text-tertiary)]"
+      className="rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] border-2 border-dashed border-[var(--border-glass)] bg-transparent flex items-center gap-3 text-[var(--text-tertiary)]"
     >
       <div className="h-9 w-9 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-glass)] flex items-center justify-center shrink-0">
         <Plus className="h-4 w-4" />

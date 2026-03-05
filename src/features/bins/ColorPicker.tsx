@@ -61,10 +61,10 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           onClick={() => onChange('')}
           title="Choose a color"
           className={cn(
-            'h-7 w-7 rounded-full transition-all',
+            'h-7 w-7 rounded-full transition-colors',
             !value
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110'
-              : 'hover:scale-105'
+              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+              : 'hover:opacity-80'
           )}
           style={{ background: 'conic-gradient(from 0deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)' }}
         />
@@ -73,10 +73,10 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           onClick={() => onChange('black')}
           title="Black"
           className={cn(
-            'h-7 w-7 rounded-full transition-all',
+            'h-7 w-7 rounded-full transition-colors',
             isBlack
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110'
-              : 'hover:scale-105'
+              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+              : 'hover:opacity-80'
           )}
           style={{ backgroundColor: '#1C1C1E' }}
         />
@@ -85,10 +85,10 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           onClick={() => onChange('white')}
           title="White"
           className={cn(
-            'h-7 w-7 rounded-full border border-[var(--border-subtle)] transition-all',
+            'h-7 w-7 rounded-full border border-[var(--border-subtle)] transition-colors',
             isWhite
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110'
-              : 'hover:scale-105'
+              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+              : 'hover:opacity-80'
           )}
           style={{ backgroundColor: '#F2F2F7' }}
         />
@@ -97,10 +97,10 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           onClick={() => onChange(buildColorKey('neutral', currentShade))}
           title="Gray"
           className={cn(
-            'h-7 w-7 rounded-full transition-all',
+            'h-7 w-7 rounded-full transition-colors',
             isNeutral
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110'
-              : 'hover:scale-105'
+              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+              : 'hover:opacity-80'
           )}
           style={{ backgroundColor: hslToHex(0, 0, 52) }}
         />

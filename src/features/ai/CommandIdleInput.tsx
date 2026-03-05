@@ -88,7 +88,7 @@ export function CommandIdleInput({
         type="button"
         onClick={onParse}
         disabled={!text.trim() || isLoading}
-        className="w-full rounded-[var(--radius-full)] bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
+        className="w-full bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
       >
         <Sparkles className="h-4 w-4 mr-1.5" />
         {isLoading ? 'Processing...' : 'Send'}

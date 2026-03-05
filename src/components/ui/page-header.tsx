@@ -23,9 +23,9 @@ export function PageHeader({ title, actions, back, className }: PageHeaderProps)
           <Tooltip content="Go back" side="bottom">
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={() => navigate(-1)}
-              className="rounded-full h-9 w-9 shrink-0"
+              className="shrink-0"
               aria-label="Go back"
             >
               <ChevronLeft className="h-5 w-5" />

@@ -9,8 +9,8 @@ export function ListItem({ interactive, className, children, ...props }: ListIte
   return (
     <div
       className={cn(
-        'glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 transition-all duration-200',
-        interactive && 'cursor-pointer active:scale-[0.98] hover:bg-[var(--bg-hover)]',
+        'glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 transition-colors duration-150',
+        interactive && 'cursor-pointer active:bg-[var(--bg-active)] hover:bg-[var(--bg-hover)]',
         className,
       )}
       {...props}

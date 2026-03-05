@@ -19,17 +19,17 @@ export function UnsavedChangesDialog({ open, onSave, onDiscard, onCancel }: Unsa
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="ghost" onClick={onCancel} className="rounded-[var(--radius-full)]">
+          <Button variant="ghost" onClick={onCancel}>
             Cancel
           </Button>
           <Button
             variant="ghost"
             onClick={onDiscard}
-            className="rounded-[var(--radius-full)] text-[var(--destructive)]"
+            className="text-[var(--destructive)]"
           >
             Discard
           </Button>
-          <Button onClick={onSave} className="rounded-[var(--radius-full)]">
+          <Button onClick={onSave}>
             Save &amp; Leave
           </Button>
         </DialogFooter>

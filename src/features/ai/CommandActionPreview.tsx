@@ -107,7 +107,7 @@ export function CommandActionPreview({
       )}
 
       <div className="flex gap-2">
-        <Button type="button" variant="ghost" size="sm" onClick={onBack} className="rounded-[var(--radius-full)]">
+        <Button type="button" variant="ghost" size="sm" onClick={onBack}>
           <ChevronLeft className="h-4 w-4 mr-0.5" />
           Back
         </Button>
@@ -116,7 +116,7 @@ export function CommandActionPreview({
           size="sm"
           onClick={onExecute}
           disabled={selectedCount === 0 || isExecuting}
-          className="flex-1 rounded-[var(--radius-full)]"
+          className="flex-1"
         >
           {isExecuting ? (
             <>

@@ -79,10 +79,10 @@ export function BulkCustomFieldsDialog({ open, onOpenChange, binIds, onDone }: B
           )}
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleApply} disabled={loading || !hasValues} className="rounded-[var(--radius-full)]">
+          <Button onClick={handleApply} disabled={loading || !hasValues}>
             {loading ? 'Applying...' : 'Apply'}
           </Button>
         </DialogFooter>

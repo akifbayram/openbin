@@ -148,7 +148,7 @@ export function AreasPage() {
               variant="secondary"
               size="sm"
               onClick={() => setJoinLocationOpen(true)}
-              className="rounded-[var(--radius-full)] h-10 px-3.5"
+              className="h-10 px-3.5"
             >
               <LogIn className="h-4 w-4 mr-1.5" />
               Join
@@ -195,11 +195,11 @@ export function AreasPage() {
             subtitle="Create a location or join one with an invite code"
           >
             <div className="flex gap-2.5">
-              <Button onClick={() => setJoinLocationOpen(true)} variant="outline" className="rounded-[var(--radius-full)]">
+              <Button onClick={() => setJoinLocationOpen(true)} variant="outline">
                 <LogIn className="h-4 w-4 mr-2" />
                 Join Location
               </Button>
-              <Button onClick={() => setCreateLocationOpen(true)} className="rounded-[var(--radius-full)]">
+              <Button onClick={() => setCreateLocationOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Location
               </Button>
@@ -276,7 +276,7 @@ export function AreasPage() {
                 subtitle={isAdmin ? `Create ${t.areas} to organize your ${t.bins} by zone` : `This ${t.location} has no ${t.areas} yet`}
               >
                 {isAdmin && (
-                  <Button onClick={() => setCreateAreaOpen(true)} variant="outline" size="sm" className="rounded-[var(--radius-full)]">
+                  <Button onClick={() => setCreateAreaOpen(true)} variant="outline" size="sm">
                     <Plus className="h-3.5 w-3.5 mr-1.5" />
                     {`Create ${t.Area}`}
                   </Button>
@@ -334,10 +334,10 @@ export function AreasPage() {
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setCreateAreaOpen(false)} className="rounded-[var(--radius-full)]">
+              <Button type="button" variant="ghost" onClick={() => setCreateAreaOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={!newAreaName.trim() || creatingArea} className="rounded-[var(--radius-full)]">
+              <Button type="submit" disabled={!newAreaName.trim() || creatingArea}>
                 {creatingArea ? 'Creating...' : 'Create'}
               </Button>
             </DialogFooter>
@@ -357,13 +357,13 @@ export function AreasPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)} className="rounded-[var(--radius-full)]">
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
               Cancel
             </Button>
             <Button
               onClick={handleDeleteArea}
               disabled={deletingArea}
-              className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:bg-[var(--destructive-hover)] text-[var(--text-on-accent)]"
+              className="bg-[var(--destructive)] hover:bg-[var(--destructive-hover)] text-[var(--text-on-accent)]"
             >
               {deletingArea ? 'Deleting...' : 'Delete'}
             </Button>
