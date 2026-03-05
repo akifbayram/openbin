@@ -20,7 +20,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
   const { photos } = usePhotos(binId);
   const { showToast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [lightboxPhoto, setLightboxPhoto] = useState<Photo | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
 
   const handleFiles = useCallback(async (files: FileList | null) => {
@@ -41,22 +41,23 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
   }, [binId, showToast]);
 
   const handleDelete = useCallback(async (photo: Photo) => {
-    await deletePhoto(photo.id);
-    setLightboxPhoto(null);
-    showToast({ message: 'Deleted photo' });
+    try {
+      await deletePhoto(photo.id);
+      showToast({ message: 'Deleted photo' });
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : 'Failed to delete photo' });
+    }
   }, [showToast]);
-
-  const lightboxUrl = lightboxPhoto ? getPhotoUrl(lightboxPhoto.id) : undefined;
 
   const content = (
     <>
       {variant !== 'inline' && <Label>Photos</Label>}
       <div className={`flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory${variant !== 'inline' ? ' mt-2.5' : ''}`}>
-        {photos.map((photo) => (
+        {photos.map((photo, index) => (
           <div key={photo.id} className="relative group flex-shrink-0">
             <button
               type="button"
-              onClick={() => setLightboxPhoto(photo)}
+              onClick={() => setLightboxIndex(index)}
               aria-label={`View ${photo.filename}`}
               className="block w-20 h-20 rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-input)] snap-start"
             >
@@ -98,12 +99,12 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
       />
-      {lightboxPhoto && lightboxUrl && (
+      {lightboxIndex !== null && photos.length > 0 && (
         <PhotoLightbox
-          src={lightboxUrl}
-          filename={lightboxPhoto.filename}
-          onClose={() => setLightboxPhoto(null)}
-          onDelete={() => setPhotoToDelete(lightboxPhoto)}
+          photos={photos}
+          initialIndex={Math.min(lightboxIndex, photos.length - 1)}
+          onClose={() => setLightboxIndex(null)}
+          onDelete={(photo) => setPhotoToDelete(photo)}
         />
       )}
       <DeletePhotoDialog

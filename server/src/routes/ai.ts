@@ -226,6 +226,7 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
     topP: row.top_p ?? null,
     requestTimeout: row.request_timeout ?? null,
     providerConfigs,
+    source: 'user' as const,
   });
 }));
 
@@ -248,6 +249,17 @@ router.post('/analyze-image', aiLimiter, memoryPhotoUpload.fields([
 
   if (allFiles.length === 0) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photo file is required (JPEG, PNG, WebP, or GIF, max 5MB)' });
+    return;
+  }
+
+  // Mock mode: return fake AI response without calling any provider
+  if (config.aiMock) {
+    res.json({
+      name: `Test Bin ${Date.now().toString(36).slice(-4).toUpperCase()}`,
+      items: ['Screwdriver', 'Wrench set', 'Duct tape', 'Cable ties'],
+      tags: ['tools', 'hardware'],
+      notes: 'Mock AI analysis — generated without an API call.',
+    });
     return;
   }
 
@@ -285,6 +297,17 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
 
   if (ids.length === 0) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photoId or photoIds is required' });
+    return;
+  }
+
+  // Mock mode: return fake AI response without calling any provider
+  if (config.aiMock) {
+    res.json({
+      name: `Test Bin ${Date.now().toString(36).slice(-4).toUpperCase()}`,
+      items: ['Screwdriver', 'Wrench set', 'Duct tape', 'Cable ties'],
+      tags: ['tools', 'hardware'],
+      notes: 'Mock AI analysis — generated without an API call.',
+    });
     return;
   }
 
@@ -330,12 +353,19 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
 // POST /api/ai/structure-text — structure dictated/typed text into items
 router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
-  const { mode, context } = req.body;
+  const { context } = req.body;
+
+  // Mock mode: return fake AI response without calling any provider
+  if (config.aiMock) {
+    res.json({ items: [text] });
+    return;
+  }
+
   const settings = await getUserAiSettings(req.user!.id);
 
   const request: StructureTextRequest = {
     text,
-    mode: mode === 'items' ? 'items' : 'items',
+    mode: 'items',
     context: context ? {
       binName: context.binName || undefined,
       existingItems: Array.isArray(context.existingItems) ? context.existingItems : undefined,
@@ -352,6 +382,12 @@ router.post('/test', aiLimiter, aiRouteHandler('test connection', async (req, re
 
   if (!provider || !apiKey || !model) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'provider, apiKey, and model are required' });
+    return;
+  }
+
+  // Mock mode: return success without calling any provider
+  if (config.aiMock) {
+    res.json({ success: true });
     return;
   }
 

@@ -108,7 +108,7 @@ export function buildUserMessage(request: CommandRequest): string {
     tags: b.tags,
     area_id: b.area_id,
     area_name: b.area_name,
-    notes: b.notes.length > 200 ? `${b.notes.slice(0, 200)}...` : b.notes,
+    notes: b.notes,
     icon: b.icon,
     color: b.color,
     visibility: b.visibility,

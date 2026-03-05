@@ -70,6 +70,7 @@ export async function* apiStream(
 
       buffer += decoder.decode(value, { stream: true });
       if (buffer.length > 1024 * 1024) { // 1 MB safety limit
+        yield { type: 'error' as const, message: 'Response too large', code: 'STREAM_OVERFLOW' };
         reader.cancel();
         break;
       }

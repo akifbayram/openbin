@@ -3,7 +3,8 @@ import { promisify } from 'node:util';
 import { generateText } from 'ai';
 import { createSdkModel } from './sdkProviderFactory.js';
 
-const dnsLookup = promisify(dns.lookup);
+const dnsResolve4 = promisify(dns.resolve4);
+const dnsResolve6 = promisify(dns.resolve6);
 
 export type AiProviderType = 'openai' | 'anthropic' | 'gemini' | 'openai-compatible';
 
@@ -64,11 +65,22 @@ export async function validateEndpointUrl(url: string): Promise<void> {
   // Allow known AI provider hosts without DNS check
   if (ALLOWED_AI_HOSTS.has(parsed.hostname)) return;
 
-  // Resolve hostname and check for private IPs
+  // Resolve hostname and check ALL IPs for private addresses.
+  // Note: a TOCTOU gap exists between this check and the SDK's HTTP request;
+  // full mitigation would require a custom DNS resolver passed to the HTTP client.
   try {
-    const { address } = await dnsLookup(parsed.hostname);
-    if (isPrivateIp(address)) {
-      throw new AiAnalysisError('NETWORK_ERROR', 'Endpoint URL must not resolve to a private or reserved IP address');
+    const [ipv4s, ipv6s] = await Promise.all([
+      dnsResolve4(parsed.hostname).catch(() => [] as string[]),
+      dnsResolve6(parsed.hostname).catch(() => [] as string[]),
+    ]);
+    const allIps = [...ipv4s, ...ipv6s];
+    if (allIps.length === 0) {
+      throw new AiAnalysisError('NETWORK_ERROR', `Failed to resolve endpoint hostname: ${parsed.hostname}`);
+    }
+    for (const ip of allIps) {
+      if (isPrivateIp(ip)) {
+        throw new AiAnalysisError('NETWORK_ERROR', 'Endpoint URL must not resolve to a private or reserved IP address');
+      }
     }
   } catch (err) {
     if (err instanceof AiAnalysisError) throw err;
