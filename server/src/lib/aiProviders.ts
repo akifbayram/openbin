@@ -3,13 +3,9 @@ import type { AiProviderConfig } from './aiCaller.js';
 import { mapSdkError, validateEndpointUrl } from './aiCaller.js';
 import { AiSuggestionsSchema } from './aiSchemas.js';
 import type { CustomFieldDef } from './customFieldHelpers.js';
-import { DEFAULT_AI_PROMPT } from './defaultPrompts.js';
+import { AI_CORRECTION_PROMPT, DEFAULT_AI_PROMPT } from './defaultPrompts.js';
 import { createSdkModel } from './sdkProviderFactory.js';
 
-export type { AiProviderConfig, AiProviderType } from './aiCaller.js';
-// Re-export types that other modules import from here
-export { AiAnalysisError } from './aiCaller.js';
-export type { CustomFieldDef } from './customFieldHelpers.js';
 
 export interface AiSuggestionsResult {
   name: string;
@@ -38,6 +34,31 @@ When a relevant existing tag fits the bin's contents, reuse it instead of creati
       prompt = basePrompt.replace(/\{available_tags\}/g, tagBlock);
     } else {
       prompt = `${basePrompt}\n\n${tagBlock}`;
+    }
+  }
+
+  if (customFieldDefs && customFieldDefs.length > 0) {
+    const fieldList = customFieldDefs.map((f) => `"${f.name}" (id: ${f.id})`).join(', ');
+    prompt += `\n\nCUSTOM FIELDS defined for this location: [${fieldList}]
+If any of these fields are relevant to the bin's contents, include a "customFields" object in your response mapping field IDs to suggested values. Only include fields where you can provide a meaningful value.`;
+  }
+
+  return prompt;
+}
+
+export function buildCorrectionPrompt(existingTags?: string[], customFieldDefs?: CustomFieldDef[]): string {
+  let prompt = AI_CORRECTION_PROMPT;
+
+  if (!existingTags || existingTags.length === 0) {
+    prompt = prompt.replace(/\{available_tags\}/g, '');
+  } else {
+    const tagBlock = `EXISTING TAGS in this inventory: [${existingTags.join(', ')}]
+When a relevant existing tag fits the bin's contents, reuse it instead of creating a new synonym. Only create new tags when no existing tag is appropriate.`;
+
+    if (prompt.includes('{available_tags}')) {
+      prompt = prompt.replace(/\{available_tags\}/g, tagBlock);
+    } else {
+      prompt = `${prompt}\n\n${tagBlock}`;
     }
   }
 
@@ -161,4 +182,3 @@ export async function analyzeImage(
   return analyzeImages(config, [{ base64: imageBase64, mimeType }], existingTags, customPrompt, overrides);
 }
 
-export { testProviderConnection as testConnection } from './aiCaller.js';

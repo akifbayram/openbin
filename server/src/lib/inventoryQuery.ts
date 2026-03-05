@@ -40,29 +40,9 @@ IMPORTANT: The "answer" and "matches" fields are both REQUIRED. If no bins match
 }
 
 export function buildUserMessage(question: string, context: InventoryContext): string {
-  const binsContext = context.bins.map((b) => ({
-    id: b.id,
-    name: b.name,
-    items: b.items,
-    tags: b.tags,
-    area_name: b.area_name,
-    notes: b.notes,
-    visibility: b.visibility,
-    is_pinned: b.is_pinned,
-    photo_count: b.photo_count,
-    ...(b.custom_fields ? { custom_fields: b.custom_fields } : {}),
-  }));
-
-  const areasContext = context.areas.map((a) => ({
-    id: a.id,
-    name: a.name,
-  }));
-
-  const trashContext = context.trash_bins;
-
   return `Question: ${question}
 
 Inventory:
-${JSON.stringify({ bins: binsContext, areas: areasContext, trash_bins: trashContext })}`;
+${JSON.stringify(context)}`;
 }
 

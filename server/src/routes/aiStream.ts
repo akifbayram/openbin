@@ -1,9 +1,8 @@
-import fs from 'node:fs/promises';
 import { Router } from 'express';
-import { query } from '../db.js';
 import { validateEndpointUrl } from '../lib/aiCaller.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
-import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText } from '../lib/aiProviders.js';
+import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
+import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildCorrectionPrompt } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { QueryResultSchema } from '../lib/aiSchemas.js';
 import type { UserAiSettings } from '../lib/aiSettings.js';
@@ -14,28 +13,16 @@ import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg } from '../lib/commandParser.js';
 import { config } from '../lib/config.js';
 import { fetchCustomFieldDefs } from '../lib/customFieldHelpers.js';
-import { AI_CORRECTION_PREAMBLE } from '../lib/defaultPrompts.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
-import { safePath } from '../lib/pathSafety.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
 import { createSdkModel } from '../lib/sdkProviderFactory.js';
 import { buildPrompt as buildStructurePrompt } from '../lib/structureText.js';
-import { memoryPhotoUpload, PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
+import { memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 
 const streamRouter = Router();
 streamRouter.use(authenticate);
-
-/** Build a deterministic mock analysis result. */
-function buildMockAnalysisResult() {
-  return {
-    name: `Test Bin ${Date.now().toString(36).slice(-4).toUpperCase()}`,
-    items: ['Screwdriver', 'Wrench set', 'Duct tape', 'Cable ties'],
-    tags: ['tools', 'hardware'],
-    notes: 'Mock AI analysis — generated without an API call.',
-  };
-}
 
 /** Stream a JSON object as fake SSE chunks (mock mode). */
 async function sendMockJsonStream(res: import('express').Response, data: object): Promise<void> {
@@ -185,59 +172,22 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
 
   const { settings, model } = await resolveUserModel(req.user!.id);
 
-  // Batch-fetch all photo metadata in a single query
-  const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
-  const photoResult = await query(
-    `SELECT p.id, p.storage_path, p.mime_type, b.location_id FROM photos p
-     JOIN bins b ON b.id = p.bin_id
-     JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $${ids.length + 1}
-     WHERE p.id IN (${placeholders})`,
-    [...ids, req.user!.id]
-  );
-
-  if (photoResult.rows.length !== ids.length) {
+  const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
+  if (!loaded) {
     res.status(404).json({ error: 'NOT_FOUND', message: 'Photo not found or access denied' });
     return;
   }
 
-  const locationId: string = photoResult.rows[0].location_id;
-
-  // Read files + fetch tags + field defs in parallel
-  const [imageBuffers, existingTags, customFieldDefs] = await Promise.all([
-    Promise.all(
-      photoResult.rows.map(async (row) => {
-        const filePath = safePath(PHOTO_STORAGE_PATH, row.storage_path);
-        if (!filePath) {
-          throw Object.assign(new Error('Invalid photo path'), { statusCode: 404 });
-        }
-        const buffer = await fs.readFile(filePath);
-        return { buffer, mimeType: row.mime_type };
-      })
-    ).catch((err) => {
-      if ((err as NodeJS.ErrnoException).code === 'ENOENT' || (err as { statusCode?: number }).statusCode === 404) {
-        return null;
-      }
-      throw err;
-    }),
-    fetchExistingTags(locationId),
-    fetchCustomFieldDefs(locationId),
-  ]);
-
-  if (!imageBuffers) {
-    res.status(404).json({ error: 'NOT_FOUND', message: 'Photo file not found on disk' });
-    return;
-  }
-
-  const imageParts = imageBuffers.map((img) => ({
+  const imageParts = loaded.images.map((img) => ({
     type: 'image' as const,
     image: img.buffer,
     mimeType: img.mimeType,
   }));
 
   await pipeAiStreamToResponse(res, model, {
-    system: buildAnalysisPrompt(existingTags, settings.custom_prompt, customFieldDefs),
-    userContent: [...imageParts, { type: 'text' as const, text: buildAnalysisUserText(imageBuffers.length) }],
-    ...streamOpts(settings, { maxTokens: imageBuffers.length > 1 ? 2000 : 1500 }),
+    system: buildAnalysisPrompt(loaded.existingTags, settings.custom_prompt, loaded.customFieldDefs),
+    userContent: [...imageParts, { type: 'text' as const, text: buildAnalysisUserText(loaded.images.length) }],
+    ...streamOpts(settings, { maxTokens: loaded.images.length > 1 ? 2000 : 1500 }),
   });
 }));
 
@@ -289,10 +239,12 @@ streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correctio
     res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
     return;
   }
-  const existingTags = locationId ? await fetchExistingTags(locationId) : undefined;
+  const [existingTags, customFieldDefs] = await Promise.all([
+    locationId ? fetchExistingTags(locationId) : Promise.resolve(undefined),
+    locationId ? fetchCustomFieldDefs(locationId) : Promise.resolve(undefined),
+  ]);
 
-  const basePrompt = buildAnalysisPrompt(existingTags, settings.custom_prompt);
-  const system = `${basePrompt}\n\n${AI_CORRECTION_PREAMBLE}`;
+  const system = buildCorrectionPrompt(existingTags, customFieldDefs);
 
   const userMessage = `Previous analysis result:\n${JSON.stringify(safePrevious, null, 2)}\n\nUser correction: ${correctionText}`;
 

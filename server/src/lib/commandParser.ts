@@ -101,32 +101,9 @@ Example responses:
 }
 
 export function buildUserMessage(request: CommandRequest): string {
-  const binsContext = request.context.bins.map((b) => ({
-    id: b.id,
-    name: b.name,
-    items: b.items,
-    tags: b.tags,
-    area_id: b.area_id,
-    area_name: b.area_name,
-    notes: b.notes,
-    icon: b.icon,
-    color: b.color,
-    visibility: b.visibility,
-    is_pinned: b.is_pinned,
-    photo_count: b.photo_count,
-  }));
-
-  const areasContext = request.context.areas.map((a) => ({
-    id: a.id,
-    name: a.name,
-  }));
-
-  const trashContext = request.context.trash_bins;
-
+  const { bins, areas, trash_bins } = request.context;
   return `Command: ${request.text}
 
 Current inventory:
-${JSON.stringify({ bins: binsContext, areas: areasContext, trash_bins: trashContext })}`;
+${JSON.stringify({ bins, areas, trash_bins })}`;
 }
-
-

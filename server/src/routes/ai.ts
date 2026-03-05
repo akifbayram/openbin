@@ -1,10 +1,10 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { Router } from 'express';
 import { generateUuid, query } from '../db.js';
+import { testProviderConnection } from '../lib/aiCaller.js';
 import { fetchExistingTags } from '../lib/aiContext.js';
+import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
 import type { ImageInput } from '../lib/aiProviders.js';
-import { analyzeImages, testConnection } from '../lib/aiProviders.js';
+import { analyzeImages } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
@@ -14,7 +14,7 @@ import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
 import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
-import { memoryPhotoUpload, PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
+import { memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
 
 const MOCK_AI_SETTINGS = {
@@ -255,12 +255,7 @@ router.post('/analyze-image', aiLimiter, memoryPhotoUpload.fields([
 
   // Mock mode: return fake AI response without calling any provider
   if (config.aiMock) {
-    res.json({
-      name: `Test Bin ${Date.now().toString(36).slice(-4).toUpperCase()}`,
-      items: ['Screwdriver', 'Wrench set', 'Duct tape', 'Cable ties'],
-      tags: ['tools', 'hardware'],
-      notes: 'Mock AI analysis — generated without an API call.',
-    });
+    res.json(buildMockAnalysisResult());
     return;
   }
 
@@ -299,51 +294,24 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
 
   // Mock mode: return fake AI response without calling any provider
   if (config.aiMock) {
-    res.json({
-      name: `Test Bin ${Date.now().toString(36).slice(-4).toUpperCase()}`,
-      items: ['Screwdriver', 'Wrench set', 'Duct tape', 'Cable ties'],
-      tags: ['tools', 'hardware'],
-      notes: 'Mock AI analysis — generated without an API call.',
-    });
+    res.json(buildMockAnalysisResult());
     return;
   }
 
   const settings = await getUserAiSettings(req.user!.id);
 
-  const images: ImageInput[] = [];
-  let locationId: string | null = null;
-  for (const pid of ids) {
-    const photoResult = await query(
-      `SELECT p.storage_path, p.mime_type, b.location_id FROM photos p
-       JOIN bins b ON b.id = p.bin_id
-       JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-       WHERE p.id = $1`,
-      [pid, req.user!.id]
-    );
-
-    if (photoResult.rows.length === 0) {
-      res.status(404).json({ error: 'NOT_FOUND', message: 'Photo not found or access denied' });
-      return;
-    }
-
-    const { storage_path, mime_type, location_id } = photoResult.rows[0];
-    if (!locationId) locationId = location_id;
-    const filePath = path.join(PHOTO_STORAGE_PATH, storage_path);
-
-    if (!fs.existsSync(filePath)) {
-      res.status(404).json({ error: 'NOT_FOUND', message: 'Photo file not found on disk' });
-      return;
-    }
-
-    const imageBuffer = fs.readFileSync(filePath);
-    images.push({
-      base64: imageBuffer.toString('base64'),
-      mimeType: mime_type,
-    });
+  const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
+  if (!loaded) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Photo not found or access denied' });
+    return;
   }
 
-  const existingTags = locationId ? await fetchExistingTags(locationId) : undefined;
-  const suggestions = await analyzeImages(settings.config, images, existingTags, settings.custom_prompt, settings);
+  const images: ImageInput[] = loaded.images.map((img) => ({
+    base64: img.buffer.toString('base64'),
+    mimeType: img.mimeType,
+  }));
+
+  const suggestions = await analyzeImages(settings.config, images, loaded.existingTags, settings.custom_prompt, settings);
   res.json(suggestions);
 }));
 
@@ -389,7 +357,7 @@ router.post('/test', aiLimiter, aiRouteHandler('test connection', async (req, re
   }
 
   const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id, provider);
-  await testConnection({
+  await testProviderConnection({
     provider,
     apiKey: finalApiKey,
     model,

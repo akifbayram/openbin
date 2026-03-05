@@ -61,11 +61,26 @@ export async function pipeAiStreamToResponse(
 
     let finalText = await streamResult.text;
 
-    // Fallback: some providers route structured output through a separate channel,
-    // leaving the text stream empty. Use the validated output object instead.
-    if (opts.schema && !finalText.trim()) {
-      const output = await streamResult.output;
-      if (output) finalText = JSON.stringify(output);
+    // When structured output is requested, prefer the validated output object.
+    // The text stream may be truncated (e.g. max tokens reached) while the
+    // SDK's output channel still provides the complete, validated object.
+    if (opts.schema) {
+      try {
+        const output = await streamResult.output;
+        if (output) finalText = JSON.stringify(output);
+      } catch {
+        // output parsing failed — fall through to raw text
+      }
+    }
+
+    // Guard against truncated JSON (e.g. model hit max tokens)
+    if (finalText.trim()) {
+      try {
+        JSON.parse(finalText);
+      } catch {
+        writeEvent({ type: 'error', message: 'AI response was cut short — try a shorter query or increase max tokens', code: 'TRUNCATED_RESPONSE' });
+        return;
+      }
     }
 
     writeEvent({ type: 'done', text: finalText });
