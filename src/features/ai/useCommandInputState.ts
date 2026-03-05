@@ -114,10 +114,10 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
   }
 
   function handleExecuteComplete(result: ExecutionResult) {
+    setExecutionResult(result);
     setText('');
     clearCommand();
     setCheckedActions(new Map());
-    setExecutionResult(result);
   }
 
   function handleAskAnother() {
