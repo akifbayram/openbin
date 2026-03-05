@@ -47,7 +47,11 @@ export function BinListDialogs({
 }: BinListDialogsProps) {
   return (
     <>
-      <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} allTags={allTags} />
+      <BinCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        allTags={allTags}
+      />
       <BinFilterDialog
         open={filterOpen}
         onOpenChange={setFilterOpen}

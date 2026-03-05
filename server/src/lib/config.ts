@@ -49,6 +49,7 @@ export const config = Object.freeze({
   registrationEnabled: parseBool(process.env.REGISTRATION_ENABLED, true),
   trustProxy: parseBool(process.env.TRUST_PROXY, false),
   demoMode: parseBool(process.env.DEMO_MODE, false),
+  aiMock: parseBool(process.env.AI_MOCK, false),
 
   // Encryption
   aiEncryptionKey: process.env.AI_ENCRYPTION_KEY || null,

@@ -151,7 +151,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
           'grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none',
           aiEnabled ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
         )}>
-          <div className="overflow-hidden min-h-0">
+          <div className="overflow-hidden min-h-0 -mx-1.5 px-1.5">
             <div className={cn(
               'transition-opacity duration-200 motion-reduce:transition-none',
               aiEnabled ? 'opacity-100' : 'opacity-0',

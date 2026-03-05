@@ -1,28 +1,40 @@
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StreamingText } from './StreamingText';
 import type { QueryResult } from './useInventoryQuery';
 
 interface InventoryQueryResultProps {
-  queryResult: QueryResult;
+  queryResult: QueryResult | null;
+  streamingText?: string;
+  isStreaming?: boolean;
   onBinClick: (binId: string) => void;
   onBack: () => void;
 }
 
-export function InventoryQueryResult({ queryResult, onBinClick, onBack }: InventoryQueryResultProps) {
+export function InventoryQueryResult({ queryResult, streamingText, isStreaming, onBinClick, onBack }: InventoryQueryResultProps) {
+  const showStreaming = isStreaming && !queryResult;
+  const answer = queryResult?.answer ?? streamingText ?? '';
+  const matches = queryResult?.matches ?? [];
+
   return (
     <div className="space-y-4">
-      <p className="text-[14px] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">
-        {queryResult.answer}
-      </p>
+      <div className="ai-content-enter">
+        <StreamingText
+          text={answer}
+          isStreaming={!!showStreaming}
+          className="text-[14px] text-[var(--text-primary)] leading-relaxed"
+        />
+      </div>
 
-      {queryResult.matches.length > 0 && (
+      {matches.length > 0 && (
         <div className="space-y-2">
-          {queryResult.matches.map((match) => (
+          {matches.map((match, i) => (
             <button
               key={match.bin_id}
+              className="ai-stagger-item glass-card w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-[var(--bg-active)] transition-colors cursor-pointer rounded-[var(--radius-sm)]"
+              style={{ animationDelay: `${Math.min(i * 60, 500)}ms` }}
               type="button"
               onClick={() => onBinClick(match.bin_id)}
-              className="glass-card w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-[var(--bg-active)] transition-colors cursor-pointer rounded-[var(--radius-sm)]"
             >
               <Search className="h-4 w-4 shrink-0 text-[var(--accent)]" />
               <div className="flex-1 min-w-0">
@@ -43,10 +55,12 @@ export function InventoryQueryResult({ queryResult, onBinClick, onBack }: Invent
         </div>
       )}
 
-      <Button type="button" variant="ghost" size="sm" onClick={onBack} className="rounded-[var(--radius-full)]">
-        <ChevronLeft className="h-4 w-4 mr-0.5" />
-        Back
-      </Button>
+      {!isStreaming && (
+        <Button type="button" variant="ghost" size="sm" onClick={onBack} className="rounded-[var(--radius-full)]">
+          <ChevronLeft className="h-4 w-4 mr-0.5" />
+          Back
+        </Button>
+      )}
     </div>
   );
 }

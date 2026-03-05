@@ -13,6 +13,9 @@ export interface BulkAddPhoto {
   analyzeError: string | null;
   createError?: string;
   createdBinId?: string;
+  streamedItems: string[];
+  streamedName: string;
+  correctionCount: number;
 }
 
 export type BulkAddStep = 'upload' | 'review' | 'summary';
@@ -36,6 +39,7 @@ export type BulkAddAction =
   | { type: 'SET_CURRENT_INDEX'; index: number }
   | { type: 'UPDATE_PHOTO'; id: string; changes: Partial<BulkAddPhoto> }
   | { type: 'SET_ANALYZING'; id: string }
+  | { type: 'UPDATE_STREAM'; id: string; name: string; items: string[] }
   | { type: 'SET_ANALYZE_RESULT'; id: string; name: string; items: string[]; tags: string[]; notes: string }
   | { type: 'SET_ANALYZE_ERROR'; id: string; error: string }
   | { type: 'SKIP_PHOTO'; id: string }
@@ -44,6 +48,8 @@ export type BulkAddAction =
   | { type: 'SET_CREATING'; id: string }
   | { type: 'SET_CREATED'; id: string; binId: string }
   | { type: 'SET_CREATE_ERROR'; id: string; error: string }
+  | { type: 'INCREMENT_CORRECTION'; id: string }
+  | { type: 'RESET_CORRECTION_COUNT'; id: string }
   | { type: 'DONE_CREATING' };
 
 export const initialState: BulkAddState = {
@@ -96,16 +102,32 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
       return {
         ...state,
         photos: state.photos.map((p) =>
-          p.id === action.id ? { ...p, status: 'analyzing', analyzeError: null } : p
+          p.id === action.id ? { ...p, status: 'analyzing', analyzeError: null, streamedItems: [], streamedName: '' } : p
         ),
       };
+
+    case 'UPDATE_STREAM': {
+      const target = state.photos.find((p) => p.id === action.id);
+      if (
+        !target ||
+        (target.streamedName === action.name && target.streamedItems.length === action.items.length)
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        photos: state.photos.map((p) =>
+          p.id === action.id ? { ...p, streamedName: action.name, streamedItems: action.items } : p
+        ),
+      };
+    }
 
     case 'SET_ANALYZE_RESULT':
       return {
         ...state,
         photos: state.photos.map((p) =>
           p.id === action.id
-            ? { ...p, status: 'reviewed', name: action.name, items: action.items, tags: action.tags, notes: action.notes, analyzeError: null }
+            ? { ...p, status: 'reviewed', name: action.name, items: action.items, tags: action.tags, notes: action.notes, analyzeError: null, streamedItems: [], streamedName: '' }
             : p
         ),
       };
@@ -165,6 +187,22 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
     case 'DONE_CREATING':
       return { ...state, isCreating: false };
 
+    case 'INCREMENT_CORRECTION':
+      return {
+        ...state,
+        photos: state.photos.map((p) =>
+          p.id === action.id ? { ...p, correctionCount: p.correctionCount + 1 } : p
+        ),
+      };
+
+    case 'RESET_CORRECTION_COUNT':
+      return {
+        ...state,
+        photos: state.photos.map((p) =>
+          p.id === action.id ? { ...p, correctionCount: 0 } : p
+        ),
+      };
+
     default:
       return state;
   }
@@ -197,11 +235,25 @@ export function createBulkAddPhoto(file: File, sharedAreaId: string | null): Bul
     icon: '',
     color: '',
     analyzeError: null,
+    streamedItems: [],
+    streamedName: '',
+    correctionCount: 0,
   };
 }
 
-const STEP_ORDER: BulkAddStep[] = ['upload', 'review', 'summary'];
+export const BULK_ADD_STEPS = [
+  { id: 'upload', label: 'Upload' },
+  { id: 'analyze', label: 'Analyze' },
+  { id: 'review', label: 'Review' },
+  { id: 'create', label: 'Create' },
+];
 
-export function stepIndex(step: BulkAddStep): number {
-  return STEP_ORDER.indexOf(step);
+/** Map reducer state to the 4-step visual indicator index. */
+export function bulkAddStepIndex(state: BulkAddState): number {
+  if (state.step === 'upload') return 0;
+  if (state.step === 'summary') return 3;
+  // 'review' step: Analyze(1) while current photo is pending/analyzing, Review(2) otherwise
+  const photo = state.photos[state.currentIndex];
+  if (photo && (photo.status === 'pending' || photo.status === 'analyzing')) return 1;
+  return 2;
 }

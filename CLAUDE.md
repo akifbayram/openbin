@@ -12,7 +12,6 @@ Multi-user web app for organizing physical storage bins with QR codes. Data pers
 - **Server**: Express 4, SQLite (better-sqlite3), JWT auth, express-rate-limit
 - **Docker**: Single container (Express serves static frontend + API), reverse proxy optional
 - Features live in `src/features/`, server code in `server/src/`, shared types in @src/types.ts
-- No external component libraries — build UI primitives in `src/components/ui/`.
 - No ESLint or Prettier — single root `biome.json` covers both `src/` and `server/src/`.
 
 ## Code Conventions

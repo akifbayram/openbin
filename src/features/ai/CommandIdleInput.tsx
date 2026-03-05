@@ -1,4 +1,4 @@
-import { ChevronDown, ImagePlus, Loader2, Sparkles } from 'lucide-react';
+import { ChevronDown, ImagePlus, Sparkles } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 interface CommandIdleInputProps {
   text: string;
   setText: (v: string) => void;
-  effectiveState: string;
+  isLoading: boolean;
   examplesOpen: boolean;
   setExamplesOpen: Dispatch<SetStateAction<boolean>>;
   error: string | null;
@@ -19,7 +19,7 @@ interface CommandIdleInputProps {
 export function CommandIdleInput({
   text,
   setText,
-  effectiveState,
+  isLoading,
   examplesOpen,
   setExamplesOpen,
   error,
@@ -37,7 +37,7 @@ export function CommandIdleInput({
           placeholder="What would you like to do?"
           rows={3}
           className="min-h-[80px] bg-[var(--bg-elevated)] pr-12"
-          disabled={effectiveState === 'parsing' || effectiveState === 'executing'}
+          disabled={isLoading}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
@@ -72,7 +72,7 @@ export function CommandIdleInput({
             <p><span className="text-[var(--text-secondary)]">Organize</span> — &quot;Move batteries from kitchen to garage&quot; or &quot;Tag tools bin as hardware&quot;</p>
             <p><span className="text-[var(--text-secondary)]">Manage {t.bins}</span> — &quot;Create a {t.bin} called Holiday Decorations in the attic&quot; or &quot;Delete the empty box {t.bin}&quot;</p>
             <p><span className="text-[var(--text-secondary)]">Quick actions</span> — &quot;Duplicate the tools {t.bin}&quot; or &quot;Pin my kitchen {t.bin}&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">{t.areas}</span> — &quot;Rename the garage {t.area} to workshop&quot; or &quot;Delete the empty attic {t.area}&quot;</p>
+            <p><span className="text-[var(--text-secondary)]">Manage {t.areas}</span> — &quot;Rename the garage {t.area} to workshop&quot; or &quot;Delete the empty attic {t.area}&quot;</p>
             <p><span className="text-[var(--text-secondary)]">Find things</span> — &quot;Where is the glass cleaner?&quot; or &quot;Which {t.bins} have batteries?&quot;</p>
             <p><span className="text-[var(--text-secondary)]">Search trash</span> — &quot;What&apos;s in my trash?&quot; or &quot;Restore the holiday decorations {t.bin}&quot;</p>
             <p><span className="text-[var(--text-secondary)]">Upload photos</span> — Snap a photo of a {t.bin} and AI will create it for you</p>
@@ -87,15 +87,11 @@ export function CommandIdleInput({
       <Button
         type="button"
         onClick={onParse}
-        disabled={!text.trim() || effectiveState === 'parsing' || effectiveState === 'executing'}
+        disabled={!text.trim() || isLoading}
         className="w-full rounded-[var(--radius-full)] bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
       >
-        {effectiveState === 'parsing' || effectiveState === 'executing' ? (
-          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-        ) : (
-          <Sparkles className="h-4 w-4 mr-1.5" />
-        )}
-        {effectiveState === 'parsing' ? 'Understanding...' : effectiveState === 'executing' ? 'Executing...' : 'Send'}
+        <Sparkles className="h-4 w-4 mr-1.5" />
+        {isLoading ? 'Processing...' : 'Send'}
       </Button>
     </div>
   );

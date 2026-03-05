@@ -1,10 +1,13 @@
-import type { AiProviderConfig, MultimodalContent } from './aiCaller.js';
-import { callAiProvider, testProviderConnection } from './aiCaller.js';
+import { generateObject } from 'ai';
+import type { AiProviderConfig } from './aiCaller.js';
+import { mapSdkError, validateEndpointUrl } from './aiCaller.js';
+import { AiSuggestionsSchema } from './aiSchemas.js';
 import { DEFAULT_AI_PROMPT } from './defaultPrompts.js';
+import { createSdkModel } from './sdkProviderFactory.js';
 
 export type { AiProviderConfig, AiProviderType } from './aiCaller.js';
 // Re-export types that other modules import from here
-export { AiAnalysisError, stripCodeFences } from './aiCaller.js';
+export { AiAnalysisError } from './aiCaller.js';
 
 export interface AiSuggestionsResult {
   name: string;
@@ -18,7 +21,7 @@ export interface ImageInput {
   mimeType: string;
 }
 
-function buildSystemPrompt(existingTags?: string[], customPrompt?: string | null): string {
+export function buildSystemPrompt(existingTags?: string[], customPrompt?: string | null): string {
   const basePrompt = customPrompt || DEFAULT_AI_PROMPT;
 
   if (!existingTags || existingTags.length === 0) {
@@ -72,6 +75,13 @@ export interface AiOverrides {
   request_timeout?: number | null;
 }
 
+/** Build the user-facing prompt text for image analysis. */
+export function buildAnalysisUserText(imageCount: number): string {
+  return imageCount > 1
+    ? `Catalog the contents of this storage bin. ${imageCount} photos attached showing different angles of the same bin.`
+    : 'Catalog the contents of this storage bin.';
+}
+
 export async function analyzeImages(
   config: AiProviderConfig,
   images: ImageInput[],
@@ -79,25 +89,42 @@ export async function analyzeImages(
   customPrompt?: string | null,
   overrides?: AiOverrides
 ): Promise<AiSuggestionsResult> {
-  const userText = images.length > 1
-    ? `Catalog the contents of this storage bin. ${images.length} photos attached showing different angles of the same bin.`
-    : 'Catalog the contents of this storage bin.';
+  // SSRF protection: validate user-supplied endpoint URLs before making requests
+  if (config.endpointUrl) {
+    await validateEndpointUrl(config.endpointUrl);
+  }
 
-  const userContent: MultimodalContent[] = [
-    ...images.map((img) => ({ type: 'image' as const, base64: img.base64, mimeType: img.mimeType })),
-    { type: 'text' as const, text: userText },
-  ];
+  const model = createSdkModel(config);
 
-  return callAiProvider({
-    config,
-    systemPrompt: buildSystemPrompt(existingTags, customPrompt),
-    userContent,
-    temperature: overrides?.temperature ?? 0.3,
-    maxTokens: overrides?.max_tokens ?? (images.length > 1 ? 2000 : 1500),
-    topP: overrides?.top_p ?? undefined,
-    timeoutMs: overrides?.request_timeout ? overrides.request_timeout * 1000 : undefined,
-    validate: validateSuggestions,
-  });
+  const userText = buildAnalysisUserText(images.length);
+
+  const imageParts = images.map((img) => ({
+    type: 'image' as const,
+    image: Buffer.from(img.base64, 'base64'),
+    mimeType: img.mimeType,
+  }));
+
+  try {
+    const result = await generateObject({
+      model,
+      schema: AiSuggestionsSchema,
+      system: buildSystemPrompt(existingTags, customPrompt),
+      messages: [{
+        role: 'user' as const,
+        content: [...imageParts, { type: 'text' as const, text: userText }],
+      }],
+      maxOutputTokens: overrides?.max_tokens ?? (images.length > 1 ? 2000 : 1500),
+      temperature: overrides?.temperature ?? 0.3,
+      topP: overrides?.top_p ?? undefined,
+      abortSignal: overrides?.request_timeout
+        ? AbortSignal.timeout(overrides.request_timeout * 1000)
+        : undefined,
+    });
+    // Post-process with existing business rule sanitizer
+    return validateSuggestions(result.object);
+  } catch (err) {
+    throw mapSdkError(err);
+  }
 }
 
 export async function analyzeImage(
@@ -111,6 +138,4 @@ export async function analyzeImage(
   return analyzeImages(config, [{ base64: imageBase64, mimeType }], existingTags, customPrompt, overrides);
 }
 
-export async function testConnection(config: AiProviderConfig): Promise<void> {
-  return testProviderConnection(config);
-}
+export { testProviderConnection as testConnection } from './aiCaller.js';

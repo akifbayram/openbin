@@ -3,13 +3,15 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { OptionGroup } from '@/components/ui/option-group';
-import { useToast } from '@/components/ui/toast';
+import { StepIndicator } from '@/components/ui/stepper';
 import { AreaPicker } from '@/features/areas/AreaPicker';
+import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
+import { BinCreateSuccess } from '@/features/bins/BinCreateSuccess';
 import { addBin, notifyBinsChanged } from '@/features/bins/useBins';
 import { BulkAddReviewStep } from '@/features/bulk-add/BulkAddReviewStep';
 import { BulkAddSummaryStep } from '@/features/bulk-add/BulkAddSummaryStep';
 import type { BulkAddPhoto, BulkAddState } from '@/features/bulk-add/useBulkAdd';
-import { bulkAddReducer, createBulkAddPhoto, initialState } from '@/features/bulk-add/useBulkAdd';
+import { BULK_ADD_STEPS, bulkAddReducer, bulkAddStepIndex, createBulkAddPhoto, initialState } from '@/features/bulk-add/useBulkAdd';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { useAuth } from '@/lib/auth';
@@ -35,12 +37,12 @@ function initState(files: File[]): BulkAddState {
 export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProps) {
   const t = useTerminology();
   const { activeLocationId } = useAuth();
-  const { showToast } = useToast();
   const [state, dispatch] = useReducer(bulkAddReducer, initialFiles, initState);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hadPhotos = useRef(initialFiles.length > 0);
   const [mode, setMode] = useState<'per-photo' | 'single-bin'>('per-photo');
   const [singleBinReview, setSingleBinReview] = useState(false);
+  const [successBins, setSuccessBins] = useState<CreatedBinInfo[] | null>(null);
 
   const effectiveMax = mode === 'single-bin' ? MAX_AI_PHOTOS : MAX_PHOTOS;
 
@@ -83,6 +85,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       dispatch({ type: 'START_CREATING' });
 
       let successCount = 0;
+      const createdBinInfos: CreatedBinInfo[] = [];
       for (const photo of toCreate) {
         dispatch({ type: 'SET_CREATING', id: photo.id });
         try {
@@ -98,6 +101,13 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           });
           dispatch({ type: 'SET_CREATED', id: photo.id, binId: createdBin.id });
           successCount++;
+          createdBinInfos.push({
+            id: createdBin.id,
+            name: photo.name.trim(),
+            icon: photo.icon,
+            color: photo.color,
+            itemCount: photo.items.length,
+          });
           // Upload photo fire-and-forget
           compressImage(photo.file)
             .then((compressed) => {
@@ -123,13 +133,10 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       notifyBinsChanged();
 
       if (successCount === toCreate.length) {
-        showToast({
-          message: `Created ${successCount} ${successCount !== 1 ? t.bins : t.bin}`,
-        });
-        onClose();
+        setSuccessBins(createdBinInfos);
       }
     },
-    [activeLocationId, showToast, onClose, t.bin, t.bins]
+    [activeLocationId, t]
   );
 
   const handleCreateAll = useCallback(() => {
@@ -144,6 +151,21 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
     createBins(failed);
   }, [state.photos, createBins]);
 
+  const stepIndex = bulkAddStepIndex(state);
+
+  if (successBins) {
+    return (
+      <BinCreateSuccess
+        createdBins={successBins}
+        onCreateAnother={() => {
+          setSuccessBins(null);
+          onBack();
+        }}
+        onClose={onClose}
+      />
+    );
+  }
+
   if (singleBinReview) {
     return (
       <SingleBinReview
@@ -152,30 +174,37 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
         sharedAreaId={state.sharedAreaId}
         onBack={() => setSingleBinReview(false)}
         onClose={onClose}
+        onRestart={onBack}
       />
     );
   }
 
   if (state.step === 'review') {
     return (
-      <BulkAddReviewStep
-        photos={state.photos}
-        currentIndex={state.currentIndex}
-        dispatch={dispatch}
-      />
+      <div className="space-y-4">
+        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
+        <BulkAddReviewStep
+          photos={state.photos}
+          currentIndex={state.currentIndex}
+          dispatch={dispatch}
+        />
+      </div>
     );
   }
 
   if (state.step === 'summary') {
     return (
-      <BulkAddSummaryStep
-        photos={state.photos}
-        isCreating={state.isCreating}
-        createdCount={state.createdCount}
-        dispatch={dispatch}
-        onCreateAll={handleCreateAll}
-        onRetryFailed={handleRetryFailed}
-      />
+      <div className="space-y-4">
+        <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
+        <BulkAddSummaryStep
+          photos={state.photos}
+          isCreating={state.isCreating}
+          createdCount={state.createdCount}
+          dispatch={dispatch}
+          onCreateAll={handleCreateAll}
+          onRetryFailed={handleRetryFailed}
+        />
+      </div>
     );
   }
 
@@ -184,15 +213,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
 
   return (
     <div className="space-y-4">
-      {/* Mode toggle */}
-      <OptionGroup
-        options={[
-          { key: 'per-photo' as const, label: `Separate ${t.bins}` },
-          { key: 'single-bin' as const, label: `Same ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Max ${MAX_AI_PHOTOS} photos for single ${t.bin}` },
-        ]}
-        value={mode}
-        onChange={setMode}
-      />
+      <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} className="mb-2" />
 
       <input
         ref={fileInputRef}
@@ -232,6 +253,16 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           </button>
         )}
       </div>
+
+      {/* Mode toggle */}
+      <OptionGroup
+        options={[
+          { key: 'per-photo' as const, label: `Separate ${t.bins}` },
+          { key: 'single-bin' as const, label: `Same ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Max ${MAX_AI_PHOTOS} photos for single ${t.bin}` },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
 
       {/* Helper text */}
       <p className="text-[12px] text-[var(--text-tertiary)]">

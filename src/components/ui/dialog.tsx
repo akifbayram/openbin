@@ -47,6 +47,51 @@ function DialogTrigger({ children, asChild }: { children: React.ReactNode; asChi
   return <button type="button" onClick={() => onOpenChange(true)}>{children}</button>;
 }
 
+/** Inner wrapper that measures children and animates height changes. */
+function AnimatedHeight({ children }: { children: React.ReactNode }) {
+  const outerRef = React.useRef<HTMLDivElement>(null);
+  const innerRef = React.useRef<HTMLDivElement>(null);
+  const [height, setHeight] = React.useState<number | undefined>(undefined);
+  const [shouldAnimate, setShouldAnimate] = React.useState(false);
+
+  React.useEffect(() => {
+    const inner = innerRef.current;
+    const outer = outerRef.current;
+    if (!inner || !outer) return;
+    // Padding is static (Tailwind classes), compute once
+    const style = getComputedStyle(outer);
+    const pad = Number.parseFloat(style.paddingTop) + Number.parseFloat(style.paddingBottom);
+    const ro = new ResizeObserver((entries) => {
+      const contentH = entries[0]?.contentRect.height;
+      if (contentH != null) setHeight(contentH + pad);
+    });
+    ro.observe(inner);
+    return () => ro.disconnect();
+  }, []);
+
+  // Enable transitions only after the initial height has been painted
+  React.useEffect(() => {
+    if (height != null && !shouldAnimate) {
+      requestAnimationFrame(() => { setShouldAnimate(true); });
+    }
+  }, [height, shouldAnimate]);
+
+  return (
+    <div
+      ref={outerRef}
+      className="overflow-y-auto min-h-0 px-8 pt-7 pb-[calc(24px+var(--safe-bottom))] sm:pb-6"
+      style={{
+        height: height != null ? height : undefined,
+        transition: shouldAnimate ? 'height 0.3s ease' : undefined,
+      }}
+    >
+      <div ref={innerRef}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function DialogContent({
   children,
   className,
@@ -104,9 +149,9 @@ function DialogContent({
             >
               <X className="h-3.5 w-3.5" />
             </button>
-            <div className="overflow-y-auto min-h-0 px-8 pt-7 pb-[calc(24px+var(--safe-bottom))] sm:pb-6">
+            <AnimatedHeight>
               {children}
-            </div>
+            </AnimatedHeight>
           </div>
           {/* Portal target for dropdowns — inside z-[60] stacking context but outside overflow-hidden panel */}
           <div ref={setPortalNode} className="absolute z-[70]" />

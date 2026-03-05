@@ -26,6 +26,12 @@ export async function verifyLocationMembership(locationId: string, userId: strin
   return result.rows.length > 0;
 }
 
+/** Verify optional location membership — returns true if no locationId provided. */
+export async function verifyOptionalLocationMembership(locationId: string | undefined | null, userId: string): Promise<boolean> {
+  if (!locationId) return true;
+  return verifyLocationMembership(locationId, userId);
+}
+
 /** Get the role of a user in a location, or null if not a member */
 export async function getMemberRole(locationId: string, userId: string): Promise<string | null> {
   const result = await query(

@@ -1,9 +1,13 @@
-import {ArrowUpDown, 
-  Copy, FileText, FolderMinus, FolderPen, Image as ImageIcon,MapPin, Minus, Package, Palette, PenLine,Pin, PinOff, 
-  Plus, Tag, Trash2, Undo2, 
+import {ArrowUpDown, CircleHelp,
+  Copy, FileText, FolderMinus, FolderPen, Image as ImageIcon,MapPin, Minus, Package, Palette, PenLine,Pin, PinOff,
+  Plus, Tag, Trash2, Undo2,
 } from 'lucide-react';
 import type { Terminology } from '@/lib/terminology';
 import type { CommandAction } from './useCommand';
+
+export function isBinCreatingAction(action: CommandAction): boolean {
+  return action.type === 'create_bin' || action.type === 'duplicate_bin';
+}
 
 export function isDestructiveAction(action: CommandAction): boolean {
   return action.type === 'delete_bin' || action.type === 'remove_items' || action.type === 'remove_tags'
@@ -33,6 +37,7 @@ export function getActionIcon(action: CommandAction) {
     case 'delete_area': return FolderMinus;
     case 'set_tag_color': return Palette;
     case 'reorder_items': return ArrowUpDown;
+    default: return CircleHelp;
   }
 }
 
@@ -88,5 +93,7 @@ export function describeAction(action: CommandAction, t: Terminology): string {
       return `Set color of tag "${action.tag}" to ${action.color}`;
     case 'reorder_items':
       return `Reorder items in "${action.bin_name}"`;
+    default:
+      return `Unknown action: ${(action as Record<string, unknown>).type}`;
   }
 }

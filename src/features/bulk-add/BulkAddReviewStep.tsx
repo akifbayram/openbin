@@ -1,12 +1,15 @@
-import { AlertCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Loader2, SkipForward, Sparkles } from 'lucide-react';
+import { ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SkipForward, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
-import { analyzeImageFile, mapErrorMessage } from '@/features/ai/useAiAnalysis';
+import { AiAnalyzeError, AiStreamingPreview } from '@/features/ai/AiStreamingPreview';
+import { parsePartialAnalysis } from '@/features/ai/parsePartialAnalysis';
+import { mapErrorMessage } from '@/features/ai/useAiAnalysis';
 import { useAiSettings } from '@/features/ai/useAiSettings';
+import { useAiStream } from '@/features/ai/useAiStream';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { ColorPicker } from '@/features/bins/ColorPicker';
 import { IconPicker } from '@/features/bins/IconPicker';
@@ -15,8 +18,10 @@ import { TagInput } from '@/features/bins/TagInput';
 import { useAllTags } from '@/features/bins/useBins';
 import { compressImage } from '@/features/photos/compressImage';
 import { useAiEnabled } from '@/lib/aiToggle';
+import { apiStream } from '@/lib/apiStream';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import type { AiSuggestions } from '@/types';
 import type { BulkAddAction, BulkAddPhoto } from './useBulkAdd';
 
 interface BulkAddReviewStepProps {
@@ -33,8 +38,35 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   const allTags = useAllTags();
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const autoAnalyzedRef = useRef<Set<string>>(new Set());
+  const abortRef = useRef<Map<string, AbortController>>(new Map());
+  const [correctionOpen, setCorrectionOpen] = useState(false);
+  const [correctionText, setCorrectionText] = useState('');
+  const MAX_CORRECTIONS = 3;
+
+  const {
+    isStreaming: isCorrecting,
+    partialText: correctionPartialText,
+    stream: streamCorrection,
+    cancel: cancelCorrection,
+  } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
+  const { name: correctionStreamedName, items: correctionStreamedItems } = parsePartialAnalysis(correctionPartialText);
 
   const photo = photos[currentIndex];
+
+  // Abort streams on unmount or navigate away
+  useEffect(() => {
+    return () => {
+      for (const ctrl of abortRef.current.values()) ctrl.abort();
+      abortRef.current.clear();
+      cancelCorrection();
+    };
+  }, []);
+
+  // Reset correction state when navigating between photos
+  useEffect(() => {
+    setCorrectionOpen(false);
+    setCorrectionText('');
+  }, [currentIndex]);
 
   // Auto-analyze on first visit to each photo
   useEffect(() => {
@@ -50,18 +82,78 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   const isLast = currentIndex === photos.length - 1;
   const reviewedCount = photos.filter((p) => p.status === 'reviewed' || p.status === 'skipped').length;
 
+  const isStreaming = photo.status === 'analyzing';
+
   async function triggerAnalyze(target: BulkAddPhoto) {
     if (!aiSettings) {
       setAiSetupExpanded(true);
       return;
     }
+
+    // Abort any existing stream for this photo
+    abortRef.current.get(target.id)?.abort();
+    const controller = new AbortController();
+    abortRef.current.set(target.id, controller);
+
     dispatch({ type: 'SET_ANALYZING', id: target.id });
+
     try {
       const compressed = await compressImage(target.file);
       const file = compressed instanceof File
         ? compressed
         : new File([compressed], target.file.name, { type: compressed.type || 'image/jpeg' });
-      const result = await analyzeImageFile(file, activeLocationId || undefined);
+
+      const formData = new FormData();
+      formData.append('photo', file);
+      if (activeLocationId) formData.append('locationId', activeLocationId);
+
+      let accumulated = '';
+      for await (const event of apiStream('/api/ai/analyze-image/stream', { body: formData, signal: controller.signal })) {
+        if (event.type === 'delta') {
+          accumulated += event.text;
+          const partial = parsePartialAnalysis(accumulated);
+          dispatch({ type: 'UPDATE_STREAM', id: target.id, name: partial.name, items: partial.items });
+        } else if (event.type === 'done') {
+          const result: AiSuggestions = JSON.parse(event.text);
+          dispatch({
+            type: 'SET_ANALYZE_RESULT',
+            id: target.id,
+            name: result.name,
+            items: result.items,
+            tags: result.tags,
+            notes: result.notes,
+          });
+        } else if (event.type === 'error') {
+          dispatch({ type: 'SET_ANALYZE_ERROR', id: target.id, error: event.message });
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return;
+      dispatch({ type: 'SET_ANALYZE_ERROR', id: target.id, error: mapErrorMessage(err) });
+    } finally {
+      abortRef.current.delete(target.id);
+    }
+  }
+
+  async function triggerCorrection(target: BulkAddPhoto, text: string) {
+    // Abort any pending analyze stream for this photo
+    abortRef.current.get(target.id)?.abort();
+    dispatch({ type: 'SET_ANALYZING', id: target.id });
+
+    const previousResult = {
+      name: target.name,
+      items: target.items,
+      tags: target.tags,
+      notes: target.notes,
+    };
+
+    const result = await streamCorrection({
+      previousResult,
+      correction: text,
+      locationId: activeLocationId || undefined,
+    });
+
+    if (result) {
       dispatch({
         type: 'SET_ANALYZE_RESULT',
         id: target.id,
@@ -70,13 +162,28 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
         tags: result.tags,
         notes: result.notes,
       });
-    } catch (err) {
-      dispatch({ type: 'SET_ANALYZE_ERROR', id: target.id, error: mapErrorMessage(err) });
+      dispatch({ type: 'INCREMENT_CORRECTION', id: target.id });
+      setCorrectionText('');
+      setCorrectionOpen(false);
     }
   }
 
+  function handleCorrectionSubmit() {
+    const trimmed = correctionText.trim();
+    if (!trimmed) {
+      cancelCorrection();
+      dispatch({ type: 'RESET_CORRECTION_COUNT', id: photo.id });
+      triggerAnalyze(photo);
+      setCorrectionText('');
+      setCorrectionOpen(false);
+      return;
+    }
+    triggerCorrection(photo, trimmed);
+  }
+
   function handleNext() {
-    if (photo.status === 'pending') {
+    abortRef.current.get(photo.id)?.abort();
+    if (photo.status === 'pending' || photo.status === 'analyzing') {
       dispatch({ type: 'UPDATE_PHOTO', id: photo.id, changes: { status: 'reviewed' } });
     }
     if (isLast) {
@@ -87,6 +194,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   }
 
   function handleBack() {
+    abortRef.current.get(photo.id)?.abort();
     if (isFirst) {
       dispatch({ type: 'GO_TO_UPLOAD' });
     } else {
@@ -95,6 +203,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   }
 
   function handleSkip() {
+    abortRef.current.get(photo.id)?.abort();
     dispatch({ type: 'SKIP_PHOTO', id: photo.id });
     if (isLast) {
       dispatch({ type: 'GO_TO_SUMMARY' });
@@ -105,62 +214,83 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
 
   return (
     <div className="space-y-5">
-      {/* Progress */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-[13px] text-[var(--text-secondary)]">
-          <span>Photo {currentIndex + 1} of {photos.length}</span>
-          <span>{reviewedCount}/{photos.length} reviewed</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-[var(--bg-active)] overflow-hidden">
-          <div
-            className="h-full rounded-full bg-[var(--accent)] transition-all"
-            style={{ width: `${(reviewedCount / photos.length) * 100}%` }}
-          />
-        </div>
+      {/* Photo counter */}
+      <div className="flex items-center justify-between text-[13px] text-[var(--text-secondary)]">
+        <span>Photo {currentIndex + 1} of {photos.length}</span>
+        <span>{reviewedCount}/{photos.length} reviewed</span>
       </div>
 
-      {photo.status === 'analyzing' ? (
-        <div className="flex flex-col items-center justify-center py-8 gap-3">
-          <Loader2 className="h-6 w-6 animate-spin text-[var(--accent)]" />
-          <p className="text-[14px] text-[var(--text-secondary)]">Analyzing photo...</p>
-        </div>
+      {(isStreaming || isCorrecting) ? (
+        <AiStreamingPreview
+          previewUrls={[photo.previewUrl]}
+          streamedName={isCorrecting ? correctionStreamedName : photo.streamedName}
+          streamedItems={isCorrecting ? correctionStreamedItems : photo.streamedItems}
+          initialStatusLabel={isCorrecting ? 'Applying correction...' : 'Analyzing photo...'}
+        />
       ) : (
         <>
-          {/* Photo preview */}
+          {/* Phase C: Reviewed / editable form */}
+          {/* Photo preview (compact if reviewed) */}
           <div className="relative">
             <img
               src={photo.previewUrl}
               alt={`Upload ${currentIndex + 1}`}
-              className="w-full max-h-64 object-contain rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5"
+              className={`w-full rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out ${
+                photo.status === 'reviewed' ? 'max-h-20 object-cover opacity-80' : 'aspect-square object-cover'
+              }`}
             />
-            {aiEnabled && (
+            {aiEnabled && photo.status === 'reviewed' && (
               <button
                 type="button"
-                onClick={() => triggerAnalyze(photo)}
-                title="Rescan"
-                className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
+                onClick={() => setCorrectionOpen(!correctionOpen)}
+                title="Correct AI result"
+                className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${
+                  correctionOpen
+                    ? 'bg-[var(--ai-accent)] text-white'
+                    : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]'
+                }`}
               >
                 <Sparkles className="h-4 w-4" />
               </button>
             )}
           </div>
 
+          {/* Correction bar */}
+          {correctionOpen && photo.status === 'reviewed' && (
+            <div className="space-y-1.5">
+              {photo.correctionCount >= MAX_CORRECTIONS ? (
+                <p className="text-[12px] text-[var(--text-tertiary)] italic">
+                  Correction limit reached — edit fields directly.
+                </p>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={correctionText}
+                    onChange={(e) => setCorrectionText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCorrectionSubmit(); } }}
+                    placeholder="Tell AI what's wrong..."
+                    className="flex-1 h-9 text-[13px]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCorrectionSubmit}
+                    className="shrink-0 p-2 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              {photo.correctionCount > 0 && photo.correctionCount < MAX_CORRECTIONS && (
+                <p className="text-[11px] text-[var(--text-tertiary)]">
+                  {MAX_CORRECTIONS - photo.correctionCount} correction{MAX_CORRECTIONS - photo.correctionCount !== 1 ? 's' : ''} remaining
+                </p>
+              )}
+            </div>
+          )}
+
           {/* AI Error */}
           {photo.analyzeError && (
-            <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-red-500/10 px-3 py-2.5">
-              <AlertCircle className="h-4 w-4 text-[var(--destructive)] shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-[13px] text-[var(--destructive)]">{photo.analyzeError}</p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => triggerAnalyze(photo)}
-                  className="mt-1 h-7 px-2 text-[12px]"
-                >
-                  Retry
-                </Button>
-              </div>
-            </div>
+            <AiAnalyzeError error={photo.analyzeError} onRetry={() => triggerAnalyze(photo)} />
           )}
 
           {/* Configure AI provider */}
@@ -195,7 +325,6 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
             </div>
 
             <div className="space-y-2">
-              <Label>Items</Label>
               <ItemsInput
                 items={photo.items}
                 onChange={(items) =>

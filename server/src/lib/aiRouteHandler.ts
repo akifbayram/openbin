@@ -1,5 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
-import { AiAnalysisError } from './aiCaller.js';
+import { AiAnalysisError, toSafeAiMessage } from './aiCaller.js';
 import { aiErrorToStatus, NoAiSettingsError } from './aiSettings.js';
 import { ValidationError } from './crypto.js';
 import { HttpError } from './httpErrors.js';
@@ -18,7 +18,12 @@ export function aiRouteHandler(
         return;
       }
       if (err instanceof AiAnalysisError) {
-        res.status(aiErrorToStatus(err.code)).json({ error: err.message, code: err.code });
+        const message = toSafeAiMessage(err);
+        if (err.code === 'PROVIDER_ERROR') {
+          const safeErr = { message: err.message, name: err.name, code: err.code };
+          console.error(`AI ${action} provider error:`, safeErr);
+        }
+        res.status(aiErrorToStatus(err.code)).json({ error: message, code: err.code });
         return;
       }
       if (err instanceof NoAiSettingsError) {

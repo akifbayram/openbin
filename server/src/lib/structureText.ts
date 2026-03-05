@@ -1,6 +1,9 @@
+import { generateObject } from 'ai';
 import type { AiProviderConfig } from './aiCaller.js';
-import { callAiProvider } from './aiCaller.js';
+import { mapSdkError, validateEndpointUrl } from './aiCaller.js';
+import { StructureTextSchema } from './aiSchemas.js';
 import { DEFAULT_STRUCTURE_PROMPT } from './defaultPrompts.js';
+import { createSdkModel } from './sdkProviderFactory.js';
 
 export interface StructureTextRequest {
   text: string;
@@ -15,7 +18,7 @@ export interface StructureTextResult {
   items: string[];
 }
 
-function buildPrompt(request: StructureTextRequest, customPrompt?: string): string {
+export function buildPrompt(request: StructureTextRequest, customPrompt?: string): string {
   let prompt = customPrompt || DEFAULT_STRUCTURE_PROMPT;
 
   if (request.context?.binName) {
@@ -55,14 +58,29 @@ export async function structureText(
   customPrompt?: string,
   overrides?: StructureTextOverrides
 ): Promise<StructureTextResult> {
-  return callAiProvider({
-    config,
-    systemPrompt: buildPrompt(request, customPrompt),
-    userContent: request.text,
-    temperature: overrides?.temperature ?? 0.2,
-    maxTokens: overrides?.max_tokens ?? 800,
-    topP: overrides?.top_p ?? undefined,
-    timeoutMs: overrides?.request_timeout ? overrides.request_timeout * 1000 : undefined,
-    validate: validateItems,
-  });
+  // SSRF protection: validate user-supplied endpoint URLs before making requests
+  if (config.endpointUrl) {
+    await validateEndpointUrl(config.endpointUrl);
+  }
+
+  const model = createSdkModel(config);
+
+  try {
+    const result = await generateObject({
+      model,
+      schema: StructureTextSchema,
+      system: buildPrompt(request, customPrompt),
+      messages: [{ role: 'user' as const, content: request.text }],
+      maxOutputTokens: overrides?.max_tokens ?? 800,
+      temperature: overrides?.temperature ?? 0.2,
+      topP: overrides?.top_p ?? undefined,
+      abortSignal: overrides?.request_timeout
+        ? AbortSignal.timeout(overrides.request_timeout * 1000)
+        : undefined,
+    });
+    // Post-process: business rule sanitization that Zod cannot express
+    return validateItems(result.object);
+  } catch (err) {
+    throw mapSdkError(err);
+  }
 }

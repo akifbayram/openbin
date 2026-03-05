@@ -56,6 +56,7 @@ Rules:
 - Always include the "matches" array with relevant bins, even if empty
 - The "relevance" field should briefly explain why each bin matched (e.g., "contains batteries", "tagged as electronics")
 - Sort matches by relevance (most relevant first)
+- Return at most 8 matching bins. For each bin, include only the most relevant items (up to 10), not the entire list.
 - Visibility, pin status, photo counts, and trash bins are available in the inventory context — use them to answer questions like "which bins are private?", "what's pinned?", "which bins have photos?", or "what's in the trash?"`;
 
 export const DEFAULT_STRUCTURE_PROMPT = `You are an inventory item extractor. The user will dictate or type a description of items in a storage bin. Your job is to parse this into a clean, structured list of individual items.
@@ -76,9 +77,14 @@ Rules:
 Respond with ONLY valid JSON, no markdown fences, no extra text. Example:
 {"items":["Winter jacket","Socks","Old t-shirts","Scarf","Wool gloves"]}`;
 
+export const AI_CORRECTION_PREAMBLE = `You previously analyzed a photo of a storage bin and produced the JSON result shown below. The user says your output needs correction. Apply their feedback and return a corrected JSON object with the same four fields (name, items, tags, notes). Only change what the user explicitly mentions — keep everything else intact.
+
+Respond with ONLY valid JSON, no markdown fences, no extra text.`;
+
 export const ALL_DEFAULT_PROMPTS = {
   analysis: DEFAULT_AI_PROMPT,
   command: DEFAULT_COMMAND_PROMPT,
   query: DEFAULT_QUERY_PROMPT,
   structure: DEFAULT_STRUCTURE_PROMPT,
+  correction: AI_CORRECTION_PREAMBLE,
 };

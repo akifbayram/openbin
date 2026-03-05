@@ -32,6 +32,7 @@ import { BinSearchBar } from './BinSearchBar';
 import { BinTableView } from './BinTableView';
 import { BulkActionBar } from './BulkActionBar';
 import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
+import { DeleteBinDialog } from './DeleteBinDialog';
 import { SearchBarOverflowMenu } from './SearchBarOverflowMenu';
 import { useBinSearchParams } from './useBinSearchParams';
 import { countActiveFilters, type SortOption, updateBin, useAllTags, usePaginatedBinList } from './useBins';
@@ -83,6 +84,7 @@ export function BinListPage() {
   const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(bins, [debouncedSearch, sort, sortDir, filters]);
   const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(bins, selectedIds, clearSelection, showToast, t);
 
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [copiedStyle, setCopiedStyle] = useState<{ icon: string; color: string; card_style: string } | null>(null);
 
   const handleCopyStyle = useCallback(() => {
@@ -296,13 +298,20 @@ export function BinListPage() {
         clearSelection={clearSelection}
       />
 
+      <DeleteBinDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        binName={`${selectedIds.size} ${selectedIds.size === 1 ? t.bin : t.bins}`}
+        onConfirm={bulkDelete}
+      />
+
       {selectable && (
         <BulkActionBar
           selectedCount={selectedIds.size}
           isAdmin={isAdmin}
           onTag={() => bulk.open('tag')}
           onMove={() => bulk.open('area')}
-          onDelete={bulkDelete}
+          onDelete={() => setBulkDeleteOpen(true)}
           onClear={clearSelection}
           onAppearance={() => bulk.open('appearance')}
           onVisibility={() => bulk.open('visibility')}
