@@ -38,7 +38,15 @@ export function useAiStream<T>(
           setPartialText(prev => prev + event.text);
         } else if (event.type === 'done') {
           try {
-            const parsed = JSON.parse(event.text) as T;
+            // Strip markdown code block wrappers if present
+            let text = event.text.trim();
+            const fenced = text.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
+            if (fenced) text = fenced[1].trim();
+            if (!text) {
+              setError(`${errorFallback} — empty response from AI`);
+              return null;
+            }
+            const parsed = JSON.parse(text) as T;
             setResult(parsed);
             return parsed;
           } catch {

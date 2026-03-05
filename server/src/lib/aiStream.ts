@@ -44,7 +44,7 @@ export async function pipeAiStreamToResponse(
   const writeEvent = initSseResponse(res);
 
   try {
-    const { textStream, text: textPromise } = streamText({
+    const streamResult = streamText({
       model,
       ...(opts.schema ? { output: Output.object({ schema: opts.schema }) } : {}),
       system: opts.system,
@@ -55,11 +55,20 @@ export async function pipeAiStreamToResponse(
       abortSignal: opts.abortSignal,
     });
 
-    for await (const delta of textStream) {
+    for await (const delta of streamResult.textStream) {
       writeEvent({ type: 'delta', text: delta });
     }
 
-    writeEvent({ type: 'done', text: await textPromise });
+    let finalText = await streamResult.text;
+
+    // Fallback: some providers route structured output through a separate channel,
+    // leaving the text stream empty. Use the validated output object instead.
+    if (opts.schema && !finalText.trim()) {
+      const output = await streamResult.output;
+      if (output) finalText = JSON.stringify(output);
+    }
+
+    writeEvent({ type: 'done', text: finalText });
   } catch (err) {
     const mapped = mapSdkError(err);
     const safeMessage = toSafeAiMessage(mapped) || 'Provider error — check server logs';

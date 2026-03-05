@@ -25,6 +25,7 @@ export interface InventoryContext {
     visibility: string;
     is_pinned: boolean;
     photo_count: number;
+    custom_fields?: Record<string, string>;
   }>;
   areas: Array<{ id: string; name: string }>;
   trash_bins: Array<{ id: string; name: string }>;
@@ -45,10 +46,11 @@ export function buildUserMessage(question: string, context: InventoryContext): s
     items: b.items,
     tags: b.tags,
     area_name: b.area_name,
-    notes: b.notes.length > 200 ? `${b.notes.slice(0, 200)}...` : b.notes,
+    notes: b.notes,
     visibility: b.visibility,
     is_pinned: b.is_pinned,
     photo_count: b.photo_count,
+    ...(b.custom_fields ? { custom_fields: b.custom_fields } : {}),
   }));
 
   const areasContext = context.areas.map((a) => ({

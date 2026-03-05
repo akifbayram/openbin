@@ -9,9 +9,9 @@ export const AVAILABLE_ICONS = [
   'Scissors', 'Hammer', 'Paintbrush', 'Leaf', 'Apple', 'Coffee', 'Wine', 'Baby', 'Dog', 'Cat',
 ];
 
-/** Fetch bins, areas, and trash for a location (shared between command and inventory contexts). */
+/** Fetch bins, areas, trash, and custom field data for a location. */
 async function fetchLocationData(locationId: string, userId: string) {
-  const [binsResult, areasResult, trashResult] = await Promise.all([
+  const [binsResult, areasResult, trashResult, cfResult] = await Promise.all([
     query(
       `SELECT b.id, b.name,
         COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name)) FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
@@ -33,8 +33,25 @@ async function fetchLocationData(locationId: string, userId: string) {
       'SELECT id, name FROM bins WHERE location_id = $1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 20',
       [locationId]
     ),
+    query<{ bin_id: string; field_name: string; value: string }>(
+      `SELECT v.bin_id, f.name AS field_name, v.value
+       FROM bin_custom_field_values v
+       JOIN location_custom_fields f ON f.id = v.field_id
+       JOIN bins b ON b.id = v.bin_id
+       WHERE f.location_id = $1 AND b.deleted_at IS NULL`,
+      [locationId]
+    ),
   ]);
-  return { binsResult, areasResult, trashResult };
+
+  // Build a map: binId -> Record<fieldName, value>
+  const customFieldsByBin = new Map<string, Record<string, string>>();
+  for (const row of cfResult.rows) {
+    let map = customFieldsByBin.get(row.bin_id);
+    if (!map) { map = {}; customFieldsByBin.set(row.bin_id, map); }
+    map[row.field_name] = row.value;
+  }
+
+  return { binsResult, areasResult, trashResult, customFieldsByBin };
 }
 
 function truncateNotes(notes: unknown): string {
@@ -44,22 +61,27 @@ function truncateNotes(notes: unknown): string {
 
 /** Build context for command/execute endpoints. */
 export async function buildCommandContext(locationId: string, userId: string): Promise<CommandRequest['context']> {
-  const { binsResult, areasResult, trashResult } = await fetchLocationData(locationId, userId);
+  const { binsResult, areasResult, trashResult, customFieldsByBin } = await fetchLocationData(locationId, userId);
 
-  const bins = binsResult.rows.map((r) => ({
-    id: r.id as string,
-    name: r.name as string,
-    items: r.items as Array<{ id: string; name: string }>,
-    tags: r.tags as string[],
-    area_id: r.area_id as string | null,
-    area_name: r.area_name as string,
-    notes: truncateNotes(r.notes),
-    icon: r.icon as string,
-    color: r.color as string,
-    visibility: (r.visibility as string) || 'location',
-    is_pinned: !!(r.is_pinned as number),
-    photo_count: (r.photo_count as number) || 0,
-  }));
+  const bins = binsResult.rows.map((r) => {
+    const binId = r.id as string;
+    const cf = customFieldsByBin.get(binId);
+    return {
+      id: binId,
+      name: r.name as string,
+      items: r.items as Array<{ id: string; name: string }>,
+      tags: r.tags as string[],
+      area_id: r.area_id as string | null,
+      area_name: r.area_name as string,
+      notes: truncateNotes(r.notes),
+      icon: r.icon as string,
+      color: r.color as string,
+      visibility: (r.visibility as string) || 'location',
+      is_pinned: !!(r.is_pinned as number),
+      photo_count: (r.photo_count as number) || 0,
+      ...(cf ? { custom_fields: cf } : {}),
+    };
+  });
 
   const areas = areasResult.rows.map((r) => ({
     id: r.id as string,
@@ -76,20 +98,25 @@ export async function buildCommandContext(locationId: string, userId: string): P
 
 /** Build context for the query (read-only) endpoint. */
 export async function buildInventoryContext(locationId: string, userId: string): Promise<InventoryContext> {
-  const { binsResult, areasResult, trashResult } = await fetchLocationData(locationId, userId);
+  const { binsResult, areasResult, trashResult, customFieldsByBin } = await fetchLocationData(locationId, userId);
 
   return {
-    bins: binsResult.rows.map((r) => ({
-      id: r.id as string,
-      name: r.name as string,
-      items: (r.items as Array<{ id: string; name: string }>).map((i) => i.name),
-      tags: r.tags as string[],
-      area_name: r.area_name as string,
-      notes: truncateNotes(r.notes),
-      visibility: (r.visibility as string) || 'location',
-      is_pinned: !!(r.is_pinned as number),
-      photo_count: (r.photo_count as number) || 0,
-    })),
+    bins: binsResult.rows.map((r) => {
+      const binId = r.id as string;
+      const cf = customFieldsByBin.get(binId);
+      return {
+        id: binId,
+        name: r.name as string,
+        items: (r.items as Array<{ id: string; name: string }>).map((i) => i.name),
+        tags: r.tags as string[],
+        area_name: r.area_name as string,
+        notes: truncateNotes(r.notes),
+        visibility: (r.visibility as string) || 'location',
+        is_pinned: !!(r.is_pinned as number),
+        photo_count: (r.photo_count as number) || 0,
+        ...(cf ? { custom_fields: cf } : {}),
+      };
+    }),
     areas: areasResult.rows.map((r) => ({
       id: r.id as string,
       name: r.name as string,
