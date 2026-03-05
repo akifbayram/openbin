@@ -88,6 +88,19 @@ export async function validateEndpointUrl(url: string): Promise<void> {
   }
 }
 
+/** Safe client-facing messages keyed by AI error code (avoids leaking provider internals). */
+export const SAFE_AI_MESSAGES: Partial<Record<AiErrorCode, string>> = {
+  INVALID_KEY: 'Invalid API key — check your AI provider settings',
+  RATE_LIMITED: 'Rate limited by provider — try again later',
+  MODEL_NOT_FOUND: 'Model not found — check your AI provider settings',
+  INVALID_RESPONSE: 'Provider returned an invalid response',
+};
+
+/** Convert an AiAnalysisError to a safe, client-facing message string. */
+export function toSafeAiMessage(err: { code: AiErrorCode; message: string }): string {
+  return (err.code === 'NETWORK_ERROR' ? err.message : SAFE_AI_MESSAGES[err.code]) ?? err.message;
+}
+
 export class AiAnalysisError extends Error {
   code: AiErrorCode;
   constructor(code: AiErrorCode, message: string) {

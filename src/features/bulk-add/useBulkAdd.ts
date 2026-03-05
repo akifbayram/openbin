@@ -110,9 +110,7 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
       const target = state.photos.find((p) => p.id === action.id);
       if (
         !target ||
-        (target.streamedName === action.name &&
-          target.streamedItems.length === action.items.length &&
-          target.streamedItems.every((v, i) => v === action.items[i]))
+        (target.streamedName === action.name && target.streamedItems.length === action.items.length)
       ) {
         return state;
       }

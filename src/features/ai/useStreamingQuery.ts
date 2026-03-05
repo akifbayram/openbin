@@ -3,7 +3,7 @@ import { useAiStream } from './useAiStream';
 import type { QueryResult } from './useInventoryQuery';
 
 export function useStreamingQuery() {
-  const { result, isStreaming, error, partialText, stream, cancel, clear: clearStream } = useAiStream<QueryResult>(
+  const { isStreaming, error, partialText, stream, cancel, clear: clearStream } = useAiStream<QueryResult>(
     '/api/ai/query/stream',
     'Query failed'
   );
@@ -13,14 +13,7 @@ export function useStreamingQuery() {
     [stream]
   );
 
-  const answer = result?.answer ?? '';
-  const matches = result?.matches ?? [];
-
-  const clear = useCallback(() => {
-    clearStream();
-  }, [clearStream]);
-
   return useMemo(() => ({
-    answer, matches, isStreaming, error, partialText, query, cancel, clear,
-  }), [answer, matches, isStreaming, error, partialText, query, cancel, clear]);
+    isStreaming, error, partialText, query, cancel, clear: clearStream,
+  }), [isStreaming, error, partialText, query, cancel, clearStream]);
 }

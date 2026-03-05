@@ -24,11 +24,7 @@ export function useStreamingCommand() {
   );
   const interpretation = result?.interpretation ?? '';
 
-  const clear = useCallback(() => {
-    clearStream();
-  }, [clearStream]);
-
   return useMemo(() => ({
-    actions, interpretation, isStreaming, error, parse, cancel, clear,
-  }), [actions, interpretation, isStreaming, error, parse, cancel, clear]);
+    actions, interpretation, isStreaming, error, parse, cancel, clear: clearStream,
+  }), [actions, interpretation, isStreaming, error, parse, cancel, clearStream]);
 }

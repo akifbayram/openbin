@@ -9,6 +9,7 @@ import { QueryResultSchema } from '../lib/aiSchemas.js';
 import type { UserAiSettings } from '../lib/aiSettings.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
 import { initSseResponse, pipeAiStreamToResponse } from '../lib/aiStream.js';
+import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg } from '../lib/commandParser.js';
 import { config } from '../lib/config.js';
@@ -25,20 +26,24 @@ import { requireLocationMember } from '../middleware/locationAccess.js';
 const streamRouter = Router();
 streamRouter.use(authenticate);
 
-/** Send a fake SSE analysis response (mock mode). */
-async function sendMockAnalysisStream(res: import('express').Response): Promise<void> {
-  const writeEvent = initSseResponse(res);
-  const mockResult = {
+/** Build a deterministic mock analysis result. */
+function buildMockAnalysisResult() {
+  return {
     name: `Test Bin ${Date.now().toString(36).slice(-4).toUpperCase()}`,
     items: ['Screwdriver', 'Wrench set', 'Duct tape', 'Cable ties'],
     tags: ['tools', 'hardware'],
     notes: 'Mock AI analysis — generated without an API call.',
   };
-  const json = JSON.stringify(mockResult);
+}
+
+/** Stream a JSON object as fake SSE chunks (mock mode). */
+async function sendMockJsonStream(res: import('express').Response, data: object): Promise<void> {
+  const writeEvent = initSseResponse(res);
+  const json = JSON.stringify(data);
   const chunkSize = 20;
   for (let i = 0; i < json.length; i += chunkSize) {
     writeEvent({ type: 'delta', text: json.slice(i, i + chunkSize) });
-    await new Promise((r) => setTimeout(r, 30));
+    await new Promise((r) => setTimeout(r, 5));
   }
   writeEvent({ type: 'done', text: json });
   res.end();
@@ -131,18 +136,14 @@ streamRouter.post('/analyze-image/stream', aiLimiter, memoryPhotoUpload.fields([
   }
 
   // Mock mode: return fake AI response without calling any provider
-  if (config.aiMock) { await sendMockAnalysisStream(res); return; }
+  if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
 
   const { settings, model } = await resolveUserModel(req.user!.id);
 
   const locationId = req.body?.locationId;
-  // Verify location membership if locationId is provided (prevents tag enumeration from other locations)
-  if (locationId) {
-    const { verifyLocationMembership } = await import('../lib/binAccess.js');
-    if (!await verifyLocationMembership(locationId, req.user!.id)) {
-      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
-      return;
-    }
+  if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
+    res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
+    return;
   }
   const existingTags = locationId ? await fetchExistingTags(locationId) : undefined;
 
@@ -176,7 +177,7 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
   }
 
   // Mock mode: return fake AI response without calling any provider
-  if (config.aiMock) { await sendMockAnalysisStream(res); return; }
+  if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
 
   const { settings, model } = await resolveUserModel(req.user!.id);
 
@@ -267,36 +268,23 @@ streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correctio
 
   // Mock mode
   if (config.aiMock) {
-    const writeEvent = initSseResponse(res);
-    const mockResult = {
+    await sendMockJsonStream(res, {
       name: safePrevious.name,
       items: [...safePrevious.items.slice(0, -1), 'Corrected item'],
       tags: safePrevious.tags,
       notes: `Corrected: ${correctionText.slice(0, 50)}`,
-    };
-    const json = JSON.stringify(mockResult);
-    const chunkSize = 20;
-    for (let i = 0; i < json.length; i += chunkSize) {
-      writeEvent({ type: 'delta', text: json.slice(i, i + chunkSize) });
-      await new Promise((r) => setTimeout(r, 30));
-    }
-    writeEvent({ type: 'done', text: json });
-    res.end();
+    });
     return;
   }
 
   const { settings, model } = await resolveUserModel(req.user!.id);
 
   // Optional location membership check + tag fetch
-  let existingTags: string[] | undefined;
-  if (locationId) {
-    const { verifyLocationMembership } = await import('../lib/binAccess.js');
-    if (!await verifyLocationMembership(locationId, req.user!.id)) {
-      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
-      return;
-    }
-    existingTags = await fetchExistingTags(locationId);
+  if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
+    res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
+    return;
   }
+  const existingTags = locationId ? await fetchExistingTags(locationId) : undefined;
 
   const basePrompt = buildAnalysisPrompt(existingTags, settings.custom_prompt);
   const system = `${basePrompt}\n\n${AI_CORRECTION_PREAMBLE}`;

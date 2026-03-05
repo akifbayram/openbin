@@ -1,8 +1,7 @@
 import type { LanguageModel, UserContent } from 'ai';
 import { Output, streamText } from 'ai';
 import type { Response } from 'express';
-import type { AiErrorCode } from './aiCaller.js';
-import { mapSdkError } from './aiCaller.js';
+import { mapSdkError, toSafeAiMessage } from './aiCaller.js';
 
 export interface StreamOptions {
   system: string;
@@ -25,13 +24,6 @@ export function initSseResponse(res: Response): (data: object) => void {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 }
-
-const SAFE_MESSAGES: Partial<Record<AiErrorCode, string>> = {
-  INVALID_KEY: 'Invalid API key — check your AI provider settings',
-  RATE_LIMITED: 'Rate limited by provider — try again later',
-  MODEL_NOT_FOUND: 'Model not found — check your AI provider settings',
-  INVALID_RESPONSE: 'Provider returned an invalid response',
-};
 
 /**
  * Stream AI output as SSE to an Express response.
@@ -70,8 +62,7 @@ export async function pipeAiStreamToResponse(
     writeEvent({ type: 'done', text: await textPromise });
   } catch (err) {
     const mapped = mapSdkError(err);
-    const safeMessage = (mapped.code === 'NETWORK_ERROR' ? mapped.message : SAFE_MESSAGES[mapped.code])
-      ?? 'Provider error — check server logs';
+    const safeMessage = toSafeAiMessage(mapped) || 'Provider error — check server logs';
     if (mapped.code === 'PROVIDER_ERROR') {
       const safeErr = err instanceof Error ? { message: err.message, name: err.name } : '[non-Error thrown]';
       console.error('AI stream error:', safeErr);

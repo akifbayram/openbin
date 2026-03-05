@@ -7,6 +7,7 @@ import type { ImageInput } from '../lib/aiProviders.js';
 import { analyzeImages, testConnection } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
+import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import { config, getEnvAiConfig } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
 import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
@@ -271,13 +272,9 @@ router.post('/analyze-image', aiLimiter, memoryPhotoUpload.fields([
   }));
 
   const locationId = req.body?.locationId;
-  // Verify location membership if locationId is provided (prevents tag enumeration from other locations)
-  if (locationId) {
-    const { verifyLocationMembership } = await import('../lib/binAccess.js');
-    if (!await verifyLocationMembership(locationId, req.user!.id)) {
-      res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
-      return;
-    }
+  if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
+    res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
+    return;
   }
   const existingTags = locationId ? await fetchExistingTags(locationId) : undefined;
 
