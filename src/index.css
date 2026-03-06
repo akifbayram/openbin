@@ -2,11 +2,31 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ─── Glass & Layout Design Tokens ─── */
+/* ─── Design Tokens (color vars kept until all components use Chakra tokens) ─── */
 :root {
+  --bg-base: #f2f2f7;
+  --bg-sidebar: #e8e8ed;
+  --bg-elevated: rgba(255, 255, 255, 0.72);
   --bg-glass: rgba(255, 255, 255, 0.55);
   --bg-glass-heavy: rgba(255, 255, 255, 0.78);
+  --bg-input: rgba(120, 120, 128, 0.12);
+  --bg-hover: rgba(120, 120, 128, 0.08);
+  --bg-active: rgba(120, 120, 128, 0.16);
   --border-glass: rgba(255, 255, 255, 0.45);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --text-primary: #1c1c1e;
+  --text-secondary: #3c3c43;
+  --text-tertiary: #6d6d72;
+  --text-on-accent: #ffffff;
+  --accent: #5e2fe0;
+  --accent-hover: #4e1fd0;
+  --accent-active: #4520b8;
+  --accent-glow: rgba(94, 47, 224, 0.15);
+  --destructive: #ff3b30;
+  --destructive-hover: #d63028;
+  --destructive-active: #b52a22;
+  --ai-accent: #5e2fe0;
+  --ai-accent-hover: #4e1fd0;
   --shadow-glass: 0 2px 16px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1);
   --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
   --radius-xs: 8px;
@@ -25,18 +45,40 @@
   --overlay-heavy: rgba(0, 0, 0, 0.7);
   --overlay-button: rgba(0, 0, 0, 0.5);
   --overlay-button-hover: rgba(0, 0, 0, 0.7);
+  color-scheme: light;
 }
 
 .dark {
+  --bg-base: #000000;
+  --bg-sidebar: #1c1c1e;
+  --bg-elevated: rgba(28, 28, 30, 0.72);
   --bg-glass: rgba(44, 44, 46, 0.55);
   --bg-glass-heavy: rgba(44, 44, 46, 0.78);
+  --bg-input: rgba(120, 120, 128, 0.24);
+  --bg-hover: rgba(120, 120, 128, 0.18);
+  --bg-active: rgba(120, 120, 128, 0.28);
   --border-glass: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --text-primary: #f5f5f7;
+  --text-secondary: #ebebf0;
+  --text-tertiary: #98989d;
+  --text-on-accent: #ffffff;
+  --accent: #7b52f5;
+  --accent-hover: #9b7af7;
+  --accent-active: #6842d4;
+  --accent-glow: rgba(123, 82, 245, 0.2);
+  --destructive: #ff453a;
+  --destructive-hover: #ff6961;
+  --destructive-active: #d63a32;
+  --ai-accent: #7b52f5;
+  --ai-accent-hover: #9b7af7;
   --shadow-glass: 0 2px 16px rgba(0, 0, 0, 0.32), 0 0 1px rgba(0, 0, 0, 0.4);
   --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 1px rgba(0, 0, 0, 0.3);
   --overlay-backdrop: rgba(0, 0, 0, 0.5);
   --overlay-heavy: rgba(0, 0, 0, 0.8);
   --overlay-button: rgba(0, 0, 0, 0.5);
   --overlay-button-hover: rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
 }
 
 /* ─── Base ─── */
@@ -54,6 +96,8 @@ html {
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
     'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
 }
 
 /* ─── Liquid Glass Utilities ─── */
