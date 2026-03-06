@@ -4,6 +4,7 @@ import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { Table, TableHeader, TableRow } from '@/components/ui/table';
 import { formatTimeAgo } from '@/lib/formatTime';
 import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 import type { ActivityLogEntry } from '@/types';
 import { getActionColor, getActionIcon, getActionLabel, renderChangeDiff } from './activityHelpers';
 
@@ -57,7 +58,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
               {/* Icon */}
               <div className="w-8 shrink-0 flex justify-center">
                 <div
-                  className={`h-6 w-6 rounded-full bg-[var(--bg-elevated)] flex items-center justify-center ${getActionColor(entry.action)}`}
+                  className={cn('h-6 w-6 rounded-full bg-[var(--bg-elevated)] flex items-center justify-center', getActionColor(entry.action))}
                 >
                   {getActionIcon(entry)}
                 </div>
@@ -70,7 +71,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
                   {getActionLabel(entry, t)}
                 </p>
                 {changeDiffs && (
-                  <p className="caption truncate">
+                  <p className="text-[12px] text-[var(--text-tertiary)] truncate">
                     {changeDiffs.map((d, i) => (
                       <span key={d.field}>
                         {i > 0 && ', '}
@@ -82,7 +83,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
               </div>
 
               {/* User */}
-              <div className="hidden md:flex flex-fill items-center gap-1.5">
+              <div className="hidden md:flex flex-1 min-w-0 items-center gap-1.5">
                 <span className="text-[13px] text-[var(--text-secondary)] truncate">{entry.display_name}</span>
                 {entry.auth_method === 'api_key' && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
@@ -99,7 +100,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
               </div>
 
               {/* Time */}
-              <span className="w-24 shrink-0 caption text-right">
+              <span className="w-24 shrink-0 text-[12px] text-[var(--text-tertiary)] text-right">
                 {formatTimeAgo(entry.created_at)}
               </span>
             </TableRow>

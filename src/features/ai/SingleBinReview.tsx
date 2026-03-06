@@ -20,6 +20,7 @@ import { addPhoto } from '@/features/photos/usePhotos';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 import type { AiSuggestions } from '@/types';
 import { AiSettingsSection } from './AiSettingsSection';
 import { AiAnalyzeError, AiStreamingPreview } from './AiStreamingPreview';
@@ -231,9 +232,10 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               <img
                 src={previewUrls[0]}
                 alt="Upload 1"
-                className={`w-full rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out ${
-                  name ? 'max-h-20 opacity-80' : 'aspect-square'
-                }`}
+                className={cn(
+                  'w-full rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
+                  name ? 'max-h-20 opacity-80' : 'aspect-square',
+                )}
               />
             ) : (
               <div className="flex gap-2 overflow-x-auto">
@@ -242,9 +244,10 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                   <img key={i}
                     src={url}
                     alt={`Upload ${i + 1}`}
-                    className={`shrink-0 flex-fill rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out ${
-                      name ? 'max-h-20 opacity-80' : 'aspect-square'
-                    }`}
+                    className={cn(
+                      'shrink-0 flex-1 min-w-0 rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
+                      name ? 'max-h-20 opacity-80' : 'aspect-square',
+                    )}
                   />
                 ))}
               </div>
@@ -254,11 +257,12 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                 type="button"
                 onClick={() => setCorrectionOpen(!correctionOpen)}
                 title="Correct AI result"
-                className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${
+                className={cn(
+                  'absolute top-2 right-2 p-1.5 rounded-full transition-colors',
                   correctionOpen
                     ? 'bg-[var(--ai-accent)] text-white'
-                    : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]'
-                }`}
+                    : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
+                )}
               >
                 <Sparkles className="h-4 w-4" />
               </button>
@@ -269,11 +273,11 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
           <div className={correctionOpen && name ? 'ai-correction-enter' : 'hidden'}>
             <div className="space-y-1.5">
               {correctionCount >= MAX_CORRECTIONS ? (
-                <p className="caption italic">
+                <p className="text-[12px] text-[var(--text-tertiary)] italic">
                   Correction limit reached — edit fields directly.
                 </p>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="row">
                   <Input
                     value={correctionText}
                     onChange={(e) => setCorrectionText(e.target.value)}
@@ -372,7 +376,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
           </div>
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-2">
+          <div className="row-spread pt-2">
             <Button
               variant="ghost"
               onClick={handleBack}

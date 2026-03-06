@@ -12,6 +12,7 @@ import { useLocationList } from '@/features/locations/useLocations';
 import { compressImage } from '@/features/photos/compressImage';
 import { apiFetch, getAvatarUrl } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { cn } from '@/lib/utils';
 import type { User } from '@/types';
 
 export function ProfilePage() {
@@ -166,12 +167,12 @@ export function ProfilePage() {
         <p className="text-[15px] text-[var(--text-tertiary)]">@{user.username}</p>
 
         <div className="flex items-center gap-3 mt-3 text-[13px] text-[var(--text-tertiary)]">
-          <span className="flex items-center gap-1.5">
+          <span className="row-tight">
             <Calendar className="h-3.5 w-3.5" />
             {memberSince}
           </span>
           <span className="h-0.5 w-0.5 rounded-full bg-current opacity-40" />
-          <span className="flex items-center gap-1.5">
+          <span className="row-tight">
             <MapPin className="h-3.5 w-3.5" />
             {locations.length} location{locations.length !== 1 ? 's' : ''}
           </span>
@@ -226,11 +227,11 @@ export function ProfilePage() {
           <button
             type="button"
             onClick={() => setPasswordOpen((v) => !v)}
-            className="flex items-center justify-between w-full"
+            className="row-spread w-full"
           >
             <Label className="pointer-events-none">Change Password</Label>
             <ChevronDown
-              className={`h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200 ${passwordOpen ? 'rotate-180' : ''}`}
+              className={cn('h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200', passwordOpen && 'rotate-180')}
             />
           </button>
           {passwordOpen && (

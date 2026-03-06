@@ -79,7 +79,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          'flex items-center justify-between w-full h-10 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 text-[15px] text-left transition-colors',
+          'row-spread w-full h-10 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 text-[15px] text-left transition-colors',
           'hover:border-[var(--border-glass)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]',
           !selectedArea && 'text-[var(--text-tertiary)]'
         )}
@@ -122,7 +122,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
 
           <div className="border-t border-[var(--border-subtle)]">
             {creating ? (
-              <div className="flex items-center gap-2 p-2">
+              <div className="row p-2">
                 <Input
                   ref={inputRef}
                   value={newName}
@@ -155,7 +155,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
               <button
                 type="button"
                 onClick={() => setCreating(true)}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-[14px] text-[var(--accent)] hover:bg-[var(--bg-hover)] transition-colors"
+                className="w-full row px-3 py-2.5 text-[14px] text-[var(--accent)] hover:bg-[var(--bg-hover)] transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 Create new area...

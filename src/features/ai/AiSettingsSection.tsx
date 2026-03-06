@@ -136,8 +136,8 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
   return (
     <Card id="ai-settings">
       <CardContent>
-        <div className="flex items-center justify-between">
-          <div className="flex-fill">
+        <div className="row-spread">
+          <div className="flex-1 min-w-0">
             <Label htmlFor="ai-toggle" className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" />AI Features</Label>
             <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
               Photo analysis, item extraction, and AI commands
@@ -226,7 +226,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
 
                 {/* Required fields hint */}
                 {touched && !setup.apiKey && !setup.model && (
-                  <p className="caption">
+                  <p className="text-[12px] text-[var(--text-tertiary)]">
                     API key and model are required.
                   </p>
                 )}
@@ -273,13 +273,13 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           className="font-mono text-[13px] min-h-[200px] resize-y"
                           maxLength={10000}
                         />
-                        <div className="flex items-center justify-between">
-                          <p className="caption">{helpText[activePromptTab]}</p>
+                        <div className="row-spread">
+                          <p className="text-[12px] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
                           {active.value.trim() ? (
                             <button
                               type="button"
                               onClick={() => active.set('')}
-                              className="flex items-center gap-1 caption hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
+                              className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
                             >
                               <RotateCcw className="h-3 w-3" />
                               Reset to Default

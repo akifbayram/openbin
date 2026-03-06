@@ -116,11 +116,11 @@ export function ApiKeysSection() {
                   className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)]"
                 >
                   <Key className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
-                  <div className="flex-fill">
+                  <div className="flex-1 min-w-0">
                     <p className="text-[14px] font-medium text-[var(--text-primary)] truncate">
                       {k.name || k.key_prefix}
                     </p>
-                    <p className="caption">
+                    <p className="text-[12px] text-[var(--text-tertiary)]">
                       {k.key_prefix}... &middot; Created {formatDate(k.created_at)}
                       {k.last_used_at ? ` \u00b7 Last used ${formatDate(k.last_used_at)}` : ''}
                     </p>
@@ -156,7 +156,7 @@ export function ApiKeysSection() {
           </DialogHeader>
           {newKey ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
+              <div className="row">
                 <code className="flex-1 text-[13px] bg-[var(--bg-input)] px-3 py-2 rounded-[var(--radius-sm)] break-all select-all font-mono">
                   {newKey}
                 </code>

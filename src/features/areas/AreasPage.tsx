@@ -17,6 +17,7 @@ import { leaveLocation, useLocationList } from '@/features/locations/useLocation
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 import { AreaCard, CreateAreaCard, UnassignedAreaCard } from './AreaCard';
 import { LocationSettingsMenu } from './LocationSettingsMenu';
 import { LocationTabs } from './LocationTabs';
@@ -170,7 +171,7 @@ export function AreasPage() {
         skeleton={
           <div className="flex flex-col gap-4">
             {/* Meta line skeleton */}
-            <div className="flex items-center gap-2">
+            <div className="row">
               <Skeleton className="h-4 w-12" />
               <Skeleton className="h-4 w-1" />
               <Skeleton className="h-4 w-20" />
@@ -221,10 +222,10 @@ export function AreasPage() {
 
             {/* Location info card */}
             <div className="glass-card rounded-[var(--radius-lg)] p-4">
-              <div className="flex items-center justify-between gap-3">
+              <div className="row-spread gap-3">
                 <div className="flex items-center gap-3 min-w-0 overflow-hidden">
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium px-2 py-1 ${isAdmin ? 'bg-[var(--accent)]/10 text-[var(--accent)]' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}>
+                  <div className="row shrink-0">
+                    <span className={cn('inline-flex items-center gap-1.5 text-[12px] font-medium px-2 py-1', isAdmin ? 'bg-[var(--accent)]/10 text-[var(--accent)]' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]')}>
                       {isAdmin ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
                       {isAdmin ? 'Admin' : 'Member'}
                     </span>

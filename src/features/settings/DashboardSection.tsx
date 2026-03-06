@@ -30,7 +30,7 @@ export function DashboardSection({ settings, updateSettings }: DashboardSectionP
                 { key: 'showRecentlyScanned' as const, label: 'Recently Scanned' },
                 { key: 'showRecentlyUpdated' as const, label: 'Recently Updated' },
               ]).map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between py-1">
+                <div key={key} className="row-spread py-1">
                   <span className="text-[14px] text-[var(--text-primary)]">{label}</span>
                   <Switch
                     checked={settings[key]}

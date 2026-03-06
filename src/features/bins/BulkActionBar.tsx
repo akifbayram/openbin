@@ -48,7 +48,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
       'transition-all duration-200',
       visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
     )}>
-    <div className="glass-heavy rounded-[var(--radius-full)] flex items-center gap-2 px-4 py-2.5 shadow-lg">
+    <div className="glass-heavy rounded-[var(--radius-full)] row px-4 py-2.5 shadow-lg">
       <CheckCircle2 className="h-4 w-4 text-[var(--accent)]" />
       <span className="text-[13px] font-medium text-[var(--text-secondary)] whitespace-nowrap">
         {selectedCount} selected

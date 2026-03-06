@@ -1,5 +1,6 @@
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface AiStreamingPreviewProps {
   previewUrls: string[];
@@ -11,9 +12,10 @@ interface AiStreamingPreviewProps {
 /** Shared streaming analysis UI — photo with scan overlay, streamed name/items, status indicator. */
 export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, initialStatusLabel }: AiStreamingPreviewProps) {
   const hasStreamedData = streamedItems.length > 0 || streamedName.length > 0;
-  const shimmerClass = `rounded-[var(--radius-lg)] ai-photo-shimmer ai-photo-shrink transition-all duration-500 ease-in-out ${
-    hasStreamedData ? 'max-h-20 opacity-80' : 'max-h-64'
-  }`;
+  const shimmerClass = cn(
+    'rounded-[var(--radius-lg)] ai-photo-shimmer ai-photo-shrink transition-all duration-500 ease-in-out',
+    hasStreamedData ? 'max-h-20 opacity-80' : 'max-h-64',
+  );
   const imgClass = 'w-full h-full object-cover rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5';
 
   return (
@@ -26,7 +28,7 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
         <div className="flex gap-2 overflow-x-auto">
           {previewUrls.map((url, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: preview URLs have no stable identity
-            <div key={i} className={`shrink-0 flex-fill ${shimmerClass}`}>
+            <div key={i} className={cn('shrink-0 flex-1 min-w-0', shimmerClass)}>
               <img src={url} alt={`Upload ${i + 1}`} className={imgClass} />
             </div>
           ))}
@@ -53,7 +55,7 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
         </ul>
       )}
 
-      <div className="flex items-center gap-2 text-[13px] text-[var(--text-tertiary)]">
+      <div className="row text-[13px] text-[var(--text-tertiary)]">
         <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--accent)]" />
         <span>{hasStreamedData ? 'Finding more items...' : initialStatusLabel}</span>
       </div>

@@ -42,7 +42,7 @@ export function CommandActionPreview({
       )}
 
       {actions.length === 0 ? (
-        <p className="hint py-4 text-center">
+        <p className="text-[14px] text-[var(--text-tertiary)] py-4 text-center">
           No matching {t.bins} found, or the command was ambiguous. Try using exact {t.bin} names.
         </p>
       ) : (

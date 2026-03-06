@@ -16,6 +16,7 @@ import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/lib/auth';
+import { cn } from '@/lib/utils';
 import { changeMemberRole, leaveLocation, regenerateInvite, removeMember, useLocationList, useLocationMembers } from './useLocations';
 
 interface LocationMembersDialogProps {
@@ -103,8 +104,8 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
 
         {/* Invite Code */}
         {location?.invite_code && (
-          <div className="flex items-center gap-2 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
-            <span className="flex-fill text-[14px] font-mono text-[var(--text-primary)] tracking-wider truncate">
+          <div className="row p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+            <span className="flex-1 min-w-0 text-[14px] font-mono text-[var(--text-primary)] tracking-wider truncate">
               {location.invite_code}
             </span>
             <Tooltip content="Copy invite code" side="bottom">
@@ -128,7 +129,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                   className="shrink-0"
                   aria-label="Regenerate invite code"
                 >
-                  <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={cn('h-4 w-4', regenerating && 'animate-spin')} />
                 </Button>
               </Tooltip>
             )}
@@ -159,7 +160,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                     displayName={member.display_name || member.user_id}
                     size="sm"
                   />
-                  <div className="flex-fill">
+                  <div className="flex-1 min-w-0">
                     <span className="text-[14px] text-[var(--text-primary)] truncate block">
                       {isSelf ? 'You' : member.display_name || member.user_id.slice(0, 8)}
                     </span>
@@ -244,7 +245,7 @@ function RoleToggle({ currentRole, onChangeRole }: { currentRole: string; onChan
         type="button"
         ref={triggerRef}
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 caption hover:text-[var(--text-secondary)] transition-colors"
+        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
       >
         {currentRole === 'admin' ? 'Admin' : 'Member'}
         <ChevronDown className="h-3 w-3" />
@@ -258,14 +259,14 @@ function RoleToggle({ currentRole, onChangeRole }: { currentRole: string; onChan
           <button
             type="button"
             onClick={() => { setOpen(false); if (currentRole !== 'admin') onChangeRole('admin'); }}
-            className={`w-full text-left px-3 py-2 text-[13px] transition-colors ${currentRole === 'admin' ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}
+            className={cn('w-full text-left px-3 py-2 text-[13px] transition-colors', currentRole === 'admin' ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]')}
           >
             Admin
           </button>
           <button
             type="button"
             onClick={() => { setOpen(false); if (currentRole !== 'member') onChangeRole('member'); }}
-            className={`w-full text-left px-3 py-2 text-[13px] transition-colors ${currentRole === 'member' ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}
+            className={cn('w-full text-left px-3 py-2 text-[13px] transition-colors', currentRole === 'member' ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]')}
           >
             Member
           </button>

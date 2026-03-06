@@ -21,6 +21,7 @@ import { useAiEnabled } from '@/lib/aiToggle';
 import { apiStream } from '@/lib/apiStream';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 import type { AiSuggestions } from '@/types';
 import type { BulkAddAction, BulkAddPhoto } from './useBulkAdd';
 
@@ -215,7 +216,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   return (
     <div className="space-y-5">
       {/* Photo counter */}
-      <div className="flex items-center justify-between text-[13px] text-[var(--text-secondary)]">
+      <div className="row-spread text-[13px] text-[var(--text-secondary)]">
         <span>Photo {currentIndex + 1} of {photos.length}</span>
         <span>{reviewedCount}/{photos.length} reviewed</span>
       </div>
@@ -235,20 +236,22 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
             <img
               src={photo.previewUrl}
               alt={`Upload ${currentIndex + 1}`}
-              className={`w-full rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out ${
-                photo.status === 'reviewed' ? 'max-h-20 object-cover opacity-80' : 'aspect-square object-cover'
-              }`}
+              className={cn(
+                'w-full rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
+                photo.status === 'reviewed' ? 'max-h-20 object-cover opacity-80' : 'aspect-square object-cover',
+              )}
             />
             {aiEnabled && photo.status === 'reviewed' && (
               <button
                 type="button"
                 onClick={() => setCorrectionOpen(!correctionOpen)}
                 title="Correct AI result"
-                className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${
+                className={cn(
+                  'absolute top-2 right-2 p-1.5 rounded-full transition-colors',
                   correctionOpen
                     ? 'bg-[var(--ai-accent)] text-white'
-                    : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]'
-                }`}
+                    : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
+                )}
               >
                 <Sparkles className="h-4 w-4" />
               </button>
@@ -259,11 +262,11 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
           {correctionOpen && photo.status === 'reviewed' && (
             <div className="space-y-1.5">
               {photo.correctionCount >= MAX_CORRECTIONS ? (
-                <p className="caption italic">
+                <p className="text-[12px] text-[var(--text-tertiary)] italic">
                   Correction limit reached — edit fields directly.
                 </p>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="row">
                   <Input
                     value={correctionText}
                     onChange={(e) => setCorrectionText(e.target.value)}
@@ -390,7 +393,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
           </div>
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-2">
+          <div className="row-spread pt-2">
             <Button
               variant="ghost"
               onClick={handleBack}
@@ -398,7 +401,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               <ChevronLeft className="h-4 w-4 mr-1" />
               Back
             </Button>
-            <div className="flex items-center gap-2">
+            <div className="row">
               <Button
                 variant="ghost"
                 onClick={handleSkip}

@@ -92,7 +92,7 @@ export function SettingsPage() {
                   displayName={user.displayName || user.username}
                   size="md"
                 />
-                <div className="flex-fill">
+                <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-medium text-[var(--text-primary)] truncate">
                     {user.displayName || user.username}
                   </p>

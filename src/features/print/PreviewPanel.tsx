@@ -46,9 +46,9 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
 
         <Card>
           <CardContent>
-            <div className="flex items-center justify-between mb-3">
+            <div className="row-spread mb-3">
               <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal">Preview</Label>
-              <span className="caption tabular-nums">
+              <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums">
                 {pageCount} {pageCount !== 1 ? 'pages' : 'page'}
               </span>
             </div>

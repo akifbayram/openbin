@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
+import { cn } from '@/lib/utils';
 import { FIELD_LABELS, type FieldKey } from './useColumnVisibility';
 
 /** Shared field toggle list used by both ColumnVisibilityMenu and SearchBarOverflowMenu */
@@ -19,7 +20,7 @@ export function FieldToggleList({ fields, visibility, onToggle }: {
         <label
           key={field}
           htmlFor={`field-toggle-${field}`}
-          className="w-full flex items-center justify-between px-3.5 py-2 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
+          className="w-full row-spread px-3.5 py-2 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
         >
           {FIELD_LABELS[field]}
           <Switch
@@ -59,7 +60,10 @@ export function ColumnVisibilityMenu({ applicableFields, visibility, onToggle }:
         </Button>
       </Tooltip>
       {visible && (
-        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 mt-1 w-52 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg overflow-hidden z-20`}>
+        <div className={cn(
+          animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
+          'absolute right-0 mt-1 w-52 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg overflow-hidden z-20',
+        )}>
           <div className="px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
             Visible Fields
           </div>

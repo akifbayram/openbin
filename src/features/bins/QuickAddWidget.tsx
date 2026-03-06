@@ -2,6 +2,7 @@ import { Check, ChevronLeft, Loader2, Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import type { useQuickAdd } from './useQuickAdd';
 
 interface QuickAddWidgetProps {
@@ -13,7 +14,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
   return (
     <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
       {quickAdd.state === 'input' && (
-        <div className="flex items-center gap-1.5">
+        <div className="row-tight">
           <Input
             value={quickAdd.value}
             onChange={(e) => quickAdd.setValue(e.target.value)}
@@ -71,7 +72,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
           {quickAdd.structureError && (
             <p className="text-[13px] text-[var(--destructive)]">{quickAdd.structureError}</p>
           )}
-          <div className="flex items-center gap-2">
+          <div className="row">
             <button
               type="button"
               onClick={quickAdd.cancelExpanded}
@@ -108,11 +109,12 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
                 <button key={i}
                   type="button"
                   onClick={() => quickAdd.toggleChecked(i)}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] transition-all ${
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] transition-all',
                     checked
                       ? 'bg-[var(--accent)] text-white'
-                      : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] line-through'
-                  }`}
+                      : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] line-through',
+                  )}
                 >
                   {checked && <Check className="h-3 w-3" />}
                   {item}
@@ -120,7 +122,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               );
             })}
           </div>
-          <div className="flex items-center gap-2 pt-1">
+          <div className="row pt-1">
             <Button
               type="button"
               variant="ghost"

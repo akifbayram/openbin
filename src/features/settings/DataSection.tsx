@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import type { useDataSectionActions } from './useDataSectionActions';
 
 interface DataSectionProps {
@@ -39,7 +40,7 @@ function SectionLabel({ children, trailing }: { children: React.ReactNode; trail
         {children}
       </span>
       {trailing && (
-        <span className="caption">{trailing}</span>
+        <span className="text-[12px] text-[var(--text-tertiary)]">{trailing}</span>
       )}
     </div>
   );
@@ -83,25 +84,19 @@ function SettingsRow({
       type="button"
       onClick={onClick}
       disabled={disabled || loading}
-      className={`flex items-center gap-3 px-3.5 py-3 hover:bg-[var(--bg-hover)] transition-colors w-full text-left disabled:opacity-40 disabled:pointer-events-none ${destructive ? 'text-[var(--destructive)]' : ''}`}
+      className={cn('flex items-center gap-3 px-3.5 py-3 hover:bg-[var(--bg-hover)] transition-colors w-full text-left disabled:opacity-40 disabled:pointer-events-none', destructive && 'text-[var(--destructive)]')}
     >
       <Icon
-        className={`h-[18px] w-[18px] shrink-0 ${
-          destructive ? 'text-[var(--destructive)]' : 'text-[var(--text-tertiary)]'
-        }`}
+        className={cn('h-[18px] w-[18px] shrink-0', destructive ? 'text-[var(--destructive)]' : 'text-[var(--text-tertiary)]')}
       />
-      <div className="flex-fill">
+      <div className="flex-1 min-w-0">
         <p
-          className={`text-[15px] font-medium leading-snug ${
-            destructive ? 'text-[var(--destructive)]' : 'text-[var(--text-primary)]'
-          }`}
+          className={cn('text-[15px] font-medium leading-snug', destructive ? 'text-[var(--destructive)]' : 'text-[var(--text-primary)]')}
         >
           {loading ? loadingLabel : label}
         </p>
         <p
-          className={`text-[13px] leading-snug ${
-            destructive ? 'text-[var(--destructive)]/60' : 'text-[var(--text-tertiary)]'
-          }`}
+          className={cn('text-[13px] leading-snug', destructive ? 'text-[var(--destructive)]/60' : 'text-[var(--text-tertiary)]')}
         >
           {description}
         </p>

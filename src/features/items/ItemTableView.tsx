@@ -63,7 +63,7 @@ export function ItemTableView({
                   <Highlight text={entry.name} query={searchQuery} />
                 </span>
               </div>
-              <div className="flex-fill flex items-center gap-2">
+              <div className="flex-1 min-w-0 row">
                 <div
                   className="hidden sm:block h-2 w-2 rounded-full shrink-0"
                   style={colorPreset ? { backgroundColor: colorPreset.dot } : { backgroundColor: 'var(--text-tertiary)' }}

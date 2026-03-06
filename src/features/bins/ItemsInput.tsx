@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
+import { cn } from '@/lib/utils';
 
 type InputState = 'input' | 'expanded' | 'processing' | 'preview';
 
@@ -177,7 +178,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2 min-h-8">
+      <div className="row-spread mb-2 min-h-8">
         <Label>{items.length} {items.length === 1 ? 'Item' : 'Items'}</Label>
       </div>
 
@@ -187,8 +188,8 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
             // biome-ignore lint/suspicious/noArrayIndexKey: items may contain duplicates
             <div key={index}>
               {index > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-              <div className="group flex items-center gap-1.5 px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors">
-                <span className="flex-fill text-[15px] text-[var(--text-primary)] leading-relaxed">{item}</span>
+              <div className="group row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors">
+                <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">{item}</span>
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
@@ -205,7 +206,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
 
       <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
         {state === 'input' && (
-          <div className="flex items-center gap-1.5">
+          <div className="row-tight">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -257,7 +258,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
             {error && (
               <p className="text-[13px] text-[var(--destructive)]">{error}</p>
             )}
-            <div className="flex items-center gap-2">
+            <div className="row">
               <button
                 type="button"
                 onClick={handleCollapse}
@@ -294,11 +295,12 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                   <button key={i}
                     type="button"
                     onClick={() => toggleItem(i)}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] transition-all ${
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] transition-all',
                       checked
                         ? 'bg-[var(--accent)] text-white'
-                        : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] line-through'
-                    }`}
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] line-through',
+                    )}
                   >
                     {checked && <Check className="h-3 w-3" />}
                     {item}
@@ -306,7 +308,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 );
               })}
             </div>
-            <div className="flex items-center gap-2 pt-1">
+            <div className="row pt-1">
               <Button
                 type="button"
                 variant="ghost"

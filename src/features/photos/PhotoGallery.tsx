@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import type { Photo } from '@/types';
 import { compressImage } from './compressImage';
 import { DeletePhotoDialog } from './DeletePhotoDialog';
@@ -53,7 +54,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
   const content = (
     <>
       {variant !== 'inline' && <Label>Photos</Label>}
-      <div className={`flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory${variant !== 'inline' ? ' mt-2.5' : ''}`}>
+      <div className={cn('flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory', variant !== 'inline' && 'mt-2.5')}>
         {photos.map((photo, index) => (
           <div key={photo.id} className="relative group flex-shrink-0">
             <button

@@ -120,7 +120,7 @@ function DialogContent({
           {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay dismisses dialog on click */}
           <div
             role="presentation"
-            className={`${overlayBackdrop} duration-200`}
+            className={cn(overlayBackdrop, 'duration-200')}
             style={{ opacity: isEntered ? 1 : 0 }}
             onClick={() => onOpenChange(false)}
           />

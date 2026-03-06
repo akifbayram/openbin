@@ -37,7 +37,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
 
   if (editing) {
     return (
-      <div className="flex items-center gap-2 px-4 py-2.5">
+      <div className="row px-4 py-2.5">
         <Input
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
@@ -77,7 +77,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
     <div className="group flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--bg-hover)] transition-colors">
       <button
         type="button"
-        className="flex-fill text-left cursor-pointer"
+        className="flex-1 min-w-0 text-left cursor-pointer"
         onClick={() => onNavigate(id)}
       >
         <span className="text-[15px] font-medium text-[var(--text-primary)] truncate block">

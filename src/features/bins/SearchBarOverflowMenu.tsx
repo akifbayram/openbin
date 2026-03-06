@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
+import { cn } from '@/lib/utils';
 import { FieldToggleList } from './ColumnVisibilityMenu';
 import type { FieldKey } from './useColumnVisibility';
 import type { ViewMode } from './useViewMode';
@@ -36,7 +37,10 @@ export function SearchBarOverflowMenu({ viewMode, onViewModeChange, applicableFi
         <MoreHorizontal className="h-4 w-4" />
       </Button>
       {visible && (
-        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 mt-1 w-56 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg overflow-hidden z-20`}>
+        <div className={cn(
+          animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
+          'absolute right-0 mt-1 w-56 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg overflow-hidden z-20',
+        )}>
           <div className="px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
             View
           </div>

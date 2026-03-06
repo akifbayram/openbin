@@ -82,7 +82,7 @@ function DemoAiShowcase({ onNext }: { onNext: () => void }) {
       <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
         AI-powered organization
       </h2>
-      <p className="hint mb-5 leading-relaxed">
+      <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
         Snap a photo, and AI catalogs everything inside.
       </p>
       {/* Mock photo area */}
@@ -286,7 +286,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Welcome to OpenBin
               </h2>
-              <p className="hint mb-6 leading-relaxed">
+              <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
                 We've set up a family home with 40+ organized bins — tools, kids' stuff, camping gear, and more. Let's take a quick tour.
               </p>
               <Button
@@ -307,7 +307,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Welcome to OpenBin
               </h2>
-              <p className="hint mb-6 leading-relaxed">
+              <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
                 Start by naming your first {t.location} — a space where your {t.bins} live, like your home, garage, or office.
               </p>
               <Input
@@ -396,7 +396,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Create your first {t.bin}
               </h2>
-              <p className="hint mb-5 leading-relaxed">
+              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 A {t.bin} is any container you want to track — a box, drawer, shelf, etc.
               </p>
               <BinPreviewCard
@@ -439,7 +439,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Everything in its place
               </h2>
-              <p className="hint mb-5 leading-relaxed">
+              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 Items, tags, area, notes, and a QR code.
               </p>
               <BinPreviewCard
@@ -468,7 +468,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Scan to find anything
               </h2>
-              <p className="hint mb-5 leading-relaxed">
+              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 Print this label and stick it on your {t.bin}. Scan with any phone camera to instantly see what's inside.
               </p>
               <QRCodeDisplay binId={createdBin.id} size={160} shortCode={createdBin.id} hideActions />
@@ -502,7 +502,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 You're ready to go
               </h2>
-              <p className="hint mb-5 leading-relaxed">
+              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 Here are a few things you can do next.
               </p>
               <div className="w-full space-y-2 mb-6">
@@ -544,7 +544,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 Supercharge with AI
               </h2>
-              <p className="hint mb-5 leading-relaxed">
+              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 Bring your own API key from OpenAI, Anthropic, Google, or any compatible provider.
               </p>
               <div className="w-full space-y-2 mb-6">
@@ -555,7 +555,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                     </div>
                     <div className="min-w-0">
                       <div className="text-[13px] font-semibold text-[var(--text-primary)]">{title}</div>
-                      <div className="caption leading-snug">{desc}</div>
+                      <div className="text-[12px] text-[var(--text-tertiary)] leading-snug">{desc}</div>
                     </div>
                   </div>
                 ))}
@@ -586,7 +586,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
                 You're ready to go
               </h2>
-              <p className="hint mb-5 leading-relaxed">
+              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 Here are a few things you can do next.
               </p>
               <div className="w-full space-y-2 mb-6">

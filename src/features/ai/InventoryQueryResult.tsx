@@ -40,10 +40,10 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
                 ? <Trash2 className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
                 : <Search className="h-4 w-4 shrink-0 text-[var(--accent)]" />
               }
-              <div className="flex-fill">
+              <div className="flex-1 min-w-0">
                 <p className="text-[14px] font-medium text-[var(--text-primary)] truncate">{match.name}</p>
                 {match.area_name && (
-                  <p className="caption">{match.area_name}</p>
+                  <p className="text-[12px] text-[var(--text-tertiary)]">{match.area_name}</p>
                 )}
                 {match.items.length > 0 && (
                   <p className="text-[12px] text-[var(--text-secondary)] truncate">{match.items.join(', ')}</p>

@@ -1,5 +1,6 @@
 import { resolveColor } from '@/lib/colorPalette';
 import { resolveIcon } from '@/lib/iconMap';
+import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
 import { computeCodeFontSize } from './labelFormats';
@@ -66,7 +67,7 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
 
     const codeLabel = layout.codeUnderQr ? (
       <div
-        className={`label-code font-mono font-bold text-center ${layout.useColoredCard ? '' : 'text-gray-700'}`}
+        className={cn('label-code font-mono font-bold text-center', !layout.useColoredCard && 'text-gray-700')}
         style={{ fontSize: qrCodeFontSize, width: format.qrSize }}
       >
         {bin.id}
@@ -75,7 +76,7 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
 
     qrSection = (
       <div
-        className={`${layout.useColoredCard ? 'label-qr-card' : ''} shrink-0 flex flex-col items-center ${layout.isPortrait ? 'mb-[2pt]' : ''}`}
+        className={cn(layout.useColoredCard && 'label-qr-card', 'shrink-0 flex flex-col items-center', layout.isPortrait && 'mb-[2pt]')}
         style={layout.useColoredCard ? {
           ...(colorPreset ? { backgroundColor: colorPreset.bg } : {}),
           borderRadius,
@@ -94,12 +95,17 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
     );
   }
 
-  const cellClass = `label-cell flex overflow-hidden ${textAlign === 'center' ? 'justify-center' : ''} ${layout.isPortrait ? 'flex-col' : 'flex-row items-center gap-[4pt]'} ${layout.isPortrait ? (textAlign === 'center' ? 'items-center' : 'items-start') : ''}`;
+  const cellClass = cn(
+    'label-cell flex overflow-hidden',
+    textAlign === 'center' && 'justify-center',
+    layout.isPortrait ? 'flex-col' : 'flex-row items-center gap-[4pt]',
+    layout.isPortrait && (textAlign === 'center' ? 'items-center' : 'items-start'),
+  );
 
   return (
     <div className={cellClass} style={{ width: format.cellWidth, height: format.cellHeight, padding: format.padding }}>
       {qrSection}
-      <div className={`min-w-0 flex flex-col ${layout.isPortrait && textAlign === 'center' ? 'items-center text-center w-full' : layout.isPortrait ? 'w-full' : ''}`}>
+      <div className={cn('min-w-0 flex flex-col', layout.isPortrait && textAlign === 'center' ? 'items-center text-center w-full' : layout.isPortrait ? 'w-full' : '')}>
         {layout.showSwatchBar && colorPreset && (
           <div
             className="color-swatch-print rounded-[1pt] w-full shrink-0"
@@ -113,10 +119,10 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
         )}
         {showBinName && (
           <div
-            className={`label-name font-semibold ${layout.isPortrait && textAlign === 'center' ? 'text-center' : ''}`}
+            className={cn('label-name font-semibold', layout.isPortrait && textAlign === 'center' && 'text-center')}
             style={{ fontSize: format.nameFontSize }}
           >
-            <span className={`min-w-0 ${layout.useColoredCard ? 'line-clamp-2' : 'line-clamp-1'}`}>{bin.name}</span>
+            <span className={cn('min-w-0', layout.useColoredCard ? 'line-clamp-2' : 'line-clamp-1')}>{bin.name}</span>
           </div>
         )}
       </div>

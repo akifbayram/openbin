@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { useDialogPortal } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useTagStyle } from '@/features/tags/useTagStyle';
+import { cn } from '@/lib/utils';
 
 interface TagInputProps {
   tags: string[];
@@ -128,7 +129,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
           <Badge
             key={tag}
             variant="secondary"
-            className={`gap-1 pl-1.5 ${exitingTags.has(tag) ? 'animate-shrink-out' : ''}`}
+            className={cn('gap-1 pl-1.5', exitingTags.has(tag) && 'animate-shrink-out')}
             style={getTagStyle(tag)}
           >
             <button
@@ -182,11 +183,10 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
                   e.preventDefault();
                   addTag(tag);
                 }}
-                className={`inline-flex items-center px-2.5 py-0.5 text-[12px] font-medium transition-colors cursor-pointer ${
-                  !baseStyle && !isHighlighted
-                    ? 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
-                    : ''
-                }`}
+                className={cn(
+                  'inline-flex items-center px-2.5 py-0.5 text-[12px] font-medium transition-colors cursor-pointer',
+                  !baseStyle && !isHighlighted && 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]',
+                )}
                 style={style}
               >
                 {tag}

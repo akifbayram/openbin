@@ -7,6 +7,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
+import { cn } from '@/lib/utils';
 import type { Bin, Location } from '@/types';
 
 interface BinDetailToolbarProps {
@@ -67,7 +68,7 @@ export function BinDetailToolbar({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="row">
       <MenuButton />
       {!editing && (
         <Button
@@ -91,7 +92,7 @@ export function BinDetailToolbar({
             placeholder="Name..."
           />
         ) : (
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="row-tight min-w-0">
             <span className="text-[17px] font-semibold text-[var(--text-primary)] leading-tight truncate">{bin.name}</span>
             {bin.visibility === 'private' && (
               <Lock className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
@@ -174,7 +175,10 @@ export function BinDetailToolbar({
               </Button>
             </Tooltip>
             {visible && (
-              <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1.5 z-50 min-w-[180px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]`}>
+              <div className={cn(
+                animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
+                'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]',
+              )}>
                 <button
                   type="button"
                   className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
