@@ -13,7 +13,7 @@ import { TagColorsProvider } from '@/features/tags/TagColorsContext';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { useNavigationGuard } from '@/lib/navigationGuard';
-import { useTheme } from '@/lib/theme';
+import { useColorMode } from '@/components/ui/color-mode';
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
 import { toggleSidebarCollapsed, useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
 import { cn } from '@/lib/utils';
@@ -31,7 +31,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function AppLayout() {
-  useTheme();
+  useColorMode();
   const { isCollapsed: sidebarCollapsed } = useSidebarCollapsed();
   const { settings } = useAppSettings();
   const { activeLocationId, setActiveLocationId, demoMode } = useAuth();

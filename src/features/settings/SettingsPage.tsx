@@ -15,7 +15,7 @@ import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
 import { useTerminology } from '@/lib/terminology';
-import { useTheme } from '@/lib/theme';
+import { useColorMode } from '@/components/ui/color-mode';
 import { usePermissions } from '@/lib/usePermissions';
 import { ApiKeysSection } from './ApiKeysSection';
 import { DangerZoneSection } from './DangerZoneSection';
@@ -26,7 +26,7 @@ import { useDataSectionActions } from './useDataSectionActions';
 
 export function SettingsPage() {
   const navigate = useNavigate();
-  const { preference, setThemePreference } = useTheme();
+  const { preference, setColorMode } = useColorMode();
   const { aiEnabled, setAiEnabled } = useAiEnabled();
   const { settings, updateSettings, resetSettings } = useAppSettings();
   const t = useTerminology();
@@ -67,10 +67,10 @@ export function SettingsPage() {
             options={[
               { key: 'light' as const, label: 'Light', icon: Sun },
               { key: 'dark' as const, label: 'Dark', icon: Moon },
-              { key: 'auto' as const, label: 'Auto', icon: Monitor },
+              { key: 'system' as const, label: 'Auto', icon: Monitor },
             ]}
             value={preference}
-            onChange={setThemePreference}
+            onChange={setColorMode}
             iconOnly
           />
         }

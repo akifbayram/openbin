@@ -4,7 +4,7 @@ import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
 import { getCardRenderProps, parseCardStyle } from '@/lib/cardStyle';
 import { resolveIcon } from '@/lib/iconMap';
 import { getPremadeUrl } from '@/lib/premadeBackgrounds';
-import { useTheme } from '@/lib/theme';
+import { useColorMode } from '@/components/ui/color-mode';
 import { cn } from '@/lib/utils';
 
 export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, areaName, className }: {
@@ -17,8 +17,8 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
   areaName?: string;
   className?: string;
 }) {
-  const { theme } = useTheme();
-  const renderProps = getCardRenderProps(color, cardStyle ?? '', theme);
+  const { colorMode } = useColorMode();
+  const renderProps = getCardRenderProps(color, cardStyle ?? '', colorMode);
   const parsed = parseCardStyle(cardStyle ?? '');
   const isPhoto = renderProps.isPhotoVariant;
   const coverPhotoId = parsed?.coverPhotoId;

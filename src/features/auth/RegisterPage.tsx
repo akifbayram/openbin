@@ -7,15 +7,15 @@ import { Label } from '@/components/ui/label';
 import { toaster } from '@/components/ui/toaster';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
-import { cycleThemePreference, useTheme } from '@/lib/theme';
+import { cycleColorMode, useColorMode } from '@/components/ui/color-mode';
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,50}$/;
 
 export function RegisterPage() {
   const navigate = useNavigate();
   const { register } = useAuth();
-    const { settings } = useAppSettings();
-  const { preference, setThemePreference } = useTheme();
+  const { settings } = useAppSettings();
+  const { preference, setColorMode } = useColorMode();
   const ThemeIcon = preference === 'light' ? Sun : preference === 'dark' ? Moon : Monitor;
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -80,7 +80,7 @@ export function RegisterPage() {
     <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-[var(--bg-base)] relative">
       <button
         type="button"
-        onClick={() => setThemePreference(cycleThemePreference(preference))}
+        onClick={() => setColorMode(cycleColorMode(preference))}
         aria-label={`Theme: ${preference}`}
         className="absolute top-4 right-4 p-2.5 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
       >

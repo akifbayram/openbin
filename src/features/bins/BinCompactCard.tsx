@@ -2,7 +2,7 @@ import { Check, Lock } from 'lucide-react';
 import React from 'react';
 import { Highlight } from '@/components/ui/highlight';
 import { resolveIcon } from '@/lib/iconMap';
-import { useTheme } from '@/lib/theme';
+import { useColorMode } from '@/components/ui/color-mode';
 import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { computeBinCardStyles } from './binCardStyles';
@@ -30,11 +30,11 @@ export const BinCompactCard = React.memo(function BinCompactCard({
   searchQuery = '',
   isVisible,
 }: BinCompactCardProps) {
-  const { theme } = useTheme();
+  const { colorMode } = useColorMode();
   const BinIcon = resolveIcon(bin.icon);
 
   const { renderProps, isPhoto, coverImageSrc, secondaryStyle, secondaryBorderStyle, iconStyle, nameStyle } =
-    computeBinCardStyles(bin.color, bin.card_style, theme);
+    computeBinCardStyles(bin.color, bin.card_style, colorMode);
 
   const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect });
 

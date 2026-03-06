@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { resolveIcon } from '@/lib/iconMap';
-import { useTheme } from '@/lib/theme';
+import { useColorMode } from '@/components/ui/color-mode';
 import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { computeBinCardStyles } from './binCardStyles';
@@ -24,12 +24,12 @@ interface BinCardProps {
 }
 
 export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick, selectable, selected, onSelect, searchQuery = '', isVisible }: BinCardProps) {
-  const { theme } = useTheme();
+  const { colorMode } = useColorMode();
   const getTagStyle = useTagStyle();
   const BinIcon = resolveIcon(bin.icon);
 
   const { renderProps, isPhoto, coverImageSrc, secondaryStyle, secondaryBorderStyle, iconStyle, nameStyle, tagDefaultStyle } =
-    computeBinCardStyles(bin.color, bin.card_style, theme);
+    computeBinCardStyles(bin.color, bin.card_style, colorMode);
 
   const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect });
 
