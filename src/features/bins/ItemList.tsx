@@ -152,6 +152,7 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
         ) : (
           <button
             type="button"
+            onTouchEnd={(e) => { if (!swipingRef.current) { e.preventDefault(); handleStartEdit(); } }}
             onClick={handleStartEdit}
             className="flex-1 min-w-0 text-left text-[15px] text-[var(--text-primary)] leading-relaxed cursor-text"
           >
@@ -165,7 +166,7 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
             <button
               type="button"
               onClick={onDelete}
-              className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
+              className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity"
               aria-label="Remove item"
             >
               <X className="h-3.5 w-3.5" />

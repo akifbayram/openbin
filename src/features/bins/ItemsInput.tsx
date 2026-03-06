@@ -269,6 +269,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
                 ) : (
                   <button
                     type="button"
+                    onTouchEnd={(e) => { e.preventDefault(); startEditing(index); }}
                     onClick={() => startEditing(index)}
                     className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed text-left cursor-text truncate"
                   >
