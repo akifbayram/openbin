@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Dialog } from '@chakra-ui/react';
+import { Button, Drawer } from '@chakra-ui/react';
+import { DRAWER_PLACEMENT } from '@/components/ui/provider';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAuth } from '@/lib/auth';
 import { updateBin } from './useBins';
@@ -31,18 +32,22 @@ export function BulkAreaDialog({ open, onOpenChange, binIds, onDone }: BulkAreaD
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <Dialog.Backdrop />
-      <Dialog.Positioner>
-        <Dialog.Content>
-          <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Move to Area</Dialog.Title>
-            <Dialog.Description>
+    <Drawer.Root
+      open={open}
+      onOpenChange={(e) => onOpenChange(e.open)}
+      placement={DRAWER_PLACEMENT}
+    >
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>Move to Area</Drawer.Title>
+            <Drawer.Description>
               Assign {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''} to an area.
-            </Dialog.Description>
-          </Dialog.Header>
-          <Dialog.Body>
+            </Drawer.Description>
+          </Drawer.Header>
+          <Drawer.Body>
             <div className="space-y-2">
               <AreaPicker
                 locationId={activeLocationId ?? undefined}
@@ -50,17 +55,17 @@ export function BulkAreaDialog({ open, onOpenChange, binIds, onDone }: BulkAreaD
                 onChange={setAreaId}
               />
             </div>
-          </Dialog.Body>
-          <Dialog.Footer>
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          </Drawer.Body>
+          <Drawer.Footer flexDirection="column">
+            <Button width="full" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleApply} disabled={loading}>
+            <Button width="full" onClick={handleApply} disabled={loading}>
               {loading ? 'Moving...' : 'Apply'}
             </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
-      </Dialog.Positioner>
-    </Dialog.Root>
+          </Drawer.Footer>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }

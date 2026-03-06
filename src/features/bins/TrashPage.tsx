@@ -14,7 +14,8 @@ import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
 import type { Bin } from '@/types';
 import { notifyBinsChanged, permanentDeleteBin, restoreBinFromTrash, useTrashBins } from './useBins';
-import { Button, Dialog } from '@chakra-ui/react'
+import { DRAWER_PLACEMENT } from '@/components/ui/provider'
+import { Button, Drawer } from '@chakra-ui/react'
 
 
 export function TrashPage() {
@@ -137,41 +138,44 @@ export function TrashPage() {
       )}
 
       {/* Confirm permanent delete */}
-      <Dialog.Root open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Permanently Delete</Dialog.Title>
-          </Dialog.Header>
-          <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
-              <AlertTriangle className="h-5 w-5 text-red-500 dark:text-red-400" />
-            </div>
-            <div>
-              <p className="text-[15px]">
-                Are you sure you want to permanently delete <strong>"{confirmDelete?.name}"</strong>?
-              </p>
-              <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
-                This action cannot be undone. All photos will also be deleted.
-              </p>
-            </div>
-          </div>
-          <Dialog.Footer>
-            <Button variant="ghost" onClick={() => setConfirmDelete(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="solid" colorPalette="red"
-              onClick={handlePermanentDelete}
-            >
-              Delete Forever
-            </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+      <Drawer.Root role="alertdialog" placement={DRAWER_PLACEMENT} open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
+        <Drawer.Backdrop />
+        <Drawer.Positioner>
+          <Drawer.Content>
+            <Drawer.CloseTrigger />
+            <Drawer.Header>
+              <Drawer.Title>Permanently Delete</Drawer.Title>
+            </Drawer.Header>
+            <Drawer.Body>
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-red-500 dark:text-red-400" />
+                </div>
+                <div>
+                  <p className="text-[15px]">
+                    Are you sure you want to permanently delete <strong>"{confirmDelete?.name}"</strong>?
+                  </p>
+                  <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
+                    This action cannot be undone. All photos will also be deleted.
+                  </p>
+                </div>
+              </div>
+            </Drawer.Body>
+            <Drawer.Footer>
+              <Button width="full" variant="ghost" onClick={() => setConfirmDelete(null)}>
+                Cancel
+              </Button>
+              <Button
+                width="full"
+                variant="solid" colorPalette="red"
+                onClick={handlePermanentDelete}
+              >
+                Delete Forever
+              </Button>
+            </Drawer.Footer>
+          </Drawer.Content>
+        </Drawer.Positioner>
+      </Drawer.Root>
     </div>
   );
 }

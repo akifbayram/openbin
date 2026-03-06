@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Dialog } from '@chakra-ui/react';
+import { Drawer } from '@chakra-ui/react';
+import { DRAWER_PLACEMENT } from '@/components/ui/provider';
 import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
@@ -76,18 +77,18 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
 
   return (
     <>
-      <Dialog.Root open={open} onOpenChange={(e) => handleOpenChange(e.open)}>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-            <Dialog.Header>
-              {!successInfo && <Dialog.Title>New {t.Bin}</Dialog.Title>}
+      <Drawer.Root placement={DRAWER_PLACEMENT} open={open} onOpenChange={(e) => handleOpenChange(e.open)}>
+        <Drawer.Backdrop />
+        <Drawer.Positioner>
+          <Drawer.Content>
+            <Drawer.CloseTrigger />
+            <Drawer.Header>
+              {!successInfo && <Drawer.Title>New {t.Bin}</Drawer.Title>}
               {!successInfo && (
-                <Dialog.Description>Add a new storage {t.bin} to your inventory.</Dialog.Description>
+                <Drawer.Description>Add a new storage {t.bin} to your inventory.</Drawer.Description>
               )}
-            </Dialog.Header>
-            <Dialog.Body>
+            </Drawer.Header>
+            <Drawer.Body>
               {activeLocationId && (
                 successInfo ? (
                   <BinCreateSuccess
@@ -109,10 +110,10 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
                   />
                 )
               )}
-            </Dialog.Body>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+            </Drawer.Body>
+          </Drawer.Content>
+        </Drawer.Positioner>
+      </Drawer.Root>
 
       <AiSetupDialog open={aiSetupOpen} onOpenChange={setAiSetupOpen} onNavigate={() => handleOpenChange(false)} />
     </>

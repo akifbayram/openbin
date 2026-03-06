@@ -1,7 +1,8 @@
 import { GripVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toaster } from '@/components/ui/toaster';
-import { Button, Dialog, Input } from '@chakra-ui/react';
+import { Button, Drawer, Input } from '@chakra-ui/react';
+import { DRAWER_PLACEMENT } from '@/components/ui/provider';
 import {
   addCustomField,
   deleteCustomField,
@@ -17,7 +18,7 @@ interface CustomFieldsDialogProps {
 
 export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFieldsDialogProps) {
   const { fields } = useCustomFields(open ? locationId : null);
-    const [newName, setNewName] = useState('');
+  const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -64,87 +65,89 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-        <Dialog.Header>
-          <Dialog.Title>Custom Fields</Dialog.Title>
-          <Dialog.Description>
-            Define custom fields that appear on all bins in this location.
-          </Dialog.Description>
-        </Dialog.Header>
+    <Drawer.Root open={open} onOpenChange={(e) => onOpenChange(e.open)} placement={DRAWER_PLACEMENT}>
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>Custom Fields</Drawer.Title>
+            <Drawer.Description>
+              Define custom fields that appear on all bins in this location.
+            </Drawer.Description>
+          </Drawer.Header>
 
-        <div className="space-y-3">
-          {fields.length === 0 && (
-            <p className="text-[13px] text-gray-500 dark:text-gray-400 py-2">
-              No custom fields yet. Add one below.
-            </p>
-          )}
-
-          {fields.map((field) => (
-            <div key={field.id} className="flex items-center gap-2">
-              <GripVertical className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0 opacity-40" />
-              {editingId === field.id ? (
-                <form
-                  className="flex-1 flex items-center gap-2"
-                  onSubmit={(e) => { e.preventDefault(); handleRename(field.id); }}
-                >
-                  <Input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    autoFocus
-                    className="h-8 text-[14px]"
-                  />
-                  <Button type="submit" size="xs" px="0" variant="ghost" flexShrink={0} disabled={!editName.trim()}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button type="button" size="xs" px="0" variant="ghost" flexShrink={0} onClick={() => setEditingId(null)}>
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </form>
-              ) : (
-                <>
-                  <span className="flex-1 text-[14px]  truncate">
-                    {field.name}
-                  </span>
-                  <Button
-                    size="xs" px="0"
-                    variant="ghost"
-                    flexShrink={0}
-                    onClick={() => { setEditingId(field.id); setEditName(field.name); }}
-                  >
-                    <Pencil className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-                  </Button>
-                  <Button
-                    size="xs" px="0"
-                    variant="ghost"
-                    flexShrink={0}
-                    onClick={() => handleDelete(field.id, field.name)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
-                  </Button>
-                </>
+          <Drawer.Body>
+            <div className="space-y-3">
+              {fields.length === 0 && (
+                <p className="text-[13px] text-gray-500 dark:text-gray-400 py-2">
+                  No custom fields yet. Add one below.
+                </p>
               )}
-            </div>
-          ))}
 
-          <form onSubmit={handleAdd} className="flex items-center gap-2 pt-2 border-t border-black/6 dark:border-white/6">
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="New field name"
-              className="h-8 text-[14px]"
-            />
-            <Button type="submit" size="sm" disabled={!newName.trim() || adding} flexShrink={0}>
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Add
-            </Button>
-          </form>
-        </div>
-      </Dialog.Content>
-        </Dialog.Positioner>
-    </Dialog.Root>
+              {fields.map((field) => (
+                <div key={field.id} className="flex items-center gap-2">
+                  <GripVertical className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0 opacity-40" />
+                  {editingId === field.id ? (
+                    <form
+                      className="flex-1 flex items-center gap-2"
+                      onSubmit={(e) => { e.preventDefault(); handleRename(field.id); }}
+                    >
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        autoFocus
+                        className="h-8 text-[14px]"
+                      />
+                      <Button type="submit" size="xs" px="0" variant="ghost" flexShrink={0} disabled={!editName.trim()}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button type="button" size="xs" px="0" variant="ghost" flexShrink={0} onClick={() => setEditingId(null)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </form>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-[14px]  truncate">
+                        {field.name}
+                      </span>
+                      <Button
+                        size="xs" px="0"
+                        variant="ghost"
+                        flexShrink={0}
+                        onClick={() => { setEditingId(field.id); setEditName(field.name); }}
+                      >
+                        <Pencil className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                      </Button>
+                      <Button
+                        size="xs" px="0"
+                        variant="ghost"
+                        flexShrink={0}
+                        onClick={() => handleDelete(field.id, field.name)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              ))}
+
+              <form onSubmit={handleAdd} className="flex items-center gap-2 pt-2 border-t border-black/6 dark:border-white/6">
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="New field name"
+                  className="h-8 text-[14px]"
+                />
+                <Button type="submit" size="sm" disabled={!newName.trim() || adding} flexShrink={0}>
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  Add
+                </Button>
+              </form>
+            </div>
+          </Drawer.Body>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }

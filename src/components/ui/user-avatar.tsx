@@ -1,41 +1,53 @@
-import { cn } from '@/lib/utils';
+import { Avatar } from '@chakra-ui/react';
+import type React from 'react';
 
-const sizeClasses = {
-  xs: 'h-5 w-5 text-[10px]',
-  sm: 'h-8 w-8 text-[13px]',
-  md: 'h-9 w-9 text-[14px]',
-  lg: 'h-24 w-24 text-[32px]',
-} as const;
+const sizeStyles: Record<string, React.CSSProperties> = {
+  xs: { height: '1.25rem', width: '1.25rem', fontSize: '10px' },
+  sm: { height: '2rem', width: '2rem', fontSize: '13px' },
+  md: { height: '2.25rem', width: '2.25rem', fontSize: '14px' },
+  lg: { height: '6rem', width: '6rem', fontSize: '32px' },
+};
 
 interface UserAvatarProps {
   avatarUrl?: string | null;
   displayName?: string;
-  size?: keyof typeof sizeClasses;
+  size?: keyof typeof sizeStyles;
   className?: string;
 }
 
 export function UserAvatar({ avatarUrl, displayName, size = 'sm', className }: UserAvatarProps) {
   const initial = displayName?.[0]?.toUpperCase() ?? '?';
 
-  if (avatarUrl) {
-    return (
-      <img
-        src={avatarUrl}
-        alt=""
-        className={cn('rounded-full object-cover shrink-0', sizeClasses[size], className)}
-      />
-    );
-  }
+  const baseStyle: React.CSSProperties = {
+    borderRadius: 'var(--radius-full)',
+    flexShrink: 0,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    ...(!avatarUrl ? {
+      background: 'var(--bg-active)',
+      fontWeight: 600,
+      color: 'var(--text-medium)',
+    } : {}),
+    ...sizeStyles[size],
+  };
 
   return (
-    <div
-      className={cn(
-        'rounded-full bg-gray-500/16 dark:bg-gray-500/28 flex items-center justify-center font-semibold text-gray-600 dark:text-gray-300 shrink-0',
-        sizeClasses[size],
-        className,
-      )}
+    <Avatar.Root
+      unstyled
+      style={baseStyle}
+      className={className}
     >
-      {initial}
-    </div>
+      {avatarUrl ? (
+        <Avatar.Image
+          src={avatarUrl}
+          alt=""
+          style={{ height: '100%', width: '100%', objectFit: 'cover' }}
+        />
+      ) : (
+        <Avatar.Fallback name={displayName}>{initial}</Avatar.Fallback>
+      )}
+    </Avatar.Root>
   );
 }

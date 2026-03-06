@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Dialog } from '@chakra-ui/react';
+import { Button, Drawer } from '@chakra-ui/react';
+import { DRAWER_PLACEMENT } from '@/components/ui/provider';
 import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
 import { TagInput } from './TagInput';
@@ -46,33 +47,37 @@ export function BulkTagDialog({ open, onOpenChange, binIds, onDone, allTags }: B
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <Dialog.Backdrop />
-      <Dialog.Positioner>
-        <Dialog.Content>
-          <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Add Tags</Dialog.Title>
-            <Dialog.Description>
+    <Drawer.Root
+      open={open}
+      onOpenChange={(e) => onOpenChange(e.open)}
+      placement={DRAWER_PLACEMENT}
+    >
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>Add Tags</Drawer.Title>
+            <Drawer.Description>
               Add tags to {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''}.
-            </Dialog.Description>
-          </Dialog.Header>
-          <Dialog.Body>
+            </Drawer.Description>
+          </Drawer.Header>
+          <Drawer.Body>
             <div className="space-y-2">
               <Label>Tags</Label>
               <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
             </div>
-          </Dialog.Body>
-          <Dialog.Footer>
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          </Drawer.Body>
+          <Drawer.Footer flexDirection="column">
+            <Button width="full" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleApply} disabled={tags.length === 0 || loading}>
+            <Button width="full" onClick={handleApply} disabled={tags.length === 0 || loading}>
               {loading ? 'Applying...' : 'Apply'}
             </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
-      </Dialog.Positioner>
-    </Dialog.Root>
+          </Drawer.Footer>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }

@@ -1,5 +1,6 @@
+import { Drawer } from '@chakra-ui/react';
+import { DRAWER_PLACEMENT } from '@/components/ui/provider';
 import { formatKeys, groupedShortcuts } from '@/lib/shortcuts';
-import { Dialog } from '@chakra-ui/react';
 
 function KeyBadge({ children }: { children: string }) {
   return (
@@ -13,15 +14,15 @@ export function ShortcutsHelp({ open, onOpenChange }: { open: boolean; onOpenCha
   const groups = groupedShortcuts();
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <Dialog.Backdrop />
-      <Dialog.Positioner>
-        <Dialog.Content>
-          <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Keyboard Shortcuts</Dialog.Title>
-          </Dialog.Header>
-          <Dialog.Body>
+    <Drawer.Root placement={DRAWER_PLACEMENT} open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>Keyboard Shortcuts</Drawer.Title>
+          </Drawer.Header>
+          <Drawer.Body>
             <div className="space-y-5">
               {groups.map((group) => (
                 <div key={group.category}>
@@ -50,9 +51,9 @@ export function ShortcutsHelp({ open, onOpenChange }: { open: boolean; onOpenCha
                 </div>
               ))}
             </div>
-          </Dialog.Body>
-        </Dialog.Content>
-      </Dialog.Positioner>
-    </Dialog.Root>
+          </Drawer.Body>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }

@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { EmptyState as ChakraEmptyState, VStack } from '@chakra-ui/react';
 
 interface EmptyStateProps {
   icon: React.ComponentType<{ className?: string }>;
@@ -10,16 +10,36 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon: Icon, title, subtitle, compact, children }: EmptyStateProps) {
   return (
-    <div className={cn(
-      'flex flex-col items-center justify-center gap-5 text-gray-500 dark:text-gray-400',
-      compact ? 'py-4' : 'py-24'
-    )}>
-      <Icon className="h-16 w-16 opacity-40" />
-      <div className="text-center space-y-1.5">
-        <p className="text-[17px] font-semibold text-gray-600 dark:text-gray-300">{title}</p>
-        {subtitle && <p className="text-[13px]">{subtitle}</p>}
-      </div>
-      {children}
-    </div>
+    <ChakraEmptyState.Root
+      color="var(--text-tertiary)"
+      py={compact ? '4' : '24'}
+    >
+      <ChakraEmptyState.Content
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        gap="5"
+      >
+        <ChakraEmptyState.Indicator>
+          <Icon className="h-16 w-16 opacity-40" />
+        </ChakraEmptyState.Indicator>
+        <VStack textAlign="center" gap="1.5">
+          <ChakraEmptyState.Title
+            fontSize="17px"
+            fontWeight="semibold"
+            color="var(--text-medium)"
+          >
+            {title}
+          </ChakraEmptyState.Title>
+          {subtitle && (
+            <ChakraEmptyState.Description fontSize="13px">
+              {subtitle}
+            </ChakraEmptyState.Description>
+          )}
+        </VStack>
+        {children}
+      </ChakraEmptyState.Content>
+    </ChakraEmptyState.Root>
   );
 }

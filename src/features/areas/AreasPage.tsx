@@ -18,7 +18,8 @@ import { AreaCard, CreateAreaCard, UnassignedAreaCard } from './AreaCard';
 import { LocationSettingsMenu } from './LocationSettingsMenu';
 import { LocationTabs } from './LocationTabs';
 import { createArea, deleteArea, updateArea, useAreaList } from './useAreas';
-import { Button, Dialog, Input } from '@chakra-ui/react'
+import { DRAWER_PLACEMENT } from '@/components/ui/provider'
+import { Button, Drawer, Input } from '@chakra-ui/react'
 
 
 interface DeleteAreaTarget {
@@ -313,70 +314,74 @@ export function AreasPage() {
         )}
       </Crossfade>
 
-      {/* Create Area Dialog */}
-      <Dialog.Root open={createAreaOpen} onOpenChange={(e) => setCreateAreaOpen(e.open)}>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>{`Create ${t.Area}`}</Dialog.Title>
-            <Dialog.Description>
-              {`${t.Areas} help organize ${t.bins} by zone (e.g. Garage, Kitchen, Closet).`}
-            </Dialog.Description>
-          </Dialog.Header>
-          <form onSubmit={handleCreateArea} className="space-y-5">
-            <div className="space-y-2">
-              <Input
-                value={newAreaName}
-                onChange={(e) => setNewAreaName(e.target.value)}
-                placeholder={`${t.Area} name...`}
-                autoFocus
-                required
-              />
-            </div>
-            <Dialog.Footer>
-              <Button type="button" variant="ghost" onClick={() => setCreateAreaOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!newAreaName.trim() || creatingArea}>
+      {/* Create Area Drawer */}
+      <Drawer.Root placement={DRAWER_PLACEMENT} open={createAreaOpen} onOpenChange={(e) => setCreateAreaOpen(e.open)}>
+        <Drawer.Backdrop />
+        <Drawer.Positioner>
+          <Drawer.Content>
+            <Drawer.CloseTrigger />
+            <Drawer.Header>
+              <Drawer.Title>{`Create ${t.Area}`}</Drawer.Title>
+              <Drawer.Description>
+                {`${t.Areas} help organize ${t.bins} by zone (e.g. Garage, Kitchen, Closet).`}
+              </Drawer.Description>
+            </Drawer.Header>
+            <Drawer.Body>
+              <form id="create-area-form" onSubmit={handleCreateArea} className="space-y-5">
+                <div className="space-y-2">
+                  <Input
+                    value={newAreaName}
+                    onChange={(e) => setNewAreaName(e.target.value)}
+                    placeholder={`${t.Area} name...`}
+                    autoFocus
+                    required
+                  />
+                </div>
+              </form>
+            </Drawer.Body>
+            <Drawer.Footer flexDirection="column">
+              <Button form="create-area-form" type="submit" disabled={!newAreaName.trim() || creatingArea} width="full">
                 {creatingArea ? 'Creating...' : 'Create'}
               </Button>
-            </Dialog.Footer>
-          </form>
-        </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+              <Button type="button" variant="ghost" onClick={() => setCreateAreaOpen(false)} width="full">
+                Cancel
+              </Button>
+            </Drawer.Footer>
+          </Drawer.Content>
+        </Drawer.Positioner>
+      </Drawer.Root>
 
       {/* Delete Area Confirmation */}
-      <Dialog.Root open={!!deleteTarget} onOpenChange={(e) => !e.open && setDeleteTarget(null)}>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>{`Delete ${t.area}?`}</Dialog.Title>
-            <Dialog.Description>
-              {deleteTarget && deleteTarget.binCount > 0
-                ? `"${deleteTarget.name}" has ${deleteTarget.binCount} ${deleteTarget.binCount !== 1 ? t.bins : t.bin}. They will become unassigned.`
-                : `Delete "${deleteTarget?.name}"?`}
-            </Dialog.Description>
-          </Dialog.Header>
-          <Dialog.Footer>
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeleteArea}
-              disabled={deletingArea}
-              className="bg-red-500 hover:bg-red-600 text-white"
-            >
-              {deletingArea ? 'Deleting...' : 'Delete'}
-            </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+      <Drawer.Root role="alertdialog" placement={DRAWER_PLACEMENT} open={!!deleteTarget} onOpenChange={(e) => !e.open && setDeleteTarget(null)}>
+        <Drawer.Backdrop />
+        <Drawer.Positioner>
+          <Drawer.Content>
+            <Drawer.CloseTrigger />
+            <Drawer.Header>
+              <Drawer.Title>{`Delete ${t.area}?`}</Drawer.Title>
+              <Drawer.Description>
+                {deleteTarget && deleteTarget.binCount > 0
+                  ? `"${deleteTarget.name}" has ${deleteTarget.binCount} ${deleteTarget.binCount !== 1 ? t.bins : t.bin}. They will become unassigned.`
+                  : `Delete "${deleteTarget?.name}"?`}
+              </Drawer.Description>
+            </Drawer.Header>
+            <Drawer.Body />
+            <Drawer.Footer>
+              <Button width="full" variant="ghost" onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </Button>
+              <Button
+                width="full"
+                onClick={handleDeleteArea}
+                disabled={deletingArea}
+                className="bg-red-500 hover:bg-red-600 text-white"
+              >
+                {deletingArea ? 'Deleting...' : 'Delete'}
+              </Button>
+            </Drawer.Footer>
+          </Drawer.Content>
+        </Drawer.Positioner>
+      </Drawer.Root>
 
       {/* Location Dialogs */}
       <LocationCreateDialog open={createLocationOpen} onOpenChange={setCreateLocationOpen} />

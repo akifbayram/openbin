@@ -1,8 +1,8 @@
+import { Box, Flex, Text } from '@chakra-ui/react';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { formatKeys, SHORTCUTS, type ShortcutDef } from '@/lib/shortcuts';
 import { useOverlayAnimation } from '@/lib/useOverlayAnimation';
-import { cn } from '@/lib/utils';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -103,32 +103,48 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
   if (!visible) return null;
 
   return createPortal(
-    // biome-ignore lint/a11y/noStaticElementInteractions: container delegates keyboard events to input
-    <div
+    <Box
       role="presentation"
-      className="fixed inset-0 z-[70] flex items-start justify-center pt-[15vh]"
+      position="fixed"
+      inset="0"
+      zIndex={70}
+      display="flex"
+      alignItems="start"
+      justifyContent="center"
+      pt="15vh"
       onKeyDown={handleKeyDown}
     >
       {/* Backdrop */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay dismisses palette on click */}
-      <div
+      <Box
         role="presentation"
-        className={cn(
-          'fixed inset-0 bg-[var(--overlay-backdrop)] backdrop-blur-sm transition-opacity duration-150',
-          isEntered ? 'opacity-100' : 'opacity-0',
-        )}
+        position="fixed"
+        inset="0"
+        bg="var(--overlay-backdrop)"
+        backdropFilter="blur(4px)"
+        transition="opacity 0.15s"
+        opacity={isEntered ? 1 : 0}
         onClick={() => onOpenChange(false)}
       />
       {/* Panel */}
-      <div
-        className={cn(
-          'relative z-[70] w-full max-w-lg mx-4 rounded-[var(--radius-xl)] overflow-hidden flex flex-col transition-all duration-150',
-          isEntered ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.97]',
-        )}
+      <Box
+        position="relative"
+        zIndex={70}
+        w="full"
+        maxW="lg"
+        mx="4"
+        borderRadius="var(--radius-xl)"
+        overflow="hidden"
+        display="flex"
+        flexDirection="column"
+        transition="all 0.15s"
+        style={{
+          opacity: isEntered ? 1 : 0,
+          transform: isEntered ? 'scale(1)' : 'scale(0.97)',
+        }}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 border-b border-black/6 dark:border-white/6">
-          <svg aria-hidden="true" className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <Flex align="center" gap="3" px="4" borderBottom="1px solid var(--border-subtle)">
+          <svg aria-hidden="true" className="h-4 w-4 shrink-0" style={{ color: 'var(--text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
           </svg>
@@ -137,22 +153,30 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Type a command..."
-            className="flex-1 bg-transparent text-[15px] placeholder:text-gray-500 dark:placeholder:text-gray-400 outline-none py-3"
+            style={{
+              flex: 1,
+              background: 'transparent',
+              fontSize: '15px',
+              outline: 'none',
+              paddingBlock: '12px',
+              color: 'var(--text-primary)',
+              border: 'none',
+            }}
           />
-        </div>
+        </Flex>
         {/* Results */}
-        <div ref={listRef} className="overflow-y-auto max-h-[50vh] py-2">
+        <Box ref={listRef} overflowY="auto" maxH="50vh" py="2">
           {flatItems.length === 0 ? (
-            <p className="text-center text-[13px] text-gray-500 dark:text-gray-400 py-6">No matching commands</p>
+            <Text textAlign="center" fontSize="13px" color="var(--text-tertiary)" py="6">No matching commands</Text>
           ) : (
             groups.map((group) => {
               return (
-                <div key={group.label}>
-                  <div className="px-4 pt-2 pb-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                <Box key={group.label}>
+                  <Box px="4" pt="2" pb="1">
+                    <Text as="span" fontSize="11px" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider" color="var(--text-tertiary)">
                       {group.label}
-                    </span>
-                  </div>
+                    </Text>
+                  </Box>
                   {group.items.map((item) => {
                     const idx = flatItems.indexOf(item);
                     const isActive = idx === activeIndex;
@@ -164,40 +188,59 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
                         data-active={isActive}
                         onClick={() => execute(item.id)}
                         onMouseEnter={() => setActiveIndex(idx)}
-                        className={cn(
-                          'w-full flex items-center justify-between px-4 py-2 text-left text-[14px] transition-colors',
-                          isActive
-                            ? 'bg-purple-600 dark:bg-purple-500 text-white'
-                            : 'hover:bg-gray-500/8 dark:hover:bg-gray-500/18',
-                        )}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          paddingInline: '16px',
+                          paddingBlock: '8px',
+                          textAlign: 'left',
+                          fontSize: '14px',
+                          transition: 'background-color 0.15s, color 0.15s',
+                          background: isActive ? 'var(--accent)' : undefined,
+                          color: isActive ? 'white' : undefined,
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
                       >
-                        <span>{item.label}</span>
-                        <div className="flex items-center gap-1">
+                        <Text as="span">{item.label}</Text>
+                        <Flex align="center" gap="1">
                           {keys.map((k, i) => (
-                            <kbd
+                            <Box
+                              as="kbd"
                               // biome-ignore lint/suspicious/noArrayIndexKey: static list of keyboard shortcut keys
                               key={i}
-                              className={cn(
-                                'inline-flex items-center justify-center min-w-[22px] h-5 px-1 rounded text-[11px] font-mono leading-none',
+                              display="inline-flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              minW="22px"
+                              h="5"
+                              px="1"
+                              borderRadius="var(--radius-xs)"
+                              fontSize="11px"
+                              fontFamily="mono"
+                              lineHeight="1"
+                              style={
                                 isActive
-                                  ? 'bg-white/20 text-white'
-                                  : 'bg-gray-500/12 dark:bg-gray-500/24 text-gray-500 dark:text-gray-400',
-                              )}
+                                  ? { background: 'rgba(255,255,255,0.2)', color: 'white' }
+                                  : { background: 'var(--bg-input)', color: 'var(--text-tertiary)' }
+                              }
                             >
                               {k}
-                            </kbd>
+                            </Box>
                           ))}
-                        </div>
+                        </Flex>
                       </button>
                     );
                   })}
-                </div>
+                </Box>
               );
             })
           )}
-        </div>
-      </div>
-    </div>,
+        </Box>
+      </Box>
+    </Box>,
     document.body,
   );
 }

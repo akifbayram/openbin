@@ -1,6 +1,5 @@
 import { Checkbox as ChakraCheckbox } from '@chakra-ui/react';
 import * as React from 'react';
-import { cn } from '@/lib/utils';
 
 interface CheckboxProps {
   checked?: boolean;
@@ -17,7 +16,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         checked={checked}
         onCheckedChange={(e) => onCheckedChange?.(!!e.checked)}
         disabled={disabled}
-        className={cn(className)}
+        className={className}
       >
         <ChakraCheckbox.HiddenInput id={id} />
         <ChakraCheckbox.Control>

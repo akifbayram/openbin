@@ -13,7 +13,8 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import type { useDataSectionActions } from './useDataSectionActions';
-import { Button, Dialog } from '@chakra-ui/react'
+import { DRAWER_PLACEMENT } from '@/components/ui/provider'
+import { Button, Drawer } from '@chakra-ui/react'
 
 
 interface DataSectionProps {
@@ -239,37 +240,40 @@ export function DataSection({
       </Card>
 
       {/* Replace confirmation dialog */}
-      <Dialog.Root open={confirmReplace} onOpenChange={(e) => setConfirmReplace(e.open)}>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Replace All Data?</Dialog.Title>
-            <Dialog.Description>
-              This will delete all existing bins and photos in the current location, then import from the backup file. This action cannot be undone.
-            </Dialog.Description>
-          </Dialog.Header>
-          <Dialog.Footer>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setConfirmReplace(false);
-                setPendingData(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleReplaceImport}
-              className="bg-red-500 hover:opacity-90"
-            >
-              Replace All
-            </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+      <Drawer.Root role="alertdialog" placement={DRAWER_PLACEMENT} open={confirmReplace} onOpenChange={(e) => setConfirmReplace(e.open)}>
+        <Drawer.Backdrop />
+        <Drawer.Positioner>
+          <Drawer.Content>
+            <Drawer.CloseTrigger />
+            <Drawer.Header>
+              <Drawer.Title>Replace All Data?</Drawer.Title>
+              <Drawer.Description>
+                This will delete all existing bins and photos in the current location, then import from the backup file. This action cannot be undone.
+              </Drawer.Description>
+            </Drawer.Header>
+            <Drawer.Body />
+            <Drawer.Footer>
+              <Button
+                width="full"
+                variant="ghost"
+                onClick={() => {
+                  setConfirmReplace(false);
+                  setPendingData(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                width="full"
+                onClick={handleReplaceImport}
+                className="bg-red-500 hover:opacity-90"
+              >
+                Replace All
+              </Button>
+            </Drawer.Footer>
+          </Drawer.Content>
+        </Drawer.Positioner>
+      </Drawer.Root>
     </>
   );
 }

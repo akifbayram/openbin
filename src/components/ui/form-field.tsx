@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { Field } from '@chakra-ui/react';
 
 interface FormFieldProps {
   label: string;
@@ -10,12 +10,20 @@ interface FormFieldProps {
 
 export function FormField({ label, htmlFor, hint, children, className }: FormFieldProps) {
   return (
-    <div className={cn('space-y-1.5', className)}>
-      <label htmlFor={htmlFor} className="text-[13px] text-gray-600 dark:text-gray-300">
+    <Field.Root display="flex" flexDirection="column" gap="1.5" className={className}>
+      <Field.Label
+        htmlFor={htmlFor}
+        fontSize="13px"
+        color="var(--text-medium)"
+      >
         {label}
-      </label>
+      </Field.Label>
       {children}
-      {hint && <p className="text-[11px] text-gray-500 dark:text-gray-400">{hint}</p>}
-    </div>
+      {hint && (
+        <Field.HelperText fontSize="11px" color="var(--text-tertiary)">
+          {hint}
+        </Field.HelperText>
+      )}
+    </Field.Root>
   );
 }

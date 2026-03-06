@@ -4,7 +4,8 @@ import { toaster } from '@/components/ui/toaster';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { createLocation, deleteLocation, joinLocation, updateLocation, useLocationList } from './useLocations';
-import { Button, Dialog, Input } from '@chakra-ui/react'
+import { DRAWER_PLACEMENT } from '@/components/ui/provider'
+import { Button, Drawer, Input } from '@chakra-ui/react'
 
 
 interface LocationCreateDialogProps {
@@ -42,41 +43,43 @@ export function LocationCreateDialog({ open, onOpenChange }: LocationCreateDialo
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-        <Dialog.Header>
-          <Dialog.Title>Create {t.Location}</Dialog.Title>
-          <Dialog.Description>
-            A {t.location} is a shared space where members can manage {t.bins} together.
-          </Dialog.Description>
-        </Dialog.Header>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="location-name">Name</Label>
-            <Input
-              id="location-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., My House, Office"
-              autoFocus
-              required
-            />
-          </div>
-          <Dialog.Footer>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!name.trim() || creating}>
+    <Drawer.Root placement={DRAWER_PLACEMENT} open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>Create {t.Location}</Drawer.Title>
+            <Drawer.Description>
+              A {t.location} is a shared space where members can manage {t.bins} together.
+            </Drawer.Description>
+          </Drawer.Header>
+          <Drawer.Body>
+            <form id="create-location-form" onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="location-name">Name</Label>
+                <Input
+                  id="location-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., My House, Office"
+                  autoFocus
+                  required
+                />
+              </div>
+            </form>
+          </Drawer.Body>
+          <Drawer.Footer flexDirection="column">
+            <Button form="create-location-form" type="submit" disabled={!name.trim() || creating} width="full">
               {creating ? 'Creating...' : 'Create'}
             </Button>
-          </Dialog.Footer>
-        </form>
-      </Dialog.Content>
-        </Dialog.Positioner>
-    </Dialog.Root>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} width="full">
+              Cancel
+            </Button>
+          </Drawer.Footer>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }
 
@@ -115,41 +118,43 @@ export function LocationJoinDialog({ open, onOpenChange }: LocationJoinDialogPro
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-        <Dialog.Header>
-          <Dialog.Title>Join {t.Location}</Dialog.Title>
-          <Dialog.Description>
-            Enter the invite code shared by a {t.location} owner to join.
-          </Dialog.Description>
-        </Dialog.Header>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="invite-code">Invite Code</Label>
-            <Input
-              id="invite-code"
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              placeholder="Enter invite code"
-              autoFocus
-              required
-            />
-          </div>
-          <Dialog.Footer>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!inviteCode.trim() || joining}>
+    <Drawer.Root placement={DRAWER_PLACEMENT} open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>Join {t.Location}</Drawer.Title>
+            <Drawer.Description>
+              Enter the invite code shared by a {t.location} owner to join.
+            </Drawer.Description>
+          </Drawer.Header>
+          <Drawer.Body>
+            <form id="join-location-form" onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="invite-code">Invite Code</Label>
+                <Input
+                  id="invite-code"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  placeholder="Enter invite code"
+                  autoFocus
+                  required
+                />
+              </div>
+            </form>
+          </Drawer.Body>
+          <Drawer.Footer flexDirection="column">
+            <Button form="join-location-form" type="submit" disabled={!inviteCode.trim() || joining} width="full">
               {joining ? 'Joining...' : 'Join'}
             </Button>
-          </Dialog.Footer>
-        </form>
-      </Dialog.Content>
-        </Dialog.Positioner>
-    </Dialog.Root>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} width="full">
+              Cancel
+            </Button>
+          </Drawer.Footer>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }
 
@@ -188,40 +193,42 @@ export function LocationRenameDialog({ locationId, currentName, open, onOpenChan
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-        <Dialog.Header>
-          <Dialog.Title>Rename {t.Location}</Dialog.Title>
-          <Dialog.Description>
-            Enter a new name for this {t.location}.
-          </Dialog.Description>
-        </Dialog.Header>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="rename-location">Name</Label>
-            <Input
-              id="rename-location"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-              required
-            />
-          </div>
-          <Dialog.Footer>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!name.trim() || renaming}>
+    <Drawer.Root placement={DRAWER_PLACEMENT} open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>Rename {t.Location}</Drawer.Title>
+            <Drawer.Description>
+              Enter a new name for this {t.location}.
+            </Drawer.Description>
+          </Drawer.Header>
+          <Drawer.Body>
+            <form id="rename-location-form" onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="rename-location">Name</Label>
+                <Input
+                  id="rename-location"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoFocus
+                  required
+                />
+              </div>
+            </form>
+          </Drawer.Body>
+          <Drawer.Footer flexDirection="column">
+            <Button form="rename-location-form" type="submit" disabled={!name.trim() || renaming} width="full">
               {renaming ? 'Saving...' : 'Save'}
             </Button>
-          </Dialog.Footer>
-        </form>
-      </Dialog.Content>
-        </Dialog.Positioner>
-    </Dialog.Root>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} width="full">
+              Cancel
+            </Button>
+          </Drawer.Footer>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }
 
@@ -257,31 +264,33 @@ export function LocationDeleteDialog({ locationId, locationName, open, onOpenCha
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-        <Dialog.Header>
-          <Dialog.Title>Delete {t.Location}?</Dialog.Title>
-          <Dialog.Description>
-            This will permanently delete &quot;{locationName}&quot; and all its {t.bins} and photos. This cannot be undone.
-          </Dialog.Description>
-        </Dialog.Header>
-        <Dialog.Footer>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="bg-red-500 hover:bg-red-600 text-white"
-          >
-            {deleting ? 'Deleting...' : 'Delete'}
-          </Button>
-        </Dialog.Footer>
-      </Dialog.Content>
-        </Dialog.Positioner>
-    </Dialog.Root>
+    <Drawer.Root role="alertdialog" placement={DRAWER_PLACEMENT} open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>Delete {t.Location}?</Drawer.Title>
+            <Drawer.Description>
+              This will permanently delete &quot;{locationName}&quot; and all its {t.bins} and photos. This cannot be undone.
+            </Drawer.Description>
+          </Drawer.Header>
+          <Drawer.Body />
+          <Drawer.Footer>
+            <Button width="full" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              width="full"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </Drawer.Footer>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }

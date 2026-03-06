@@ -1,4 +1,5 @@
-import { Button, Dialog } from '@chakra-ui/react'
+import { DRAWER_PLACEMENT } from '@/components/ui/provider'
+import { Button, Drawer } from '@chakra-ui/react'
 
 
 interface UnsavedChangesDialogProps {
@@ -10,34 +11,36 @@ interface UnsavedChangesDialogProps {
 
 export function UnsavedChangesDialog({ open, onSave, onDiscard, onCancel }: UnsavedChangesDialogProps) {
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => { if (!e.open) onCancel(); }}>
-      <Dialog.Backdrop />
-      <Dialog.Positioner>
-        <Dialog.Content>
-          <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Unsaved changes</Dialog.Title>
-            <Dialog.Description>
+    <Drawer.Root role="alertdialog" placement={DRAWER_PLACEMENT} open={open} onOpenChange={(e) => { if (!e.open) onCancel(); }}>
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>Unsaved changes</Drawer.Title>
+            <Drawer.Description>
               You have unsaved changes. Would you like to save them before leaving?
-            </Dialog.Description>
-          </Dialog.Header>
-          <Dialog.Footer>
-            <Button variant="ghost" onClick={onCancel}>
+            </Drawer.Description>
+          </Drawer.Header>
+          <Drawer.Body />
+          <Drawer.Footer>
+            <Button width="full" variant="ghost" onClick={onCancel}>
               Cancel
             </Button>
             <Button
+              width="full"
               variant="ghost"
               onClick={onDiscard}
               className="text-red-500 dark:text-red-400"
             >
               Discard
             </Button>
-            <Button onClick={onSave}>
+            <Button width="full" onClick={onSave}>
               Save &amp; Leave
             </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
-      </Dialog.Positioner>
-    </Dialog.Root>
+          </Drawer.Footer>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }

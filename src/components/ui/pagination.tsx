@@ -1,9 +1,9 @@
+import { Box, Flex, Text } from '@chakra-ui/react';
 import { Check, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
-import { useRef } from 'react';
+import { type CSSProperties, useRef } from 'react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
-import { cn } from '@/lib/utils';
 
 interface PaginationProps {
   currentPage: number;
@@ -41,27 +41,52 @@ function getPageNumbers(current: number, total: number): (number | 'ellipsis')[]
   return pages;
 }
 
+const pageSizeBtnStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+  paddingInline: '8px',
+  paddingBlock: '2px',
+  borderRadius: 'var(--radius-sm)',
+  fontSize: '12px',
+  color: 'var(--text-medium)',
+  transition: 'background-color 0.15s',
+  background: 'transparent',
+  border: 'none',
+  cursor: 'pointer',
+};
+
 function PageSizeSelect({ value, options, onChange }: { value: number; options: number[]; onChange: (size: number) => void }) {
   const { visible, animating, close, toggle } = usePopover();
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, close);
 
   return (
-    <div className="relative" ref={ref}>
+    <Box position="relative" ref={ref}>
       <button
         type="button"
         onClick={toggle}
-        className="flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
+        style={pageSizeBtnStyle}
         aria-haspopup="listbox"
         aria-expanded={visible}
       >
         {value} per page
-        <ChevronsUpDown className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+        <ChevronsUpDown className="h-3 w-3" style={{ color: 'var(--text-tertiary)' }} />
       </button>
       {visible && (
-        <div
+        <Box
           role="listbox"
-          className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute bottom-full mb-1.5 right-0 z-50 rounded-[var(--radius-md)] py-1 shadow-lg border border-[var(--border-glass)] min-w-[100px]`}
+          className={animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'}
+          position="absolute"
+          bottom="full"
+          mb="1.5"
+          right="0"
+          zIndex={50}
+          borderRadius="var(--radius-md)"
+          py="1"
+          boxShadow="lg"
+          border="1px solid var(--border-glass)"
+          minW="100px"
         >
           {options.map((opt) => (
             <button
@@ -70,22 +95,50 @@ function PageSizeSelect({ value, options, onChange }: { value: number; options: 
               role="option"
               aria-selected={opt === value}
               onClick={() => { onChange(opt); close(); }}
-              className={cn(
-                'w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors',
-                opt === value
-                  ? 'bg-gray-500/8 dark:bg-gray-500/18'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-500/8 dark:hover:bg-gray-500/18',
-              )}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                paddingInline: '12px',
+                paddingBlock: '6px',
+                fontSize: '12px',
+                transition: 'background-color 0.15s',
+                background: opt === value ? 'var(--bg-hover)' : undefined,
+                color: opt === value ? undefined : 'var(--text-medium)',
+                border: 'none',
+                cursor: 'pointer',
+              }}
             >
-              <Check className={cn('h-3 w-3 shrink-0', opt === value ? 'text-purple-600 dark:text-purple-400' : 'invisible')} />
+              <Check
+                className="h-3 w-3 shrink-0"
+                style={{
+                  color: opt === value ? 'var(--accent-fg)' : undefined,
+                  visibility: opt === value ? 'visible' : 'hidden',
+                }}
+              />
               {opt}
             </button>
           ))}
-        </div>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }
+
+const navBtnBase: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '36px',
+  width: '36px',
+  borderRadius: 'var(--radius-md)',
+  fontSize: '14px',
+  transition: 'background-color 0.15s, color 0.15s',
+  background: 'transparent',
+  border: 'none',
+  cursor: 'pointer',
+};
 
 export function Pagination({
   currentPage,
@@ -108,9 +161,9 @@ export function Pagination({
   if (!showNav && !showFooter) return null;
 
   return (
-    <nav aria-label="Pagination" className="flex flex-col items-center gap-2 pt-4 pb-2">
+    <Box as="nav" aria-label="Pagination" display="flex" flexDirection="column" alignItems="center" gap="2" pt="4" pb="2">
       {showNav && (
-        <div className="flex items-center gap-1">
+        <Flex align="center" gap="1">
           {/* Previous */}
           <Tooltip content="Previous page">
             <button
@@ -118,25 +171,32 @@ export function Pagination({
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage <= 1}
               aria-label="Previous page"
-              className={cn(
-                'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
-                currentPage <= 1
-                  ? 'text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-40'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 active:bg-gray-500/16 dark:active:bg-gray-500/28',
-              )}
+              style={{
+                ...navBtnBase,
+                color: currentPage <= 1 ? 'var(--text-tertiary)' : 'var(--text-medium)',
+                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                opacity: currentPage <= 1 ? 0.4 : undefined,
+              }}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
           </Tooltip>
 
           {/* Page numbers — full on md+, simplified on mobile */}
-          <div className="hidden sm:flex items-center gap-1">
-            {pages.map((p, i) =>
+          <Flex display={{ base: 'none', sm: 'flex' }} align="center" gap="1">
+            {pages.map((p, idx) =>
               p === 'ellipsis' ? (
-                // biome-ignore lint/suspicious/noArrayIndexKey: ellipsis separators have no stable identity
-                <span key={`e${i}`} className="flex items-center justify-center h-9 w-9 text-sm text-gray-500 dark:text-gray-400">
+                <Flex
+                  key={`ellipsis${idx === 1 ? 'start' : 'end'}`}
+                  align="center"
+                  justify="center"
+                  h="9"
+                  w="9"
+                  fontSize="sm"
+                  color="var(--text-tertiary)"
+                >
                   &hellip;
-                </span>
+                </Flex>
               ) : (
                 <button
                   key={p}
@@ -144,23 +204,34 @@ export function Pagination({
                   onClick={() => onPageChange(p)}
                   aria-label={`Page ${p}`}
                   aria-current={p === currentPage ? 'page' : undefined}
-                  className={cn(
-                    'flex items-center justify-center h-9 min-w-9 px-2 rounded-[var(--radius-md)] text-sm font-medium transition-colors',
-                    p === currentPage
-                      ? 'bg-white/70 dark:bg-gray-500/28 shadow-sm font-semibold'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 active:bg-gray-500/16 dark:active:bg-gray-500/28',
-                  )}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '36px',
+                    minWidth: '36px',
+                    paddingInline: '8px',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '14px',
+                    fontWeight: p === currentPage ? 600 : 500,
+                    transition: 'background-color 0.15s, color 0.15s',
+                    background: p === currentPage ? 'var(--bg-indicator)' : undefined,
+                    boxShadow: p === currentPage ? '0 1px 2px rgba(0,0,0,0.05)' : undefined,
+                    color: p === currentPage ? undefined : 'var(--text-medium)',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
                 >
                   {p}
                 </button>
               ),
             )}
-          </div>
+          </Flex>
 
           {/* Mobile: page X of Y */}
-          <span className="flex sm:hidden items-center px-3 text-sm text-gray-600 dark:text-gray-300">
+          <Flex display={{ base: 'flex', sm: 'none' }} align="center" px="3" fontSize="sm" color="var(--text-medium)">
             {currentPage} / {totalPages}
-          </span>
+          </Flex>
 
           {/* Next */}
           <Tooltip content="Next page">
@@ -169,32 +240,32 @@ export function Pagination({
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage >= totalPages}
               aria-label="Next page"
-              className={cn(
-                'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
-                currentPage >= totalPages
-                  ? 'text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-40'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 active:bg-gray-500/16 dark:active:bg-gray-500/28',
-              )}
+              style={{
+                ...navBtnBase,
+                color: currentPage >= totalPages ? 'var(--text-tertiary)' : 'var(--text-medium)',
+                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                opacity: currentPage >= totalPages ? 0.4 : undefined,
+              }}
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </Tooltip>
-        </div>
+        </Flex>
       )}
 
       {/* Summary + page size */}
       {showFooter && (
-        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+        <Flex align="center" gap="3" fontSize="xs" color="var(--text-tertiary)">
           {showSummary && (
-            <span>
+            <Text as="span">
               Showing {rangeStart}&ndash;{rangeEnd} of {totalCount} {itemLabel}
-            </span>
+            </Text>
           )}
           {pageSizeOptions && onPageSizeChange && pageSize != null && (
             <PageSizeSelect value={pageSize} options={pageSizeOptions} onChange={onPageSizeChange} />
           )}
-        </div>
+        </Flex>
       )}
-    </nav>
+    </Box>
   );
 }

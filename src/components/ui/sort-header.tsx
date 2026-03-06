@@ -1,5 +1,4 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -37,11 +36,18 @@ export function SortHeader<C extends string>({
     <button
       type="button"
       onClick={handleClick}
-      className={cn(
-        'flex items-center gap-0.5 text-[12px] font-medium uppercase tracking-wide transition-colors',
-        active ? '' : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
-        className,
-      )}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.125rem',
+        fontSize: '12px',
+        fontWeight: 500,
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.025em',
+        color: active ? undefined : 'var(--text-tertiary)',
+        transition: 'color 150ms',
+      }}
+      className={className}
     >
       {label}
       {active && <Chevron className="h-3 w-3" />}

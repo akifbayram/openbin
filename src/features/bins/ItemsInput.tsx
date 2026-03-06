@@ -211,7 +211,14 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
               onKeyDown={handleInputKeyDown}
               onPaste={handlePaste}
               placeholder="Add item..."
-              className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0"
+              variant="flushed"
+            height="7"
+            bg="transparent"
+            px="0.5"
+            py="0"
+            fontSize="md"
+            border="none"
+            _focus={{ boxShadow: 'none' }}
             />
             {input.trim() && (
               <Tooltip content="Add item">

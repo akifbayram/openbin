@@ -1,5 +1,5 @@
+import { Box } from '@chakra-ui/react';
 import { useDrawer } from '@/features/layout/DrawerContext';
-import { cn } from '@/lib/utils';
 
 export function MenuButton({ className }: { className?: string }) {
   const { openDrawer, isOnboarding } = useDrawer();
@@ -11,13 +11,10 @@ export function MenuButton({ className }: { className?: string }) {
       type="button"
       onClick={openDrawer}
       aria-label="Open navigation"
-      className={cn(
-        'lg:hidden print-hide flex flex-col justify-center items-center gap-[5px] w-10 h-10 rounded-[var(--radius-sm)] hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors shrink-0',
-        className,
-      )}
+      className={`lg:hidden print-hide flex flex-col justify-center items-center gap-[5px] w-10 h-10 rounded-[var(--radius-sm)] transition-colors hover:bg-gray-500/8 dark:hover:bg-gray-500/18 shrink-0${className ? ` ${className}` : ''}`}
     >
-      <span className="block w-[18px] h-[2px] rounded-full bg-gray-900 dark:bg-gray-100" />
-      <span className="block w-[18px] h-[2px] rounded-full bg-gray-900 dark:bg-gray-100" />
+      <Box as="span" display="block" w="18px" h="2px" borderRadius="full" bg="var(--text-primary)" />
+      <Box as="span" display="block" w="18px" h="2px" borderRadius="full" bg="var(--text-primary)" />
     </button>
   );
 }

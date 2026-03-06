@@ -1,5 +1,5 @@
+import { Box, Flex, Text } from '@chakra-ui/react';
 import { Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface StepDef {
   id: string;
@@ -14,71 +14,99 @@ interface StepIndicatorProps {
 
 function StepIndicator({ steps, currentStepIndex, className }: StepIndicatorProps) {
   return (
-    <nav aria-label="Progress" className={cn('w-full', className)}>
-      <ol className="flex items-start" >
+    <Box as="nav" aria-label="Progress" w="full" className={className}>
+      <Flex as="ol" align="start">
         {steps.map((step, index) => {
           const isLast = index === steps.length - 1;
           const status =
             index < currentStepIndex ? 'complete' : index === currentStepIndex ? 'active' : 'upcoming';
 
           return (
-            <li
+            <Flex
+              as="li"
               key={step.id}
-              className={cn('flex items-start', isLast ? 'shrink-0' : 'flex-1')}
+              align="start"
+              flex={isLast ? undefined : '1'}
+              flexShrink={isLast ? 0 : undefined}
             >
               {/* Circle + label */}
-              <div className="flex flex-col items-center shrink-0">
-                <span
+              <Flex direction="column" align="center" flexShrink={0}>
+                <Flex
+                  as="span"
                   role="tab"
                   tabIndex={-1}
                   aria-current={status === 'active' ? 'step' : undefined}
-                  className={cn(
-                    'flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-semibold',
-                    'transition-all duration-300 ease-out',
-                    status === 'active' &&
-                      'bg-purple-600 dark:bg-purple-500 text-white shadow-[0_0_12px_rgba(147,51,234,0.3),0_2px_8px_rgba(0,0,0,0.1)] scale-110',
-                    status === 'complete' &&
-                      'bg-purple-600 dark:bg-purple-500 text-white opacity-70',
-                    status === 'upcoming' &&
-                      'bg-gray-500/12 dark:bg-gray-500/24 text-gray-500 dark:text-gray-400 border border-[var(--border-glass)]',
-                  )}
+                  h="7"
+                  w="7"
+                  align="center"
+                  justify="center"
+                  borderRadius="full"
+                  fontSize="12px"
+                  fontWeight="semibold"
+                  transition="all 0.3s ease-out"
+                  style={
+                    status === 'active'
+                      ? {
+                          background: 'var(--accent)',
+                          color: 'white',
+                          boxShadow: '0 0 12px rgba(147,51,234,0.3), 0 2px 8px rgba(0,0,0,0.1)',
+                          transform: 'scale(1.1)',
+                        }
+                      : status === 'complete'
+                        ? {
+                            background: 'var(--accent)',
+                            color: 'white',
+                            opacity: 0.7,
+                          }
+                        : {
+                            background: 'var(--bg-input)',
+                            color: 'var(--text-tertiary)',
+                            border: '1px solid var(--border-glass)',
+                          }
+                  }
                 >
                   {status === 'complete' ? (
                     <Check className="h-3.5 w-3.5" data-testid="step-check" />
                   ) : (
-                    <span>{index + 1}</span>
+                    <Text as="span">{index + 1}</Text>
                   )}
-                </span>
+                </Flex>
 
-                <span
-                  className={cn(
-                    'mt-1.5 text-center text-[11px] leading-tight transition-all duration-300 ease-out',
-                    status === 'active' && 'font-semibold text-purple-600 dark:text-purple-400',
-                    (status === 'complete' || status === 'upcoming') &&
-                      'font-normal text-gray-500 dark:text-gray-400',
-                  )}
+                <Text
+                  as="span"
+                  mt="1.5"
+                  textAlign="center"
+                  fontSize="11px"
+                  lineHeight="tight"
+                  transition="all 0.3s ease-out"
+                  fontWeight={status === 'active' ? 'semibold' : 'normal'}
+                  color={status === 'active' ? 'var(--accent-fg)' : 'var(--text-tertiary)'}
                 >
                   {step.label}
-                </span>
-              </div>
+                </Text>
+              </Flex>
 
               {/* Connecting line */}
               {!isLast && (
-                <div
+                <Box
                   aria-hidden="true"
-                  className={cn(
-                    'mt-[13px] mx-2 h-px flex-1 transition-all duration-300 ease-out',
+                  mt="13px"
+                  mx="2"
+                  flex="1"
+                  h="1px"
+                  transition="all 0.3s ease-out"
+                  style={
                     status === 'complete'
-                      ? 'bg-purple-600 dark:bg-purple-500 opacity-40'
-                      : 'bg-[var(--border-glass)]',
-                  )}
+                      ? { background: 'var(--accent)', opacity: 0.4 }
+                      : { background: 'var(--border-glass)' }
+                  }
                 />
               )}
-            </li>
+            </Flex>
           );
         })}
-      </ol>
-    </nav>
+      </Flex>
+    </Box>
   );
 }
 

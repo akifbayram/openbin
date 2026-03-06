@@ -1,5 +1,5 @@
-import { type ReactNode, useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { cn } from '@/lib/utils';
+import { Box } from '@chakra-ui/react';
+import { type CSSProperties, type ReactNode, useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 export interface OptionGroupOption<K extends string> {
   key: K;
@@ -38,10 +38,8 @@ export function OptionGroup<K extends string>({
   /** @deprecated use renderContent */
   renderLabel?: (opt: { key: K; label: string }) => string;
 }) {
-  const containerRadius = shape === 'pill' ? 'rounded-full' : 'rounded-[var(--radius-md)]';
-  const segmentRadius = shape === 'pill' ? 'rounded-full' : 'rounded-[var(--radius-sm)]';
-  const textSize = size === 'sm' ? 'text-[12px]' : 'text-[13px]';
-  const padding = iconOnly ? 'p-2' : size === 'sm' ? 'px-2 py-1' : 'px-3 py-1.5';
+  const containerBorderRadius = shape === 'pill' ? 'var(--radius-full)' : 'var(--radius-md)';
+  const segmentBorderRadius = shape === 'pill' ? 'var(--radius-full)' : 'var(--radius-sm)';
 
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef(new Map<string, HTMLElement>());
@@ -88,19 +86,27 @@ export function OptionGroup<K extends string>({
   const animate = hasMounted && !prefersReducedMotion;
 
   return (
-    <div
+    <Box
       ref={containerRef}
-      className={cn(
-        'relative flex bg-gray-500/12 dark:bg-gray-500/24 p-1 gap-0.5',
-        containerRadius,
-        scrollable && 'overflow-x-auto flex-nowrap',
-        className,
-      )}
+      position="relative"
+      display="flex"
+      p="1"
+      gap="0.5"
+      bg="var(--bg-input)"
+      borderRadius={containerBorderRadius}
+      overflowX={scrollable ? 'auto' : undefined}
+      flexWrap={scrollable ? 'nowrap' : undefined}
+      className={className}
     >
       {indicator && (
-        <div
+        <Box
           aria-hidden
-          className={cn('absolute top-1 bottom-1 bg-white/70 dark:bg-gray-500/28 shadow-sm', segmentRadius)}
+          position="absolute"
+          top="1"
+          bottom="1"
+          bg="var(--bg-indicator)"
+          boxShadow="sm"
+          borderRadius={segmentBorderRadius}
           style={{
             left: indicator.left,
             width: indicator.width,
@@ -113,6 +119,30 @@ export function OptionGroup<K extends string>({
         const Icon = opt.icon;
         const disabled = opt.disabled && !active;
 
+        const btnStyle: CSSProperties = {
+          position: 'relative',
+          zIndex: 10,
+          fontWeight: 500,
+          transition: 'color 0.15s',
+          fontSize: size === 'sm' ? '12px' : '13px',
+          borderRadius: segmentBorderRadius,
+          padding: iconOnly ? '8px' : undefined,
+          paddingInline: !iconOnly ? (size === 'sm' ? '8px' : '12px') : undefined,
+          paddingBlock: !iconOnly ? (size === 'sm' ? '4px' : '6px') : undefined,
+          flexShrink: scrollable ? 0 : undefined,
+          flex: scrollable ? undefined : '1',
+          minWidth: scrollable ? undefined : '0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: iconOnly ? undefined : '6px',
+          color: active ? undefined : 'var(--text-tertiary)',
+          opacity: disabled ? 0.4 : undefined,
+          cursor: disabled ? 'not-allowed' : undefined,
+          background: 'transparent',
+          border: 'none',
+        };
+
         return (
           <button
             key={opt.key}
@@ -121,20 +151,7 @@ export function OptionGroup<K extends string>({
             disabled={disabled}
             title={disabled ? opt.disabledTitle : undefined}
             onClick={() => !disabled && onChange(opt.key)}
-            className={cn(
-              'relative z-10 font-medium transition-colors',
-              textSize,
-              segmentRadius,
-              padding,
-              scrollable ? 'shrink-0' : 'flex-1 min-w-0',
-              'flex items-center justify-center',
-              !iconOnly && 'gap-1.5',
-              active
-                ? ''
-                : disabled
-                  ? 'text-gray-500 dark:text-gray-400 opacity-40 cursor-not-allowed'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
-            )}
+            style={btnStyle}
           >
             {renderContent ? (
               renderContent(opt, active)
@@ -147,6 +164,6 @@ export function OptionGroup<K extends string>({
           </button>
         );
       })}
-    </div>
+    </Box>
   );
 }

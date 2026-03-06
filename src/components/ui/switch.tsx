@@ -1,5 +1,4 @@
 import { Switch as ChakraSwitch } from '@chakra-ui/react';
-import { cn } from '@/lib/utils';
 
 interface SwitchProps {
   checked: boolean;
@@ -15,7 +14,7 @@ export function Switch({ checked, onCheckedChange, id, disabled, className }: Sw
       checked={checked}
       onCheckedChange={(e) => onCheckedChange(e.checked)}
       disabled={disabled}
-      className={cn(className)}
+      className={className}
     >
       <ChakraSwitch.HiddenInput id={id} />
       <ChakraSwitch.Control>

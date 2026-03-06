@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Dialog } from '@chakra-ui/react';
+import { Button, Drawer } from '@chakra-ui/react';
+import { DRAWER_PLACEMENT } from '@/components/ui/provider';
 import { LocationSelectList } from '@/features/locations/LocationSelectList';
 import { useLocationList } from '@/features/locations/useLocations';
 import { useAuth } from '@/lib/auth';
@@ -33,35 +34,39 @@ export function BulkLocationDialog({ open, onOpenChange, binIds, onDone }: BulkL
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <Dialog.Backdrop />
-      <Dialog.Positioner>
-        <Dialog.Content>
-          <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Move to Location</Dialog.Title>
-            <Dialog.Description>
+    <Drawer.Root
+      open={open}
+      onOpenChange={(e) => onOpenChange(e.open)}
+      placement={DRAWER_PLACEMENT}
+    >
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>Move to Location</Drawer.Title>
+            <Drawer.Description>
               Move {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''} to another location.
-            </Dialog.Description>
-          </Dialog.Header>
-          <Dialog.Body>
+            </Drawer.Description>
+          </Drawer.Header>
+          <Drawer.Body>
             <LocationSelectList
               locations={otherLocations}
               value={targetId}
               onChange={setTargetId}
               emptyMessage="No other locations available."
             />
-          </Dialog.Body>
-          <Dialog.Footer>
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          </Drawer.Body>
+          <Drawer.Footer flexDirection="column">
+            <Button width="full" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleApply} disabled={!targetId || loading}>
+            <Button width="full" onClick={handleApply} disabled={!targetId || loading}>
               {loading ? 'Moving...' : 'Move'}
             </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
-      </Dialog.Positioner>
-    </Dialog.Root>
+          </Drawer.Footer>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Dialog, Input } from '@chakra-ui/react';
+import { Button, Drawer, Input } from '@chakra-ui/react';
+import { DRAWER_PLACEMENT } from '@/components/ui/provider';
 import { toaster } from '@/components/ui/toaster';
 import { saveView } from '@/lib/savedViews';
 import type { BinFilters, SortOption } from './useBins';
@@ -14,7 +15,7 @@ interface SaveViewDialogProps {
 
 export function SaveViewDialog({ open, onOpenChange, searchQuery, sort, filters }: SaveViewDialogProps) {
   const [viewName, setViewName] = useState('');
-  
+
   async function handleSave() {
     if (!viewName.trim()) return;
     await saveView({ name: viewName.trim(), searchQuery, sort, filters });
@@ -23,34 +24,35 @@ export function SaveViewDialog({ open, onOpenChange, searchQuery, sort, filters 
   }
 
   return (
-    <Dialog.Root
+    <Drawer.Root
       open={open}
       onOpenChange={(e) => {
         if (e.open) setViewName('');
         onOpenChange(e.open);
       }}
+      placement={DRAWER_PLACEMENT}
     >
-      <Dialog.Backdrop />
-      <Dialog.Positioner>
-        <Dialog.Content>
-          <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Save Search</Dialog.Title>
-          </Dialog.Header>
-          <Dialog.Body>
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>Save Search</Drawer.Title>
+          </Drawer.Header>
+          <Drawer.Body>
             <Input
               value={viewName}
               onChange={(e) => setViewName(e.target.value)}
               placeholder="View name..."
               onKeyDown={(e) => { if (e.key === 'Enter' && viewName.trim()) handleSave(); }}
             />
-          </Dialog.Body>
-          <Dialog.Footer>
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={!viewName.trim()}>Save</Button>
-          </Dialog.Footer>
-        </Dialog.Content>
-      </Dialog.Positioner>
-    </Dialog.Root>
+          </Drawer.Body>
+          <Drawer.Footer flexDirection="column">
+            <Button width="full" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button width="full" onClick={handleSave} disabled={!viewName.trim()}>Save</Button>
+          </Drawer.Footer>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }

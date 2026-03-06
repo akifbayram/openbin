@@ -1,5 +1,4 @@
 import { Skeleton as ChakraSkeleton } from '@chakra-ui/react';
-import { cn } from '@/lib/utils';
 
 interface SkeletonProps {
   className?: string;
@@ -8,10 +7,8 @@ interface SkeletonProps {
 export function Skeleton({ className }: SkeletonProps) {
   return (
     <ChakraSkeleton
-      className={cn(
-        'rounded-[var(--radius-md)]',
-        className
-      )}
+      borderRadius="var(--radius-md)"
+      className={className}
     />
   );
 }

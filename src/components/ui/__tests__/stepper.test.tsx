@@ -1,6 +1,11 @@
+import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { StepIndicator } from '../stepper';
+
+function renderWithChakra(ui: React.ReactElement) {
+  return render(<ChakraProvider value={defaultSystem}>{ui}</ChakraProvider>);
+}
 
 const threeSteps = [
   { id: 'upload', label: 'Upload' },
@@ -15,7 +20,7 @@ const twoSteps = [
 
 describe('StepIndicator', () => {
   it('renders all step labels', () => {
-    render(<StepIndicator steps={threeSteps} currentStepIndex={0} />);
+    renderWithChakra(<StepIndicator steps={threeSteps} currentStepIndex={0} />);
 
     expect(screen.getByText('Upload')).toBeInTheDocument();
     expect(screen.getByText('Review')).toBeInTheDocument();
@@ -23,7 +28,7 @@ describe('StepIndicator', () => {
   });
 
   it('marks current step with aria-current="step"', () => {
-    render(<StepIndicator steps={threeSteps} currentStepIndex={1} />);
+    renderWithChakra(<StepIndicator steps={threeSteps} currentStepIndex={1} />);
 
     // Stepperize renders triggers with role="tab"
     const currentTrigger = screen.getByRole('tab', { current: 'step' });
@@ -33,7 +38,7 @@ describe('StepIndicator', () => {
   });
 
   it('shows check icons for completed steps', () => {
-    render(<StepIndicator steps={threeSteps} currentStepIndex={2} />);
+    renderWithChakra(<StepIndicator steps={threeSteps} currentStepIndex={2} />);
 
     // Steps 0 and 1 are completed, step 2 is active
     const checkIcons = screen.getAllByTestId('step-check');
@@ -41,7 +46,7 @@ describe('StepIndicator', () => {
   });
 
   it('shows step numbers for active and future steps', () => {
-    render(<StepIndicator steps={threeSteps} currentStepIndex={1} />);
+    renderWithChakra(<StepIndicator steps={threeSteps} currentStepIndex={1} />);
 
     // Step 0 is completed (check icon), step 1 is active (shows "2"), step 2 is future (shows "3")
     const checkIcons = screen.getAllByTestId('step-check');
@@ -60,7 +65,7 @@ describe('StepIndicator', () => {
   });
 
   it('renders with 2 steps', () => {
-    render(<StepIndicator steps={twoSteps} currentStepIndex={0} />);
+    renderWithChakra(<StepIndicator steps={twoSteps} currentStepIndex={0} />);
 
     expect(screen.getByText('Edit')).toBeInTheDocument();
     expect(screen.getByText('Done')).toBeInTheDocument();
@@ -70,7 +75,7 @@ describe('StepIndicator', () => {
   });
 
   it('applies custom className', () => {
-    const { container } = render(
+    const { container } = renderWithChakra(
       <StepIndicator steps={threeSteps} currentStepIndex={0} className="my-custom-class" />,
     );
 

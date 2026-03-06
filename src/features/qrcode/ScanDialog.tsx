@@ -14,7 +14,8 @@ import { BIN_URL_REGEX } from '@/lib/qr';
 import { useTerminology } from '@/lib/terminology';
 import { haptic } from '@/lib/utils';
 import { Html5QrcodePlugin } from './Html5QrcodePlugin';
-import { Button, Dialog, Input } from '@chakra-ui/react'
+import { DRAWER_PLACEMENT } from '@/components/ui/provider'
+import { Button, Drawer, Input } from '@chakra-ui/react'
 
 
 interface ScanDialogProps {
@@ -103,15 +104,15 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
 
   return (
     <>
-      <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Scan QR Code</Dialog.Title>
-          </Dialog.Header>
-
+      <Drawer.Root placement={DRAWER_PLACEMENT} open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+        <Drawer.Backdrop />
+        <Drawer.Positioner>
+          <Drawer.Content>
+            <Drawer.CloseTrigger />
+            <Drawer.Header>
+              <Drawer.Title>Scan QR Code</Drawer.Title>
+            </Drawer.Header>
+            <Drawer.Body>
           {error ? (
             <Card>
               <CardContent className="py-8">
@@ -211,9 +212,10 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
               <p className="mt-2 text-[13px] text-red-500 dark:text-red-400">{manualError}</p>
             )}
           </div>
-        </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+            </Drawer.Body>
+          </Drawer.Content>
+        </Drawer.Positioner>
+      </Drawer.Root>
 
       <BinCreateDialog
         open={createOpen}

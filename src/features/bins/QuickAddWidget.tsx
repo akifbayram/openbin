@@ -25,7 +25,14 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
             onPaste={quickAdd.handlePaste}
             placeholder="Add item..."
             disabled={quickAdd.saving}
-            className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0"
+            variant="flushed"
+            height="7"
+            bg="transparent"
+            px="0.5"
+            py="0"
+            fontSize="md"
+            border="none"
+            _focus={{ boxShadow: 'none' }}
           />
           {quickAdd.value.trim() && (
             <Tooltip content="Add item">

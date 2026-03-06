@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dialog } from '@chakra-ui/react';
+import { Drawer } from '@chakra-ui/react';
+import { DRAWER_PLACEMENT } from '@/components/ui/provider';
 import { CommandActionPreview } from './CommandActionPreview';
 import { CommandIdleInput } from './CommandIdleInput';
 import { CommandSuccess } from './CommandSuccess';
@@ -57,15 +58,15 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
   const effectiveState = isExecuting ? 'executing' : state;
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => handleClose(e.open)}>
-      <Dialog.Backdrop />
-      <Dialog.Positioner>
-        <Dialog.Content>
-          <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>{photoMode ? 'Add from Photos' : 'Ask AI'}</Dialog.Title>
-          </Dialog.Header>
-          <Dialog.Body>
+    <Drawer.Root placement={DRAWER_PLACEMENT} open={open} onOpenChange={(e) => handleClose(e.open)}>
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>{photoMode ? 'Add from Photos' : 'Ask AI'}</Drawer.Title>
+          </Drawer.Header>
+          <Drawer.Body>
             <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
 
             {photoMode ? (
@@ -127,9 +128,9 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
                 />
               </div>
             )}
-          </Dialog.Body>
-        </Dialog.Content>
-      </Dialog.Positioner>
-    </Dialog.Root>
+          </Drawer.Body>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }

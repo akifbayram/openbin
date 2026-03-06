@@ -1,6 +1,6 @@
+import { Box, Collapsible } from '@chakra-ui/react';
 import { ChevronDown } from 'lucide-react';
-import { type ReactNode, useId, useState } from 'react';
-import { cn } from '@/lib/utils';
+import { type ReactNode, useState } from 'react';
 
 interface DisclosureProps {
   label: ReactNode;
@@ -12,37 +12,37 @@ interface DisclosureProps {
 
 export function Disclosure({ label, defaultOpen = false, indicator, labelClassName, children }: DisclosureProps) {
   const [open, setOpen] = useState(defaultOpen);
-  const contentId = useId();
 
   return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        aria-controls={contentId}
-        className={cn('flex items-center justify-between w-full text-[13px] text-gray-600 dark:text-gray-300 font-medium', labelClassName)}
-      >
-        <span className="flex items-center gap-1.5">
-          {label}
-          {indicator && <span className="h-1.5 w-1.5 rounded-full bg-purple-600 dark:bg-purple-500" />}
-        </span>
-        <ChevronDown className={cn('h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform duration-200', open && 'rotate-180')} />
-      </button>
-      <section
-        id={contentId}
-        aria-hidden={!open}
-        className={cn(
-          'grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none',
-          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-        )}
-      >
-        <div className="overflow-hidden min-h-0 -mx-1.5 px-1.5">
-          <div className={cn('mt-2 transition-opacity duration-200 motion-reduce:transition-none', open ? 'opacity-100' : 'opacity-0')}>
+    <Collapsible.Root open={open} onOpenChange={(e) => setOpen(e.open)}>
+      <Collapsible.Trigger asChild>
+        <button
+          type="button"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            fontSize: '13px',
+            color: 'var(--text-medium)',
+            fontWeight: 500,
+          }}
+          className={labelClassName}
+        >
+          <Box as="span" display="flex" alignItems="center" gap="1.5">
+            {label}
+            {indicator && <Box as="span" h="1.5" w="1.5" borderRadius="full" bg="var(--accent)" />}
+          </Box>
+          <ChevronDown className={`h-4 w-4 transition-transform duration-200${open ? ' rotate-180' : ''}`} style={{ color: 'var(--text-tertiary)' }} />
+        </button>
+      </Collapsible.Trigger>
+      <Collapsible.Content>
+        <Box mx="-1.5" px="1.5">
+          <Box mt="2">
             {children}
-          </div>
-        </div>
-      </section>
-    </div>
+          </Box>
+        </Box>
+      </Collapsible.Content>
+    </Collapsible.Root>
   );
 }

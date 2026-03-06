@@ -1,10 +1,10 @@
 import {
   Toaster as ChakraToaster,
+  createToaster,
+  ToastActionTrigger,
   ToastCloseTrigger,
   ToastDescription,
   ToastRoot,
-  ToastActionTrigger,
-  createToaster,
 } from '@chakra-ui/react';
 
 export const toaster = createToaster({

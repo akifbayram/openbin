@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Dialog } from '@chakra-ui/react';
+import { Button, Drawer } from '@chakra-ui/react';
+import { DRAWER_PLACEMENT } from '@/components/ui/provider';
 import { LocationSelectList } from '@/features/locations/LocationSelectList';
 import { useTerminology } from '@/lib/terminology';
 import type { Location } from '@/types';
@@ -22,18 +23,18 @@ export function MoveBinDialog({ open, onOpenChange, binName, locations, onConfir
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => handleOpenChange(e.open)}>
-      <Dialog.Backdrop />
-      <Dialog.Positioner>
-        <Dialog.Content>
-          <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Move to another {t.location}</Dialog.Title>
-            <Dialog.Description>
+    <Drawer.Root open={open} onOpenChange={(e) => handleOpenChange(e.open)} placement={DRAWER_PLACEMENT}>
+      <Drawer.Backdrop />
+      <Drawer.Positioner>
+        <Drawer.Content>
+          <Drawer.CloseTrigger />
+          <Drawer.Header>
+            <Drawer.Title>Move to another {t.location}</Drawer.Title>
+            <Drawer.Description>
               Select a {t.location} to move the &apos;{binName}&apos; {t.bin}.
-            </Dialog.Description>
-          </Dialog.Header>
-          <Dialog.Body>
+            </Drawer.Description>
+          </Drawer.Header>
+          <Drawer.Body>
             <div className="py-2">
               <LocationSelectList
                 locations={locations}
@@ -42,20 +43,21 @@ export function MoveBinDialog({ open, onOpenChange, binName, locations, onConfir
                 emptyMessage={`No other ${t.locations} available`}
               />
             </div>
-          </Dialog.Body>
-          <Dialog.Footer>
-            <Button variant="ghost" onClick={() => handleOpenChange(false)}>
+          </Drawer.Body>
+          <Drawer.Footer flexDirection="column">
+            <Button width="full" variant="ghost" onClick={() => handleOpenChange(false)}>
               Cancel
             </Button>
             <Button
+              width="full"
               onClick={() => { if (targetId) onConfirm(targetId); }}
               disabled={!targetId}
             >
               Move
             </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
-      </Dialog.Positioner>
-    </Dialog.Root>
+          </Drawer.Footer>
+        </Drawer.Content>
+      </Drawer.Positioner>
+    </Drawer.Root>
   );
 }

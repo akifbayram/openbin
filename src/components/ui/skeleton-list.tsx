@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { Flex } from '@chakra-ui/react';
 
 interface SkeletonListProps {
   count?: number;
@@ -8,11 +8,11 @@ interface SkeletonListProps {
 
 export function SkeletonList({ count = 5, children, className }: SkeletonListProps) {
   return (
-    <div className={cn('flex flex-col gap-1', className)}>
+    <Flex direction="column" gap="1" className={className}>
       {Array.from({ length: count }, (_, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no stable identity
         <div key={i}>{children(i)}</div>
       ))}
-    </div>
+    </Flex>
   );
 }
