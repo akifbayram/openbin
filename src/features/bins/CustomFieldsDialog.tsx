@@ -1,7 +1,15 @@
 import { GripVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button, Dialog, Input } from '@chakra-ui/react';
-import { toaster } from '@/components/ui/toaster';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/toast';
 import {
   addCustomField,
   deleteCustomField,
@@ -17,7 +25,8 @@ interface CustomFieldsDialogProps {
 
 export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFieldsDialogProps) {
   const { fields } = useCustomFields(open ? locationId : null);
-    const [newName, setNewName] = useState('');
+  const { showToast } = useToast();
+  const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -37,7 +46,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
       await addCustomField(locationId, newName.trim());
       setNewName('');
     } catch (err) {
-      toaster.create({ description: err instanceof Error ? err.message : 'Failed to add field' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to add field' });
     } finally {
       setAdding(false);
     }
@@ -49,7 +58,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
       await updateCustomField(locationId, fieldId, { name: editName.trim() });
       setEditingId(null);
     } catch (err) {
-      toaster.create({ description: err instanceof Error ? err.message : 'Failed to rename field' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to rename field' });
     }
   }
 
@@ -57,95 +66,90 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
     if (!locationId) return;
     try {
       await deleteCustomField(locationId, fieldId);
-      toaster.create({ description: `Deleted "${fieldName}"` });
+      showToast({ message: `Deleted "${fieldName}"` });
     } catch (err) {
-      toaster.create({ description: err instanceof Error ? err.message : 'Failed to delete field' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to delete field' });
     }
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <Dialog.Backdrop />
-      <Dialog.Positioner>
-        <Dialog.Content>
-          <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Custom Fields</Dialog.Title>
-            <Dialog.Description>
-              Define custom fields that appear on all bins in this location.
-            </Dialog.Description>
-          </Dialog.Header>
-          <Dialog.Body>
-            <div className="space-y-3">
-              {fields.length === 0 && (
-                <p className="text-[13px] text-[var(--text-tertiary)] py-2">
-                  No custom fields yet. Add one below.
-                </p>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Custom Fields</DialogTitle>
+          <DialogDescription>
+            Define custom fields that appear on all bins in this location.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          {fields.length === 0 && (
+            <p className="text-[13px] text-gray-500 dark:text-gray-400 py-2">
+              No custom fields yet. Add one below.
+            </p>
+          )}
+
+          {fields.map((field) => (
+            <div key={field.id} className="flex items-center gap-2">
+              <GripVertical className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0 opacity-40" />
+              {editingId === field.id ? (
+                <form
+                  className="flex-1 flex items-center gap-2"
+                  onSubmit={(e) => { e.preventDefault(); handleRename(field.id); }}
+                >
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    autoFocus
+                    className="h-8 text-[14px]"
+                  />
+                  <Button type="submit" size="icon-sm" variant="ghost" className="shrink-0" disabled={!editName.trim()}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button type="button" size="icon-sm" variant="ghost" className="shrink-0" onClick={() => setEditingId(null)}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </form>
+              ) : (
+                <>
+                  <span className="flex-1 text-[14px]  truncate">
+                    {field.name}
+                  </span>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="shrink-0"
+                    onClick={() => { setEditingId(field.id); setEditName(field.name); }}
+                  >
+                    <Pencil className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                  </Button>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="shrink-0"
+                    onClick={() => handleDelete(field.id, field.name)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
+                  </Button>
+                </>
               )}
-
-              {fields.map((field) => (
-                <div key={field.id} className="flex items-center gap-2">
-                  <GripVertical className="h-4 w-4 text-[var(--text-tertiary)] shrink-0 opacity-40" />
-                  {editingId === field.id ? (
-                    <form
-                      className="flex-1 flex items-center gap-2"
-                      onSubmit={(e) => { e.preventDefault(); handleRename(field.id); }}
-                    >
-                      <Input
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        autoFocus
-                        className="h-8 text-[14px]"
-                      />
-                      <Button type="submit" size="xs" px="0" variant="ghost" className="shrink-0" disabled={!editName.trim()}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button type="button" size="xs" px="0" variant="ghost" className="shrink-0" onClick={() => setEditingId(null)}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </form>
-                  ) : (
-                    <>
-                      <span className="flex-1 text-[14px] text-[var(--text-primary)] truncate">
-                        {field.name}
-                      </span>
-                      <Button
-                        size="xs" px="0"
-                        variant="ghost"
-                        className="shrink-0"
-                        onClick={() => { setEditingId(field.id); setEditName(field.name); }}
-                      >
-                        <Pencil className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-                      </Button>
-                      <Button
-                        size="xs" px="0"
-                        variant="ghost"
-                        className="shrink-0"
-                        onClick={() => handleDelete(field.id, field.name)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-[var(--destructive)]" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              ))}
-
-              <form onSubmit={handleAdd} className="flex items-center gap-2 pt-2 border-t border-[var(--border-subtle)]">
-                <Input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="New field name"
-                  className="h-8 text-[14px]"
-                />
-                <Button type="submit" size="sm" disabled={!newName.trim() || adding} className="shrink-0">
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                  Add
-                </Button>
-              </form>
             </div>
-          </Dialog.Body>
-        </Dialog.Content>
-      </Dialog.Positioner>
-    </Dialog.Root>
+          ))}
+
+          <form onSubmit={handleAdd} className="flex items-center gap-2 pt-2 border-t border-black/6 dark:border-white/6">
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="New field name"
+              className="h-8 text-[14px]"
+            />
+            <Button type="submit" size="sm" disabled={!newName.trim() || adding} className="shrink-0">
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Add
+            </Button>
+          </form>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

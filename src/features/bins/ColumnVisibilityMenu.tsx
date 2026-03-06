@@ -1,6 +1,6 @@
 import { Columns3 } from 'lucide-react';
 import { useRef } from 'react';
-import { Button } from '@chakra-ui/react';
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
@@ -16,18 +16,18 @@ export function FieldToggleList({ fields, visibility, onToggle }: {
   return (
     <>
       {fields.map((field) => (
-        <button
+        <label
           key={field}
-          type="button"
-          className="w-full flex items-center justify-between px-3.5 py-2 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
-          onClick={() => onToggle(field)}
+          htmlFor={`field-toggle-${field}`}
+          className="w-full flex items-center justify-between px-3.5 py-2 text-[15px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors cursor-pointer"
         >
           {FIELD_LABELS[field]}
           <Switch
+            id={`field-toggle-${field}`}
             checked={visibility[field]}
             onCheckedChange={() => onToggle(field)}
           />
-        </button>
+        </label>
       ))}
     </>
   );
@@ -49,8 +49,8 @@ export function ColumnVisibilityMenu({ applicableFields, visibility, onToggle }:
     <div ref={menuRef} className="relative">
       <Tooltip content="Fields" side="bottom">
         <Button
-          variant="ghost"
-          size="sm" px="0"
+          variant="secondary"
+          size="icon"
           onClick={toggle}
           className="shrink-0"
           aria-label="Toggle field visibility"
@@ -59,8 +59,8 @@ export function ColumnVisibilityMenu({ applicableFields, visibility, onToggle }:
         </Button>
       </Tooltip>
       {visible && (
-        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 mt-1 w-52 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg overflow-hidden z-20`}>
-          <div className="px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
+        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 mt-1 w-52 rounded-[var(--radius-md)] border border-black/6 dark:border-white/6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl shadow-lg overflow-hidden z-20`}>
+          <div className="px-3.5 py-2 text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             Visible Fields
           </div>
           <FieldToggleList fields={applicableFields} visibility={visibility} onToggle={onToggle} />

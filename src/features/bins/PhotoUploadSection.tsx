@@ -46,10 +46,10 @@ export function PhotoUploadSection({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           className={cn(
-            'w-full flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-2 border-dashed text-[14px] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]',
+            'w-full flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-2 border-dashed text-[14px] transition-colors hover:border-purple-600 dark:hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400',
             isFull
-              ? 'border-[var(--border)] py-4 text-[var(--text-tertiary)]'
-              : 'border-[var(--border-primary)] py-3 text-[var(--text-tertiary)]'
+              ? 'border-black/6 dark:border-white/6 py-4 text-gray-500 dark:text-gray-400'
+              : 'border-black/6 dark:border-white/6 py-3 text-gray-500 dark:text-gray-400'
           )}
         >
           <Camera className={cn(isFull ? 'h-5 w-5' : 'h-4 w-4')} />
@@ -59,7 +59,7 @@ export function PhotoUploadSection({
         <div className="space-y-2">
           <div className={cn(
             'flex items-center gap-2 overflow-x-auto',
-            !isFull && 'rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2'
+            !isFull && 'rounded-[var(--radius-md)] bg-gray-500/12 dark:bg-gray-500/24 p-2'
           )}>
             {photoPreviews.map((preview, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: preview blobs have no stable identity
@@ -75,7 +75,7 @@ export function PhotoUploadSection({
                 <button
                   type="button"
                   onClick={() => onRemovePhoto(i)}
-                  className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors"
+                  className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-white/70 dark:bg-gray-800/70 border border-black/6 dark:border-white/6 flex items-center justify-center shadow-sm hover:bg-red-500 hover:text-white transition-colors"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -86,7 +86,7 @@ export function PhotoUploadSection({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className={cn(
-                  'h-14 w-14 shrink-0 flex items-center justify-center border-2 border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors',
+                  'h-14 w-14 shrink-0 flex items-center justify-center border-2 border-dashed border-black/6 dark:border-white/6 text-gray-500 dark:text-gray-400 hover:border-purple-600 dark:hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors',
                   isFull ? 'rounded-[var(--radius-md)]' : 'rounded-[var(--radius-sm)]'
                 )}
               >
@@ -107,7 +107,7 @@ export function PhotoUploadSection({
                 {analyzing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Sparkles className="h-4 w-4 text-[var(--ai-accent)]" />
+                  <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 )}
                 {analyzing ? 'Analyzing...' : `Analyze with AI${photos.length > 1 ? ` (${photos.length})` : ''}`}
               </Button>
@@ -117,7 +117,7 @@ export function PhotoUploadSection({
               type="button"
               onClick={onAnalyze}
               disabled={analyzing}
-              className="flex items-center gap-1.5 text-[13px] text-[var(--ai-accent)] hover:opacity-80 transition-opacity disabled:opacity-50"
+              className="flex items-center gap-1.5 text-[13px] text-purple-600 dark:text-purple-400 hover:opacity-80 transition-opacity disabled:opacity-50"
             >
               {analyzing ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -130,7 +130,7 @@ export function PhotoUploadSection({
         </div>
       )}
       {analyzeError && (
-        <p className={cn('text-[var(--destructive)]', isFull ? 'text-[13px]' : 'text-[12px] mt-1')}>{analyzeError}</p>
+        <p className={cn('text-red-500 dark:text-red-400', isFull ? 'text-[13px]' : 'text-[12px] mt-1')}>{analyzeError}</p>
       )}
     </div>
   );

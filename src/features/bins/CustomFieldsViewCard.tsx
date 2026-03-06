@@ -17,8 +17,8 @@ export function CustomFieldsViewCard({ fields, values }: CustomFieldsViewCardPro
         <Label>Custom Fields</Label>
         {populated.map((field) => (
           <div key={field.id}>
-            <p className="text-[13px] text-[var(--text-tertiary)]">{field.name}</p>
-            <p className="mt-0.5 text-[15px] text-[var(--text-primary)]">{values[field.id]}</p>
+            <p className="text-[13px] text-gray-500 dark:text-gray-400">{field.name}</p>
+            <p className="mt-0.5 text-[15px] ">{values[field.id]}</p>
           </div>
         ))}
       </CardContent>

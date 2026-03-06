@@ -181,17 +181,17 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
       </div>
 
       {items.length > 0 && (
-        <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden">
+        <div className="rounded-[var(--radius-md)] bg-gray-500/12 dark:bg-gray-500/24 overflow-hidden">
           {items.map((item, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: items may contain duplicates
             <div key={index}>
-              {index > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-              <div className="group flex items-center gap-1.5 px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors">
-                <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">{item}</span>
+              {index > 0 && <div className="h-px mx-3.5 bg-black/6 dark:bg-white/6" />}
+              <div className="group flex items-center gap-1.5 px-3.5 py-1 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors">
+                <span className="flex-1 min-w-0 text-[15px]  leading-relaxed">{item}</span>
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
-                  className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
+                  className="shrink-0 p-1 text-gray-500 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-all"
                   aria-label={`Remove ${item}`}
                 >
                   <X className="h-3.5 w-3.5" />
@@ -202,7 +202,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
         </div>
       )}
 
-      <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
+      <div className="mt-3 rounded-[var(--radius-md)] bg-gray-500/12 dark:bg-gray-500/24 p-2.5 transition-all duration-200">
         {state === 'input' && (
           <div className="flex items-center gap-1.5">
             <Input
@@ -218,7 +218,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 <button
                   type="button"
                   onClick={addItem}
-                  className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+                  className="shrink-0 rounded-full p-1 text-purple-600 dark:text-purple-400 hover:bg-gray-500/16 dark:hover:bg-gray-500/28 transition-colors"
                   aria-label="Add item"
                 >
                   <Plus className="h-4 w-4" />
@@ -230,7 +230,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 <button
                   type="button"
                   onClick={handleSparklesClick}
-                  className="shrink-0 rounded-full p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
+                  className="shrink-0 rounded-full p-1 text-purple-600 dark:text-purple-400 hover:bg-gray-500/16 dark:hover:bg-gray-500/28 transition-colors"
                   aria-label="Add with AI"
                 >
                   <Sparkles className="h-4 w-4" />
@@ -251,16 +251,16 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
               placeholder="List or describe items, e.g. 'three socks, AA batteries, winter jacket'"
               rows={3}
               disabled={isStructuring}
-              className="w-full min-h-[80px] bg-[var(--bg-elevated)] rounded-[var(--radius-sm)] px-3 py-2 text-base text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none resize-none disabled:opacity-50"
+              className="w-full min-h-[80px] bg-white/70 dark:bg-gray-800/70 rounded-[var(--radius-sm)] px-3 py-2 text-base  placeholder:text-gray-500 dark:placeholder:text-gray-400 outline-none resize-none disabled:opacity-50"
             />
             {error && (
-              <p className="text-[13px] text-[var(--destructive)]">{error}</p>
+              <p className="text-[13px] text-red-500 dark:text-red-400">{error}</p>
             )}
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleCollapse}
-                className="text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                className="text-[13px] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
               >
                 Cancel
               </button>
@@ -270,7 +270,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 size="sm"
                 onClick={handleExtract}
                 disabled={!expandedText.trim() || isStructuring}
-                className="rounded-[var(--radius-full)] gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
+                className="rounded-[var(--radius-full)] gap-1.5 bg-purple-600 dark:bg-purple-500 hover:bg-purple-700 dark:hover:bg-purple-400"
               >
                 {isStructuring ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -295,8 +295,8 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                     onClick={() => toggleItem(i)}
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] transition-all ${
                       checked
-                        ? 'bg-[var(--accent)] text-white'
-                        : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] line-through'
+                        ? 'bg-purple-600 dark:bg-purple-500 text-white'
+                        : 'bg-gray-200 dark:bg-gray-900 text-gray-500 dark:text-gray-400 line-through'
                     }`}
                   >
                     {checked && <Check className="h-3 w-3" />}

@@ -43,8 +43,8 @@ export const BinCompactCard = React.memo(function BinCompactCard({
       className={cn(
         'mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
         selected
-          ? 'bg-[var(--accent)] border-[var(--accent)]'
-          : 'border-[var(--text-tertiary)]',
+          ? 'bg-purple-600 dark:bg-purple-500 border-purple-600 dark:border-purple-500'
+          : 'border-gray-500 dark:border-gray-400',
       )}
       style={!selected ? secondaryBorderStyle : undefined}
     >
@@ -56,16 +56,16 @@ export const BinCompactCard = React.memo(function BinCompactCard({
     <div className="flex items-start gap-2">
       <div className="min-w-0 flex-1">
         <h3
-          className="font-semibold text-[13px] text-[var(--text-primary)] truncate leading-snug flex items-center gap-1"
+          className="font-semibold text-[13px]  truncate leading-snug flex items-center gap-1"
           style={nameStyle}
         >
           <Highlight text={bin.name} query={searchQuery} />
           {bin.visibility === 'private' && (
-            <Lock className="h-3 w-3 shrink-0 text-[var(--text-tertiary)]" style={secondaryStyle} />
+            <Lock className="h-3 w-3 shrink-0 text-gray-500 dark:text-gray-400" style={secondaryStyle} />
           )}
         </h3>
         {isVisible?.('area') && bin.area_name && (
-          <p className="text-[11px] text-[var(--text-tertiary)] truncate leading-relaxed" style={secondaryStyle}>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate leading-relaxed" style={secondaryStyle}>
             <Highlight text={bin.area_name} query={searchQuery} />
           </p>
         )}
@@ -84,18 +84,18 @@ export const BinCompactCard = React.memo(function BinCompactCard({
         >
           {isVisible?.('icon') !== false && (
             <BinIcon
-              className="absolute inset-0 h-5 w-5 text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
+              className="absolute inset-0 h-5 w-5 text-gray-500 dark:text-gray-400 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
               style={iconStyle}
             />
           )}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100">
-            <div className="h-5 w-5 rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center"
+            <div className="h-5 w-5 rounded-full border-2 border-gray-500 dark:border-gray-400 flex items-center justify-center"
               style={secondaryBorderStyle}
             />
           </div>
         </button>
       ) : isVisible?.('icon') !== false ? (
-        <BinIcon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-tertiary)]" style={iconStyle} />
+        <BinIcon className="mt-0.5 h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400" style={iconStyle} />
       ) : null}
     </div>
   );
@@ -107,10 +107,10 @@ export const BinCompactCard = React.memo(function BinCompactCard({
       role="button"
       aria-pressed={selectable ? selected : undefined}
       className={cn(
-        'group rounded-[var(--radius-md)] px-3 py-2.5 cursor-pointer transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none bin-card-shadow',
+        'group rounded-[var(--radius-md)] px-3 py-2.5 cursor-pointer transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-purple-600 dark:focus-visible:ring-purple-500 select-none bin-card-shadow',
         renderProps.className,
         selected && 'bin-selected-ring',
-        selectable && !selected && 'active:bg-[var(--bg-active)]',
+        selectable && !selected && 'active:bg-gray-500/16 dark:active:bg-gray-500/28',
       )}
       style={renderProps.style}
       onClick={handleClick}

@@ -54,7 +54,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
             className="shrink-0"
             aria-label="Save"
           >
-            <Check className="h-4 w-4 text-[var(--accent)]" />
+            <Check className="h-4 w-4 text-purple-600 dark:text-purple-500" />
           </Button>
         </Tooltip>
         <Tooltip content="Cancel">
@@ -73,17 +73,17 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
   }
 
   return (
-    <div className="group flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--bg-hover)] transition-colors">
+    <div className="group flex items-center gap-3 px-4 py-2.5 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors">
       <button
         type="button"
         className="flex-1 min-w-0 text-left cursor-pointer"
         onClick={() => onNavigate(id)}
       >
-        <span className="text-[15px] font-medium text-[var(--text-primary)] truncate block">
+        <span className="text-[15px] font-medium truncate block">
           {name}
         </span>
       </button>
-      <span className="text-[13px] text-[var(--text-tertiary)] shrink-0 tabular-nums">
+      <span className="text-[13px] text-gray-500 dark:text-gray-400 shrink-0 tabular-nums">
         {binCount} {binCount !== 1 ? t.bins : t.bin}
       </span>
       {isAdmin && (

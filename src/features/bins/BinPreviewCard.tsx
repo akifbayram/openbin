@@ -44,16 +44,16 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
   const content = (
     <div className="flex items-start gap-3">
       <div className="min-w-0 flex-1">
-        <h3 className="font-semibold text-[15px] text-[var(--text-primary)] truncate leading-snug" style={nameStyle}>
+        <h3 className="font-semibold text-[15px]  truncate leading-snug" style={nameStyle}>
           {name || <span>My bin</span>}
         </h3>
         {areaName && (
-          <p className="text-[12px] text-[var(--text-tertiary)] truncate leading-relaxed" style={secondaryStyle}>
+          <p className="text-[12px] text-gray-500 dark:text-gray-400 truncate leading-relaxed" style={secondaryStyle}>
             {areaName}
           </p>
         )}
         {items.length > 0 && (
-          <p className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed" style={secondaryStyle}>
+          <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400 line-clamp-1 leading-relaxed" style={secondaryStyle}>
             {items.join(', ')}
           </p>
         )}
@@ -67,7 +67,7 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
           </div>
         )}
       </div>
-      <BinIcon className="mt-0.5 h-[22px] w-[22px] shrink-0 text-[var(--text-tertiary)]" style={iconStyle} />
+      <BinIcon className="mt-0.5 h-[22px] w-[22px] shrink-0 text-gray-500 dark:text-gray-400" style={iconStyle} />
     </div>
   );
 

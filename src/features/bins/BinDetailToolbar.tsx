@@ -75,26 +75,26 @@ export function BinDetailToolbar({
           size="xs" px="0"
           onClick={onBack}
           aria-label="Go back"
-          className="hidden lg:flex shrink-0 text-[var(--accent)]"
+          className="hidden lg:flex shrink-0 text-purple-600 dark:text-purple-400"
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
       )}
-      {!editing && <BinIcon className="hidden lg:block h-5 w-5 text-[var(--text-secondary)] shrink-0" />}
+      {!editing && <BinIcon className="hidden lg:block h-5 w-5 text-gray-600 dark:text-gray-300 shrink-0" />}
       <div className="min-w-0 flex-1">
         {editing ? (
           <input
             id="edit-name"
             value={editingName}
             onChange={(e) => onNameChange(e.target.value)}
-            className="w-full bg-transparent text-[17px] font-semibold text-[var(--text-primary)] leading-tight border-b border-b-[var(--border-glass)] outline-none placeholder:text-[var(--text-tertiary)] p-0"
+            className="w-full bg-transparent text-[17px] font-semibold  leading-tight border-b border-b-[var(--border-glass)] outline-none placeholder:text-gray-500 dark:placeholder:text-gray-400 p-0"
             placeholder="Name..."
           />
         ) : (
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[17px] font-semibold text-[var(--text-primary)] leading-tight truncate">{bin.name}</span>
+            <span className="text-[17px] font-semibold  leading-tight truncate">{bin.name}</span>
             {bin.visibility === 'private' && (
-              <Lock className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
+              <Lock className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 shrink-0" />
             )}
           </div>
         )}
@@ -177,27 +177,27 @@ export function BinDetailToolbar({
               <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]`}>
                 <button
                   type="button"
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors duration-150"
                   onClick={() => handleItem(onDuplicate)}
                 >
-                  <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
+                  <Copy className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                   Duplicate
                 </button>
                 <button
                   type="button"
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors duration-150"
                   onClick={() => handleItem(onPrint)}
                 >
-                  <Printer className="h-4 w-4 text-[var(--text-tertiary)]" />
+                  <Printer className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                   Print Label
                 </button>
                 {otherLocations.length > 0 && (
                   <button
                     type="button"
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors duration-150"
                     onClick={() => handleItem(onMove)}
                   >
-                    <ArrowRightLeft className="h-4 w-4 text-[var(--text-tertiary)]" />
+                    <ArrowRightLeft className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     Move
                   </button>
                 )}
@@ -206,7 +206,7 @@ export function BinDetailToolbar({
                     <div className="my-1 border-t border-[var(--border-glass)]" />
                     <button
                       type="button"
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-red-500 dark:text-red-400 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors duration-150"
                       onClick={() => handleItem(onDelete)}
                     >
                       <Trash2 className="h-4 w-4" />

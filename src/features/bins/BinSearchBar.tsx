@@ -45,8 +45,8 @@ export function BinSearchBar({
   return (
     <div className="flex items-center gap-2.5">
       {/* Unified search bar with inline filter badges */}
-      <div className="flex flex-1 min-w-0 items-center gap-1.5 rounded-[var(--radius-full)] bg-[var(--bg-input)] px-3.5 min-h-10 py-1.5 focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:shadow-[0_0_0_4px_var(--accent-glow)] transition-all duration-200">
-        <Search className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+      <div className="flex flex-1 min-w-0 items-center gap-1.5 rounded-[var(--radius-full)] bg-gray-500/12 dark:bg-gray-500/24 px-3.5 min-h-10 py-1.5 focus-within:ring-2 focus-within:ring-purple-600 dark:focus-within:ring-purple-500 focus-within:shadow-[0_0_0_4px_rgba(147,51,234,0.15)] dark:focus-within:shadow-[0_0_0_4px_rgba(168,85,247,0.2)] transition-all duration-200">
+        <Search className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" />
         {hasBadges && (
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide min-w-0 shrink">
             {filters.tags.map((tag) => (
@@ -60,7 +60,7 @@ export function BinSearchBar({
               </DismissibleBadge>
             ))}
             {filters.tags.length >= 2 && (
-              <Badge variant="outline" className="py-0.5 shrink-0 text-[11px] text-[var(--text-tertiary)]">
+              <Badge variant="outline" className="py-0.5 shrink-0 text-[11px] text-gray-500 dark:text-gray-400">
                 {filters.tagMode === 'all' ? 'All tags' : 'Any tag'}
               </Badge>
             )}
@@ -111,14 +111,14 @@ export function BinSearchBar({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={`Search ${t.bins}...`}
-          className="flex-1 min-w-[80px] bg-transparent text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none"
+          className="flex-1 min-w-[80px] bg-transparent text-[15px]  placeholder:text-gray-500 dark:placeholder:text-gray-400 outline-none"
         />
         {(hasBadges || search) && (
           <button
             type="button"
             onClick={clearAll}
             aria-label="Clear all filters"
-            className="p-1 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-active)] shrink-0"
+            className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-500/16 dark:hover:bg-gray-500/28 shrink-0"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -139,7 +139,7 @@ export function BinSearchBar({
         >
           <SlidersHorizontal className="h-4 w-4" />
           {activeCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 rounded-full bg-[var(--accent)] text-[10px] font-bold text-white flex items-center justify-center px-1">
+            <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 rounded-full bg-purple-600 dark:bg-purple-500 text-[10px] font-bold text-white flex items-center justify-center px-1">
               {activeCount}
             </span>
           )}

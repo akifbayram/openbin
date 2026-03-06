@@ -37,20 +37,20 @@ export function SortMenu({ sort, onSortChange }: SortMenuProps) {
         >
           <ArrowUpDown className="h-4 w-4" />
           {sort !== 'updated' && (
-            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[var(--accent)]" />
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-purple-600 dark:bg-purple-500" />
           )}
         </Button>
       </Tooltip>
       {visible && (
-        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg overflow-hidden z-20`}>
+        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] border border-black/6 dark:border-white/6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl shadow-lg overflow-hidden z-20`}>
           {(Object.keys(sortLabels) as SortOption[]).map((key) => (
             <button
               type="button"
               key={key}
               onClick={() => { onSortChange(key); close(); }}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
             >
-              <Check className={cn('h-4 w-4', sort === key ? 'text-[var(--accent)]' : 'invisible')} />
+              <Check className={cn('h-4 w-4', sort === key ? 'text-purple-600 dark:text-purple-400' : 'invisible')} />
               {sortLabels[key]}
             </button>
           ))}

@@ -159,7 +159,7 @@ export function BinCreateForm({
   }
 
   const isFull = mode === 'full';
-  const compactLabel = 'text-[13px] text-[var(--text-tertiary)] mb-1.5 block';
+  const compactLabel = 'text-[13px] text-gray-500 dark:text-gray-400 mb-1.5 block';
 
   // Determine AI "configured" and "enabled" for ItemsInput
   const aiReady = isFull ? (aiEnabled && !!aiSettings) : aiConfiguredInline;
@@ -351,7 +351,7 @@ export function BinCreateForm({
           {aiConfiguredInline ? (
             <AiConfiguredIndicator>
               {photos.length > 0 && (
-                <span className="text-[var(--text-tertiary)]">— tap <Sparkles className="h-3 w-3 inline" /> to analyze</span>
+                <span className="text-gray-500 dark:text-gray-400">— tap <Sparkles className="h-3 w-3 inline" /> to analyze</span>
               )}
             </AiConfiguredIndicator>
           ) : (

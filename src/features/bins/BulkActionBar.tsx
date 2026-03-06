@@ -1,6 +1,6 @@
 import { ArrowRightLeft, CheckCircle2, Clipboard, ClipboardPaste, Copy, Eye, List, MapPin, MoreHorizontal, Paintbrush, Pin, Tag, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button } from '@chakra-ui/react';
+import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { cn } from '@/lib/utils';
@@ -48,9 +48,9 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
       'transition-all duration-200',
       visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
     )}>
-    <div className="rounded-[var(--radius-full)] flex items-center gap-2 px-4 py-2.5 shadow-lg">
-      <CheckCircle2 className="h-4 w-4 text-[var(--accent)]" />
-      <span className="text-[13px] font-medium text-[var(--text-secondary)] whitespace-nowrap">
+    <div className="glass-heavy rounded-[var(--radius-full)] flex items-center gap-2 px-4 py-2.5 shadow-lg">
+      <CheckCircle2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+      <span className="text-[13px] font-medium text-gray-600 dark:text-gray-300 whitespace-nowrap">
         {selectedCount} selected
       </span>
       {isAdmin && (
@@ -86,7 +86,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)] text-[var(--destructive)]"
+            className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)] text-red-500 dark:text-red-400"
             onClick={onDelete}
             aria-label="Delete"
           >
@@ -100,7 +100,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
           <Tooltip content="More actions" side="top">
             <Button
               variant="ghost"
-              size="sm" px="0"
+              size="icon"
               className="h-8 w-8 rounded-full"
               onClick={() => setMoreOpen((o) => !o)}
               aria-label="More actions"
@@ -109,77 +109,77 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
             </Button>
           </Tooltip>
           {moreOpen && (
-            <div className="absolute bottom-full mb-2 right-0 rounded-[var(--radius-md)] py-1 min-w-[180px] z-50 shadow-lg">
+            <div className="absolute bottom-full mb-2 right-0 glass-heavy rounded-[var(--radius-md)] py-1 min-w-[180px] z-50 shadow-lg">
               <button
                 type="button"
-                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
                 onClick={() => handleMoreAction(onAppearance)}
               >
-                <Paintbrush className="h-4 w-4 text-[var(--text-tertiary)]" />
+                <Paintbrush className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 Appearance
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
                 onClick={() => handleMoreAction(onVisibility)}
               >
-                <Eye className="h-4 w-4 text-[var(--text-tertiary)]" />
+                <Eye className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 Change Visibility
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
                 onClick={() => handleMoreAction(onMoveLocation)}
               >
-                <ArrowRightLeft className="h-4 w-4 text-[var(--text-tertiary)]" />
+                <ArrowRightLeft className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 Move to Location
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
                 onClick={() => handleMoreAction(onPin)}
               >
-                <Pin className="h-4 w-4 text-[var(--text-tertiary)]" />
+                <Pin className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 {pinLabel}
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
                 onClick={() => handleMoreAction(onDuplicate)}
               >
-                <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
+                <Copy className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 Duplicate
               </button>
               {onCustomFields && (
                 <button
                   type="button"
-                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
                   onClick={() => handleMoreAction(onCustomFields)}
                 >
-                  <List className="h-4 w-4 text-[var(--text-tertiary)]" />
+                  <List className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                   Custom Fields
                 </button>
               )}
               {(canCopyStyle || canPasteStyle) && (
-                <div className="my-1 border-t border-[var(--border-primary)]" />
+                <div className="my-1 border-t border-black/6 dark:border-white/6" />
               )}
               {canCopyStyle && onCopyStyle && (
                 <button
                   type="button"
-                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
                   onClick={() => handleMoreAction(onCopyStyle)}
                 >
-                  <Clipboard className="h-4 w-4 text-[var(--text-tertiary)]" />
+                  <Clipboard className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                   Copy Style
                 </button>
               )}
               {canPasteStyle && onPasteStyle && (
                 <button
                   type="button"
-                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
                   onClick={() => handleMoreAction(onPasteStyle)}
                 >
-                  <ClipboardPaste className="h-4 w-4 text-[var(--text-tertiary)]" />
+                  <ClipboardPaste className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                   Paste Style
                 </button>
               )}
@@ -190,7 +190,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
       <Tooltip content="Clear selection" side="top">
         <Button
           variant="ghost"
-          size="sm" px="0"
+          size="icon"
           className="h-8 w-8 rounded-full"
           onClick={onClear}
           aria-label="Clear selection"

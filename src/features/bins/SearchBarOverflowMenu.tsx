@@ -36,8 +36,8 @@ export function SearchBarOverflowMenu({ viewMode, onViewModeChange, applicableFi
         <MoreHorizontal className="h-4 w-4" />
       </Button>
       {visible && (
-        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 mt-1 w-56 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg overflow-hidden z-20`}>
-          <div className="px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
+        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 mt-1 w-56 rounded-[var(--radius-md)] border border-black/6 dark:border-white/6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl shadow-lg overflow-hidden z-20`}>
+          <div className="px-3.5 py-2 text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             View
           </div>
           <div className="px-3.5 pb-2">
@@ -45,7 +45,7 @@ export function SearchBarOverflowMenu({ viewMode, onViewModeChange, applicableFi
           </div>
           {applicableFields.length > 0 && (
             <>
-              <div className="px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide border-t border-[var(--border-subtle)]">
+              <div className="px-3.5 py-2 text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide border-t border-black/6 dark:border-white/6">
                 Fields
               </div>
               <FieldToggleList fields={applicableFields} visibility={visibility} onToggle={onColumnToggle} />

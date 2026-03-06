@@ -59,8 +59,8 @@ export function BinCreateSuccess({ createdBins, onCreateAnother, onClose }: BinC
 
       {/* Heading + stats */}
       <div className="text-center scan-text-fade">
-        <h2 className="text-xl font-bold text-[var(--text-primary)]">Success</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+        <h2 className="text-xl font-bold ">Success</h2>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
           <StatsLine createdBins={createdBins} binsLabel={t.bins} />
         </p>
       </div>
@@ -102,14 +102,14 @@ export function BinRow({ bin, showColor, onViewBin }: { bin: CreatedBinInfo; sho
       onClick={() => onViewBin(bin.id)}
       style={colorPreset ? { background: colorPreset.bgCss, boxShadow: 'none' } : { boxShadow: 'none' }}
     >
-      <Icon className="h-5 w-5 shrink-0 text-[var(--text-secondary)]" />
-      <span className="flex-1 truncate text-[var(--text-primary)] font-medium">{bin.name}</span>
+      <Icon className="h-5 w-5 shrink-0 text-gray-600 dark:text-gray-300" />
+      <span className="flex-1 truncate  font-medium">{bin.name}</span>
       {showColor && (bin.itemCount ?? 0) > 0 && (
-        <span className="text-xs text-[var(--text-tertiary)]">
+        <span className="text-xs text-gray-500 dark:text-gray-400">
           {bin.itemCount} {plural(bin.itemCount ?? 0, 'item')}
         </span>
       )}
-      <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+      <ChevronRight className="h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400" />
     </ListItem>
   );
 }

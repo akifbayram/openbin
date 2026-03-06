@@ -106,8 +106,8 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       className={cn(
         'mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
         selected
-          ? 'bg-[var(--accent)] border-[var(--accent)]'
-          : 'border-[var(--text-tertiary)]'
+          ? 'bg-purple-600 dark:bg-purple-500 border-purple-600 dark:border-purple-500'
+          : 'border-gray-500 dark:border-gray-400'
       )}
       style={!selected ? secondaryBorderStyle : undefined}
     >
@@ -119,21 +119,21 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
     <div className="flex items-start gap-3 h-full">
       <div className="min-w-0 flex-1 flex flex-col self-stretch">
         <h3
-          className="font-semibold text-[15px] text-[var(--text-primary)] leading-snug flex items-center gap-1.5 min-w-0 overflow-hidden"
+          className="font-semibold text-[15px] leading-snug flex items-center gap-1.5 min-w-0 overflow-hidden"
         >
           <span className="truncate" style={nameStyle}>
             <Highlight text={bin.name} query={searchQuery} />
           </span>
           {bin.visibility === 'private' && (
             <Lock
-              className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]"
+              className="h-3.5 w-3.5 shrink-0 text-gray-500 dark:text-gray-400"
               style={secondaryStyle}
             />
           )}
         </h3>
         {isVisible?.('area') !== false && bin.area_name && (
           <p
-            className="text-[12px] text-[var(--text-tertiary)] truncate leading-relaxed"
+            className="text-[12px] text-gray-500 dark:text-gray-400 truncate leading-relaxed"
             style={secondaryStyle}
           >
             <Highlight text={bin.area_name} query={searchQuery} />
@@ -141,7 +141,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
         )}
         {isVisible?.('items') !== false && bin.items.length > 0 && (
           <p
-            className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed"
+            className="mt-1 text-[13px] text-gray-500 dark:text-gray-400 line-clamp-1 leading-relaxed"
             style={secondaryStyle}
           >
             <Highlight text={bin.items.map(i => i.name).join(', ')} query={searchQuery} />
@@ -157,7 +157,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
         )}
         {isVisible?.('customFields') && bin.custom_fields && Object.keys(bin.custom_fields).length > 0 && (
           <p
-            className="mt-1 text-[13px] text-[var(--text-tertiary)] line-clamp-1 leading-relaxed"
+            className="mt-1 text-[13px] text-gray-500 dark:text-gray-400 line-clamp-1 leading-relaxed"
             style={secondaryStyle}
           >
             {Object.values(bin.custom_fields).filter(Boolean).join(' · ')}
@@ -169,7 +169,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
               <Badge
                 key={tag}
                 variant="secondary"
-                className="shrink-0 max-w-[8rem] truncate cursor-pointer text-[11px] hover:bg-[var(--bg-active)] transition-colors"
+                className="shrink-0 max-w-[8rem] truncate cursor-pointer text-[11px] hover:bg-gray-500/16 dark:hover:bg-gray-500/28 transition-colors"
                 style={isPhoto
                   ? { backgroundColor: 'rgba(0,0,0,0.4)', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }
                   : getTagStyle(tag) ?? tagDefaultStyle
@@ -211,7 +211,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           {/* Default icon — fades out on hover (hover:hover targets pointer devices only) */}
           {isVisible?.('icon') !== false && (
             <BinIcon
-              className="absolute inset-0 h-5 w-5 text-[var(--text-tertiary)] transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
+              className="absolute inset-0 h-5 w-5 text-gray-500 dark:text-gray-400 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0"
               style={iconStyle}
             />
           )}
@@ -221,14 +221,14 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
               'absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100',
             )}
           >
-            <div className="h-5 w-5 rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center"
+            <div className="h-5 w-5 rounded-full border-2 border-gray-500 dark:border-gray-400 flex items-center justify-center"
               style={secondaryBorderStyle}
             />
           </div>
         </button>
       ) : isVisible?.('icon') !== false ? (
         <BinIcon
-          className="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-tertiary)]"
+          className="mt-0.5 h-5 w-5 shrink-0 text-gray-500 dark:text-gray-400"
           style={iconStyle}
         />
       ) : null}
@@ -242,10 +242,10 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       role="button"
       aria-pressed={selectable ? selected : undefined}
       className={cn(
-        'group h-full rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none bin-card-shadow',
+        'group h-full rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-purple-600 dark:focus-visible:ring-purple-500 select-none bin-card-shadow',
         renderProps.className,
         selected && 'bin-selected-ring',
-        selectable && !selected && 'active:bg-[var(--bg-active)]'
+        selectable && !selected && 'active:bg-gray-500/16 dark:active:bg-gray-500/28'
       )}
       style={renderProps.style}
       onClick={handleClick}

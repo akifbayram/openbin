@@ -63,7 +63,7 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           className={cn(
             'h-7 w-7 rounded-full transition-colors',
             !value
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+              ? 'ring-2 ring-purple-600 dark:ring-purple-500 ring-offset-2 ring-offset-white/70 dark:ring-offset-gray-800/70'
               : 'hover:opacity-80'
           )}
           style={{ background: 'conic-gradient(from 0deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)' }}
@@ -75,7 +75,7 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           className={cn(
             'h-7 w-7 rounded-full transition-colors',
             isBlack
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+              ? 'ring-2 ring-purple-600 dark:ring-purple-500 ring-offset-2 ring-offset-white/70 dark:ring-offset-gray-800/70'
               : 'hover:opacity-80'
           )}
           style={{ backgroundColor: '#1C1C1E' }}
@@ -85,9 +85,9 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           onClick={() => onChange('white')}
           title="White"
           className={cn(
-            'h-7 w-7 rounded-full border border-[var(--border-subtle)] transition-colors',
+            'h-7 w-7 rounded-full border border-black/6 dark:border-white/6 transition-colors',
             isWhite
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+              ? 'ring-2 ring-purple-600 dark:ring-purple-500 ring-offset-2 ring-offset-white/70 dark:ring-offset-gray-800/70'
               : 'hover:opacity-80'
           )}
           style={{ backgroundColor: '#F2F2F7' }}
@@ -99,7 +99,7 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           className={cn(
             'h-7 w-7 rounded-full transition-colors',
             isNeutral
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+              ? 'ring-2 ring-purple-600 dark:ring-purple-500 ring-offset-2 ring-offset-white/70 dark:ring-offset-gray-800/70'
               : 'hover:opacity-80'
           )}
           style={{ backgroundColor: hslToHex(0, 0, 52) }}
@@ -185,13 +185,13 @@ export function ColorPicker({ value, onChange, secondaryLabel, secondaryValue, o
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors border border-[var(--border-subtle)]"
+        className="flex items-center gap-2 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px]  hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors border border-black/6 dark:border-white/6"
       >
         {hasSecondary ? (
           <span className="flex-1 flex items-center gap-1.5 min-w-0">
             <ColorDot colorKey={value} />
             <span className="truncate">{primaryLabel}</span>
-            <span className="text-[var(--text-tertiary)]">/</span>
+            <span className="text-gray-500 dark:text-gray-400">/</span>
             <ColorDot colorKey={secondaryValue ?? ''} />
             <span className="truncate">{secondaryDisplayLabel}</span>
           </span>
@@ -201,17 +201,17 @@ export function ColorPicker({ value, onChange, secondaryLabel, secondaryValue, o
             <span className="flex-1 text-left">{primaryLabel}</span>
           </>
         )}
-        {open ? <ChevronUp className="h-4 w-4 text-[var(--text-tertiary)]" /> : <ChevronDown className="h-4 w-4 text-[var(--text-tertiary)]" />}
+        {open ? <ChevronUp className="h-4 w-4 text-gray-500 dark:text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />}
       </button>
       {open && (
-        <div className="space-y-3 p-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+        <div className="space-y-3 p-2 rounded-[var(--radius-sm)] border border-black/6 dark:border-white/6 bg-white/70 dark:bg-gray-800/70">
           {hasSecondary && (
-            <p className="text-[12px] text-[var(--text-tertiary)]">Color</p>
+            <p className="text-[12px] text-gray-500 dark:text-gray-400">Color</p>
           )}
           <HueGradientPicker value={value} onChange={onChange} />
           {hasSecondary && (
             <>
-              <p className="text-[12px] text-[var(--text-tertiary)]">{secondaryLabel}</p>
+              <p className="text-[12px] text-gray-500 dark:text-gray-400">{secondaryLabel}</p>
               <HueGradientPicker
                 value={secondaryValue ?? ''}
                 onChange={(v) => onSecondaryChange?.(v)}

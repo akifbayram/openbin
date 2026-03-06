@@ -14,7 +14,7 @@ export function AreaActionMenu({ visible, animating, onRename, onDelete }: AreaA
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onRename(); }}
-        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
       >
         <Pencil className="h-4 w-4" />
         Rename
@@ -23,7 +23,7 @@ export function AreaActionMenu({ visible, animating, onRename, onDelete }: AreaA
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
-        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors"
+        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-red-500 dark:text-red-400 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
       >
         <Trash2 className="h-4 w-4" />
         Delete

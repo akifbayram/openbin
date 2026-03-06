@@ -24,7 +24,7 @@ export function CustomFieldsEditCard({ fields, values, onChange }: CustomFieldsE
           <div key={field.id} className="space-y-1.5">
             <label
               htmlFor={`cf-${field.id}`}
-              className="text-[13px] text-[var(--text-secondary)]"
+              className="text-[13px] text-gray-600 dark:text-gray-300"
             >
               {field.name}
             </label>

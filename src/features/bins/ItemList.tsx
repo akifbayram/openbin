@@ -86,7 +86,7 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
     <div className="relative overflow-hidden">
       {/* Delete zone behind */}
       <div
-        className="absolute inset-y-0 right-0 flex items-center justify-end px-4 text-[var(--text-tertiary)] text-[13px] font-medium"
+        className="absolute inset-y-0 right-0 flex items-center justify-end px-4 text-gray-500 dark:text-gray-400 text-[13px] font-medium"
         style={{ width: Math.max(0, -swipeX) }}
       >
         {-swipeX > SWIPE_THRESHOLD / 2 && 'Delete'}
@@ -95,7 +95,7 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
       {/* Foreground row */}
       <div
         className={cn(
-          'relative flex items-center gap-1.5 px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors',
+          'relative flex items-center gap-1.5 px-3.5 py-1 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors',
           !isEditing && 'group'
         )}
         style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 0.2s ease' : 'none' }}
@@ -118,13 +118,13 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
               }
             }}
             onBlur={handleSave}
-            className="flex-1 min-w-0 bg-transparent text-[15px] text-[var(--text-primary)] outline-none"
+            className="flex-1 min-w-0 bg-transparent text-[15px]  outline-none"
           />
         ) : (
           <button
             type="button"
             onClick={handleStartEdit}
-            className="flex-1 min-w-0 text-left text-[15px] text-[var(--text-primary)] leading-relaxed cursor-text"
+            className="flex-1 min-w-0 text-left text-[15px]  leading-relaxed cursor-text"
           >
             {text}
           </button>
@@ -136,7 +136,7 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
             <button
               type="button"
               onClick={onDelete}
-              className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
+              className="shrink-0 p-1 text-gray-500 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-all"
               aria-label="Remove item"
             >
               <X className="h-3.5 w-3.5" />
@@ -223,25 +223,25 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
         )}
       </div>
       {items.length === 0 ? (
-        <p className="text-[15px] text-[var(--text-tertiary)] italic">No items yet</p>
+        <p className="text-[15px] text-gray-500 dark:text-gray-400 italic">No items yet</p>
       ) : (
-        <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden">
+        <div className="rounded-[var(--radius-md)] bg-gray-500/12 dark:bg-gray-500/24 overflow-hidden">
           {items.map((item, i) => readOnly ? (
             <div key={item.id}>
-              {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+              {i > 0 && <div className="h-px mx-3.5 bg-black/6 dark:bg-white/6" />}
               <div
                 className={cn(
                   'flex items-center gap-1.5 px-3.5 py-1',
                 )}
               >
-                <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
+                <span className="flex-1 min-w-0 text-[15px]  leading-relaxed">
                   {item.name}
                 </span>
               </div>
             </div>
           ) : (
             <div key={item.id}>
-              {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+              {i > 0 && <div className="h-px mx-3.5 bg-black/6 dark:bg-white/6" />}
               <div
                 className={cn(
                   exitingIds.has(item.id) && 'animate-shrink-out',

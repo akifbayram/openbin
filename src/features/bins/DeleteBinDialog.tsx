@@ -1,4 +1,5 @@
-import { Button, Dialog } from '@chakra-ui/react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTerminology } from '@/lib/terminology';
 
 interface DeleteBinDialogProps {
@@ -12,33 +13,29 @@ export function DeleteBinDialog({ open, onOpenChange, binName, onConfirm }: Dele
   const t = useTerminology();
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <Dialog.Backdrop />
-      <Dialog.Positioner>
-        <Dialog.Content>
-          <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Delete this {t.bin}?</Dialog.Title>
-            <Dialog.Description>
-              This will delete &apos;{binName}&apos; and all its photos. You can undo this action briefly after deletion.
-            </Dialog.Description>
-          </Dialog.Header>
-          <Dialog.Footer>
-            <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                onOpenChange(false);
-                onConfirm();
-              }}
-              className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:bg-[var(--destructive-hover)] text-[var(--text-on-accent)]"
-            >
-              Delete
-            </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
-      </Dialog.Positioner>
-    </Dialog.Root>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete this {t.bin}?</DialogTitle>
+          <DialogDescription>
+            This will delete &apos;{binName}&apos; and all its photos. You can undo this action briefly after deletion.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              onOpenChange(false);
+              onConfirm();
+            }}
+            className="rounded-[var(--radius-full)] bg-red-500 hover:bg-red-600 text-white"
+          >
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

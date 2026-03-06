@@ -59,9 +59,9 @@ export function BinViewContent({
     <div className="fade-in-fast contents">
       {/* AI error */}
       {aiError && (
-        <Card className="border-t-2 border-t-[var(--destructive)]">
+        <Card className="border-t-2 border-t-red-500">
           <CardContent>
-            <p className="text-[14px] text-[var(--destructive)]">{aiError}</p>
+            <p className="text-[14px] text-red-500 dark:text-red-400">{aiError}</p>
             <Button variant="ghost" size="sm" onClick={onClearSuggestions} className="mt-2">
               Dismiss
             </Button>
@@ -97,7 +97,7 @@ export function BinViewContent({
         <Card>
           <CardContent>
             <Label>Notes</Label>
-            <p className="mt-2 text-[15px] text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
+            <p className="mt-2 text-[15px]  whitespace-pre-wrap leading-relaxed">
               {bin.notes}
             </p>
           </CardContent>
@@ -111,7 +111,7 @@ export function BinViewContent({
             {bin.area_name && (
               <div>
                 <Label>{t.Area}</Label>
-                <p className="mt-1.5 text-[15px] text-[var(--text-primary)]">
+                <p className="mt-1.5 text-[15px] ">
                   {bin.area_name}
                 </p>
               </div>
@@ -154,12 +154,12 @@ export function BinViewContent({
             aria-expanded={qrExpanded}
             className="flex items-center justify-between w-full py-4 text-left"
           >
-            <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
+            <span className="text-[13px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               QR Code & Info
             </span>
             <ChevronDown
               className={cn(
-                'h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200',
+                'h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform duration-200',
                 qrExpanded && 'rotate-180'
               )}
             />
@@ -169,17 +169,17 @@ export function BinViewContent({
               <div className="flex flex-col items-center">
                 <QRCodeDisplay binId={bin.id} size={160} />
               </div>
-              <div className="border-t border-[var(--border-subtle)] pt-4">
+              <div className="border-t border-black/6 dark:border-white/6 pt-4">
                 <div className="mb-4">
                   <Label>Code</Label>
-                  <p className="mt-1.5 text-[15px] font-mono tracking-widest text-[var(--text-primary)]">
+                  <p className="mt-1.5 text-[15px] font-mono tracking-widest ">
                     {bin.id}
                   </p>
                 </div>
                 {bin.created_by_name && (
                   <div className="mb-4">
                     <Label>Created by</Label>
-                    <p className="mt-1.5 text-[13px] text-[var(--text-secondary)]">
+                    <p className="mt-1.5 text-[13px] text-gray-600 dark:text-gray-300">
                       {bin.created_by_name}
                     </p>
                   </div>
@@ -187,13 +187,13 @@ export function BinViewContent({
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <Label>Created</Label>
-                    <p className="mt-1.5 text-[13px] text-[var(--text-secondary)]">
+                    <p className="mt-1.5 text-[13px] text-gray-600 dark:text-gray-300">
                       {formatDate(bin.created_at)}
                     </p>
                   </div>
                   <div>
                     <Label>Updated</Label>
-                    <p className="mt-1.5 text-[13px] text-[var(--text-secondary)]">
+                    <p className="mt-1.5 text-[13px] text-gray-600 dark:text-gray-300">
                       {formatDate(bin.updated_at)}
                     </p>
                   </div>

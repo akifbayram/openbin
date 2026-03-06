@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { Button, Dialog, Input } from '@chakra-ui/react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/lib/auth';
 import { updateBin } from './useBins';
@@ -41,49 +50,43 @@ export function BulkCustomFieldsDialog({ open, onOpenChange, binIds, onDone }: B
   const hasValues = Object.values(values).some((v) => v.trim());
 
   return (
-    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <Dialog.Backdrop />
-      <Dialog.Positioner>
-        <Dialog.Content>
-          <Dialog.CloseTrigger />
-          <Dialog.Header>
-            <Dialog.Title>Set Custom Fields</Dialog.Title>
-            <Dialog.Description>
-              Set custom field values for {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''}.
-              Only filled fields will be updated.
-            </Dialog.Description>
-          </Dialog.Header>
-          <Dialog.Body>
-            <div className="space-y-3">
-              {fields.length === 0 ? (
-                <p className="text-[13px] text-[var(--text-tertiary)]">
-                  No custom fields defined for this location.
-                </p>
-              ) : (
-                fields.map((field) => (
-                  <div key={field.id} className="space-y-1.5">
-                    <Label htmlFor={`bulk-cf-${field.id}`}>{field.name}</Label>
-                    <Input
-                      id={`bulk-cf-${field.id}`}
-                      value={values[field.id] ?? ''}
-                      onChange={(e) => handleChange(field.id, e.target.value)}
-                      placeholder={field.name}
-                    />
-                  </div>
-                ))
-              )}
-            </div>
-          </Dialog.Body>
-          <Dialog.Footer>
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleApply} disabled={loading || !hasValues}>
-              {loading ? 'Applying...' : 'Apply'}
-            </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
-      </Dialog.Positioner>
-    </Dialog.Root>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Set Custom Fields</DialogTitle>
+          <DialogDescription>
+            Set custom field values for {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''}.
+            Only filled fields will be updated.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          {fields.length === 0 ? (
+            <p className="text-[13px] text-gray-500 dark:text-gray-400">
+              No custom fields defined for this location.
+            </p>
+          ) : (
+            fields.map((field) => (
+              <div key={field.id} className="space-y-1.5">
+                <Label htmlFor={`bulk-cf-${field.id}`}>{field.name}</Label>
+                <Input
+                  id={`bulk-cf-${field.id}`}
+                  value={values[field.id] ?? ''}
+                  onChange={(e) => handleChange(field.id, e.target.value)}
+                  placeholder={field.name}
+                />
+              </div>
+            ))
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleApply} disabled={loading || !hasValues}>
+            {loading ? 'Applying...' : 'Apply'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

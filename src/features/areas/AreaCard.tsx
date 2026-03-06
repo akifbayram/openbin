@@ -1,6 +1,7 @@
 import { Check, Folder, Inbox, MoreHorizontal, Plus, X } from 'lucide-react';
 import { useRef } from 'react';
-import { Button, Input } from '@chakra-ui/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
@@ -46,7 +47,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
 
   if (editing) {
     return (
-      <div className="rounded-[var(--radius-lg)] p-4 flex flex-col gap-2">
+      <div className="glass-card rounded-[var(--radius-lg)] p-4 flex flex-col gap-2">
         <Input
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
@@ -59,19 +60,19 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
           <Tooltip content="Save">
             <Button
               variant="ghost"
-              size="xs" px="0"
+              size="icon-sm"
               onClick={handleSave}
               disabled={!editValue.trim() || saving}
               className="shrink-0"
               aria-label="Save"
             >
-              <Check className="h-4 w-4 text-[var(--accent)]" />
+              <Check className="h-4 w-4 text-purple-600 dark:text-purple-500" />
             </Button>
           </Tooltip>
           <Tooltip content="Cancel">
             <Button
               variant="ghost"
-              size="xs" px="0"
+              size="icon-sm"
               onClick={cancelEdit}
               className="shrink-0"
               aria-label="Cancel"
@@ -92,19 +93,19 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
       onClick={() => onNavigate(id)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(id); } }}
       className={cn(
-        "rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] text-left relative group",
+        "glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors duration-150 active:bg-gray-500/12 dark:active:bg-gray-500/24 text-left relative group",
         isOpen && "z-10"
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 flex items-center justify-center shrink-0 mt-0.5">
-          <Folder className="h-4.5 w-4.5 text-[var(--accent)]" />
+        <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-purple-600/10 dark:bg-purple-500/10 flex items-center justify-center shrink-0 mt-0.5">
+          <Folder className="h-4.5 w-4.5 text-purple-600 dark:text-purple-500" />
         </div>
         <div className="flex-1 min-w-0 pr-7">
-          <span className="text-[15px] font-semibold text-[var(--text-primary)] truncate block">
+          <span className="text-[15px] font-semibold truncate block">
             {name}
           </span>
-          <span className="text-[13px] text-[var(--text-tertiary)] mt-0.5 block">
+          <span className="text-[13px] text-gray-500 dark:text-gray-400 mt-0.5 block">
             {binCount} {binCount !== 1 ? t.bins : t.bin}
           </span>
         </div>
@@ -118,7 +119,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
           <Tooltip content="More actions" side="bottom">
             <Button
               variant="ghost"
-              size="sm" px="0"
+              size="icon"
               onClick={(e) => { e.stopPropagation(); toggle(); }}
               className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus:opacity-100 transition-opacity"
               aria-label="More actions"
@@ -144,17 +145,17 @@ export function UnassignedAreaCard({ count, onNavigate }: UnassignedCardProps) {
     <button
       type="button"
       onClick={onNavigate}
-      className="rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] text-left"
+      className="glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors duration-150 active:bg-gray-500/12 dark:active:bg-gray-500/24 text-left"
     >
       <div className="flex items-start gap-3">
-        <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-input)] flex items-center justify-center shrink-0 mt-0.5">
-          <Inbox className="h-4.5 w-4.5 text-[var(--text-tertiary)]" />
+        <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-gray-500/12 dark:bg-gray-500/24 flex items-center justify-center shrink-0 mt-0.5">
+          <Inbox className="h-4.5 w-4.5 text-gray-500 dark:text-gray-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <span className="text-[15px] font-semibold text-[var(--text-secondary)] truncate block">
+          <span className="text-[15px] font-semibold text-gray-600 dark:text-gray-300 truncate block">
             Unassigned
           </span>
-          <span className="text-[13px] text-[var(--text-tertiary)] mt-0.5 block">
+          <span className="text-[13px] text-gray-500 dark:text-gray-400 mt-0.5 block">
             {count} {count !== 1 ? t.bins : t.bin}
           </span>
         </div>
@@ -169,7 +170,7 @@ export function CreateAreaCard({ onCreate }: CreateCardProps) {
     <button
       type="button"
       onClick={onCreate}
-      className="rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] border-2 border-dashed border-[var(--border-glass)] bg-transparent flex items-center gap-3 text-[var(--text-tertiary)]"
+      className="rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors duration-150 active:bg-gray-500/12 dark:active:bg-gray-500/24 border-2 border-dashed border-[var(--border-glass)] bg-transparent flex items-center gap-3 text-gray-500 dark:text-gray-400"
     >
       <div className="h-9 w-9 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-glass)] flex items-center justify-center shrink-0">
         <Plus className="h-4 w-4" />

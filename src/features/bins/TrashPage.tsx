@@ -1,13 +1,14 @@
 import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Dialog } from '@chakra-ui/react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
-import { toaster } from '@/components/ui/toaster';
+import { useToast } from '@/components/ui/toast';
 import { useLocationList } from '@/features/locations/useLocations';
 import { useAuth } from '@/lib/auth';
 import { formatTimeAgo } from '@/lib/formatTime';
@@ -19,7 +20,8 @@ import { notifyBinsChanged, permanentDeleteBin, restoreBinFromTrash, useTrashBin
 export function TrashPage() {
   const navigate = useNavigate();
   const { bins, isLoading } = useTrashBins();
-    const { activeLocationId } = useAuth();
+  const { showToast } = useToast();
+  const { activeLocationId } = useAuth();
   const { isAdmin, isLoading: permissionsLoading } = usePermissions();
   const t = useTerminology();
   const { locations } = useLocationList();
@@ -40,9 +42,9 @@ export function TrashPage() {
   async function handleRestore(bin: Bin) {
     try {
       await restoreBinFromTrash(bin.id);
-      toaster.create({ description: `"${bin.name}" restored` });
+      showToast({ message: `"${bin.name}" restored` });
     } catch {
-      toaster.create({ description: `Failed to restore ${t.bin}` });
+      showToast({ message: `Failed to restore ${t.bin}` });
     }
   }
 
@@ -51,9 +53,9 @@ export function TrashPage() {
     try {
       await permanentDeleteBin(confirmDelete.id);
       notifyBinsChanged();
-      toaster.create({ description: `"${confirmDelete.name}" permanently deleted` });
+      showToast({ message: `"${confirmDelete.name}" permanently deleted` });
     } catch {
-      toaster.create({ description: `Failed to delete ${t.bin}` });
+      showToast({ message: `Failed to delete ${t.bin}` });
     } finally {
       setConfirmDelete(null);
     }
@@ -62,7 +64,7 @@ export function TrashPage() {
   return (
     <div className="page-content">
       <PageHeader title="Trash" />
-      <p className="text-[13px] text-[var(--text-tertiary)]">
+      <p className="text-[13px] text-gray-500 dark:text-gray-400">
         Deleted {t.bins} are kept for {retentionDays} day{retentionDays !== 1 ? 's' : ''} before being permanently removed.
       </p>
 
@@ -98,10 +100,10 @@ export function TrashPage() {
               <CardContent className="py-3 px-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
+                    <p className="text-[15px] font-semibold truncate">
                       {bin.name}
                     </p>
-                    <p className="text-[12px] text-[var(--text-tertiary)]">
+                    <p className="text-[12px] text-gray-500 dark:text-gray-400">
                       Deleted {formatTimeAgo(bin.deleted_at ?? bin.updated_at)}
                       {bin.area_name ? ` · ${bin.area_name}` : ''}
                       {Array.isArray(bin.items) && bin.items.length > 0 ? ` · ${bin.items.length} ${bin.items.length === 1 ? 'item' : 'items'}` : ''}
@@ -113,7 +115,7 @@ export function TrashPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRestore(bin)}
-                        className="h-8 px-2.5 rounded-[var(--radius-full)] text-[var(--accent)]"
+                        className="h-8 px-2.5 rounded-[var(--radius-full)] text-purple-600 dark:text-purple-500"
                       >
                         <RotateCcw className="h-3.5 w-3.5 mr-1" />
                         Restore
@@ -122,7 +124,7 @@ export function TrashPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setConfirmDelete(bin)}
-                        className="h-8 px-2.5 rounded-[var(--radius-full)] text-[var(--destructive)]"
+                        className="h-8 px-2.5 rounded-[var(--radius-full)] text-red-500 dark:text-red-400"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -136,44 +138,38 @@ export function TrashPage() {
       )}
 
       {/* Confirm permanent delete */}
-      <Dialog.Root open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-            <Dialog.Header>
-              <Dialog.Title>Permanently Delete</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-full bg-[var(--destructive)] bg-opacity-10 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="h-5 w-5 text-[var(--destructive)]" />
-                </div>
-                <div>
-                  <p className="text-[15px] text-[var(--text-primary)]">
-                    Are you sure you want to permanently delete <strong>"{confirmDelete?.name}"</strong>?
-                  </p>
-                  <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
-                    This action cannot be undone. All photos will also be deleted.
-                  </p>
-                </div>
-              </div>
-            </Dialog.Body>
-            <Dialog.Footer>
-              <Button variant="ghost" onClick={() => setConfirmDelete(null)} className="rounded-[var(--radius-full)]">
-                Cancel
-              </Button>
-              <Button
-                variant="solid" colorPalette="red"
-                onClick={handlePermanentDelete}
-                className="rounded-[var(--radius-full)]"
-              >
-                Delete Forever
-              </Button>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+      <Dialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Permanently Delete</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-5 w-5 text-red-500 dark:text-red-400" />
+            </div>
+            <div>
+              <p className="text-[15px]">
+                Are you sure you want to permanently delete <strong>"{confirmDelete?.name}"</strong>?
+              </p>
+              <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
+                This action cannot be undone. All photos will also be deleted.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmDelete(null)} className="rounded-[var(--radius-full)]">
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handlePermanentDelete}
+              className="rounded-[var(--radius-full)]"
+            >
+              Delete Forever
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

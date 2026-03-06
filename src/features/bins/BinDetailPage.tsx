@@ -74,8 +74,8 @@ export function BinDetailPage() {
 
   if (!bin) {
     return (
-      <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-        <p className="text-[17px] font-semibold text-[var(--text-secondary)]">{t.Bin} not found</p>
+      <div className="flex flex-col items-center justify-center gap-5 py-24 text-gray-500 dark:text-gray-400">
+        <p className="text-[17px] font-semibold text-gray-600 dark:text-gray-300">{t.Bin} not found</p>
         <Button variant="outline" onClick={() => navigate('/bins')}>
           Back to {t.bins}
         </Button>
@@ -94,12 +94,12 @@ export function BinDetailPage() {
           aria-expanded={photosExpanded}
           className="flex items-center justify-between w-full py-4 text-left"
         >
-          <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
+          <span className="text-[13px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             Photos{actions.photos.length > 0 ? ` (${actions.photos.length})` : ''}
           </span>
           <ChevronDown
             className={cn(
-              'h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200',
+              'h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform duration-200',
               photosExpanded && 'rotate-180'
             )}
           />

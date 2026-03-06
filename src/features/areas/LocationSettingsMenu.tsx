@@ -35,8 +35,8 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
           onClick={onLeave}
           aria-label="Leave"
           className={compact
-            ? 'h-7 w-7 rounded-full text-[var(--destructive)]'
-            : 'rounded-[var(--radius-full)] h-8 px-3 text-[var(--destructive)]'
+            ? 'h-7 w-7 rounded-full text-red-500 dark:text-red-400'
+            : 'rounded-[var(--radius-full)] h-8 px-3 text-red-500 dark:text-red-400'
           }
         >
           <LogOut className="h-3.5 w-3.5" />
@@ -73,32 +73,32 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
         <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]`}>
           <button
             type="button"
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
             onClick={() => handleItem(onRename)}
           >
-            <Pencil className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             Rename
           </button>
           <button
             type="button"
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
             onClick={() => handleItem(onRetention)}
           >
-            <Clock className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             Data Retention
           </button>
           <button
             type="button"
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
             onClick={() => handleItem(onCustomFields)}
           >
-            <List className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <List className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             Custom Fields
           </button>
           <div className="my-1 border-t border-[var(--border-glass)]" />
           <button
             type="button"
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-red-500 dark:text-red-400 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
             onClick={() => handleItem(onDelete)}
           >
             <Trash2 className="h-4 w-4" />
