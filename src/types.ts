@@ -67,6 +67,7 @@ export type BinVisibility = 'location' | 'private';
 export interface BinItem {
   id: string;
   name: string;
+  quantity: number | null;
 }
 
 export interface Bin {
