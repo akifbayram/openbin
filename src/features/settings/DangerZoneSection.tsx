@@ -1,15 +1,7 @@
 import { ShieldAlert, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Button, Input } from '@chakra-ui/react';
+import { Button, Dialog, Input } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 
@@ -53,28 +45,34 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
         </CardContent>
       </Card>
 
-      <Dialog open={deleteOpen} onOpenChange={(open) => { setDeleteOpen(open); if (!open) { setDeletePassword(''); setDeleting(false); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Account</DialogTitle>
-            <DialogDescription>
-              This will permanently delete your account and all data in locations where you are the only member. Locations shared with others will be preserved. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleDeleteAccount} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="delete-password">Enter your password to confirm</Label>
-              <Input
-                id="delete-password"
-                type="password"
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                placeholder="Password"
-                autoFocus
-                required
-              />
-            </div>
-            <DialogFooter>
+      <Dialog.Root open={deleteOpen} onOpenChange={(e) => { setDeleteOpen(e.open); if (!e.open) { setDeletePassword(''); setDeleting(false); } }}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+            <Dialog.Header>
+              <Dialog.Title>Delete Account</Dialog.Title>
+              <Dialog.Description>
+                This will permanently delete your account and all data in locations where you are the only member. Locations shared with others will be preserved. This action cannot be undone.
+              </Dialog.Description>
+            </Dialog.Header>
+            <Dialog.Body>
+              <form onSubmit={handleDeleteAccount} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="delete-password">Enter your password to confirm</Label>
+                  <Input
+                    id="delete-password"
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder="Password"
+                    autoFocus
+                    required
+                  />
+                </div>
+              </form>
+            </Dialog.Body>
+            <Dialog.Footer>
               <Button
                 type="button"
                 variant="ghost"
@@ -84,16 +82,16 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
                 Cancel
               </Button>
               <Button
-                type="submit"
+                onClick={(e: React.MouseEvent) => handleDeleteAccount(e as unknown as React.FormEvent)}
                 disabled={!deletePassword || deleting}
                 className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:opacity-90"
               >
                 {deleting ? 'Deleting...' : 'Delete Account'}
               </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </>
   );
 }

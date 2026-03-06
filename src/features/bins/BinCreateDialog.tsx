@@ -1,11 +1,5 @@
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog } from '@chakra-ui/react';
 import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
@@ -82,37 +76,43 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
 
   return (
     <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            {!successInfo && <DialogTitle>New {t.Bin}</DialogTitle>}
-            {!successInfo && (
-              <DialogDescription>Add a new storage {t.bin} to your inventory.</DialogDescription>
-            )}
-          </DialogHeader>
-          {activeLocationId && (
-            successInfo ? (
-              <BinCreateSuccess
-                createdBins={successInfo}
-                onCreateAnother={() => setSuccessInfo(null)}
-                onClose={() => handleOpenChange(false)}
-              />
-            ) : (
-              <BinCreateForm
-                mode="full"
-                locationId={activeLocationId}
-                onSubmit={handleSubmit}
-                submitting={loading}
-                showCancel
-                onCancel={() => handleOpenChange(false)}
-                onAiSetupRedirect={() => setAiSetupOpen(true)}
-                prefillName={prefillName}
-                allTags={allTags}
-              />
-            )
-          )}
-        </DialogContent>
-      </Dialog>
+      <Dialog.Root open={open} onOpenChange={(e) => handleOpenChange(e.open)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+            <Dialog.Header>
+              {!successInfo && <Dialog.Title>New {t.Bin}</Dialog.Title>}
+              {!successInfo && (
+                <Dialog.Description>Add a new storage {t.bin} to your inventory.</Dialog.Description>
+              )}
+            </Dialog.Header>
+            <Dialog.Body>
+              {activeLocationId && (
+                successInfo ? (
+                  <BinCreateSuccess
+                    createdBins={successInfo}
+                    onCreateAnother={() => setSuccessInfo(null)}
+                    onClose={() => handleOpenChange(false)}
+                  />
+                ) : (
+                  <BinCreateForm
+                    mode="full"
+                    locationId={activeLocationId}
+                    onSubmit={handleSubmit}
+                    submitting={loading}
+                    showCancel
+                    onCancel={() => handleOpenChange(false)}
+                    onAiSetupRedirect={() => setAiSetupOpen(true)}
+                    prefillName={prefillName}
+                    allTags={allTags}
+                  />
+                )
+              )}
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
 
       <AiSetupDialog open={aiSetupOpen} onOpenChange={setAiSetupOpen} onNavigate={() => handleOpenChange(false)} />
     </>

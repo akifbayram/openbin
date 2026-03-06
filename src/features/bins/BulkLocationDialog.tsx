@@ -1,13 +1,5 @@
 import { useState } from 'react';
-import { Button } from '@chakra-ui/react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Button, Dialog } from '@chakra-ui/react';
 import { LocationSelectList } from '@/features/locations/LocationSelectList';
 import { useLocationList } from '@/features/locations/useLocations';
 import { useAuth } from '@/lib/auth';
@@ -41,29 +33,35 @@ export function BulkLocationDialog({ open, onOpenChange, binIds, onDone }: BulkL
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Move to Location</DialogTitle>
-          <DialogDescription>
-            Move {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''} to another location.
-          </DialogDescription>
-        </DialogHeader>
-        <LocationSelectList
-          locations={otherLocations}
-          value={targetId}
-          onChange={setTargetId}
-          emptyMessage="No other locations available."
-        />
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleApply} disabled={!targetId || loading}>
-            {loading ? 'Moving...' : 'Move'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+      <Dialog.Positioner>
+        <Dialog.Content>
+          <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>Move to Location</Dialog.Title>
+            <Dialog.Description>
+              Move {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''} to another location.
+            </Dialog.Description>
+          </Dialog.Header>
+          <Dialog.Body>
+            <LocationSelectList
+              locations={otherLocations}
+              value={targetId}
+              onChange={setTargetId}
+              emptyMessage="No other locations available."
+            />
+          </Dialog.Body>
+          <Dialog.Footer>
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleApply} disabled={!targetId || loading}>
+              {loading ? 'Moving...' : 'Move'}
+            </Button>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Positioner>
+    </Dialog.Root>
   );
 }

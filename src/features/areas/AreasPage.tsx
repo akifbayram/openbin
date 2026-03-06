@@ -1,9 +1,8 @@
 import { Check, Copy, LogIn, MapPin, MapPinned, Plus, Shield, User, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Input } from '@chakra-ui/react';
+import { Button, Dialog, Input } from '@chakra-ui/react';
 import { Crossfade } from '@/components/ui/crossfade';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -314,61 +313,71 @@ export function AreasPage() {
       </Crossfade>
 
       {/* Create Area Dialog */}
-      <Dialog open={createAreaOpen} onOpenChange={setCreateAreaOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{`Create ${t.Area}`}</DialogTitle>
-            <DialogDescription>
-              {`${t.Areas} help organize ${t.bins} by zone (e.g. Garage, Kitchen, Closet).`}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreateArea} className="space-y-5">
-            <div className="space-y-2">
-              <Input
-                value={newAreaName}
-                onChange={(e) => setNewAreaName(e.target.value)}
-                placeholder={`${t.Area} name...`}
-                autoFocus
-                required
-              />
-            </div>
-            <DialogFooter>
+      <Dialog.Root open={createAreaOpen} onOpenChange={(e) => setCreateAreaOpen(e.open)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+            <Dialog.Header>
+              <Dialog.Title>{`Create ${t.Area}`}</Dialog.Title>
+              <Dialog.Description>
+                {`${t.Areas} help organize ${t.bins} by zone (e.g. Garage, Kitchen, Closet).`}
+              </Dialog.Description>
+            </Dialog.Header>
+            <Dialog.Body>
+              <form onSubmit={handleCreateArea} className="space-y-5">
+                <div className="space-y-2">
+                  <Input
+                    value={newAreaName}
+                    onChange={(e) => setNewAreaName(e.target.value)}
+                    placeholder={`${t.Area} name...`}
+                    autoFocus
+                    required
+                  />
+                </div>
+              </form>
+            </Dialog.Body>
+            <Dialog.Footer>
               <Button type="button" variant="ghost" onClick={() => setCreateAreaOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={!newAreaName.trim() || creatingArea}>
+              <Button onClick={(e: React.MouseEvent) => handleCreateArea(e as unknown as React.FormEvent)} disabled={!newAreaName.trim() || creatingArea}>
                 {creatingArea ? 'Creating...' : 'Create'}
               </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
 
       {/* Delete Area Confirmation */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{`Delete ${t.area}?`}</DialogTitle>
-            <DialogDescription>
-              {deleteTarget && deleteTarget.binCount > 0
-                ? `"${deleteTarget.name}" has ${deleteTarget.binCount} ${deleteTarget.binCount !== 1 ? t.bins : t.bin}. They will become unassigned.`
-                : `Delete "${deleteTarget?.name}"?`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeleteArea}
-              disabled={deletingArea}
-              className="bg-[var(--destructive)] hover:bg-[var(--destructive-hover)] text-[var(--text-on-accent)]"
-            >
-              {deletingArea ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Dialog.Root open={!!deleteTarget} onOpenChange={(e) => { if (!e.open) setDeleteTarget(null); }}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+            <Dialog.Header>
+              <Dialog.Title>{`Delete ${t.area}?`}</Dialog.Title>
+              <Dialog.Description>
+                {deleteTarget && deleteTarget.binCount > 0
+                  ? `"${deleteTarget.name}" has ${deleteTarget.binCount} ${deleteTarget.binCount !== 1 ? t.bins : t.bin}. They will become unassigned.`
+                  : `Delete "${deleteTarget?.name}"?`}
+              </Dialog.Description>
+            </Dialog.Header>
+            <Dialog.Footer>
+              <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteArea}
+                disabled={deletingArea}
+                className="bg-[var(--destructive)] hover:bg-[var(--destructive-hover)] text-[var(--text-on-accent)]"
+              >
+                {deletingArea ? 'Deleting...' : 'Delete'}
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
 
       {/* Location Dialogs */}
       <LocationCreateDialog open={createLocationOpen} onOpenChange={setCreateLocationOpen} />

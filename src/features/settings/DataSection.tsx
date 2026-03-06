@@ -10,16 +10,8 @@ import {
   Upload,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@chakra-ui/react';
+import { Button, Dialog } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import type { useDataSectionActions } from './useDataSectionActions';
 
@@ -246,34 +238,38 @@ export function DataSection({
       </Card>
 
       {/* Replace confirmation dialog */}
-      <Dialog open={confirmReplace} onOpenChange={setConfirmReplace}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Replace All Data?</DialogTitle>
-            <DialogDescription>
-              This will delete all existing bins and photos in the current location, then import from the backup file. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setConfirmReplace(false);
-                setPendingData(null);
-              }}
-              className="rounded-[var(--radius-full)]"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleReplaceImport}
-              className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:opacity-90"
-            >
-              Replace All
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Dialog.Root open={confirmReplace} onOpenChange={(e) => setConfirmReplace(e.open)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+            <Dialog.Header>
+              <Dialog.Title>Replace All Data?</Dialog.Title>
+              <Dialog.Description>
+                This will delete all existing bins and photos in the current location, then import from the backup file. This action cannot be undone.
+              </Dialog.Description>
+            </Dialog.Header>
+            <Dialog.Footer>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setConfirmReplace(false);
+                  setPendingData(null);
+                }}
+                className="rounded-[var(--radius-full)]"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleReplaceImport}
+                className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:opacity-90"
+              >
+                Replace All
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </>
   );
 }

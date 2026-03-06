@@ -1,15 +1,9 @@
 import { Check, ChevronDown, Copy, LogOut, RefreshCw, Shield, UserMinus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Dialog } from '@chakra-ui/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@chakra-ui/react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
@@ -92,122 +86,127 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{location?.name ?? 'Location'} Members</DialogTitle>
-          <DialogDescription>
-            Manage members and share the invite code.
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Invite Code */}
-        {location?.invite_code && (
-          <div className="flex items-center gap-2 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
-            <span className="flex-1 min-w-0 text-[14px] font-mono text-[var(--text-primary)] tracking-wider truncate">
-              {location.invite_code}
-            </span>
-            <Tooltip content="Copy invite code" side="bottom">
-              <Button
-                variant="ghost"
-                size="xs" px="0"
-                onClick={handleCopyInvite}
-                className="shrink-0"
-                aria-label="Copy invite code"
-              >
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </Tooltip>
-            {isAdmin && (
-              <Tooltip content="Regenerate invite code" side="bottom">
-                <Button
-                  variant="ghost"
-                  size="xs" px="0"
-                  onClick={handleRegenerate}
-                  disabled={regenerating}
-                  className="shrink-0"
-                  aria-label="Regenerate invite code"
-                >
-                  <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
-                </Button>
-              </Tooltip>
-            )}
-          </div>
-        )}
-
-        {/* Members list */}
-        {isLoading ? (
-          <SkeletonList count={2} className="space-y-1 py-2">
-            {() => (
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-8 w-8 rounded-full" />
-                <Skeleton className="h-4 flex-1" />
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+      <Dialog.Positioner>
+        <Dialog.Content>
+          <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>{location?.name ?? 'Location'} Members</Dialog.Title>
+            <Dialog.Description>
+              Manage members and share the invite code.
+            </Dialog.Description>
+          </Dialog.Header>
+          <Dialog.Body>
+            {/* Invite Code */}
+            {location?.invite_code && (
+              <div className="flex items-center gap-2 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+                <span className="flex-1 min-w-0 text-[14px] font-mono text-[var(--text-primary)] tracking-wider truncate">
+                  {location.invite_code}
+                </span>
+                <Tooltip content="Copy invite code" side="bottom">
+                  <Button
+                    variant="ghost"
+                    size="xs" px="0"
+                    onClick={handleCopyInvite}
+                    className="shrink-0"
+                    aria-label="Copy invite code"
+                  >
+                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </Tooltip>
+                {isAdmin && (
+                  <Tooltip content="Regenerate invite code" side="bottom">
+                    <Button
+                      variant="ghost"
+                      size="xs" px="0"
+                      onClick={handleRegenerate}
+                      disabled={regenerating}
+                      className="shrink-0"
+                      aria-label="Regenerate invite code"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </Tooltip>
+                )}
               </div>
             )}
-          </SkeletonList>
-        ) : (
-          <div className="space-y-1 py-2">
-            {members.map((member) => {
-              const isSelf = member.user_id === user?.id;
-              const memberIsAdmin = member.role === 'admin';
-              return (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)]"
-                >
-                  <UserAvatar
-                    displayName={member.display_name || member.user_id}
-                    size="sm"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[14px] text-[var(--text-primary)] truncate block">
-                      {isSelf ? 'You' : member.display_name || member.user_id.slice(0, 8)}
-                    </span>
-                  </div>
-                  {memberIsAdmin && (
-                    <Badge variant="secondary" className="text-[11px] gap-1 py-0 shrink-0">
-                      <Shield className="h-3 w-3" />
-                      Admin
-                    </Badge>
-                  )}
-                  {isAdmin && !isSelf && (
-                    <RoleToggle
-                      currentRole={member.role}
-                      onChangeRole={(role) => handleRoleChange(member.user_id, role)}
-                    />
-                  )}
-                  {isAdmin && !isSelf && (
-                    <Tooltip content="Remove member" side="bottom">
-                      <Button
-                        variant="ghost"
-                        size="xs" px="0"
-                        className="text-[var(--destructive)] shrink-0"
-                        onClick={() => handleRemoveMember(member.user_id)}
-                        aria-label="Remove member"
-                      >
-                        <UserMinus className="h-3.5 w-3.5" />
-                      </Button>
-                    </Tooltip>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
 
-        {/* Leave button for non-admins */}
-        {!isAdmin && (
-          <Button
-            variant="outline"
-            onClick={handleLeave}
-            className="w-full rounded-[var(--radius-sm)] text-[var(--destructive)]"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Leave Location
-          </Button>
-        )}
-      </DialogContent>
-    </Dialog>
+            {/* Members list */}
+            {isLoading ? (
+              <SkeletonList count={2} className="space-y-1 py-2">
+                {() => (
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <Skeleton className="h-4 flex-1" />
+                  </div>
+                )}
+              </SkeletonList>
+            ) : (
+              <div className="space-y-1 py-2">
+                {members.map((member) => {
+                  const isSelf = member.user_id === user?.id;
+                  const memberIsAdmin = member.role === 'admin';
+                  return (
+                    <div
+                      key={member.id}
+                      className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)]"
+                    >
+                      <UserAvatar
+                        displayName={member.display_name || member.user_id}
+                        size="sm"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[14px] text-[var(--text-primary)] truncate block">
+                          {isSelf ? 'You' : member.display_name || member.user_id.slice(0, 8)}
+                        </span>
+                      </div>
+                      {memberIsAdmin && (
+                        <Badge variant="secondary" className="text-[11px] gap-1 py-0 shrink-0">
+                          <Shield className="h-3 w-3" />
+                          Admin
+                        </Badge>
+                      )}
+                      {isAdmin && !isSelf && (
+                        <RoleToggle
+                          currentRole={member.role}
+                          onChangeRole={(role) => handleRoleChange(member.user_id, role)}
+                        />
+                      )}
+                      {isAdmin && !isSelf && (
+                        <Tooltip content="Remove member" side="bottom">
+                          <Button
+                            variant="ghost"
+                            size="xs" px="0"
+                            className="text-[var(--destructive)] shrink-0"
+                            onClick={() => handleRemoveMember(member.user_id)}
+                            aria-label="Remove member"
+                          >
+                            <UserMinus className="h-3.5 w-3.5" />
+                          </Button>
+                        </Tooltip>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Leave button for non-admins */}
+            {!isAdmin && (
+              <Button
+                variant="outline"
+                onClick={handleLeave}
+                className="w-full rounded-[var(--radius-sm)] text-[var(--destructive)]"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Leave Location
+              </Button>
+            )}
+          </Dialog.Body>
+        </Dialog.Content>
+      </Dialog.Positioner>
+    </Dialog.Root>
   );
 }
 

@@ -1,9 +1,8 @@
 import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@chakra-ui/react';
+import { Button, Dialog } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -138,38 +137,44 @@ export function TrashPage() {
       )}
 
       {/* Confirm permanent delete */}
-      <Dialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Permanently Delete</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-full bg-[var(--destructive)] bg-opacity-10 flex items-center justify-center shrink-0">
-              <AlertTriangle className="h-5 w-5 text-[var(--destructive)]" />
-            </div>
-            <div>
-              <p className="text-[15px] text-[var(--text-primary)]">
-                Are you sure you want to permanently delete <strong>"{confirmDelete?.name}"</strong>?
-              </p>
-              <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
-                This action cannot be undone. All photos will also be deleted.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setConfirmDelete(null)} className="rounded-[var(--radius-full)]">
-              Cancel
-            </Button>
-            <Button
-              variant="solid" colorPalette="red"
-              onClick={handlePermanentDelete}
-              className="rounded-[var(--radius-full)]"
-            >
-              Delete Forever
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Dialog.Root open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+            <Dialog.Header>
+              <Dialog.Title>Permanently Delete</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-[var(--destructive)] bg-opacity-10 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-[var(--destructive)]" />
+                </div>
+                <div>
+                  <p className="text-[15px] text-[var(--text-primary)]">
+                    Are you sure you want to permanently delete <strong>"{confirmDelete?.name}"</strong>?
+                  </p>
+                  <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
+                    This action cannot be undone. All photos will also be deleted.
+                  </p>
+                </div>
+              </div>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button variant="ghost" onClick={() => setConfirmDelete(null)} className="rounded-[var(--radius-full)]">
+                Cancel
+              </Button>
+              <Button
+                variant="solid" colorPalette="red"
+                onClick={handlePermanentDelete}
+                className="rounded-[var(--radius-full)]"
+              >
+                Delete Forever
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </div>
   );
 }

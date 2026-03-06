@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog } from '@chakra-ui/react';
 import { CommandActionPreview } from './CommandActionPreview';
 import { CommandIdleInput } from './CommandIdleInput';
 import { CommandSuccess } from './CommandSuccess';
@@ -57,74 +57,79 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
   const effectiveState = isExecuting ? 'executing' : state;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{photoMode ? 'Add from Photos' : 'Ask AI'}</DialogTitle>
-        </DialogHeader>
+    <Dialog.Root open={open} onOpenChange={(e) => handleClose(e.open)}>
+      <Dialog.Backdrop />
+      <Dialog.Positioner>
+        <Dialog.Content>
+          <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>{photoMode ? 'Add from Photos' : 'Ask AI'}</Dialog.Title>
+          </Dialog.Header>
+          <Dialog.Body>
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
 
-        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
-
-        {photoMode ? (
-          <div key="photo" className="ai-content-enter">
-            <PhotoBulkAdd
-              initialFiles={initialFiles}
-              onClose={() => handleClose(false)}
-              onBack={() => { setPhotoMode(false); setInitialFiles([]); }}
-            />
-          </div>
-        ) : effectiveState === 'success' && executionResult ? (
-          <div key="success" className="ai-content-enter">
-            <CommandSuccess
-              result={executionResult}
-              onAskAnother={handleAskAnother}
-              onClose={() => handleClose(false)}
-              onBinClick={handleBinClick}
-            />
-          </div>
-        ) : effectiveState === 'query-result' ? (
-          <div key="query-result" className="ai-content-enter">
-            <InventoryQueryResult
-              queryResult={queryResult}
-              streamingText={queryPartialText}
-              isStreaming={isQueryStreaming}
-              onBinClick={handleBinClick}
-              onBack={handleBack}
-            />
-          </div>
-        ) : effectiveState === 'preview' && actions ? (
-          <div key="preview" className="ai-content-enter">
-            <CommandActionPreview
-              actions={actions}
-              interpretation={interpretation}
-              checkedActions={checkedActions}
-              toggleAction={toggleAction}
-              selectedCount={selectedCount}
-              isExecuting={isExecuting}
-              executingProgress={executingProgress}
-              onBack={handleBack}
-              onExecute={executeActions}
-            />
-          </div>
-        ) : !aiSettingsLoading && !isAiReady ? (
-          <div key="setup" className="ai-content-enter">
-            <AiSetupView onNavigate={() => { handleClose(false); navigate('/settings#ai-settings'); }} />
-          </div>
-        ) : (
-          <div key="idle" className="ai-content-enter">
-            <CommandIdleInput
-              text={text}
-              setText={setText}
-              isLoading={effectiveState === 'parsing' || effectiveState === 'querying' || effectiveState === 'executing'}
-              examplesOpen={examplesOpen}
-              setExamplesOpen={setExamplesOpen}
-              error={error}
-              onParse={handleParse}
-              onPhotoClick={() => fileInputRef.current?.click()}
-            />
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+            {photoMode ? (
+              <div key="photo" className="ai-content-enter">
+                <PhotoBulkAdd
+                  initialFiles={initialFiles}
+                  onClose={() => handleClose(false)}
+                  onBack={() => { setPhotoMode(false); setInitialFiles([]); }}
+                />
+              </div>
+            ) : effectiveState === 'success' && executionResult ? (
+              <div key="success" className="ai-content-enter">
+                <CommandSuccess
+                  result={executionResult}
+                  onAskAnother={handleAskAnother}
+                  onClose={() => handleClose(false)}
+                  onBinClick={handleBinClick}
+                />
+              </div>
+            ) : effectiveState === 'query-result' ? (
+              <div key="query-result" className="ai-content-enter">
+                <InventoryQueryResult
+                  queryResult={queryResult}
+                  streamingText={queryPartialText}
+                  isStreaming={isQueryStreaming}
+                  onBinClick={handleBinClick}
+                  onBack={handleBack}
+                />
+              </div>
+            ) : effectiveState === 'preview' && actions ? (
+              <div key="preview" className="ai-content-enter">
+                <CommandActionPreview
+                  actions={actions}
+                  interpretation={interpretation}
+                  checkedActions={checkedActions}
+                  toggleAction={toggleAction}
+                  selectedCount={selectedCount}
+                  isExecuting={isExecuting}
+                  executingProgress={executingProgress}
+                  onBack={handleBack}
+                  onExecute={executeActions}
+                />
+              </div>
+            ) : !aiSettingsLoading && !isAiReady ? (
+              <div key="setup" className="ai-content-enter">
+                <AiSetupView onNavigate={() => { handleClose(false); navigate('/settings#ai-settings'); }} />
+              </div>
+            ) : (
+              <div key="idle" className="ai-content-enter">
+                <CommandIdleInput
+                  text={text}
+                  setText={setText}
+                  isLoading={effectiveState === 'parsing' || effectiveState === 'querying' || effectiveState === 'executing'}
+                  examplesOpen={examplesOpen}
+                  setExamplesOpen={setExamplesOpen}
+                  error={error}
+                  onParse={handleParse}
+                  onPhotoClick={() => fileInputRef.current?.click()}
+                />
+              </div>
+            )}
+          </Dialog.Body>
+        </Dialog.Content>
+      </Dialog.Positioner>
+    </Dialog.Root>
   );
 }

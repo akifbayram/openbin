@@ -1,8 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import {
-  Dialog,
-  DialogContent,
-} from '@/components/ui/dialog';
+import { Dialog } from '@chakra-ui/react';
 import { AiSetupView } from './InlineAiSetup';
 
 interface AiSetupDialogProps {
@@ -15,17 +12,23 @@ export function AiSetupDialog({ open, onOpenChange, onNavigate }: AiSetupDialogP
   const navigate = useNavigate();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <AiSetupView
-          onNavigate={() => {
-            onOpenChange(false);
-            onNavigate?.();
-            navigate('/settings#ai-settings');
-          }}
-          onDismiss={() => onOpenChange(false)}
-        />
-      </DialogContent>
-    </Dialog>
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+      <Dialog.Positioner>
+        <Dialog.Content>
+          <Dialog.CloseTrigger />
+          <Dialog.Body>
+            <AiSetupView
+              onNavigate={() => {
+                onOpenChange(false);
+                onNavigate?.();
+                navigate('/settings#ai-settings');
+              }}
+              onDismiss={() => onOpenChange(false)}
+            />
+          </Dialog.Body>
+        </Dialog.Content>
+      </Dialog.Positioner>
+    </Dialog.Root>
   );
 }

@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Button, Input } from '@chakra-ui/react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button, Dialog, Input } from '@chakra-ui/react';
 import { useToast } from '@/components/ui/toast';
 import { saveView } from '@/lib/savedViews';
 import type { BinFilters, SortOption } from './useBins';
@@ -25,28 +24,34 @@ export function SaveViewDialog({ open, onOpenChange, searchQuery, sort, filters 
   }
 
   return (
-    <Dialog
+    <Dialog.Root
       open={open}
-      onOpenChange={(v) => {
-        if (v) setViewName('');
-        onOpenChange(v);
+      onOpenChange={(e) => {
+        if (e.open) setViewName('');
+        onOpenChange(e.open);
       }}
     >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Save Search</DialogTitle>
-        </DialogHeader>
-        <Input
-          value={viewName}
-          onChange={(e) => setViewName(e.target.value)}
-          placeholder="View name..."
-          onKeyDown={(e) => { if (e.key === 'Enter' && viewName.trim()) handleSave(); }}
-        />
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!viewName.trim()}>Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <Dialog.Backdrop />
+      <Dialog.Positioner>
+        <Dialog.Content>
+          <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>Save Search</Dialog.Title>
+          </Dialog.Header>
+          <Dialog.Body>
+            <Input
+              value={viewName}
+              onChange={(e) => setViewName(e.target.value)}
+              placeholder="View name..."
+              onKeyDown={(e) => { if (e.key === 'Enter' && viewName.trim()) handleSave(); }}
+            />
+          </Dialog.Body>
+          <Dialog.Footer>
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={!viewName.trim()}>Save</Button>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Positioner>
+    </Dialog.Root>
   );
 }

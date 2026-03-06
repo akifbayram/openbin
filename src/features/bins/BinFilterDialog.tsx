@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Button } from '@chakra-ui/react';
+import { Button, Dialog } from '@chakra-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { OptionGroup } from '@/components/ui/option-group';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { HUE_RANGES } from '@/lib/colorPalette';
@@ -87,216 +86,220 @@ export function BinFilterDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Filter Bins</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Sort */}
-          <div className="space-y-2.5">
-            <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
-              Sort
-            </span>
-            <OptionGroup
-              options={(Object.keys(sortLabels) as SortOption[]).map((key) => ({ key, label: sortLabels[key] }))}
-              value={sort}
-              onChange={onSortChange}
-              size="sm"
-            />
-          </div>
-
-          {/* Tags */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
-                Tags
-              </span>
-              {draft.tags.length >= 2 && (
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+      <Dialog.Positioner>
+        <Dialog.Content>
+          <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>Filter Bins</Dialog.Title>
+          </Dialog.Header>
+          <Dialog.Body>
+            <div className="space-y-6">
+              {/* Sort */}
+              <div className="space-y-2.5">
+                <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
+                  Sort
+                </span>
                 <OptionGroup
-                  options={[
-                    { key: 'any' as const, label: 'Any' },
-                    { key: 'all' as const, label: 'All' },
-                  ]}
-                  value={draft.tagMode}
-                  onChange={(mode) => setDraft((d) => ({ ...d, tagMode: mode }))}
+                  options={(Object.keys(sortLabels) as SortOption[]).map((key) => ({ key, label: sortLabels[key] }))}
+                  value={sort}
+                  onChange={onSortChange}
                   size="sm"
                 />
-              )}
-            </div>
-            {availableTags.length === 0 ? (
-              <p className="text-[13px] text-[var(--text-tertiary)]">No tags in this location</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {(() => {
-                  const TAG_LIMIT = 12;
-                  const sorted = [...availableTags].sort((a, b) => {
-                    const aSelected = draft.tags.includes(a);
-                    const bSelected = draft.tags.includes(b);
-                    if (aSelected !== bSelected) return aSelected ? -1 : 1;
-                    return a.localeCompare(b, undefined, { sensitivity: 'base' });
-                  });
-                  const canCollapse = sorted.length > TAG_LIMIT;
-                  const visible = canCollapse && !tagsExpanded ? sorted.slice(0, TAG_LIMIT) : sorted;
-                  const hiddenCount = sorted.length - TAG_LIMIT;
-
-                  return (
-                    <>
-                      {visible.map((tag) => {
-                        const selected = draft.tags.includes(tag);
-                        const tagStyle = getTagStyle(tag);
-
-                        return (
-                          <button
-                            key={tag}
-                            type="button"
-                            onClick={() => toggleTag(tag)}
-                            className={cn(
-                              'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
-                              tagStyle
-                                ? selected
-                                  ? 'ring-2 ring-[var(--accent)] ring-offset-1'
-                                  : 'opacity-60 hover:opacity-80'
-                                : selected
-                                  ? 'bg-[var(--accent)] text-white'
-                                  : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
-                            )}
-                            style={tagStyle}
-                          >
-                            {tag}
-                          </button>
-                        );
-                      })}
-                      {canCollapse && (
-                        <button
-                          type="button"
-                          onClick={() => setTagsExpanded((v) => !v)}
-                          className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium text-[var(--accent)] hover:underline cursor-pointer"
-                        >
-                          {tagsExpanded ? 'Show less' : `+${hiddenCount} more`}
-                        </button>
-                      )}
-                    </>
-                  );
-                })()}
               </div>
-            )}
-          </div>
 
-          {/* Area */}
-          {areas.length > 0 && (
-            <div className="space-y-2.5">
-              <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
-                Area
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => toggleArea('__unassigned__')}
-                  className={cn(
-                    'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
-                    draft.areas.includes('__unassigned__')
-                      ? 'bg-[var(--accent)] text-white'
-                      : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
+              {/* Tags */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
+                    Tags
+                  </span>
+                  {draft.tags.length >= 2 && (
+                    <OptionGroup
+                      options={[
+                        { key: 'any' as const, label: 'Any' },
+                        { key: 'all' as const, label: 'All' },
+                      ]}
+                      value={draft.tagMode}
+                      onChange={(mode) => setDraft((d) => ({ ...d, tagMode: mode }))}
+                      size="sm"
+                    />
                   )}
-                >
-                  Unassigned
-                </button>
-                {areas.map((area) => {
-                  const selected = draft.areas.includes(area.id);
-                  return (
+                </div>
+                {availableTags.length === 0 ? (
+                  <p className="text-[13px] text-[var(--text-tertiary)]">No tags in this location</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(() => {
+                      const TAG_LIMIT = 12;
+                      const sorted = [...availableTags].sort((a, b) => {
+                        const aSelected = draft.tags.includes(a);
+                        const bSelected = draft.tags.includes(b);
+                        if (aSelected !== bSelected) return aSelected ? -1 : 1;
+                        return a.localeCompare(b, undefined, { sensitivity: 'base' });
+                      });
+                      const canCollapse = sorted.length > TAG_LIMIT;
+                      const visible = canCollapse && !tagsExpanded ? sorted.slice(0, TAG_LIMIT) : sorted;
+                      const hiddenCount = sorted.length - TAG_LIMIT;
+
+                      return (
+                        <>
+                          {visible.map((tag) => {
+                            const selected = draft.tags.includes(tag);
+                            const tagStyle = getTagStyle(tag);
+
+                            return (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => toggleTag(tag)}
+                                className={cn(
+                                  'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
+                                  tagStyle
+                                    ? selected
+                                      ? 'ring-2 ring-[var(--accent)] ring-offset-1'
+                                      : 'opacity-60 hover:opacity-80'
+                                    : selected
+                                      ? 'bg-[var(--accent)] text-white'
+                                      : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
+                                )}
+                                style={tagStyle}
+                              >
+                                {tag}
+                              </button>
+                            );
+                          })}
+                          {canCollapse && (
+                            <button
+                              type="button"
+                              onClick={() => setTagsExpanded((v) => !v)}
+                              className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium text-[var(--accent)] hover:underline cursor-pointer"
+                            >
+                              {tagsExpanded ? 'Show less' : `+${hiddenCount} more`}
+                            </button>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+
+              {/* Area */}
+              {areas.length > 0 && (
+                <div className="space-y-2.5">
+                  <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
+                    Area
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
                     <button
-                      key={area.id}
                       type="button"
-                      onClick={() => toggleArea(area.id)}
+                      onClick={() => toggleArea('__unassigned__')}
                       className={cn(
                         'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
-                        selected
+                        draft.areas.includes('__unassigned__')
                           ? 'bg-[var(--accent)] text-white'
                           : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
                       )}
                     >
-                      {area.name}
+                      Unassigned
                     </button>
-                  );
-                })}
+                    {areas.map((area) => {
+                      const selected = draft.areas.includes(area.id);
+                      return (
+                        <button
+                          key={area.id}
+                          type="button"
+                          onClick={() => toggleArea(area.id)}
+                          className={cn(
+                            'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
+                            selected
+                              ? 'bg-[var(--accent)] text-white'
+                              : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
+                          )}
+                        >
+                          {area.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Color */}
+              <div className="space-y-2.5">
+                <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
+                  Color
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {HUE_RANGES.map((range) => {
+                    const selected = draft.colors.includes(range.name);
+                    return (
+                      <button
+                        key={range.name}
+                        type="button"
+                        onClick={() => toggleHueRange(range.name)}
+                        title={range.label}
+                        className={cn(
+                          'h-8 w-8 rounded-full transition-colors',
+                          selected
+                            ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+                            : 'hover:opacity-80'
+                        )}
+                        style={{ backgroundColor: range.dot }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="space-y-1">
+                <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
+                  Content
+                </span>
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-[15px] text-[var(--text-primary)]">Has items</span>
+                  <Checkbox
+                    checked={draft.hasItems}
+                    onCheckedChange={(v) => setDraft((d) => ({ ...d, hasItems: v }))}
+                  />
+                </div>
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-[15px] text-[var(--text-primary)]">Has notes</span>
+                  <Checkbox
+                    checked={draft.hasNotes}
+                    onCheckedChange={(v) => setDraft((d) => ({ ...d, hasNotes: v }))}
+                  />
+                </div>
               </div>
             </div>
-          )}
-
-          {/* Color */}
-          <div className="space-y-2.5">
-            <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
-              Color
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {HUE_RANGES.map((range) => {
-                const selected = draft.colors.includes(range.name);
-                return (
-                  <button
-                    key={range.name}
-                    type="button"
-                    onClick={() => toggleHueRange(range.name)}
-                    title={range.label}
-                    className={cn(
-                      'h-8 w-8 rounded-full transition-colors',
-                      selected
-                        ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
-                        : 'hover:opacity-80'
-                    )}
-                    style={{ backgroundColor: range.dot }}
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="space-y-1">
-            <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
-              Content
-            </span>
-            <div className="flex items-center justify-between py-2.5">
-              <span className="text-[15px] text-[var(--text-primary)]">Has items</span>
-              <Checkbox
-                checked={draft.hasItems}
-                onCheckedChange={(v) => setDraft((d) => ({ ...d, hasItems: v }))}
-              />
-            </div>
-            <div className="flex items-center justify-between py-2.5">
-              <span className="text-[15px] text-[var(--text-primary)]">Has notes</span>
-              <Checkbox
-                checked={draft.hasNotes}
-                onCheckedChange={(v) => setDraft((d) => ({ ...d, hasNotes: v }))}
-              />
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" onClick={reset}>
-                Reset
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              {(searchQuery || countActiveFilters(draft) > 0) && (
-                <Button
-                  variant="ghost"
-                  onClick={() => { onSaveView(); onOpenChange(false); }}
-                >
-                  Save View
+          </Dialog.Body>
+          <Dialog.Footer>
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={reset}>
+                  Reset
                 </Button>
-              )}
-              <Button onClick={apply}>
-                Apply
-              </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                {(searchQuery || countActiveFilters(draft) > 0) && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => { onSaveView(); onOpenChange(false); }}
+                  >
+                    Save View
+                  </Button>
+                )}
+                <Button onClick={apply}>
+                  Apply
+                </Button>
+              </div>
             </div>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Positioner>
+    </Dialog.Root>
   );
 }

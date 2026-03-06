@@ -2,7 +2,6 @@ import { X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
-import { useDialogPortal } from '@/components/ui/dialog';
 import { Input } from '@chakra-ui/react';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 
@@ -13,7 +12,6 @@ interface TagInputProps {
 }
 
 export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
-  const dialogPortal = useDialogPortal();
   const [input, setInput] = useState('');
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -194,7 +192,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
             );
           })}
         </div>,
-        dialogPortal ?? document.body,
+        document.body,
       )}
     </div>
   );

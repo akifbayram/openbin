@@ -1,13 +1,5 @@
 import { useState } from 'react';
-import { Button } from '@chakra-ui/react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Button, Dialog } from '@chakra-ui/react';
 import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
 import { TagInput } from './TagInput';
@@ -54,27 +46,33 @@ export function BulkTagDialog({ open, onOpenChange, binIds, onDone, allTags }: B
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add Tags</DialogTitle>
-          <DialogDescription>
-            Add tags to {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''}.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2">
-          <Label>Tags</Label>
-          <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleApply} disabled={tags.length === 0 || loading}>
-            {loading ? 'Applying...' : 'Apply'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+      <Dialog.Positioner>
+        <Dialog.Content>
+          <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>Add Tags</Dialog.Title>
+            <Dialog.Description>
+              Add tags to {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''}.
+            </Dialog.Description>
+          </Dialog.Header>
+          <Dialog.Body>
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
+            </div>
+          </Dialog.Body>
+          <Dialog.Footer>
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleApply} disabled={tags.length === 0 || loading}>
+              {loading ? 'Applying...' : 'Apply'}
+            </Button>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Positioner>
+    </Dialog.Root>
   );
 }
