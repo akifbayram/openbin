@@ -52,6 +52,8 @@ export interface LabelOptions {
   showColorSwatch: boolean;
 }
 
+export type PrintMode = 'labels' | 'items';
+
 export interface ItemListOptions {
   showCheckboxes: boolean;
   showQuantity: boolean;
@@ -79,7 +81,7 @@ export interface PrintSettings {
   orientation?: 'landscape' | 'portrait';
   displayUnit?: DisplayUnit;
   qrStyle?: QrStyleOptions;
-  printMode?: 'labels' | 'items';
+  printMode?: PrintMode;
   itemListOptions?: ItemListOptions;
 }
 
@@ -199,7 +201,7 @@ export function usePrintSettings() {
     update({ qrStyle });
   }
 
-  function updatePrintMode(printMode: 'labels' | 'items') {
+  function updatePrintMode(printMode: PrintMode) {
     update({ printMode });
   }
 

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useBinList } from '@/features/bins/useBins';
 import { useAuth } from '@/lib/auth';
@@ -7,8 +8,8 @@ import type { LabelFormat } from './labelFormats';
 import { applyOrientation, computePageSize, DEFAULT_LABEL_FORMAT, getLabelFormat, getOrientation } from './labelFormats';
 import { inchesToMm, mmToInches } from './pdfUnits';
 import { useBinSelection } from './useBinSelection';
-import type { CustomState, DisplayUnit, LabelOptions, QrStyleOptions } from './usePrintSettings';
-import { DEFAULT_QR_STYLE, usePrintSettings } from './usePrintSettings';
+import type { CustomState, DisplayUnit, ItemListOptions, LabelOptions, PrintMode, QrStyleOptions } from './usePrintSettings';
+import { DEFAULT_ITEM_LIST_OPTIONS, DEFAULT_QR_STYLE, usePrintSettings } from './usePrintSettings';
 
 const CUSTOM_FIELDS: { label: string; key: keyof LabelFormat; minIn: number; max?: string; stepIn: string; stepMm: string; isNumber?: boolean; isDimensional: boolean }[] = [
   { label: 'Page Width', key: 'pageWidth', minIn: 1, stepIn: '0.5', stepMm: '10', isNumber: true, isDimensional: true },
@@ -57,18 +58,32 @@ export function usePrintPageActions() {
   const { bins: allBins, isLoading: binsLoading } = useBinList(undefined, 'name');
   const { activeLocationId } = useAuth();
   const { areas } = useAreaList(activeLocationId);
-  const { settings, isLoading: settingsLoading, updateFormatKey, updateCustomState, updateLabelOptions, updateOrientation, updateDisplayUnit, updateQrStyle, addPreset, removePreset } = usePrintSettings();
+  const { settings, isLoading: settingsLoading, updateFormatKey, updateCustomState, updateLabelOptions, updateOrientation, updateDisplayUnit, updateQrStyle, addPreset, removePreset, updatePrintMode: setPrintMode, updateItemListOptions } = usePrintSettings();
   const selection = useBinSelection(allBins);
+  const [searchParams] = useSearchParams();
 
   const [binsExpanded, setBinsExpanded] = useState(false);
   const [formatExpanded, setFormatExpanded] = useState(true);
   const [optionsExpanded, setOptionsExpanded] = useState(false);
   const [qrStyleExpanded, setQrStyleExpanded] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [itemListOptionsExpanded, setItemListOptionsExpanded] = useState(true);
 
-  const { formatKey, customState, labelOptions, presets: savedPresets, qrStyle: savedQrStyle } = settings;
+  const { formatKey, customState, labelOptions, presets: savedPresets, qrStyle: savedQrStyle, printMode: savedPrintMode, itemListOptions: savedItemListOptions } = settings;
   const qrStyle = savedQrStyle ?? DEFAULT_QR_STYLE;
   const displayUnit: DisplayUnit = settings.displayUnit ?? 'in';
+  const printMode: PrintMode = savedPrintMode ?? 'labels';
+  const itemListOptions = savedItemListOptions ?? DEFAULT_ITEM_LIST_OPTIONS;
+
+  const modeInitRef = useRef(false);
+  useEffect(() => {
+    if (modeInitRef.current || settingsLoading) return;
+    const modeParam = searchParams.get('mode');
+    if (modeParam === 'items' && printMode !== 'items') {
+      setPrintMode('items');
+    }
+    modeInitRef.current = true;
+  }, [settingsLoading]);
 
   const { baseFormat, orientedBase, labelFormat, iconSize, effectiveOrientation } = computeEffectiveFormat(
     formatKey, settings.orientation, customState, labelOptions.fontScale, savedPresets,
@@ -163,6 +178,10 @@ export function usePrintPageActions() {
     updateQrStyle(style);
   }
 
+  function handleUpdateItemListOption<K extends keyof ItemListOptions>(key: K, value: ItemListOptions[K]) {
+    updateItemListOptions({ ...itemListOptions, [key]: value });
+  }
+
   const isLoading = binsLoading || settingsLoading;
 
   const format: FormatState = {
@@ -187,6 +206,11 @@ export function usePrintPageActions() {
     qrStyle,
   };
 
+  const itemSheetProps = {
+    bins: selection.selectedBins,
+    ...itemListOptions,
+  };
+
   async function handleDownloadPDF() {
     if (pdfLoading || selection.selectedBins.length === 0) return;
     setPdfLoading(true);
@@ -208,7 +232,12 @@ export function usePrintPageActions() {
     handleUpdateLabelOption,
     qrStyle,
     handleUpdateQrStyle,
-    ui: { binsExpanded, setBinsExpanded, formatExpanded, setFormatExpanded, optionsExpanded, setOptionsExpanded, qrStyleExpanded, setQrStyleExpanded },
+    printMode,
+    handlePrintModeChange: setPrintMode,
+    itemListOptions,
+    handleUpdateItemListOption,
+    itemSheetProps,
+    ui: { binsExpanded, setBinsExpanded, formatExpanded, setFormatExpanded, optionsExpanded, setOptionsExpanded, qrStyleExpanded, setQrStyleExpanded, itemListOptionsExpanded, setItemListOptionsExpanded },
     pdfLoading,
     handleDownloadPDF,
     labelSheetProps,
