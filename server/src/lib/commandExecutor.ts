@@ -97,7 +97,7 @@ function executeSingleAction(
       const maxResult = querySync<{ max_pos: number | null }>('SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1', [action.bin_id]);
       let nextPos = (maxResult.rows[0]?.max_pos ?? -1) + 1;
       for (const itemName of action.items) {
-        querySync('INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)', [generateUuid(), action.bin_id, itemName, nextPos++]);
+        querySync('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, NULL, $4)', [generateUuid(), action.bin_id, itemName, nextPos++]);
       }
       querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
       pendingActivities.push({
@@ -186,7 +186,7 @@ function executeSingleAction(
       const createItems: string[] = action.items || [];
       if (createItems.length > MAX_ITEMS_PER_ACTION) throw new Error('Too many items per action (max 500)');
       for (let i = 0; i < createItems.length; i++) {
-        querySync('INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)', [crypto.randomUUID(), binId, createItems[i], i]);
+        querySync('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, NULL, $4)', [crypto.randomUUID(), binId, createItems[i], i]);
       }
 
       // Insert custom field values
@@ -497,9 +497,9 @@ function executeSingleAction(
       }
 
       // Copy items
-      const srcItems = querySync<{ name: string }>('SELECT name FROM bin_items WHERE bin_id = $1 ORDER BY position', [action.bin_id]);
+      const srcItems = querySync<{ name: string; quantity: number | null }>('SELECT name, quantity FROM bin_items WHERE bin_id = $1 ORDER BY position', [action.bin_id]);
       for (let i = 0; i < srcItems.rows.length; i++) {
-        querySync('INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)', [generateUuid(), binId, srcItems.rows[i].name, i]);
+        querySync('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)', [generateUuid(), binId, srcItems.rows[i].name, srcItems.rows[i].quantity, i]);
       }
 
       pendingActivities.push({
