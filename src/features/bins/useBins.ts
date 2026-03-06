@@ -261,7 +261,7 @@ export async function addBin(options: AddBinOptions): Promise<Bin> {
 
 export async function updateBin(
   id: string,
-  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color' | 'card_style' | 'visibility'>> & { areaId?: string | null; items?: string[]; cardStyle?: string; customFields?: Record<string, string> }
+  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color' | 'card_style' | 'visibility'>> & { areaId?: string | null; items?: (string | { name: string; quantity: number | null })[]; cardStyle?: string; customFields?: Record<string, string> }
 ): Promise<void> {
   await apiFetch(`/api/bins/${id}`, {
     method: 'PUT',

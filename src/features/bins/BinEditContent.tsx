@@ -55,6 +55,8 @@ export function BinEditContent({
           <ItemsInput
             items={edit.items}
             onChange={edit.setItems}
+            quantities={edit.quantities}
+            onQuantityChange={edit.setQuantity}
             showAi={aiEnabled}
             aiConfigured={aiConfigured}
             onAiSetupNeeded={onAiSetupNeeded}

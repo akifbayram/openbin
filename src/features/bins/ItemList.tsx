@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { BinItem } from '@/types';
-import { removeItemFromBin, renameItem, reorderItems, updateItemQuantity } from './useBins';
+import { removeItemFromBin, renameItem, reorderItems } from './useBins';
 
 interface ItemListProps {
   items: BinItem[];
@@ -24,18 +24,18 @@ interface ItemRowProps {
   onSave: (value: string, quantity: number | null) => void;
   onCancel: () => void;
   onDelete: () => void;
-  onQuantityChange: (newQty: number) => void;
 }
 
 const SWIPE_THRESHOLD = 80;
 
-function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onDelete, onQuantityChange }: ItemRowProps) {
+function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onDelete }: ItemRowProps) {
   const [editValue, setEditValue] = useState(text);
   const [editQuantity, setEditQuantity] = useState<string>(quantity != null ? String(quantity) : '');
   const [swipeX, setSwipeX] = useState(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const swipingRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
 
   function handleStartEdit() {
     setEditValue(text);
@@ -100,6 +100,7 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
 
       {/* Foreground row */}
       <div
+        ref={rowRef}
         className={cn(
           'relative row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors',
           !isEditing && 'group'
@@ -109,45 +110,33 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Quantity stepper (left of name) */}
-        {!isEditing && quantity != null && (
-          <div className="shrink-0 flex items-center gap-1">
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onQuantityChange(quantity - 1); }}
-              className="w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-active)] transition-colors text-sm font-medium"
-              aria-label="Decrease quantity"
-            >
-              −
-            </button>
-            <span className="min-w-[1.5rem] text-center text-[13px] font-medium text-[var(--text-secondary)] tabular-nums">
-              {quantity}
-            </span>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onQuantityChange(quantity + 1); }}
-              className="w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-active)] transition-colors text-sm font-medium"
-              aria-label="Increase quantity"
-            >
-              +
-            </button>
-          </div>
-        )}
+        <input
+          value={isEditing ? editQuantity : (quantity != null ? String(quantity) : '')}
+          onChange={(e) => {
+            const val = e.target.value.replace(/[^0-9]/g, '');
+            if (!isEditing) {
+              const num = val === '' ? null : Number.parseInt(val, 10);
+              const finalQty = num != null && Number.isFinite(num) && num >= 0 ? num : null;
+              onSave(text, finalQty);
+            } else {
+              setEditQuantity(val);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (isEditing) {
+              if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
+              else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+            }
+          }}
+          onBlur={isEditing ? () => { requestAnimationFrame(() => { if (!rowRef.current?.contains(document.activeElement)) handleSave(); }); } : undefined}
+          placeholder="1"
+          className="shrink-0 w-8 text-center text-[13px] tabular-nums text-[var(--text-tertiary)] bg-transparent outline-none focus:text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)]"
+          inputMode="numeric"
+          aria-label="Quantity"
+        />
 
         {isEditing ? (
-          <div className="flex-1 min-w-0 flex items-center gap-2">
-            <input
-              value={editQuantity}
-              onChange={(e) => setEditQuantity(e.target.value.replace(/[^0-9]/g, ''))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
-                else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
-              }}
-              onBlur={handleSave}
-              placeholder="Qty"
-              className="w-14 bg-[var(--bg-elevated)] rounded-[var(--radius-sm)] px-2 py-0.5 text-[13px] text-[var(--text-primary)] text-center outline-none"
-              inputMode="numeric"
-            />
+          <div className="flex-1 min-w-0">
             <input
               ref={inputRef}
               value={editValue}
@@ -156,8 +145,8 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
                 if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
                 else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
               }}
-              onBlur={handleSave}
-              className="flex-1 min-w-0 bg-transparent text-[15px] text-[var(--text-primary)] outline-none"
+              onBlur={() => { requestAnimationFrame(() => { if (!rowRef.current?.contains(document.activeElement)) handleSave(); }); }}
+              className="w-full bg-transparent text-[15px] text-[var(--text-primary)] leading-relaxed outline-none"
             />
           </div>
         ) : (
@@ -224,8 +213,6 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
     handleSort(next);
   }
 
-  const [confirmRemove, setConfirmRemove] = useState<{ itemId: string; name: string } | null>(null);
-
   async function handleSaveEdit(itemId: string, value: string, quantity: number | null) {
     setEditingId(null);
     try {
@@ -233,28 +220,6 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
     } catch {
       showToast({ message: 'Failed to update item', variant: 'error' });
     }
-  }
-
-  async function handleQuantityChange(itemId: string, name: string, newQty: number) {
-    if (newQty <= 0) {
-      setConfirmRemove({ itemId, name });
-      return;
-    }
-    try {
-      await updateItemQuantity(binId, itemId, newQty);
-    } catch {
-      showToast({ message: 'Failed to update quantity', variant: 'error' });
-    }
-  }
-
-  async function handleConfirmRemove() {
-    if (!confirmRemove) return;
-    try {
-      await updateItemQuantity(binId, confirmRemove.itemId, 0);
-    } catch {
-      showToast({ message: 'Failed to remove item', variant: 'error' });
-    }
-    setConfirmRemove(null);
   }
 
   function handleDelete(itemId: string) {
@@ -291,13 +256,19 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
         <p className="text-[15px] text-[var(--text-tertiary)] italic">No items yet</p>
       ) : (
         <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden">
+          {!readOnly && (
+            <div className="row-tight px-3.5 pt-1.5 pb-0.5">
+              <span className="shrink-0 w-8 text-center text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Qty</span>
+              <span className="flex-1 text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Name</span>
+            </div>
+          )}
           {items.map((item, i) => readOnly ? (
             <div key={item.id}>
               {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
               <div className="row-tight px-3.5 py-1">
                 {item.quantity != null && (
                   <span className="shrink-0 text-[13px] text-[var(--text-tertiary)] tabular-nums">
-                    ×{item.quantity}
+                    {item.quantity}
                   </span>
                 )}
                 <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
@@ -321,24 +292,10 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
                   onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
                   onCancel={() => setEditingId(null)}
                   onDelete={() => handleDelete(item.id)}
-                  onQuantityChange={(newQty) => handleQuantityChange(item.id, item.name, newQty)}
                 />
               </div>
             </div>
           ))}
-        </div>
-      )}
-      {confirmRemove && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-[var(--bg-primary)] rounded-[var(--radius-lg)] p-5 shadow-lg max-w-xs w-full mx-4 space-y-3">
-            <p className="text-[15px] text-[var(--text-primary)]">
-              Remove <strong>{confirmRemove.name}</strong>?
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button variant="ghost" size="sm" onClick={() => setConfirmRemove(null)}>Cancel</Button>
-              <Button variant="destructive" size="sm" onClick={handleConfirmRemove}>Remove</Button>
-            </div>
-          </div>
         </div>
       )}
     </div>

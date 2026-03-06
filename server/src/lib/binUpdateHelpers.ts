@@ -68,13 +68,15 @@ export async function replaceBinItems(binId: string, newItems: unknown[]): Promi
 
   const db = getDb();
   const deleteStmt = db.prepare('DELETE FROM bin_items WHERE bin_id = ?');
-  const insertStmt = db.prepare('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES (?, ?, ?, NULL, ?)');
+  const insertStmt = db.prepare('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES (?, ?, ?, ?, ?)');
   const runReplace = db.transaction(() => {
     deleteStmt.run(binId);
     for (let i = 0; i < newItems.length; i++) {
-      const itemName = typeof newItems[i] === 'string' ? newItems[i] : (newItems[i] as { name: string }).name;
+      const item = newItems[i];
+      const itemName = typeof item === 'string' ? item : (item as { name: string }).name;
+      const itemQty = typeof item === 'object' && item !== null ? ((item as { quantity?: number | null }).quantity ?? null) : null;
       if (!itemName) continue;
-      insertStmt.run(generateUuid(), binId, itemName, i);
+      insertStmt.run(generateUuid(), binId, itemName, itemQty, i);
     }
   });
   runReplace();
