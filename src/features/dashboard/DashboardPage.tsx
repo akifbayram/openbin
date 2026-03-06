@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { Tooltip } from '@/components/ui/tooltip';
 import { BinCard } from '@/features/bins/BinCard';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
@@ -134,8 +134,7 @@ export function DashboardPage() {
   const { activeLocationId } = useAuth();
   const { openScanDialog } = useScanDialog();
   const { aiEnabled } = useAiEnabled();
-  const { showToast } = useToast();
-  const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, recentlyUpdated, pinnedBins, isLoading } =
+    const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, recentlyUpdated, pinnedBins, isLoading } =
     useDashboard();
   const { settings: dashSettings } = useDashboardSettings();
   const [search, setSearch] = useState('');
@@ -161,7 +160,7 @@ export function DashboardPage() {
   const allTags = useAllTags();
   const bulk = useBulkDialogs();
   const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(allDashboardBins, [activeLocationId]);
-  const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(allDashboardBins, selectedIds, clearSelection, showToast, t);
+  const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(allDashboardBins, selectedIds, clearSelection, t);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [copiedStyle, setCopiedStyle] = useState<{ icon: string; color: string; card_style: string } | null>(null);
 
@@ -177,16 +176,16 @@ export function DashboardPage() {
     if (!bin) return;
     setCopiedStyle({ icon: bin.icon, color: bin.color, card_style: bin.card_style });
     clearSelection();
-    showToast({ message: 'Style copied' });
-  }, [selectedIds, allDashboardBins, clearSelection, showToast]);
+    toaster.create({ description: 'Style copied' });
+  }, [selectedIds, allDashboardBins, clearSelection]);
 
   const handlePasteStyle = useCallback(async () => {
     if (!copiedStyle) return;
     const ids = [...selectedIds];
     await Promise.all(ids.map((id) => updateBin(id, { icon: copiedStyle.icon, color: copiedStyle.color, cardStyle: copiedStyle.card_style })));
     clearSelection();
-    showToast({ message: `Style applied to ${ids.length} ${ids.length === 1 ? t.bin : t.bins}` });
-  }, [copiedStyle, selectedIds, clearSelection, showToast, t]);
+    toaster.create({ description: `Style applied to ${ids.length} ${ids.length === 1 ? t.bin : t.bins}` });
+  }, [copiedStyle, selectedIds, clearSelection, t]);
 
   useEffect(() => {
     if (sessionStorage.getItem('openbin-demo-toast')) return;
@@ -195,8 +194,8 @@ export function DashboardPage() {
       .then((data) => {
         if (data.demoMode) {
           sessionStorage.setItem('openbin-demo-toast', '1');
-          showToast({
-            message: 'This is a demo — data resets periodically.',
+          toaster.create({
+            description: 'This is a demo — data resets periodically.',
             action: {
               label: 'Self-host',
               onClick: () => window.open('https://github.com/openbin-app/openbin', '_blank'),
@@ -206,7 +205,7 @@ export function DashboardPage() {
         }
       })
       .catch(() => {});
-  }, [showToast]);
+  }, []);
 
   useEffect(() => {
     if (debouncedSearch.trim()) {

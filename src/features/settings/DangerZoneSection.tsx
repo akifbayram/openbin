@@ -3,15 +3,14 @@ import { useState } from 'react';
 import { Button, Dialog, Input } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 
 interface DangerZoneSectionProps {
   deleteAccount: (password: string) => Promise<void>;
 }
 
 export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
-  const { showToast } = useToast();
-  const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
 
@@ -22,7 +21,7 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
     try {
       await deleteAccount(deletePassword);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete account' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to delete account' });
       setDeleting(false);
     }
   }

@@ -2,7 +2,7 @@ import { AlertCircle, ChevronLeft } from 'lucide-react';
 import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { Button } from '@chakra-ui/react';
-import { ToastProvider, useToast } from '@/components/ui/toast';
+import { Toaster, toaster } from '@/components/ui/toaster';
 import { AuthGuard } from '@/features/auth/AuthGuard';
 import { AppLayout } from '@/features/layout/AppLayout';
 import { LocationProvider } from '@/features/locations/useLocations';
@@ -109,8 +109,6 @@ class ErrorBoundary extends React.Component<
 let controllerChangeReloaded = false;
 
 function SWUpdateNotifier() {
-  const { showToast } = useToast();
-
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
 
@@ -130,8 +128,8 @@ function SWUpdateNotifier() {
         if (!newWorker) return;
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            showToast({
-              message: 'New version available',
+            toaster.create({
+              description: 'New version available',
               duration: 10000,
               action: {
                 label: 'Refresh',
@@ -146,7 +144,7 @@ function SWUpdateNotifier() {
     return () => {
       navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
     };
-  }, [showToast]);
+  }, []);
 
   return null;
 }
@@ -176,7 +174,6 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <NavigationGuardProvider>
-        <ToastProvider>
           <AuthProvider>
             <SWUpdateNotifier />
             <Routes>
@@ -302,8 +299,8 @@ export default function App() {
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Routes>
+            <Toaster />
           </AuthProvider>
-        </ToastProvider>
         </NavigationGuardProvider>
       </BrowserRouter>
     </ErrorBoundary>

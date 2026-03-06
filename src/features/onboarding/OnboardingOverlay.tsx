@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { BrandIcon } from '@/components/BrandIcon';
 import { Badge } from '@/components/ui/badge';
 import { Button, Input } from '@chakra-ui/react';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { createArea } from '@/features/areas/useAreas';
 import { BinPreviewCard } from '@/features/bins/BinPreviewCard';
 import { ItemsInput } from '@/features/bins/ItemsInput';
@@ -132,8 +132,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
   const dots = Array.from({ length: totalSteps });
   const navigate = useNavigate();
   const { setActiveLocationId } = useAuth();
-  const { showToast } = useToast();
-
+  
   // Step 0 state
   const [locationName, setLocationName] = useState('');
   const [areaNames, setAreaNames] = useState<string[]>([]);
@@ -200,7 +199,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
         }
       }
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.location}` });
+      toaster.create({ description: err instanceof Error ? err.message : `Failed to create ${t.location}` });
     } finally {
       setLoading(false);
     }
@@ -218,7 +217,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
       setCreatedBin(bin);
       advanceStep();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.bin}` });
+      toaster.create({ description: err instanceof Error ? err.message : `Failed to create ${t.bin}` });
     } finally {
       setLoading(false);
     }
@@ -234,7 +233,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
       }
       complete();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to skip setup' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to skip setup' });
     } finally {
       setLoading(false);
     }

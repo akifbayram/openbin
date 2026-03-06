@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import type { AiProvider, AiSettings } from '@/types';
 import { DEFAULT_MODELS } from './aiConstants';
 import { saveAiSettings, testAiConnection } from './useAiSettings';
@@ -32,8 +32,7 @@ interface UseAiProviderSetupOptions {
 }
 
 export function useAiProviderSetup(opts?: UseAiProviderSetupOptions): AiProviderSetup {
-  const { showToast } = useToast();
-
+  
   const [provider, setProvider] = useState<AiProvider>('openai');
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState(DEFAULT_MODELS.openai);
@@ -89,10 +88,10 @@ export function useAiProviderSetup(opts?: UseAiProviderSetupOptions): AiProvider
         endpointUrl: provider === 'openai-compatible' ? endpointUrl : undefined,
       });
       setConfigured(true);
-      showToast({ message: 'AI settings saved' });
+      toaster.create({ description: 'AI settings saved' });
       opts?.onSaveSuccess?.();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to save AI settings' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to save AI settings' });
     } finally {
       setSaving(false);
     }

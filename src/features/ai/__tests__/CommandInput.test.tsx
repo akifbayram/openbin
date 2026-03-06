@@ -28,8 +28,8 @@ vi.mock('@/lib/auth', () => ({
   useAuth: () => ({ activeLocationId: 'loc-1', token: 'tok', user: { id: 'u1' } }),
 }));
 
-vi.mock('@/components/ui/toast', () => ({
-  useToast: () => ({ showToast: vi.fn() }),
+vi.mock('@/components/ui/toaster', () => ({
+  toaster: { create: vi.fn() },
 }));
 
 vi.mock('../useAiSettings', () => ({

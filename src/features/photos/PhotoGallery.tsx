@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Button } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { Photo } from '@/types';
 import { compressImage } from './compressImage';
@@ -18,8 +18,7 @@ interface PhotoGalleryProps {
 
 export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
   const { photos } = usePhotos(binId);
-  const { showToast } = useToast();
-  const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
 
@@ -32,22 +31,22 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
         const compressedFile = new File([compressed], file.name, { type: compressed.type });
         await addPhoto(binId, compressedFile);
       } catch (err) {
-        showToast({
-          message: err instanceof Error ? err.message : 'Failed to add photo',
+        toaster.create({
+          description: err instanceof Error ? err.message : 'Failed to add photo',
         });
       }
     }
     if (inputRef.current) inputRef.current.value = '';
-  }, [binId, showToast]);
+  }, [binId]);
 
   const handleDelete = useCallback(async (photo: Photo) => {
     try {
       await deletePhoto(photo.id);
-      showToast({ message: 'Deleted photo' });
+      toaster.create({ description: 'Deleted photo' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete photo' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to delete photo' });
     }
-  }, [showToast]);
+  }, []);
 
   const content = (
     <>

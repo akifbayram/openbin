@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@chakra-ui/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { Tooltip } from '@/components/ui/tooltip';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/lib/auth';
@@ -22,8 +22,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   const { user, setActiveLocationId, activeLocationId } = useAuth();
   const { members, isLoading } = useLocationMembers(locationId);
   const { locations } = useLocationList();
-  const { showToast } = useToast();
-  const [copied, setCopied] = useState(false);
+    const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
   const location = locations.find((h) => h.id === locationId);
@@ -36,7 +35,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      showToast({ message: 'Failed to copy' });
+      toaster.create({ description: 'Failed to copy' });
     }
   }
 
@@ -44,9 +43,9 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
     setRegenerating(true);
     try {
       await regenerateInvite(locationId);
-      showToast({ message: 'Invite code regenerated' });
+      toaster.create({ description: 'Invite code regenerated' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to regenerate' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to regenerate' });
     } finally {
       setRegenerating(false);
     }
@@ -55,18 +54,18 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   async function handleRemoveMember(userId: string) {
     try {
       await removeMember(locationId, userId);
-      showToast({ message: 'Member removed' });
+      toaster.create({ description: 'Member removed' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to remove member' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to remove member' });
     }
   }
 
   async function handleRoleChange(userId: string, newRole: 'admin' | 'member') {
     try {
       await changeMemberRole(locationId, userId, newRole);
-      showToast({ message: `Role updated to ${newRole}` });
+      toaster.create({ description: `Role updated to ${newRole}` });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to change role' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to change role' });
     }
   }
 
@@ -79,9 +78,9 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
         setActiveLocationId(other?.id ?? null);
       }
       onOpenChange(false);
-      showToast({ message: 'Left location' });
+      toaster.create({ description: 'Left location' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to leave' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to leave' });
     }
   }
 

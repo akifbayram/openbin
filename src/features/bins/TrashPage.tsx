@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { useLocationList } from '@/features/locations/useLocations';
 import { useAuth } from '@/lib/auth';
 import { formatTimeAgo } from '@/lib/formatTime';
@@ -19,8 +19,7 @@ import { notifyBinsChanged, permanentDeleteBin, restoreBinFromTrash, useTrashBin
 export function TrashPage() {
   const navigate = useNavigate();
   const { bins, isLoading } = useTrashBins();
-  const { showToast } = useToast();
-  const { activeLocationId } = useAuth();
+    const { activeLocationId } = useAuth();
   const { isAdmin, isLoading: permissionsLoading } = usePermissions();
   const t = useTerminology();
   const { locations } = useLocationList();
@@ -41,9 +40,9 @@ export function TrashPage() {
   async function handleRestore(bin: Bin) {
     try {
       await restoreBinFromTrash(bin.id);
-      showToast({ message: `"${bin.name}" restored` });
+      toaster.create({ description: `"${bin.name}" restored` });
     } catch {
-      showToast({ message: `Failed to restore ${t.bin}` });
+      toaster.create({ description: `Failed to restore ${t.bin}` });
     }
   }
 
@@ -52,9 +51,9 @@ export function TrashPage() {
     try {
       await permanentDeleteBin(confirmDelete.id);
       notifyBinsChanged();
-      showToast({ message: `"${confirmDelete.name}" permanently deleted` });
+      toaster.create({ description: `"${confirmDelete.name}" permanently deleted` });
     } catch {
-      showToast({ message: `Failed to delete ${t.bin}` });
+      toaster.create({ description: `Failed to delete ${t.bin}` });
     } finally {
       setConfirmDelete(null);
     }

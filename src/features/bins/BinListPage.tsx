@@ -14,7 +14,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import type { SortDirection } from '@/components/ui/sort-header';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
@@ -69,8 +69,7 @@ export function BinListPage() {
   const allTags = useAllTags();
   const activeCount = countActiveFilters(filters);
   const { areas } = useAreaList(activeLocationId);
-  const { showToast } = useToast();
-  const navigate = useNavigate();
+    const navigate = useNavigate();
   const { openScanDialog } = useScanDialog();
   const { aiEnabled } = useAiEnabled();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -82,7 +81,7 @@ export function BinListPage() {
 
   const bulk = useBulkDialogs();
   const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(bins, [debouncedSearch, sort, sortDir, filters]);
-  const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(bins, selectedIds, clearSelection, showToast, t);
+  const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(bins, selectedIds, clearSelection, t);
 
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [copiedStyle, setCopiedStyle] = useState<{ icon: string; color: string; card_style: string } | null>(null);
@@ -93,16 +92,16 @@ export function BinListPage() {
     if (!bin) return;
     setCopiedStyle({ icon: bin.icon, color: bin.color, card_style: bin.card_style });
     clearSelection();
-    showToast({ message: 'Style copied' });
-  }, [selectedIds, bins, clearSelection, showToast]);
+    toaster.create({ description: 'Style copied' });
+  }, [selectedIds, bins, clearSelection]);
 
   const handlePasteStyle = useCallback(async () => {
     if (!copiedStyle) return;
     const ids = [...selectedIds];
     await Promise.all(ids.map((id) => updateBin(id, { icon: copiedStyle.icon, color: copiedStyle.color, cardStyle: copiedStyle.card_style })));
     clearSelection();
-    showToast({ message: `Style applied to ${ids.length} ${ids.length === 1 ? t.bin : t.bins}` });
-  }, [copiedStyle, selectedIds, clearSelection, showToast, t]);
+    toaster.create({ description: `Style applied to ${ids.length} ${ids.length === 1 ? t.bin : t.bins}` });
+  }, [copiedStyle, selectedIds, clearSelection, t]);
 
   const handleBinSortChange = useCallback((column: SortOption, direction: SortDirection) => {
     setSort(column);

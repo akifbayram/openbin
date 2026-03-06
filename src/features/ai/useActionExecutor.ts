@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
 import { notifyBinsChanged } from '@/features/bins/useBins';
 import { apiFetch } from '@/lib/api';
@@ -40,8 +40,7 @@ const TAG_COLOR_TYPES = new Set(['set_tag_color']);
 
 export function useActionExecutor({ actions, checkedActions, onComplete }: UseActionExecutorOptions) {
   const { activeLocationId } = useAuth();
-  const { showToast } = useToast();
-  const [isExecuting, setIsExecuting] = useState(false);
+    const [isExecuting, setIsExecuting] = useState(false);
   const [executingProgress, setExecutingProgress] = useState({ current: 0, total: 0 });
 
   const executeActions = useCallback(async () => {
@@ -78,8 +77,8 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
           // Show undo toast for deletes
           if (r.type === 'delete_bin' && r.bin_id) {
             const binId = r.bin_id;
-            showToast({
-              message: `Deleted "${r.bin_name}"`,
+            toaster.create({
+              description: `Deleted "${r.bin_name}"`,
               action: {
                 label: 'Undo',
                 onClick: () => {
@@ -100,7 +99,7 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
 
       const failedCount = selected.length - completedActions.length;
       if (failedCount > 0) {
-        showToast({ message: `${completedActions.length} of ${selected.length} actions completed` });
+        toaster.create({ description: `${completedActions.length} of ${selected.length} actions completed` });
       }
       if (errors.length > 0) {
         console.error('Batch errors:', errors);
@@ -110,13 +109,13 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
       onComplete({ completedActions, createdBins, failedCount });
     } catch (err) {
       console.error('Batch execution failed:', err);
-      showToast({ message: 'Failed to execute actions' });
+      toaster.create({ description: 'Failed to execute actions' });
       onComplete({ completedActions: [], createdBins: [], failedCount: selected.length });
     } finally {
       setIsExecuting(false);
       setExecutingProgress({ current: 0, total: 0 });
     }
-  }, [actions, checkedActions, activeLocationId, onComplete, showToast]);
+  }, [actions, checkedActions, activeLocationId, onComplete]);
 
   return { isExecuting, executingProgress, executeActions };
 }

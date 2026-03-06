@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { apiFetch } from '@/lib/api';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
@@ -13,8 +13,7 @@ import { cycleThemePreference, useTheme } from '@/lib/theme';
 export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { showToast } = useToast();
-  const { settings } = useAppSettings();
+    const { settings } = useAppSettings();
   const { preference, setThemePreference } = useTheme();
   const ThemeIcon = preference === 'light' ? Sun : preference === 'dark' ? Moon : Monitor;
   const [username, setUsername] = useState('');
@@ -49,11 +48,11 @@ export function LoginPage() {
         if (!cancelled) {
           setDemoLoading(false);
           setDemoMode(false);
-          showToast({ message: 'Demo login failed. Please sign in manually.' });
+          toaster.create({ description: 'Demo login failed. Please sign in manually.' });
         }
       });
     return () => { cancelled = true; };
-  }, [demoMode, showToast]);
+  }, [demoMode]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,8 +62,8 @@ export function LoginPage() {
       await login(username.trim(), password);
       navigate('/');
     } catch (err) {
-      showToast({
-        message: err instanceof Error ? err.message : 'Login failed',
+      toaster.create({
+        description: err instanceof Error ? err.message : 'Login failed',
       });
     } finally {
       setLoading(false);

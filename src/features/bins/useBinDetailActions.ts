@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { useAiAnalysis } from '@/features/ai/useAiAnalysis';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useLocationList } from '@/features/locations/useLocations';
@@ -16,8 +16,7 @@ import { useQuickAdd } from './useQuickAdd';
 
 export function useBinDetailActions(bin: Bin | null | undefined, id: string | undefined, editing: boolean) {
   const navigate = useNavigate();
-  const { showToast } = useToast();
-  const { activeLocationId } = useAuth();
+    const { activeLocationId } = useAuth();
   const { isAdmin, canEditBin, canChangeVisibility } = usePermissions();
   const { aiEnabled } = useAiEnabled();
   const t = useTerminology();
@@ -47,8 +46,8 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     const snapshot: Bin = { ...bin };
     await deleteBin(id);
     navigate('/bins');
-    showToast({
-      message: `Deleted "${snapshot.name}"`,
+    toaster.create({
+      description: `Deleted "${snapshot.name}"`,
       action: {
         label: 'Undo',
         onClick: () => restoreBin(snapshot),
@@ -63,8 +62,8 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     await moveBin(id, targetId);
     setMoveOpen(false);
     navigate('/bins');
-    showToast({
-      message: `Moved to ${targetLoc?.name ?? t.location}`,
+    toaster.create({
+      description: `Moved to ${targetLoc?.name ?? t.location}`,
       action: {
         label: 'Undo',
         onClick: async () => {
@@ -89,9 +88,9 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     try {
       await updateBin(id, changes);
       clearSuggestions();
-      showToast({ message: 'Applied AI suggestions' });
+      toaster.create({ description: 'Applied AI suggestions' });
     } catch {
-      showToast({ message: 'Failed to apply suggestions' });
+      toaster.create({ description: 'Failed to apply suggestions' });
     }
   }
 
@@ -112,9 +111,9 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
         customFields: bin.custom_fields ? { ...bin.custom_fields } : undefined,
       });
       navigate(`/bin/${newBin.id}`);
-      showToast({ message: `Duplicated "${bin.name}"` });
+      toaster.create({ description: `Duplicated "${bin.name}"` });
     } catch {
-      showToast({ message: 'Failed to duplicate' });
+      toaster.create({ description: 'Failed to duplicate' });
     }
   }
 
@@ -122,10 +121,10 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     if (!bin) return;
     if (bin.is_pinned) {
       await unpinBin(bin.id);
-      showToast({ message: 'Unpinned' });
+      toaster.create({ description: 'Unpinned' });
     } else {
       await pinBin(bin.id);
-      showToast({ message: 'Pinned' });
+      toaster.create({ description: 'Pinned' });
     }
   }
 

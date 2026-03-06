@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button, Dialog, Input } from '@chakra-ui/react';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { useTerminology } from '@/lib/terminology';
 import type { Location } from '@/types';
 import { updateLocation } from './useLocations';
@@ -13,8 +13,7 @@ interface LocationRetentionDialogProps {
 }
 
 export function LocationRetentionDialog({ location, open, onOpenChange }: LocationRetentionDialogProps) {
-  const { showToast } = useToast();
-  const t = useTerminology();
+    const t = useTerminology();
   const [activityRetention, setActivityRetention] = useState(90);
   const [trashRetention, setTrashRetention] = useState(30);
   const [saving, setSaving] = useState(false);
@@ -36,9 +35,9 @@ export function LocationRetentionDialog({ location, open, onOpenChange }: Locati
         trash_retention_days: trashRetention,
       });
       onOpenChange(false);
-      showToast({ message: 'Retention settings saved' });
+      toaster.create({ description: 'Retention settings saved' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to save retention settings' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to save retention settings' });
     } finally {
       setSaving(false);
     }

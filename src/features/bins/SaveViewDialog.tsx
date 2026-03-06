@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Dialog, Input } from '@chakra-ui/react';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { saveView } from '@/lib/savedViews';
 import type { BinFilters, SortOption } from './useBins';
 
@@ -14,13 +14,12 @@ interface SaveViewDialogProps {
 
 export function SaveViewDialog({ open, onOpenChange, searchQuery, sort, filters }: SaveViewDialogProps) {
   const [viewName, setViewName] = useState('');
-  const { showToast } = useToast();
-
+  
   async function handleSave() {
     if (!viewName.trim()) return;
     await saveView({ name: viewName.trim(), searchQuery, sort, filters });
     onOpenChange(false);
-    showToast({ message: 'View saved' });
+    toaster.create({ description: 'View saved' });
   }
 
   return (

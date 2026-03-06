@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import type { Bin, BinVisibility } from '@/types';
 import { useBinFormFields } from './useBinFormFields';
 import { updateBin } from './useBins';
@@ -31,8 +31,7 @@ function recordsEqual(a: Record<string, string>, b: Record<string, string>): boo
 }
 
 export function useEditBinForm(id: string | undefined) {
-  const { showToast } = useToast();
-  const [editing, setEditing] = useState(false);
+    const [editing, setEditing] = useState(false);
   const {
     name, setName,
     areaId, setAreaId,
@@ -119,7 +118,7 @@ export function useEditBinForm(id: string | undefined) {
       setEditing(false);
       originalRef.current = null;
     } catch {
-      showToast({ message: 'Failed to save changes' });
+      toaster.create({ description: 'Failed to save changes' });
     }
   }
 

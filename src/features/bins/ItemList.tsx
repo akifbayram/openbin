@@ -2,7 +2,7 @@ import { ArrowUpDown, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@chakra-ui/react';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { BinItem } from '@/types';
@@ -151,8 +151,7 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
 export function ItemList({ items, binId, readOnly }: ItemListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('manual');
-  const { showToast } = useToast();
-  const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
+    const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
   const knownIdsRef = useRef<Set<string>>(new Set(items.map((i) => i.id)));
   const newIds = new Set<string>();
   for (const item of items) {
@@ -174,10 +173,10 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
       try {
         await reorderItems(binId, sorted.map((i) => i.id));
       } catch {
-        showToast({ message: 'Failed to sort items' });
+        toaster.create({ description: 'Failed to sort items' });
       }
     }
-  }, [items, binId, showToast]);
+  }, [items, binId]);
 
   function cycleSortMode() {
     const next: SortMode = sortMode === 'manual' ? 'az' : sortMode === 'az' ? 'za' : 'manual';
@@ -189,7 +188,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
     try {
       await renameItem(binId, itemId, value);
     } catch {
-      showToast({ message: 'Failed to rename item' });
+      toaster.create({ description: 'Failed to rename item' });
     }
   }
 
@@ -200,7 +199,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
         await removeItemFromBin(binId, itemId);
       } catch {
         setExitingIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
-        showToast({ message: 'Failed to delete item' });
+        toaster.create({ description: 'Failed to delete item' });
       }
     }, 200);
   }

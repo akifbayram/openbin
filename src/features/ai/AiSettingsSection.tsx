@@ -6,7 +6,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Label } from '@/components/ui/label';
 import { OptionGroup } from '@/components/ui/option-group';
 import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { AI_PROVIDERS, KEY_PLACEHOLDERS, MODEL_HINTS } from './aiConstants';
 import { useAiProviderSetup } from './useAiProviderSetup';
@@ -30,8 +30,7 @@ interface AiSettingsSectionProps {
 export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProps) {
   const { settings, isLoading, setSettings } = useAiSettings();
   const { prompts: defaultPrompts } = useDefaultPrompts();
-  const { showToast } = useToast();
-
+  
   const setup = useAiProviderSetup({ providerConfigs: settings?.providerConfigs });
 
   const [customPrompt, setCustomPrompt] = useState('');
@@ -100,9 +99,9 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
         requestTimeout: requestTimeout ? Number(requestTimeout) : null,
       });
       setSettings(saved);
-      showToast({ message: 'AI settings saved' });
+      toaster.create({ description: 'AI settings saved' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to save' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to save' });
     }
   }
 
@@ -123,9 +122,9 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setTopP('');
       setRequestTimeout('');
       setup.setTestResult(null);
-      showToast({ message: 'AI settings removed' });
+      toaster.create({ description: 'AI settings removed' });
     } catch {
-      showToast({ message: 'Failed to remove settings' });
+      toaster.create({ description: 'Failed to remove settings' });
     }
   }
 

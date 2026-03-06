@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toaster } from '@/components/ui/toaster';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 import { useAuth } from '@/lib/auth';
 import type { Terminology } from '@/lib/terminology';
@@ -11,7 +12,6 @@ export function useBulkActions(
   bins: Bin[],
   selectedIds: Set<string>,
   clearSelection: () => void,
-  showToast: (toast: { message: string; action?: { label: string; onClick: () => void } }) => void,
   t: Terminology,
 ) {
   const { activeLocationId } = useAuth();
@@ -33,8 +33,8 @@ export function useBulkActions(
     await Promise.all(selected.map((b) => deleteBin(b.id)));
     haptic([50, 30, 50]);
     clearSelection();
-    showToast({
-      message: `Deleted ${snapshots.length} ${snapshots.length !== 1 ? t.bins : t.bin}`,
+    toaster.create({
+      description: `Deleted ${snapshots.length} ${snapshots.length !== 1 ? t.bins : t.bin}`,
       action: {
         label: 'Undo',
         onClick: async () => {
@@ -44,7 +44,7 @@ export function useBulkActions(
         },
       },
     });
-  }, [selected, clearSelection, showToast, t]);
+  }, [selected, clearSelection, t]);
 
   const bulkPinToggle = useCallback(async () => {
     if (majorityUnpinned) {
@@ -77,11 +77,11 @@ export function useBulkActions(
     clearSelection();
     if (ids.length === 1) {
       navigate(`/bin/${ids[0]}`);
-      showToast({ message: `Duplicated "${selected[0].name}"` });
+      toaster.create({ description: `Duplicated "${selected[0].name}"` });
     } else {
-      showToast({ message: `Duplicated ${ids.length} ${t.bins}` });
+      toaster.create({ description: `Duplicated ${ids.length} ${t.bins}` });
     }
-  }, [selected, activeLocationId, clearSelection, showToast, navigate, t]);
+  }, [selected, activeLocationId, clearSelection, navigate, t]);
 
   return { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel };
 }

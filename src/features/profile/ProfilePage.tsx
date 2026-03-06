@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { FormField } from '@/components/ui/form-field';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useLocationList } from '@/features/locations/useLocations';
 import { compressImage } from '@/features/photos/compressImage';
@@ -15,8 +15,7 @@ import type { User } from '@/types';
 
 export function ProfilePage() {
   const { user, updateUser } = useAuth();
-  const { showToast } = useToast();
-  const { locations } = useLocationList();
+    const { locations } = useLocationList();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Profile form
@@ -42,7 +41,7 @@ export function ProfilePage() {
     e.preventDefault();
     const trimmedName = displayName.trim();
     if (!trimmedName) {
-      showToast({ message: 'Display name is required' });
+      toaster.create({ description: 'Display name is required' });
       return;
     }
     setSavingProfile(true);
@@ -52,9 +51,9 @@ export function ProfilePage() {
         body: { displayName: trimmedName, email: email.trim() || null },
       });
       updateUser(updated);
-      showToast({ message: 'Profile updated' });
+      toaster.create({ description: 'Profile updated' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to update profile' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to update profile' });
     } finally {
       setSavingProfile(false);
     }
@@ -63,11 +62,11 @@ export function ProfilePage() {
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
     if (newPassword.length < 8) {
-      showToast({ message: 'New password must be at least 8 characters' });
+      toaster.create({ description: 'New password must be at least 8 characters' });
       return;
     }
     if (newPassword !== confirmPassword) {
-      showToast({ message: 'Passwords do not match' });
+      toaster.create({ description: 'Passwords do not match' });
       return;
     }
     setSavingPassword(true);
@@ -79,9 +78,9 @@ export function ProfilePage() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      showToast({ message: 'Password updated' });
+      toaster.create({ description: 'Password updated' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to change password' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to change password' });
     } finally {
       setSavingPassword(false);
     }
@@ -99,9 +98,9 @@ export function ProfilePage() {
         body: formData,
       });
       if (user) updateUser({ ...user, avatarUrl: result.avatarUrl });
-      showToast({ message: 'Avatar updated' });
+      toaster.create({ description: 'Avatar updated' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to upload avatar' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to upload avatar' });
     } finally {
       setUploadingAvatar(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -113,9 +112,9 @@ export function ProfilePage() {
     try {
       await apiFetch('/api/auth/avatar', { method: 'DELETE' });
       if (user) updateUser({ ...user, avatarUrl: null });
-      showToast({ message: 'Avatar removed' });
+      toaster.create({ description: 'Avatar removed' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to remove avatar' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to remove avatar' });
     } finally {
       setUploadingAvatar(false);
     }

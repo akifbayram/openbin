@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button, Dialog, Input } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { Tooltip } from '@/components/ui/tooltip';
 import { createApiKey, revokeApiKey, useApiKeys } from './useApiKeys';
 
@@ -18,8 +18,7 @@ function formatDate(iso: string | null): string {
 
 export function ApiKeysSection() {
   const { keys, isLoading } = useApiKeys();
-  const { showToast } = useToast();
-  const [createOpen, setCreateOpen] = useState(false);
+    const [createOpen, setCreateOpen] = useState(false);
   const [keyName, setKeyName] = useState('');
   const [creating, setCreating] = useState(false);
   const [newKey, setNewKey] = useState<string | null>(null);
@@ -35,7 +34,7 @@ export function ApiKeysSection() {
       setNewKey(result.key);
       setKeyName('');
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to create API key' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to create API key' });
     } finally {
       setCreating(false);
     }
@@ -46,10 +45,10 @@ export function ApiKeysSection() {
     setRevoking(true);
     try {
       await revokeApiKey(revokeId);
-      showToast({ message: 'API key revoked' });
+      toaster.create({ description: 'API key revoked' });
       setRevokeId(null);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to revoke API key' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to revoke API key' });
     } finally {
       setRevoking(false);
     }
@@ -62,7 +61,7 @@ export function ApiKeysSection() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      showToast({ message: 'Failed to copy' });
+      toaster.create({ description: 'Failed to copy' });
     }
   }
 

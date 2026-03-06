@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
 import { addItemsToBin } from './useBins';
 
@@ -16,8 +16,7 @@ interface UseQuickAddOptions {
 
 export function useQuickAdd(options: UseQuickAddOptions) {
   const { binId, binName, existingItems, activeLocationId, aiConfigured, onNavigateAiSetup } = options;
-  const { showToast } = useToast();
-
+  
   const [value, setValue] = useState('');
   const [saving, setSaving] = useState(false);
   const [state, setState] = useState<QuickAddState>('input');
@@ -67,14 +66,14 @@ export function useQuickAdd(options: UseQuickAddOptions) {
         const newItems = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
         if (newItems.length > 0) {
           await addItemsToBin(binId, newItems);
-          showToast({ message: `Added ${newItems.length} items` });
+          toaster.create({ description: `Added ${newItems.length} items` });
         }
       } else {
         await addItemsToBin(binId, [trimmed]);
       }
       setValue('');
     } catch {
-      showToast({ message: 'Failed to add item' });
+      toaster.create({ description: 'Failed to add item' });
     } finally {
       setSaving(false);
     }
@@ -89,10 +88,10 @@ export function useQuickAdd(options: UseQuickAddOptions) {
     setSaving(true);
     try {
       await addItemsToBin(binId, newItems);
-      showToast({ message: `Added ${newItems.length} items` });
+      toaster.create({ description: `Added ${newItems.length} items` });
       setValue('');
     } catch {
-      showToast({ message: 'Failed to add items' });
+      toaster.create({ description: 'Failed to add items' });
     } finally {
       setSaving(false);
     }
@@ -145,9 +144,9 @@ export function useQuickAdd(options: UseQuickAddOptions) {
     if (selected.length === 0) return;
     try {
       await addItemsToBin(binId, selected);
-      showToast({ message: `Added ${selected.length} item${selected.length !== 1 ? 's' : ''}` });
+      toaster.create({ description: `Added ${selected.length} item${selected.length !== 1 ? 's' : ''}` });
     } catch {
-      showToast({ message: 'Failed to add items' });
+      toaster.create({ description: 'Failed to add items' });
     }
     reset();
   }

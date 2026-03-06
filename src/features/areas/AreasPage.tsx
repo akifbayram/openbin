@@ -6,7 +6,7 @@ import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { CustomFieldsDialog } from '@/features/bins/CustomFieldsDialog';
 import { LocationCreateDialog, LocationDeleteDialog, LocationJoinDialog, LocationRenameDialog } from '@/features/locations/LocationDialogs';
 import { LocationMembersDialog } from '@/features/locations/LocationMembersDialog';
@@ -31,8 +31,7 @@ export function AreasPage() {
   const navigate = useNavigate();
   const { user, activeLocationId, setActiveLocationId } = useAuth();
   const { locations, isLoading: locationsLoading } = useLocationList();
-  const { showToast } = useToast();
-  const { areas, unassignedCount } = useAreaList(activeLocationId);
+    const { areas, unassignedCount } = useAreaList(activeLocationId);
 
   // Location dialog state
   const [createLocationOpen, setCreateLocationOpen] = useState(false);
@@ -65,7 +64,7 @@ export function AreasPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      showToast({ message: 'Failed to copy' });
+      toaster.create({ description: 'Failed to copy' });
     }
   }
 
@@ -86,7 +85,7 @@ export function AreasPage() {
       setNewAreaName('');
       setCreateAreaOpen(false);
     } catch (err) {
-      showToast({ message: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong' });
+      toaster.create({ description: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong' });
     } finally {
       setCreatingArea(false);
     }
@@ -97,7 +96,7 @@ export function AreasPage() {
     try {
       await updateArea(activeLocationId, areaId, newName);
     } catch (err) {
-      showToast({ message: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong' });
+      toaster.create({ description: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong' });
       throw err;
     }
   }
@@ -113,7 +112,7 @@ export function AreasPage() {
       await deleteArea(activeLocationId, deleteTarget.id);
       setDeleteTarget(null);
     } catch {
-      showToast({ message: 'Something went wrong' });
+      toaster.create({ description: 'Something went wrong' });
     } finally {
       setDeletingArea(false);
     }
@@ -127,9 +126,9 @@ export function AreasPage() {
         const other = locations.find((l) => l.id !== locationId);
         setActiveLocationId(other?.id ?? null);
       }
-      showToast({ message: 'Left location' });
+      toaster.create({ description: 'Left location' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to leave' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to leave' });
     }
   }
 

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { mapAiError } from './aiErrors';
@@ -17,8 +17,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
   const { activeLocationId } = useAuth();
   const navigate = useNavigate();
   const { settings, isLoading: aiSettingsLoading } = useAiSettings();
-  const { showToast } = useToast();
-  const { isStreaming: isParsing, error, partialText: queryPartialText, ask, cancel: cancelAsk, clear: clearAsk } = useStreamingAsk();
+    const { isStreaming: isParsing, error, partialText: queryPartialText, ask, cancel: cancelAsk, clear: clearAsk } = useStreamingAsk();
   const [text, setText] = useState('');
   const [checkedActions, setCheckedActions] = useState<Map<number, boolean>>(new Map());
   const [actions, setActions] = useState<CommandAction[] | null>(null);
@@ -83,7 +82,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
         });
       }
     } catch (err) {
-      showToast({ message: mapAiError(err, 'Request failed') });
+      toaster.create({ description: mapAiError(err, 'Request failed') });
     }
   }
 

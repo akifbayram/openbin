@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { useAuth } from '@/lib/auth';
 import type { ExportData } from '@/types';
 import {
@@ -25,8 +25,7 @@ function importErrorMessage(err: unknown): string {
 
 export function useDataSectionActions() {
   const { activeLocationId } = useAuth();
-  const { showToast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const [confirmReplace, setConfirmReplace] = useState(false);
   const [pendingData, setPendingData] = useState<ExportData | null>(null);
@@ -36,16 +35,16 @@ export function useDataSectionActions() {
 
   async function handleExport() {
     if (!activeLocationId) {
-      showToast({ message: 'Select a location first' });
+      toaster.create({ description: 'Select a location first' });
       return;
     }
     setExporting(true);
     try {
       const data = await exportAllData(activeLocationId);
       downloadExport(data);
-      showToast({ message: 'Backup exported successfully' });
+      toaster.create({ description: 'Backup exported successfully' });
     } catch {
-      showToast({ message: 'Export failed' });
+      toaster.create({ description: 'Export failed' });
     } finally {
       setExporting(false);
     }
@@ -53,15 +52,15 @@ export function useDataSectionActions() {
 
   async function handleExportZip() {
     if (!activeLocationId) {
-      showToast({ message: 'Select a location first' });
+      toaster.create({ description: 'Select a location first' });
       return;
     }
     setExportingZip(true);
     try {
       await exportZip(activeLocationId);
-      showToast({ message: 'ZIP backup exported successfully' });
+      toaster.create({ description: 'ZIP backup exported successfully' });
     } catch {
-      showToast({ message: 'ZIP export failed' });
+      toaster.create({ description: 'ZIP export failed' });
     } finally {
       setExportingZip(false);
     }
@@ -69,15 +68,15 @@ export function useDataSectionActions() {
 
   async function handleExportCsv() {
     if (!activeLocationId) {
-      showToast({ message: 'Select a location first' });
+      toaster.create({ description: 'Select a location first' });
       return;
     }
     setExportingCsv(true);
     try {
       await exportCsv(activeLocationId);
-      showToast({ message: 'CSV exported successfully' });
+      toaster.create({ description: 'CSV exported successfully' });
     } catch {
-      showToast({ message: 'CSV export failed' });
+      toaster.create({ description: 'CSV export failed' });
     } finally {
       setExportingCsv(false);
     }
@@ -93,12 +92,12 @@ export function useDataSectionActions() {
       const data = await parseImportFile(files[0]);
       setPendingData(data);
       const result = await importData(activeLocationId, data, 'merge');
-      showToast({
-        message: `Imported ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}${result.binsSkipped ? ` (${result.binsSkipped} skipped)` : ''}`,
+      toaster.create({
+        description: `Imported ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}${result.binsSkipped ? ` (${result.binsSkipped} skipped)` : ''}`,
       });
       setPendingData(null);
     } catch (err) {
-      showToast({ message: importErrorMessage(err) });
+      toaster.create({ description: importErrorMessage(err) });
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
@@ -107,12 +106,12 @@ export function useDataSectionActions() {
     if (!pendingData || !activeLocationId) return;
     try {
       const result = await importData(activeLocationId, pendingData, 'replace');
-      showToast({
-        message: `Replaced all data: ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}`,
+      toaster.create({
+        description: `Replaced all data: ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}`,
       });
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
-      showToast({ message: `Replace import failed: ${detail}` });
+      toaster.create({ description: `Replace import failed: ${detail}` });
     }
     setPendingData(null);
     setConfirmReplace(false);
@@ -125,7 +124,7 @@ export function useDataSectionActions() {
       setPendingData(data);
       setConfirmReplace(true);
     } catch (err) {
-      showToast({ message: importErrorMessage(err) });
+      toaster.create({ description: importErrorMessage(err) });
     }
     if (replaceInputRef.current) replaceInputRef.current.value = '';
   }

@@ -1,7 +1,7 @@
 import { GripVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button, Dialog, Input } from '@chakra-ui/react';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import {
   addCustomField,
   deleteCustomField,
@@ -17,8 +17,7 @@ interface CustomFieldsDialogProps {
 
 export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFieldsDialogProps) {
   const { fields } = useCustomFields(open ? locationId : null);
-  const { showToast } = useToast();
-  const [newName, setNewName] = useState('');
+    const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -38,7 +37,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
       await addCustomField(locationId, newName.trim());
       setNewName('');
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to add field' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to add field' });
     } finally {
       setAdding(false);
     }
@@ -50,7 +49,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
       await updateCustomField(locationId, fieldId, { name: editName.trim() });
       setEditingId(null);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to rename field' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to rename field' });
     }
   }
 
@@ -58,9 +57,9 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
     if (!locationId) return;
     try {
       await deleteCustomField(locationId, fieldId);
-      showToast({ message: `Deleted "${fieldName}"` });
+      toaster.create({ description: `Deleted "${fieldName}"` });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete field' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to delete field' });
     }
   }
 

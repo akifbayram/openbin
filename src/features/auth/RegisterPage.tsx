@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
@@ -14,8 +14,7 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,50}$/;
 export function RegisterPage() {
   const navigate = useNavigate();
   const { register } = useAuth();
-  const { showToast } = useToast();
-  const { settings } = useAppSettings();
+    const { settings } = useAppSettings();
   const { preference, setThemePreference } = useTheme();
   const ThemeIcon = preference === 'light' ? Sun : preference === 'dark' ? Moon : Monitor;
   const [username, setUsername] = useState('');
@@ -29,13 +28,13 @@ export function RegisterPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.registrationEnabled === false) {
-          showToast({ message: 'Registration is currently disabled' });
+          toaster.create({ description: 'Registration is currently disabled' });
           navigate('/login');
         }
       })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate, showToast]);
+  }, [navigate]);
 
   const passwordChecks = useMemo(() => ({
     length: password.length >= 8,
@@ -61,7 +60,7 @@ export function RegisterPage() {
     e.preventDefault();
     const error = validate();
     if (error) {
-      showToast({ message: error });
+      toaster.create({ description: error });
       return;
     }
     setLoading(true);
@@ -69,8 +68,8 @@ export function RegisterPage() {
       await register(username.trim(), password, displayName.trim() || username.trim());
       navigate('/');
     } catch (err) {
-      showToast({
-        message: err instanceof Error ? err.message : 'Registration failed',
+      toaster.create({
+        description: err instanceof Error ? err.message : 'Registration failed',
       });
     } finally {
       setLoading(false);

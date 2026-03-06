@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Input, Textarea } from '@chakra-ui/react';
 import { Label } from '@/components/ui/label';
 import { StepIndicator } from '@/components/ui/stepper';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
 import { BinCreateSuccess } from '@/features/bins/BinCreateSuccess';
@@ -41,8 +41,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   const { settings: aiSettings } = useAiSettings();
   const { aiEnabled, setAiEnabled } = useAiEnabled();
   const allTags = useAllTags();
-  const { showToast } = useToast();
-
+  
   const [name, setName] = useState('');
   const [items, setItems] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
@@ -195,7 +194,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
         itemCount: items.length,
       });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.bin}` });
+      toaster.create({ description: err instanceof Error ? err.message : `Failed to create ${t.bin}` });
       setIsCreating(false);
     }
   }
