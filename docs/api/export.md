@@ -29,7 +29,10 @@ Exports all location bins as a V2 JSON document. Photos are base64-encoded and e
     {
       "id": "ABC123",
       "name": "Screws",
-      "items": ["M3x8", "M4x10"],
+      "items": [
+        { "name": "M3x8", "quantity": 50 },
+        { "name": "M4x10", "quantity": 25 }
+      ],
       "notes": "Sorted by size",
       "tags": ["hardware"],
       "icon": "Wrench",
@@ -64,7 +67,7 @@ Exports the location as a ZIP file containing a JSON manifest (`export.json`) an
 
 ### GET /api/locations/`{id}`/export/csv
 
-Exports the location as a CSV spreadsheet. Columns: `name`, `area`, `items` (semicolon-separated), `tags` (semicolon-separated), `notes`, `icon`, `color`, `id`.
+Exports the location as a CSV spreadsheet. Columns: `name`, `area`, `items` (semicolon-separated; items with quantities appear as `"Item Name (×3)"`), `tags` (semicolon-separated), `notes`, `icon`, `color`, `id`.
 
 **Path parameters**: `id` (location UUID)
 

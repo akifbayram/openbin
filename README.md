@@ -6,7 +6,7 @@ Self-hosted inventory system for organizing physical storage bins with QR codes.
 
 ## Features
 
-- **AI-powered cataloging** - Snap a photo and AI names the bin, lists every item, and tags it. Ask "where are the batteries?" or say "move the drill to the garage." Fully optional
+- **AI-powered cataloging** - Snap a photo and AI names the bin, lists every item with quantities, and tags it. Ask "where are the batteries?" or say "move the drill to the garage." Fully optional
 - **Print & scan QR labels** - Generate label sheets, stick them on bins, scan with your phone camera to instantly see contents
 - **Multi-user locations** - Share a location with invite codes, split bins into areas, track all changes in the activity log
 - **MCP server included** - Connect Claude and other AI assistants directly to your inventory via Model Context Protocol

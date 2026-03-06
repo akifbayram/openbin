@@ -26,7 +26,7 @@ Pick photos of the containers, shelves, or drawers you want to catalog. Clear, w
 AI analyzes each uploaded photo and suggests:
 
 - **Bin name** — a descriptive name based on what it sees in the photo
-- **Items** — a list of individual items visible in the photo
+- **Items** — a list of individual items visible in the photo, with quantities when countable
 - **Tags** — relevant category tags
 - **Notes** — any additional context the AI picks up
 
