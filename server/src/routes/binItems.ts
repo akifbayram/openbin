@@ -185,4 +185,72 @@ router.put('/:id/items/:itemId', asyncHandler(async (req, res) => {
   res.json({ id: itemId, name: name.trim(), quantity: newQuantity });
 }));
 
+// PATCH /api/bins/:id/items/:itemId/quantity — update item quantity (stepper)
+router.patch('/:id/items/:itemId/quantity', asyncHandler(async (req, res) => {
+  const { id, itemId } = req.params;
+  const { quantity } = req.body;
+
+  if (typeof quantity !== 'number' || !Number.isFinite(quantity)) {
+    throw new ValidationError('quantity must be a number');
+  }
+
+  const access = await verifyBinEditAccess(id, req.user!.id);
+
+  const itemResult = await query<{ name: string; quantity: number | null }>(
+    'SELECT name, quantity FROM bin_items WHERE id = $1 AND bin_id = $2',
+    [itemId, id]
+  );
+  if (itemResult.rows.length === 0) {
+    throw new NotFoundError('Item not found');
+  }
+
+  const itemName = itemResult.rows[0].name;
+  const oldQuantity = itemResult.rows[0].quantity;
+  const newQuantity = Math.floor(quantity);
+
+  if (newQuantity <= 0) {
+    // Remove item
+    await query('DELETE FROM bin_items WHERE id = $1 AND bin_id = $2', [itemId, id]);
+    await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
+
+    const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
+    logActivity({
+      locationId: access.locationId,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      action: 'update',
+      entityType: 'bin',
+      entityId: id,
+      entityName: binResult.rows[0]?.name,
+      changes: { items_removed: { old: [itemName], new: null } },
+      authMethod: req.authMethod,
+      apiKeyId: req.apiKeyId,
+    });
+
+    return res.json({ id: itemId, removed: true });
+  }
+
+  await query(
+    "UPDATE bin_items SET quantity = $1, updated_at = datetime('now') WHERE id = $2 AND bin_id = $3",
+    [newQuantity, itemId, id]
+  );
+  await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
+
+  const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
+  logActivity({
+    locationId: access.locationId,
+    userId: req.user!.id,
+    userName: req.user!.username,
+    action: 'update',
+    entityType: 'bin',
+    entityId: id,
+    entityName: binResult.rows[0]?.name,
+    changes: { items_quantity: { old: { name: itemName, qty: oldQuantity }, new: { name: itemName, qty: newQuantity } } },
+    authMethod: req.authMethod,
+    apiKeyId: req.apiKeyId,
+  });
+
+  res.json({ id: itemId, quantity: newQuantity });
+}));
+
 export default router;

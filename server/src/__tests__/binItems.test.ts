@@ -191,6 +191,72 @@ describe('PUT /api/bins/:id/items/:itemId', () => {
   });
 });
 
+describe('PATCH /api/bins/:id/items/:itemId/quantity', () => {
+  it('updates quantity', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    const addRes = await request(app)
+      .post(`/api/bins/${bin.id}/items`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: [{ name: 'Battery', quantity: 5 }] });
+
+    const item = addRes.body.items[0];
+
+    const res = await request(app)
+      .patch(`/api/bins/${bin.id}/items/${item.id}/quantity`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ quantity: 10 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(item.id);
+    expect(res.body.quantity).toBe(10);
+  });
+
+  it('removes item when quantity is 0', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    const addRes = await request(app)
+      .post(`/api/bins/${bin.id}/items`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: [{ name: 'Last One', quantity: 1 }] });
+
+    const item = addRes.body.items[0];
+
+    const res = await request(app)
+      .patch(`/api/bins/${bin.id}/items/${item.id}/quantity`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ quantity: 0 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(item.id);
+    expect(res.body.removed).toBe(true);
+  });
+
+  it('returns 422 for non-numeric quantity', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    const addRes = await request(app)
+      .post(`/api/bins/${bin.id}/items`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: ['Item'] });
+
+    const item = addRes.body.items[0];
+
+    const res = await request(app)
+      .patch(`/api/bins/${bin.id}/items/${item.id}/quantity`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ quantity: 'abc' });
+
+    expect(res.status).toBe(422);
+  });
+});
+
 describe('PUT /api/bins/:id/items/reorder', () => {
   it('reorders items', async () => {
     const { token } = await createTestUser(app);
