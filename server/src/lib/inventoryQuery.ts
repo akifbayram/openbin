@@ -7,6 +7,7 @@ export interface QueryMatch {
   items: string[];
   tags: string[];
   relevance: string;
+  is_trashed?: boolean;
 }
 
 export interface QueryResult {

@@ -1,4 +1,4 @@
-import { RotateCcw } from 'lucide-react';
+import { Paintbrush, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -17,7 +17,7 @@ export function PersonalizationSection({ settings, updateSettings, resetSettings
   return (
     <Card>
       <CardContent>
-        <Label>Personalization</Label>
+        <Label className="inline-flex items-center gap-1.5"><Paintbrush className="h-3.5 w-3.5" />Personalization</Label>
         <div className="flex flex-col gap-3 mt-3">
           <FormField label="App Name" htmlFor="app-name">
             <Input

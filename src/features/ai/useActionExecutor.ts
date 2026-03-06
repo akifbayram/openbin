@@ -1,15 +1,25 @@
 import { useCallback, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
-import { createArea, deleteArea, updateArea, useAreaList } from '@/features/areas/useAreas';
 import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
-import { addBin, addItemsToBin, deleteBin, notifyBinsChanged, reorderItems, restoreBin, restoreBinFromTrash, updateBin } from '@/features/bins/useBins';
-import { pinBin, unpinBin } from '@/features/pins/usePins';
-import { setTagColor } from '@/features/tags/useTagColors';
+import { notifyBinsChanged } from '@/features/bins/useBins';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Events, notify } from '@/lib/eventBus';
-import type { Bin } from '@/types';
 import type { CommandAction } from './useCommand';
+
+interface ActionResult {
+  type: string;
+  success: boolean;
+  details: string;
+  bin_id?: string;
+  bin_name?: string;
+  error?: string;
+}
+
+interface BatchResponse {
+  results: ActionResult[];
+  errors: string[];
+}
 
 export interface ExecutionResult {
   completedActions: CommandAction[];
@@ -23,22 +33,16 @@ interface UseActionExecutorOptions {
   onComplete: (result: ExecutionResult) => void;
 }
 
+/** Action types that affect non-bin entities and need extra event bus notifications. */
+const AREA_TYPES = new Set(['set_area', 'rename_area', 'delete_area', 'create_bin']);
+const PIN_TYPES = new Set(['pin_bin', 'unpin_bin']);
+const TAG_COLOR_TYPES = new Set(['set_tag_color']);
+
 export function useActionExecutor({ actions, checkedActions, onComplete }: UseActionExecutorOptions) {
   const { activeLocationId } = useAuth();
   const { showToast } = useToast();
-  const { areas } = useAreaList(activeLocationId);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executingProgress, setExecutingProgress] = useState({ current: 0, total: 0 });
-
-  async function resolveAreaId(areaName: string): Promise<string> {
-    const existing = areas.find(
-      (a) => a.name.toLowerCase() === areaName.toLowerCase()
-    );
-    if (existing) return existing.id;
-    if (!activeLocationId) throw new Error('No active location');
-    const newArea = await createArea(activeLocationId, areaName);
-    return newArea.id;
-  }
 
   const executeActions = useCallback(async () => {
     if (!actions || !activeLocationId) return;
@@ -48,181 +52,71 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
 
     setIsExecuting(true);
     setExecutingProgress({ current: 0, total: selected.length });
-    const completedActions: CommandAction[] = [];
-    const createdBins: CreatedBinInfo[] = [];
 
-    for (let idx = 0; idx < selected.length; idx++) {
-      const action = selected[idx];
-      setExecutingProgress({ current: idx + 1, total: selected.length });
-      try {
-        switch (action.type) {
-          case 'add_items': {
-            await addItemsToBin(action.bin_id, action.items);
-            break;
-          }
-          case 'remove_items': {
-            const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
-            const remaining = (bin.items || []).filter(
-              (item) => !action.items.some((r) => r.toLowerCase() === item.name.toLowerCase())
-            );
-            await updateBin(action.bin_id, { items: remaining.map((i) => i.name) });
-            break;
-          }
-          case 'modify_item': {
-            const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
-            const modified = (bin.items || []).map((item) =>
-              item.name.toLowerCase() === action.old_item.toLowerCase() ? action.new_item : item.name
-            );
-            await updateBin(action.bin_id, { items: modified });
-            break;
-          }
-          case 'create_bin': {
-            const areaId = action.area_name ? await resolveAreaId(action.area_name) : null;
-            const created = await addBin({
-              name: action.name,
-              locationId: activeLocationId,
-              items: action.items,
-              tags: action.tags,
-              notes: action.notes,
-              areaId,
-              icon: action.icon,
-              color: action.color,
+    try {
+      const { results, errors } = await apiFetch<BatchResponse>('/api/batch', {
+        method: 'POST',
+        body: { locationId: activeLocationId, operations: selected },
+      });
+
+      // Map batch results back to completed actions and created bins
+      const completedActions: CommandAction[] = [];
+      const createdBins: CreatedBinInfo[] = [];
+
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i];
+        if (r.success) {
+          completedActions.push(selected[i]);
+          if (r.type === 'create_bin' || r.type === 'duplicate_bin') {
+            createdBins.push({
+              id: r.bin_id!,
+              name: r.bin_name!,
+              icon: (selected[i] as { icon?: string }).icon || '',
+              color: (selected[i] as { color?: string }).color || '',
             });
-            createdBins.push({ id: created.id, name: created.name, icon: created.icon, color: created.color });
-            break;
           }
-          case 'delete_bin': {
-            const deleted = await deleteBin(action.bin_id);
+          // Show undo toast for deletes
+          if (r.type === 'delete_bin' && r.bin_id) {
+            const binId = r.bin_id;
             showToast({
-              message: `Deleted "${action.bin_name}"`,
+              message: `Deleted "${r.bin_name}"`,
               action: {
                 label: 'Undo',
-                onClick: () => restoreBin(deleted),
+                onClick: () => {
+                  apiFetch(`/api/bins/${binId}/restore`, { method: 'POST' }).then(() => notifyBinsChanged());
+                },
               },
             });
-            break;
           }
-          case 'add_tags': {
-            const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
-            const merged = [...new Set([...(bin.tags || []), ...action.tags])];
-            await updateBin(action.bin_id, { tags: merged });
-            break;
-          }
-          case 'remove_tags': {
-            const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
-            const filtered = (bin.tags || []).filter(
-              (t) => !action.tags.some((r) => r.toLowerCase() === t.toLowerCase())
-            );
-            await updateBin(action.bin_id, { tags: filtered });
-            break;
-          }
-          case 'modify_tag': {
-            const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
-            const renamed = (bin.tags || []).map((t) =>
-              t.toLowerCase() === action.old_tag.toLowerCase() ? action.new_tag : t
-            );
-            await updateBin(action.bin_id, { tags: renamed });
-            break;
-          }
-          case 'set_area': {
-            let areaId = action.area_id;
-            if (!areaId && action.area_name) {
-              areaId = await resolveAreaId(action.area_name);
-            }
-            await updateBin(action.bin_id, { areaId });
-            break;
-          }
-          case 'set_notes': {
-            if (action.mode === 'clear') {
-              await updateBin(action.bin_id, { notes: '' });
-            } else if (action.mode === 'append') {
-              const bin = await apiFetch<Bin>(`/api/bins/${action.bin_id}`);
-              const appended = bin.notes ? `${bin.notes}\n${action.notes}` : action.notes;
-              await updateBin(action.bin_id, { notes: appended });
-            } else {
-              await updateBin(action.bin_id, { notes: action.notes });
-            }
-            break;
-          }
-          case 'set_icon':
-            await updateBin(action.bin_id, { icon: action.icon });
-            break;
-          case 'set_color':
-            await updateBin(action.bin_id, { color: action.color });
-            break;
-          case 'update_bin': {
-            const updates: Record<string, unknown> = {};
-            if (action.name !== undefined) updates.name = action.name;
-            if (action.notes !== undefined) updates.notes = action.notes;
-            if (action.tags !== undefined) updates.tags = action.tags;
-            if (action.icon !== undefined) updates.icon = action.icon;
-            if (action.color !== undefined) updates.color = action.color;
-            if (action.visibility !== undefined) updates.visibility = action.visibility;
-            if (action.area_name !== undefined) {
-              const areaId = action.area_name ? await resolveAreaId(action.area_name) : null;
-              updates.areaId = areaId;
-            }
-            await updateBin(action.bin_id, updates);
-            break;
-          }
-          case 'restore_bin':
-            await restoreBinFromTrash(action.bin_id);
-            break;
-          case 'duplicate_bin': {
-            const duped = await apiFetch<Bin>(`/api/bins/${action.bin_id}/duplicate`, {
-              method: 'POST',
-              body: action.new_name ? { name: action.new_name } : {},
-            });
-            createdBins.push({ id: duped.id, name: duped.name, icon: duped.icon, color: duped.color });
-            break;
-          }
-          case 'pin_bin':
-            await pinBin(action.bin_id);
-            notify(Events.PINS);
-            break;
-          case 'unpin_bin':
-            await unpinBin(action.bin_id);
-            notify(Events.PINS);
-            break;
-          case 'rename_area':
-            await updateArea(activeLocationId, action.area_id, action.new_name);
-            notify(Events.AREAS);
-            break;
-          case 'delete_area':
-            await deleteArea(activeLocationId, action.area_id);
-            notify(Events.AREAS);
-            break;
-          case 'set_tag_color':
-            await setTagColor(activeLocationId, action.tag, action.color);
-            notify(Events.TAG_COLORS);
-            break;
-          case 'reorder_items':
-            await reorderItems(action.bin_id, action.item_ids);
-            break;
         }
-        completedActions.push(action);
-      } catch (err) {
-        console.error(`Failed to execute action ${action.type}:`, err);
       }
+
+      // Fire event bus notifications based on action types present
+      const actionTypes = new Set(selected.map((a) => a.type));
+      notifyBinsChanged();
+      if ([...actionTypes].some((t) => AREA_TYPES.has(t))) notify(Events.AREAS);
+      if ([...actionTypes].some((t) => PIN_TYPES.has(t))) notify(Events.PINS);
+      if ([...actionTypes].some((t) => TAG_COLOR_TYPES.has(t))) notify(Events.TAG_COLORS);
+
+      const failedCount = selected.length - completedActions.length;
+      if (failedCount > 0) {
+        showToast({ message: `${completedActions.length} of ${selected.length} actions completed` });
+      }
+      if (errors.length > 0) {
+        console.error('Batch errors:', errors);
+      }
+
+      setExecutingProgress({ current: selected.length, total: selected.length });
+      onComplete({ completedActions, createdBins, failedCount });
+    } catch (err) {
+      console.error('Batch execution failed:', err);
+      showToast({ message: 'Failed to execute actions' });
+      onComplete({ completedActions: [], createdBins: [], failedCount: selected.length });
+    } finally {
+      setIsExecuting(false);
+      setExecutingProgress({ current: 0, total: 0 });
     }
-
-    setIsExecuting(false);
-    setExecutingProgress({ current: 0, total: 0 });
-    notifyBinsChanged();
-
-    const result: ExecutionResult = {
-      completedActions,
-      createdBins,
-      failedCount: selected.length - completedActions.length,
-    };
-
-    if (result.failedCount > 0) {
-      showToast({ message: `${completedActions.length} of ${selected.length} actions completed` });
-    }
-
-    onComplete(result);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actions, checkedActions, activeLocationId, areas, onComplete, showToast]);
+  }, [actions, checkedActions, activeLocationId, onComplete, showToast]);
 
   return { isExecuting, executingProgress, executeActions };
 }

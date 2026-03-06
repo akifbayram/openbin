@@ -169,27 +169,21 @@ describe('CommandInput', () => {
     });
   });
 
-  it('falls back to inventory query when command returns zero actions', async () => {
-    // First call: command stream returns 0 actions
-    // Second call: query stream returns result
-    mockApiStream
-      .mockReturnValueOnce(mockStreamDone({
-        actions: [],
-        interpretation: '',
-      })())
-      .mockReturnValueOnce(mockStreamDone({
-        answer: 'Glass cleaner is in the Kitchen bin.',
-        matches: [
-          {
-            bin_id: 'b-kitchen',
-            name: 'Kitchen Supplies',
-            area_name: 'Kitchen',
-            items: ['glass cleaner', 'sponges'],
-            tags: [],
-            relevance: 'Contains glass cleaner',
-          },
-        ],
-      })());
+  it('shows query result when AI returns answer instead of actions', async () => {
+    // Unified endpoint returns a query-style response for questions
+    mockApiStream.mockReturnValue(mockStreamDone({
+      answer: 'Glass cleaner is in the Kitchen bin.',
+      matches: [
+        {
+          bin_id: 'b-kitchen',
+          name: 'Kitchen Supplies',
+          area_name: 'Kitchen',
+          items: ['glass cleaner', 'sponges'],
+          tags: [],
+          relevance: 'Contains glass cleaner',
+        },
+      ],
+    })());
 
     render(<CommandInput {...defaultProps} />);
 
@@ -203,27 +197,25 @@ describe('CommandInput', () => {
 
     expect(screen.getByText('Kitchen Supplies')).toBeDefined();
     expect(screen.getByText('glass cleaner, sponges')).toBeDefined();
-    expect(screen.getByText('Contains glass cleaner')).toBeDefined();
+    // Relevance is not shown to the user
     // No Execute button in query-result state
     expect(screen.queryByText(/Execute/)).toBeNull();
   });
 
   it('navigates to bin on match click', async () => {
-    mockApiStream
-      .mockReturnValueOnce(mockStreamDone({ actions: [], interpretation: '' })())
-      .mockReturnValueOnce(mockStreamDone({
-        answer: 'Found it in Kitchen.',
-        matches: [
-          {
-            bin_id: 'b-kitchen',
-            name: 'Kitchen Supplies',
-            area_name: 'Kitchen',
-            items: ['glass cleaner'],
-            tags: [],
-            relevance: 'Match',
-          },
-        ],
-      })());
+    mockApiStream.mockReturnValue(mockStreamDone({
+      answer: 'Found it in Kitchen.',
+      matches: [
+        {
+          bin_id: 'b-kitchen',
+          name: 'Kitchen Supplies',
+          area_name: 'Kitchen',
+          items: ['glass cleaner'],
+          tags: [],
+          relevance: 'Match',
+        },
+      ],
+    })());
 
     const onOpenChange = vi.fn();
     render(<CommandInput open={true} onOpenChange={onOpenChange} />);
@@ -246,12 +238,10 @@ describe('CommandInput', () => {
   });
 
   it('back from query result returns to idle', async () => {
-    mockApiStream
-      .mockReturnValueOnce(mockStreamDone({ actions: [], interpretation: '' })())
-      .mockReturnValueOnce(mockStreamDone({
-        answer: 'Found it.',
-        matches: [],
-      })());
+    mockApiStream.mockReturnValue(mockStreamDone({
+      answer: 'Found it.',
+      matches: [],
+    })());
 
     render(<CommandInput {...defaultProps} />);
 
@@ -270,12 +260,10 @@ describe('CommandInput', () => {
   });
 
   it('shows answer even with zero matches', async () => {
-    mockApiStream
-      .mockReturnValueOnce(mockStreamDone({ actions: [], interpretation: '' })())
-      .mockReturnValueOnce(mockStreamDone({
-        answer: "I couldn't find any bins containing that item.",
-        matches: [],
-      })());
+    mockApiStream.mockReturnValue(mockStreamDone({
+      answer: "I couldn't find any bins containing that item.",
+      matches: [],
+    })());
 
     render(<CommandInput {...defaultProps} />);
 

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StreamingText } from './StreamingText';
 import type { QueryResult } from './useInventoryQuery';
@@ -7,7 +7,7 @@ interface InventoryQueryResultProps {
   queryResult: QueryResult | null;
   streamingText?: string;
   isStreaming?: boolean;
-  onBinClick: (binId: string) => void;
+  onBinClick: (binId: string, isTrashed?: boolean) => void;
   onBack: () => void;
 }
 
@@ -34,9 +34,12 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
               className="ai-stagger-item glass-card w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-[var(--bg-active)] transition-colors cursor-pointer rounded-[var(--radius-sm)]"
               style={{ animationDelay: `${Math.min(i * 60, 500)}ms` }}
               type="button"
-              onClick={() => onBinClick(match.bin_id)}
+              onClick={() => onBinClick(match.bin_id, match.is_trashed)}
             >
-              <Search className="h-4 w-4 shrink-0 text-[var(--accent)]" />
+              {match.is_trashed
+                ? <Trash2 className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+                : <Search className="h-4 w-4 shrink-0 text-[var(--accent)]" />
+              }
               <div className="flex-1 min-w-0">
                 <p className="text-[14px] font-medium text-[var(--text-primary)] truncate">{match.name}</p>
                 {match.area_name && (
@@ -44,9 +47,6 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
                 )}
                 {match.items.length > 0 && (
                   <p className="text-[12px] text-[var(--text-secondary)] truncate">{match.items.join(', ')}</p>
-                )}
-                {match.relevance && (
-                  <p className="text-[11px] text-[var(--text-tertiary)] italic mt-0.5">{match.relevance}</p>
                 )}
               </div>
               <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />

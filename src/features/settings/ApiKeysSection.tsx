@@ -1,4 +1,4 @@
-import { Check, Copy, Key, Plus, Trash2 } from 'lucide-react';
+import { Check, Copy, Key, KeyRound, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -88,8 +88,8 @@ export function ApiKeysSection() {
     <>
       <Card>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <Label>API Keys</Label>
+          <div className="flex items-baseline justify-between">
+            <Label className="inline-flex items-center gap-1.5"><KeyRound className="h-3.5 w-3.5" />API Keys</Label>
             <Tooltip content="Create API key" side="bottom">
               <Button
                 onClick={() => setCreateOpen(true)}

@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react';
+import { ShieldAlert, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -40,7 +40,7 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
     <>
       <Card>
         <CardContent>
-          <Label>Danger Zone</Label>
+          <Label className="inline-flex items-center gap-1.5"><ShieldAlert className="h-3.5 w-3.5" />Danger Zone</Label>
           <div className="flex flex-col gap-2 mt-3">
             <Button
               variant="outline"

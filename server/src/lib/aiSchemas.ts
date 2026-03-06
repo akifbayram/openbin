@@ -24,5 +24,6 @@ export const QueryResultSchema = z.object({
     items: z.array(z.string()),
     tags: z.array(z.string()),
     relevance: z.string(),
+    is_trashed: z.boolean().optional(),
   })),
 });

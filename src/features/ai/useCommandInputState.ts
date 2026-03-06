@@ -6,9 +6,9 @@ import { useTerminology } from '@/lib/terminology';
 import { mapAiError } from './aiErrors';
 import type { ExecutionResult } from './useActionExecutor';
 import { useAiSettings } from './useAiSettings';
+import type { CommandAction } from './useCommand';
 import type { QueryResult } from './useInventoryQuery';
-import { useStreamingCommand } from './useStreamingCommand';
-import { useStreamingQuery } from './useStreamingQuery';
+import { useStreamingAsk } from './useStreamingAsk';
 
 type State = 'idle' | 'parsing' | 'preview' | 'executing' | 'querying' | 'query-result' | 'success';
 
@@ -18,12 +18,12 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
   const navigate = useNavigate();
   const { settings, isLoading: aiSettingsLoading } = useAiSettings();
   const { showToast } = useToast();
-  const { actions, interpretation, isStreaming: isParsing, error, parse, clear: clearCommand } = useStreamingCommand();
-  const { partialText: queryPartialText, query, isStreaming: isQueryStreaming, error: queryError, cancel: cancelQuery, clear: clearQuery } = useStreamingQuery();
+  const { isStreaming: isParsing, error, partialText: queryPartialText, ask, cancel: cancelAsk, clear: clearAsk } = useStreamingAsk();
   const [text, setText] = useState('');
   const [checkedActions, setCheckedActions] = useState<Map<number, boolean>>(new Map());
+  const [actions, setActions] = useState<CommandAction[] | null>(null);
+  const [interpretation, setInterpretation] = useState('');
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
-  const [isQuerying, setIsQuerying] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
   const [initialFiles, setInitialFiles] = useState<File[]>([]);
   const [examplesOpen, setExamplesOpen] = useState(false);
@@ -32,10 +32,13 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
 
   const isAiReady = settings !== null;
 
+  // Derive querying state from streaming + query result
+  const isQuerying = isParsing && !actions && !queryResult;
+
   const state: State = executionResult ? 'success'
     : checkedActions.size > 0 && actions ? 'preview'
     : isParsing ? 'parsing'
-    : (isQuerying || isQueryStreaming) ? 'querying'
+    : isQuerying ? 'querying'
     : queryResult ? 'query-result'
     : actions ? 'preview'
     : 'idle';
@@ -46,32 +49,49 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
 
   async function handleParse() {
     if (!text.trim() || !activeLocationId || !isAiReady) return;
-    const result = await parse({ text: text.trim(), locationId: activeLocationId });
-    if (result?.actions) {
-      if (result.actions.length === 0) {
-        clearCommand();
-        setIsQuerying(true);
-        try {
-          const qr = await query({ question: text.trim(), locationId: activeLocationId });
-          setQueryResult(qr);
-        } catch (err) {
-          setQueryResult(null);
-          showToast({ message: mapAiError(err, 'Query failed') });
-        } finally {
-          setIsQuerying(false);
-        }
-      } else {
+    // Reset previous state
+    setActions(null);
+    setInterpretation('');
+    setQueryResult(null);
+
+    try {
+      const result = await ask({ text: text.trim(), locationId: activeLocationId });
+      if (!result) return;
+
+      // The hook classifies internally, but we need to read the classified value
+      // after the stream completes. Since `classified` is derived from `result`,
+      // we classify here from the raw result.
+      const asCmd = result as { actions?: CommandAction[]; interpretation?: string };
+      const asQuery = result as { answer?: string; matches?: Array<{ bin_id: string; name: string; area_name: string; items: string[]; tags: string[]; relevance: string }> };
+
+      if (Array.isArray(asCmd.actions) && asCmd.actions.length > 0) {
+        const validActions = asCmd.actions.filter(
+          (a): a is CommandAction => typeof a === 'object' && a !== null && typeof (a as Record<string, unknown>).type === 'string'
+        );
+        setActions(validActions);
+        setInterpretation(asCmd.interpretation ?? '');
         const initial = new Map<number, boolean>();
-        for (let i = 0; i < result.actions.length; i++) initial.set(i, true);
+        for (let i = 0; i < validActions.length; i++) initial.set(i, true);
         setCheckedActions(initial);
+      } else if (typeof asQuery.answer === 'string') {
+        setQueryResult({ answer: asQuery.answer, matches: asQuery.matches ?? [] });
+      } else if (Array.isArray(asCmd.actions) && asCmd.actions.length === 0) {
+        // AI returned empty actions — treat interpretation as query answer
+        setQueryResult({
+          answer: asCmd.interpretation || 'I couldn\'t find relevant information for that.',
+          matches: [],
+        });
       }
+    } catch (err) {
+      showToast({ message: mapAiError(err, 'Request failed') });
     }
   }
 
   function handleBack() {
-    clearCommand();
-    cancelQuery();
-    clearQuery();
+    cancelAsk();
+    clearAsk();
+    setActions(null);
+    setInterpretation('');
     setCheckedActions(new Map());
     setQueryResult(null);
     setExecutionResult(null);
@@ -88,9 +108,10 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
   function handleClose(v: boolean) {
     if (!v) {
       setText('');
-      clearCommand();
-      cancelQuery();
-      clearQuery();
+      cancelAsk();
+      clearAsk();
+      setActions(null);
+      setInterpretation('');
       setCheckedActions(new Map());
       setQueryResult(null);
       setExecutionResult(null);
@@ -108,21 +129,28 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
-  function handleBinClick(binId: string) {
+  function handleBinClick(binId: string, isTrashed?: boolean) {
     handleClose(false);
-    navigate(`/bin/${binId}`, { state: { backLabel: t.Bins, backPath: '/bins' } });
+    if (isTrashed) {
+      navigate('/trash');
+    } else {
+      navigate(`/bin/${binId}`, { state: { backLabel: t.Bins, backPath: '/bins' } });
+    }
   }
 
   function handleExecuteComplete(result: ExecutionResult) {
     setExecutionResult(result);
     setText('');
-    clearCommand();
+    setActions(null);
+    setInterpretation('');
     setCheckedActions(new Map());
   }
 
   function handleAskAnother() {
     setText('');
-    clearCommand();
+    clearAsk();
+    setActions(null);
+    setInterpretation('');
     setExecutionResult(null);
   }
 
@@ -133,7 +161,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     checkedActions,
     queryResult,
     queryPartialText,
-    isQueryStreaming,
+    isQueryStreaming: isParsing && queryResult === null && actions === null,
     photoMode,
     setPhotoMode,
     initialFiles,
@@ -150,7 +178,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     // Command
     actions,
     interpretation,
-    error: error || queryError,
+    error,
     // Handlers
     handleParse,
     handleBack,

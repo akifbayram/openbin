@@ -1,4 +1,4 @@
-import { ChevronRight, ExternalLink, LogOut, Monitor, Moon, Sun } from 'lucide-react';
+import { ChevronRight, ExternalLink, Info, LogOut, Monitor, Moon, Sun, UserCircle } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -80,7 +80,7 @@ export function SettingsPage() {
       {user && (
         <Card>
           <CardContent>
-            <Label>Account</Label>
+            <Label className="inline-flex items-center gap-1.5"><UserCircle className="h-3.5 w-3.5" />Account</Label>
             <div className="flex flex-col gap-3 mt-3">
               <button
                 type="button"
@@ -113,15 +113,6 @@ export function SettingsPage() {
         </Card>
       )}
 
-      {/* Personalization (admin only) */}
-      {(isAdmin || permissionsLoading) && (
-        <PersonalizationSection
-          settings={settings}
-          updateSettings={updateSettings}
-          resetSettings={resetSettings}
-        />
-      )}
-
       {/* Dashboard */}
       <DashboardSection settings={dashSettings} updateSettings={updateDashSettings} />
 
@@ -143,10 +134,19 @@ export function SettingsPage() {
         />
       )}
 
+      {/* Personalization (admin only) */}
+      {(isAdmin || permissionsLoading) && (
+        <PersonalizationSection
+          settings={settings}
+          updateSettings={updateSettings}
+          resetSettings={resetSettings}
+        />
+      )}
+
       {/* About */}
       <Card>
         <CardContent>
-          <Label>About</Label>
+          <Label className="inline-flex items-center gap-1.5"><Info className="h-3.5 w-3.5" />About</Label>
           <div className="mt-3 space-y-2 text-[15px] text-[var(--text-secondary)]">
             <div className="flex items-baseline gap-2">
               <p className="font-semibold text-[var(--text-primary)]">{settings.appName}</p>

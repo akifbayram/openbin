@@ -107,3 +107,42 @@ export function buildUserMessage(request: CommandRequest): string {
 Current inventory:
 ${JSON.stringify({ bins, areas, trash_bins })}`;
 }
+
+/**
+ * Build a unified system prompt that handles both commands AND queries.
+ * The AI returns `{ actions, interpretation }` for commands or `{ answer, matches }` for queries.
+ */
+export function buildUnifiedSystemPrompt(request: CommandRequest, customCommandPrompt?: string, customQueryPrompt?: string): string {
+  // Build the command half (action types, rules, examples)
+  const commandPrompt = buildSystemPrompt(request, customCommandPrompt);
+
+  // Import query rules inline
+  const queryBase = customQueryPrompt || `You are also an inventory search assistant. When the user asks a question (rather than giving a command), search through the inventory context and answer their question.`;
+
+  return `${commandPrompt}
+
+---
+
+QUERY MODE (for questions instead of commands):
+${queryBase}
+
+Query rules:
+- Answer in natural language, conversationally
+- Reference specific bin names and areas when answering
+- If items match partially, include them and note the partial match
+- If nothing matches, say so clearly
+- Sort matches by relevance (most relevant first)
+- Return at most 8 matching bins. For each bin, include only the most relevant items (up to 10), not the entire list.
+- Visibility, pin status, photo counts, and trash bins are available — use them to answer questions like "which bins are private?", "what's pinned?", "which bins have photos?", or "what's in the trash?"
+- When including trash bins in matches, set "is_trashed": true so the UI can link to the trash page instead of the bin detail page.
+
+---
+
+RESPONSE FORMAT:
+- If the user input is a COMMAND (create, move, add, delete, rename, etc.), respond with: {"actions":[...],"interpretation":"..."}
+- If the user input is a QUESTION (where is, what's in, how many, do I have, etc.), respond with: {"answer":"...","matches":[{"bin_id":"...","name":"...","area_name":"...","items":["..."],"tags":["..."],"relevance":"...","is_trashed":false}]}
+- For matches that are trash bins (from trash_bins in the context), set "is_trashed": true.
+- If the command is ambiguous and you cannot determine actionable steps, treat it as a question.
+
+Respond with ONLY valid JSON, no markdown fences, no extra text.`;
+}

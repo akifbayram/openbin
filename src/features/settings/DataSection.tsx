@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   ChevronRight,
   Clock,
+  Database,
   Download,
   FileArchive,
   FileSpreadsheet,
@@ -150,7 +151,7 @@ export function DataSection({
     <>
       <Card>
         <CardContent>
-          <Label>Data</Label>
+          <Label className="inline-flex items-center gap-1.5"><Database className="h-3.5 w-3.5" />Data</Label>
 
           {/* Navigation */}
           <SectionLabel>Navigation</SectionLabel>

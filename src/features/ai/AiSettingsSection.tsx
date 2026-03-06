@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Loader2, RotateCcw } from 'lucide-react';
+import { Eye, EyeOff, Loader2, RotateCcw, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -138,7 +138,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       <CardContent>
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
-            <Label htmlFor="ai-toggle">AI Features</Label>
+            <Label htmlFor="ai-toggle" className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" />AI Features</Label>
             <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
               Photo analysis, item extraction, and AI commands
             </p>

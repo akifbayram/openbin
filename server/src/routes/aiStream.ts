@@ -10,7 +10,7 @@ import { getUserAiSettings } from '../lib/aiSettings.js';
 import { initSseResponse, pipeAiStreamToResponse } from '../lib/aiStream.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import type { CommandRequest } from '../lib/commandParser.js';
-import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg } from '../lib/commandParser.js';
+import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg, buildUnifiedSystemPrompt } from '../lib/commandParser.js';
 import { config } from '../lib/config.js';
 import { fetchCustomFieldDefs } from '../lib/customFieldHelpers.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
@@ -23,6 +23,15 @@ import { requireLocationMember } from '../middleware/locationAccess.js';
 
 const streamRouter = Router();
 streamRouter.use(authenticate);
+
+/** Fetch existing tags and custom field definitions for a location (used by analysis/correction routes). */
+async function fetchLocationAiMeta(locationId: string | undefined) {
+  const [existingTags, customFieldDefs] = await Promise.all([
+    locationId ? fetchExistingTags(locationId) : Promise.resolve(undefined),
+    locationId ? fetchCustomFieldDefs(locationId) : Promise.resolve(undefined),
+  ]);
+  return { existingTags, customFieldDefs };
+}
 
 /** Stream a JSON object as fake SSE chunks (mock mode). */
 async function sendMockJsonStream(res: import('express').Response, data: object): Promise<void> {
@@ -94,6 +103,23 @@ streamRouter.post('/command/stream', aiLimiter, requireLocationMember(), aiRoute
   });
 }));
 
+// POST /api/ai/ask/stream — unified command+query endpoint
+streamRouter.post('/ask/stream', aiLimiter, requireLocationMember(), aiRouteHandler('stream ask', async (req, res) => {
+  const text = validateTextInput(req.body.text, 'text');
+  const { locationId } = req.body;
+  const [{ settings, model }, context] = await Promise.all([
+    resolveUserModel(req.user!.id),
+    buildCommandContext(locationId, req.user!.id),
+  ]);
+  const request: CommandRequest = { text, context };
+
+  await pipeAiStreamToResponse(res, model, {
+    system: buildUnifiedSystemPrompt(request, settings.command_prompt ?? undefined, settings.query_prompt ?? undefined),
+    userContent: buildCommandUserMsg(request),
+    ...streamOpts(settings, { temperature: 0.2 }),
+  });
+}));
+
 // POST /api/ai/structure-text/stream
 streamRouter.post('/structure-text/stream', aiLimiter, aiRouteHandler('stream structure-text', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
@@ -133,10 +159,7 @@ streamRouter.post('/analyze-image/stream', aiLimiter, memoryPhotoUpload.fields([
     res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
     return;
   }
-  const [existingTags, customFieldDefs] = await Promise.all([
-    locationId ? fetchExistingTags(locationId) : Promise.resolve(undefined),
-    locationId ? fetchCustomFieldDefs(locationId) : Promise.resolve(undefined),
-  ]);
+  const { existingTags, customFieldDefs } = await fetchLocationAiMeta(locationId);
 
   const imageParts = allFiles.map((f) => ({
     type: 'image' as const,
@@ -239,10 +262,7 @@ streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correctio
     res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
     return;
   }
-  const [existingTags, customFieldDefs] = await Promise.all([
-    locationId ? fetchExistingTags(locationId) : Promise.resolve(undefined),
-    locationId ? fetchCustomFieldDefs(locationId) : Promise.resolve(undefined),
-  ]);
+  const { existingTags, customFieldDefs } = await fetchLocationAiMeta(locationId);
 
   const system = buildCorrectionPrompt(existingTags, customFieldDefs);
 

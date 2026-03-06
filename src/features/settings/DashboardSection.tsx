@@ -1,7 +1,8 @@
+import { LayoutDashboard } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Disclosure } from '@/components/ui/disclosure';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { DASHBOARD_LIMITS, type DashboardSettings } from '@/lib/dashboardSettings';
 import { useTerminology } from '@/lib/terminology';
@@ -17,8 +18,8 @@ export function DashboardSection({ settings, updateSettings }: DashboardSectionP
   return (
     <Card id="dashboard-settings">
       <CardContent>
-        <Label>Dashboard</Label>
-        <div className="flex flex-col gap-3 mt-3">
+        <Disclosure label={<span className="inline-flex items-center gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" />Dashboard</span>} labelClassName="text-[var(--text-tertiary)] uppercase tracking-wider">
+        <div className="flex flex-col gap-3 mt-1">
           <div className="space-y-1.5">
             <div className="flex flex-col gap-2">
               {([
@@ -70,6 +71,7 @@ export function DashboardSection({ settings, updateSettings }: DashboardSectionP
             </FormField>
           </div>
         </div>
+        </Disclosure>
       </CardContent>
     </Card>
   );
