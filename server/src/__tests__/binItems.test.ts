@@ -127,6 +127,49 @@ describe('PUT /api/bins/:id/items/:itemId', () => {
     expect(res.body.name).toBe('New Name');
   });
 
+  it('updates item quantity', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    const addRes = await request(app)
+      .post(`/api/bins/${bin.id}/items`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: ['Widget'] });
+
+    const item = addRes.body.items[0];
+
+    const res = await request(app)
+      .put(`/api/bins/${bin.id}/items/${item.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Widget', quantity: 5 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('Widget');
+    expect(res.body.quantity).toBe(5);
+  });
+
+  it('clears quantity when set to null', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    const addRes = await request(app)
+      .post(`/api/bins/${bin.id}/items`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: [{ name: 'Tracked', quantity: 3 }] });
+
+    const item = addRes.body.items[0];
+
+    const res = await request(app)
+      .put(`/api/bins/${bin.id}/items/${item.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Tracked', quantity: null });
+
+    expect(res.status).toBe(200);
+    expect(res.body.quantity).toBeNull();
+  });
+
   it('returns 422 for missing name', async () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
