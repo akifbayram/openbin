@@ -40,6 +40,24 @@ describe('POST /api/bins/:id/items', () => {
     expect(res.status).toBe(422);
   });
 
+  it('adds items with quantity', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/items`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: [{ name: 'AA Battery', quantity: 12 }, 'Flashlight'] });
+
+    expect(res.status).toBe(201);
+    expect(res.body.items).toHaveLength(2);
+    expect(res.body.items[0].name).toBe('AA Battery');
+    expect(res.body.items[0].quantity).toBe(12);
+    expect(res.body.items[1].name).toBe('Flashlight');
+    expect(res.body.items[1].quantity).toBeNull();
+  });
+
   it('returns 404 for non-existent bin', async () => {
     const { token } = await createTestUser(app);
 

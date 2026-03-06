@@ -38,16 +38,19 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
   );
   let nextPos = (maxResult.rows[0]?.max_pos ?? -1) + 1;
 
-  const newItems: Array<{ id: string; name: string }> = [];
+  const newItems: Array<{ id: string; name: string; quantity: number | null }> = [];
   for (const item of items) {
     const name = typeof item === 'string' ? item : (item as { name: string }).name;
     if (!name || !name.trim()) continue;
+    const qty = typeof item === 'object' && item !== null && typeof (item as { quantity?: number }).quantity === 'number'
+      ? Math.max(1, Math.floor((item as { quantity: number }).quantity))
+      : null;
     const itemId = generateUuid();
     await query(
-      'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
-      [itemId, id, name.trim(), nextPos++]
+      'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)',
+      [itemId, id, name.trim(), qty, nextPos++]
     );
-    newItems.push({ id: itemId, name: name.trim() });
+    newItems.push({ id: itemId, name: name.trim(), quantity: qty });
   }
 
   await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
