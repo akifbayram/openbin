@@ -54,7 +54,7 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
       )}
 
       <div className="flex items-center gap-2 text-[13px] text-[var(--text-tertiary)]">
-        <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--accent)]" />
+        <Loader2 className="icon-sm animate-spin text-[var(--accent)]" />
         <span>{hasStreamedData ? 'Finding more items...' : initialStatusLabel}</span>
       </div>
     </div>
@@ -65,7 +65,7 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
 export function AiAnalyzeError({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
     <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-red-500/10 px-3 py-2.5">
-      <AlertCircle className="h-4 w-4 text-[var(--destructive)] shrink-0 mt-0.5" />
+      <AlertCircle className="icon-md text-[var(--destructive)] shrink-0 mt-0.5" />
       <div className="flex-1">
         <p className="text-[13px] text-[var(--destructive)]">{error}</p>
         <Button variant="ghost" size="sm" onClick={onRetry} className="mt-1 h-7 px-2 text-[12px]">

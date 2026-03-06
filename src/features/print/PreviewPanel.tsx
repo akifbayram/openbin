@@ -30,7 +30,7 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
             onClick={() => window.print()}
             className="flex-1 rounded-[var(--radius-md)] h-12 text-[17px] shadow-[0_2px_12px_var(--accent-glow)]"
           >
-            <Printer className="h-5 w-5 mr-2.5" />
+            <Printer className="icon-lg mr-2.5" />
             Print {selectedBins.length} {selectedBins.length !== 1 ? 'Labels' : 'Label'}
           </Button>
           <Button
@@ -39,7 +39,7 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
             disabled={pdfLoading}
             className="rounded-[var(--radius-md)] h-12 px-4 text-[15px]"
           >
-            <Download className={cn('h-5 w-5 mr-1.5', pdfLoading && 'animate-pulse')} />
+            <Download className={cn('icon-lg mr-1.5', pdfLoading && 'animate-pulse')} />
             PDF
           </Button>
         </div>

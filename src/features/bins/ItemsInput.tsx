@@ -195,7 +195,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                   className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
                   aria-label={`Remove ${item}`}
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="icon-sm" />
                 </button>
               </div>
             </div>
@@ -222,7 +222,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                   className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
                   aria-label="Add item"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="icon-md" />
                 </button>
               </Tooltip>
             )}
@@ -234,7 +234,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                   className="shrink-0 rounded-full p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
                   aria-label="Add with AI"
                 >
-                  <Sparkles className="h-4 w-4" />
+                  <Sparkles className="icon-md" />
                 </button>
               </Tooltip>
             )}
@@ -274,9 +274,9 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 className="rounded-[var(--radius-full)] gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
               >
                 {isStructuring ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="icon-sm animate-spin" />
                 ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
+                  <Sparkles className="icon-sm" />
                 )}
                 {isStructuring ? 'Thinking...' : 'Go'}
               </Button>
@@ -300,7 +300,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                         : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] line-through'
                     }`}
                   >
-                    {checked && <Check className="h-3 w-3" />}
+                    {checked && <Check className="icon-xs" />}
                     {item}
                   </button>
                 );
@@ -314,7 +314,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 onClick={handleBack}
                 className="rounded-[var(--radius-full)] gap-0.5"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="icon-md" />
                 Back
               </Button>
               <div className="flex-1" />

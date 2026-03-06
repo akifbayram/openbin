@@ -169,7 +169,7 @@ export function AppLayout() {
       {/* PWA install toast — fixed bottom-left (mobile) / bottom-right (desktop) */}
       {installPrompt && !dismissed && (
         <div className="fixed z-40 bottom-[calc(16px+var(--safe-bottom))] lg:bottom-6 left-4 right-4 lg:left-auto lg:right-6 lg:w-[360px] glass-heavy rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 shadow-lg fade-in-fast">
-          <Download className="h-5 w-5 text-[var(--accent)] shrink-0" />
+          <Download className="icon-lg text-[var(--accent)] shrink-0" />
           <p className="flex-1 text-[14px] text-[var(--text-primary)]">
             Install {settings.appName}
           </p>
@@ -186,7 +186,7 @@ export function AppLayout() {
             aria-label="Dismiss install prompt"
             className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] p-1"
           >
-            <X className="h-4 w-4" />
+            <X className="icon-md" />
           </button>
         </div>
       )}

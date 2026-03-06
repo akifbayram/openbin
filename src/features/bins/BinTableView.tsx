@@ -189,13 +189,13 @@ const BinTableRow = React.memo(function BinTableRow({
       {/* Name (with icon) */}
       <div className="flex-[2] min-w-0 flex items-center gap-2">
         {isVisible?.('icon') !== false && (
-          <BinIcon className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+          <BinIcon className="icon-md shrink-0 text-[var(--text-tertiary)]" />
         )}
         <span className="truncate font-medium text-[14px] text-[var(--text-primary)]">
           <Highlight text={bin.name} query={searchQuery} />
         </span>
         {bin.visibility === 'private' && (
-          <Lock className="h-3 w-3 shrink-0 text-[var(--text-tertiary)]" />
+          <Lock className="icon-xs shrink-0 text-[var(--text-tertiary)]" />
         )}
       </div>
 

@@ -54,8 +54,8 @@ export function CommandSuccess({ result, onAskAnother, onClose, onBinClick }: Co
                   className="ai-stagger-item flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-primary)]"
                   style={{ animationDelay: `${(createdBins.length + idx) * 60}ms` }}
                 >
-                  <Check className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
-                  <Icon className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" />
+                  <Check className="icon-sm shrink-0 text-[var(--accent)]" />
+                  <Icon className="icon-md shrink-0 text-[var(--text-secondary)]" />
                   <span className="truncate">{describeAction(action, t)}</span>
                 </div>
               );
@@ -65,7 +65,7 @@ export function CommandSuccess({ result, onAskAnother, onClose, onBinClick }: Co
       )}
 
       <div className="flex w-full flex-col gap-2 scan-text-fade-delay">
-        <Button fullWidth onClick={onAskAnother}>
+        <Button className="w-full" onClick={onAskAnother}>
           <Sparkles className="mr-2 h-4 w-4" />
           Ask another
         </Button>

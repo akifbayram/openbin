@@ -52,7 +52,7 @@ export function CommandIdleInput({
           title={`Upload photos to auto-create ${t.bins} with AI`}
           aria-label="Upload photos"
         >
-          <ImagePlus className="h-5 w-5" />
+          <ImagePlus className="icon-lg" />
         </button>
       </div>
 
@@ -63,7 +63,7 @@ export function CommandIdleInput({
           onClick={() => setExamplesOpen((v) => !v)}
           className="flex items-center gap-1 font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
         >
-          <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', !examplesOpen && '-rotate-90')} />
+          <ChevronDown className={cn('icon-sm transition-transform', !examplesOpen && '-rotate-90')} />
           Examples
         </button>
         {examplesOpen && (
@@ -90,7 +90,7 @@ export function CommandIdleInput({
         disabled={!text.trim() || isLoading}
         className="w-full bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
       >
-        <Sparkles className="h-4 w-4 mr-1.5" />
+        <Sparkles className="icon-md mr-1.5" />
         {isLoading ? 'Processing...' : 'Send'}
       </Button>
     </div>

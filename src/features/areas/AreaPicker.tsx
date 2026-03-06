@@ -85,7 +85,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
         )}
       >
         <span className="truncate">{selectedArea ? selectedArea.name : 'No area'}</span>
-        <ChevronDown className={cn('h-4 w-4 text-[var(--text-tertiary)] shrink-0 transition-transform', open && 'rotate-180')} />
+        <ChevronDown className={cn('icon-md text-[var(--text-tertiary)] shrink-0 transition-transform', open && 'rotate-180')} />
       </button>
 
       {open && pos && createPortal(
@@ -148,7 +148,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
                   onClick={() => { setCreating(false); setNewName(''); }}
                   className="h-8 w-8 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="icon-md" />
                 </button>
               </div>
             ) : (
@@ -157,7 +157,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
                 onClick={() => setCreating(true)}
                 className="w-full flex items-center gap-2 px-3 py-2.5 text-[14px] text-[var(--accent)] hover:bg-[var(--bg-hover)] transition-colors"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="icon-md" />
                 Create new area...
               </button>
             )}

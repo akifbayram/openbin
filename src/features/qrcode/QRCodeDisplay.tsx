@@ -52,7 +52,7 @@ export function QRCodeDisplay({ binId, size = 200, shortCode, hideActions }: QRC
             onClick={handleCopy}
             className="gap-1.5"
           >
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copied ? <Check className="icon-md" /> : <Copy className="icon-md" />}
             {copied ? 'Copied' : 'Copy URL'}
           </Button>
           <Button
@@ -61,7 +61,7 @@ export function QRCodeDisplay({ binId, size = 200, shortCode, hideActions }: QRC
             onClick={() => navigate(`/print?ids=${binId}`)}
             className="gap-1.5"
           >
-            <Printer className="h-4 w-4" />
+            <Printer className="icon-md" />
             Print
           </Button>
         </div>

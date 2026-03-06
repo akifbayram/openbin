@@ -76,7 +76,7 @@ export function BinCreateSuccess({ createdBins, onCreateAnother, onClose }: BinC
 
       {/* Action buttons */}
       <div className="flex w-full flex-col gap-2 scan-text-fade-delay">
-        <Button fullWidth onClick={onCreateAnother}>
+        <Button className="w-full" onClick={onCreateAnother}>
           <CirclePlus className="mr-2 h-4 w-4" />
           Create another
         </Button>
@@ -102,14 +102,14 @@ export function BinRow({ bin, showColor, onViewBin }: { bin: CreatedBinInfo; sho
       onClick={() => onViewBin(bin.id)}
       style={colorPreset ? { background: colorPreset.bgCss, boxShadow: 'none' } : { boxShadow: 'none' }}
     >
-      <Icon className="h-5 w-5 shrink-0 text-[var(--text-secondary)]" />
+      <Icon className="icon-lg shrink-0 text-[var(--text-secondary)]" />
       <span className="flex-1 truncate text-[var(--text-primary)] font-medium">{bin.name}</span>
       {showColor && (bin.itemCount ?? 0) > 0 && (
         <span className="text-xs text-[var(--text-tertiary)]">
           {bin.itemCount} {plural(bin.itemCount ?? 0, 'item')}
         </span>
       )}
-      <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+      <ChevronRight className="icon-md shrink-0 text-[var(--text-tertiary)]" />
     </ListItem>
   );
 }

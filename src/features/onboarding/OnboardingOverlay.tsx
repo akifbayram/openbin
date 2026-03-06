@@ -252,7 +252,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           aria-label="Close setup"
           className="absolute top-4 right-4 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-40 p-1 z-10"
         >
-          <X className="h-5 w-5" />
+          <X className="icon-lg" />
         </button>
         {/* Progress dots */}
         <div className="flex justify-center gap-2 mb-8">
@@ -352,7 +352,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                       disabled={!areaInput.trim()}
                       className="h-10 px-3"
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus className="icon-md" />
                     </Button>
                   </div>
                   {areaNames.length > 0 && (
@@ -365,7 +365,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                             onClick={() => handleRemoveArea(name)}
                             className="hover:text-[var(--destructive)] transition-colors ml-0.5"
                           >
-                            <X className="h-3 w-3" />
+                            <X className="icon-xs" />
                           </button>
                         </Badge>
                       ))}
@@ -479,7 +479,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                   onClick={() => { complete(); navigate('/print'); }}
                   className="flex-1 rounded-[var(--radius-md)] h-11 text-[15px] gap-1.5"
                 >
-                  <Printer className="h-4 w-4" />
+                  <Printer className="icon-md" />
                   Print Label
                 </Button>
                 <Button
@@ -519,7 +519,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                     className="w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-[var(--bg-active)] hover:bg-[var(--bg-hover)] transition-colors text-left"
                   >
                     <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
-                      <Icon className="h-4 w-4 text-[var(--accent)]" />
+                      <Icon className="icon-md text-[var(--accent)]" />
                     </div>
                     <span className="text-[14px] font-medium text-[var(--text-primary)]">{label}</span>
                   </button>
@@ -551,7 +551,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                 {AI_FEATURES.map(({ icon: Icon, title, desc }) => (
                   <div key={title} className="onboarding-feature-card flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 bg-[var(--bg-active)] text-left">
                     <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
-                      <Icon className="h-4 w-4 text-[var(--accent)]" />
+                      <Icon className="icon-md text-[var(--accent)]" />
                     </div>
                     <div className="min-w-0">
                       <div className="text-[13px] font-semibold text-[var(--text-primary)]">{title}</div>
@@ -602,7 +602,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                     className="w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-[var(--bg-active)] hover:bg-[var(--bg-hover)] transition-colors text-left"
                   >
                     <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
-                      <Icon className="h-4 w-4 text-[var(--accent)]" />
+                      <Icon className="icon-md text-[var(--accent)]" />
                     </div>
                     <span className="text-[14px] font-medium text-[var(--text-primary)]">{label}</span>
                   </button>

@@ -150,7 +150,7 @@ export function AreasPage() {
               onClick={() => setJoinLocationOpen(true)}
               className="h-10 px-3.5"
             >
-              <LogIn className="h-4 w-4 mr-1.5" />
+              <LogIn className="icon-md mr-1.5" />
               Join
             </Button>
             <Button
@@ -159,7 +159,7 @@ export function AreasPage() {
               className="h-10 w-10 rounded-full"
               aria-label={`Create ${t.location}`}
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="icon-lg" />
             </Button>
           </div>
         ) : undefined}
@@ -196,11 +196,11 @@ export function AreasPage() {
           >
             <div className="flex gap-2.5">
               <Button onClick={() => setJoinLocationOpen(true)} variant="outline">
-                <LogIn className="h-4 w-4 mr-2" />
+                <LogIn className="icon-md mr-2" />
                 Join Location
               </Button>
               <Button onClick={() => setCreateLocationOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="icon-md mr-2" />
                 Create Location
               </Button>
             </div>
@@ -225,7 +225,7 @@ export function AreasPage() {
                 <div className="flex items-center gap-3 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium px-2 py-1 ${isAdmin ? 'bg-[var(--accent)]/10 text-[var(--accent)]' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}>
-                      {isAdmin ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                      {isAdmin ? <Shield className="icon-xs" /> : <User className="icon-xs" />}
                       {isAdmin ? 'Admin' : 'Member'}
                     </span>
                   </div>
@@ -235,7 +235,7 @@ export function AreasPage() {
                     className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0"
                     onClick={() => setMembersLocationId(activeLocation.id)}
                   >
-                    <Users className="h-3.5 w-3.5" />
+                    <Users className="icon-sm" />
                     <span className="hidden sm:inline">{memberCount} {memberCount !== 1 ? 'members' : 'member'}</span>
                     <span className="sm:hidden">{memberCount}</span>
                   </button>
@@ -249,8 +249,8 @@ export function AreasPage() {
                         title="Copy invite code"
                       >
                         {copied
-                          ? <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
-                          : <Copy className="h-3.5 w-3.5 shrink-0" />}
+                          ? <Check className="icon-sm shrink-0 text-green-500" />
+                          : <Copy className="icon-sm shrink-0" />}
                         <span className="truncate">{activeLocation.invite_code}</span>
                       </button>
                     </>
@@ -277,7 +277,7 @@ export function AreasPage() {
               >
                 {isAdmin && (
                   <Button onClick={() => setCreateAreaOpen(true)} variant="outline" size="sm">
-                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    <Plus className="icon-sm mr-1.5" />
                     {`Create ${t.Area}`}
                   </Button>
                 )}

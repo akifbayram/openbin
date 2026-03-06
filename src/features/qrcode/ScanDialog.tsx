@@ -122,7 +122,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
                     <p className="text-[13px] text-[var(--text-tertiary)] break-all max-w-xs mx-auto leading-relaxed">{error}</p>
                   </div>
                   <Button variant="outline" onClick={handleRetry} className="mt-1">
-                    <RotateCcw className="h-4 w-4 mr-1.5" />
+                    <RotateCcw className="icon-md mr-1.5" />
                     Scan Again
                   </Button>
                 </div>
@@ -143,11 +143,11 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
                   </div>
                   <div className="flex gap-2.5 mt-1">
                     <Button variant="outline" onClick={handleRetry}>
-                      <RotateCcw className="h-4 w-4 mr-1.5" />
+                      <RotateCcw className="icon-md mr-1.5" />
                       Scan Again
                     </Button>
                     <Button onClick={() => setCreateOpen(true)}>
-                      <Plus className="h-4 w-4 mr-1.5" />
+                      <Plus className="icon-md mr-1.5" />
                       Create {t.Bin}
                     </Button>
                   </div>
@@ -200,7 +200,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
                 disabled={!manualCode.trim() || manualLoading}
                 className="rounded-[var(--radius-md)] shrink-0"
               >
-                <Search className="h-4 w-4 mr-1.5" />
+                <Search className="icon-md mr-1.5" />
                 Look Up
               </Button>
             </div>

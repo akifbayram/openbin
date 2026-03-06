@@ -353,7 +353,7 @@ export function BinCreateForm({
           {aiConfiguredInline ? (
             <AiConfiguredIndicator>
               {photos.length > 0 && (
-                <span className="text-[var(--text-tertiary)]">— tap <Sparkles className="h-3 w-3 inline" /> to analyze</span>
+                <span className="text-[var(--text-tertiary)]">— tap <Sparkles className="icon-xs inline" /> to analyze</span>
               )}
             </AiConfiguredIndicator>
           ) : (

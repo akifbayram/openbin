@@ -238,7 +238,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
               onClick={() => handleRemove(photo.id)}
               className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors opacity-0 group-hover:opacity-100"
             >
-              <X className="h-3 w-3" />
+              <X className="icon-xs" />
             </button>
           </div>
         ))}
@@ -248,7 +248,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
             onClick={() => fileInputRef.current?.click()}
             className="aspect-square flex flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
           >
-            <Camera className="h-4 w-4" />
+            <Camera className="icon-md" />
             <span className="text-[10px]">Add more</span>
           </button>
         )}
@@ -290,7 +290,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           size="sm"
           onClick={onBack}
         >
-          <ChevronLeft className="h-4 w-4 mr-0.5" />
+          <ChevronLeft className="icon-md mr-0.5" />
           Back
         </Button>
         <Button

@@ -55,7 +55,7 @@ export function ColumnVisibilityMenu({ applicableFields, visibility, onToggle }:
           className="shrink-0"
           aria-label="Toggle field visibility"
         >
-          <Columns3 className="h-4 w-4" />
+          <Columns3 className="icon-md" />
         </Button>
       </Tooltip>
       {visible && (

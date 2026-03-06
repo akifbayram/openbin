@@ -164,7 +164,7 @@ function NotFoundPage() {
       <p className="text-[48px] font-bold text-[var(--text-primary)]">404</p>
       <p className="text-[17px] font-semibold text-[var(--text-secondary)]">Page not found</p>
       <Button variant="outline" onClick={() => navigate('/')}>
-        <ChevronLeft className="h-4 w-4 mr-1" />
+        <ChevronLeft className="icon-md mr-1" />
         Back to home
       </Button>
     </div>

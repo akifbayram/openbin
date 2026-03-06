@@ -138,7 +138,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       <CardContent>
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
-            <Label htmlFor="ai-toggle" className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" />AI Features</Label>
+            <Label htmlFor="ai-toggle" className="inline-flex items-center gap-1.5"><Sparkles className="icon-sm" />AI Features</Label>
             <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
               Photo analysis, item extraction, and AI commands
             </p>
@@ -195,7 +195,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                       onClick={() => setup.setShowKey(!setup.showKey)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
                     >
-                      {setup.showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {setup.showKey ? <EyeOff className="icon-md" /> : <Eye className="icon-md" />}
                     </button>
                   </div>
                 </div>
@@ -281,7 +281,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                               onClick={() => active.set('')}
                               className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
                             >
-                              <RotateCcw className="h-3 w-3" />
+                              <RotateCcw className="icon-xs" />
                               Reset to Default
                             </button>
                           ) : (
@@ -320,7 +320,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         />
                         {temperature && (
                           <button type="button" onClick={() => setTemperature('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                            <RotateCcw className="h-3 w-3" />
+                            <RotateCcw className="icon-xs" />
                           </button>
                         )}
                       </div>
@@ -341,7 +341,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         />
                         {maxTokens && (
                           <button type="button" onClick={() => setMaxTokens('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                            <RotateCcw className="h-3 w-3" />
+                            <RotateCcw className="icon-xs" />
                           </button>
                         )}
                       </div>
@@ -362,7 +362,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         />
                         {topP && (
                           <button type="button" onClick={() => setTopP('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                            <RotateCcw className="h-3 w-3" />
+                            <RotateCcw className="icon-xs" />
                           </button>
                         )}
                       </div>
@@ -383,7 +383,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         />
                         {requestTimeout && (
                           <button type="button" onClick={() => setRequestTimeout('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                            <RotateCcw className="h-3 w-3" />
+                            <RotateCcw className="icon-xs" />
                           </button>
                         )}
                       </div>
@@ -407,7 +407,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     onClick={handleTest}
                     disabled={setup.testing || !setup.apiKey || !setup.model}
                   >
-                    {setup.testing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+                    {setup.testing ? <Loader2 className="icon-md mr-1.5 animate-spin" /> : null}
                     Test Connection
                   </Button>
                   <Button

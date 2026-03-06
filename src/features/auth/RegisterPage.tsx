@@ -98,7 +98,7 @@ export function RegisterPage() {
         </div>
 
         <Card>
-          <CardContent padding="relaxed">
+          <CardContent className="py-6">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="reg-username">Username</Label>
@@ -143,7 +143,7 @@ export function RegisterPage() {
                     ] as const).map(([key, label]) => (
                       <li key={key} className="flex items-center gap-1.5">
                         {passwordChecks[key] ? (
-                          <Check className="h-3.5 w-3.5 text-[var(--accent)] shrink-0" />
+                          <Check className="icon-sm text-[var(--accent)] shrink-0" />
                         ) : (
                           <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--border-default)]" />
                         )}
@@ -170,10 +170,9 @@ export function RegisterPage() {
               <Button
                 type="submit"
                 disabled={!username.trim() || !password || !confirmPassword || loading}
-                fullWidth
-                className="rounded-[var(--radius-md)] h-11 text-[15px]"
+                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
               >
-                <UserPlus className="h-4 w-4 mr-2" />
+                <UserPlus className="icon-md mr-2" />
                 {loading ? 'Creating account...' : 'Create Account'}
               </Button>
             </form>

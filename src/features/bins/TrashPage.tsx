@@ -72,7 +72,7 @@ export function TrashPage() {
         <SkeletonList count={3} className="flex flex-col gap-3">
           {() => (
             <Card>
-              <CardContent padding="compact">
+              <CardContent className="py-3 px-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
                     <Skeleton className="h-5 w-2/3" />
@@ -97,7 +97,7 @@ export function TrashPage() {
         <div className="space-y-3">
           {bins.map((bin) => (
             <Card key={bin.id}>
-              <CardContent padding="compact">
+              <CardContent className="py-3 px-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
@@ -117,7 +117,7 @@ export function TrashPage() {
                         onClick={() => handleRestore(bin)}
                         className="h-8 px-2.5 text-[var(--accent)]"
                       >
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        <RotateCcw className="icon-sm mr-1" />
                         Restore
                       </Button>
                       <Button
@@ -126,7 +126,7 @@ export function TrashPage() {
                         onClick={() => setConfirmDelete(bin)}
                         className="h-8 px-2.5 text-[var(--destructive)]"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="icon-sm" />
                       </Button>
                     </div>
                   )}
@@ -145,7 +145,7 @@ export function TrashPage() {
           </DialogHeader>
           <div className="flex items-start gap-3">
             <div className="h-10 w-10 rounded-full bg-[var(--destructive)] bg-opacity-10 flex items-center justify-center shrink-0">
-              <AlertTriangle className="h-5 w-5 text-[var(--destructive)]" />
+              <AlertTriangle className="icon-lg text-[var(--destructive)]" />
             </div>
             <div>
               <p className="text-[15px] text-[var(--text-primary)]">

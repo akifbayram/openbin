@@ -111,7 +111,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       )}
       style={!selected ? secondaryBorderStyle : undefined}
     >
-      {selected && <Check className="h-3 w-3 text-white animate-check-pop" strokeWidth={3} />}
+      {selected && <Check className="icon-xs text-white animate-check-pop" strokeWidth={3} />}
     </div>
   );
 
@@ -126,7 +126,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
           </span>
           {bin.visibility === 'private' && (
             <Lock
-              className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]"
+              className="icon-sm shrink-0 text-[var(--text-tertiary)]"
               style={secondaryStyle}
             />
           )}

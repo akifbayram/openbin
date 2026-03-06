@@ -33,7 +33,7 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
           onClick={() => onExpandedChange(!expanded)}
         >
           <div className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <SlidersHorizontal className="icon-md text-[var(--text-tertiary)]" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Options</Label>
           </div>
           <ChevronDown className={cn(
@@ -96,7 +96,7 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
                     checked={labelOptions[key]}
                     onCheckedChange={(checked) => onUpdateOption(key, !!checked)}
                   />
-                  <Icon className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+                  <Icon className="icon-md text-[var(--text-tertiary)] shrink-0" />
                   <span className="text-[15px] text-[var(--text-primary)]">{label}</span>
                 </label>
               ))}

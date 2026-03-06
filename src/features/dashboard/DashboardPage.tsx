@@ -91,7 +91,7 @@ function StatCard({
         className="w-full text-left"
         {...(onClick ? { onClick } : {})}
       >
-        <CardContent padding="compact">
+        <CardContent className="py-3 px-4">
           <p className="text-[24px] font-bold text-[var(--text-primary)] leading-tight">
             {animatedValue}
           </p>
@@ -121,7 +121,7 @@ function SectionHeader({
           className="flex items-center gap-0.5 text-[13px] font-medium text-[var(--accent)]"
         >
           {action.label}
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="icon-sm" />
         </button>
       )}
     </div>
@@ -228,7 +228,7 @@ export function DashboardPage() {
             variant="outline"
             className="mt-1"
           >
-            <MapPin className="h-4 w-4 mr-2" />
+            <MapPin className="icon-md mr-2" />
             {`Manage ${t.Locations}`}
           </Button>
         </EmptyState>
@@ -251,7 +251,7 @@ export function DashboardPage() {
                   className="h-10 w-10 rounded-full"
                   aria-label="Scan QR code"
                 >
-                  <ScanLine className="h-5 w-5" />
+                  <ScanLine className="icon-lg" />
                 </Button>
               </Tooltip>
               {aiEnabled && (
@@ -263,7 +263,7 @@ export function DashboardPage() {
                     className="h-10 w-10 rounded-full"
                     aria-label="Ask AI"
                   >
-                    <Sparkles className="h-5 w-5" />
+                    <Sparkles className="icon-lg" />
                   </Button>
                 </Tooltip>
               )}
@@ -275,7 +275,7 @@ export function DashboardPage() {
                 className="h-10 w-10 rounded-full"
                 aria-label={`New ${t.bin}`}
               >
-                <Plus className="h-5 w-5" />
+                <Plus className="icon-lg" />
               </Button>
             </Tooltip>
           </div>
@@ -314,7 +314,7 @@ export function DashboardPage() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {[1, 2].map((i) => (
                     <Card key={i}>
-                      <CardContent padding="compact" spacing="sm">
+                      <CardContent className="py-3 px-4 space-y-2">
                         <Skeleton className="h-5 w-2/3" />
                         <Skeleton className="h-4 w-1/2" />
                       </CardContent>
@@ -331,7 +331,7 @@ export function DashboardPage() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {[1, 2, 3].map((i) => (
                     <Card key={i}>
-                      <CardContent padding="compact" spacing="sm">
+                      <CardContent className="py-3 px-4 space-y-2">
                         <Skeleton className="h-5 w-2/3" />
                         <Skeleton className="h-4 w-1/2" />
                       </CardContent>
@@ -380,7 +380,7 @@ export function DashboardPage() {
                 <p className="text-[12px] text-[var(--text-tertiary)]">No tags, area, or items</p>
               </div>
             </div>
-            <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <ChevronRight className="icon-md text-[var(--text-tertiary)]" />
           </button>
         )}
 
@@ -456,7 +456,7 @@ export function DashboardPage() {
               variant="outline"
               className="mt-1"
             >
-              <Settings className="h-4 w-4 mr-2" />
+              <Settings className="icon-md mr-2" />
               Dashboard Settings
             </Button>
           </EmptyState>

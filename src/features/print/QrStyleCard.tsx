@@ -212,7 +212,7 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
           onClick={() => onExpandedChange(!expanded)}
         >
           <div className="flex items-center gap-2">
-            <QrCode className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <QrCode className="icon-md text-[var(--text-tertiary)]" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">QR Style</Label>
           </div>
           <ChevronDown className={cn(
@@ -344,7 +344,7 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
                   onClick={() => onUpdateStyle({ ...DEFAULT_QR_STYLE })}
                   className="w-full"
                 >
-                  <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                  <RotateCcw className="icon-sm mr-1.5" />
                   Reset QR Style
                 </Button>
               </div>

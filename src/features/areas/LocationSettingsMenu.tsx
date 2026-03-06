@@ -38,7 +38,7 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
             : 'h-8 px-3 text-[var(--destructive)]'
           }
         >
-          <LogOut className="h-3.5 w-3.5" />
+          <LogOut className="icon-sm" />
           {!compact && <span className="ml-1.5">Leave</span>}
         </Button>
       </Tooltip>
@@ -58,11 +58,11 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
           }
           aria-label="Settings"
         >
-          <Settings className="h-3.5 w-3.5" />
+          <Settings className="icon-sm" />
           {!compact && (
             <>
               <span className="ml-1.5">Settings</span>
-              <ChevronRight className={`h-3.5 w-3.5 ml-1 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+              <ChevronRight className={`icon-sm ml-1 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
             </>
           )}
         </Button>
@@ -74,7 +74,7 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
             onClick={() => handleItem(onRename)}
           >
-            <Pencil className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <Pencil className="icon-md text-[var(--text-tertiary)]" />
             Rename
           </button>
           <button
@@ -82,7 +82,7 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
             onClick={() => handleItem(onRetention)}
           >
-            <Clock className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <Clock className="icon-md text-[var(--text-tertiary)]" />
             Data Retention
           </button>
           <button
@@ -90,7 +90,7 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
             onClick={() => handleItem(onCustomFields)}
           >
-            <List className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <List className="icon-md text-[var(--text-tertiary)]" />
             Custom Fields
           </button>
           <div className="my-1 border-t border-[var(--border-glass)]" />
@@ -99,7 +99,7 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors"
             onClick={() => handleItem(onDelete)}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="icon-md" />
             Delete Location
           </button>
         </div>

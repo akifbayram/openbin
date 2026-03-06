@@ -64,7 +64,7 @@ function VariantPreview({ variant, color, rectangular }: { variant: CardStyleVar
   if (variant === 'photo') {
     return (
       <div className={cn(baseClass, 'bg-[var(--bg-secondary)] flex items-center justify-center')}>
-        <ImageIcon className="h-4 w-4 text-[var(--text-tertiary)]" />
+        <ImageIcon className="icon-md text-[var(--text-tertiary)]" />
       </div>
     );
   }
@@ -111,7 +111,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
           <VariantPreview variant={currentVariant} color={color} />
         </div>
         <span className="flex-1 text-left">{displayLabel}</span>
-        {open ? <ChevronUp className="h-4 w-4 text-[var(--text-tertiary)]" /> : <ChevronDown className="h-4 w-4 text-[var(--text-tertiary)]" />}
+        {open ? <ChevronUp className="icon-md text-[var(--text-tertiary)]" /> : <ChevronDown className="icon-md text-[var(--text-tertiary)]" />}
       </button>
       {open && (
         <div className="space-y-3 p-3 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">

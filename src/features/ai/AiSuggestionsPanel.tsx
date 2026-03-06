@@ -75,7 +75,7 @@ export function AiSuggestionsPanel({
 
   return (
     <Card className="border-t-2 border-t-[var(--accent)]">
-      <CardContent spacing="md">
+      <CardContent className="space-y-4">
         <div>
           <Label>AI Suggestions</Label>
           <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">

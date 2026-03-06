@@ -40,14 +40,14 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
     <>
       <Card>
         <CardContent>
-          <Label className="inline-flex items-center gap-1.5"><ShieldAlert className="h-3.5 w-3.5" />Danger Zone</Label>
+          <Label className="inline-flex items-center gap-1.5"><ShieldAlert className="icon-sm" />Danger Zone</Label>
           <div className="flex flex-col gap-2 mt-3">
             <Button
               variant="destructive"
               onClick={() => setDeleteOpen(true)}
               className="justify-start rounded-[var(--radius-sm)]"
             >
-              <Trash2 className="h-4 w-4 mr-2.5" />
+              <Trash2 className="icon-md mr-2.5" />
               Delete Account
             </Button>
           </div>

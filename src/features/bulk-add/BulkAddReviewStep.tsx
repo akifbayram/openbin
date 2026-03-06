@@ -250,7 +250,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                     : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]'
                 }`}
               >
-                <Sparkles className="h-4 w-4" />
+                <Sparkles className="icon-md" />
               </button>
             )}
           </div>
@@ -276,7 +276,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                     onClick={handleCorrectionSubmit}
                     className="shrink-0 p-2 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
                   >
-                    <ArrowUp className="h-4 w-4" />
+                    <ArrowUp className="icon-md" />
                   </button>
                 </div>
               )}
@@ -302,7 +302,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                 className="text-[12px] text-[var(--accent)] font-medium flex items-center gap-0.5"
               >
                 Configure AI provider
-                {aiSetupExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                {aiSetupExpanded ? <ChevronUp className="icon-xs" /> : <ChevronDown className="icon-xs" />}
               </button>
             </div>
           )}
@@ -395,7 +395,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               variant="ghost"
               onClick={handleBack}
               >
-              <ChevronLeft className="h-4 w-4 mr-1" />
+              <ChevronLeft className="icon-md mr-1" />
               Back
             </Button>
             <div className="flex items-center gap-2">
@@ -404,14 +404,14 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                 onClick={handleSkip}
                 className="rounded-[var(--radius-full)] text-[var(--text-tertiary)]"
               >
-                <SkipForward className="h-4 w-4 mr-1" />
+                <SkipForward className="icon-md mr-1" />
                 Skip
               </Button>
               <Button
                 onClick={handleNext}
                   >
                 {isLast ? 'Done' : 'Next'}
-                {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}
+                {!isLast && <ChevronRight className="icon-md ml-1" />}
               </Button>
             </div>
           </div>

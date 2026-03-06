@@ -17,7 +17,7 @@ export function PersonalizationSection({ settings, updateSettings, resetSettings
   return (
     <Card>
       <CardContent>
-        <Label className="inline-flex items-center gap-1.5"><Paintbrush className="h-3.5 w-3.5" />Personalization</Label>
+        <Label className="inline-flex items-center gap-1.5"><Paintbrush className="icon-sm" />Personalization</Label>
         <div className="flex flex-col gap-3 mt-3">
           <FormField label="App Name" htmlFor="app-name">
             <Input
@@ -63,7 +63,7 @@ export function PersonalizationSection({ settings, updateSettings, resetSettings
             </div>
           </Disclosure>
           <Button variant="outline" onClick={resetSettings} className="justify-start rounded-[var(--radius-sm)] h-11">
-            <RotateCcw className="h-4 w-4 mr-2.5" />
+            <RotateCcw className="icon-md mr-2.5" />
             Reset to Default
           </Button>
         </div>

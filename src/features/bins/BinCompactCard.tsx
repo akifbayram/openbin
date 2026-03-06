@@ -48,7 +48,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
       )}
       style={!selected ? secondaryBorderStyle : undefined}
     >
-      {selected && <Check className="h-3 w-3 text-white animate-check-pop" strokeWidth={3} />}
+      {selected && <Check className="icon-xs text-white animate-check-pop" strokeWidth={3} />}
     </div>
   );
 
@@ -61,7 +61,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
         >
           <Highlight text={bin.name} query={searchQuery} />
           {bin.visibility === 'private' && (
-            <Lock className="h-3 w-3 shrink-0 text-[var(--text-tertiary)]" style={secondaryStyle} />
+            <Lock className="icon-xs shrink-0 text-[var(--text-tertiary)]" style={secondaryStyle} />
           )}
         </h3>
         {isVisible?.('area') && bin.area_name && (

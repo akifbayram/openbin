@@ -66,7 +66,7 @@ export function BinEditContent({
 
       {/* Notes */}
       <Card>
-        <CardContent spacing="sm" className="py-5">
+        <CardContent className="space-y-2 py-5">
           <Label htmlFor="edit-notes">Notes</Label>
           <Textarea
             id="edit-notes"
@@ -79,7 +79,7 @@ export function BinEditContent({
 
       {/* Organization: Area + Tags */}
       <Card>
-        <CardContent spacing="lg" className="py-5">
+        <CardContent className="space-y-5 py-5">
           <div className="space-y-2">
             <Label>{t.Area}</Label>
             <AreaPicker locationId={activeLocationId} value={edit.areaId} onChange={edit.setAreaId} />
@@ -102,7 +102,7 @@ export function BinEditContent({
 
       {/* Appearance — icon, color, style */}
       <Card>
-        <CardContent spacing="lg" className="py-5">
+        <CardContent className="space-y-5 py-5">
           <div className="space-y-3">
             <Label>Preview</Label>
             <BinPreviewCard
@@ -139,7 +139,7 @@ export function BinEditContent({
       {/* Visibility */}
       {canChangeVisibility && (
         <Card>
-          <CardContent spacing="sm" className="py-5">
+          <CardContent className="space-y-2 py-5">
             <Label>Visibility</Label>
             <VisibilityPicker value={edit.visibility} onChange={edit.setVisibility} />
           </CardContent>

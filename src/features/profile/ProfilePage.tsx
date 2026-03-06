@@ -141,7 +141,7 @@ export function ProfilePage() {
               className="absolute -top-1 -right-1 z-10 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100 max-lg:opacity-100"
               aria-label="Remove avatar"
             >
-              <X className="h-3 w-3" />
+              <X className="icon-xs" />
             </button>
           )}
           <button
@@ -167,12 +167,12 @@ export function ProfilePage() {
 
         <div className="flex items-center gap-3 mt-3 text-[13px] text-[var(--text-tertiary)]">
           <span className="flex items-center gap-1.5">
-            <Calendar className="h-3.5 w-3.5" />
+            <Calendar className="icon-sm" />
             {memberSince}
           </span>
           <span className="h-0.5 w-0.5 rounded-full bg-current opacity-40" />
           <span className="flex items-center gap-1.5">
-            <MapPin className="h-3.5 w-3.5" />
+            <MapPin className="icon-sm" />
             {locations.length} location{locations.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -230,7 +230,7 @@ export function ProfilePage() {
           >
             <Label className="pointer-events-none">Change Password</Label>
             <ChevronDown
-              className={`h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200 ${passwordOpen ? 'rotate-180' : ''}`}
+              className={`icon-md text-[var(--text-tertiary)] transition-transform duration-200 ${passwordOpen ? 'rotate-180' : ''}`}
             />
           </button>
           {passwordOpen && (

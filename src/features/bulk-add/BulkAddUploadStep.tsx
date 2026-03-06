@@ -81,7 +81,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
                   onClick={() => handleRemove(photo.id)}
                   className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors opacity-0 group-hover:opacity-100"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="icon-sm" />
                 </button>
               </div>
             ))}
@@ -91,7 +91,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
                 onClick={() => fileInputRef.current?.click()}
                 className="aspect-square flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
               >
-                <Camera className="h-5 w-5" />
+                <Camera className="icon-lg" />
                 <span className="text-[11px]">Add more</span>
               </button>
             )}

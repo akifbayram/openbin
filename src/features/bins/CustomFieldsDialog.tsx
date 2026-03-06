@@ -91,7 +91,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
 
           {fields.map((field) => (
             <div key={field.id} className="flex items-center gap-2">
-              <GripVertical className="h-4 w-4 text-[var(--text-tertiary)] shrink-0 opacity-40" />
+              <GripVertical className="icon-md text-[var(--text-tertiary)] shrink-0 opacity-40" />
               {editingId === field.id ? (
                 <form
                   className="flex-1 flex items-center gap-2"
@@ -104,10 +104,10 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                     className="h-8 text-[14px]"
                   />
                   <Button type="submit" size="icon-sm" variant="ghost" className="shrink-0" disabled={!editName.trim()}>
-                    <Pencil className="h-3.5 w-3.5" />
+                    <Pencil className="icon-sm" />
                   </Button>
                   <Button type="button" size="icon-sm" variant="ghost" className="shrink-0" onClick={() => setEditingId(null)}>
-                    <X className="h-3.5 w-3.5" />
+                    <X className="icon-sm" />
                   </Button>
                 </form>
               ) : (
@@ -121,7 +121,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                     className="shrink-0"
                     onClick={() => { setEditingId(field.id); setEditName(field.name); }}
                   >
-                    <Pencil className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+                    <Pencil className="icon-sm text-[var(--text-tertiary)]" />
                   </Button>
                   <Button
                     size="icon-sm"
@@ -129,7 +129,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                     className="shrink-0"
                     onClick={() => handleDelete(field.id, field.name)}
                   >
-                    <Trash2 className="h-3.5 w-3.5 text-[var(--destructive)]" />
+                    <Trash2 className="icon-sm text-[var(--destructive)]" />
                   </Button>
                 </>
               )}
@@ -144,7 +144,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
               className="h-8 text-[14px]"
             />
             <Button type="submit" size="sm" disabled={!newName.trim() || adding} className="shrink-0">
-              <Plus className="h-3.5 w-3.5 mr-1" />
+              <Plus className="icon-sm mr-1" />
               Add
             </Button>
           </form>

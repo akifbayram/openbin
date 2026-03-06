@@ -52,7 +52,7 @@ export function PhotoUploadSection({
               : 'border-[var(--border-primary)] py-3 text-[var(--text-tertiary)]'
           )}
         >
-          <Camera className={cn(isFull ? 'h-5 w-5' : 'h-4 w-4')} />
+          <Camera className={cn(isFull ? 'icon-lg' : 'icon-md')} />
           Add Photo
         </button>
       ) : (
@@ -77,7 +77,7 @@ export function PhotoUploadSection({
                   onClick={() => onRemovePhoto(i)}
                   className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="icon-xs" />
                 </button>
               </div>
             ))}
@@ -90,7 +90,7 @@ export function PhotoUploadSection({
                   isFull ? 'rounded-[var(--radius-md)]' : 'rounded-[var(--radius-sm)]'
                 )}
               >
-                <Camera className="h-4 w-4" />
+                <Camera className="icon-md" />
               </button>
             )}
           </div>
@@ -105,9 +105,9 @@ export function PhotoUploadSection({
                 className="gap-1.5"
               >
                 {analyzing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="icon-md animate-spin" />
                 ) : (
-                  <Sparkles className="h-4 w-4 text-[var(--ai-accent)]" />
+                  <Sparkles className="icon-md text-[var(--ai-accent)]" />
                 )}
                 {analyzing ? 'Analyzing...' : `Analyze with AI${photos.length > 1 ? ` (${photos.length})` : ''}`}
               </Button>
@@ -120,9 +120,9 @@ export function PhotoUploadSection({
               className="flex items-center gap-1.5 text-[13px] text-[var(--ai-accent)] hover:opacity-80 transition-opacity disabled:opacity-50"
             >
               {analyzing ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="icon-sm animate-spin" />
               ) : (
-                <Sparkles className="h-3.5 w-3.5" />
+                <Sparkles className="icon-sm" />
               )}
               {analyzing ? 'Analyzing...' : `Analyze with AI${photos.length > 1 ? ` (${photos.length})` : ''}`}
             </button>

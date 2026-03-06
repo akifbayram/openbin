@@ -18,7 +18,7 @@ export function DashboardSection({ settings, updateSettings }: DashboardSectionP
   return (
     <Card id="dashboard-settings">
       <CardContent>
-        <Disclosure label={<span className="inline-flex items-center gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" />Dashboard</span>} labelClassName="text-[var(--text-tertiary)] uppercase tracking-wider">
+        <Disclosure label={<span className="inline-flex items-center gap-1.5"><LayoutDashboard className="icon-sm" />Dashboard</span>} labelClassName="text-[var(--text-tertiary)] uppercase tracking-wider">
         <div className="flex flex-col gap-3 mt-1">
           <div className="space-y-1.5">
             <div className="flex flex-col gap-2">

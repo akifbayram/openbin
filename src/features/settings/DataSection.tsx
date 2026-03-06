@@ -107,7 +107,7 @@ function SettingsRow({
         </p>
       </div>
       {chevron && (
-        <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+        <ChevronRight className="icon-md text-[var(--text-tertiary)] shrink-0" />
       )}
     </button>
   );
@@ -151,7 +151,7 @@ export function DataSection({
     <>
       <Card>
         <CardContent>
-          <Label className="inline-flex items-center gap-1.5"><Database className="h-3.5 w-3.5" />Data</Label>
+          <Label className="inline-flex items-center gap-1.5"><Database className="icon-sm" />Data</Label>
 
           {/* Navigation */}
           <SectionLabel>Navigation</SectionLabel>
