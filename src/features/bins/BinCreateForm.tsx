@@ -259,7 +259,7 @@ export function BinCreateForm({
           <AiSuggestionsPanel
             suggestions={suggestions}
             currentName={name}
-            currentItems={items.map((name, i) => ({ id: String(i), name }))}
+            currentItems={items.map((name, i) => ({ id: String(i), name, quantity: null }))}
             currentTags={tags}
             currentNotes={notes}
             customFieldDefs={customFieldDefs}

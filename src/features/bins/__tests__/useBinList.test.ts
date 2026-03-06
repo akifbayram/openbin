@@ -196,8 +196,8 @@ describe('useBinList', () => {
 
   it('search: filters by items array entries', async () => {
     const bins = [
-      makeBin({ id: '1', name: 'Bin A', items: [{ id: 'i1', name: 'Hammer' }, { id: 'i2', name: 'Nails' }] }),
-      makeBin({ id: '2', name: 'Bin B', items: [{ id: 'i3', name: 'Screws' }] }),
+      makeBin({ id: '1', name: 'Bin A', items: [{ id: 'i1', name: 'Hammer', quantity: null }, { id: 'i2', name: 'Nails', quantity: null }] }),
+      makeBin({ id: '2', name: 'Bin B', items: [{ id: 'i3', name: 'Screws', quantity: null }] }),
     ];
     mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
@@ -353,7 +353,7 @@ describe('useBinList', () => {
 
   it('filters — hasItems: only bins with non-empty items array', async () => {
     const bins = [
-      makeBin({ id: '1', items: [{ id: 'i1', name: 'Hammer' }] }),
+      makeBin({ id: '1', items: [{ id: 'i1', name: 'Hammer', quantity: null }] }),
       makeBin({ id: '2', items: [] }),
     ];
     mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });

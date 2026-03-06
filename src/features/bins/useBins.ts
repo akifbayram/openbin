@@ -284,12 +284,23 @@ export async function removeItemFromBin(binId: string, itemId: string): Promise<
   notifyBinsChanged();
 }
 
-export async function renameItem(binId: string, itemId: string, name: string): Promise<void> {
+export async function renameItem(binId: string, itemId: string, name: string, quantity?: number | null): Promise<void> {
+  const body: { name: string; quantity?: number | null } = { name };
+  if (quantity !== undefined) body.quantity = quantity;
   await apiFetch(`/api/bins/${binId}/items/${itemId}`, {
     method: 'PUT',
-    body: { name },
+    body,
   });
   notifyBinsChanged();
+}
+
+export async function updateItemQuantity(binId: string, itemId: string, quantity: number): Promise<{ id: string; quantity?: number; removed?: boolean }> {
+  const result = await apiFetch<{ id: string; quantity?: number; removed?: boolean }>(`/api/bins/${binId}/items/${itemId}/quantity`, {
+    method: 'PATCH',
+    body: { quantity },
+  });
+  notifyBinsChanged();
+  return result;
 }
 
 export async function reorderItems(binId: string, itemIds: string[]): Promise<void> {
