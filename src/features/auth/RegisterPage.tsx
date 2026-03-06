@@ -1,9 +1,8 @@
 import { Check, Monitor, Moon, Sun, UserPlus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button, Input } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { useAppSettings } from '@/lib/appSettings';

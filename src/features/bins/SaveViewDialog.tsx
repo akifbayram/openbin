@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button, Input } from '@chakra-ui/react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import { saveView } from '@/lib/savedViews';
 import type { BinFilters, SortOption } from './useBins';

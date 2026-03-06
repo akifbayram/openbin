@@ -1,11 +1,10 @@
 import { Check, Copy, LogIn, MapPin, MapPinned, Plus, Shield, User, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button, Input } from '@chakra-ui/react';
 import { Crossfade } from '@/components/ui/crossfade';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
@@ -145,7 +144,7 @@ export function AreasPage() {
         actions={locations.length > 0 ? (
           <div className="flex gap-2">
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               onClick={() => setJoinLocationOpen(true)}
               className="h-10 px-3.5"
@@ -155,7 +154,7 @@ export function AreasPage() {
             </Button>
             <Button
               onClick={() => setCreateLocationOpen(true)}
-              size="icon"
+              size="sm" px="0"
               className="h-10 w-10 rounded-full"
               aria-label={`Create ${t.location}`}
             >

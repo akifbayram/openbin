@@ -1,6 +1,6 @@
 import { ChevronDown, QrCode, RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Label } from '@/components/ui/label';

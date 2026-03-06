@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface DeletePhotoDialogProps {

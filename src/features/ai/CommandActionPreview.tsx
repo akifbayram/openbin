@@ -1,5 +1,5 @@
 import { Check, ChevronLeft, Loader2, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 import { describeAction, getActionIcon, isDestructiveAction } from './commandActionUtils';

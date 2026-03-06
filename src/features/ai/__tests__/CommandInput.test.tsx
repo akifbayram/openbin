@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockNavigate = vi.fn();
@@ -69,6 +70,10 @@ vi.mock('../PhotoBulkAdd', () => ({
 import { apiStream } from '@/lib/apiStream';
 import { CommandInput } from '../CommandInput';
 
+function renderWithChakra(ui: React.ReactElement) {
+  return render(<ChakraProvider value={defaultSystem}>{ui}</ChakraProvider>);
+}
+
 const mockApiStream = vi.mocked(apiStream);
 
 /** Helper to create a mock async generator that yields a done event with JSON data. */
@@ -96,14 +101,14 @@ describe('CommandInput', () => {
   };
 
   it('renders idle state with textarea and button', () => {
-    render(<CommandInput {...defaultProps} />);
+    renderWithChakra(<CommandInput {...defaultProps} />);
 
     expect(screen.getByPlaceholderText('What would you like to do?')).toBeDefined();
     expect(screen.getByText('Send')).toBeDefined();
   });
 
   it('button is disabled when textarea is empty', () => {
-    render(<CommandInput {...defaultProps} />);
+    renderWithChakra(<CommandInput {...defaultProps} />);
 
     const button = screen.getByText('Send');
     expect(button.closest('button')).toHaveProperty('disabled', true);
@@ -117,7 +122,7 @@ describe('CommandInput', () => {
       interpretation: 'Add hammer to Tools',
     })());
 
-    render(<CommandInput {...defaultProps} />);
+    renderWithChakra(<CommandInput {...defaultProps} />);
 
     const textarea = screen.getByPlaceholderText('What would you like to do?');
     fireEvent.change(textarea, { target: { value: 'add hammer to tools' } });
@@ -140,7 +145,7 @@ describe('CommandInput', () => {
       interpretation: 'Add hammer to Tools',
     })());
 
-    render(<CommandInput {...defaultProps} />);
+    renderWithChakra(<CommandInput {...defaultProps} />);
 
     const textarea = screen.getByPlaceholderText('What would you like to do?');
     fireEvent.change(textarea, { target: { value: 'add hammer' } });
@@ -158,7 +163,7 @@ describe('CommandInput', () => {
   it('shows error message on failure', async () => {
     mockApiStream.mockReturnValue(mockStreamError("Couldn't understand that command")());
 
-    render(<CommandInput {...defaultProps} />);
+    renderWithChakra(<CommandInput {...defaultProps} />);
 
     const textarea = screen.getByPlaceholderText('What would you like to do?');
     fireEvent.change(textarea, { target: { value: 'do something' } });
@@ -185,7 +190,7 @@ describe('CommandInput', () => {
       ],
     })());
 
-    render(<CommandInput {...defaultProps} />);
+    renderWithChakra(<CommandInput {...defaultProps} />);
 
     const textarea = screen.getByPlaceholderText('What would you like to do?');
     fireEvent.change(textarea, { target: { value: 'where is glass cleaner?' } });
@@ -218,7 +223,7 @@ describe('CommandInput', () => {
     })());
 
     const onOpenChange = vi.fn();
-    render(<CommandInput open={true} onOpenChange={onOpenChange} />);
+    renderWithChakra(<CommandInput open={true} onOpenChange={onOpenChange} />);
 
     fireEvent.change(screen.getByPlaceholderText('What would you like to do?'), {
       target: { value: 'where is glass cleaner?' },
@@ -243,7 +248,7 @@ describe('CommandInput', () => {
       matches: [],
     })());
 
-    render(<CommandInput {...defaultProps} />);
+    renderWithChakra(<CommandInput {...defaultProps} />);
 
     fireEvent.change(screen.getByPlaceholderText('What would you like to do?'), {
       target: { value: 'where is the tape?' },
@@ -265,7 +270,7 @@ describe('CommandInput', () => {
       matches: [],
     })());
 
-    render(<CommandInput {...defaultProps} />);
+    renderWithChakra(<CommandInput {...defaultProps} />);
 
     fireEvent.change(screen.getByPlaceholderText('What would you like to do?'), {
       target: { value: 'where is the unicorn?' },

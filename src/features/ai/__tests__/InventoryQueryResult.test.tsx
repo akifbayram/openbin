@@ -1,6 +1,11 @@
 import { render, screen } from '@testing-library/react';
+import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { describe, expect, it, vi } from 'vitest';
 import { InventoryQueryResult } from '../InventoryQueryResult';
+
+function renderWithChakra(ui: React.ReactElement) {
+  return render(<ChakraProvider value={defaultSystem}>{ui}</ChakraProvider>);
+}
 
 describe('InventoryQueryResult', () => {
   const defaultProps = {
@@ -9,7 +14,7 @@ describe('InventoryQueryResult', () => {
   };
 
   it('renders completed query result with answer and matches', () => {
-    render(
+    renderWithChakra(
       <InventoryQueryResult
         {...defaultProps}
         queryResult={{
@@ -26,7 +31,7 @@ describe('InventoryQueryResult', () => {
   });
 
   it('renders streaming text with cursor when isStreaming and no queryResult', () => {
-    const { container } = render(
+    const { container } = renderWithChakra(
       <InventoryQueryResult
         {...defaultProps}
         queryResult={null}
@@ -41,7 +46,7 @@ describe('InventoryQueryResult', () => {
   });
 
   it('hides Back button while streaming', () => {
-    render(
+    renderWithChakra(
       <InventoryQueryResult
         {...defaultProps}
         queryResult={null}

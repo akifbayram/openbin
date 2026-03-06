@@ -1,7 +1,7 @@
 import { ChevronRight, ExternalLink, Info, LogOut, Monitor, Moon, Sun, UserCircle } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { OptionGroup } from '@/components/ui/option-group';

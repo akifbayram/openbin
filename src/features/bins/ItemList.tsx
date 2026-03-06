@@ -1,6 +1,6 @@
 import { ArrowUpDown, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -213,7 +213,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
         <Label>{items.length} {items.length === 1 ? 'Item' : 'Items'}</Label>
         {!readOnly && items.length >= 2 && (
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
             onClick={cycleSortMode}
             className="shrink-0 rounded-[var(--radius-full)] gap-1.5 h-8 px-3"

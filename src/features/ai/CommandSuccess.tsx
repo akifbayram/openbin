@@ -1,6 +1,6 @@
 import { Check, Sparkles } from 'lucide-react';
 import { AnimatedCheckmark } from '@/components/ui/animated-checkmark';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { BinRow } from '@/features/bins/BinCreateSuccess';
 import { useTerminology } from '@/lib/terminology';
 import { plural } from '@/lib/utils';

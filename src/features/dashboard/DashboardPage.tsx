@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 
 import { SavedViewChips } from '@/components/saved-view-chips';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -246,7 +246,7 @@ export function DashboardPage() {
               <Tooltip content="Scan QR code" side="bottom">
                 <Button
                   onClick={() => openScanDialog()}
-                  size="icon"
+                  size="sm" px="0"
                   variant="ghost"
                   className="h-10 w-10 rounded-full"
                   aria-label="Scan QR code"
@@ -258,7 +258,7 @@ export function DashboardPage() {
                 <Tooltip content="Ask AI" side="bottom">
                   <Button
                     onClick={() => setCommandOpen(true)}
-                    size="icon"
+                    size="sm" px="0"
                     variant="ghost"
                     className="h-10 w-10 rounded-full"
                     aria-label="Ask AI"
@@ -271,7 +271,7 @@ export function DashboardPage() {
             <Tooltip content={`New ${t.bin}`} side="bottom">
               <Button
                 onClick={() => setCreateOpen(true)}
-                size="icon"
+                size="sm" px="0"
                 className="h-10 w-10 rounded-full"
                 aria-label={`New ${t.bin}`}
               >

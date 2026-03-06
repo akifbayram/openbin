@@ -1,5 +1,5 @@
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 
 interface AiStreamingPreviewProps {
   previewUrls: string[];

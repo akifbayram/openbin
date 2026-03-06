@@ -8,7 +8,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
@@ -127,7 +127,7 @@ export function BinListPage() {
               <Tooltip content="Scan QR code" side="bottom">
                 <Button
                   onClick={() => openScanDialog()}
-                  size="icon"
+                  size="sm" px="0"
                   variant="ghost"
                   className="h-10 w-10 rounded-full"
                   aria-label="Scan QR code"
@@ -139,7 +139,7 @@ export function BinListPage() {
                 <Tooltip content="Ask AI" side="bottom">
                   <Button
                     onClick={() => setCommandOpen(true)}
-                    size="icon"
+                    size="sm" px="0"
                     variant="ghost"
                     className="h-10 w-10 rounded-full"
                     aria-label="Ask AI"
@@ -152,7 +152,7 @@ export function BinListPage() {
             <Tooltip content={`New ${t.bin}`} side="bottom">
               <Button
                 onClick={() => setCreateOpen(true)}
-                size="icon"
+                size="sm" px="0"
                 className="h-10 w-10 rounded-full"
                 aria-label={`New ${t.bin}`}
               >

@@ -1,9 +1,7 @@
 import { ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SkipForward, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button, Input, Textarea } from '@chakra-ui/react';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { AiAnalyzeError, AiStreamingPreview } from '@/features/ai/AiStreamingPreview';
 import { parsePartialAnalysis } from '@/features/ai/parsePartialAnalysis';

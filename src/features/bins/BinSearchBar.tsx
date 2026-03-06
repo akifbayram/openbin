@@ -1,7 +1,7 @@
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { DismissibleBadge } from '@/components/ui/dismissible-badge';
 import { Tooltip } from '@/components/ui/tooltip';
 import { HUE_RANGES } from '@/lib/colorPalette';
@@ -131,8 +131,8 @@ export function BinSearchBar({
       {overflowMenu && <div className="sm:hidden">{overflowMenu}</div>}
       <Tooltip content="Filter" side="bottom">
         <Button
-          variant="secondary"
-          size="icon"
+          variant="ghost"
+          size="sm" px="0"
           onClick={onOpenFilter}
           className="shrink-0 relative"
           aria-label={`Filter ${t.bins}`}

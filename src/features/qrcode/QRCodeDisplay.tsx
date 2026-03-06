@@ -1,7 +1,7 @@
 import { Check, Copy, Printer } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { getBinUrl } from '@/lib/constants';
 import { generateQRDataURL } from '@/lib/qr';
 
@@ -47,7 +47,7 @@ export function QRCodeDisplay({ binId, size = 200, shortCode, hideActions }: QRC
       {!hideActions && (
         <div className="flex gap-2.5">
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
             onClick={handleCopy}
             className="rounded-[var(--radius-full)] gap-1.5"
@@ -56,7 +56,7 @@ export function QRCodeDisplay({ binId, size = 200, shortCode, hideActions }: QRC
             {copied ? 'Copied' : 'Copy URL'}
           </Button>
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
             onClick={() => navigate(`/print?ids=${binId}`)}
             className="rounded-[var(--radius-full)] gap-1.5"

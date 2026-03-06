@@ -1,6 +1,6 @@
 import { Camera, ChevronLeft, X } from 'lucide-react';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Label } from '@/components/ui/label';
 import { OptionGroup } from '@/components/ui/option-group';
 import { StepIndicator } from '@/components/ui/stepper';

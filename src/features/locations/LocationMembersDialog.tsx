@@ -2,7 +2,7 @@ import { Check, ChevronDown, Copy, LogOut, RefreshCw, Shield, UserMinus } from '
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import {
   Dialog,
   DialogContent,
@@ -110,7 +110,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
             <Tooltip content="Copy invite code" side="bottom">
               <Button
                 variant="ghost"
-                size="icon-sm"
+                size="xs" px="0"
                 onClick={handleCopyInvite}
                 className="shrink-0"
                 aria-label="Copy invite code"
@@ -122,7 +122,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
               <Tooltip content="Regenerate invite code" side="bottom">
                 <Button
                   variant="ghost"
-                  size="icon-sm"
+                  size="xs" px="0"
                   onClick={handleRegenerate}
                   disabled={regenerating}
                   className="shrink-0"
@@ -180,7 +180,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                     <Tooltip content="Remove member" side="bottom">
                       <Button
                         variant="ghost"
-                        size="icon-sm"
+                        size="xs" px="0"
                         className="text-[var(--destructive)] shrink-0"
                         onClick={() => handleRemoveMember(member.user_id)}
                         aria-label="Remove member"

@@ -1,9 +1,8 @@
 import { Paintbrush, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, Input } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { FormField } from '@/components/ui/form-field';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { AppSettings } from '@/lib/appSettings';
 

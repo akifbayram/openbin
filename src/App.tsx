@@ -1,7 +1,7 @@
 import { AlertCircle, ChevronLeft } from 'lucide-react';
 import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { ToastProvider, useToast } from '@/components/ui/toast';
 import { AuthGuard } from '@/features/auth/AuthGuard';
 import { AppLayout } from '@/features/layout/AppLayout';

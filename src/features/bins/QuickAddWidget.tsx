@@ -1,6 +1,5 @@
 import { Check, ChevronLeft, Loader2, Plus, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button, Input } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { useQuickAdd } from './useQuickAdd';
 

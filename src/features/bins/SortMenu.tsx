@@ -1,6 +1,6 @@
 import { ArrowUpDown, Check } from 'lucide-react';
 import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
@@ -29,8 +29,8 @@ export function SortMenu({ sort, onSortChange }: SortMenuProps) {
     <div ref={menuRef} className="relative">
       <Tooltip content="Sort" side="bottom">
         <Button
-          variant="secondary"
-          size="icon"
+          variant="ghost"
+          size="sm" px="0"
           onClick={toggle}
           className="shrink-0 h-10 w-10 rounded-full relative"
           aria-label={`Sort by ${sortLabels[sort]}`}

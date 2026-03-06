@@ -1,5 +1,5 @@
 import { CheckCircle2, ChevronDown, Circle, Package } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { resolveColor } from '@/lib/colorPalette';

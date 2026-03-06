@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { ArrowRightLeft, Check, ChevronLeft, Copy, Loader2, Lock, MoreHorizontal, Pencil, Pin, Printer, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { MenuButton } from '@/components/ui/menu-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
@@ -72,7 +72,7 @@ export function BinDetailToolbar({
       {!editing && (
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="xs" px="0"
           onClick={onBack}
           aria-label="Go back"
           className="hidden lg:flex shrink-0 text-[var(--accent)]"
@@ -103,7 +103,7 @@ export function BinDetailToolbar({
         <div className="flex gap-1.5">
           <Button
             variant="ghost"
-            size="icon"
+            size="sm" px="0"
             onClick={onCancelEdit}
             className="lg:w-auto lg:px-3"
           >
@@ -111,7 +111,7 @@ export function BinDetailToolbar({
             <span className="hidden lg:inline text-sm">Cancel</span>
           </Button>
           <Button
-            size="icon"
+            size="sm" px="0"
             onClick={onSave}
             disabled={!editNameValid}
             className="lg:w-auto lg:px-3"
@@ -126,7 +126,7 @@ export function BinDetailToolbar({
           {showAiButton && (
             <Tooltip content="Analyze with AI" side="bottom">
               <Button
-                size="icon"
+                size="sm" px="0"
                 onClick={onAnalyze}
                 disabled={isAnalyzing}
                 aria-label="Analyze with AI"
@@ -143,7 +143,7 @@ export function BinDetailToolbar({
           <Tooltip content={bin.is_pinned ? 'Unpin' : 'Pin'} side="bottom">
             <Button
               variant="ghost"
-              size="icon"
+              size="sm" px="0"
               onClick={onTogglePin}
               aria-label={bin.is_pinned ? `Unpin ${t.bin}` : `Pin ${t.bin}`}
             >
@@ -154,7 +154,7 @@ export function BinDetailToolbar({
             <Tooltip content="Edit" side="bottom">
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm" px="0"
                 onClick={onStartEdit}
                 aria-label={`Edit ${t.bin}`}
               >
@@ -166,7 +166,7 @@ export function BinDetailToolbar({
             <Tooltip content="More" side="bottom">
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm" px="0"
                 onClick={toggle}
                 aria-label="More actions"
               >

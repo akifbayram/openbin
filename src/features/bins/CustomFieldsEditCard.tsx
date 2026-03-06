@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Input } from '@chakra-ui/react';
 import { Label } from '@/components/ui/label';
 import type { CustomField } from '@/types';
 

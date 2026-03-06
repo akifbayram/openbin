@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Search, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { StreamingText } from './StreamingText';
 import type { QueryResult } from './useInventoryQuery';
 

@@ -1,6 +1,6 @@
 import { Columns3 } from 'lucide-react';
 import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
@@ -49,8 +49,8 @@ export function ColumnVisibilityMenu({ applicableFields, visibility, onToggle }:
     <div ref={menuRef} className="relative">
       <Tooltip content="Fields" side="bottom">
         <Button
-          variant="secondary"
-          size="icon"
+          variant="ghost"
+          size="sm" px="0"
           onClick={toggle}
           className="shrink-0"
           aria-label="Toggle field visibility"

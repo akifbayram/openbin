@@ -1,6 +1,6 @@
 import { Check, Copy, Key, KeyRound, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button, Input } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -93,7 +92,7 @@ export function ApiKeysSection() {
             <Tooltip content="Create API key" side="bottom">
               <Button
                 onClick={() => setCreateOpen(true)}
-                size="icon-sm"
+                size="xs" px="0"
                 aria-label="Create API key"
               >
                 <Plus className="h-4 w-4" />
@@ -128,7 +127,7 @@ export function ApiKeysSection() {
                   <Tooltip content="Revoke API key" side="bottom">
                     <Button
                       variant="ghost"
-                      size="icon-sm"
+                      size="xs" px="0"
                       className="text-[var(--destructive)] shrink-0"
                       onClick={() => setRevokeId(k.id)}
                       aria-label="Revoke API key"
@@ -162,7 +161,7 @@ export function ApiKeysSection() {
                 </code>
                 <Button
                   variant="outline"
-                  size="icon-sm"
+                  size="xs" px="0"
                   className="shrink-0"
                   onClick={handleCopy}
                 >

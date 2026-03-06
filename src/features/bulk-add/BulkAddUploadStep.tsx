@@ -1,6 +1,6 @@
 import { Camera, ImagePlus, X } from 'lucide-react';
 import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Label } from '@/components/ui/label';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAuth } from '@/lib/auth';

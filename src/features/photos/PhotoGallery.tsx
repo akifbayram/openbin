@@ -1,6 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
@@ -70,7 +70,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
             <Tooltip content="Delete photo">
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm" px="0"
                 onClick={() => setPhotoToDelete(photo)}
                 className="absolute top-1 right-1 h-7 w-7 rounded-full bg-[var(--overlay-button)] text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
                 aria-label="Delete photo"

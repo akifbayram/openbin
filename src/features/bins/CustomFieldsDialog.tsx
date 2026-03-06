@@ -1,6 +1,6 @@
 import { GripVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button, Input } from '@chakra-ui/react';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import {
   addCustomField,
@@ -103,10 +102,10 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                     autoFocus
                     className="h-8 text-[14px]"
                   />
-                  <Button type="submit" size="icon-sm" variant="ghost" className="shrink-0" disabled={!editName.trim()}>
+                  <Button type="submit" size="xs" px="0" variant="ghost" className="shrink-0" disabled={!editName.trim()}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                  <Button type="button" size="icon-sm" variant="ghost" className="shrink-0" onClick={() => setEditingId(null)}>
+                  <Button type="button" size="xs" px="0" variant="ghost" className="shrink-0" onClick={() => setEditingId(null)}>
                     <X className="h-3.5 w-3.5" />
                   </Button>
                 </form>
@@ -116,7 +115,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                     {field.name}
                   </span>
                   <Button
-                    size="icon-sm"
+                    size="xs" px="0"
                     variant="ghost"
                     className="shrink-0"
                     onClick={() => { setEditingId(field.id); setEditName(field.name); }}
@@ -124,7 +123,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                     <Pencil className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
                   </Button>
                   <Button
-                    size="icon-sm"
+                    size="xs" px="0"
                     variant="ghost"
                     className="shrink-0"
                     onClick={() => handleDelete(field.id, field.name)}

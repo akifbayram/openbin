@@ -2,7 +2,7 @@ import { LayoutDashboard } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { FormField } from '@/components/ui/form-field';
-import { Input } from '@/components/ui/input';
+import { Input } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { DASHBOARD_LIMITS, type DashboardSettings } from '@/lib/dashboardSettings';
 import { useTerminology } from '@/lib/terminology';

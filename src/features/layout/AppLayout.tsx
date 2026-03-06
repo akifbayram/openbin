@@ -2,7 +2,7 @@ import { Download, X } from 'lucide-react';
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { PageTransition } from '@/components/page-transition';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
 import { useLocationList } from '@/features/locations/useLocations';

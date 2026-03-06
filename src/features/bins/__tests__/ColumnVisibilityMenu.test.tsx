@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ColumnVisibilityMenu } from '../ColumnVisibilityMenu';
 import { FIELD_LABELS, type FieldKey } from '../useColumnVisibility';
@@ -18,7 +19,7 @@ function renderMenu(overrides: {
     visibility: overrides.visibility ?? DEFAULT_VIS,
     onToggle: overrides.onToggle ?? vi.fn(),
   };
-  return { ...render(<ColumnVisibilityMenu {...props} />), props };
+  return { ...render(<ChakraProvider value={defaultSystem}><ColumnVisibilityMenu {...props} /></ChakraProvider>), props };
 }
 
 describe('ColumnVisibilityMenu', () => {

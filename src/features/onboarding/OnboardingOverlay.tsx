@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BrandIcon } from '@/components/BrandIcon';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button, Input } from '@chakra-ui/react';
 import { useToast } from '@/components/ui/toast';
 import { createArea } from '@/features/areas/useAreas';
 import { BinPreviewCard } from '@/features/bins/BinPreviewCard';
@@ -346,7 +345,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                     />
                     <Button
                       type="button"
-                      variant="secondary"
+                      variant="ghost"
                       size="sm"
                       onClick={handleAddArea}
                       disabled={!areaInput.trim()}
@@ -475,7 +474,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <div className="flex gap-3 w-full mt-6">
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="ghost"
                   onClick={() => { complete(); navigate('/print'); }}
                   className="flex-1 rounded-[var(--radius-md)] h-11 text-[15px] gap-1.5"
                 >

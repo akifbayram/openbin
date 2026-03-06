@@ -1,7 +1,6 @@
 import { Check, MoreHorizontal, X } from 'lucide-react';
 import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button, Input } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
@@ -49,7 +48,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
         <Tooltip content="Save">
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="xs" px="0"
             onClick={handleSave}
             disabled={!editValue.trim() || saving}
             className="shrink-0"
@@ -61,7 +60,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
         <Tooltip content="Cancel">
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="xs" px="0"
             onClick={cancelEdit}
             className="shrink-0"
             aria-label="Cancel"
@@ -92,7 +91,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
           <Tooltip content="More actions" side="bottom">
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="xs" px="0"
               onClick={(e) => { e.stopPropagation(); toggle(); }}
               aria-label="More actions"
             >

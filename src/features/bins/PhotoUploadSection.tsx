@@ -1,5 +1,5 @@
 import { Camera, Loader2, Sparkles, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Label } from '@/components/ui/label';
 import { MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
 import { cn } from '@/lib/utils';

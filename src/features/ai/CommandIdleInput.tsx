@@ -1,7 +1,6 @@
 import { ChevronDown, ImagePlus, Sparkles } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Button, Textarea } from '@chakra-ui/react';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 

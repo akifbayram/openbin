@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
 import { useDialogPortal } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Input } from '@chakra-ui/react';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 
 interface TagInputProps {

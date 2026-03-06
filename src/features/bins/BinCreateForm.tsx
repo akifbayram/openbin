@@ -1,9 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button, Input, Textarea } from '@chakra-ui/react';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
 import { AiConfiguredIndicator, InlineAiSetup } from '@/features/ai/InlineAiSetup';
 import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';

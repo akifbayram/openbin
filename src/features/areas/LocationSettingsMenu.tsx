@@ -1,6 +1,6 @@
 import { ChevronRight, Clock, List, LogOut, Pencil, Settings, Trash2 } from 'lucide-react';
 import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
@@ -30,7 +30,8 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
       <Tooltip content="Leave" side="bottom">
         <Button
           variant="ghost"
-          size={compact ? 'icon' : 'sm'}
+          size={compact ? 'sm' : 'sm'}
+          px={compact ? '0' : undefined}
           onClick={onLeave}
           aria-label="Leave"
           className={compact
@@ -50,7 +51,8 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
       <Tooltip content="Settings" side="bottom">
         <Button
           variant="ghost"
-          size={compact ? 'icon' : 'sm'}
+          size={compact ? 'sm' : 'sm'}
+          px={compact ? '0' : undefined}
           onClick={toggle}
           className={compact
             ? 'h-7 w-7 rounded-full'

@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { Photo } from '@/types';
@@ -159,7 +159,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
           <Tooltip content="Delete photo" side="bottom">
             <Button
               variant="ghost"
-              size="icon"
+              size="sm" px="0"
               onClick={() => onDelete(photo)}
               aria-label="Delete photo"
               className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
@@ -170,7 +170,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
           <Tooltip content="Close" side="bottom">
             <Button
               variant="ghost"
-              size="icon"
+              size="sm" px="0"
               onClick={handleClose}
               aria-label="Close"
               className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)]"
@@ -193,7 +193,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
           <>
             <Button
               variant="ghost"
-              size="icon"
+              size="sm" px="0"
               onClick={goPrev}
               disabled={!hasPrev}
               aria-label="Previous photo"
@@ -206,7 +206,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
             </Button>
             <Button
               variant="ghost"
-              size="icon"
+              size="sm" px="0"
               onClick={goNext}
               disabled={!hasNext}
               aria-label="Next photo"

@@ -1,6 +1,6 @@
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { MenuButton } from '@/components/ui/menu-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -23,7 +23,7 @@ export function PageHeader({ title, actions, back, className }: PageHeaderProps)
           <Tooltip content="Go back" side="bottom">
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="xs" px="0"
               onClick={() => navigate(-1)}
               className="shrink-0"
               aria-label="Go back"

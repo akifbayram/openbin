@@ -1,6 +1,6 @@
 import { MoreHorizontal } from 'lucide-react';
 import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
 import { FieldToggleList } from './ColumnVisibilityMenu';
@@ -25,8 +25,8 @@ export function SearchBarOverflowMenu({ viewMode, onViewModeChange, applicableFi
   return (
     <div ref={menuRef} className="relative">
       <Button
-        variant="secondary"
-        size="icon"
+        variant="ghost"
+        size="sm" px="0"
         onClick={toggle}
         className="shrink-0 h-10 w-10 rounded-full"
         aria-label="More options"

@@ -1,6 +1,6 @@
 import { CheckCircle2, ChevronDown, Circle, LayoutGrid, RectangleHorizontal, RectangleVertical, Save, Search, X } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';

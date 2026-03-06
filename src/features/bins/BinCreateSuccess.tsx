@@ -1,7 +1,7 @@
 import { ChevronRight, CirclePlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatedCheckmark } from '@/components/ui/animated-checkmark';
-import { Button } from '@/components/ui/button';
+import { Button } from '@chakra-ui/react';
 import { ListItem } from '@/components/ui/list-item';
 import { resolveColor } from '@/lib/colorPalette';
 import { resolveIcon } from '@/lib/iconMap';
