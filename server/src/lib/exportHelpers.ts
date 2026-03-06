@@ -16,7 +16,7 @@ export interface ExportBin {
   id: string;
   name: string;
   location: string;
-  items: string[];
+  items: Array<string | { name: string; quantity?: number | null }>;
   notes: string;
   tags: string[];
   icon: string;
@@ -50,8 +50,8 @@ export interface ExportData {
 export async function fetchLocationBins(locationId: string) {
   const result = await query(
     `SELECT b.id, b.name, COALESCE(a.name, '') AS area_name,
-       COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name))
-         FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
+       COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name, 'quantity', bi.quantity))
+         FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
        b.notes, b.tags, b.icon, b.color, b.card_style,
        COALESCE((SELECT json_group_object(bcfv.field_id, bcfv.value) FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
        b.created_at, b.updated_at
@@ -67,6 +67,16 @@ export async function fetchLocationBins(locationId: string) {
 export function extractItemNames(items: unknown): string[] {
   if (!Array.isArray(items)) return [];
   return items.map((i: string | { name: string }) => typeof i === 'string' ? i : i.name);
+}
+
+/** Extract items with optional quantity from the items column. */
+export function extractItemsWithQuantity(items: unknown): Array<string | { name: string; quantity: number }> {
+  if (!Array.isArray(items)) return [];
+  return items.map((i: string | { name: string; quantity?: number | null }) => {
+    if (typeof i === 'string') return i;
+    if (i.quantity != null && i.quantity >= 1) return { name: i.name, quantity: i.quantity };
+    return i.name;
+  });
 }
 
 /** Load photos for a bin and convert to base64. */
@@ -163,11 +173,14 @@ export function insertBinWithShortCode(
 }
 
 /** Insert items into bin_items. Synchronous (for use in transactions). */
-export function insertBinItemsSync(binId: string, items: string[]): void {
+export function insertBinItemsSync(binId: string, items: Array<string | { name: string; quantity?: number | null }>): void {
   for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const name = typeof item === 'string' ? item : item.name;
+    const qty = typeof item === 'object' && item.quantity != null ? item.quantity : null;
     querySync(
-      'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
-      [generateUuid(), binId, items[i], i]
+      'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)',
+      [generateUuid(), binId, name, qty, i]
     );
   }
 }

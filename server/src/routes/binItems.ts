@@ -227,7 +227,8 @@ router.patch('/:id/items/:itemId/quantity', asyncHandler(async (req, res) => {
       apiKeyId: req.apiKeyId,
     });
 
-    return res.json({ id: itemId, removed: true });
+    res.json({ id: itemId, removed: true });
+    return;
   }
 
   await query(
