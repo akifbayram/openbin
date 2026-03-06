@@ -109,43 +109,7 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {isEditing ? (
-          <div className="flex-1 min-w-0 flex items-center gap-2">
-            <input
-              ref={inputRef}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
-                else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
-              }}
-              onBlur={handleSave}
-              className="flex-1 min-w-0 bg-transparent text-[15px] text-[var(--text-primary)] outline-none"
-            />
-            <input
-              value={editQuantity}
-              onChange={(e) => setEditQuantity(e.target.value.replace(/[^0-9]/g, ''))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
-                else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
-              }}
-              onBlur={handleSave}
-              placeholder="Qty"
-              className="w-14 bg-[var(--bg-elevated)] rounded-[var(--radius-sm)] px-2 py-0.5 text-[13px] text-[var(--text-primary)] text-center outline-none"
-              inputMode="numeric"
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={handleStartEdit}
-            className="flex-1 min-w-0 text-left text-[15px] text-[var(--text-primary)] leading-relaxed cursor-text"
-          >
-            {text}
-          </button>
-        )}
-
-        {/* Quantity stepper */}
+        {/* Quantity stepper (left of name) */}
         {!isEditing && quantity != null && (
           <div className="shrink-0 flex items-center gap-1">
             <button
@@ -168,6 +132,42 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
               +
             </button>
           </div>
+        )}
+
+        {isEditing ? (
+          <div className="flex-1 min-w-0 flex items-center gap-2">
+            <input
+              value={editQuantity}
+              onChange={(e) => setEditQuantity(e.target.value.replace(/[^0-9]/g, ''))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
+                else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+              }}
+              onBlur={handleSave}
+              placeholder="Qty"
+              className="w-14 bg-[var(--bg-elevated)] rounded-[var(--radius-sm)] px-2 py-0.5 text-[13px] text-[var(--text-primary)] text-center outline-none"
+              inputMode="numeric"
+            />
+            <input
+              ref={inputRef}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
+                else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+              }}
+              onBlur={handleSave}
+              className="flex-1 min-w-0 bg-transparent text-[15px] text-[var(--text-primary)] outline-none"
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleStartEdit}
+            className="flex-1 min-w-0 text-left text-[15px] text-[var(--text-primary)] leading-relaxed cursor-text"
+          >
+            {text}
+          </button>
         )}
 
         {/* Desktop delete button */}
@@ -295,14 +295,14 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
             <div key={item.id}>
               {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
               <div className="row-tight px-3.5 py-1">
-                <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
-                  {item.name}
-                </span>
                 {item.quantity != null && (
                   <span className="shrink-0 text-[13px] text-[var(--text-tertiary)] tabular-nums">
                     ×{item.quantity}
                   </span>
                 )}
+                <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
+                  {item.name}
+                </span>
               </div>
             </div>
           ) : (
