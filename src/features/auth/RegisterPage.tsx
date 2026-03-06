@@ -30,7 +30,7 @@ export function RegisterPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.registrationEnabled === false) {
-          showToast({ message: 'Registration is currently disabled' });
+          showToast({ message: 'Registration is currently disabled', variant: 'warning' });
           navigate('/login');
         }
       })
@@ -62,7 +62,7 @@ export function RegisterPage() {
     e.preventDefault();
     const error = validate();
     if (error) {
-      showToast({ message: error });
+      showToast({ message: error, variant: 'error' });
       return;
     }
     setLoading(true);
@@ -72,6 +72,7 @@ export function RegisterPage() {
     } catch (err) {
       showToast({
         message: err instanceof Error ? err.message : 'Registration failed',
+        variant: 'error',
       });
     } finally {
       setLoading(false);

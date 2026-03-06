@@ -125,7 +125,7 @@ export function AppLayout() {
     <div className="min-h-dvh bg-[var(--bg-base)] text-[var(--text-primary)] transition-colors duration-300">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-[var(--radius-full)] focus:bg-[var(--accent)] focus:text-[var(--text-on-accent)] focus:text-[14px] focus:font-medium focus:shadow-lg"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:focus:bg-[var(--accent)] focus:text-[var(--text-on-accent)] focus:text-[14px] focus:font-medium focus:shadow-lg"
       >
         Skip to main content
       </a>
@@ -176,7 +176,7 @@ export function AppLayout() {
           <Button
             size="sm"
             onClick={handleInstall}
-            className="rounded-[var(--radius-full)] h-8 px-3.5 text-[13px]"
+            className="h-8 px-3.5 text-[13px]"
           >
             Install
           </Button>

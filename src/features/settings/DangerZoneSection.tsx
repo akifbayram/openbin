@@ -31,7 +31,7 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
     try {
       await deleteAccount(deletePassword);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete account' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to delete account', variant: 'error' });
       setDeleting(false);
     }
   }
@@ -43,9 +43,9 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
           <Label className="inline-flex items-center gap-1.5"><ShieldAlert className="h-3.5 w-3.5" />Danger Zone</Label>
           <div className="flex flex-col gap-2 mt-3">
             <Button
-              variant="outline"
+              variant="destructive"
               onClick={() => setDeleteOpen(true)}
-              className="justify-start rounded-[var(--radius-sm)] h-11 text-[var(--destructive)] border-[var(--destructive)]/30"
+              className="justify-start rounded-[var(--radius-sm)]"
             >
               <Trash2 className="h-4 w-4 mr-2.5" />
               Delete Account
@@ -80,15 +80,14 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
                 type="button"
                 variant="ghost"
                 onClick={() => { setDeleteOpen(false); setDeletePassword(''); }}
-                className="rounded-[var(--radius-full)]"
-              >
+                  >
                 Cancel
               </Button>
               <Button
                 type="submit"
+                variant="destructive"
                 disabled={!deletePassword || deleting}
-                className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:opacity-90"
-              >
+                  >
                 {deleting ? 'Deleting...' : 'Delete Account'}
               </Button>
             </DialogFooter>

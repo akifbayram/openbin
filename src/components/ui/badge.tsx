@@ -1,5 +1,5 @@
 import type * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn, focusRingInset } from '@/lib/utils';
 
 const badgeVariants = {
   default: 'bg-[var(--accent)] text-[var(--text-on-accent)]',
@@ -8,33 +8,37 @@ const badgeVariants = {
   outline: 'border border-[var(--border-glass)] text-[var(--text-secondary)]',
 };
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLElement> {
+const BASE = 'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-0.5 text-[12px] font-medium transition-colors';
+
+export interface BadgeProps {
   variant?: keyof typeof badgeVariants;
+  className?: string;
+  style?: React.CSSProperties;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  children?: React.ReactNode;
 }
 
-function Badge({ className, variant = 'default', onClick, ...props }: BadgeProps) {
-  const classes = cn(
-    'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-0.5 text-[12px] font-medium transition-colors',
-    badgeVariants[variant],
-    className
-  );
-
+function Badge({ className, variant = 'default', onClick, style, children }: BadgeProps) {
   if (onClick) {
     return (
       <button
         type="button"
-        className={cn(classes, 'border-0 cursor-pointer')}
+        className={cn(BASE, badgeVariants[variant], 'border-0 cursor-pointer', focusRingInset, className)}
         onClick={onClick}
-        {...(props as React.ButtonHTMLAttributes<HTMLButtonElement>)}
-      />
+        style={style}
+      >
+        {children}
+      </button>
     );
   }
 
   return (
     <div
-      className={classes}
-      {...props}
-    />
+      className={cn(BASE, badgeVariants[variant], className)}
+      style={style}
+    >
+      {children}
+    </div>
   );
 }
 

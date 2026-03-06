@@ -46,7 +46,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
       await addCustomField(locationId, newName.trim());
       setNewName('');
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to add field' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to add field', variant: 'error' });
     } finally {
       setAdding(false);
     }
@@ -58,7 +58,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
       await updateCustomField(locationId, fieldId, { name: editName.trim() });
       setEditingId(null);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to rename field' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to rename field', variant: 'error' });
     }
   }
 
@@ -66,9 +66,9 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
     if (!locationId) return;
     try {
       await deleteCustomField(locationId, fieldId);
-      showToast({ message: `Deleted "${fieldName}"` });
+      showToast({ message: `Deleted "${fieldName}"`, variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete field' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to delete field', variant: 'error' });
     }
   }
 

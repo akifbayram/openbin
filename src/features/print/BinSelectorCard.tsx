@@ -67,7 +67,7 @@ export function BinSelectorCard({
                       key={area.id}
                       type="button"
                       onClick={() => selectByArea(area.id)}
-                      className="inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)] transition-colors"
+                      className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)] transition-colors"
                     >
                       {area.name}
                       <span className="ml-1 text-[var(--text-tertiary)]">({count})</span>
@@ -78,7 +78,7 @@ export function BinSelectorCard({
                   <button
                     type="button"
                     onClick={() => selectByArea(null)}
-                    className="inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors italic"
+                    className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors italic"
                   >
                     Unassigned
                     <span className="ml-1">({allBins.filter((b) => !b.area_id).length})</span>

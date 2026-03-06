@@ -35,7 +35,7 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
           aria-label="Leave"
           className={compact
             ? 'h-7 w-7 rounded-full text-[var(--destructive)]'
-            : 'rounded-[var(--radius-full)] h-8 px-3 text-[var(--destructive)]'
+            : 'h-8 px-3 text-[var(--destructive)]'
           }
         >
           <LogOut className="h-3.5 w-3.5" />
@@ -54,7 +54,7 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
           onClick={toggle}
           className={compact
             ? 'h-7 w-7 rounded-full'
-            : 'rounded-[var(--radius-full)] h-8 px-3'
+            : 'h-8 px-3'
           }
           aria-label="Settings"
         >

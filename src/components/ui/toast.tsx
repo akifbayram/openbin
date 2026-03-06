@@ -1,10 +1,27 @@
-import { X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, X, XCircle } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+
+type ToastVariant = 'default' | 'success' | 'error' | 'warning';
+
+const variantStyles: Record<ToastVariant, string> = {
+  default: '',
+  success: 'bg-emerald-500/10 ring-1 ring-emerald-500/20',
+  error: 'bg-[var(--destructive)]/10 ring-1 ring-[var(--destructive)]/20',
+  warning: 'bg-amber-500/10 ring-1 ring-amber-500/20',
+};
+
+const variantIcons: Record<ToastVariant, React.ReactNode> = {
+  default: <Info className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />,
+  success: <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />,
+  error: <XCircle className="h-4 w-4 text-[var(--destructive)] shrink-0" />,
+  warning: <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />,
+};
 
 interface Toast {
   id: number;
   message: string;
+  variant?: ToastVariant;
   action?: { label: string; onClick: () => void };
   duration?: number;
 }
@@ -49,14 +66,12 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => setVisible(true));
-    });
+    const frame = requestAnimationFrame(() => setVisible(true));
     const timer = setTimeout(() => {
       setVisible(false);
       setTimeout(() => onDismiss(toast.id), 300);
     }, toast.duration ?? 4000);
-    return () => clearTimeout(timer);
+    return () => { cancelAnimationFrame(frame); clearTimeout(timer); };
   }, [toast, onDismiss]);
 
   return (
@@ -64,9 +79,11 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
       className={cn(
         'pointer-events-auto flex items-center gap-3.5 rounded-[var(--radius-xl)] px-5 py-3.5 shadow-lg transition-all duration-300 min-w-[280px] max-w-[90vw]',
         'glass-heavy text-[var(--text-primary)]',
+        variantStyles[toast.variant ?? 'default'],
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
       )}
     >
+      {variantIcons[toast.variant ?? 'default']}
       <span className="text-[15px] flex-1">{toast.message}</span>
       {toast.action && (
         <button

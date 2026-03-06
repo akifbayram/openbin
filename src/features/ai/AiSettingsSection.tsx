@@ -102,9 +102,9 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
         requestTimeout: requestTimeout ? Number(requestTimeout) : null,
       });
       setSettings(saved);
-      showToast({ message: 'AI settings saved' });
+      showToast({ message: 'AI settings saved', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to save' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to save', variant: 'error' });
     }
   }
 
@@ -125,9 +125,9 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setTopP('');
       setRequestTimeout('');
       setup.setTestResult(null);
-      showToast({ message: 'AI settings removed' });
+      showToast({ message: 'AI settings removed', variant: 'success' });
     } catch {
-      showToast({ message: 'Failed to remove settings' });
+      showToast({ message: 'Failed to remove settings', variant: 'error' });
     }
   }
 
@@ -418,9 +418,8 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                   </Button>
                   {settings && settings.source !== 'env' && (
                     <Button
-                      variant="ghost"
+                      variant="destructive-ghost"
                       onClick={handleRemove}
-                      className="text-[var(--destructive)]"
                     >
                       Remove AI Settings
                     </Button>

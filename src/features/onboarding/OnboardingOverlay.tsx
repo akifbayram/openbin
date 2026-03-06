@@ -201,7 +201,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
         }
       }
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.location}` });
+      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.location}`, variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -219,7 +219,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
       setCreatedBin(bin);
       advanceStep();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.bin}` });
+      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.bin}`, variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -235,7 +235,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
       }
       complete();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to skip setup' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to skip setup', variant: 'error' });
     } finally {
       setLoading(false);
     }

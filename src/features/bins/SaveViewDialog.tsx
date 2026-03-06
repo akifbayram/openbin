@@ -22,7 +22,7 @@ export function SaveViewDialog({ open, onOpenChange, searchQuery, sort, filters 
     if (!viewName.trim()) return;
     await saveView({ name: viewName.trim(), searchQuery, sort, filters });
     onOpenChange(false);
-    showToast({ message: 'View saved' });
+    showToast({ message: 'View saved', variant: 'success' });
   }
 
   return (

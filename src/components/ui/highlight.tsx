@@ -1,16 +1,25 @@
+import { useMemo } from 'react';
+
 interface HighlightProps {
   text: string;
   query: string;
 }
 
 export function Highlight({ text, query }: HighlightProps) {
-  if (!query.trim()) return <>{text}</>;
-  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  const parts = text.split(regex);
+  const trimmed = query.trim();
+
+  const parts = useMemo(() => {
+    if (!trimmed) return null;
+    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return text.split(new RegExp(`(${escaped})`, 'gi'));
+  }, [text, trimmed]);
+
+  if (!parts) return <>{text}</>;
+
   return (
     <>
       {parts.map((part, i) =>
-        regex.test(part) ? (
+        part.toLowerCase() === trimmed.toLowerCase() ? (
           // biome-ignore lint/suspicious/noArrayIndexKey: text fragments from split() have no stable identity
           <mark key={i} className="bg-[var(--accent)]/20 text-inherit rounded-sm px-0.5">
             {part}

@@ -6,7 +6,7 @@ interface SearchInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEleme
   containerClassName?: string;
 }
 
-export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
+const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
   ({ containerClassName, className, ...props }, ref) => {
     return (
       <div
@@ -29,3 +29,6 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
     );
   },
 );
+SearchInput.displayName = 'SearchInput';
+
+export { SearchInput };

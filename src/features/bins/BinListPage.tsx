@@ -93,7 +93,7 @@ export function BinListPage() {
     if (!bin) return;
     setCopiedStyle({ icon: bin.icon, color: bin.color, card_style: bin.card_style });
     clearSelection();
-    showToast({ message: 'Style copied' });
+    showToast({ message: 'Style copied', variant: 'success' });
   }, [selectedIds, bins, clearSelection, showToast]);
 
   const handlePasteStyle = useCallback(async () => {
@@ -101,7 +101,7 @@ export function BinListPage() {
     const ids = [...selectedIds];
     await Promise.all(ids.map((id) => updateBin(id, { icon: copiedStyle.icon, color: copiedStyle.color, cardStyle: copiedStyle.card_style })));
     clearSelection();
-    showToast({ message: `Style applied to ${ids.length} ${ids.length === 1 ? t.bin : t.bins}` });
+    showToast({ message: `Style applied to ${ids.length} ${ids.length === 1 ? t.bin : t.bins}`, variant: 'success' });
   }, [copiedStyle, selectedIds, clearSelection, showToast, t]);
 
   const handleBinSortChange = useCallback((column: SortOption, direction: SortDirection) => {
@@ -198,7 +198,7 @@ export function BinListPage() {
           title={`No ${t.location} selected`}
           subtitle={`Create or join a ${t.location} to start organizing ${t.bins}`}
         >
-          <Button onClick={() => navigate('/locations')} variant="outline" className="rounded-[var(--radius-full)] mt-1">
+          <Button onClick={() => navigate('/locations')} variant="outline" className="mt-1">
             <MapPin className="h-4 w-4 mr-2" />
             {`Manage ${t.Locations}`}
           </Button>
@@ -217,7 +217,7 @@ export function BinListPage() {
               subtitle={!search && activeCount === 0 ? `Create your first ${t.bin} to get started` : undefined}
             >
               {!search && activeCount === 0 && (
-                <Button onClick={() => setCreateOpen(true)} variant="outline" className="rounded-[var(--radius-full)] mt-1">
+                <Button onClick={() => setCreateOpen(true)} variant="outline" className="mt-1">
                   <Plus className="h-4 w-4 mr-2" />
                   {`Create ${t.Bin}`}
                 </Button>

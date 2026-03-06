@@ -177,7 +177,7 @@ export function DashboardPage() {
     if (!bin) return;
     setCopiedStyle({ icon: bin.icon, color: bin.color, card_style: bin.card_style });
     clearSelection();
-    showToast({ message: 'Style copied' });
+    showToast({ message: 'Style copied', variant: 'success' });
   }, [selectedIds, allDashboardBins, clearSelection, showToast]);
 
   const handlePasteStyle = useCallback(async () => {
@@ -185,7 +185,7 @@ export function DashboardPage() {
     const ids = [...selectedIds];
     await Promise.all(ids.map((id) => updateBin(id, { icon: copiedStyle.icon, color: copiedStyle.color, cardStyle: copiedStyle.card_style })));
     clearSelection();
-    showToast({ message: `Style applied to ${ids.length} ${ids.length === 1 ? t.bin : t.bins}` });
+    showToast({ message: `Style applied to ${ids.length} ${ids.length === 1 ? t.bin : t.bins}`, variant: 'success' });
   }, [copiedStyle, selectedIds, clearSelection, showToast, t]);
 
   useEffect(() => {
@@ -226,7 +226,7 @@ export function DashboardPage() {
           <Button
             onClick={() => navigate('/locations')}
             variant="outline"
-            className="rounded-[var(--radius-full)] mt-1"
+            className="mt-1"
           >
             <MapPin className="h-4 w-4 mr-2" />
             {`Manage ${t.Locations}`}
@@ -454,7 +454,7 @@ export function DashboardPage() {
             <Button
               onClick={() => navigate('/settings#dashboard-settings')}
               variant="outline"
-              className="rounded-[var(--radius-full)] mt-1"
+              className="mt-1"
             >
               <Settings className="h-4 w-4 mr-2" />
               Dashboard Settings

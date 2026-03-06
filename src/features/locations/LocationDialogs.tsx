@@ -42,9 +42,9 @@ export function LocationCreateDialog({ open, onOpenChange }: LocationCreateDialo
       const location = await createLocation(name.trim());
       setActiveLocationId(location.id);
       onOpenChange(false);
-      showToast({ message: `Created "${location.name}"` });
+      showToast({ message: `Created "${location.name}"`, variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.location}` });
+      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.location}`, variant: 'error' });
     } finally {
       setCreating(false);
     }
@@ -112,9 +112,9 @@ export function LocationJoinDialog({ open, onOpenChange }: LocationJoinDialogPro
       const location = await joinLocation(inviteCode.trim());
       setActiveLocationId(location.id);
       onOpenChange(false);
-      showToast({ message: `Joined "${location.name}"` });
+      showToast({ message: `Joined "${location.name}"`, variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to join ${t.location}` });
+      showToast({ message: err instanceof Error ? err.message : `Failed to join ${t.location}`, variant: 'error' });
     } finally {
       setJoining(false);
     }
@@ -182,9 +182,9 @@ export function LocationRenameDialog({ locationId, currentName, open, onOpenChan
     try {
       await updateLocation(locationId, { name: name.trim() });
       onOpenChange(false);
-      showToast({ message: `${t.Location} renamed` });
+      showToast({ message: `${t.Location} renamed`, variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to rename ${t.location}` });
+      showToast({ message: err instanceof Error ? err.message : `Failed to rename ${t.location}`, variant: 'error' });
     } finally {
       setRenaming(false);
     }
@@ -248,9 +248,9 @@ export function LocationDeleteDialog({ locationId, locationName, open, onOpenCha
         setActiveLocationId(remaining.length > 0 ? remaining[0].id : null);
       }
       onOpenChange(false);
-      showToast({ message: `${t.Location} deleted` });
+      showToast({ message: `${t.Location} deleted`, variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to delete ${t.location}` });
+      showToast({ message: err instanceof Error ? err.message : `Failed to delete ${t.location}`, variant: 'error' });
     } finally {
       setDeleting(false);
     }
@@ -270,9 +270,9 @@ export function LocationDeleteDialog({ locationId, locationName, open, onOpenCha
             Cancel
           </Button>
           <Button
+            variant="destructive"
             onClick={handleDelete}
             disabled={deleting}
-            className="bg-[var(--destructive)] hover:bg-[var(--destructive-hover)] text-[var(--text-on-accent)]"
           >
             {deleting ? 'Deleting...' : 'Delete'}
           </Button>

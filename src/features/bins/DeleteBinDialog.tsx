@@ -22,15 +22,15 @@ export function DeleteBinDialog({ open, onOpenChange, binName, onConfirm }: Dele
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
+            variant="destructive"
             onClick={() => {
               onOpenChange(false);
               onConfirm();
             }}
-            className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:bg-[var(--destructive-hover)] text-[var(--text-on-accent)]"
           >
             Delete
           </Button>

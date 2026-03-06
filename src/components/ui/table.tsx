@@ -1,7 +1,7 @@
-import { cn } from '@/lib/utils';
+import { cn, glassCard } from '@/lib/utils';
 
 export function Table({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn('glass-card rounded-[var(--radius-lg)] overflow-hidden', className)}>{children}</div>;
+  return <div className={cn(glassCard, 'overflow-hidden', className)}>{children}</div>;
 }
 
 export function TableHeader({ children, className }: { children: React.ReactNode; className?: string }) {

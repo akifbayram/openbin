@@ -40,13 +40,12 @@ export function MoveBinDialog({ open, onOpenChange, binName, locations, onConfir
           />
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => handleOpenChange(false)} className="rounded-[var(--radius-full)]">
+          <Button variant="ghost" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
           <Button
             onClick={() => { if (targetId) onConfirm(targetId); }}
             disabled={!targetId}
-            className="rounded-[var(--radius-full)]"
           >
             Move
           </Button>

@@ -43,7 +43,7 @@ export function ProfilePage() {
     e.preventDefault();
     const trimmedName = displayName.trim();
     if (!trimmedName) {
-      showToast({ message: 'Display name is required' });
+      showToast({ message: 'Display name is required', variant: 'error' });
       return;
     }
     setSavingProfile(true);
@@ -53,9 +53,9 @@ export function ProfilePage() {
         body: { displayName: trimmedName, email: email.trim() || null },
       });
       updateUser(updated);
-      showToast({ message: 'Profile updated' });
+      showToast({ message: 'Profile updated', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to update profile' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to update profile', variant: 'error' });
     } finally {
       setSavingProfile(false);
     }
@@ -64,11 +64,11 @@ export function ProfilePage() {
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
     if (newPassword.length < 8) {
-      showToast({ message: 'New password must be at least 8 characters' });
+      showToast({ message: 'New password must be at least 8 characters', variant: 'error' });
       return;
     }
     if (newPassword !== confirmPassword) {
-      showToast({ message: 'Passwords do not match' });
+      showToast({ message: 'Passwords do not match', variant: 'error' });
       return;
     }
     setSavingPassword(true);
@@ -80,9 +80,9 @@ export function ProfilePage() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      showToast({ message: 'Password updated' });
+      showToast({ message: 'Password updated', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to change password' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to change password', variant: 'error' });
     } finally {
       setSavingPassword(false);
     }
@@ -100,9 +100,9 @@ export function ProfilePage() {
         body: formData,
       });
       if (user) updateUser({ ...user, avatarUrl: result.avatarUrl });
-      showToast({ message: 'Avatar updated' });
+      showToast({ message: 'Avatar updated', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to upload avatar' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to upload avatar', variant: 'error' });
     } finally {
       setUploadingAvatar(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -114,9 +114,9 @@ export function ProfilePage() {
     try {
       await apiFetch('/api/auth/avatar', { method: 'DELETE' });
       if (user) updateUser({ ...user, avatarUrl: null });
-      showToast({ message: 'Avatar removed' });
+      showToast({ message: 'Avatar removed', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to remove avatar' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to remove avatar', variant: 'error' });
     } finally {
       setUploadingAvatar(false);
     }

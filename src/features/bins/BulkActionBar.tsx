@@ -58,7 +58,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)]"
+            className="h-8 px-2 sm:px-3"
             onClick={onTag}
             aria-label="Tag"
           >
@@ -72,7 +72,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)]"
+            className="h-8 px-2 sm:px-3"
             onClick={onMove}
             aria-label="Move"
           >
@@ -84,9 +84,9 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
       {isAdmin && (
         <Tooltip content="Delete" side="top">
           <Button
-            variant="ghost"
+            variant="destructive-ghost"
             size="sm"
-            className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)] text-[var(--destructive)]"
+            className="h-8 px-2 sm:px-3"
             onClick={onDelete}
             aria-label="Delete"
           >

@@ -44,7 +44,7 @@ export function ApiKeysSection() {
       setNewKey(result.key);
       setKeyName('');
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to create API key' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to create API key', variant: 'error' });
     } finally {
       setCreating(false);
     }
@@ -55,10 +55,10 @@ export function ApiKeysSection() {
     setRevoking(true);
     try {
       await revokeApiKey(revokeId);
-      showToast({ message: 'API key revoked' });
+      showToast({ message: 'API key revoked', variant: 'success' });
       setRevokeId(null);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to revoke API key' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to revoke API key', variant: 'error' });
     } finally {
       setRevoking(false);
     }
@@ -71,7 +71,7 @@ export function ApiKeysSection() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      showToast({ message: 'Failed to copy' });
+      showToast({ message: 'Failed to copy', variant: 'error' });
     }
   }
 
@@ -214,9 +214,9 @@ export function ApiKeysSection() {
               Cancel
             </Button>
             <Button
+              variant="destructive"
               onClick={handleRevoke}
               disabled={revoking}
-              className="bg-[var(--destructive)] hover:opacity-90"
             >
               {revoking ? 'Revoking...' : 'Revoke'}
             </Button>

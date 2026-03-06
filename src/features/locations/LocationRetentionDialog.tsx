@@ -45,9 +45,9 @@ export function LocationRetentionDialog({ location, open, onOpenChange }: Locati
         trash_retention_days: trashRetention,
       });
       onOpenChange(false);
-      showToast({ message: 'Retention settings saved' });
+      showToast({ message: 'Retention settings saved', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to save retention settings' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to save retention settings', variant: 'error' });
     } finally {
       setSaving(false);
     }

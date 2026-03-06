@@ -57,7 +57,7 @@ export function Tooltip({ content, children, side = 'top', className }: TooltipP
 
     const dismiss = () => hide();
     window.addEventListener('scroll', dismiss, { capture: true, passive: true });
-    window.addEventListener('resize', dismiss);
+    window.addEventListener('resize', dismiss, { passive: true });
 
     return () => {
       cancelAnimationFrame(frame);

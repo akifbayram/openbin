@@ -188,7 +188,7 @@ export function BulkAddSummaryStep({
                       dispatch({ type: 'SET_CURRENT_INDEX', index: idx });
                       dispatch({ type: 'GO_TO_REVIEW' });
                     }}
-                    className="h-7 px-2 text-[12px] rounded-[var(--radius-full)]"
+                    className="h-7 px-2 text-[12px]"
                   >
                     <Plus className="h-3 w-3 mr-1" />
                     Include
@@ -209,7 +209,6 @@ export function BulkAddSummaryStep({
             dispatch({ type: 'GO_TO_REVIEW' });
           }}
           disabled={isCreating}
-          className="rounded-[var(--radius-full)]"
         >
           <ChevronLeft className="h-4 w-4 mr-1" />
           Back
@@ -218,7 +217,6 @@ export function BulkAddSummaryStep({
           <Button
             onClick={failed.length > 0 ? onRetryFailed : onCreateAll}
             disabled={isCreating || (createReady.length === 0 && failed.length === 0)}
-            className="rounded-[var(--radius-full)]"
           >
             {isCreating && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
             {isCreating

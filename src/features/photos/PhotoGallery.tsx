@@ -34,6 +34,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
       } catch (err) {
         showToast({
           message: err instanceof Error ? err.message : 'Failed to add photo',
+          variant: 'error',
         });
       }
     }
@@ -43,9 +44,9 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
   const handleDelete = useCallback(async (photo: Photo) => {
     try {
       await deletePhoto(photo.id);
-      showToast({ message: 'Deleted photo' });
+      showToast({ message: 'Deleted photo', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete photo' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to delete photo', variant: 'error' });
     }
   }, [showToast]);
 

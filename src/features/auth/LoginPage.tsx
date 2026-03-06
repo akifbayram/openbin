@@ -50,7 +50,7 @@ export function LoginPage() {
         if (!cancelled) {
           setDemoLoading(false);
           setDemoMode(false);
-          showToast({ message: 'Demo login failed. Please sign in manually.' });
+          showToast({ message: 'Demo login failed. Please sign in manually.', variant: 'error' });
         }
       });
     return () => { cancelled = true; };
@@ -66,6 +66,7 @@ export function LoginPage() {
     } catch (err) {
       showToast({
         message: err instanceof Error ? err.message : 'Login failed',
+        variant: 'error',
       });
     } finally {
       setLoading(false);

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn, inputBase } from '@/lib/utils';
 
 const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, type, ...props }, ref) => {
@@ -7,10 +7,7 @@ const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLI
       <input
         type={type}
         autoComplete="off"
-        className={cn(
-          'flex h-11 w-full rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3.5 py-2.5 text-base text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] transition-all duration-200 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40',
-          className
-        )}
+        className={cn('flex h-11', inputBase, className)}
         ref={ref}
         {...props}
       />

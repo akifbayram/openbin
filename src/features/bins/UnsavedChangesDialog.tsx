@@ -23,9 +23,8 @@ export function UnsavedChangesDialog({ open, onSave, onDiscard, onCancel }: Unsa
             Cancel
           </Button>
           <Button
-            variant="ghost"
+            variant="destructive-ghost"
             onClick={onDiscard}
-            className="text-[var(--destructive)]"
           >
             Discard
           </Button>

@@ -1,11 +1,15 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn, focusRing } from '@/lib/utils';
 
 const variants = {
   default:
     'bg-[var(--accent)] text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)]',
   destructive:
     'bg-[var(--destructive)] text-[var(--text-on-accent)] hover:bg-[var(--destructive-hover)] active:bg-[var(--destructive-active)]',
+  'destructive-ghost':
+    'text-[var(--destructive)] hover:bg-[var(--destructive)]/10 active:bg-[var(--destructive)]/15',
+  'destructive-outline':
+    'bg-[var(--bg-input)] border border-[var(--destructive)]/30 text-[var(--destructive)] hover:bg-[var(--destructive)]/10 active:bg-[var(--destructive)]/15',
   outline:
     'bg-[var(--bg-input)] border border-[var(--border-glass)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
   secondary:
@@ -34,7 +38,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         className={cn(
-          'inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] text-[15px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40',
+          'inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] text-[15px] font-semibold transition-colors duration-150',
+          focusRing,
+          'disabled:pointer-events-none disabled:opacity-40',
           variants[variant],
           sizes[size],
           className

@@ -10,6 +10,18 @@ export interface OptionGroupOption<K extends string> {
   disabledTitle?: string;
 }
 
+interface OptionGroupProps<K extends string> {
+  options: OptionGroupOption<K>[];
+  value: K;
+  onChange: (key: K) => void;
+  shape?: 'pill' | 'rounded';
+  size?: 'sm' | 'md' | 'lg';
+  scrollable?: boolean;
+  iconOnly?: boolean;
+  renderContent?: (opt: OptionGroupOption<K>, active: boolean) => ReactNode;
+  className?: string;
+}
+
 export function OptionGroup<K extends string>({
   options,
   value,
@@ -20,24 +32,7 @@ export function OptionGroup<K extends string>({
   iconOnly,
   renderContent,
   className,
-  // Deprecated — ignored, kept for back-compat
-  gap: _gap,
-  renderLabel: _renderLabel,
-}: {
-  options: OptionGroupOption<K>[];
-  value: K;
-  onChange: (key: K) => void;
-  shape?: 'pill' | 'rounded';
-  size?: 'sm' | 'md' | 'lg';
-  scrollable?: boolean;
-  iconOnly?: boolean;
-  renderContent?: (opt: OptionGroupOption<K>, active: boolean) => ReactNode;
-  className?: string;
-  /** @deprecated ignored */
-  gap?: string;
-  /** @deprecated use renderContent */
-  renderLabel?: (opt: { key: K; label: string }) => string;
-}) {
+}: OptionGroupProps<K>) {
   const containerRadius = shape === 'pill' ? 'rounded-full' : 'rounded-[var(--radius-md)]';
   const segmentRadius = shape === 'pill' ? 'rounded-full' : 'rounded-[var(--radius-sm)]';
   const textSize = size === 'sm' ? 'text-[12px]' : 'text-[13px]';
@@ -46,8 +41,8 @@ export function OptionGroup<K extends string>({
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef(new Map<string, HTMLElement>());
   const [hasMounted, setHasMounted] = useState(false);
-  const [prefersReducedMotion] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  const prefersReducedMotion = useRef(
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
 
@@ -71,12 +66,10 @@ export function OptionGroup<K extends string>({
   useLayoutEffect(() => {
     measure();
     if (!hasMounted) {
-      // Allow one frame for the indicator to snap into position before enabling transitions
       requestAnimationFrame(() => setHasMounted(true));
     }
   }, [measure, hasMounted]);
 
-  // Re-measure on container resize
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -85,7 +78,7 @@ export function OptionGroup<K extends string>({
     return () => ro.disconnect();
   }, [measure]);
 
-  const animate = hasMounted && !prefersReducedMotion;
+  const animate = hasMounted && !prefersReducedMotion.current;
 
   return (
     <div

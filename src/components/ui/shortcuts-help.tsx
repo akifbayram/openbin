@@ -1,4 +1,5 @@
 import { formatKeys, groupedShortcuts } from '@/lib/shortcuts';
+import { categoryHeader } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog';
 
 function KeyBadge({ children }: { children: string }) {
@@ -21,7 +22,7 @@ export function ShortcutsHelp({ open, onOpenChange }: { open: boolean; onOpenCha
         <div className="space-y-5">
           {groups.map((group) => (
             <div key={group.category}>
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-2">
+              <h3 className={`${categoryHeader} mb-2`}>
                 {group.category}
               </h3>
               <div className="space-y-1.5">

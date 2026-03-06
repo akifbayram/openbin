@@ -67,7 +67,7 @@ export function AreasPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      showToast({ message: 'Failed to copy' });
+      showToast({ message: 'Failed to copy', variant: 'error' });
     }
   }
 
@@ -88,7 +88,7 @@ export function AreasPage() {
       setNewAreaName('');
       setCreateAreaOpen(false);
     } catch (err) {
-      showToast({ message: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong' });
+      showToast({ message: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong', variant: 'error' });
     } finally {
       setCreatingArea(false);
     }
@@ -99,7 +99,7 @@ export function AreasPage() {
     try {
       await updateArea(activeLocationId, areaId, newName);
     } catch (err) {
-      showToast({ message: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong' });
+      showToast({ message: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong', variant: 'error' });
       throw err;
     }
   }
@@ -115,7 +115,7 @@ export function AreasPage() {
       await deleteArea(activeLocationId, deleteTarget.id);
       setDeleteTarget(null);
     } catch {
-      showToast({ message: 'Something went wrong' });
+      showToast({ message: 'Something went wrong', variant: 'error' });
     } finally {
       setDeletingArea(false);
     }
@@ -129,9 +129,9 @@ export function AreasPage() {
         const other = locations.find((l) => l.id !== locationId);
         setActiveLocationId(other?.id ?? null);
       }
-      showToast({ message: 'Left location' });
+      showToast({ message: 'Left location', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to leave' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to leave', variant: 'error' });
     }
   }
 
@@ -224,7 +224,7 @@ export function AreasPage() {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium px-2 py-1 rounded-[var(--radius-full)] ${isAdmin ? 'bg-[var(--accent)]/10 text-[var(--accent)]' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}>
+                    <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium px-2 py-1 ${isAdmin ? 'bg-[var(--accent)]/10 text-[var(--accent)]' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}>
                       {isAdmin ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
                       {isAdmin ? 'Admin' : 'Member'}
                     </span>
@@ -361,9 +361,9 @@ export function AreasPage() {
               Cancel
             </Button>
             <Button
+              variant="destructive"
               onClick={handleDeleteArea}
               disabled={deletingArea}
-              className="bg-[var(--destructive)] hover:bg-[var(--destructive-hover)] text-[var(--text-on-accent)]"
             >
               {deletingArea ? 'Deleting...' : 'Delete'}
             </Button>

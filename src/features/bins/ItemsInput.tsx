@@ -323,8 +323,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 size="sm"
                 onClick={handleConfirm}
                 disabled={selectedCount === 0}
-                className="rounded-[var(--radius-full)]"
-              >
+                  >
                 Add {selectedCount}
               </Button>
             </div>

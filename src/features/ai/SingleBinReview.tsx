@@ -197,7 +197,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
         itemCount: items.length,
       });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.bin}` });
+      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.bin}`, variant: 'error' });
       setIsCreating(false);
     }
   }
@@ -376,16 +376,14 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             <Button
               variant="ghost"
               onClick={handleBack}
-              className="rounded-[var(--radius-full)]"
-            >
+              >
               <ChevronLeft className="h-4 w-4 mr-1" />
               Back
             </Button>
             <Button
               onClick={handleCreate}
               disabled={!name.trim() || isAnalyzing || isCorrecting || isCreating}
-              className="rounded-[var(--radius-full)]"
-            >
+              >
               {isCreating ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-1 animate-spin" />

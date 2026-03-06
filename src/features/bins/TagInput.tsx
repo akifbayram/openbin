@@ -182,7 +182,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
                   e.preventDefault();
                   addTag(tag);
                 }}
-                className={`inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-0.5 text-[12px] font-medium transition-colors cursor-pointer ${
+                className={`inline-flex items-center px-2.5 py-0.5 text-[12px] font-medium transition-colors cursor-pointer ${
                   !baseStyle && !isHighlighted
                     ? 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
                     : ''

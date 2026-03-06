@@ -174,7 +174,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
       try {
         await reorderItems(binId, sorted.map((i) => i.id));
       } catch {
-        showToast({ message: 'Failed to sort items' });
+        showToast({ message: 'Failed to sort items', variant: 'error' });
       }
     }
   }, [items, binId, showToast]);
@@ -189,7 +189,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
     try {
       await renameItem(binId, itemId, value);
     } catch {
-      showToast({ message: 'Failed to rename item' });
+      showToast({ message: 'Failed to rename item', variant: 'error' });
     }
   }
 
@@ -200,7 +200,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
         await removeItemFromBin(binId, itemId);
       } catch {
         setExitingIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
-        showToast({ message: 'Failed to delete item' });
+        showToast({ message: 'Failed to delete item', variant: 'error' });
       }
     }, 200);
   }
@@ -216,7 +216,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
             variant="secondary"
             size="sm"
             onClick={cycleSortMode}
-            className="shrink-0 rounded-[var(--radius-full)] gap-1.5 h-8 px-3"
+            className="shrink-0 gap-1.5 h-8 px-3"
           >
             <ArrowUpDown className="h-3.5 w-3.5" />
             <span className="text-[13px]">{sortLabel}</span>

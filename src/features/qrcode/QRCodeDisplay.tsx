@@ -50,7 +50,7 @@ export function QRCodeDisplay({ binId, size = 200, shortCode, hideActions }: QRC
             variant="secondary"
             size="sm"
             onClick={handleCopy}
-            className="rounded-[var(--radius-full)] gap-1.5"
+            className="gap-1.5"
           >
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             {copied ? 'Copied' : 'Copy URL'}
@@ -59,7 +59,7 @@ export function QRCodeDisplay({ binId, size = 200, shortCode, hideActions }: QRC
             variant="secondary"
             size="sm"
             onClick={() => navigate(`/print?ids=${binId}`)}
-            className="rounded-[var(--radius-full)] gap-1.5"
+            className="gap-1.5"
           >
             <Printer className="h-4 w-4" />
             Print

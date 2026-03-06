@@ -42,9 +42,9 @@ export function TrashPage() {
   async function handleRestore(bin: Bin) {
     try {
       await restoreBinFromTrash(bin.id);
-      showToast({ message: `"${bin.name}" restored` });
+      showToast({ message: `"${bin.name}" restored`, variant: 'success' });
     } catch {
-      showToast({ message: `Failed to restore ${t.bin}` });
+      showToast({ message: `Failed to restore ${t.bin}`, variant: 'error' });
     }
   }
 
@@ -53,9 +53,9 @@ export function TrashPage() {
     try {
       await permanentDeleteBin(confirmDelete.id);
       notifyBinsChanged();
-      showToast({ message: `"${confirmDelete.name}" permanently deleted` });
+      showToast({ message: `"${confirmDelete.name}" permanently deleted`, variant: 'success' });
     } catch {
-      showToast({ message: `Failed to delete ${t.bin}` });
+      showToast({ message: `Failed to delete ${t.bin}`, variant: 'error' });
     } finally {
       setConfirmDelete(null);
     }
@@ -115,7 +115,7 @@ export function TrashPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRestore(bin)}
-                        className="h-8 px-2.5 rounded-[var(--radius-full)] text-[var(--accent)]"
+                        className="h-8 px-2.5 text-[var(--accent)]"
                       >
                         <RotateCcw className="h-3.5 w-3.5 mr-1" />
                         Restore
@@ -124,7 +124,7 @@ export function TrashPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setConfirmDelete(bin)}
-                        className="h-8 px-2.5 rounded-[var(--radius-full)] text-[var(--destructive)]"
+                        className="h-8 px-2.5 text-[var(--destructive)]"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -157,14 +157,13 @@ export function TrashPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setConfirmDelete(null)} className="rounded-[var(--radius-full)]">
+            <Button variant="ghost" onClick={() => setConfirmDelete(null)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handlePermanentDelete}
-              className="rounded-[var(--radius-full)]"
-            >
+              >
               Delete Forever
             </Button>
           </DialogFooter>

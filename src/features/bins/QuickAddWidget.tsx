@@ -85,7 +85,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               size="sm"
               onClick={quickAdd.handleExtractClick}
               disabled={!quickAdd.expandedText.trim() || quickAdd.isStructuring}
-              className="rounded-[var(--radius-full)] gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
+              className="gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
             >
               {quickAdd.isStructuring ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -126,7 +126,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               variant="ghost"
               size="sm"
               onClick={quickAdd.backToExpanded}
-              className="rounded-[var(--radius-full)] gap-0.5"
+              className="gap-0.5"
             >
               <ChevronLeft className="h-4 w-4" />
               Back
@@ -137,8 +137,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               size="sm"
               onClick={quickAdd.handleConfirmAdd}
               disabled={quickAdd.selectedCount === 0}
-              className="rounded-[var(--radius-full)]"
-            >
+              >
               Add {quickAdd.selectedCount}
             </Button>
           </div>

@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import * as React from 'react';
 import { useFocusTrap } from '@/lib/useFocusTrap';
 import { useOverlayAnimation } from '@/lib/useOverlayAnimation';
-import { cn } from '@/lib/utils';
+import { cn, overlayBackdrop } from '@/lib/utils';
 
 interface DialogContextValue {
   open: boolean;
@@ -120,7 +120,7 @@ function DialogContent({
           {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay dismisses dialog on click */}
           <div
             role="presentation"
-            className="fixed inset-0 bg-[var(--overlay-backdrop)] backdrop-blur-sm transition-opacity duration-200"
+            className={`${overlayBackdrop} duration-200`}
             style={{ opacity: isEntered ? 1 : 0 }}
             onClick={() => onOpenChange(false)}
           />

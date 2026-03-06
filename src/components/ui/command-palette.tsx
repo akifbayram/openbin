@@ -2,7 +2,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { formatKeys, SHORTCUTS, type ShortcutDef } from '@/lib/shortcuts';
 import { useOverlayAnimation } from '@/lib/useOverlayAnimation';
-import { cn } from '@/lib/utils';
+import { categoryHeader, cn, overlayBackdrop } from '@/lib/utils';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -114,7 +114,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
       <div
         role="presentation"
         className={cn(
-          'fixed inset-0 bg-[var(--overlay-backdrop)] backdrop-blur-sm transition-opacity duration-150',
+          overlayBackdrop, 'duration-150',
           isEntered ? 'opacity-100' : 'opacity-0',
         )}
         onClick={() => onOpenChange(false)}
@@ -149,7 +149,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
               return (
                 <div key={group.label}>
                   <div className="px-4 pt-2 pb-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                    <span className={categoryHeader}>
                       {group.label}
                     </span>
                   </div>

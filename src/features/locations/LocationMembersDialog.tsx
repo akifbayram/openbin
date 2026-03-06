@@ -42,7 +42,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      showToast({ message: 'Failed to copy' });
+      showToast({ message: 'Failed to copy', variant: 'error' });
     }
   }
 
@@ -50,9 +50,9 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
     setRegenerating(true);
     try {
       await regenerateInvite(locationId);
-      showToast({ message: 'Invite code regenerated' });
+      showToast({ message: 'Invite code regenerated', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to regenerate' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to regenerate', variant: 'error' });
     } finally {
       setRegenerating(false);
     }
@@ -61,18 +61,18 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   async function handleRemoveMember(userId: string) {
     try {
       await removeMember(locationId, userId);
-      showToast({ message: 'Member removed' });
+      showToast({ message: 'Member removed', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to remove member' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to remove member', variant: 'error' });
     }
   }
 
   async function handleRoleChange(userId: string, newRole: 'admin' | 'member') {
     try {
       await changeMemberRole(locationId, userId, newRole);
-      showToast({ message: `Role updated to ${newRole}` });
+      showToast({ message: `Role updated to ${newRole}`, variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to change role' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to change role', variant: 'error' });
     }
   }
 
@@ -85,9 +85,9 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
         setActiveLocationId(other?.id ?? null);
       }
       onOpenChange(false);
-      showToast({ message: 'Left location' });
+      showToast({ message: 'Left location', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to leave' });
+      showToast({ message: err instanceof Error ? err.message : 'Failed to leave', variant: 'error' });
     }
   }
 
@@ -179,9 +179,9 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                   {isAdmin && !isSelf && (
                     <Tooltip content="Remove member" side="bottom">
                       <Button
-                        variant="ghost"
+                        variant="destructive-ghost"
                         size="icon-sm"
-                        className="text-[var(--destructive)] shrink-0"
+                        className="shrink-0"
                         onClick={() => handleRemoveMember(member.user_id)}
                         aria-label="Remove member"
                       >
@@ -198,9 +198,9 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
         {/* Leave button for non-admins */}
         {!isAdmin && (
           <Button
-            variant="outline"
+            variant="destructive-outline"
             onClick={handleLeave}
-            className="w-full rounded-[var(--radius-sm)] text-[var(--destructive)]"
+            className="w-full rounded-[var(--radius-sm)]"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Leave Location
