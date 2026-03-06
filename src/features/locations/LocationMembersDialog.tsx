@@ -108,7 +108,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                 variant="ghost"
                 size="xs" px="0"
                 onClick={handleCopyInvite}
-                className="shrink-0"
+                flexShrink={0}
                 aria-label="Copy invite code"
               >
                 {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
@@ -121,7 +121,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                   size="xs" px="0"
                   onClick={handleRegenerate}
                   disabled={regenerating}
-                  className="shrink-0"
+                  flexShrink={0}
                   aria-label="Regenerate invite code"
                 >
                   <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
@@ -177,7 +177,8 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                       <Button
                         variant="ghost"
                         size="xs" px="0"
-                        className="text-red-500 dark:text-red-400 shrink-0"
+                        flexShrink={0}
+                        className="text-red-500 dark:text-red-400"
                         onClick={() => handleRemoveMember(member.user_id)}
                         aria-label="Remove member"
                       >
@@ -196,7 +197,9 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
           <Button
             variant="outline"
             onClick={handleLeave}
-            className="w-full rounded-[var(--radius-sm)] text-red-500 dark:text-red-400"
+            width="full"
+            borderRadius="var(--radius-sm)"
+            className="text-red-500 dark:text-red-400"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Leave Location

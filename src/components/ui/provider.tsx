@@ -8,6 +8,15 @@ const config = defineConfig({
       colorPalette: "purple",
     },
   },
+  theme: {
+    recipes: {
+      button: {
+        base: {
+          borderRadius: "full",
+        },
+      },
+    },
+  },
 })
 
 const system = createSystem(defaultConfig, config)

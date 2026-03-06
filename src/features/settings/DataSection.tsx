@@ -257,13 +257,12 @@ export function DataSection({
                 setConfirmReplace(false);
                 setPendingData(null);
               }}
-              className="rounded-[var(--radius-full)]"
             >
               Cancel
             </Button>
             <Button
               onClick={handleReplaceImport}
-              className="rounded-[var(--radius-full)] bg-red-500 hover:opacity-90"
+              className="bg-red-500 hover:opacity-90"
             >
               Replace All
             </Button>

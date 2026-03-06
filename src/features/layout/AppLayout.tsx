@@ -176,7 +176,9 @@ export function AppLayout() {
           <Button
             size="sm"
             onClick={handleInstall}
-            className="rounded-[var(--radius-full)] h-8 px-3.5 text-[13px]"
+            height="8"
+            fontSize="13px"
+            className="px-3.5"
           >
             Install
           </Button>

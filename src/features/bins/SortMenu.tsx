@@ -32,7 +32,7 @@ export function SortMenu({ sort, onSortChange }: SortMenuProps) {
           variant="ghost"
           size="sm" px="0"
           onClick={toggle}
-          className="shrink-0 h-10 w-10 rounded-full relative"
+          flexShrink={0} height="10" width="10" className="relative"
           aria-label={`Sort by ${sortLabels[sort]}`}
         >
           <ArrowUpDown className="h-4 w-4" />

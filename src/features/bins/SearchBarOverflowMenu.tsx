@@ -28,7 +28,7 @@ export function SearchBarOverflowMenu({ viewMode, onViewModeChange, applicableFi
         variant="ghost"
         size="sm" px="0"
         onClick={toggle}
-        className="shrink-0 h-10 w-10 rounded-full"
+        flexShrink={0} height="10" width="10"
         aria-label="More options"
         aria-haspopup="menu"
         aria-expanded={isOpen}

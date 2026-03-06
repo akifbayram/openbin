@@ -167,7 +167,10 @@ export function RegisterPage() {
               <Button
                 type="submit"
                 disabled={!username.trim() || !password || !confirmPassword || loading}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+                width="full"
+                borderRadius="var(--radius-md)"
+                height="11"
+                fontSize="15px"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 {loading ? 'Creating account...' : 'Create Account'}

@@ -146,7 +146,8 @@ export function AreasPage() {
               variant="ghost"
               size="sm"
               onClick={() => setJoinLocationOpen(true)}
-              className="h-10 px-3.5"
+              className="px-3.5"
+              height="10"
             >
               <LogIn className="h-4 w-4 mr-1.5" />
               Join
@@ -154,7 +155,7 @@ export function AreasPage() {
             <Button
               onClick={() => setCreateLocationOpen(true)}
               size="sm" px="0"
-              className="h-10 w-10 rounded-full"
+              height="10" width="10"
               aria-label={`Create ${t.location}`}
             >
               <Plus className="h-5 w-5" />

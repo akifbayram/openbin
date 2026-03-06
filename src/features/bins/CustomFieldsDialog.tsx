@@ -97,10 +97,10 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                     autoFocus
                     className="h-8 text-[14px]"
                   />
-                  <Button type="submit" size="xs" px="0" variant="ghost" className="shrink-0" disabled={!editName.trim()}>
+                  <Button type="submit" size="xs" px="0" variant="ghost" flexShrink={0} disabled={!editName.trim()}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                  <Button type="button" size="xs" px="0" variant="ghost" className="shrink-0" onClick={() => setEditingId(null)}>
+                  <Button type="button" size="xs" px="0" variant="ghost" flexShrink={0} onClick={() => setEditingId(null)}>
                     <X className="h-3.5 w-3.5" />
                   </Button>
                 </form>
@@ -112,7 +112,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                   <Button
                     size="xs" px="0"
                     variant="ghost"
-                    className="shrink-0"
+                    flexShrink={0}
                     onClick={() => { setEditingId(field.id); setEditName(field.name); }}
                   >
                     <Pencil className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
@@ -120,7 +120,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                   <Button
                     size="xs" px="0"
                     variant="ghost"
-                    className="shrink-0"
+                    flexShrink={0}
                     onClick={() => handleDelete(field.id, field.name)}
                   >
                     <Trash2 className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
@@ -137,7 +137,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
               placeholder="New field name"
               className="h-8 text-[14px]"
             />
-            <Button type="submit" size="sm" disabled={!newName.trim() || adding} className="shrink-0">
+            <Button type="submit" size="sm" disabled={!newName.trim() || adding} flexShrink={0}>
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add
             </Button>

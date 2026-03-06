@@ -28,7 +28,10 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
         <div className="flex gap-2">
           <Button
             onClick={() => window.print()}
-            className="flex-1 rounded-[var(--radius-md)] h-12 text-[17px] shadow-[0_2px_12px_rgba(147,51,234,0.3)] dark:shadow-[0_2px_12px_rgba(168,85,247,0.4)]"
+            borderRadius="var(--radius-md)"
+            height="12"
+            fontSize="17px"
+            className="flex-1 shadow-[0_2px_12px_rgba(147,51,234,0.3)] dark:shadow-[0_2px_12px_rgba(168,85,247,0.4)]"
           >
             <Printer className="h-5 w-5 mr-2.5" />
             Print {selectedBins.length} {selectedBins.length !== 1 ? 'Labels' : 'Label'}
@@ -37,7 +40,10 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
             variant="outline"
             onClick={onDownloadPDF}
             disabled={pdfLoading}
-            className="rounded-[var(--radius-md)] h-12 px-4 text-[15px]"
+            borderRadius="var(--radius-md)"
+            height="12"
+            fontSize="15px"
+            className="px-4"
           >
             <Download className={cn('h-5 w-5 mr-1.5', pdfLoading && 'animate-pulse')} />
             PDF

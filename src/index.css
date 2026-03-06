@@ -1,3 +1,6 @@
+/* Declare Chakra UI layers BEFORE Tailwind so utilities always win the cascade */
+@layer reset, base, recipes, tokens, utilities;
+
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));

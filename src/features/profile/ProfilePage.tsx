@@ -210,7 +210,9 @@ export function ProfilePage() {
             <Button
               type="submit"
               disabled={savingProfile || !displayName.trim()}
-              className="rounded-[var(--radius-sm)] h-11 mt-1"
+              borderRadius="var(--radius-sm)"
+              height="11"
+              mt="1"
             >
               {savingProfile ? 'Saving...' : 'Save'}
             </Button>
@@ -264,7 +266,9 @@ export function ProfilePage() {
               <Button
                 type="submit"
                 disabled={savingPassword || !currentPassword || !newPassword || !confirmPassword}
-                className="rounded-[var(--radius-sm)] h-11 mt-1"
+                borderRadius="var(--radius-sm)"
+                height="11"
+                mt="1"
               >
                 {savingPassword ? 'Updating...' : 'Update Password'}
               </Button>

@@ -120,7 +120,8 @@ export function ApiKeysSection() {
                     <Button
                       variant="ghost"
                       size="xs" px="0"
-                      className="text-red-500 dark:text-red-400 shrink-0"
+                      className="text-red-500 dark:text-red-400"
+                      flexShrink={0}
                       onClick={() => setRevokeId(k.id)}
                       aria-label="Revoke API key"
                     >
@@ -157,7 +158,7 @@ export function ApiKeysSection() {
                 <Button
                   variant="outline"
                   size="xs" px="0"
-                  className="shrink-0"
+                  flexShrink={0}
                   onClick={handleCopy}
                 >
                   {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}

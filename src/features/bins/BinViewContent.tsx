@@ -62,7 +62,7 @@ export function BinViewContent({
         <Card className="border-t-2 border-t-red-500">
           <CardContent>
             <p className="text-[14px] text-red-500 dark:text-red-400">{aiError}</p>
-            <Button variant="ghost" size="sm" onClick={onClearSuggestions} className="mt-2">
+            <Button variant="ghost" size="sm" onClick={onClearSuggestions} mt="2">
               Dismiss
             </Button>
           </CardContent>

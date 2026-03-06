@@ -59,7 +59,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)]"
+            height="8" className="px-2 sm:px-3"
             onClick={onTag}
             aria-label="Tag"
           >
@@ -73,7 +73,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)]"
+            height="8" className="px-2 sm:px-3"
             onClick={onMove}
             aria-label="Move"
           >
@@ -87,7 +87,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 sm:px-3 rounded-[var(--radius-full)] text-red-500 dark:text-red-400"
+            height="8" className="px-2 sm:px-3 text-red-500 dark:text-red-400"
             onClick={onDelete}
             aria-label="Delete"
           >
@@ -102,7 +102,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
             <Button
               variant="ghost"
               size="sm" px="0"
-              className="h-8 w-8 rounded-full"
+              height="8" width="8"
               onClick={() => setMoreOpen((o) => !o)}
               aria-label="More actions"
             >
@@ -192,7 +192,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
         <Button
           variant="ghost"
           size="sm" px="0"
-          className="h-8 w-8 rounded-full"
+          height="8" width="8"
           onClick={onClear}
           aria-label="Clear selection"
         >

@@ -63,7 +63,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
               size="xs" px="0"
               onClick={handleSave}
               disabled={!editValue.trim() || saving}
-              className="shrink-0"
+              flexShrink={0}
               aria-label="Save"
             >
               <Check className="h-4 w-4 text-purple-600 dark:text-purple-500" />
@@ -74,7 +74,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
               variant="ghost"
               size="xs" px="0"
               onClick={cancelEdit}
-              className="shrink-0"
+              flexShrink={0}
               aria-label="Cancel"
             >
               <X className="h-4 w-4" />

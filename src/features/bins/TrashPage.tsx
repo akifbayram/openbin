@@ -114,7 +114,7 @@ export function TrashPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRestore(bin)}
-                        className="h-8 px-2.5 rounded-[var(--radius-full)] text-purple-600 dark:text-purple-500"
+                        height="8" className="px-2.5 text-purple-600 dark:text-purple-500"
                       >
                         <RotateCcw className="h-3.5 w-3.5 mr-1" />
                         Restore
@@ -123,7 +123,7 @@ export function TrashPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setConfirmDelete(bin)}
-                        className="h-8 px-2.5 rounded-[var(--radius-full)] text-red-500 dark:text-red-400"
+                        height="8" className="px-2.5 text-red-500 dark:text-red-400"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -159,13 +159,12 @@ export function TrashPage() {
             </div>
           </div>
           <Dialog.Footer>
-            <Button variant="ghost" onClick={() => setConfirmDelete(null)} className="rounded-[var(--radius-full)]">
+            <Button variant="ghost" onClick={() => setConfirmDelete(null)}>
               Cancel
             </Button>
             <Button
               variant="solid" colorPalette="red"
               onClick={handlePermanentDelete}
-              className="rounded-[var(--radius-full)]"
             >
               Delete Forever
             </Button>

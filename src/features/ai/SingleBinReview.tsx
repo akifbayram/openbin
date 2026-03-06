@@ -373,7 +373,6 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             <Button
               variant="ghost"
               onClick={handleBack}
-              className="rounded-[var(--radius-full)]"
             >
               <ChevronLeft className="h-4 w-4 mr-1" />
               Back
@@ -381,7 +380,6 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             <Button
               onClick={handleCreate}
               disabled={!name.trim() || isAnalyzing || isCorrecting || isCreating}
-              className="rounded-[var(--radius-full)]"
             >
               {isCreating ? (
                 <>

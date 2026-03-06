@@ -289,7 +289,6 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           variant="ghost"
           size="sm"
           onClick={onBack}
-          className="rounded-[var(--radius-full)]"
         >
           <ChevronLeft className="h-4 w-4 mr-0.5" />
           Back
@@ -304,7 +303,6 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           }}
           disabled={state.photos.length === 0}
           size="sm"
-          className="rounded-[var(--radius-full)]"
         >
           Continue
         </Button>

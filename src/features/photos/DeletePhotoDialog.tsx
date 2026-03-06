@@ -21,7 +21,7 @@ export function DeletePhotoDialog({ open, onOpenChange, onConfirm }: DeletePhoto
           </Dialog.Description>
         </Dialog.Header>
         <Dialog.Footer>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
@@ -29,7 +29,7 @@ export function DeletePhotoDialog({ open, onOpenChange, onConfirm }: DeletePhoto
               onOpenChange(false);
               onConfirm();
             }}
-            className="rounded-[var(--radius-full)] bg-red-500 hover:bg-red-600 text-white"
+            className="bg-red-500 hover:bg-red-600 text-white"
           >
             Delete
           </Button>

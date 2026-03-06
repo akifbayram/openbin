@@ -381,7 +381,7 @@ export function BinCreateForm({
         <Button
           type="submit"
           disabled={!name.trim() || submitting}
-          className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+          width="full" borderRadius="var(--radius-md)" height="11" fontSize="15px"
         >
           {submitting ? 'Creating...' : (submitLabel ?? `Create ${t.Bin}`)}
         </Button>

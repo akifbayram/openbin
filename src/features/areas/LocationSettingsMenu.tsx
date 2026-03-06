@@ -31,13 +31,12 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
         <Button
           variant="ghost"
           size={compact ? 'sm' : 'sm'}
-          px={compact ? '0' : undefined}
+          px={compact ? '0' : '3'}
           onClick={onLeave}
           aria-label="Leave"
-          className={compact
-            ? 'h-7 w-7 rounded-full text-red-500 dark:text-red-400'
-            : 'rounded-[var(--radius-full)] h-8 px-3 text-red-500 dark:text-red-400'
-          }
+          className="text-red-500 dark:text-red-400"
+          height={compact ? '7' : '8'}
+          width={compact ? '7' : undefined}
         >
           <LogOut className="h-3.5 w-3.5" />
           {!compact && <span className="ml-1.5">Leave</span>}
@@ -52,12 +51,10 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
         <Button
           variant="ghost"
           size={compact ? 'sm' : 'sm'}
-          px={compact ? '0' : undefined}
+          px={compact ? '0' : '3'}
           onClick={toggle}
-          className={compact
-            ? 'h-7 w-7 rounded-full'
-            : 'rounded-[var(--radius-full)] h-8 px-3'
-          }
+          height={compact ? '7' : '8'}
+          width={compact ? '7' : undefined}
           aria-label="Settings"
         >
           <Settings className="h-3.5 w-3.5" />

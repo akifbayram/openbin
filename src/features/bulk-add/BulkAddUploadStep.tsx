@@ -119,7 +119,6 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
         <Button
           onClick={() => dispatch({ type: 'GO_TO_REVIEW' })}
           disabled={photos.length === 0}
-          className="rounded-[var(--radius-full)]"
         >
           Continue
         </Button>

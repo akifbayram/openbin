@@ -109,7 +109,10 @@ function DemoAiShowcase({ onNext }: { onNext: () => void }) {
       <Button
         type="button"
         onClick={onNext}
-        className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+        width="full"
+        borderRadius="var(--radius-md)"
+        height="11"
+        fontSize="15px"
       >
         Next
       </Button>
@@ -290,7 +293,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <Button
                 type="button"
                 onClick={() => advanceWithLocation(activeLocationId)}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+                width="full"
+                borderRadius="var(--radius-md)"
+                height="11"
+                fontSize="15px"
               >
                 Get Started
               </Button>
@@ -348,7 +354,8 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                       size="sm"
                       onClick={handleAddArea}
                       disabled={!areaInput.trim()}
-                      className="h-10 px-3"
+                      height="10"
+                      className="px-3"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -376,7 +383,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                 type="button"
                 onClick={handleCreateLocation}
                 disabled={!locationName.trim() || loading}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+                width="full"
+                borderRadius="var(--radius-md)"
+                height="11"
+                fontSize="15px"
               >
                 {loading ? 'Creating...' : 'Continue'}
               </Button>
@@ -424,7 +434,11 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                 type="button"
                 onClick={handleCreateBin}
                 disabled={!binName.trim() || loading}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px] mt-5"
+                width="full"
+                borderRadius="var(--radius-md)"
+                height="11"
+                fontSize="15px"
+                mt="5"
               >
                 {loading ? 'Creating...' : `Create ${t.Bin}`}
               </Button>
@@ -453,7 +467,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <Button
                 type="button"
                 onClick={advanceStep}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+                width="full"
+                borderRadius="var(--radius-md)"
+                height="11"
+                fontSize="15px"
               >
                 Next
               </Button>
@@ -475,7 +492,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                   type="button"
                   variant="ghost"
                   onClick={() => { complete(); navigate('/print'); }}
-                  className="flex-1 rounded-[var(--radius-md)] h-11 text-[15px] gap-1.5"
+                  borderRadius="var(--radius-md)"
+                  height="11"
+                  fontSize="15px"
+                  className="flex-1 gap-1.5"
                 >
                   <Printer className="h-4 w-4" />
                   Print Label
@@ -483,7 +503,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                 <Button
                   type="button"
                   onClick={advanceStep}
-                  className="flex-1 rounded-[var(--radius-md)] h-11 text-[15px]"
+                  borderRadius="var(--radius-md)"
+                  height="11"
+                  fontSize="15px"
+                  className="flex-1"
                 >
                   Next
                 </Button>
@@ -526,7 +549,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <Button
                 type="button"
                 onClick={() => { complete(); navigate('/'); }}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+                width="full"
+                borderRadius="var(--radius-md)"
+                height="11"
+                fontSize="15px"
               >
                 Go to Dashboard
               </Button>
@@ -561,7 +587,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <Button
                 type="button"
                 onClick={() => { complete(); navigate('/settings#ai-settings'); }}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+                width="full"
+                borderRadius="var(--radius-md)"
+                height="11"
+                fontSize="15px"
               >
                 Set Up Now
               </Button>
@@ -609,7 +638,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <Button
                 type="button"
                 onClick={() => { complete(); navigate('/'); }}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+                width="full"
+                borderRadius="var(--radius-md)"
+                height="11"
+                fontSize="15px"
               >
                 Go to Dashboard
               </Button>

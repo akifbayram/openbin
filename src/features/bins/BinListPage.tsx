@@ -128,7 +128,7 @@ export function BinListPage() {
                   onClick={() => openScanDialog()}
                   size="sm" px="0"
                   variant="ghost"
-                  className="h-10 w-10 rounded-full"
+                  height="10" width="10"
                   aria-label="Scan QR code"
                 >
                   <ScanLine className="h-5 w-5" />
@@ -140,7 +140,7 @@ export function BinListPage() {
                     onClick={() => setCommandOpen(true)}
                     size="sm" px="0"
                     variant="ghost"
-                    className="h-10 w-10 rounded-full"
+                    height="10" width="10"
                     aria-label="Ask AI"
                   >
                     <Sparkles className="h-5 w-5" />
@@ -152,7 +152,7 @@ export function BinListPage() {
               <Button
                 onClick={() => setCreateOpen(true)}
                 size="sm" px="0"
-                className="h-10 w-10 rounded-full"
+                height="10" width="10"
                 aria-label={`New ${t.bin}`}
               >
                 <Plus className="h-5 w-5" />
@@ -197,7 +197,7 @@ export function BinListPage() {
           title={`No ${t.location} selected`}
           subtitle={`Create or join a ${t.location} to start organizing ${t.bins}`}
         >
-          <Button onClick={() => navigate('/locations')} variant="outline" className="rounded-[var(--radius-full)] mt-1">
+          <Button onClick={() => navigate('/locations')} variant="outline" mt="1">
             <MapPin className="h-4 w-4 mr-2" />
             {`Manage ${t.Locations}`}
           </Button>
@@ -216,7 +216,7 @@ export function BinListPage() {
               subtitle={!search && activeCount === 0 ? `Create your first ${t.bin} to get started` : undefined}
             >
               {!search && activeCount === 0 && (
-                <Button onClick={() => setCreateOpen(true)} variant="outline" className="rounded-[var(--radius-full)] mt-1">
+                <Button onClick={() => setCreateOpen(true)} variant="outline" mt="1">
                   <Plus className="h-4 w-4 mr-2" />
                   {`Create ${t.Bin}`}
                 </Button>

@@ -123,7 +123,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
                     <p className="text-[17px] font-semibold">Not a {t.Bin} QR Code</p>
                     <p className="text-[13px] text-gray-500 dark:text-gray-400 break-all max-w-xs mx-auto leading-relaxed">{error}</p>
                   </div>
-                  <Button variant="outline" onClick={handleRetry} className="mt-1">
+                  <Button variant="outline" onClick={handleRetry} mt="1">
                     <RotateCcw className="h-4 w-4 mr-1.5" />
                     Scan Again
                   </Button>
@@ -200,7 +200,8 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
               <Button
                 onClick={handleManualLookup}
                 disabled={!manualCode.trim() || manualLoading}
-                className="rounded-[var(--radius-md)] shrink-0"
+                borderRadius="var(--radius-md)"
+                flexShrink={0}
               >
                 <Search className="h-4 w-4 mr-1.5" />
                 Look Up

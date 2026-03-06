@@ -270,7 +270,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 size="sm"
                 onClick={handleExtract}
                 disabled={!expandedText.trim() || isStructuring}
-                className="rounded-[var(--radius-full)] gap-1.5 bg-purple-600 dark:bg-purple-500 hover:bg-purple-700 dark:hover:bg-purple-400"
+                className="gap-1.5 bg-purple-600 dark:bg-purple-500 hover:bg-purple-700 dark:hover:bg-purple-400"
               >
                 {isStructuring ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -311,7 +311,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 variant="ghost"
                 size="sm"
                 onClick={handleBack}
-                className="rounded-[var(--radius-full)] gap-0.5"
+                className="gap-0.5"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back
@@ -322,7 +322,6 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 size="sm"
                 onClick={handleConfirm}
                 disabled={selectedCount === 0}
-                className="rounded-[var(--radius-full)]"
               >
                 Add {selectedCount}
               </Button>

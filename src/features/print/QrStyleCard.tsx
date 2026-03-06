@@ -342,7 +342,7 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
                   variant="outline"
                   size="sm"
                   onClick={() => onUpdateStyle({ ...DEFAULT_QR_STYLE })}
-                  className="w-full"
+                  width="full"
                 >
                   <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
                   Reset QR Style

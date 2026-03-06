@@ -75,7 +75,7 @@ export function BinDetailToolbar({
           size="xs" px="0"
           onClick={onBack}
           aria-label="Go back"
-          className="hidden lg:flex shrink-0 text-purple-600 dark:text-purple-400"
+          flexShrink={0} className="hidden lg:flex text-purple-600 dark:text-purple-400"
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
@@ -103,18 +103,16 @@ export function BinDetailToolbar({
         <div className="flex gap-1.5">
           <Button
             variant="ghost"
-            size="sm" px="0"
+            size="sm"
             onClick={onCancelEdit}
-            className="lg:w-auto lg:px-3"
           >
             <X className="h-4 w-4 lg:hidden" />
             <span className="hidden lg:inline text-sm">Cancel</span>
           </Button>
           <Button
-            size="sm" px="0"
+            size="sm"
             onClick={onSave}
             disabled={!editNameValid}
-            className="lg:w-auto lg:px-3"
           >
             <Check className="h-4 w-4 lg:hidden" />
             <Save className="h-4 w-4 mr-1.5 hidden lg:block" />

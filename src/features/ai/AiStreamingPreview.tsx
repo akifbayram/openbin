@@ -68,7 +68,7 @@ export function AiAnalyzeError({ error, onRetry }: { error: string; onRetry: () 
       <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
       <div className="flex-1">
         <p className="text-[13px] text-red-500 dark:text-red-400">{error}</p>
-        <Button variant="ghost" size="sm" onClick={onRetry} className="mt-1 h-7 px-2 text-[12px]">
+        <Button variant="ghost" size="sm" onClick={onRetry} mt="1" height="7" fontSize="12px" px="2">
           Retry
         </Button>
       </div>

@@ -65,13 +65,13 @@ export function CommandSuccess({ result, onAskAnother, onClose, onBinClick }: Co
       )}
 
       <div className="flex w-full flex-col gap-2 scan-text-fade-delay">
-        <Button className="w-full" onClick={onAskAnother}>
+        <Button width="full" onClick={onAskAnother}>
           <Sparkles className="mr-2 h-4 w-4" />
           Ask another
         </Button>
         <Button
           variant="ghost"
-          className="w-full"
+          width="full"
           onClick={onClose}
         >
           Done

@@ -124,7 +124,10 @@ export function LoginPage() {
                   <Button
                     type="submit"
                     disabled={!username.trim() || !password || loading}
-                    className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+                    width="full"
+                    borderRadius="var(--radius-md)"
+                    height="11"
+                    fontSize="15px"
                   >
                     <LogIn className="h-4 w-4 mr-2" />
                     {loading ? 'Signing in...' : 'Sign In'}

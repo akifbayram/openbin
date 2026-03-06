@@ -61,7 +61,7 @@ export function PersonalizationSection({ settings, updateSettings, resetSettings
               })}
             </div>
           </Disclosure>
-          <Button variant="outline" onClick={resetSettings} className="justify-start rounded-[var(--radius-sm)] h-11">
+          <Button variant="outline" onClick={resetSettings} justifyContent="start" borderRadius="var(--radius-sm)" height="11">
             <RotateCcw className="h-4 w-4 mr-2.5" />
             Reset to Default
           </Button>

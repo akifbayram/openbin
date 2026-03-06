@@ -392,7 +392,6 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
             <Button
               variant="ghost"
               onClick={handleBack}
-              className="rounded-[var(--radius-full)]"
             >
               <ChevronLeft className="h-4 w-4 mr-1" />
               Back
@@ -401,14 +400,13 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               <Button
                 variant="ghost"
                 onClick={handleSkip}
-                className="rounded-[var(--radius-full)] text-gray-500 dark:text-gray-400"
+                className="text-gray-500 dark:text-gray-400"
               >
                 <SkipForward className="h-4 w-4 mr-1" />
                 Skip
               </Button>
               <Button
                 onClick={handleNext}
-                className="rounded-[var(--radius-full)]"
               >
                 {isLast ? 'Done' : 'Next'}
                 {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}

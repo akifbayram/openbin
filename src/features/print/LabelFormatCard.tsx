@@ -228,14 +228,15 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                       onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                       className="h-9 flex-1 rounded-[var(--radius-sm)] border border-black/6 dark:border-white/6 bg-white/70 dark:bg-gray-800/70 px-2.5 text-[14px] outline-none focus:border-purple-600 dark:border-purple-500 transition-colors"
                     />
-                    <Button size="sm" onClick={handleSave} disabled={!presetName.trim()} className="h-9 px-3">
+                    <Button size="sm" onClick={handleSave} disabled={!presetName.trim()} height="9" px="3">
                       Save
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => { setShowSaveInput(false); setPresetName(''); }}
-                      className="h-9 px-2.5 text-gray-500 dark:text-gray-400"
+                      height="9"
+                      className="px-2.5 text-gray-500 dark:text-gray-400"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -245,7 +246,8 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowSaveInput(true)}
-                    className="mt-3 mx-1 text-[13px] text-purple-600 dark:text-purple-400 h-9 px-3"
+                    height="9"
+                    className="mt-3 mx-1 text-[13px] text-purple-600 dark:text-purple-400 px-3"
                   >
                     <Save className="h-4 w-4 mr-1.5" />
                     Save as Preset

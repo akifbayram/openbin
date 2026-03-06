@@ -162,7 +162,9 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
               size="sm" px="0"
               onClick={() => onDelete(photo)}
               aria-label="Delete photo"
-              className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
+              height="10"
+              width="10"
+              className="bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
             >
               <Trash2 className="h-5 w-5" />
             </Button>
@@ -173,7 +175,9 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
               size="sm" px="0"
               onClick={handleClose}
               aria-label="Close"
-              className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)]"
+              height="10"
+              width="10"
+              className="bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)]"
             >
               <X className="h-5 w-5" />
             </Button>
@@ -197,8 +201,10 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
               onClick={goPrev}
               disabled={!hasPrev}
               aria-label="Previous photo"
+              height="10"
+              width="10"
               className={cn(
-                'absolute left-2 top-1/2 -translate-y-1/2 rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] transition-opacity',
+                'absolute left-2 top-1/2 -translate-y-1/2 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] transition-opacity',
                 !hasPrev && 'opacity-30 pointer-events-none',
               )}
             >
@@ -210,8 +216,10 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
               onClick={goNext}
               disabled={!hasNext}
               aria-label="Next photo"
+              height="10"
+              width="10"
               className={cn(
-                'absolute right-2 top-1/2 -translate-y-1/2 rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] transition-opacity',
+                'absolute right-2 top-1/2 -translate-y-1/2 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] transition-opacity',
                 !hasNext && 'opacity-30 pointer-events-none',
               )}
             >

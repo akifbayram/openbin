@@ -95,7 +95,7 @@ class ErrorBoundary extends React.Component<
           </p>
           <Button
             onClick={() => window.location.reload()}
-            className="rounded-[var(--radius-full)] mt-2"
+            mt="2"
           >
             Reload App
           </Button>
@@ -161,7 +161,7 @@ function NotFoundPage() {
     <div className="flex flex-col items-center justify-center gap-5 py-24 text-gray-500 dark:text-gray-400">
       <p className="text-[48px] font-bold">404</p>
       <p className="text-[17px] font-semibold text-gray-600 dark:text-gray-300">Page not found</p>
-      <Button variant="outline" onClick={() => navigate('/')} className="rounded-[var(--radius-full)]">
+      <Button variant="outline" onClick={() => navigate('/')}>
         <ChevronLeft className="h-4 w-4 mr-1" />
         Back to home
       </Button>

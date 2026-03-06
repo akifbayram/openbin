@@ -50,8 +50,8 @@ export function BinSelectorCard({
             )} />
           </button>
           <div className="flex gap-1.5 shrink-0">
-            <Button variant="ghost" size="sm" onClick={selectAll} className="text-[13px] text-purple-600 dark:text-purple-400 h-8 px-2.5">All</Button>
-            <Button variant="ghost" size="sm" onClick={selectNone} className="text-[13px] text-purple-600 dark:text-purple-400 h-8 px-2.5">None</Button>
+            <Button variant="ghost" size="sm" onClick={selectAll} height="8" fontSize="13px" px="2.5" className="text-purple-600 dark:text-purple-400">All</Button>
+            <Button variant="ghost" size="sm" onClick={selectNone} height="8" fontSize="13px" px="2.5" className="text-purple-600 dark:text-purple-400">None</Button>
           </div>
         </div>
 

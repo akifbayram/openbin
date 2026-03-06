@@ -201,14 +201,12 @@ export function AiSuggestionsPanel({
           <Button
             variant="ghost"
             onClick={onDismiss}
-            className="rounded-[var(--radius-full)]"
           >
             Dismiss
           </Button>
           <Button
             onClick={handleApply}
             disabled={!anySelected}
-            className="rounded-[var(--radius-full)]"
           >
             Apply Selected
           </Button>

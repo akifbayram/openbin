@@ -215,7 +215,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
             variant="ghost"
             size="sm"
             onClick={cycleSortMode}
-            className="shrink-0 rounded-[var(--radius-full)] gap-1.5 h-8 px-3"
+            flexShrink={0} height="8" className="gap-1.5 px-3"
           >
             <ArrowUpDown className="h-3.5 w-3.5" />
             <span className="text-[13px]">{sortLabel}</span>
