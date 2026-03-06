@@ -187,7 +187,7 @@ const BinTableRow = React.memo(function BinTableRow({
       </div>
 
       {/* Name (with icon) */}
-      <div className="flex-[2] min-w-0 flex items-center gap-2">
+      <div className="flex-[2] min-w-0 row">
         {isVisible?.('icon') !== false && (
           <BinIcon className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
         )}

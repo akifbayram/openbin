@@ -213,9 +213,9 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   }
 
   return (
-    <div className="stack-lg">
+    <div className="space-y-5">
       {/* Photo counter */}
-      <div className="flex items-center justify-between text-[13px] text-[var(--text-secondary)]">
+      <div className="row-spread text-[13px] text-[var(--text-secondary)]">
         <span>Photo {currentIndex + 1} of {photos.length}</span>
         <span>{reviewedCount}/{photos.length} reviewed</span>
       </div>
@@ -257,13 +257,13 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
 
           {/* Correction bar */}
           {correctionOpen && photo.status === 'reviewed' && (
-            <div className="stack-xs">
+            <div className="space-y-1.5">
               {photo.correctionCount >= MAX_CORRECTIONS ? (
                 <p className="text-[12px] text-[var(--text-tertiary)] italic">
                   Correction limit reached — edit fields directly.
                 </p>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="row">
                   <Input
                     value={correctionText}
                     onChange={(e) => setCorrectionText(e.target.value)}
@@ -311,8 +311,8 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
           {aiEnabled && aiSetupExpanded && !aiSettings && <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />}
 
           {/* Form Fields */}
-          <div className="stack-md">
-            <div className="stack-sm">
+          <div className="space-y-4">
+            <div className="space-y-2">
               <Label htmlFor={`name-${photo.id}`}>Name</Label>
               <Input
                 id={`name-${photo.id}`}
@@ -324,7 +324,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               />
             </div>
 
-            <div className="stack-sm">
+            <div className="space-y-2">
               <ItemsInput
                 items={photo.items}
                 onChange={(items) =>
@@ -333,7 +333,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               />
             </div>
 
-            <div className="stack-sm">
+            <div className="space-y-2">
               <Label>Area</Label>
               <AreaPicker
                 locationId={activeLocationId ?? undefined}
@@ -344,7 +344,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               />
             </div>
 
-            <div className="stack-sm">
+            <div className="space-y-2">
               <Label htmlFor={`notes-${photo.id}`}>Notes</Label>
               <Textarea
                 id={`notes-${photo.id}`}
@@ -357,7 +357,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               />
             </div>
 
-            <div className="stack-sm">
+            <div className="space-y-2">
               <Label>Tags</Label>
               <TagInput
                 tags={photo.tags}
@@ -368,7 +368,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               />
             </div>
 
-            <div className="stack-sm">
+            <div className="space-y-2">
               <Label>Icon</Label>
               <IconPicker
                 value={photo.icon}
@@ -378,7 +378,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               />
             </div>
 
-            <div className="stack-sm">
+            <div className="space-y-2">
               <Label>Color</Label>
               <ColorPicker
                 value={photo.color}
@@ -390,7 +390,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
           </div>
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-2">
+          <div className="row-spread pt-2">
             <Button
               variant="ghost"
               onClick={handleBack}
@@ -398,7 +398,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               <ChevronLeft className="h-4 w-4 mr-1" />
               Back
             </Button>
-            <div className="flex items-center gap-2">
+            <div className="row">
               <Button
                 variant="ghost"
                 onClick={handleSkip}

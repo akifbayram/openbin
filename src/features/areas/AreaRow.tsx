@@ -37,7 +37,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
 
   if (editing) {
     return (
-      <div className="flex items-center gap-2 px-4 py-2.5">
+      <div className="row px-4 py-2.5">
         <Input
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}

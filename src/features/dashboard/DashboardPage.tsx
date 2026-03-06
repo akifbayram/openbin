@@ -110,7 +110,7 @@ function SectionHeader({
   action?: { label: string; onClick: () => void };
 }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="row-spread">
       <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
         {title}
       </h2>
@@ -241,7 +241,7 @@ export function DashboardPage() {
       <PageHeader
         title="Dashboard"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="row">
             <div className="flex items-center">
               <Tooltip content="Scan QR code" side="bottom">
                 <Button
@@ -367,7 +367,7 @@ export function DashboardPage() {
           <button
             type="button"
             onClick={() => navigate('/bins?needs_organizing=true')}
-            className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center justify-between"
+            className="glass-card rounded-[var(--radius-lg)] px-4 py-3 row-spread"
           >
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-full bg-amber-500/10 flex items-center justify-center">

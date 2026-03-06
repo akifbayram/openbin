@@ -152,7 +152,7 @@ export function BinViewContent({
             type="button"
             onClick={() => setQrExpanded(!qrExpanded)}
             aria-expanded={qrExpanded}
-            className="flex items-center justify-between w-full py-4 text-left"
+            className="row-spread w-full py-4 text-left"
           >
             <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
               QR Code & Info
@@ -165,7 +165,7 @@ export function BinViewContent({
             />
           </button>
           {qrExpanded && (
-            <div className="pb-4 stack-md">
+            <div className="pb-4 space-y-4">
               <div className="flex flex-col items-center">
                 <QRCodeDisplay binId={bin.id} size={160} />
               </div>

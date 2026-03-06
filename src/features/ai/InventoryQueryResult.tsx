@@ -17,7 +17,7 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
   const matches = queryResult?.matches ?? [];
 
   return (
-    <div className="stack-md">
+    <div className="space-y-4">
       <div className="ai-content-enter">
         <StreamingText
           text={answer}
@@ -27,7 +27,7 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
       </div>
 
       {matches.length > 0 && (
-        <div className="stack-sm">
+        <div className="space-y-2">
           {matches.map((match, i) => (
             <button
               key={match.bin_id}

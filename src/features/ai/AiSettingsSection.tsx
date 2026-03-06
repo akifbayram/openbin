@@ -136,7 +136,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
   return (
     <Card id="ai-settings">
       <CardContent>
-        <div className="flex items-center justify-between">
+        <div className="row-spread">
           <div className="flex-1 min-w-0">
             <Label htmlFor="ai-toggle" className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" />AI Features</Label>
             <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
@@ -179,7 +179,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                 />
 
                 {/* API Key */}
-                <div className="stack-xs">
+                <div className="space-y-1.5">
                   <label htmlFor="ai-api-key" className="text-[13px] text-[var(--text-secondary)]">API Key</label>
                   <div className="relative">
                     <Input
@@ -201,7 +201,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                 </div>
 
                 {/* Model */}
-                <div className="stack-xs">
+                <div className="space-y-1.5">
                   <label htmlFor="ai-model" className="text-[13px] text-[var(--text-secondary)]">Model</label>
                   <Input
                     id="ai-model"
@@ -213,7 +213,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
 
                 {/* Endpoint URL — only for openai-compatible */}
                 {setup.provider === 'openai-compatible' && (
-                  <div className="stack-xs">
+                  <div className="space-y-1.5">
                     <label htmlFor="ai-endpoint" className="text-[13px] text-[var(--text-secondary)]">Endpoint URL</label>
                     <Input
                       id="ai-endpoint"
@@ -248,7 +248,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                   const active = promptMap[activePromptTab];
                   return (
                     <Disclosure label="Custom Prompts">
-                      <div className="stack-sm">
+                      <div className="space-y-2">
                         <OptionGroup
                           options={PROMPT_TAB_META.map((tab) => ({ key: tab.key, label: tab.label, shortLabel: tab.shortLabel }))}
                           value={activePromptTab}
@@ -273,7 +273,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           className="font-mono text-[13px] min-h-[200px] resize-y"
                           maxLength={10000}
                         />
-                        <div className="flex items-center justify-between">
+                        <div className="row-spread">
                           <p className="text-[12px] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
                           {active.value.trim() ? (
                             <button
@@ -305,7 +305,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                   indicator={!!(temperature || maxTokens || topP || requestTimeout)}
                 >
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="stack-xs">
+                    <div className="space-y-1.5">
                       <label htmlFor="ai-temperature" className="text-[13px] text-[var(--text-secondary)]">Temperature</label>
                       <div className="relative">
                         <Input
@@ -326,7 +326,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                       </div>
                       <p className="text-[11px] text-[var(--text-tertiary)]">0.0–2.0</p>
                     </div>
-                    <div className="stack-xs">
+                    <div className="space-y-1.5">
                       <label htmlFor="ai-max-tokens" className="text-[13px] text-[var(--text-secondary)]">Max Tokens</label>
                       <div className="relative">
                         <Input
@@ -347,7 +347,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                       </div>
                       <p className="text-[11px] text-[var(--text-tertiary)]">100–16,000</p>
                     </div>
-                    <div className="stack-xs">
+                    <div className="space-y-1.5">
                       <label htmlFor="ai-top-p" className="text-[13px] text-[var(--text-secondary)]">Top P</label>
                       <div className="relative">
                         <Input
@@ -368,7 +368,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                       </div>
                       <p className="text-[11px] text-[var(--text-tertiary)]">0.0–1.0</p>
                     </div>
-                    <div className="stack-xs">
+                    <div className="space-y-1.5">
                       <label htmlFor="ai-timeout" className="text-[13px] text-[var(--text-secondary)]">Timeout (s)</label>
                       <div className="relative">
                         <Input

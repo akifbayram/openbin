@@ -19,7 +19,7 @@ export function FieldToggleList({ fields, visibility, onToggle }: {
         <label
           key={field}
           htmlFor={`field-toggle-${field}`}
-          className="w-full flex items-center justify-between px-3.5 py-2 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
+          className="w-full row-spread px-3.5 py-2 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
         >
           {FIELD_LABELS[field]}
           <Switch

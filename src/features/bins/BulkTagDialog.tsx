@@ -62,7 +62,7 @@ export function BulkTagDialog({ open, onOpenChange, binIds, onDone, allTags }: B
             Add tags to {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''}.
           </DialogDescription>
         </DialogHeader>
-        <div className="stack-sm">
+        <div className="space-y-2">
           <Label>Tags</Label>
           <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
         </div>

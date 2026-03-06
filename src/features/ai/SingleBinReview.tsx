@@ -213,7 +213,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   }
 
   return (
-    <div className="stack-lg">
+    <div className="space-y-5">
       <StepIndicator steps={steps} currentStepIndex={currentStepIndex} />
 
       {(isAnalyzing || isCorrecting) ? (
@@ -267,13 +267,13 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
           {/* Correction bar */}
           <div className={correctionOpen && name ? 'ai-correction-enter' : 'hidden'}>
-            <div className="stack-xs">
+            <div className="space-y-1.5">
               {correctionCount >= MAX_CORRECTIONS ? (
                 <p className="text-[12px] text-[var(--text-tertiary)] italic">
                   Correction limit reached — edit fields directly.
                 </p>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="row">
                   <Input
                     value={correctionText}
                     onChange={(e) => setCorrectionText(e.target.value)}
@@ -320,8 +320,8 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
           )}
 
           {/* Form Fields */}
-          <div className="stack-md">
-            <div className="stack-sm">
+          <div className="space-y-4">
+            <div className="space-y-2">
               <Label htmlFor="single-bin-name">Name</Label>
               <Input
                 id="single-bin-name"
@@ -331,11 +331,11 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               />
             </div>
 
-            <div className="stack-sm">
+            <div className="space-y-2">
               <ItemsInput items={items} onChange={setItems} />
             </div>
 
-            <div className="stack-sm">
+            <div className="space-y-2">
               <Label>Area</Label>
               <AreaPicker
                 locationId={activeLocationId ?? undefined}
@@ -344,7 +344,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               />
             </div>
 
-            <div className="stack-sm">
+            <div className="space-y-2">
               <Label htmlFor="single-bin-notes">Notes</Label>
               <Textarea
                 id="single-bin-notes"
@@ -355,24 +355,24 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               />
             </div>
 
-            <div className="stack-sm">
+            <div className="space-y-2">
               <Label>Tags</Label>
               <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
             </div>
 
-            <div className="stack-sm">
+            <div className="space-y-2">
               <Label>Icon</Label>
               <IconPicker value={icon} onChange={setIcon} />
             </div>
 
-            <div className="stack-sm">
+            <div className="space-y-2">
               <Label>Color</Label>
               <ColorPicker value={color} onChange={setColor} />
             </div>
           </div>
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-2">
+          <div className="row-spread pt-2">
             <Button
               variant="ghost"
               onClick={handleBack}

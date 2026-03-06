@@ -48,7 +48,7 @@ export function BinSearchBar({
       <div className="flex flex-1 min-w-0 items-center gap-1.5 bg-[var(--bg-input)] px-3.5 min-h-10 py-1.5 focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:shadow-[0_0_0_4px_var(--accent-glow)] transition-all duration-200">
         <Search className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
         {hasBadges && (
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide min-w-0 shrink">
+          <div className="row-tight overflow-x-auto scrollbar-hide min-w-0 shrink">
             {filters.tags.map((tag) => (
               <DismissibleBadge
                 key={`tag-${tag}`}

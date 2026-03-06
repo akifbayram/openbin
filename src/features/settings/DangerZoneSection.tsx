@@ -62,8 +62,8 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
               This will permanently delete your account and all data in locations where you are the only member. Locations shared with others will be preserved. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleDeleteAccount} className="stack-lg">
-            <div className="stack-sm">
+          <form onSubmit={handleDeleteAccount} className="space-y-5">
+            <div className="space-y-2">
               <Label htmlFor="delete-password">Enter your password to confirm</Label>
               <Input
                 id="delete-password"

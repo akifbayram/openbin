@@ -21,7 +21,7 @@ export function CustomFieldsEditCard({ fields, values, onChange }: CustomFieldsE
       <CardContent className="space-y-4 py-5">
         <Label>Custom Fields</Label>
         {fields.map((field) => (
-          <div key={field.id} className="stack-xs">
+          <div key={field.id} className="space-y-1.5">
             <label
               htmlFor={`cf-${field.id}`}
               className="text-[13px] text-[var(--text-secondary)]"

@@ -67,7 +67,7 @@ export function BinDetailToolbar({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="row">
       <MenuButton />
       {!editing && (
         <Button
@@ -91,7 +91,7 @@ export function BinDetailToolbar({
             placeholder="Name..."
           />
         ) : (
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="row-tight min-w-0">
             <span className="text-[17px] font-semibold text-[var(--text-primary)] leading-tight truncate">{bin.name}</span>
             {bin.visibility === 'private' && (
               <Lock className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />

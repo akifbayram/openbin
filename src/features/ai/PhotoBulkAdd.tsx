@@ -181,7 +181,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
 
   if (state.step === 'review') {
     return (
-      <div className="stack-md">
+      <div className="space-y-4">
         <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
         <BulkAddReviewStep
           photos={state.photos}
@@ -194,7 +194,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
 
   if (state.step === 'summary') {
     return (
-      <div className="stack-md">
+      <div className="space-y-4">
         <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
         <BulkAddSummaryStep
           photos={state.photos}
@@ -212,7 +212,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   const singleBinDisabled = state.photos.length > MAX_AI_PHOTOS;
 
   return (
-    <div className="stack-md">
+    <div className="space-y-4">
       <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} className="mb-2" />
 
       <input
@@ -272,7 +272,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       </p>
 
       {/* Shared area picker */}
-      <div className="stack-xs">
+      <div className="space-y-1.5">
         <Label className="text-[13px]">
           {mode === 'single-bin' ? `${t.Area} (optional)` : `${t.Area} for all ${t.bins} (optional)`}
         </Label>
@@ -284,7 +284,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-1">
+      <div className="row-spread pt-1">
         <Button
           variant="ghost"
           size="sm"

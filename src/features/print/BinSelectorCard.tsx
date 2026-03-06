@@ -35,10 +35,10 @@ export function BinSelectorCard({
   return (
     <Card>
       <CardContent>
-        <div className="flex items-center justify-between w-full">
+        <div className="row-spread w-full">
           <button
             type="button"
-            className="flex items-center gap-2 flex-1 min-w-0"
+            className="row flex-1 min-w-0"
             onClick={() => onExpandedChange(!expanded)}
           >
             <Package className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />

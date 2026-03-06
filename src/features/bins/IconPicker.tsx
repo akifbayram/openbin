@@ -14,11 +14,11 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
   const displayName = value || 'Package';
 
   return (
-    <div className="stack-sm">
+    <div className="space-y-2">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors border border-[var(--border-subtle)]"
+        className="row w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors border border-[var(--border-subtle)]"
       >
         <CurrentIcon className="h-5 w-5 text-[var(--text-tertiary)]" />
         <span className="flex-1 text-left">{displayName}</span>

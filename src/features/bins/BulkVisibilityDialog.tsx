@@ -45,7 +45,7 @@ export function BulkVisibilityDialog({ open, onOpenChange, binIds, onDone }: Bul
             Non-owned bins set to private will be skipped by the server.
           </DialogDescription>
         </DialogHeader>
-        <div className="stack-sm">
+        <div className="space-y-2">
           <VisibilityPicker value={visibility} onChange={setVisibility} />
         </div>
         <DialogFooter>

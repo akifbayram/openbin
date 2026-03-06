@@ -34,10 +34,10 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
       <CardContent>
         <button
           type="button"
-          className="flex items-center justify-between w-full"
+          className="row-spread w-full"
           onClick={() => onExpandedChange(!expanded)}
         >
-          <div className="flex items-center gap-2">
+          <div className="row">
             <LayoutGrid className="h-4 w-4 text-[var(--text-tertiary)]" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Format</Label>
             {!expanded && (
@@ -219,7 +219,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                 </div>
 
                 {showSaveInput ? (
-                  <div className="flex items-center gap-2 mt-3 px-1">
+                  <div className="row mt-3 px-1">
                     <input
                       type="text"
                       placeholder="Preset name"

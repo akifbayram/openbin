@@ -53,7 +53,7 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
         </ul>
       )}
 
-      <div className="flex items-center gap-2 text-[13px] text-[var(--text-tertiary)]">
+      <div className="row text-[13px] text-[var(--text-tertiary)]">
         <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--accent)]" />
         <span>{hasStreamedData ? 'Finding more items...' : initialStatusLabel}</span>
       </div>

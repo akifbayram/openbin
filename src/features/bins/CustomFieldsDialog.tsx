@@ -90,11 +90,11 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
           )}
 
           {fields.map((field) => (
-            <div key={field.id} className="flex items-center gap-2">
+            <div key={field.id} className="row">
               <GripVertical className="h-4 w-4 text-[var(--text-tertiary)] shrink-0 opacity-40" />
               {editingId === field.id ? (
                 <form
-                  className="flex-1 flex items-center gap-2"
+                  className="flex-1 row"
                   onSubmit={(e) => { e.preventDefault(); handleRename(field.id); }}
                 >
                   <Input
@@ -136,7 +136,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
             </div>
           ))}
 
-          <form onSubmit={handleAdd} className="flex items-center gap-2 pt-2 border-t border-[var(--border-subtle)]">
+          <form onSubmit={handleAdd} className="row pt-2 border-t border-[var(--border-subtle)]">
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}

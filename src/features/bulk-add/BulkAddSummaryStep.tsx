@@ -37,7 +37,7 @@ export function BulkAddSummaryStep({
   const totalToCreate = createReady.length + failed.length;
 
   return (
-    <div className="stack-lg">
+    <div className="space-y-5">
       <div>
         <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
           {isCreating
@@ -64,7 +64,7 @@ export function BulkAddSummaryStep({
       )}
 
       {/* Confirmed bins list */}
-      <div className="stack-sm">
+      <div className="space-y-2">
         {confirmedWithName.map((photo) => {
           const Icon = resolveIcon(photo.icon);
           const colorPreset = photo.color ? resolveColor(photo.color) : undefined;
@@ -130,7 +130,7 @@ export function BulkAddSummaryStep({
 
       {/* Failed items */}
       {failed.length > 0 && (
-        <div className="stack-sm">
+        <div className="space-y-2">
           <p className="text-[13px] font-medium text-[var(--destructive)]">
             {failed.length} failed to create
           </p>
@@ -157,7 +157,7 @@ export function BulkAddSummaryStep({
           <button
             type="button"
             onClick={() => setSkippedExpanded(!skippedExpanded)}
-            className="flex items-center gap-1.5 text-[13px] font-medium text-[var(--text-secondary)]"
+            className="row-tight text-[13px] font-medium text-[var(--text-secondary)]"
           >
             {skippedExpanded ? (
               <ChevronUp className="h-3.5 w-3.5" />
@@ -167,7 +167,7 @@ export function BulkAddSummaryStep({
             Skipped photos ({skipped.length})
           </button>
           {skippedExpanded && (
-            <div className="mt-2 stack-sm">
+            <div className="mt-2 space-y-2">
               {skipped.map((photo) => (
                 <div
                   key={photo.id}
@@ -201,7 +201,7 @@ export function BulkAddSummaryStep({
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="row-spread pt-2">
         <Button
           variant="ghost"
           onClick={() => {

@@ -13,7 +13,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
   return (
     <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
       {quickAdd.state === 'input' && (
-        <div className="flex items-center gap-1.5">
+        <div className="row-tight">
           <Input
             value={quickAdd.value}
             onChange={(e) => quickAdd.setValue(e.target.value)}
@@ -57,7 +57,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
       )}
 
       {(quickAdd.state === 'expanded' || quickAdd.state === 'processing') && (
-        <div className="stack-sm">
+        <div className="space-y-2">
           <textarea
             autoComplete="off"
             value={quickAdd.expandedText}
@@ -71,7 +71,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
           {quickAdd.structureError && (
             <p className="text-[13px] text-[var(--destructive)]">{quickAdd.structureError}</p>
           )}
-          <div className="flex items-center gap-2">
+          <div className="row">
             <button
               type="button"
               onClick={quickAdd.cancelExpanded}
@@ -99,7 +99,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
       )}
 
       {quickAdd.state === 'preview' && quickAdd.structuredItems && (
-        <div className="stack-sm">
+        <div className="space-y-2">
           <div className="flex flex-wrap gap-1.5">
             {quickAdd.structuredItems.map((item, i) => {
               const checked = quickAdd.checked.get(i) !== false;
@@ -120,7 +120,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               );
             })}
           </div>
-          <div className="flex items-center gap-2 pt-1">
+          <div className="row pt-1">
             <Button
               type="button"
               variant="ghost"

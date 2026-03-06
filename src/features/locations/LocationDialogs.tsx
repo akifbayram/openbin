@@ -59,8 +59,8 @@ export function LocationCreateDialog({ open, onOpenChange }: LocationCreateDialo
             A {t.location} is a shared space where members can manage {t.bins} together.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="stack-lg">
-          <div className="stack-sm">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
             <Label htmlFor="location-name">Name</Label>
             <Input
               id="location-name"
@@ -129,8 +129,8 @@ export function LocationJoinDialog({ open, onOpenChange }: LocationJoinDialogPro
             Enter the invite code shared by a {t.location} owner to join.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="stack-lg">
-          <div className="stack-sm">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
             <Label htmlFor="invite-code">Invite Code</Label>
             <Input
               id="invite-code"
@@ -199,8 +199,8 @@ export function LocationRenameDialog({ locationId, currentName, open, onOpenChan
             Enter a new name for this {t.location}.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="stack-lg">
-          <div className="stack-sm">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
             <Label htmlFor="rename-location">Name</Label>
             <Input
               id="rename-location"

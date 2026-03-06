@@ -208,10 +208,10 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
       <CardContent>
         <button
           type="button"
-          className="flex items-center justify-between w-full"
+          className="row-spread w-full"
           onClick={() => onExpandedChange(!expanded)}
         >
-          <div className="flex items-center gap-2">
+          <div className="row">
             <QrCode className="h-4 w-4 text-[var(--text-tertiary)]" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">QR Style</Label>
           </div>
@@ -222,7 +222,7 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
         </button>
 
         {expanded && (
-          <div className="mt-3 stack-md">
+          <div className="mt-3 space-y-4">
             <MiniPreview style={qrStyle} />
 
             {/* Dot Style */}
@@ -283,7 +283,7 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
 
                   {/* Gradient */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="row-spread mb-2">
                       <SectionLabel>Gradient</SectionLabel>
                       <Switch checked={qrStyle.useGradient} onCheckedChange={(v) => update('useGradient', v)} />
                     </div>
@@ -301,7 +301,7 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
                         <QrColorPicker value={qrStyle.gradientColor1} onChange={(v) => update('gradientColor1', v)} label="Start Color" />
                         <QrColorPicker value={qrStyle.gradientColor2} onChange={(v) => update('gradientColor2', v)} label="End Color" />
                         <div>
-                          <div className="flex items-center justify-between mb-1.5">
+                          <div className="row-spread mb-1.5">
                             <span className="text-[12px] text-[var(--text-secondary)] font-medium">Rotation</span>
                             <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums font-medium">{qrStyle.gradientRotation}°</span>
                           </div>

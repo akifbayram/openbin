@@ -117,7 +117,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
                   <div className="h-14 w-14 rounded-full bg-[var(--destructive)] bg-opacity-10 flex items-center justify-center">
                     <AlertCircle className="h-7 w-7 text-[var(--destructive)]" />
                   </div>
-                  <div className="stack-xs">
+                  <div className="space-y-1.5">
                     <p className="text-[17px] font-semibold text-[var(--text-primary)]">Not a {t.Bin} QR Code</p>
                     <p className="text-[13px] text-[var(--text-tertiary)] break-all max-w-xs mx-auto leading-relaxed">{error}</p>
                   </div>
@@ -135,7 +135,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
                   <div className="h-14 w-14 rounded-full bg-[var(--accent)] bg-opacity-10 flex items-center justify-center">
                     <ScanLine className="h-7 w-7 text-[var(--accent)]" />
                   </div>
-                  <div className="stack-xs">
+                  <div className="space-y-1.5">
                     <p className="text-[17px] font-semibold text-[var(--text-primary)]">{t.Bin} Not Found</p>
                     <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed">
                       This QR code points to a {t.bin} that doesn't exist yet.

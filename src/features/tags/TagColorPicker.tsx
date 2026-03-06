@@ -77,7 +77,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
       </Tooltip>
 
       {visible && (
-        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 shadow-lg min-w-[180px] stack-sm`}>
+        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 shadow-lg min-w-[180px] space-y-2`}>
           {/* None + Black/White + Gray buttons */}
           <div className="flex gap-1.5">
             <button

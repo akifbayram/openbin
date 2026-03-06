@@ -62,8 +62,8 @@ export function LocationRetentionDialog({ location, open, onOpenChange }: Locati
             Configure how long data is kept for this {t.location}.
           </DialogDescription>
         </DialogHeader>
-        <div className="stack-md">
-          <div className="stack-xs">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
             <Label htmlFor="activity-retention">Activity log retention (days)</Label>
             <Input
               id="activity-retention"
@@ -75,7 +75,7 @@ export function LocationRetentionDialog({ location, open, onOpenChange }: Locati
             />
             <p className="text-[11px] text-[var(--text-tertiary)]">7–365 days. Entries older than this are automatically pruned.</p>
           </div>
-          <div className="stack-xs">
+          <div className="space-y-1.5">
             <Label htmlFor="trash-retention">Trash retention (days)</Label>
             <Input
               id="trash-retention"

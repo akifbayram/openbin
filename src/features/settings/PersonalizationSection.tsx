@@ -29,7 +29,7 @@ export function PersonalizationSection({ settings, updateSettings, resetSettings
           </FormField>
           <Disclosure label="Custom Terminology">
             <p className="text-[11px] text-[var(--text-tertiary)] mb-2">Rename core concepts to match your workflow.</p>
-            <div className="stack-sm">
+            <div className="space-y-2">
               {([
                 { key: 'termBin' as const, singular: 'Bin', plural: 'Bins' },
                 { key: 'termLocation' as const, singular: 'Location', plural: 'Locations' },

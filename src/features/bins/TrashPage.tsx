@@ -73,12 +73,12 @@ export function TrashPage() {
           {() => (
             <Card>
               <CardContent className="py-3 px-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0 stack-xs">
+                <div className="row-spread gap-3">
+                  <div className="flex-1 min-w-0 space-y-1.5">
                     <Skeleton className="h-5 w-2/3" />
                     <Skeleton className="h-3.5 w-1/3" />
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="row-tight shrink-0">
                     <Skeleton className="h-8 w-20 rounded-[var(--radius-full)]" />
                     <Skeleton className="h-8 w-8 rounded-[var(--radius-full)]" />
                   </div>
@@ -98,7 +98,7 @@ export function TrashPage() {
           {bins.map((bin) => (
             <Card key={bin.id}>
               <CardContent className="py-3 px-4">
-                <div className="flex items-center justify-between gap-3">
+                <div className="row-spread gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
                       {bin.name}
@@ -110,7 +110,7 @@ export function TrashPage() {
                     </p>
                   </div>
                   {isAdmin && (
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="row-tight shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"

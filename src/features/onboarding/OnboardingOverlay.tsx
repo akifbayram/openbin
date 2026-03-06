@@ -330,7 +330,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                   + Add {t.areas} (optional)
                 </button>
               ) : (
-                <div className="w-full text-left mb-4 stack-sm">
+                <div className="w-full text-left mb-4 space-y-2">
                   <label htmlFor="onboarding-area-input" className="text-[13px] text-[var(--text-tertiary)] block">
                     {t.Areas} <span className="text-[var(--text-tertiary)] opacity-60">(optional)</span>
                   </label>
@@ -505,7 +505,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 Here are a few things you can do next.
               </p>
-              <div className="w-full stack-sm mb-6">
+              <div className="w-full space-y-2 mb-6">
                 {([
                   { icon: PackagePlus, label: 'Browse all bins', path: '/bins' },
                   { icon: Printer, label: 'Print labels', path: '/print' },
@@ -547,7 +547,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 Bring your own API key from OpenAI, Anthropic, Google, or any compatible provider.
               </p>
-              <div className="w-full stack-sm mb-6">
+              <div className="w-full space-y-2 mb-6">
                 {AI_FEATURES.map(({ icon: Icon, title, desc }) => (
                   <div key={title} className="onboarding-feature-card flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 bg-[var(--bg-active)] text-left">
                     <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
@@ -589,7 +589,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
                 Here are a few things you can do next.
               </p>
-              <div className="w-full stack-sm mb-6">
+              <div className="w-full space-y-2 mb-6">
                 {([
                   { icon: PackagePlus, label: 'Create more bins', path: '/bins' },
                   { icon: QrCode, label: 'Scan a QR code', path: '/scan' },

@@ -67,7 +67,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
           <span className="text-[13px]">One photo per {t.bin}, up to {MAX_PHOTOS}</span>
         </button>
       ) : (
-        <div className="stack-md">
+        <div className="space-y-4">
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
             {photos.map((photo) => (
               <div key={photo.id} className="relative aspect-square group">
@@ -101,7 +101,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
             <p className="text-[13px] text-amber-500">Maximum of {MAX_PHOTOS} photos reached.</p>
           )}
 
-          <div className="stack-sm">
+          <div className="space-y-2">
             <Label>{t.Area} for all {t.bins} (optional)</Label>
             <AreaPicker
               locationId={activeLocationId ?? undefined}

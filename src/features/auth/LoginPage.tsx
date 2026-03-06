@@ -91,7 +91,7 @@ export function LoginPage() {
         </div>
 
         {demoLoading ? (
-          <div className="text-center stack-md">
+          <div className="text-center space-y-4">
             <div className="h-8 w-8 mx-auto border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
             <p className="text-[14px] text-[var(--text-secondary)]">Entering demo...</p>
           </div>
@@ -99,8 +99,8 @@ export function LoginPage() {
           <>
             <Card>
               <CardContent className="py-6">
-                <form onSubmit={handleSubmit} className="stack-lg">
-                  <div className="stack-sm">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="space-y-2">
                     <Label htmlFor="login-username">Username</Label>
                     <Input
                       id="login-username"
@@ -112,7 +112,7 @@ export function LoginPage() {
                       required
                     />
                   </div>
-                  <div className="stack-sm">
+                  <div className="space-y-2">
                     <Label htmlFor="login-password">Password</Label>
                     <Input
                       id="login-password"

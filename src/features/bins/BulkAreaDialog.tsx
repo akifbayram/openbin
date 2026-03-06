@@ -47,7 +47,7 @@ export function BulkAreaDialog({ open, onOpenChange, binIds, onDone }: BulkAreaD
             Assign {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''} to an area.
           </DialogDescription>
         </DialogHeader>
-        <div className="stack-sm">
+        <div className="space-y-2">
           <AreaPicker
             locationId={activeLocationId ?? undefined}
             value={areaId}

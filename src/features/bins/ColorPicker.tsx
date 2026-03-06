@@ -181,14 +181,14 @@ export function ColorPicker({ value, onChange, secondaryLabel, secondaryValue, o
   const secondaryDisplayLabel = secondaryPreset?.label ?? 'None';
 
   return (
-    <div className="stack-sm">
+    <div className="space-y-2">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors border border-[var(--border-subtle)]"
+        className="row w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors border border-[var(--border-subtle)]"
       >
         {hasSecondary ? (
-          <span className="flex-1 flex items-center gap-1.5 min-w-0">
+          <span className="flex-1 row-tight min-w-0">
             <ColorDot colorKey={value} />
             <span className="truncate">{primaryLabel}</span>
             <span className="text-[var(--text-tertiary)]">/</span>

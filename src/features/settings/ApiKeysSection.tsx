@@ -155,8 +155,8 @@ export function ApiKeysSection() {
             </DialogDescription>
           </DialogHeader>
           {newKey ? (
-            <div className="stack-md">
-              <div className="flex items-center gap-2">
+            <div className="space-y-4">
+              <div className="row">
                 <code className="flex-1 text-[13px] bg-[var(--bg-input)] px-3 py-2 rounded-[var(--radius-sm)] break-all select-all font-mono">
                   {newKey}
                 </code>
@@ -176,8 +176,8 @@ export function ApiKeysSection() {
               </DialogFooter>
             </div>
           ) : (
-            <form onSubmit={handleCreate} className="stack-lg">
-              <div className="stack-sm">
+            <form onSubmit={handleCreate} className="space-y-5">
+              <div className="space-y-2">
                 <Label htmlFor="key-name">Name</Label>
                 <Input
                   id="key-name"

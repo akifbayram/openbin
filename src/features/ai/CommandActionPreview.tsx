@@ -31,7 +31,7 @@ export function CommandActionPreview({
   const t = useTerminology();
 
   return (
-    <div className="stack-md">
+    <div className="space-y-4">
       {interpretation && (
         <div className="flex items-start gap-2 rounded-[var(--radius-sm)] bg-[var(--accent)]/5 px-3 py-2">
           <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-[var(--accent)]" />
@@ -46,7 +46,7 @@ export function CommandActionPreview({
           No matching {t.bins} found, or the command was ambiguous. Try using exact {t.bin} names.
         </p>
       ) : (
-        <ul className="stack-xs">
+        <ul className="space-y-1.5">
           {actions.map((action, i) => {
             const checked = checkedActions.get(i) !== false;
             const Icon = getActionIcon(action);

@@ -147,7 +147,7 @@ export function SettingsPage() {
       <Card>
         <CardContent>
           <Label className="inline-flex items-center gap-1.5"><Info className="h-3.5 w-3.5" />About</Label>
-          <div className="mt-3 stack-sm text-[15px] text-[var(--text-secondary)]">
+          <div className="mt-3 space-y-2 text-[15px] text-[var(--text-secondary)]">
             <div className="flex items-baseline gap-2">
               <p className="font-semibold text-[var(--text-primary)]">{settings.appName}</p>
               <span className="text-[13px] text-[var(--text-tertiary)]">v{__APP_VERSION__}</span>

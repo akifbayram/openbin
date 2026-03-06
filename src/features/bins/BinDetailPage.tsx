@@ -92,7 +92,7 @@ export function BinDetailPage() {
           type="button"
           onClick={() => setPhotosExpanded(!photosExpanded)}
           aria-expanded={photosExpanded}
-          className="flex items-center justify-between w-full py-4 text-left"
+          className="row-spread w-full py-4 text-left"
         >
           <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
             Photos{actions.photos.length > 0 ? ` (${actions.photos.length})` : ''}

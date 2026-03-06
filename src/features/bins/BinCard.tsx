@@ -119,7 +119,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
     <div className="flex items-start gap-3 h-full">
       <div className="min-w-0 flex-1 flex flex-col self-stretch">
         <h3
-          className="font-semibold text-[15px] text-[var(--text-primary)] leading-snug flex items-center gap-1.5 min-w-0 overflow-hidden"
+          className="font-semibold text-[15px] text-[var(--text-primary)] leading-snug row-tight min-w-0 overflow-hidden"
         >
           <span className="truncate" style={nameStyle}>
             <Highlight text={bin.name} query={searchQuery} />

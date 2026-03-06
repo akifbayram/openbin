@@ -20,7 +20,7 @@ export function DashboardSection({ settings, updateSettings }: DashboardSectionP
       <CardContent>
         <Disclosure label={<span className="inline-flex items-center gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" />Dashboard</span>} labelClassName="text-[var(--text-tertiary)] uppercase tracking-wider">
         <div className="flex flex-col gap-3 mt-1">
-          <div className="stack-xs">
+          <div className="space-y-1.5">
             <div className="flex flex-col gap-2">
               {([
                 { key: 'showStats' as const, label: 'Stats' },
@@ -30,7 +30,7 @@ export function DashboardSection({ settings, updateSettings }: DashboardSectionP
                 { key: 'showRecentlyScanned' as const, label: 'Recently Scanned' },
                 { key: 'showRecentlyUpdated' as const, label: 'Recently Updated' },
               ]).map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between py-1">
+                <div key={key} className="row-spread py-1">
                   <span className="text-[14px] text-[var(--text-primary)]">{label}</span>
                   <Switch
                     checked={settings[key]}
