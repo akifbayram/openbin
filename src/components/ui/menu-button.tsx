@@ -12,12 +12,12 @@ export function MenuButton({ className }: { className?: string }) {
       onClick={openDrawer}
       aria-label="Open navigation"
       className={cn(
-        'lg:hidden print-hide flex flex-col justify-center items-center gap-[5px] w-10 h-10 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] transition-colors shrink-0',
+        'lg:hidden print-hide flex flex-col justify-center items-center gap-[5px] w-10 h-10 rounded-[var(--radius-sm)] hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors shrink-0',
         className,
       )}
     >
-      <span className="block w-[18px] h-[2px] rounded-full bg-[var(--text-primary)]" />
-      <span className="block w-[18px] h-[2px] rounded-full bg-[var(--text-primary)]" />
+      <span className="block w-[18px] h-[2px] rounded-full bg-gray-900 dark:bg-gray-100" />
+      <span className="block w-[18px] h-[2px] rounded-full bg-gray-900 dark:bg-gray-100" />
     </button>
   );
 }

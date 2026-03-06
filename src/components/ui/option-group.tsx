@@ -91,7 +91,7 @@ export function OptionGroup<K extends string>({
     <div
       ref={containerRef}
       className={cn(
-        'relative flex bg-[var(--bg-input)] p-1 gap-0.5',
+        'relative flex bg-gray-500/12 dark:bg-gray-500/24 p-1 gap-0.5',
         containerRadius,
         scrollable && 'overflow-x-auto flex-nowrap',
         className,
@@ -100,7 +100,7 @@ export function OptionGroup<K extends string>({
       {indicator && (
         <div
           aria-hidden
-          className={cn('absolute top-1 bottom-1 bg-[var(--bg-elevated)] dark:bg-[var(--bg-active)] shadow-sm', segmentRadius)}
+          className={cn('absolute top-1 bottom-1 bg-white/70 dark:bg-gray-500/28 shadow-sm', segmentRadius)}
           style={{
             left: indicator.left,
             width: indicator.width,
@@ -130,10 +130,10 @@ export function OptionGroup<K extends string>({
               'flex items-center justify-center',
               !iconOnly && 'gap-1.5',
               active
-                ? 'text-[var(--text-primary)]'
+                ? ''
                 : disabled
-                  ? 'text-[var(--text-tertiary)] opacity-40 cursor-not-allowed'
-                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]',
+                  ? 'text-gray-500 dark:text-gray-400 opacity-40 cursor-not-allowed'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
             )}
           >
             {renderContent ? (

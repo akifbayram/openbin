@@ -35,7 +35,7 @@ export function DismissibleBadge({ children, onDismiss, ariaLabel, style, dot }:
         type="button"
         onClick={handleDismiss}
         aria-label={ariaLabel}
-        className="ml-0.5 p-0.5 rounded-full hover:bg-[var(--bg-active)]"
+        className="ml-0.5 p-0.5 rounded-full hover:bg-gray-500/16 dark:hover:bg-gray-500/28"
       >
         <X className="h-2.5 w-2.5" />
       </button>

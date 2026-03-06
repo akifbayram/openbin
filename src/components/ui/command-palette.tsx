@@ -127,8 +127,8 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
         )}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 border-b border-[var(--border-default)]">
-          <svg aria-hidden="true" className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div className="flex items-center gap-3 px-4 border-b border-black/6 dark:border-white/6">
+          <svg aria-hidden="true" className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
           </svg>
@@ -137,19 +137,19 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Type a command..."
-            className="flex-1 bg-transparent text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none py-3"
+            className="flex-1 bg-transparent text-[15px] placeholder:text-gray-500 dark:placeholder:text-gray-400 outline-none py-3"
           />
         </div>
         {/* Results */}
         <div ref={listRef} className="overflow-y-auto max-h-[50vh] py-2">
           {flatItems.length === 0 ? (
-            <p className="text-center text-[13px] text-[var(--text-tertiary)] py-6">No matching commands</p>
+            <p className="text-center text-[13px] text-gray-500 dark:text-gray-400 py-6">No matching commands</p>
           ) : (
             groups.map((group) => {
               return (
                 <div key={group.label}>
                   <div className="px-4 pt-2 pb-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                       {group.label}
                     </span>
                   </div>
@@ -167,8 +167,8 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
                         className={cn(
                           'w-full flex items-center justify-between px-4 py-2 text-left text-[14px] transition-colors',
                           isActive
-                            ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
-                            : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]',
+                            ? 'bg-purple-600 dark:bg-purple-500 text-white'
+                            : 'hover:bg-gray-500/8 dark:hover:bg-gray-500/18',
                         )}
                       >
                         <span>{item.label}</span>
@@ -180,8 +180,8 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
                               className={cn(
                                 'inline-flex items-center justify-center min-w-[22px] h-5 px-1 rounded text-[11px] font-mono leading-none',
                                 isActive
-                                  ? 'bg-white/20 text-[var(--text-on-accent)]'
-                                  : 'bg-[var(--bg-input)] text-[var(--text-tertiary)]',
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-gray-500/12 dark:bg-gray-500/24 text-gray-500 dark:text-gray-400',
                               )}
                             >
                               {k}

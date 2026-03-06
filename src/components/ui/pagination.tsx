@@ -51,12 +51,12 @@ function PageSizeSelect({ value, options, onChange }: { value: number; options: 
       <button
         type="button"
         onClick={toggle}
-        className="flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+        className="flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
         aria-haspopup="listbox"
         aria-expanded={visible}
       >
         {value} per page
-        <ChevronsUpDown className="h-3 w-3 text-[var(--text-tertiary)]" />
+        <ChevronsUpDown className="h-3 w-3 text-gray-500 dark:text-gray-400" />
       </button>
       {visible && (
         <div
@@ -73,11 +73,11 @@ function PageSizeSelect({ value, options, onChange }: { value: number; options: 
               className={cn(
                 'w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors',
                 opt === value
-                  ? 'text-[var(--text-primary)] bg-[var(--bg-hover)]'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
+                  ? 'bg-gray-500/8 dark:bg-gray-500/18'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-500/8 dark:hover:bg-gray-500/18',
               )}
             >
-              <Check className={cn('h-3 w-3 shrink-0', opt === value ? 'text-[var(--accent)]' : 'invisible')} />
+              <Check className={cn('h-3 w-3 shrink-0', opt === value ? 'text-purple-600 dark:text-purple-400' : 'invisible')} />
               {opt}
             </button>
           ))}
@@ -121,8 +121,8 @@ export function Pagination({
               className={cn(
                 'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
                 currentPage <= 1
-                  ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
+                  ? 'text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-40'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 active:bg-gray-500/16 dark:active:bg-gray-500/28',
               )}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -134,7 +134,7 @@ export function Pagination({
             {pages.map((p, i) =>
               p === 'ellipsis' ? (
                 // biome-ignore lint/suspicious/noArrayIndexKey: ellipsis separators have no stable identity
-                <span key={`e${i}`} className="flex items-center justify-center h-9 w-9 text-sm text-[var(--text-muted)]">
+                <span key={`e${i}`} className="flex items-center justify-center h-9 w-9 text-sm text-gray-500 dark:text-gray-400">
                   &hellip;
                 </span>
               ) : (
@@ -147,8 +147,8 @@ export function Pagination({
                   className={cn(
                     'flex items-center justify-center h-9 min-w-9 px-2 rounded-[var(--radius-md)] text-sm font-medium transition-colors',
                     p === currentPage
-                      ? 'bg-[var(--bg-elevated)] dark:bg-[var(--bg-active)] shadow-sm text-[var(--text-primary)] font-semibold'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
+                      ? 'bg-white/70 dark:bg-gray-500/28 shadow-sm font-semibold'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 active:bg-gray-500/16 dark:active:bg-gray-500/28',
                   )}
                 >
                   {p}
@@ -158,7 +158,7 @@ export function Pagination({
           </div>
 
           {/* Mobile: page X of Y */}
-          <span className="flex sm:hidden items-center px-3 text-sm text-[var(--text-secondary)]">
+          <span className="flex sm:hidden items-center px-3 text-sm text-gray-600 dark:text-gray-300">
             {currentPage} / {totalPages}
           </span>
 
@@ -172,8 +172,8 @@ export function Pagination({
               className={cn(
                 'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
                 currentPage >= totalPages
-                  ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
+                  ? 'text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-40'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 active:bg-gray-500/16 dark:active:bg-gray-500/28',
               )}
             >
               <ChevronRight className="h-4 w-4" />
@@ -184,7 +184,7 @@ export function Pagination({
 
       {/* Summary + page size */}
       {showFooter && (
-        <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
           {showSummary && (
             <span>
               Showing {rangeStart}&ndash;{rangeEnd} of {totalCount} {itemLabel}

@@ -30,7 +30,7 @@ export function UserAvatar({ avatarUrl, displayName, size = 'sm', className }: U
   return (
     <div
       className={cn(
-        'rounded-full bg-[var(--bg-active)] flex items-center justify-center font-semibold text-[var(--text-secondary)] shrink-0',
+        'rounded-full bg-gray-500/16 dark:bg-gray-500/28 flex items-center justify-center font-semibold text-gray-600 dark:text-gray-300 shrink-0',
         sizeClasses[size],
         className,
       )}

@@ -1,29 +1,21 @@
-import { Badge as ChakraBadge } from '@chakra-ui/react';
 import type * as React from 'react';
 import { cn } from '@/lib/utils';
 
-const variantMap = {
-  default: 'solid' as const,
-  secondary: 'subtle' as const,
-  destructive: 'solid' as const,
-  outline: 'outline' as const,
-};
-
-const variantClasses: Record<string, string> = {
-  default: 'bg-[var(--accent)] text-[var(--text-on-accent)]',
-  secondary: 'bg-[var(--bg-input)] text-[var(--text-secondary)]',
-  destructive: 'bg-[var(--destructive)] text-[var(--text-on-accent)]',
-  outline: 'border border-[var(--border-glass)] text-[var(--text-secondary)]',
+const badgeVariants = {
+  default: 'bg-purple-600 dark:bg-purple-500 text-white',
+  secondary: 'bg-gray-500/12 dark:bg-gray-500/24 text-gray-600 dark:text-gray-300',
+  destructive: 'bg-red-500 text-white',
+  outline: 'border border-[var(--border-glass)] text-gray-600 dark:text-gray-300',
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLElement> {
-  variant?: 'default' | 'secondary' | 'destructive' | 'outline';
+  variant?: keyof typeof badgeVariants;
 }
 
-function Badge({ className, variant = 'default', onClick, style, children, ...props }: BadgeProps) {
+function Badge({ className, variant = 'default', onClick, ...props }: BadgeProps) {
   const classes = cn(
     'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-0.5 text-[12px] font-medium transition-colors',
-    variantClasses[variant],
+    badgeVariants[variant],
     className
   );
 
@@ -33,23 +25,16 @@ function Badge({ className, variant = 'default', onClick, style, children, ...pr
         type="button"
         className={cn(classes, 'border-0 cursor-pointer')}
         onClick={onClick}
-        style={style}
         {...(props as React.ButtonHTMLAttributes<HTMLButtonElement>)}
-      >
-        {children}
-      </button>
+      />
     );
   }
 
   return (
-    <ChakraBadge
-      variant={variantMap[variant]}
+    <div
       className={classes}
-      style={style}
       {...props}
-    >
-      {children}
-    </ChakraBadge>
+    />
   );
 }
 

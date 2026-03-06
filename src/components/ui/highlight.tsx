@@ -12,7 +12,7 @@ export function Highlight({ text, query }: HighlightProps) {
       {parts.map((part, i) =>
         regex.test(part) ? (
           // biome-ignore lint/suspicious/noArrayIndexKey: text fragments from split() have no stable identity
-          <mark key={i} className="bg-[var(--accent)]/20 text-inherit rounded-sm px-0.5">
+          <mark key={i} className="bg-purple-600/20 dark:bg-purple-500/20 text-inherit rounded-sm px-0.5">
             {part}
           </mark>
         ) : (

@@ -21,13 +21,13 @@ export function Disclosure({ label, defaultOpen = false, indicator, labelClassNa
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-controls={contentId}
-        className={cn('flex items-center justify-between w-full text-[13px] text-[var(--text-secondary)] font-medium', labelClassName)}
+        className={cn('flex items-center justify-between w-full text-[13px] text-gray-600 dark:text-gray-300 font-medium', labelClassName)}
       >
         <span className="flex items-center gap-1.5">
           {label}
-          {indicator && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
+          {indicator && <span className="h-1.5 w-1.5 rounded-full bg-purple-600 dark:bg-purple-500" />}
         </span>
-        <ChevronDown className={cn('h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200', open && 'rotate-180')} />
+        <ChevronDown className={cn('h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform duration-200', open && 'rotate-180')} />
       </button>
       <section
         id={contentId}

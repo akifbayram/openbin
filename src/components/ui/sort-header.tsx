@@ -39,7 +39,7 @@ export function SortHeader<C extends string>({
       onClick={handleClick}
       className={cn(
         'flex items-center gap-0.5 text-[12px] font-medium uppercase tracking-wide transition-colors',
-        active ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]',
+        active ? '' : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
         className,
       )}
     >
