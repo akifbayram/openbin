@@ -6,6 +6,7 @@ const badgeVariants = {
   secondary: 'bg-gray-500/12 dark:bg-gray-500/24 text-gray-600 dark:text-gray-300',
   destructive: 'bg-red-500 text-white',
   outline: 'border border-[var(--border-glass)] text-gray-600 dark:text-gray-300',
+  ghost: 'bg-gray-500/8 dark:bg-gray-500/18 text-gray-600 dark:text-gray-300',
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLElement> {

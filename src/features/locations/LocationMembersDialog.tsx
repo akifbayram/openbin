@@ -2,21 +2,15 @@ import { Check, ChevronDown, Copy, LogOut, RefreshCw, Shield, UserMinus } from '
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { Tooltip } from '@/components/ui/tooltip';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/lib/auth';
 import { changeMemberRole, leaveLocation, regenerateInvite, removeMember, useLocationList, useLocationMembers } from './useLocations';
+import { Button, Dialog } from '@chakra-ui/react'
+
 
 interface LocationMembersDialogProps {
   locationId: string;
@@ -28,8 +22,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   const { user, setActiveLocationId, activeLocationId } = useAuth();
   const { members, isLoading } = useLocationMembers(locationId);
   const { locations } = useLocationList();
-  const { showToast } = useToast();
-  const [copied, setCopied] = useState(false);
+    const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
   const location = locations.find((h) => h.id === locationId);
@@ -42,7 +35,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      showToast({ message: 'Failed to copy' });
+      toaster.create({ description: 'Failed to copy' });
     }
   }
 
@@ -50,9 +43,9 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
     setRegenerating(true);
     try {
       await regenerateInvite(locationId);
-      showToast({ message: 'Invite code regenerated' });
+      toaster.create({ description: 'Invite code regenerated' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to regenerate' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to regenerate' });
     } finally {
       setRegenerating(false);
     }
@@ -61,18 +54,18 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   async function handleRemoveMember(userId: string) {
     try {
       await removeMember(locationId, userId);
-      showToast({ message: 'Member removed' });
+      toaster.create({ description: 'Member removed' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to remove member' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to remove member' });
     }
   }
 
   async function handleRoleChange(userId: string, newRole: 'admin' | 'member') {
     try {
       await changeMemberRole(locationId, userId, newRole);
-      showToast({ message: `Role updated to ${newRole}` });
+      toaster.create({ description: `Role updated to ${newRole}` });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to change role' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to change role' });
     }
   }
 
@@ -85,21 +78,24 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
         setActiveLocationId(other?.id ?? null);
       }
       onOpenChange(false);
-      showToast({ message: 'Left location' });
+      toaster.create({ description: 'Left location' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to leave' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to leave' });
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{location?.name ?? 'Location'} Members</DialogTitle>
-          <DialogDescription>
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+        <Dialog.Header>
+          <Dialog.Title>{location?.name ?? 'Location'} Members</Dialog.Title>
+          <Dialog.Description>
             Manage members and share the invite code.
-          </DialogDescription>
-        </DialogHeader>
+          </Dialog.Description>
+        </Dialog.Header>
 
         {/* Invite Code */}
         {location?.invite_code && (
@@ -110,7 +106,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
             <Tooltip content="Copy invite code" side="bottom">
               <Button
                 variant="ghost"
-                size="icon-sm"
+                size="xs" px="0"
                 onClick={handleCopyInvite}
                 className="shrink-0"
                 aria-label="Copy invite code"
@@ -122,7 +118,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
               <Tooltip content="Regenerate invite code" side="bottom">
                 <Button
                   variant="ghost"
-                  size="icon-sm"
+                  size="xs" px="0"
                   onClick={handleRegenerate}
                   disabled={regenerating}
                   className="shrink-0"
@@ -165,7 +161,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                     </span>
                   </div>
                   {memberIsAdmin && (
-                    <Badge variant="secondary" className="text-[11px] gap-1 py-0 shrink-0">
+                    <Badge variant="ghost" className="text-[11px] gap-1 py-0 shrink-0">
                       <Shield className="h-3 w-3" />
                       Admin
                     </Badge>
@@ -180,7 +176,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                     <Tooltip content="Remove member" side="bottom">
                       <Button
                         variant="ghost"
-                        size="icon-sm"
+                        size="xs" px="0"
                         className="text-red-500 dark:text-red-400 shrink-0"
                         onClick={() => handleRemoveMember(member.user_id)}
                         aria-label="Remove member"
@@ -206,8 +202,9 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
             Leave Location
           </Button>
         )}
-      </DialogContent>
-    </Dialog>
+      </Dialog.Content>
+        </Dialog.Positioner>
+    </Dialog.Root>
   );
 }
 

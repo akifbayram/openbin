@@ -1,19 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { createLocation, deleteLocation, joinLocation, updateLocation, useLocationList } from './useLocations';
+import { Button, Dialog, Input } from '@chakra-ui/react'
+
 
 interface LocationCreateDialogProps {
   open: boolean;
@@ -23,8 +15,7 @@ interface LocationCreateDialogProps {
 export function LocationCreateDialog({ open, onOpenChange }: LocationCreateDialogProps) {
   const { setActiveLocationId } = useAuth();
   const t = useTerminology();
-  const { showToast } = useToast();
-  const [name, setName] = useState('');
+    const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -42,23 +33,26 @@ export function LocationCreateDialog({ open, onOpenChange }: LocationCreateDialo
       const location = await createLocation(name.trim());
       setActiveLocationId(location.id);
       onOpenChange(false);
-      showToast({ message: `Created "${location.name}"` });
+      toaster.create({ description: `Created "${location.name}"` });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.location}` });
+      toaster.create({ description: err instanceof Error ? err.message : `Failed to create ${t.location}` });
     } finally {
       setCreating(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create {t.Location}</DialogTitle>
-          <DialogDescription>
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+        <Dialog.Header>
+          <Dialog.Title>Create {t.Location}</Dialog.Title>
+          <Dialog.Description>
             A {t.location} is a shared space where members can manage {t.bins} together.
-          </DialogDescription>
-        </DialogHeader>
+          </Dialog.Description>
+        </Dialog.Header>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="location-name">Name</Label>
@@ -71,17 +65,18 @@ export function LocationCreateDialog({ open, onOpenChange }: LocationCreateDialo
               required
             />
           </div>
-          <DialogFooter>
+          <Dialog.Footer>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={!name.trim() || creating}>
               {creating ? 'Creating...' : 'Create'}
             </Button>
-          </DialogFooter>
+          </Dialog.Footer>
         </form>
-      </DialogContent>
-    </Dialog>
+      </Dialog.Content>
+        </Dialog.Positioner>
+    </Dialog.Root>
   );
 }
 
@@ -93,8 +88,7 @@ interface LocationJoinDialogProps {
 export function LocationJoinDialog({ open, onOpenChange }: LocationJoinDialogProps) {
   const { setActiveLocationId } = useAuth();
   const t = useTerminology();
-  const { showToast } = useToast();
-  const [inviteCode, setInviteCode] = useState('');
+    const [inviteCode, setInviteCode] = useState('');
   const [joining, setJoining] = useState(false);
 
   useEffect(() => {
@@ -112,23 +106,26 @@ export function LocationJoinDialog({ open, onOpenChange }: LocationJoinDialogPro
       const location = await joinLocation(inviteCode.trim());
       setActiveLocationId(location.id);
       onOpenChange(false);
-      showToast({ message: `Joined "${location.name}"` });
+      toaster.create({ description: `Joined "${location.name}"` });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to join ${t.location}` });
+      toaster.create({ description: err instanceof Error ? err.message : `Failed to join ${t.location}` });
     } finally {
       setJoining(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Join {t.Location}</DialogTitle>
-          <DialogDescription>
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+        <Dialog.Header>
+          <Dialog.Title>Join {t.Location}</Dialog.Title>
+          <Dialog.Description>
             Enter the invite code shared by a {t.location} owner to join.
-          </DialogDescription>
-        </DialogHeader>
+          </Dialog.Description>
+        </Dialog.Header>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="invite-code">Invite Code</Label>
@@ -141,17 +138,18 @@ export function LocationJoinDialog({ open, onOpenChange }: LocationJoinDialogPro
               required
             />
           </div>
-          <DialogFooter>
+          <Dialog.Footer>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={!inviteCode.trim() || joining}>
               {joining ? 'Joining...' : 'Join'}
             </Button>
-          </DialogFooter>
+          </Dialog.Footer>
         </form>
-      </DialogContent>
-    </Dialog>
+      </Dialog.Content>
+        </Dialog.Positioner>
+    </Dialog.Root>
   );
 }
 
@@ -163,8 +161,7 @@ interface LocationRenameDialogProps {
 }
 
 export function LocationRenameDialog({ locationId, currentName, open, onOpenChange }: LocationRenameDialogProps) {
-  const { showToast } = useToast();
-  const t = useTerminology();
+    const t = useTerminology();
   const [name, setName] = useState(currentName);
   const [renaming, setRenaming] = useState(false);
 
@@ -182,23 +179,26 @@ export function LocationRenameDialog({ locationId, currentName, open, onOpenChan
     try {
       await updateLocation(locationId, { name: name.trim() });
       onOpenChange(false);
-      showToast({ message: `${t.Location} renamed` });
+      toaster.create({ description: `${t.Location} renamed` });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to rename ${t.location}` });
+      toaster.create({ description: err instanceof Error ? err.message : `Failed to rename ${t.location}` });
     } finally {
       setRenaming(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Rename {t.Location}</DialogTitle>
-          <DialogDescription>
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+        <Dialog.Header>
+          <Dialog.Title>Rename {t.Location}</Dialog.Title>
+          <Dialog.Description>
             Enter a new name for this {t.location}.
-          </DialogDescription>
-        </DialogHeader>
+          </Dialog.Description>
+        </Dialog.Header>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="rename-location">Name</Label>
@@ -210,17 +210,18 @@ export function LocationRenameDialog({ locationId, currentName, open, onOpenChan
               required
             />
           </div>
-          <DialogFooter>
+          <Dialog.Footer>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={!name.trim() || renaming}>
               {renaming ? 'Saving...' : 'Save'}
             </Button>
-          </DialogFooter>
+          </Dialog.Footer>
         </form>
-      </DialogContent>
-    </Dialog>
+      </Dialog.Content>
+        </Dialog.Positioner>
+    </Dialog.Root>
   );
 }
 
@@ -235,8 +236,7 @@ export function LocationDeleteDialog({ locationId, locationName, open, onOpenCha
   const { activeLocationId, setActiveLocationId } = useAuth();
   const { locations } = useLocationList();
   const t = useTerminology();
-  const { showToast } = useToast();
-  const [deleting, setDeleting] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
   async function handleDelete() {
     if (!locationId) return;
@@ -248,24 +248,27 @@ export function LocationDeleteDialog({ locationId, locationName, open, onOpenCha
         setActiveLocationId(remaining.length > 0 ? remaining[0].id : null);
       }
       onOpenChange(false);
-      showToast({ message: `${t.Location} deleted` });
+      toaster.create({ description: `${t.Location} deleted` });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to delete ${t.location}` });
+      toaster.create({ description: err instanceof Error ? err.message : `Failed to delete ${t.location}` });
     } finally {
       setDeleting(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete {t.Location}?</DialogTitle>
-          <DialogDescription>
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+        <Dialog.Header>
+          <Dialog.Title>Delete {t.Location}?</Dialog.Title>
+          <Dialog.Description>
             This will permanently delete &quot;{locationName}&quot; and all its {t.bins} and photos. This cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
+          </Dialog.Description>
+        </Dialog.Header>
+        <Dialog.Footer>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
@@ -276,8 +279,9 @@ export function LocationDeleteDialog({ locationId, locationName, open, onOpenCha
           >
             {deleting ? 'Deleting...' : 'Delete'}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </Dialog.Footer>
+      </Dialog.Content>
+        </Dialog.Positioner>
+    </Dialog.Root>
   );
 }

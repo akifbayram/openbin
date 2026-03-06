@@ -1,18 +1,10 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/lib/auth';
 import { updateBin } from './useBins';
 import { useCustomFields } from './useCustomFields';
+import { Button, Dialog, Input } from '@chakra-ui/react'
+
 
 interface BulkCustomFieldsDialogProps {
   open: boolean;
@@ -50,15 +42,18 @@ export function BulkCustomFieldsDialog({ open, onOpenChange, binIds, onDone }: B
   const hasValues = Object.values(values).some((v) => v.trim());
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Set Custom Fields</DialogTitle>
-          <DialogDescription>
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+        <Dialog.Header>
+          <Dialog.Title>Set Custom Fields</Dialog.Title>
+          <Dialog.Description>
             Set custom field values for {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''}.
             Only filled fields will be updated.
-          </DialogDescription>
-        </DialogHeader>
+          </Dialog.Description>
+        </Dialog.Header>
         <div className="space-y-3">
           {fields.length === 0 ? (
             <p className="text-[13px] text-gray-500 dark:text-gray-400">
@@ -78,15 +73,16 @@ export function BulkCustomFieldsDialog({ open, onOpenChange, binIds, onDone }: B
             ))
           )}
         </div>
-        <DialogFooter>
+        <Dialog.Footer>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button onClick={handleApply} disabled={loading || !hasValues}>
             {loading ? 'Applying...' : 'Apply'}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </Dialog.Footer>
+      </Dialog.Content>
+        </Dialog.Positioner>
+    </Dialog.Root>
   );
 }

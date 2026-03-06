@@ -2,10 +2,7 @@ import { AlertCircle, Plus, RotateCcw, ScanLine, Search } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 import { lookupBinByCode } from '@/features/bins/useBins';
@@ -17,6 +14,8 @@ import { BIN_URL_REGEX } from '@/lib/qr';
 import { useTerminology } from '@/lib/terminology';
 import { haptic } from '@/lib/utils';
 import { Html5QrcodePlugin } from './Html5QrcodePlugin';
+import { Button, Dialog, Input } from '@chakra-ui/react'
+
 
 interface ScanDialogProps {
   open: boolean;
@@ -104,11 +103,14 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Scan QR Code</DialogTitle>
-          </DialogHeader>
+      <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>Scan QR Code</Dialog.Title>
+          </Dialog.Header>
 
           {error ? (
             <Card>
@@ -208,8 +210,9 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
               <p className="mt-2 text-[13px] text-red-500 dark:text-red-400">{manualError}</p>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
 
       <BinCreateDialog
         open={createOpen}

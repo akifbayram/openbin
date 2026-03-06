@@ -1,14 +1,12 @@
 import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { useLocationList } from '@/features/locations/useLocations';
 import { useAuth } from '@/lib/auth';
 import { formatTimeAgo } from '@/lib/formatTime';
@@ -16,12 +14,13 @@ import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
 import type { Bin } from '@/types';
 import { notifyBinsChanged, permanentDeleteBin, restoreBinFromTrash, useTrashBins } from './useBins';
+import { Button, Dialog } from '@chakra-ui/react'
+
 
 export function TrashPage() {
   const navigate = useNavigate();
   const { bins, isLoading } = useTrashBins();
-  const { showToast } = useToast();
-  const { activeLocationId } = useAuth();
+    const { activeLocationId } = useAuth();
   const { isAdmin, isLoading: permissionsLoading } = usePermissions();
   const t = useTerminology();
   const { locations } = useLocationList();
@@ -42,9 +41,9 @@ export function TrashPage() {
   async function handleRestore(bin: Bin) {
     try {
       await restoreBinFromTrash(bin.id);
-      showToast({ message: `"${bin.name}" restored` });
+      toaster.create({ description: `"${bin.name}" restored` });
     } catch {
-      showToast({ message: `Failed to restore ${t.bin}` });
+      toaster.create({ description: `Failed to restore ${t.bin}` });
     }
   }
 
@@ -53,9 +52,9 @@ export function TrashPage() {
     try {
       await permanentDeleteBin(confirmDelete.id);
       notifyBinsChanged();
-      showToast({ message: `"${confirmDelete.name}" permanently deleted` });
+      toaster.create({ description: `"${confirmDelete.name}" permanently deleted` });
     } catch {
-      showToast({ message: `Failed to delete ${t.bin}` });
+      toaster.create({ description: `Failed to delete ${t.bin}` });
     } finally {
       setConfirmDelete(null);
     }
@@ -138,11 +137,14 @@ export function TrashPage() {
       )}
 
       {/* Confirm permanent delete */}
-      <Dialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Permanently Delete</DialogTitle>
-          </DialogHeader>
+      <Dialog.Root open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>Permanently Delete</Dialog.Title>
+          </Dialog.Header>
           <div className="flex items-start gap-3">
             <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
               <AlertTriangle className="h-5 w-5 text-red-500 dark:text-red-400" />
@@ -156,20 +158,21 @@ export function TrashPage() {
               </p>
             </div>
           </div>
-          <DialogFooter>
+          <Dialog.Footer>
             <Button variant="ghost" onClick={() => setConfirmDelete(null)} className="rounded-[var(--radius-full)]">
               Cancel
             </Button>
             <Button
-              variant="destructive"
+              variant="solid" colorPalette="red"
               onClick={handlePermanentDelete}
               className="rounded-[var(--radius-full)]"
             >
               Delete Forever
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </Dialog.Footer>
+        </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </div>
   );
 }

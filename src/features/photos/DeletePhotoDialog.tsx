@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button, Dialog } from '@chakra-ui/react'
+
 
 interface DeletePhotoDialogProps {
   open: boolean;
@@ -9,15 +9,18 @@ interface DeletePhotoDialogProps {
 
 export function DeletePhotoDialog({ open, onOpenChange, onConfirm }: DeletePhotoDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete photo?</DialogTitle>
-          <DialogDescription>
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+        <Dialog.Header>
+          <Dialog.Title>Delete photo?</Dialog.Title>
+          <Dialog.Description>
             This photo will be permanently deleted. This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
+          </Dialog.Description>
+        </Dialog.Header>
+        <Dialog.Footer>
           <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-[var(--radius-full)]">
             Cancel
           </Button>
@@ -30,8 +33,9 @@ export function DeletePhotoDialog({ open, onOpenChange, onConfirm }: DeletePhoto
           >
             Delete
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </Dialog.Footer>
+      </Dialog.Content>
+        </Dialog.Positioner>
+    </Dialog.Root>
   );
 }

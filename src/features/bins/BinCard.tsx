@@ -168,7 +168,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
             {displayedTags.map((tag) => (
               <Badge
                 key={tag}
-                variant="secondary"
+                variant="ghost"
                 className="shrink-0 max-w-[8rem] truncate cursor-pointer text-[11px] hover:bg-gray-500/16 dark:hover:bg-gray-500/28 transition-colors"
                 style={isPhoto
                   ? { backgroundColor: 'rgba(0,0,0,0.4)', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }
@@ -184,7 +184,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
             ))}
             {hiddenTagCount > 0 && (
               <Badge
-                variant="secondary"
+                variant="ghost"
                 className="shrink-0 text-[11px] opacity-70"
                 style={isPhoto
                   ? { backgroundColor: 'rgba(0,0,0,0.4)', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }

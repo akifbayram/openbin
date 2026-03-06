@@ -1,10 +1,20 @@
 "use client"
 
-import { ChakraProvider, defaultSystem } from "@chakra-ui/react"
+import { ChakraProvider, createSystem, defaultConfig, defineConfig } from "@chakra-ui/react"
+
+const config = defineConfig({
+  globalCss: {
+    "html, body": {
+      colorPalette: "purple",
+    },
+  },
+})
+
+const system = createSystem(defaultConfig, config)
 
 export function Provider({ children }: { children: React.ReactNode }) {
   return (
-    <ChakraProvider value={defaultSystem}>
+    <ChakraProvider value={system}>
       {children}
     </ChakraProvider>
   )

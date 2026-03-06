@@ -1,7 +1,5 @@
 import { Check, Folder, Inbox, MoreHorizontal, Plus, X } from 'lucide-react';
 import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
@@ -9,6 +7,8 @@ import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
 import { AreaActionMenu } from './AreaActionMenu';
 import { useInlineEdit } from './useInlineEdit';
+import { Button, Input } from '@chakra-ui/react'
+
 
 interface AreaCardProps {
   id: string;
@@ -60,7 +60,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
           <Tooltip content="Save">
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="xs" px="0"
               onClick={handleSave}
               disabled={!editValue.trim() || saving}
               className="shrink-0"
@@ -72,7 +72,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
           <Tooltip content="Cancel">
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="xs" px="0"
               onClick={cancelEdit}
               className="shrink-0"
               aria-label="Cancel"
@@ -119,7 +119,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
           <Tooltip content="More actions" side="bottom">
             <Button
               variant="ghost"
-              size="icon"
+              size="sm" px="0"
               onClick={(e) => { e.stopPropagation(); toggle(); }}
               className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus:opacity-100 transition-opacity"
               aria-label="More actions"

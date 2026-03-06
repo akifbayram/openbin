@@ -1,11 +1,12 @@
 import { Columns3 } from 'lucide-react';
 import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
 import { FIELD_LABELS, type FieldKey } from './useColumnVisibility';
+import { Button } from '@chakra-ui/react'
+
 
 /** Shared field toggle list used by both ColumnVisibilityMenu and SearchBarOverflowMenu */
 export function FieldToggleList({ fields, visibility, onToggle }: {
@@ -49,8 +50,8 @@ export function ColumnVisibilityMenu({ applicableFields, visibility, onToggle }:
     <div ref={menuRef} className="relative">
       <Tooltip content="Fields" side="bottom">
         <Button
-          variant="secondary"
-          size="icon"
+          variant="ghost"
+          size="sm" px="0"
           onClick={toggle}
           className="shrink-0"
           aria-label="Toggle field visibility"

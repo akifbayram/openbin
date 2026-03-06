@@ -2,7 +2,6 @@ import { Download, X } from 'lucide-react';
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { PageTransition } from '@/components/page-transition';
-import { Button } from '@/components/ui/button';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
 import { useLocationList } from '@/features/locations/useLocations';
@@ -13,13 +12,14 @@ import { TagColorsProvider } from '@/features/tags/TagColorsContext';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { useNavigationGuard } from '@/lib/navigationGuard';
-import { useTheme } from '@/lib/theme';
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
 import { toggleSidebarCollapsed, useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
 import { cn } from '@/lib/utils';
 import { DrawerProvider } from './DrawerContext';
 import { MobileDrawer } from './MobileDrawer';
 import { Sidebar, SidebarContent } from './Sidebar';
+import { Button } from '@chakra-ui/react'
+
 
 const ScanDialog = React.lazy(() =>
   import('@/features/qrcode/ScanDialog').then((m) => ({ default: m.ScanDialog })),
@@ -31,7 +31,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function AppLayout() {
-  useTheme();
+  // color-mode module auto-initializes on import
   const { isCollapsed: sidebarCollapsed } = useSidebarCollapsed();
   const { settings } = useAppSettings();
   const { activeLocationId, setActiveLocationId, demoMode } = useAuth();

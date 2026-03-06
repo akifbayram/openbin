@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { OptionGroup } from '@/components/ui/option-group';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { HUE_RANGES } from '@/lib/colorPalette';
@@ -9,6 +7,8 @@ import { cn } from '@/lib/utils';
 import type { Area } from '@/types';
 import type { BinFilters, SortOption } from './useBins';
 import { countActiveFilters, EMPTY_FILTERS } from './useBins';
+import { Button, Dialog } from '@chakra-ui/react'
+
 
 const sortLabels: Record<SortOption, string> = {
   updated: 'Recently Updated',
@@ -87,11 +87,14 @@ export function BinFilterDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Filter Bins</DialogTitle>
-        </DialogHeader>
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+        <Dialog.Header>
+          <Dialog.Title>Filter Bins</Dialog.Title>
+        </Dialog.Header>
 
         <div className="space-y-6">
           {/* Sort */}
@@ -274,7 +277,7 @@ export function BinFilterDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <Dialog.Footer>
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
               <Button variant="ghost" onClick={reset}>
@@ -295,8 +298,9 @@ export function BinFilterDialog({
               </Button>
             </div>
           </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </Dialog.Footer>
+      </Dialog.Content>
+        </Dialog.Positioner>
+    </Dialog.Root>
   );
 }

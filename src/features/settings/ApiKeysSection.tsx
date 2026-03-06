@@ -1,20 +1,12 @@
 import { Check, Copy, Key, KeyRound, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { Tooltip } from '@/components/ui/tooltip';
 import { createApiKey, revokeApiKey, useApiKeys } from './useApiKeys';
+import { Button, Dialog, Input } from '@chakra-ui/react'
+
 
 function formatDate(iso: string | null): string {
   if (!iso) return 'Never';
@@ -27,8 +19,7 @@ function formatDate(iso: string | null): string {
 
 export function ApiKeysSection() {
   const { keys, isLoading } = useApiKeys();
-  const { showToast } = useToast();
-  const [createOpen, setCreateOpen] = useState(false);
+    const [createOpen, setCreateOpen] = useState(false);
   const [keyName, setKeyName] = useState('');
   const [creating, setCreating] = useState(false);
   const [newKey, setNewKey] = useState<string | null>(null);
@@ -44,7 +35,7 @@ export function ApiKeysSection() {
       setNewKey(result.key);
       setKeyName('');
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to create API key' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to create API key' });
     } finally {
       setCreating(false);
     }
@@ -55,10 +46,10 @@ export function ApiKeysSection() {
     setRevoking(true);
     try {
       await revokeApiKey(revokeId);
-      showToast({ message: 'API key revoked' });
+      toaster.create({ description: 'API key revoked' });
       setRevokeId(null);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to revoke API key' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to revoke API key' });
     } finally {
       setRevoking(false);
     }
@@ -71,7 +62,7 @@ export function ApiKeysSection() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      showToast({ message: 'Failed to copy' });
+      toaster.create({ description: 'Failed to copy' });
     }
   }
 
@@ -93,7 +84,7 @@ export function ApiKeysSection() {
             <Tooltip content="Create API key" side="bottom">
               <Button
                 onClick={() => setCreateOpen(true)}
-                size="icon-sm"
+                size="xs" px="0"
                 aria-label="Create API key"
               >
                 <Plus className="h-4 w-4" />
@@ -128,7 +119,7 @@ export function ApiKeysSection() {
                   <Tooltip content="Revoke API key" side="bottom">
                     <Button
                       variant="ghost"
-                      size="icon-sm"
+                      size="xs" px="0"
                       className="text-red-500 dark:text-red-400 shrink-0"
                       onClick={() => setRevokeId(k.id)}
                       aria-label="Revoke API key"
@@ -144,16 +135,19 @@ export function ApiKeysSection() {
       </Card>
 
       {/* Create API Key Dialog */}
-      <Dialog open={createOpen} onOpenChange={(open) => !open && handleCloseCreate()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{newKey ? 'API Key Created' : 'Create API Key'}</DialogTitle>
-            <DialogDescription>
+      <Dialog.Root open={createOpen} onOpenChange={(e) => !e.open && handleCloseCreate()}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>{newKey ? 'API Key Created' : 'Create API Key'}</Dialog.Title>
+            <Dialog.Description>
               {newKey
                 ? 'Copy this key now — it won\'t be shown again.'
                 : 'Give your key a name to help you identify it later.'}
-            </DialogDescription>
-          </DialogHeader>
+            </Dialog.Description>
+          </Dialog.Header>
           {newKey ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -162,18 +156,18 @@ export function ApiKeysSection() {
                 </code>
                 <Button
                   variant="outline"
-                  size="icon-sm"
+                  size="xs" px="0"
                   className="shrink-0"
                   onClick={handleCopy}
                 >
                   {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
-              <DialogFooter>
+              <Dialog.Footer>
                 <Button onClick={handleCloseCreate}>
                   Done
                 </Button>
-              </DialogFooter>
+              </Dialog.Footer>
             </div>
           ) : (
             <form onSubmit={handleCreate} className="space-y-5">
@@ -187,29 +181,33 @@ export function ApiKeysSection() {
                   autoFocus
                 />
               </div>
-              <DialogFooter>
+              <Dialog.Footer>
                 <Button type="button" variant="ghost" onClick={handleCloseCreate}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={creating}>
                   {creating ? 'Creating...' : 'Create'}
                 </Button>
-              </DialogFooter>
+              </Dialog.Footer>
             </form>
           )}
-        </DialogContent>
-      </Dialog>
+        </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
 
       {/* Revoke Confirmation Dialog */}
-      <Dialog open={!!revokeId} onOpenChange={(open) => !open && setRevokeId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Revoke API Key?</DialogTitle>
-            <DialogDescription>
+      <Dialog.Root open={!!revokeId} onOpenChange={(e) => !e.open && setRevokeId(null)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>Revoke API Key?</Dialog.Title>
+            <Dialog.Description>
               Any integrations using this key will stop working immediately. This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
+            </Dialog.Description>
+          </Dialog.Header>
+          <Dialog.Footer>
             <Button variant="ghost" onClick={() => setRevokeId(null)}>
               Cancel
             </Button>
@@ -220,9 +218,10 @@ export function ApiKeysSection() {
             >
               {revoking ? 'Revoking...' : 'Revoke'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </Dialog.Footer>
+        </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </>
   );
 }

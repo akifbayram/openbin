@@ -10,18 +10,11 @@ import {
   Upload,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import type { useDataSectionActions } from './useDataSectionActions';
+import { Button, Dialog } from '@chakra-ui/react'
+
 
 interface DataSectionProps {
   activeLocationId: string | null | undefined;
@@ -246,15 +239,18 @@ export function DataSection({
       </Card>
 
       {/* Replace confirmation dialog */}
-      <Dialog open={confirmReplace} onOpenChange={setConfirmReplace}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Replace All Data?</DialogTitle>
-            <DialogDescription>
+      <Dialog.Root open={confirmReplace} onOpenChange={(e) => setConfirmReplace(e.open)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>Replace All Data?</Dialog.Title>
+            <Dialog.Description>
               This will delete all existing bins and photos in the current location, then import from the backup file. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
+            </Dialog.Description>
+          </Dialog.Header>
+          <Dialog.Footer>
             <Button
               variant="ghost"
               onClick={() => {
@@ -271,9 +267,10 @@ export function DataSection({
             >
               Replace All
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </Dialog.Footer>
+        </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </>
   );
 }

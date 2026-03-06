@@ -125,7 +125,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
         {tags.map((tag) => (
           <Badge
             key={tag}
-            variant="secondary"
+            variant="ghost"
             className={`gap-1 pl-1.5 ${exitingTags.has(tag) ? 'animate-shrink-out' : ''}`}
             style={getTagStyle(tag)}
           >

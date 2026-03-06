@@ -1,7 +1,8 @@
 import { ChevronLeft, ChevronRight, Search, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { StreamingText } from './StreamingText';
 import type { QueryResult } from './useInventoryQuery';
+import { Button } from '@chakra-ui/react'
+
 
 interface InventoryQueryResultProps {
   queryResult: QueryResult | null;

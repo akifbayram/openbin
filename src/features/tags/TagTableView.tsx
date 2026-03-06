@@ -63,7 +63,7 @@ export function TagTableView({
           >
             <div className="flex-[2] min-w-0">
               <Badge
-                variant="secondary"
+                variant="ghost"
                 className="text-[13px] truncate max-w-full"
                 style={getTagBadgeStyle(entry.tag)}
               >

@@ -1,9 +1,10 @@
 import { ArrowRightLeft, CheckCircle2, Clipboard, ClipboardPaste, Copy, Eye, List, MapPin, MoreHorizontal, Paintbrush, Pin, Tag, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { cn } from '@/lib/utils';
+import { Button } from '@chakra-ui/react'
+
 
 interface BulkActionBarProps {
   selectedCount: number;
@@ -100,7 +101,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
           <Tooltip content="More actions" side="top">
             <Button
               variant="ghost"
-              size="icon"
+              size="sm" px="0"
               className="h-8 w-8 rounded-full"
               onClick={() => setMoreOpen((o) => !o)}
               aria-label="More actions"
@@ -190,7 +191,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
       <Tooltip content="Clear selection" side="top">
         <Button
           variant="ghost"
-          size="icon"
+          size="sm" px="0"
           className="h-8 w-8 rounded-full"
           onClick={onClear}
           aria-label="Clear selection"

@@ -1,5 +1,6 @@
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { ColumnVisibilityMenu } from '../ColumnVisibilityMenu';
 import { FIELD_LABELS, type FieldKey } from '../useColumnVisibility';
@@ -45,14 +46,16 @@ describe('ColumnVisibilityMenu', () => {
     }
   });
 
-  it('calls onToggle when a switch is clicked', () => {
+  it('calls onToggle when a switch is clicked', async () => {
+    const user = userEvent.setup();
     const onToggle = vi.fn();
     renderMenu({ applicableFields: ['icon', 'area'], onToggle });
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle field visibility' }));
 
-    // The wrapper div with the field label handles the click
-    fireEvent.click(screen.getByText('Icon'));
+    // Chakra Switch requires userEvent for proper event chain
+    const checkboxes = screen.getAllByRole('checkbox');
+    await user.click(checkboxes[0]);
     expect(onToggle).toHaveBeenCalledWith('icon');
   });
 

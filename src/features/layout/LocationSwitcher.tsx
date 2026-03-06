@@ -79,7 +79,7 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
                 <Check className={cn('h-4 w-4 shrink-0', isActive ? 'text-purple-600 dark:text-purple-400' : 'invisible')} />
                 <span className="flex-1 truncate">{loc.name}</span>
                 {loc.role && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  <Badge variant="ghost" className="text-[10px] px-1.5 py-0">
                     {loc.role}
                   </Badge>
                 )}

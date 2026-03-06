@@ -1,15 +1,7 @@
 import { GripVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
+import { Button, Dialog, Input } from '@chakra-ui/react';
 import {
   addCustomField,
   deleteCustomField,
@@ -25,8 +17,7 @@ interface CustomFieldsDialogProps {
 
 export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFieldsDialogProps) {
   const { fields } = useCustomFields(open ? locationId : null);
-  const { showToast } = useToast();
-  const [newName, setNewName] = useState('');
+    const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -46,7 +37,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
       await addCustomField(locationId, newName.trim());
       setNewName('');
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to add field' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to add field' });
     } finally {
       setAdding(false);
     }
@@ -58,7 +49,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
       await updateCustomField(locationId, fieldId, { name: editName.trim() });
       setEditingId(null);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to rename field' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to rename field' });
     }
   }
 
@@ -66,21 +57,24 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
     if (!locationId) return;
     try {
       await deleteCustomField(locationId, fieldId);
-      showToast({ message: `Deleted "${fieldName}"` });
+      toaster.create({ description: `Deleted "${fieldName}"` });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete field' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to delete field' });
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Custom Fields</DialogTitle>
-          <DialogDescription>
+    <Dialog.Root open={open} onOpenChange={(e) => onOpenChange(e.open)}>
+      <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+        <Dialog.Header>
+          <Dialog.Title>Custom Fields</Dialog.Title>
+          <Dialog.Description>
             Define custom fields that appear on all bins in this location.
-          </DialogDescription>
-        </DialogHeader>
+          </Dialog.Description>
+        </Dialog.Header>
 
         <div className="space-y-3">
           {fields.length === 0 && (
@@ -103,10 +97,10 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                     autoFocus
                     className="h-8 text-[14px]"
                   />
-                  <Button type="submit" size="icon-sm" variant="ghost" className="shrink-0" disabled={!editName.trim()}>
+                  <Button type="submit" size="xs" px="0" variant="ghost" className="shrink-0" disabled={!editName.trim()}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                  <Button type="button" size="icon-sm" variant="ghost" className="shrink-0" onClick={() => setEditingId(null)}>
+                  <Button type="button" size="xs" px="0" variant="ghost" className="shrink-0" onClick={() => setEditingId(null)}>
                     <X className="h-3.5 w-3.5" />
                   </Button>
                 </form>
@@ -116,7 +110,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                     {field.name}
                   </span>
                   <Button
-                    size="icon-sm"
+                    size="xs" px="0"
                     variant="ghost"
                     className="shrink-0"
                     onClick={() => { setEditingId(field.id); setEditName(field.name); }}
@@ -124,7 +118,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                     <Pencil className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                   </Button>
                   <Button
-                    size="icon-sm"
+                    size="xs" px="0"
                     variant="ghost"
                     className="shrink-0"
                     onClick={() => handleDelete(field.id, field.name)}
@@ -149,7 +143,8 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
             </Button>
           </form>
         </div>
-      </DialogContent>
-    </Dialog>
+      </Dialog.Content>
+        </Dialog.Positioner>
+    </Dialog.Root>
   );
 }

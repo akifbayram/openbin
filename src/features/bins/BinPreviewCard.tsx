@@ -60,7 +60,7 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
         {tags.length > 0 && (
           <div className="flex gap-1.5 mt-2 overflow-hidden">
             {tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-[11px]">
+              <Badge key={tag} variant="ghost" className="text-[11px]">
                 {tag}
               </Badge>
             ))}

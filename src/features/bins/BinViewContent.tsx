@@ -130,7 +130,7 @@ export function BinViewContent({
                         }
                       : undefined;
                     return (
-                      <Badge key={tag} variant="secondary" style={tagStyle}>{tag}</Badge>
+                      <Badge key={tag} variant="ghost" style={tagStyle}>{tag}</Badge>
                     );
                   })}
                 </div>

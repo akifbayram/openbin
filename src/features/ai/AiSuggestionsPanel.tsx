@@ -142,7 +142,7 @@ export function AiSuggestionsPanel({
               <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300">Tags</p>
               <div className="flex flex-wrap gap-1.5 mt-1">
                 {suggestions.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">{tag}</Badge>
+                  <Badge key={tag} variant="ghost">{tag}</Badge>
                 ))}
               </div>
               {currentTags.length > 0 && (

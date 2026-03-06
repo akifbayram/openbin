@@ -1,14 +1,11 @@
 import { Check, Copy, LogIn, MapPin, MapPinned, Plus, Shield, User, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/components/ui/toast';
+import { toaster } from '@/components/ui/toaster';
 import { CustomFieldsDialog } from '@/features/bins/CustomFieldsDialog';
 import { LocationCreateDialog, LocationDeleteDialog, LocationJoinDialog, LocationRenameDialog } from '@/features/locations/LocationDialogs';
 import { LocationMembersDialog } from '@/features/locations/LocationMembersDialog';
@@ -21,6 +18,8 @@ import { AreaCard, CreateAreaCard, UnassignedAreaCard } from './AreaCard';
 import { LocationSettingsMenu } from './LocationSettingsMenu';
 import { LocationTabs } from './LocationTabs';
 import { createArea, deleteArea, updateArea, useAreaList } from './useAreas';
+import { Button, Dialog, Input } from '@chakra-ui/react'
+
 
 interface DeleteAreaTarget {
   id: string;
@@ -33,8 +32,7 @@ export function AreasPage() {
   const navigate = useNavigate();
   const { user, activeLocationId, setActiveLocationId } = useAuth();
   const { locations, isLoading: locationsLoading } = useLocationList();
-  const { showToast } = useToast();
-  const { areas, unassignedCount } = useAreaList(activeLocationId);
+    const { areas, unassignedCount } = useAreaList(activeLocationId);
 
   // Location dialog state
   const [createLocationOpen, setCreateLocationOpen] = useState(false);
@@ -67,7 +65,7 @@ export function AreasPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      showToast({ message: 'Failed to copy' });
+      toaster.create({ description: 'Failed to copy' });
     }
   }
 
@@ -88,7 +86,7 @@ export function AreasPage() {
       setNewAreaName('');
       setCreateAreaOpen(false);
     } catch (err) {
-      showToast({ message: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong' });
+      toaster.create({ description: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong' });
     } finally {
       setCreatingArea(false);
     }
@@ -99,7 +97,7 @@ export function AreasPage() {
     try {
       await updateArea(activeLocationId, areaId, newName);
     } catch (err) {
-      showToast({ message: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong' });
+      toaster.create({ description: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong' });
       throw err;
     }
   }
@@ -115,7 +113,7 @@ export function AreasPage() {
       await deleteArea(activeLocationId, deleteTarget.id);
       setDeleteTarget(null);
     } catch {
-      showToast({ message: 'Something went wrong' });
+      toaster.create({ description: 'Something went wrong' });
     } finally {
       setDeletingArea(false);
     }
@@ -129,9 +127,9 @@ export function AreasPage() {
         const other = locations.find((l) => l.id !== locationId);
         setActiveLocationId(other?.id ?? null);
       }
-      showToast({ message: 'Left location' });
+      toaster.create({ description: 'Left location' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to leave' });
+      toaster.create({ description: err instanceof Error ? err.message : 'Failed to leave' });
     }
   }
 
@@ -145,7 +143,7 @@ export function AreasPage() {
         actions={locations.length > 0 ? (
           <div className="flex gap-2">
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               onClick={() => setJoinLocationOpen(true)}
               className="h-10 px-3.5"
@@ -155,7 +153,7 @@ export function AreasPage() {
             </Button>
             <Button
               onClick={() => setCreateLocationOpen(true)}
-              size="icon"
+              size="sm" px="0"
               className="h-10 w-10 rounded-full"
               aria-label={`Create ${t.location}`}
             >
@@ -315,14 +313,17 @@ export function AreasPage() {
       </Crossfade>
 
       {/* Create Area Dialog */}
-      <Dialog open={createAreaOpen} onOpenChange={setCreateAreaOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{`Create ${t.Area}`}</DialogTitle>
-            <DialogDescription>
+      <Dialog.Root open={createAreaOpen} onOpenChange={(e) => setCreateAreaOpen(e.open)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>{`Create ${t.Area}`}</Dialog.Title>
+            <Dialog.Description>
               {`${t.Areas} help organize ${t.bins} by zone (e.g. Garage, Kitchen, Closet).`}
-            </DialogDescription>
-          </DialogHeader>
+            </Dialog.Description>
+          </Dialog.Header>
           <form onSubmit={handleCreateArea} className="space-y-5">
             <div className="space-y-2">
               <Input
@@ -333,30 +334,34 @@ export function AreasPage() {
                 required
               />
             </div>
-            <DialogFooter>
+            <Dialog.Footer>
               <Button type="button" variant="ghost" onClick={() => setCreateAreaOpen(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={!newAreaName.trim() || creatingArea}>
                 {creatingArea ? 'Creating...' : 'Create'}
               </Button>
-            </DialogFooter>
+            </Dialog.Footer>
           </form>
-        </DialogContent>
-      </Dialog>
+        </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
 
       {/* Delete Area Confirmation */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{`Delete ${t.area}?`}</DialogTitle>
-            <DialogDescription>
+      <Dialog.Root open={!!deleteTarget} onOpenChange={(e) => !e.open && setDeleteTarget(null)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.CloseTrigger />
+          <Dialog.Header>
+            <Dialog.Title>{`Delete ${t.area}?`}</Dialog.Title>
+            <Dialog.Description>
               {deleteTarget && deleteTarget.binCount > 0
                 ? `"${deleteTarget.name}" has ${deleteTarget.binCount} ${deleteTarget.binCount !== 1 ? t.bins : t.bin}. They will become unassigned.`
                 : `Delete "${deleteTarget?.name}"?`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
+            </Dialog.Description>
+          </Dialog.Header>
+          <Dialog.Footer>
             <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
               Cancel
             </Button>
@@ -367,9 +372,10 @@ export function AreasPage() {
             >
               {deletingArea ? 'Deleting...' : 'Delete'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </Dialog.Footer>
+        </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
 
       {/* Location Dialogs */}
       <LocationCreateDialog open={createLocationOpen} onOpenChange={setCreateLocationOpen} />

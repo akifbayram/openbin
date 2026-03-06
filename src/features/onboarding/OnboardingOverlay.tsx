@@ -356,7 +356,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                   {areaNames.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {areaNames.map((name) => (
-                        <Badge key={name} variant="secondary" className="text-[12px] gap-1 pr-1">
+                        <Badge key={name} variant="ghost" className="text-[12px] gap-1 pr-1">
                           {name}
                           <button
                             type="button"

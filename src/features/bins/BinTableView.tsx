@@ -227,7 +227,7 @@ const BinTableRow = React.memo(function BinTableRow({
           {displayedTags.map((tag) => (
             <Badge
               key={tag}
-              variant="secondary"
+              variant="ghost"
               className="shrink-0 max-w-[5rem] truncate text-[11px] cursor-pointer hover:bg-gray-500/16 dark:bg-gray-500/28 transition-colors"
               style={getTagStyle(tag)}
               onClick={(e) => { e.stopPropagation(); if (!selectable) onTagClick(tag); }}
@@ -236,7 +236,7 @@ const BinTableRow = React.memo(function BinTableRow({
             </Badge>
           ))}
           {hiddenTagCount > 0 && (
-            <Badge variant="secondary" className="shrink-0 text-[11px] opacity-70">
+            <Badge variant="ghost" className="shrink-0 text-[11px] opacity-70">
               +{hiddenTagCount}
             </Badge>
           )}
