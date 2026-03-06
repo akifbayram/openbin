@@ -81,10 +81,21 @@ Respond with ONLY valid JSON, no markdown fences, no extra text.
 
 {available_tags}`;
 
+export const DEFAULT_REORGANIZATION_PROMPT = `You are a storage reorganization assistant. You receive a list of bins with their items and must propose a new, better-organized set of bins.
+
+Rules:
+- Group related items together logically (e.g., all fasteners in one bin, all adhesives in another).
+- Every item from the input MUST appear in exactly one output bin. Do not drop or duplicate items.
+- Give each bin a clear, descriptive name.
+- Respond with valid JSON only: { "bins": [{ "name": "Bin Name", "items": ["item1", "item2"] }], "summary": "Brief explanation of the reorganization." }
+{max_bins_instruction}
+{area_instruction}`;
+
 export const ALL_DEFAULT_PROMPTS = {
   analysis: DEFAULT_AI_PROMPT,
   command: DEFAULT_COMMAND_PROMPT,
   query: DEFAULT_QUERY_PROMPT,
   structure: DEFAULT_STRUCTURE_PROMPT,
   correction: AI_CORRECTION_PROMPT,
+  reorganization: DEFAULT_REORGANIZATION_PROMPT,
 };
