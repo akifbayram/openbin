@@ -1,0 +1,31 @@
+@reference "tailwindcss";
+
+/* Composition utility classes — reusable combos extracted from repeated Tailwind patterns. */
+/* Import after index.css so these can reference design tokens. */
+
+/* Icon sizing */
+.icon-xs  { @apply h-3 w-3; }
+.icon-sm  { @apply h-3.5 w-3.5; }
+.icon-md  { @apply h-4 w-4; }
+.icon-lg  { @apply h-5 w-5; }
+
+/* Stack (vertical) spacing */
+.stack-xs { @apply space-y-1.5; }
+.stack-sm { @apply space-y-2; }
+.stack-md { @apply space-y-4; }
+.stack-lg { @apply space-y-5; }
+
+/* Flex row patterns */
+.row       { @apply flex items-center gap-2; }
+.row-tight { @apply flex items-center gap-1.5; }
+.row-spread { @apply flex items-center justify-between; }
+
+/* Typography */
+.caption { @apply text-[12px] text-[var(--text-tertiary)]; }
+.hint    { @apply text-[14px] text-[var(--text-tertiary)]; }
+
+/* Layout */
+.flex-fill { @apply flex-1 min-w-0; }
+
+/* Form controls */
+.full-width-input { @apply w-full rounded-[var(--radius-md)] h-11 text-[15px]; }
