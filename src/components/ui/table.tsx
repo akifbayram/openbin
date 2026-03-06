@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 export function Table({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <Box className={cn('glass-card rounded-[var(--radius-lg)] overflow-hidden', className)} role="table">
+    <Box className={cn('rounded-[var(--radius-lg)] overflow-hidden', className)} role="table">
       {children}
     </Box>
   );

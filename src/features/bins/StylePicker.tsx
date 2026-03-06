@@ -45,7 +45,7 @@ function VariantPreview({ variant, color, rectangular }: { variant: CardStyleVar
   const baseClass = cn(rectangular ? 'aspect-[16/9]' : 'aspect-square', 'w-full rounded-[var(--radius-sm)] transition-all');
 
   if (variant === 'glass') {
-    return <div className={cn(baseClass, 'glass-card')} />;
+    return <div className={baseClass} />;
   }
   if (variant === 'border') {
     return <div className={cn(baseClass, 'border-4')} style={{ borderColor: color ? `var(--accent)` : 'var(--border)' }} />;
@@ -59,16 +59,16 @@ function VariantPreview({ variant, color, rectangular }: { variant: CardStyleVar
     );
   }
   if (variant === 'stripe') {
-    return <div className={cn(baseClass, 'glass-card')} style={{ borderLeft: '6px solid var(--accent)' }} />;
+    return <div className={baseClass} style={{ borderLeft: '6px solid var(--accent)' }} />;
   }
   if (variant === 'photo') {
     return (
-      <div className={cn(baseClass, 'bg-[var(--bg-secondary)] flex items-center justify-center')}>
+      <div className={cn(baseClass, 'flex items-center justify-center')}>
         <ImageIcon className="h-4 w-4 text-[var(--text-tertiary)]" />
       </div>
     );
   }
-  return <div className={cn(baseClass, 'glass-card')} />;
+  return <div className={baseClass} />;
 }
 
 export function StylePicker({ value, color, onChange, photos }: StylePickerProps) {

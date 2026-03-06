@@ -122,7 +122,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
       {/* Panel */}
       <div
         className={cn(
-          'relative z-[70] w-full max-w-lg mx-4 glass-heavy rounded-[var(--radius-xl)] overflow-hidden flex flex-col transition-all duration-150',
+          'relative z-[70] w-full max-w-lg mx-4 rounded-[var(--radius-xl)] overflow-hidden flex flex-col transition-all duration-150',
           isEntered ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.97]',
         )}
       >

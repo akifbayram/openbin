@@ -41,7 +41,7 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
         className={cn(
           'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[14px] font-medium transition-colors text-left',
           isOpen
-            ? 'glass-card text-[var(--text-primary)]'
+            ? 'text-[var(--text-primary)]'
             : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
         )}
         aria-haspopup="listbox"
@@ -55,7 +55,7 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
       {visible && (
         <div
           role="listbox"
-          className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute left-0 right-0 top-full mt-1.5 z-50 glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)] max-h-64 overflow-y-auto`}
+          className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute left-0 right-0 top-full mt-1.5 z-50 rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)] max-h-64 overflow-y-auto`}
         >
           {locations.map((loc) => {
             const isActive = loc.id === activeLocationId;

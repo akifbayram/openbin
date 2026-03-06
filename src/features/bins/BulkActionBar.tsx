@@ -48,7 +48,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
       'transition-all duration-200',
       visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
     )}>
-    <div className="glass-heavy rounded-[var(--radius-full)] flex items-center gap-2 px-4 py-2.5 shadow-lg">
+    <div className="rounded-[var(--radius-full)] flex items-center gap-2 px-4 py-2.5 shadow-lg">
       <CheckCircle2 className="h-4 w-4 text-[var(--accent)]" />
       <span className="text-[13px] font-medium text-[var(--text-secondary)] whitespace-nowrap">
         {selectedCount} selected
@@ -109,7 +109,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
             </Button>
           </Tooltip>
           {moreOpen && (
-            <div className="absolute bottom-full mb-2 right-0 glass-heavy rounded-[var(--radius-md)] py-1 min-w-[180px] z-50 shadow-lg">
+            <div className="absolute bottom-full mb-2 right-0 rounded-[var(--radius-md)] py-1 min-w-[180px] z-50 shadow-lg">
               <button
                 type="button"
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"

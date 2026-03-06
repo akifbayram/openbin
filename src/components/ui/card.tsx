@@ -5,7 +5,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('glass-card rounded-[var(--radius-lg)] transition-all duration-200', className)}
+      className={cn('rounded-[var(--radius-lg)] transition-all duration-200', className)}
       {...props}
     />
   )

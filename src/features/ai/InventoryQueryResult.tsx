@@ -31,7 +31,7 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
           {matches.map((match, i) => (
             <button
               key={match.bin_id}
-              className="ai-stagger-item glass-card w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-[var(--bg-active)] transition-colors cursor-pointer rounded-[var(--radius-sm)]"
+              className="ai-stagger-item w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-[var(--bg-active)] transition-colors cursor-pointer rounded-[var(--radius-sm)]"
               style={{ animationDelay: `${Math.min(i * 60, 500)}ms` }}
               type="button"
               onClick={() => onBinClick(match.bin_id, match.is_trashed)}

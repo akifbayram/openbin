@@ -10,7 +10,7 @@ interface AreaActionMenuProps {
 export function AreaActionMenu({ visible, animating, onRename, onDelete }: AreaActionMenuProps) {
   if (!visible) return null;
   return (
-    <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1.5 z-50 min-w-[140px] glass-heavy rounded-[var(--radius-lg)] shadow-lg border border-[var(--border-glass)] overflow-hidden`}>
+    <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1.5 z-50 min-w-[140px] rounded-[var(--radius-lg)] shadow-lg border border-[var(--border-glass)] overflow-hidden`}>
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onRename(); }}

@@ -66,7 +66,7 @@ export function TagsPage() {
         skeleton={
           <div className="flex flex-col gap-4">
             <Skeleton className="h-10 w-full rounded-[var(--radius-full)]" />
-            <div className="glass-card rounded-[var(--radius-md)] overflow-hidden">
+            <div className="rounded-[var(--radius-md)] overflow-hidden">
               <div className="h-9 bg-[var(--bg-hover)] border-b border-[var(--border-subtle)]" />
               <SkeletonList count={6}>
                 {() => (

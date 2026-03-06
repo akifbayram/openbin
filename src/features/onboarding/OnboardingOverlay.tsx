@@ -241,7 +241,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-backdrop)] backdrop-blur-sm">
-      <div className="glass-heavy rounded-[var(--radius-xl)] w-full max-w-sm mx-5 px-8 py-8 relative max-h-[85vh] overflow-y-auto">
+      <div className="rounded-[var(--radius-xl)] w-full max-w-sm mx-5 px-8 py-8 relative max-h-[85vh] overflow-y-auto">
         {/* Close button */}
         <button
           type="button"

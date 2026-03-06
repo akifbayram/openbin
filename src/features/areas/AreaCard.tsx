@@ -46,7 +46,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
 
   if (editing) {
     return (
-      <div className="glass-card rounded-[var(--radius-lg)] p-4 flex flex-col gap-2">
+      <div className="rounded-[var(--radius-lg)] p-4 flex flex-col gap-2">
         <Input
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
@@ -92,7 +92,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
       onClick={() => onNavigate(id)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(id); } }}
       className={cn(
-        "glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] text-left relative group",
+        "rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] text-left relative group",
         isOpen && "z-10"
       )}
     >
@@ -144,7 +144,7 @@ export function UnassignedAreaCard({ count, onNavigate }: UnassignedCardProps) {
     <button
       type="button"
       onClick={onNavigate}
-      className="glass-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] text-left"
+      className="rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] text-left"
     >
       <div className="flex items-start gap-3">
         <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-input)] flex items-center justify-center shrink-0 mt-0.5">

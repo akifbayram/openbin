@@ -55,7 +55,7 @@ export function ActivityPage() {
                 <Skeleton key={i} className="h-7 w-16 rounded-full" />
               ))}
             </div>
-            <div className="glass-card rounded-[var(--radius-lg)] overflow-hidden">
+            <div className="rounded-[var(--radius-lg)] overflow-hidden">
               <div className="h-9 bg-[var(--bg-hover)] border-b border-[var(--border-subtle)]" />
               <SkeletonList count={8}>
                 {() => (

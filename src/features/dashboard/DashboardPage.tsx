@@ -298,7 +298,7 @@ export function DashboardPage() {
             {dashSettings.showStats && (
               <div className="flex gap-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex-1 glass-card rounded-[var(--radius-lg)] p-4">
+                  <div key={i} className="flex-1 rounded-[var(--radius-lg)] p-4">
                     <Skeleton className="h-7 w-12 mb-1" />
                     <Skeleton className="h-4 w-16" />
                   </div>
@@ -366,7 +366,7 @@ export function DashboardPage() {
           <button
             type="button"
             onClick={() => navigate('/bins?needs_organizing=true')}
-            className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center justify-between"
+            className="rounded-[var(--radius-lg)] px-4 py-3 flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-full bg-amber-500/10 flex items-center justify-center">

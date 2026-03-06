@@ -20,7 +20,7 @@ export function Tooltip({ content, children, side = 'top', className }: TooltipP
       <Portal>
         <ChakraTooltip.Positioner>
           <ChakraTooltip.Content
-            className="z-[80] px-2.5 py-1 rounded-[var(--radius-sm)] text-[12px] font-medium whitespace-nowrap glass-heavy text-[var(--text-primary)]"
+            className="z-[80] px-2.5 py-1 rounded-[var(--radius-sm)] text-[12px] font-medium whitespace-nowrap"
           >
             {content}
           </ChakraTooltip.Content>
