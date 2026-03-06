@@ -14,7 +14,7 @@ Card.displayName = 'Card';
 
 const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={className ? cn('flex flex-col space-y-1 px-5 pt-5 pb-1', className) : 'flex flex-col space-y-1 px-5 pt-5 pb-1'} {...props} />
+    <div ref={ref} className={cn('flex flex-col space-y-1 px-5 pt-5 pb-1', className)} {...props} />
   )
 );
 CardHeader.displayName = 'CardHeader';
@@ -23,7 +23,7 @@ const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTML
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}
-      className={className ? cn('text-[17px] font-semibold leading-tight text-[var(--text-primary)]', className) : 'text-[17px] font-semibold leading-tight text-[var(--text-primary)]'}
+      className={cn('text-[17px] font-semibold leading-tight text-[var(--text-primary)]', className)}
       {...props}
     />
   )
@@ -32,21 +32,44 @@ CardTitle.displayName = 'CardTitle';
 
 const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
   ({ className, ...props }, ref) => (
-    <p ref={ref} className={className ? cn('text-[13px] text-[var(--text-tertiary)] leading-snug', className) : 'text-[13px] text-[var(--text-tertiary)] leading-snug'} {...props} />
+    <p ref={ref} className={cn('text-[13px] text-[var(--text-tertiary)] leading-snug', className)} {...props} />
   )
 );
 CardDescription.displayName = 'CardDescription';
 
-const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={className ? cn('px-5 py-4', className) : 'px-5 py-4'} {...props} />
+const cardContentPadding = {
+  default: 'px-5 py-4',
+  compact: 'py-3 px-4',
+  relaxed: 'py-6 px-5',
+  none: '',
+} as const;
+
+const cardContentSpacing = {
+  none: '',
+  sm: 'space-y-2',
+  md: 'space-y-4',
+  lg: 'space-y-5',
+} as const;
+
+interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  padding?: keyof typeof cardContentPadding;
+  spacing?: keyof typeof cardContentSpacing;
+}
+
+const CardContent = React.forwardRef<HTMLDivElement, CardContentProps>(
+  ({ className, padding = 'default', spacing = 'none', ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(cardContentPadding[padding], cardContentSpacing[spacing], className)}
+      {...props}
+    />
   )
 );
 CardContent.displayName = 'CardContent';
 
 const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={className ? cn('flex items-center px-5 pb-4 pt-0', className) : 'flex items-center px-5 pb-4 pt-0'} {...props} />
+    <div ref={ref} className={cn('flex items-center px-5 pb-4 pt-0', className)} {...props} />
   )
 );
 CardFooter.displayName = 'CardFooter';

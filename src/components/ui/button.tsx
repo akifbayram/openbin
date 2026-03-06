@@ -31,10 +31,11 @@ const sizes = {
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: keyof typeof variants;
   size?: keyof typeof sizes;
+  fullWidth?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'default', size = 'default', ...props }, ref) => {
+  ({ className, variant = 'default', size = 'default', fullWidth, ...props }, ref) => {
     return (
       <button
         className={cn(
@@ -43,6 +44,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           'disabled:pointer-events-none disabled:opacity-40',
           variants[variant],
           sizes[size],
+          fullWidth && 'w-full',
           className
         )}
         ref={ref}
