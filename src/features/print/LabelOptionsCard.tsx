@@ -33,11 +33,11 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
           onClick={() => onExpandedChange(!expanded)}
         >
           <div className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-[var(--text-tertiary)]" />
-            <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Options</Label>
+            <SlidersHorizontal className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <Label className="text-[15px] font-semibold normal-case tracking-normal pointer-events-none">Label Options</Label>
           </div>
           <ChevronDown className={cn(
-            'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
+            'h-5 w-5 text-gray-500 dark:text-gray-400 transition-transform duration-200',
             expanded && 'rotate-180'
           )} />
         </button>
@@ -45,7 +45,7 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
         {expanded && (
           <div className="mt-3 space-y-4">
             <div className="px-1">
-              <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">Font Size</span>
+              <span className="text-[12px] text-gray-600 dark:text-gray-300 font-medium block mb-2">Font Size</span>
               <OptionGroup
                 options={FONT_SCALE_PRESETS.map((p) => ({ key: String(p.value), label: p.label }))}
                 value={String(labelOptions.fontScale)}
@@ -55,7 +55,7 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
             </div>
 
             <div className="px-1">
-              <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">Text Alignment</span>
+              <span className="text-[12px] text-gray-600 dark:text-gray-300 font-medium block mb-2">Text Alignment</span>
               <OptionGroup
                 options={[
                   { key: 'left' as const, label: 'Left', icon: AlignLeft },
@@ -68,7 +68,7 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
             </div>
 
             <div className="px-1">
-              <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">Label Direction</span>
+              <span className="text-[12px] text-gray-600 dark:text-gray-300 font-medium block mb-2">Label Direction</span>
               <OptionGroup
                 options={[
                   { key: 'auto' as const, label: 'Auto' },
@@ -82,7 +82,7 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
             </div>
 
             <div className="space-y-1 px-1">
-              <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-1">Visible Elements</span>
+              <span className="text-[12px] text-gray-600 dark:text-gray-300 font-medium block mb-1">Visible Elements</span>
               {([
                 { key: 'showQrCode' as const, label: 'QR Code', icon: QrCode },
                 { key: 'showBinName' as const, label: `${t.Bin} Name`, icon: Type },
@@ -90,14 +90,14 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
                 { key: 'showBinCode' as const, label: `${t.Bin} Code`, icon: Hash },
                 { key: 'showColorSwatch' as const, label: 'Color Background', icon: Palette },
               ] as const).map(({ key, label, icon: Icon }) => (
-                <label key={key} htmlFor={`label-opt-${key}`} className="flex items-center gap-3 px-2 py-1.5 cursor-pointer rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] transition-colors">
+                <label key={key} htmlFor={`label-opt-${key}`} className="flex items-center gap-3 px-2 py-1.5 cursor-pointer rounded-[var(--radius-sm)] hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors">
                   <Checkbox
                     id={`label-opt-${key}`}
                     checked={labelOptions[key]}
                     onCheckedChange={(checked) => onUpdateOption(key, !!checked)}
                   />
-                  <Icon className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
-                  <span className="text-[15px] text-[var(--text-primary)]">{label}</span>
+                  <Icon className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" />
+                  <span className="text-[15px]">{label}</span>
                 </label>
               ))}
             </div>

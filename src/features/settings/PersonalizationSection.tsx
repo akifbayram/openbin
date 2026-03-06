@@ -27,7 +27,7 @@ export function PersonalizationSection({ settings, updateSettings, resetSettings
             />
           </FormField>
           <Disclosure label="Custom Terminology">
-            <p className="text-[11px] text-[var(--text-tertiary)] mb-2">Rename core concepts to match your workflow.</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">Rename core concepts to match your workflow.</p>
             <div className="space-y-2">
               {([
                 { key: 'termBin' as const, singular: 'Bin', plural: 'Bins' },

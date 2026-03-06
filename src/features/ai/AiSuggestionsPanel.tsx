@@ -74,11 +74,11 @@ export function AiSuggestionsPanel({
   const anySelected = (acceptName && hasName) || (acceptItems && hasItems) || (acceptTags && hasTags) || (acceptNotes && hasNotes) || (acceptCustomFields && hasCustomFields);
 
   return (
-    <Card className="border-t-2 border-t-[var(--accent)]">
+    <Card className="border-t-2 border-t-purple-600 dark:border-t-purple-500">
       <CardContent className="space-y-4">
         <div>
           <Label>AI Suggestions</Label>
-          <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">
+          <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-0.5">
             Select which suggestions to apply to this bin.
           </p>
         </div>
@@ -90,12 +90,12 @@ export function AiSuggestionsPanel({
               type="checkbox"
               checked={acceptName}
               onChange={(e) => setAcceptName(e.target.checked)}
-              className="mt-1 accent-[var(--accent)]"
+              className="mt-1 accent-purple-600 dark:accent-purple-500"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-[var(--text-secondary)]">Name</p>
-              <p className="text-[15px] text-[var(--text-primary)] font-semibold">{suggestions.name}</p>
-              <p className="text-[12px] text-[var(--text-tertiary)]">Current: {currentName}</p>
+              <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300">Name</p>
+              <p className="text-[15px] font-semibold">{suggestions.name}</p>
+              <p className="text-[12px] text-gray-500 dark:text-gray-400">Current: {currentName}</p>
             </div>
           </label>
         )}
@@ -107,21 +107,21 @@ export function AiSuggestionsPanel({
               type="checkbox"
               checked={acceptItems}
               onChange={(e) => setAcceptItems(e.target.checked)}
-              className="mt-1 accent-[var(--accent)]"
+              className="mt-1 accent-purple-600 dark:accent-purple-500"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-[var(--text-secondary)]">Items</p>
+              <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300">Items</p>
               <ul className="mt-1 space-y-0.5">
                 {suggestions.items.map((item, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: items may contain duplicates
-                  <li key={i} className="text-[14px] text-[var(--text-primary)] flex items-start gap-1.5">
-                    <span className="text-[var(--text-tertiary)]">•</span>
+                  <li key={i} className="text-[14px] flex items-start gap-1.5">
+                    <span className="text-gray-500 dark:text-gray-400">•</span>
                     {item}
                   </li>
                 ))}
               </ul>
               {currentItems.length > 0 && (
-                <p className="text-[12px] text-[var(--text-tertiary)] mt-1">
+                <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
                   Will replace current {currentItems.length} item{currentItems.length !== 1 ? 's' : ''}
                 </p>
               )}
@@ -136,17 +136,17 @@ export function AiSuggestionsPanel({
               type="checkbox"
               checked={acceptTags}
               onChange={(e) => setAcceptTags(e.target.checked)}
-              className="mt-1 accent-[var(--accent)]"
+              className="mt-1 accent-purple-600 dark:accent-purple-500"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-[var(--text-secondary)]">Tags</p>
+              <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300">Tags</p>
               <div className="flex flex-wrap gap-1.5 mt-1">
                 {suggestions.tags.map((tag) => (
                   <Badge key={tag} variant="secondary">{tag}</Badge>
                 ))}
               </div>
               {currentTags.length > 0 && (
-                <p className="text-[12px] text-[var(--text-tertiary)] mt-1">
+                <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
                   Will add to existing tags
                 </p>
               )}
@@ -161,13 +161,13 @@ export function AiSuggestionsPanel({
               type="checkbox"
               checked={acceptNotes}
               onChange={(e) => setAcceptNotes(e.target.checked)}
-              className="mt-1 accent-[var(--accent)]"
+              className="mt-1 accent-purple-600 dark:accent-purple-500"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-[var(--text-secondary)]">Notes</p>
-              <p className="text-[14px] text-[var(--text-primary)] whitespace-pre-wrap mt-0.5">{suggestions.notes}</p>
+              <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300">Notes</p>
+              <p className="text-[14px] whitespace-pre-wrap mt-0.5">{suggestions.notes}</p>
               {currentNotes && (
-                <p className="text-[12px] text-[var(--text-tertiary)] mt-1">Will replace current notes</p>
+                <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">Will replace current notes</p>
               )}
             </div>
           </label>
@@ -180,14 +180,14 @@ export function AiSuggestionsPanel({
               type="checkbox"
               checked={acceptCustomFields}
               onChange={(e) => setAcceptCustomFields(e.target.checked)}
-              className="mt-1 accent-[var(--accent)]"
+              className="mt-1 accent-purple-600 dark:accent-purple-500"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-[var(--text-secondary)]">Custom Fields</p>
+              <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300">Custom Fields</p>
               <div className="mt-1 space-y-1">
                 {suggestedCfEntries.map((entry) => (
-                  <p key={entry.field.id} className="text-[14px] text-[var(--text-primary)]">
-                    <span className="text-[var(--text-tertiary)]">{entry.field.name}:</span>{' '}
+                  <p key={entry.field.id} className="text-[14px]">
+                    <span className="text-gray-500 dark:text-gray-400">{entry.field.name}:</span>{' '}
                     {entry.value}
                   </p>
                 ))}

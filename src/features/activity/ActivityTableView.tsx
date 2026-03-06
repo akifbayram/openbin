@@ -23,10 +23,10 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
       <Table>
         <TableHeader>
           <span className="w-8 shrink-0" />
-          <span className="flex-[2] text-[12px] font-medium text-[var(--text-tertiary)]">Description</span>
-          <span className="hidden md:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)]">User</span>
-          <span className="hidden lg:block w-24 text-[12px] font-medium text-[var(--text-tertiary)]">Type</span>
-          <span className="w-24 shrink-0 text-[12px] font-medium text-[var(--text-tertiary)] text-right">Time</span>
+          <span className="flex-[2] text-[12px] font-medium text-gray-500 dark:text-gray-400">Description</span>
+          <span className="hidden md:block flex-1 text-[12px] font-medium text-gray-500 dark:text-gray-400">User</span>
+          <span className="hidden lg:block w-24 text-[12px] font-medium text-gray-500 dark:text-gray-400">Type</span>
+          <span className="w-24 shrink-0 text-[12px] font-medium text-gray-500 dark:text-gray-400 text-right">Time</span>
         </TableHeader>
 
         {entries.map((entry) => {
@@ -57,7 +57,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
               {/* Icon */}
               <div className="w-8 shrink-0 flex justify-center">
                 <div
-                  className={`h-6 w-6 rounded-full bg-[var(--bg-elevated)] flex items-center justify-center ${getActionColor(entry.action)}`}
+                  className={`h-6 w-6 rounded-full bg-white/70 dark:bg-gray-800/70 flex items-center justify-center ${getActionColor(entry.action)}`}
                 >
                   {getActionIcon(entry)}
                 </div>
@@ -65,12 +65,12 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
 
               {/* Description */}
               <div className="flex-[2] min-w-0">
-                <p className="text-[13px] text-[var(--text-primary)] truncate">
+                <p className="text-[13px] truncate">
                   <span className="md:hidden font-medium">{entry.display_name} </span>
                   {getActionLabel(entry, t)}
                 </p>
                 {changeDiffs && (
-                  <p className="text-[12px] text-[var(--text-tertiary)] truncate">
+                  <p className="text-[12px] text-gray-500 dark:text-gray-400 truncate">
                     {changeDiffs.map((d, i) => (
                       <span key={d.field}>
                         {i > 0 && ', '}
@@ -83,7 +83,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
 
               {/* User */}
               <div className="hidden md:flex flex-1 min-w-0 items-center gap-1.5">
-                <span className="text-[13px] text-[var(--text-secondary)] truncate">{entry.display_name}</span>
+                <span className="text-[13px] text-gray-600 dark:text-gray-300 truncate">{entry.display_name}</span>
                 {entry.auth_method === 'api_key' && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
                     API{entry.api_key_name ? `: ${entry.api_key_name}` : ''}
@@ -99,7 +99,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
               </div>
 
               {/* Time */}
-              <span className="w-24 shrink-0 text-[12px] text-[var(--text-tertiary)] text-right">
+              <span className="w-24 shrink-0 text-[12px] text-gray-500 dark:text-gray-400 text-right">
                 {formatTimeAgo(entry.created_at)}
               </span>
             </TableRow>

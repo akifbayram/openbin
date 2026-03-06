@@ -70,8 +70,8 @@ export function Html5QrcodePlugin({ paused, onScanSuccess, onScanFailure }: Html
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-12 text-center px-4">
-        <p className="text-[15px] font-medium text-[var(--text-primary)]">Failed to start scanner</p>
-        <p className="text-[13px] text-[var(--text-tertiary)]">{error}</p>
+        <p className="text-[15px] font-medium">Failed to start scanner</p>
+        <p className="text-[13px] text-gray-500 dark:text-gray-400">{error}</p>
       </div>
     );
   }
@@ -80,7 +80,7 @@ export function Html5QrcodePlugin({ paused, onScanSuccess, onScanFailure }: Html
     <>
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 rounded-full border-2 border-[var(--bg-active)] border-t-[var(--accent)] animate-spin" />
+          <div className="h-8 w-8 rounded-full border-2 border-gray-500/18 dark:border-gray-500/28 border-t-purple-600 dark:border-t-purple-500 animate-spin" />
         </div>
       )}
       <div id={containerId} className="w-full" />

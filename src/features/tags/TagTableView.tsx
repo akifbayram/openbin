@@ -70,7 +70,7 @@ export function TagTableView({
                 <Highlight text={entry.tag} query={searchQuery} />
               </Badge>
             </div>
-            <span className="w-20 shrink-0 text-[13px] text-[var(--text-tertiary)] text-right">
+            <span className="w-20 shrink-0 text-[13px] text-gray-500 dark:text-gray-400 text-right">
               {entry.count} {entry.count !== 1 ? t.bins : t.bin}
             </span>
             {/* biome-ignore lint/a11y/noStaticElementInteractions: stops row click propagation to color picker */}

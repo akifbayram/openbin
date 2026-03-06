@@ -34,7 +34,7 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
       )}
 
       {streamedName && (
-        <p className="text-[15px] font-medium text-[var(--text-primary)] ai-item-reveal">
+        <p className="text-[15px] font-medium ai-item-reveal">
           {streamedName}
         </p>
       )}
@@ -45,7 +45,7 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
             <li
               // biome-ignore lint/suspicious/noArrayIndexKey: streamed items have no stable identity
               key={i}
-              className="text-[13px] text-[var(--text-secondary)] pl-3 border-l-2 border-[var(--accent)] ai-item-reveal"
+              className="text-[13px] text-gray-600 dark:text-gray-300 pl-3 border-l-2 border-purple-600 dark:border-purple-500 ai-item-reveal"
             >
               {item}
             </li>
@@ -53,8 +53,8 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
         </ul>
       )}
 
-      <div className="flex items-center gap-2 text-[13px] text-[var(--text-tertiary)]">
-        <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--accent)]" />
+      <div className="flex items-center gap-2 text-[13px] text-gray-500 dark:text-gray-400">
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-600 dark:text-purple-400" />
         <span>{hasStreamedData ? 'Finding more items...' : initialStatusLabel}</span>
       </div>
     </div>
@@ -65,9 +65,9 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
 export function AiAnalyzeError({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
     <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-red-500/10 px-3 py-2.5">
-      <AlertCircle className="h-4 w-4 text-[var(--destructive)] shrink-0 mt-0.5" />
+      <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
       <div className="flex-1">
-        <p className="text-[13px] text-[var(--destructive)]">{error}</p>
+        <p className="text-[13px] text-red-500 dark:text-red-400">{error}</p>
         <Button variant="ghost" size="sm" onClick={onRetry} className="mt-1 h-7 px-2 text-[12px]">
           Retry
         </Button>

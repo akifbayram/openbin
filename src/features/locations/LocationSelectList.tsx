@@ -11,7 +11,7 @@ interface LocationSelectListProps {
 export function LocationSelectList({ locations, value, onChange, emptyMessage }: LocationSelectListProps) {
   if (locations.length === 0 && emptyMessage) {
     return (
-      <p className="text-[13px] text-[var(--text-tertiary)] text-center py-4">
+      <p className="text-[13px] text-gray-500 dark:text-gray-400 text-center py-4">
         {emptyMessage}
       </p>
     );
@@ -27,8 +27,8 @@ export function LocationSelectList({ locations, value, onChange, emptyMessage }:
           className={cn(
             'w-full text-left px-3 py-2.5 rounded-[var(--radius-md)] text-[15px] transition-colors',
             value === l.id
-              ? 'bg-[var(--accent)] text-white'
-              : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+              ? 'bg-purple-600 dark:bg-purple-500 text-white'
+              : 'hover:bg-gray-500/8 dark:hover:bg-gray-500/18'
           )}
         >
           {l.name}

@@ -33,16 +33,16 @@ export function CommandActionPreview({
   return (
     <div className="space-y-4">
       {interpretation && (
-        <div className="flex items-start gap-2 rounded-[var(--radius-sm)] bg-[var(--accent)]/5 px-3 py-2">
-          <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-[var(--accent)]" />
-          <p className="text-[13px] text-[var(--text-secondary)] italic">
+        <div className="flex items-start gap-2 rounded-[var(--radius-sm)] bg-purple-600/5 dark:bg-purple-500/5 px-3 py-2">
+          <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-purple-600 dark:text-purple-400" />
+          <p className="text-[13px] text-gray-600 dark:text-gray-300 italic">
             {interpretation}
           </p>
         </div>
       )}
 
       {actions.length === 0 ? (
-        <p className="text-[14px] text-[var(--text-tertiary)] py-4 text-center">
+        <p className="text-[14px] text-gray-500 dark:text-gray-400 py-4 text-center">
           No matching {t.bins} found, or the command was ambiguous. Try using exact {t.bin} names.
         </p>
       ) : (
@@ -57,7 +57,7 @@ export function CommandActionPreview({
                 <button
                   type="button"
                   onClick={() => toggleAction(i)}
-                  className="flex items-start gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 hover:bg-[var(--bg-active)] transition-colors cursor-pointer w-full text-left"
+                  className="flex items-start gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 hover:bg-gray-500/16 dark:hover:bg-gray-500/28 transition-colors cursor-pointer w-full text-left"
                 >
                   <span
                     key={`check-${i}-${checked}`}
@@ -65,9 +65,9 @@ export function CommandActionPreview({
                       'shrink-0 mt-0.5 h-4.5 w-4.5 rounded border flex items-center justify-center transition-colors',
                       checked
                         ? destructive
-                          ? 'bg-[var(--destructive)] border-[var(--destructive)]'
-                          : 'bg-[var(--accent)] border-[var(--accent)] ai-check-pop'
-                        : 'border-[var(--border-primary)] bg-transparent',
+                          ? 'bg-red-500 border-red-500'
+                          : 'bg-purple-600 dark:bg-purple-500 border-purple-600 dark:border-purple-500 ai-check-pop'
+                        : 'border-black/6 dark:border-white/6 bg-transparent',
                     )}
                   >
                     {checked && <Check className="h-3 w-3 text-white" />}
@@ -75,18 +75,18 @@ export function CommandActionPreview({
                   <Icon className={cn(
                     'h-4 w-4 shrink-0 mt-0.5',
                     !checked
-                      ? 'text-[var(--text-tertiary)]'
+                      ? 'text-gray-500 dark:text-gray-400'
                       : destructive
-                        ? 'text-[var(--destructive)]'
-                        : 'text-[var(--text-secondary)]'
+                        ? 'text-red-500 dark:text-red-400'
+                        : 'text-gray-600 dark:text-gray-300'
                   )} />
                   <span className={cn(
                     'text-[14px] leading-snug',
                     !checked
-                      ? 'text-[var(--text-tertiary)] line-through'
+                      ? 'text-gray-500 dark:text-gray-400 line-through'
                       : destructive
-                        ? 'text-[var(--destructive)]'
-                        : 'text-[var(--text-primary)]'
+                        ? 'text-red-500 dark:text-red-400'
+                        : ''
                   )}>
                     {describeAction(action, t)}
                   </span>

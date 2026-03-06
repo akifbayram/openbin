@@ -10,8 +10,16 @@ import {
   Upload,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Dialog } from '@chakra-ui/react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import type { useDataSectionActions } from './useDataSectionActions';
 
@@ -27,11 +35,11 @@ interface DataSectionProps {
 function SectionLabel({ children, trailing }: { children: React.ReactNode; trailing?: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between mt-5 mb-2">
-      <span className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
+      <span className="text-[12px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
         {children}
       </span>
       {trailing && (
-        <span className="text-[12px] text-[var(--text-tertiary)]">{trailing}</span>
+        <span className="text-[12px] text-gray-500 dark:text-gray-400">{trailing}</span>
       )}
     </div>
   );
@@ -39,14 +47,14 @@ function SectionLabel({ children, trailing }: { children: React.ReactNode; trail
 
 function RowGroup({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-[var(--radius-sm)] bg-[var(--bg-input)] overflow-hidden">
+    <div className="rounded-[var(--radius-sm)] bg-gray-500/12 dark:bg-gray-500/24 overflow-hidden">
       {children}
     </div>
   );
 }
 
 function RowDivider() {
-  return <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />;
+  return <div className="h-px mx-3.5 bg-black/6 dark:bg-white/6" />;
 }
 
 function SettingsRow({
@@ -75,31 +83,31 @@ function SettingsRow({
       type="button"
       onClick={onClick}
       disabled={disabled || loading}
-      className={`flex items-center gap-3 px-3.5 py-3 hover:bg-[var(--bg-hover)] transition-colors w-full text-left disabled:opacity-40 disabled:pointer-events-none ${destructive ? 'text-[var(--destructive)]' : ''}`}
+      className={`flex items-center gap-3 px-3.5 py-3 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors w-full text-left disabled:opacity-40 disabled:pointer-events-none ${destructive ? 'text-red-500 dark:text-red-400' : ''}`}
     >
       <Icon
         className={`h-[18px] w-[18px] shrink-0 ${
-          destructive ? 'text-[var(--destructive)]' : 'text-[var(--text-tertiary)]'
+          destructive ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
         }`}
       />
       <div className="flex-1 min-w-0">
         <p
           className={`text-[15px] font-medium leading-snug ${
-            destructive ? 'text-[var(--destructive)]' : 'text-[var(--text-primary)]'
+            destructive ? 'text-red-500 dark:text-red-400' : ''
           }`}
         >
           {loading ? loadingLabel : label}
         </p>
         <p
           className={`text-[13px] leading-snug ${
-            destructive ? 'text-[var(--destructive)]/60' : 'text-[var(--text-tertiary)]'
+            destructive ? 'text-red-500/60 dark:text-red-400/60' : 'text-gray-500 dark:text-gray-400'
           }`}
         >
           {description}
         </p>
       </div>
       {chevron && (
-        <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+        <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" />
       )}
     </button>
   );
@@ -238,38 +246,34 @@ export function DataSection({
       </Card>
 
       {/* Replace confirmation dialog */}
-      <Dialog.Root open={confirmReplace} onOpenChange={(e) => setConfirmReplace(e.open)}>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger />
-            <Dialog.Header>
-              <Dialog.Title>Replace All Data?</Dialog.Title>
-              <Dialog.Description>
-                This will delete all existing bins and photos in the current location, then import from the backup file. This action cannot be undone.
-              </Dialog.Description>
-            </Dialog.Header>
-            <Dialog.Footer>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setConfirmReplace(false);
-                  setPendingData(null);
-                }}
-                className="rounded-[var(--radius-full)]"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleReplaceImport}
-                className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:opacity-90"
-              >
-                Replace All
-              </Button>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+      <Dialog open={confirmReplace} onOpenChange={setConfirmReplace}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replace All Data?</DialogTitle>
+            <DialogDescription>
+              This will delete all existing bins and photos in the current location, then import from the backup file. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setConfirmReplace(false);
+                setPendingData(null);
+              }}
+              className="rounded-[var(--radius-full)]"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleReplaceImport}
+              className="rounded-[var(--radius-full)] bg-red-500 hover:opacity-90"
+            >
+              Replace All
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

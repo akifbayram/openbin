@@ -49,11 +49,11 @@ export function getActionIcon(entry: ActivityLogEntry): ReactNode {
 
 export function getActionColor(action: string): string {
   if (action === 'create') return 'text-green-500';
-  if (action === 'delete' || action === 'permanent_delete') return 'text-[var(--destructive)]';
-  if (action === 'restore') return 'text-[var(--accent)]';
+  if (action === 'delete' || action === 'permanent_delete') return 'text-red-500 dark:text-red-400';
+  if (action === 'restore') return 'text-purple-600 dark:text-purple-400';
   if (action === 'update') return 'text-amber-500';
   if (action === 'move_in' || action === 'move_out') return 'text-blue-500';
-  return 'text-[var(--text-tertiary)]';
+  return 'text-gray-500 dark:text-gray-400';
 }
 
 export function getActionLabel(entry: ActivityLogEntry, t: Terminology): string {

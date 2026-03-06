@@ -39,7 +39,7 @@ export function BulkAddSummaryStep({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
+        <h2 className="text-[22px] font-bold">
           {isCreating
             ? `Creating ${createdCount}/${totalToCreate}...`
             : allCreated
@@ -47,7 +47,7 @@ export function BulkAddSummaryStep({
               : `Create ${createReady.length} ${createReady.length !== 1 ? t.Bins : t.Bin}`}
         </h2>
         {!isCreating && !allCreated && (
-          <p className="text-[13px] text-[var(--text-secondary)] mt-0.5">
+          <p className="text-[13px] text-gray-600 dark:text-gray-300 mt-0.5">
             Review your {t.bins} before creating them.
           </p>
         )}
@@ -55,9 +55,9 @@ export function BulkAddSummaryStep({
 
       {/* Progress bar during creation */}
       {isCreating && totalToCreate > 0 && (
-        <div className="h-1.5 rounded-full bg-[var(--bg-active)] overflow-hidden">
+        <div className="h-1.5 rounded-full bg-gray-500/16 dark:bg-gray-500/28 overflow-hidden">
           <div
-            className="h-full rounded-full bg-[var(--accent)] transition-all"
+            className="h-full rounded-full bg-purple-600 dark:bg-purple-500 transition-all"
             style={{ width: `${(createdCount / totalToCreate) * 100}%` }}
           />
         </div>
@@ -82,13 +82,13 @@ export function BulkAddSummaryStep({
                 className="h-10 w-10 rounded-[var(--radius-md)] object-cover shrink-0"
               />
               <div className="h-8 w-8 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0">
-                <Icon className="h-4 w-4 text-[var(--text-secondary)]" />
+                <Icon className="h-4 w-4 text-gray-600 dark:text-gray-300" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
+                <p className="text-[15px] font-semibold truncate">
                   {photo.name}
                 </p>
-                <p className="text-[12px] text-[var(--text-tertiary)]">
+                <p className="text-[12px] text-gray-500 dark:text-gray-400">
                   {[
                     photo.items.length
                       ? `${photo.items.length} item${photo.items.length !== 1 ? 's' : ''}`
@@ -105,10 +105,10 @@ export function BulkAddSummaryStep({
                 <Check className="h-5 w-5 text-green-500 shrink-0" />
               )}
               {photo.status === 'creating' && (
-                <Loader2 className="h-5 w-5 text-[var(--accent)] shrink-0 animate-spin" />
+                <Loader2 className="h-5 w-5 text-purple-600 dark:text-purple-400 shrink-0 animate-spin" />
               )}
               {photo.status === 'failed' && (
-                <AlertCircle className="h-5 w-5 text-[var(--destructive)] shrink-0" />
+                <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400 shrink-0" />
               )}
               {!isCreating && photo.status !== 'created' && photo.status !== 'failed' && (
                 <button
@@ -118,9 +118,9 @@ export function BulkAddSummaryStep({
                     dispatch({ type: 'SET_CURRENT_INDEX', index: idx });
                     dispatch({ type: 'GO_TO_REVIEW' });
                   }}
-                  className="p-1.5 rounded-full hover:bg-[var(--bg-active)] transition-colors shrink-0"
+                  className="p-1.5 rounded-full hover:bg-gray-500/16 dark:hover:bg-gray-500/28 transition-colors shrink-0"
                 >
-                  <Pencil className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+                  <Pencil className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                 </button>
               )}
             </div>
@@ -131,7 +131,7 @@ export function BulkAddSummaryStep({
       {/* Failed items */}
       {failed.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[13px] font-medium text-[var(--destructive)]">
+          <p className="text-[13px] font-medium text-red-500 dark:text-red-400">
             {failed.length} failed to create
           </p>
           {failed.map((photo) => (
@@ -139,12 +139,12 @@ export function BulkAddSummaryStep({
               key={photo.id}
               className="rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 border border-red-500/20"
             >
-              <AlertCircle className="h-5 w-5 text-[var(--destructive)] shrink-0" />
+              <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
+                <p className="text-[15px] font-semibold truncate">
                   {photo.name}
                 </p>
-                <p className="text-[12px] text-[var(--destructive)]">{photo.createError}</p>
+                <p className="text-[12px] text-red-500 dark:text-red-400">{photo.createError}</p>
               </div>
             </div>
           ))}
@@ -157,7 +157,7 @@ export function BulkAddSummaryStep({
           <button
             type="button"
             onClick={() => setSkippedExpanded(!skippedExpanded)}
-            className="flex items-center gap-1.5 text-[13px] font-medium text-[var(--text-secondary)]"
+            className="flex items-center gap-1.5 text-[13px] font-medium text-gray-600 dark:text-gray-300"
           >
             {skippedExpanded ? (
               <ChevronUp className="h-3.5 w-3.5" />
@@ -178,7 +178,7 @@ export function BulkAddSummaryStep({
                     alt="Skipped"
                     className="h-9 w-9 rounded-[var(--radius-md)] object-cover shrink-0"
                   />
-                  <p className="text-[14px] text-[var(--text-secondary)] flex-1">Not included</p>
+                  <p className="text-[14px] text-gray-600 dark:text-gray-300 flex-1">Not included</p>
                   <Button
                     variant="ghost"
                     size="sm"

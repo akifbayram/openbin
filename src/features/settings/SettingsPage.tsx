@@ -85,7 +85,7 @@ export function SettingsPage() {
               <button
                 type="button"
                 onClick={() => navigate('/profile')}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] transition-colors w-full text-left"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] bg-gray-500/12 dark:bg-gray-500/24 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors w-full text-left"
               >
                 <UserAvatar
                   avatarUrl={user.avatarUrl ? getAvatarUrl(user.avatarUrl) : null}
@@ -93,17 +93,17 @@ export function SettingsPage() {
                   size="md"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-medium text-[var(--text-primary)] truncate">
+                  <p className="text-[15px] font-medium truncate">
                     {user.displayName || user.username}
                   </p>
-                  <p className="text-[13px] text-[var(--text-tertiary)]">@{user.username}</p>
+                  <p className="text-[13px] text-gray-500 dark:text-gray-400">@{user.username}</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+                <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" />
               </button>
               <Button
                 variant="outline"
                 onClick={logout}
-                className="justify-start rounded-[var(--radius-sm)] h-11 text-[var(--destructive)]"
+                className="justify-start rounded-[var(--radius-sm)] h-11 text-red-500 dark:text-red-400"
               >
                 <LogOut className="h-4 w-4 mr-2.5" />
                 Sign Out
@@ -147,10 +147,10 @@ export function SettingsPage() {
       <Card>
         <CardContent>
           <Label className="inline-flex items-center gap-1.5"><Info className="h-3.5 w-3.5" />About</Label>
-          <div className="mt-3 space-y-2 text-[15px] text-[var(--text-secondary)]">
+          <div className="mt-3 space-y-2 text-[15px] text-gray-600 dark:text-gray-300">
             <div className="flex items-baseline gap-2">
-              <p className="font-semibold text-[var(--text-primary)]">{settings.appName}</p>
-              <span className="text-[13px] text-[var(--text-tertiary)]">v{__APP_VERSION__}</span>
+              <p className="font-semibold">{settings.appName}</p>
+              <span className="text-[13px] text-gray-500 dark:text-gray-400">v{__APP_VERSION__}</span>
             </div>
             {activeLocation && (
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
@@ -167,7 +167,7 @@ export function SettingsPage() {
               href="https://github.com/akifbayram/openbin"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+              className="inline-flex items-center gap-1.5 text-[13px] text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors"
             >
               GitHub
               <ExternalLink className="h-3 w-3" />

@@ -36,15 +36,15 @@ describe('getActionColor', () => {
   });
 
   it('returns destructive for delete', () => {
-    expect(getActionColor('delete')).toBe('text-[var(--destructive)]');
+    expect(getActionColor('delete')).toBe('text-red-500 dark:text-red-400');
   });
 
   it('returns destructive for permanent_delete', () => {
-    expect(getActionColor('permanent_delete')).toBe('text-[var(--destructive)]');
+    expect(getActionColor('permanent_delete')).toBe('text-red-500 dark:text-red-400');
   });
 
   it('returns accent for restore', () => {
-    expect(getActionColor('restore')).toBe('text-[var(--accent)]');
+    expect(getActionColor('restore')).toBe('text-purple-600 dark:text-purple-400');
   });
 
   it('returns amber for update', () => {
@@ -60,7 +60,7 @@ describe('getActionColor', () => {
   });
 
   it('returns tertiary for unknown action', () => {
-    expect(getActionColor('unknown_action')).toBe('text-[var(--text-tertiary)]');
+    expect(getActionColor('unknown_action')).toBe('text-gray-500 dark:text-gray-400');
   });
 });
 

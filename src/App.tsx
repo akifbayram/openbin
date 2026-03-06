@@ -66,7 +66,7 @@ const ActivityPage = lazyWithRetry(() =>
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
-      <div className="h-8 w-8 rounded-full border-2 border-[var(--bg-active)] border-t-[var(--accent)] animate-spin" />
+      <div className="h-8 w-8 rounded-full border-2 border-gray-500/18 dark:border-gray-500/28 border-t-purple-600 dark:border-t-purple-500 animate-spin" />
     </div>
   );
 }
@@ -87,10 +87,10 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-dvh flex flex-col items-center justify-center gap-5 px-6 bg-[var(--bg-base)] text-[var(--text-primary)]">
-          <AlertCircle className="h-16 w-16 text-[var(--destructive)] opacity-60" />
+        <div className="min-h-dvh flex flex-col items-center justify-center gap-5 px-6 bg-gray-100 dark:bg-gray-950">
+          <AlertCircle className="h-16 w-16 text-red-500 dark:text-red-400 opacity-60" />
           <h1 className="text-[22px] font-bold">Something went wrong</h1>
-          <p className="text-[15px] text-[var(--text-secondary)] text-center max-w-sm">
+          <p className="text-[15px] text-gray-600 dark:text-gray-300 text-center max-w-sm">
             An unexpected error occurred. Please reload the app to continue.
           </p>
           <Button
@@ -158,9 +158,9 @@ function ScanRedirect() {
 function NotFoundPage() {
   const navigate = useNavigate();
   return (
-    <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-      <p className="text-[48px] font-bold text-[var(--text-primary)]">404</p>
-      <p className="text-[17px] font-semibold text-[var(--text-secondary)]">Page not found</p>
+    <div className="flex flex-col items-center justify-center gap-5 py-24 text-gray-500 dark:text-gray-400">
+      <p className="text-[48px] font-bold">404</p>
+      <p className="text-[17px] font-semibold text-gray-600 dark:text-gray-300">Page not found</p>
       <Button variant="outline" onClick={() => navigate('/')} className="rounded-[var(--radius-full)]">
         <ChevronLeft className="h-4 w-4 mr-1" />
         Back to home

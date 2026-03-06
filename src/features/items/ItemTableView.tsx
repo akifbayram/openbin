@@ -59,17 +59,17 @@ export function ItemTableView({
               }}
             >
               <div className="flex-[2] min-w-0">
-                <span className="truncate font-medium text-[14px] text-[var(--text-primary)]">
+                <span className="truncate font-medium text-[14px]">
                   <Highlight text={entry.name} query={searchQuery} />
                 </span>
               </div>
               <div className="flex-1 min-w-0 flex items-center gap-2">
                 <div
                   className="hidden sm:block h-2 w-2 rounded-full shrink-0"
-                  style={colorPreset ? { backgroundColor: colorPreset.dot } : { backgroundColor: 'var(--text-tertiary)' }}
+                  style={colorPreset ? { backgroundColor: colorPreset.dot } : { backgroundColor: '#6b7280' }}
                 />
-                <BinIcon className="hidden sm:block h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
-                <span className="truncate text-[13px] text-[var(--text-tertiary)]">
+                <BinIcon className="hidden sm:block h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400" />
+                <span className="truncate text-[13px] text-gray-500 dark:text-gray-400">
                   <Highlight text={entry.bin_name} query={searchQuery} />
                 </span>
               </div>

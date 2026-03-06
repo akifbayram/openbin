@@ -125,7 +125,7 @@ function MiniPreview({ style }: { style: QrStyleOptions }) {
           />
         ) : (
           <div
-            className="rounded-[var(--radius-xs)] bg-[var(--bg-input)] animate-pulse"
+            className="rounded-[var(--radius-xs)] bg-gray-500/12 dark:bg-gray-500/24 animate-pulse"
             style={{ width: QR_PREVIEW_SIZE, height: QR_PREVIEW_SIZE }}
           />
         )}
@@ -170,7 +170,7 @@ function QrColorPicker({ value, onChange, label }: { value: string; onChange: (h
 
   return (
     <div>
-      <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">{label}</span>
+      <span className="text-[12px] text-gray-600 dark:text-gray-300 font-medium block mb-2">{label}</span>
       <HueGradientPicker value={colorKey} onChange={handleChange} />
     </div>
   );
@@ -190,7 +190,7 @@ function hasAdvancedChanges(style: QrStyleOptions): boolean {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
+    <span className="text-[12px] text-gray-600 dark:text-gray-300 font-medium block mb-2">
       {children}
     </span>
   );
@@ -212,11 +212,11 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
           onClick={() => onExpandedChange(!expanded)}
         >
           <div className="flex items-center gap-2">
-            <QrCode className="h-4 w-4 text-[var(--text-tertiary)]" />
-            <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">QR Style</Label>
+            <QrCode className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <Label className="text-[15px] font-semibold normal-case tracking-normal pointer-events-none">QR Style</Label>
           </div>
           <ChevronDown className={cn(
-            'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
+            'h-5 w-5 text-gray-500 dark:text-gray-400 transition-transform duration-200',
             expanded && 'rotate-180',
           )} />
         </button>
@@ -261,7 +261,7 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
                     )}
                   </div>
 
-                  <div className="border-t border-[var(--border-subtle)]" />
+                  <div className="border-t border-black/6 dark:border-white/6" />
 
                   {/* Corner Dot Style */}
                   <div>
@@ -279,7 +279,7 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
                     )}
                   </div>
 
-                  <div className="border-t border-[var(--border-subtle)]" />
+                  <div className="border-t border-black/6 dark:border-white/6" />
 
                   {/* Gradient */}
                   <div>
@@ -302,8 +302,8 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
                         <QrColorPicker value={qrStyle.gradientColor2} onChange={(v) => update('gradientColor2', v)} label="End Color" />
                         <div>
                           <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[12px] text-[var(--text-secondary)] font-medium">Rotation</span>
-                            <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums font-medium">{qrStyle.gradientRotation}°</span>
+                            <span className="text-[12px] text-gray-600 dark:text-gray-300 font-medium">Rotation</span>
+                            <span className="text-[12px] text-gray-500 dark:text-gray-400 tabular-nums font-medium">{qrStyle.gradientRotation}°</span>
                           </div>
                           <input
                             type="range"
@@ -319,7 +319,7 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
                     )}
                   </div>
 
-                  <div className="border-t border-[var(--border-subtle)]" />
+                  <div className="border-t border-black/6 dark:border-white/6" />
 
                   {/* Error Correction */}
                   <div>

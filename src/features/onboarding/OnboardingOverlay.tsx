@@ -75,30 +75,30 @@ function DemoAiShowcase({ onNext }: { onNext: () => void }) {
 
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
-        <Sparkles className="h-8 w-8 text-[var(--accent)]" />
+      <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-purple-600/10 dark:bg-purple-500/10">
+        <Sparkles className="h-8 w-8 text-purple-600 dark:text-purple-400" />
       </div>
-      <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
+      <h2 className="text-[22px] font-bold mb-2">
         AI-powered organization
       </h2>
-      <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
+      <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
         Snap a photo, and AI catalogs everything inside.
       </p>
       {/* Mock photo area */}
       <div className={cn(
-        'w-full rounded-[var(--radius-md)] bg-[var(--bg-active)] flex items-center justify-center overflow-hidden transition-all duration-500 ease-in-out',
+        'w-full rounded-[var(--radius-md)] bg-gray-500/16 dark:bg-gray-500/28 flex items-center justify-center overflow-hidden transition-all duration-500 ease-in-out',
         photoCollapsed ? 'max-h-0 opacity-0 mb-0' : 'ai-photo-shimmer max-h-32 opacity-100 mb-4'
       )}>
-        <Camera className="h-10 w-10 text-[var(--text-tertiary)] opacity-40 my-[2.75rem]" />
+        <Camera className="h-10 w-10 text-gray-500 dark:text-gray-400 opacity-40 my-[2.75rem]" />
       </div>
       {/* Revealed items */}
       {visibleCount > 0 && (
-        <div className="w-full rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden mb-5">
+        <div className="w-full rounded-[var(--radius-md)] bg-gray-500/12 dark:bg-gray-500/24 overflow-hidden mb-5">
           {DEMO_BIN.items.slice(0, visibleCount).map((item, i) => (
             <div key={item} className="ai-item-reveal" style={{ animationDelay: `${i * 0.05}s` }}>
-              {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+              {i > 0 && <div className="h-px mx-3.5 bg-black/6 dark:bg-white/6" />}
               <div className="px-3.5 py-1">
-                <span className="text-[15px] text-[var(--text-primary)] leading-relaxed">
+                <span className="text-[15px] leading-relaxed">
                   {item}
                 </span>
               </div>
@@ -248,7 +248,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           onClick={handleSkipSetup}
           disabled={loading}
           aria-label="Close setup"
-          className="absolute top-4 right-4 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-40 p-1 z-10"
+          className="absolute top-4 right-4 text-gray-500 dark:text-gray-400 transition-colors disabled:opacity-40 p-1 z-10"
         >
           <X className="h-5 w-5" />
         </button>
@@ -259,7 +259,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
             <div key={i}
               className={cn(
                 'h-2 w-2 rounded-full transition-all duration-300',
-                i <= step ? 'bg-[var(--accent)]' : 'bg-[var(--bg-active)]',
+                i <= step ? 'bg-purple-600 dark:bg-purple-500' : 'bg-gray-500/16 dark:bg-gray-500/28',
                 i === step
                   ? 'scale-125'
                   : i < step
@@ -278,13 +278,13 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           {/* Step 0: Welcome (demo) */}
           {displayedStep === 0 && demoMode && activeLocationId && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
-                <BrandIcon className="h-8 w-8 text-[var(--accent)]" />
+              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-purple-600/10 dark:bg-purple-500/10">
+                <BrandIcon className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
+              <h2 className="text-[22px] font-bold mb-2">
                 Welcome to OpenBin
               </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
+              <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
                 We've set up a family home with 40+ organized bins — tools, kids' stuff, camping gear, and more. Let's take a quick tour.
               </p>
               <Button
@@ -299,13 +299,13 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           {/* Step 0: Welcome + Location + Areas (production) */}
           {displayedStep === 0 && !demoMode && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
-                <BrandIcon className="h-8 w-8 text-[var(--accent)]" />
+              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-purple-600/10 dark:bg-purple-500/10">
+                <BrandIcon className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
+              <h2 className="text-[22px] font-bold mb-2">
                 Welcome to OpenBin
               </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
+              <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
                 Start by naming your first {t.location} — a space where your {t.bins} live, like your home, garage, or office.
               </p>
               <Input
@@ -323,14 +323,14 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                 <button
                   type="button"
                   onClick={() => setShowAreaInput(true)}
-                  className="text-[13px] text-[var(--accent)] hover:opacity-80 transition-opacity mb-4"
+                  className="text-[13px] text-purple-600 dark:text-purple-400 hover:opacity-80 transition-opacity mb-4"
                 >
                   + Add {t.areas} (optional)
                 </button>
               ) : (
                 <div className="w-full text-left mb-4 space-y-2">
-                  <label htmlFor="onboarding-area-input" className="text-[13px] text-[var(--text-tertiary)] block">
-                    {t.Areas} <span className="text-[var(--text-tertiary)] opacity-60">(optional)</span>
+                  <label htmlFor="onboarding-area-input" className="text-[13px] text-gray-500 dark:text-gray-400 block">
+                    {t.Areas} <span className="text-gray-500 dark:text-gray-400 opacity-60">(optional)</span>
                   </label>
                   <div className="flex gap-2">
                     <Input
@@ -361,7 +361,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                           <button
                             type="button"
                             onClick={() => handleRemoveArea(name)}
-                            className="hover:text-[var(--destructive)] transition-colors ml-0.5"
+                            className="hover:text-red-500 dark:hover:text-red-400 transition-colors ml-0.5"
                           >
                             <X className="h-3 w-3" />
                           </button>
@@ -391,10 +391,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           {/* Step 1: Create First Bin (production) */}
           {displayedStep === 1 && !demoMode && locationId && (
             <div className="flex flex-col items-center text-center">
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
+              <h2 className="text-[22px] font-bold mb-2">
                 Create your first {t.bin}
               </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
+              <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
                 A {t.bin} is any container you want to track — a box, drawer, shelf, etc.
               </p>
               <BinPreviewCard
@@ -434,10 +434,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           {/* Demo Step 2: Browse bin preview */}
           {displayedStep === 2 && demoMode && (
             <div className="flex flex-col items-center text-center">
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
+              <h2 className="text-[22px] font-bold mb-2">
                 Everything in its place
               </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
+              <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
                 Items, tags, area, notes, and a QR code.
               </p>
               <BinPreviewCard
@@ -463,10 +463,10 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           {/* Step 2: QR Preview (production) */}
           {displayedStep === 2 && !demoMode && createdBin && (
             <div className="flex flex-col items-center text-center">
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
+              <h2 className="text-[22px] font-bold mb-2">
                 Scan to find anything
               </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
+              <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
                 Print this label and stick it on your {t.bin}. Scan with any phone camera to instantly see what's inside.
               </p>
               <QRCodeDisplay binId={createdBin.id} size={160} shortCode={createdBin.id} hideActions />
@@ -494,13 +494,13 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           {/* Demo Step 3: Ready to go */}
           {displayedStep === 3 && demoMode && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-24 w-24 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
-                <BrandIcon className="h-14 w-14 text-[var(--accent)]" />
+              <div className="h-24 w-24 rounded-full flex items-center justify-center mb-5 bg-purple-600/10 dark:bg-purple-500/10">
+                <BrandIcon className="h-14 w-14 text-purple-600 dark:text-purple-400" />
               </div>
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
+              <h2 className="text-[22px] font-bold mb-2">
                 You're ready to go
               </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
+              <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
                 Here are a few things you can do next.
               </p>
               <div className="w-full space-y-2 mb-6">
@@ -514,12 +514,12 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                     key={path}
                     type="button"
                     onClick={() => { complete(); navigate(path); }}
-                    className="w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-[var(--bg-active)] hover:bg-[var(--bg-hover)] transition-colors text-left"
+                    className="w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-gray-500/16 dark:bg-gray-500/28 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors text-left"
                   >
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
-                      <Icon className="h-4 w-4 text-[var(--accent)]" />
+                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-purple-600/10 dark:bg-purple-500/10">
+                      <Icon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                     </div>
-                    <span className="text-[14px] font-medium text-[var(--text-primary)]">{label}</span>
+                    <span className="text-[14px] font-medium">{label}</span>
                   </button>
                 ))}
               </div>
@@ -536,24 +536,24 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           {/* Step 3: AI Feature Showcase (production) */}
           {displayedStep === 3 && !demoMode && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
-                <Sparkles className="h-8 w-8 text-[var(--accent)]" />
+              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-purple-600/10 dark:bg-purple-500/10">
+                <Sparkles className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
+              <h2 className="text-[22px] font-bold mb-2">
                 Supercharge with AI
               </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
+              <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
                 Bring your own API key from OpenAI, Anthropic, Google, or any compatible provider.
               </p>
               <div className="w-full space-y-2 mb-6">
                 {AI_FEATURES.map(({ icon: Icon, title, desc }) => (
-                  <div key={title} className="onboarding-feature-card flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 bg-[var(--bg-active)] text-left">
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
-                      <Icon className="h-4 w-4 text-[var(--accent)]" />
+                  <div key={title} className="onboarding-feature-card flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 bg-gray-500/16 dark:bg-gray-500/28 text-left">
+                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-purple-600/10 dark:bg-purple-500/10">
+                      <Icon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[13px] font-semibold text-[var(--text-primary)]">{title}</div>
-                      <div className="text-[12px] text-[var(--text-tertiary)] leading-snug">{desc}</div>
+                      <div className="text-[13px] font-semibold">{title}</div>
+                      <div className="text-[12px] text-gray-500 dark:text-gray-400 leading-snug">{desc}</div>
                     </div>
                   </div>
                 ))}
@@ -568,7 +568,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
               <button
                 type="button"
                 onClick={advanceStep}
-                className="mt-3 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                className="mt-3 text-[13px] text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors"
               >
                 Maybe Later
               </button>
@@ -578,13 +578,13 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           {/* Step 4: Completion with Next Steps (production) */}
           {displayedStep === 4 && !demoMode && (
             <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
-                <Sparkles className="h-8 w-8 text-[var(--accent)]" />
+              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-purple-600/10 dark:bg-purple-500/10">
+                <Sparkles className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
+              <h2 className="text-[22px] font-bold mb-2">
                 You're ready to go
               </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
+              <p className="text-[14px] text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
                 Here are a few things you can do next.
               </p>
               <div className="w-full space-y-2 mb-6">
@@ -597,12 +597,12 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                     key={path}
                     type="button"
                     onClick={() => { complete(); navigate(path); }}
-                    className="w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-[var(--bg-active)] hover:bg-[var(--bg-hover)] transition-colors text-left"
+                    className="w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-gray-500/16 dark:bg-gray-500/28 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors text-left"
                   >
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
-                      <Icon className="h-4 w-4 text-[var(--accent)]" />
+                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-purple-600/10 dark:bg-purple-500/10">
+                      <Icon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                     </div>
-                    <span className="text-[14px] font-medium text-[var(--text-primary)]">{label}</span>
+                    <span className="text-[14px] font-medium">{label}</span>
                   </button>
                 ))}
               </div>

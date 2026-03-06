@@ -136,7 +136,7 @@ export function ProfilePage() {
               type="button"
               onClick={handleRemoveAvatar}
               disabled={uploadingAvatar}
-              className="absolute -top-1 -right-1 z-10 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100 max-lg:opacity-100"
+              className="absolute -top-1 -right-1 z-10 h-5 w-5 rounded-full bg-white/70 dark:bg-gray-800/70 border border-black/6 dark:border-white/6 flex items-center justify-center shadow-sm hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100 max-lg:opacity-100"
               aria-label="Remove avatar"
             >
               <X className="h-3 w-3" />
@@ -158,12 +158,12 @@ export function ProfilePage() {
           </button>
         </div>
 
-        <h2 className="text-[22px] font-bold text-[var(--text-primary)] mt-3 leading-tight">
+        <h2 className="text-[22px] font-bold mt-3 leading-tight">
           {user.displayName || user.username}
         </h2>
-        <p className="text-[15px] text-[var(--text-tertiary)]">@{user.username}</p>
+        <p className="text-[15px] text-gray-500 dark:text-gray-400">@{user.username}</p>
 
-        <div className="flex items-center gap-3 mt-3 text-[13px] text-[var(--text-tertiary)]">
+        <div className="flex items-center gap-3 mt-3 text-[13px] text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1.5">
             <Calendar className="h-3.5 w-3.5" />
             {memberSince}
@@ -228,7 +228,7 @@ export function ProfilePage() {
           >
             <Label className="pointer-events-none">Change Password</Label>
             <ChevronDown
-              className={`h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200 ${passwordOpen ? 'rotate-180' : ''}`}
+              className={`h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${passwordOpen ? 'rotate-180' : ''}`}
             />
           </button>
           {passwordOpen && (

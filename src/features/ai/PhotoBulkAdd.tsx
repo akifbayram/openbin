@@ -236,7 +236,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
             <button
               type="button"
               onClick={() => handleRemove(photo.id)}
-              className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+              className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-white/70 dark:bg-gray-800/70 border border-black/6 dark:border-white/6 flex items-center justify-center shadow-sm hover:bg-red-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
             >
               <X className="h-3 w-3" />
             </button>
@@ -246,7 +246,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="aspect-square flex flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+            className="aspect-square flex flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] border-2 border-dashed border-black/6 dark:border-white/6 text-gray-500 dark:text-gray-400 hover:border-purple-600 dark:hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
           >
             <Camera className="h-4 w-4" />
             <span className="text-[10px]">Add more</span>
@@ -265,7 +265,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       />
 
       {/* Helper text */}
-      <p className="text-[12px] text-[var(--text-tertiary)]">
+      <p className="text-[12px] text-gray-500 dark:text-gray-400">
         {mode === 'per-photo'
           ? `Each photo will create a separate ${t.bin}`
           : `All photos will be analyzed together as one ${t.bin}`}

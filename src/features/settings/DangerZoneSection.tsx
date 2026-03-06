@@ -35,7 +35,7 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
             <Button
               variant="outline"
               onClick={() => setDeleteOpen(true)}
-              className="justify-start rounded-[var(--radius-sm)] h-11 text-[var(--destructive)] border-[var(--destructive)]/30"
+              className="justify-start rounded-[var(--radius-sm)] h-11 text-red-500 dark:text-red-400 border-red-500/30"
             >
               <Trash2 className="h-4 w-4 mr-2.5" />
               Delete Account
@@ -83,7 +83,7 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
               <Button
                 onClick={(e: React.MouseEvent) => handleDeleteAccount(e as unknown as React.FormEvent)}
                 disabled={!deletePassword || deleting}
-                className="rounded-[var(--radius-full)] bg-[var(--destructive)] hover:opacity-90"
+                className="rounded-[var(--radius-full)] bg-red-500 hover:opacity-90"
               >
                 {deleting ? 'Deleting...' : 'Delete Account'}
               </Button>

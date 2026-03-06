@@ -22,9 +22,9 @@ export function ScanSuccessOverlay({ onDismiss, title = 'First scan complete!', 
     >
       {/* Expanding rings */}
       <div className="relative flex items-center justify-center">
-        <div className="absolute h-24 w-24 rounded-full border-2 border-[var(--accent)] scan-ring scan-ring-1" />
-        <div className="absolute h-24 w-24 rounded-full border-2 border-[var(--accent)] scan-ring scan-ring-2" />
-        <div className="absolute h-24 w-24 rounded-full border-2 border-[var(--accent)] scan-ring scan-ring-3" />
+        <div className="absolute h-24 w-24 rounded-full border-2 border-purple-600 dark:border-purple-500 scan-ring scan-ring-1" />
+        <div className="absolute h-24 w-24 rounded-full border-2 border-purple-600 dark:border-purple-500 scan-ring scan-ring-2" />
+        <div className="absolute h-24 w-24 rounded-full border-2 border-purple-600 dark:border-purple-500 scan-ring scan-ring-3" />
 
         {/* Checkmark circle */}
         <div className="relative">
@@ -33,10 +33,10 @@ export function ScanSuccessOverlay({ onDismiss, title = 'First scan complete!', 
       </div>
 
       {/* Text */}
-      <p className="mt-8 text-[22px] font-bold text-[var(--text-primary)] scan-text-fade">
+      <p className="mt-8 text-[22px] font-bold scan-text-fade">
         {title}
       </p>
-      <p className="mt-2 text-[14px] text-[var(--text-tertiary)] scan-text-fade-delay">
+      <p className="mt-2 text-[14px] text-gray-500 dark:text-gray-400 scan-text-fade-delay">
         {subtitle}
       </p>
     </div>

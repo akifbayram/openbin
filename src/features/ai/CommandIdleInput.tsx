@@ -35,7 +35,7 @@ export function CommandIdleInput({
           onChange={(e) => setText(e.target.value)}
           placeholder="What would you like to do?"
           rows={3}
-          className="min-h-[80px] bg-[var(--bg-elevated)] pr-12"
+          className="min-h-[80px] bg-white/70 dark:bg-gray-800/70 pr-12"
           disabled={isLoading}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -47,7 +47,7 @@ export function CommandIdleInput({
         <button
           type="button"
           onClick={onPhotoClick}
-          className="absolute right-2.5 bottom-2.5 p-1.5 rounded-full text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+          className="absolute right-2.5 bottom-2.5 p-1.5 rounded-full text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-gray-500/16 dark:hover:bg-gray-500/28 transition-colors"
           title={`Upload photos to auto-create ${t.bins} with AI`}
           aria-label="Upload photos"
         >
@@ -56,38 +56,38 @@ export function CommandIdleInput({
       </div>
 
       {/* Collapsible examples */}
-      <div className="text-[12px] text-[var(--text-tertiary)] leading-relaxed">
+      <div className="text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed">
         <button
           type="button"
           onClick={() => setExamplesOpen((v) => !v)}
-          className="flex items-center gap-1 font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+          className="flex items-center gap-1 font-medium text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
         >
           <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', !examplesOpen && '-rotate-90')} />
           Examples
         </button>
         {examplesOpen && (
           <div className="grid gap-1 mt-1.5">
-            <p><span className="text-[var(--text-secondary)]">Add/remove items</span> — &quot;Add screwdriver to the tools bin&quot; or &quot;Remove batteries from kitchen box&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Organize</span> — &quot;Move batteries from kitchen to garage&quot; or &quot;Tag tools bin as hardware&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Manage {t.bins}</span> — &quot;Create a {t.bin} called Holiday Decorations in the attic&quot; or &quot;Delete the empty box {t.bin}&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Quick actions</span> — &quot;Duplicate the tools {t.bin}&quot; or &quot;Pin my kitchen {t.bin}&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Manage {t.areas}</span> — &quot;Rename the garage {t.area} to workshop&quot; or &quot;Delete the empty attic {t.area}&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Find things</span> — &quot;Where is the glass cleaner?&quot; or &quot;Which {t.bins} have batteries?&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Search trash</span> — &quot;What&apos;s in my trash?&quot; or &quot;Restore the holiday decorations {t.bin}&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Upload photos</span> — Snap a photo of a {t.bin} and AI will create it for you</p>
+            <p><span className="text-gray-600 dark:text-gray-300">Add/remove items</span> — &quot;Add screwdriver to the tools bin&quot; or &quot;Remove batteries from kitchen box&quot;</p>
+            <p><span className="text-gray-600 dark:text-gray-300">Organize</span> — &quot;Move batteries from kitchen to garage&quot; or &quot;Tag tools bin as hardware&quot;</p>
+            <p><span className="text-gray-600 dark:text-gray-300">Manage {t.bins}</span> — &quot;Create a {t.bin} called Holiday Decorations in the attic&quot; or &quot;Delete the empty box {t.bin}&quot;</p>
+            <p><span className="text-gray-600 dark:text-gray-300">Quick actions</span> — &quot;Duplicate the tools {t.bin}&quot; or &quot;Pin my kitchen {t.bin}&quot;</p>
+            <p><span className="text-gray-600 dark:text-gray-300">Manage {t.areas}</span> — &quot;Rename the garage {t.area} to workshop&quot; or &quot;Delete the empty attic {t.area}&quot;</p>
+            <p><span className="text-gray-600 dark:text-gray-300">Find things</span> — &quot;Where is the glass cleaner?&quot; or &quot;Which {t.bins} have batteries?&quot;</p>
+            <p><span className="text-gray-600 dark:text-gray-300">Search trash</span> — &quot;What&apos;s in my trash?&quot; or &quot;Restore the holiday decorations {t.bin}&quot;</p>
+            <p><span className="text-gray-600 dark:text-gray-300">Upload photos</span> — Snap a photo of a {t.bin} and AI will create it for you</p>
           </div>
         )}
       </div>
 
       {error && (
-        <p className="text-[13px] text-[var(--destructive)]">{error}</p>
+        <p className="text-[13px] text-red-500 dark:text-red-400">{error}</p>
       )}
 
       <Button
         type="button"
         onClick={onParse}
         disabled={!text.trim() || isLoading}
-        className="w-full bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
+        className="w-full bg-purple-600 dark:bg-purple-500 hover:bg-purple-700 dark:hover:bg-purple-400"
       >
         <Sparkles className="h-4 w-4 mr-1.5" />
         {isLoading ? 'Processing...' : 'Send'}

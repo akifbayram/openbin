@@ -58,7 +58,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
               type="button"
               onClick={() => setLightboxIndex(index)}
               aria-label={`View ${photo.filename}`}
-              className="block w-20 h-20 rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-input)] snap-start"
+              className="block w-20 h-20 rounded-[var(--radius-sm)] overflow-hidden bg-gray-500/12 dark:bg-gray-500/24 snap-start"
             >
               <img
                 src={getPhotoUrl(photo.id)}
@@ -84,7 +84,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
           type="button"
           onClick={() => inputRef.current?.click()}
           aria-label="Add photo"
-          className="flex flex-col items-center justify-center w-20 h-20 flex-shrink-0 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors snap-start"
+          className="flex flex-col items-center justify-center w-20 h-20 flex-shrink-0 rounded-[var(--radius-sm)] border-2 border-dashed border-black/6 dark:border-white/6 text-gray-500 dark:text-gray-400 hover:border-purple-600 dark:hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors snap-start"
         >
           <Plus className="h-6 w-6" />
           <span className="text-[11px] mt-1 font-medium">Add Photo</span>

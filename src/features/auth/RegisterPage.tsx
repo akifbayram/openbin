@@ -77,21 +77,21 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-[var(--bg-base)] relative">
+    <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-gray-100 dark:bg-gray-950 relative">
       <button
         type="button"
         onClick={() => setColorMode(cycleColorMode(preference))}
         aria-label={`Theme: ${preference}`}
-        className="absolute top-4 right-4 p-2.5 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
+        className="absolute top-4 right-4 p-2.5 rounded-[var(--radius-sm)] text-gray-500 dark:text-gray-400 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors"
       >
         <ThemeIcon className="h-5 w-5" />
       </button>
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight">
+          <h1 className="text-[28px] font-bold tracking-tight">
             {settings.appName}
           </h1>
-          <p className="text-[14px] text-[var(--text-tertiary)] mt-1">Create your account</p>
+          <p className="text-[14px] text-gray-500 dark:text-gray-400 mt-1">Create your account</p>
         </div>
 
         <Card>
@@ -140,11 +140,11 @@ export function RegisterPage() {
                     ] as const).map(([key, label]) => (
                       <li key={key} className="flex items-center gap-1.5">
                         {passwordChecks[key] ? (
-                          <Check className="h-3.5 w-3.5 text-[var(--accent)] shrink-0" />
+                          <Check className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
                         ) : (
-                          <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--border-default)]" />
+                          <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-black/6 dark:border-white/6" />
                         )}
-                        <span className={passwordChecks[key] ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'}>
+                        <span className={passwordChecks[key] ? 'text-purple-600 dark:text-purple-400' : 'text-gray-500 dark:text-gray-400'}>
                           {label}
                         </span>
                       </li>
@@ -176,9 +176,9 @@ export function RegisterPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-[14px] text-[var(--text-secondary)]">
+        <p className="text-center text-[14px] text-gray-600 dark:text-gray-300">
           Already have an account?{' '}
-          <Link to="/login" className="text-[var(--accent)] font-medium hover:underline">
+          <Link to="/login" className="text-purple-600 dark:text-purple-400 font-medium hover:underline">
             Sign in
           </Link>
         </p>

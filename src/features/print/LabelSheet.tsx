@@ -67,7 +67,7 @@ export function LabelSheet({ bins, format, labelDirection, showColorSwatch, icon
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8 text-[var(--text-tertiary)] text-[13px]">
+      <div className="flex items-center justify-center py-8 text-gray-500 dark:text-gray-400 text-[13px]">
         Generating labels…
       </div>
     );

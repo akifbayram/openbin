@@ -253,8 +253,8 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                 title="Correct AI result"
                 className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${
                   correctionOpen
-                    ? 'bg-[var(--ai-accent)] text-white'
-                    : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]'
+                    ? 'bg-purple-600 dark:bg-purple-500 text-white'
+                    : 'bg-black/40 text-white hover:bg-purple-600 dark:hover:bg-purple-500'
                 }`}
               >
                 <Sparkles className="h-4 w-4" />
@@ -266,7 +266,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
           <div className={correctionOpen && name ? 'ai-correction-enter' : 'hidden'}>
             <div className="space-y-1.5">
               {correctionCount >= MAX_CORRECTIONS ? (
-                <p className="text-[12px] text-[var(--text-tertiary)] italic">
+                <p className="text-[12px] text-gray-500 dark:text-gray-400 italic">
                   Correction limit reached — edit fields directly.
                 </p>
               ) : (
@@ -281,14 +281,14 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                   <button
                     type="button"
                     onClick={handleCorrectionSubmit}
-                    className="shrink-0 p-2 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                    className="shrink-0 p-2 rounded-full bg-purple-600 dark:bg-purple-500 text-white hover:bg-purple-700 dark:hover:bg-purple-400 transition-colors"
                   >
                     <ArrowUp className="h-4 w-4" />
                   </button>
                 </div>
               )}
               {correctionCount > 0 && correctionCount < MAX_CORRECTIONS && (
-                <p className="text-[11px] text-[var(--text-tertiary)]">
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
                   {MAX_CORRECTIONS - correctionCount} correction{MAX_CORRECTIONS - correctionCount !== 1 ? 's' : ''} remaining
                 </p>
               )}
@@ -303,7 +303,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               <button
                 type="button"
                 onClick={() => setAiSetupExpanded(!aiSetupExpanded)}
-                className="text-[12px] text-[var(--accent)] font-medium flex items-center gap-0.5"
+                className="text-[12px] text-purple-600 dark:text-purple-400 font-medium flex items-center gap-0.5"
               >
                 Configure AI provider
                 {aiSetupExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}

@@ -27,8 +27,8 @@ export function CommandSuccess({ result, onAskAnother, onClose, onBinClick }: Co
       </div>
 
       <div className="text-center scan-text-fade">
-        <h2 className="text-xl font-bold text-[var(--text-primary)]">Success</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+        <h2 className="text-xl font-bold">Success</h2>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
           {completedActions.length} {plural(completedActions.length, 'action')} completed
           {failedCount > 0 && <> &middot; {failedCount} failed</>}
         </p>
@@ -51,11 +51,11 @@ export function CommandSuccess({ result, onAskAnother, onClose, onBinClick }: Co
               return (
                 <div
                   key={key}
-                  className="ai-stagger-item flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-primary)]"
+                  className="ai-stagger-item flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
                   style={{ animationDelay: `${(createdBins.length + idx) * 60}ms` }}
                 >
-                  <Check className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
-                  <Icon className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" />
+                  <Check className="h-3.5 w-3.5 shrink-0 text-purple-600 dark:text-purple-400" />
+                  <Icon className="h-4 w-4 shrink-0 text-gray-600 dark:text-gray-300" />
                   <span className="truncate">{describeAction(action, t)}</span>
                 </div>
               );

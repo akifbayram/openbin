@@ -213,7 +213,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   return (
     <div className="space-y-5">
       {/* Photo counter */}
-      <div className="flex items-center justify-between text-[13px] text-[var(--text-secondary)]">
+      <div className="flex items-center justify-between text-[13px] text-gray-600 dark:text-gray-300">
         <span>Photo {currentIndex + 1} of {photos.length}</span>
         <span>{reviewedCount}/{photos.length} reviewed</span>
       </div>
@@ -244,8 +244,8 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                 title="Correct AI result"
                 className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${
                   correctionOpen
-                    ? 'bg-[var(--ai-accent)] text-white'
-                    : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]'
+                    ? 'bg-purple-600 dark:bg-purple-500 text-white'
+                    : 'bg-black/40 text-white hover:bg-purple-600 dark:hover:bg-purple-500'
                 }`}
               >
                 <Sparkles className="h-4 w-4" />
@@ -257,7 +257,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
           {correctionOpen && photo.status === 'reviewed' && (
             <div className="space-y-1.5">
               {photo.correctionCount >= MAX_CORRECTIONS ? (
-                <p className="text-[12px] text-[var(--text-tertiary)] italic">
+                <p className="text-[12px] text-gray-500 dark:text-gray-400 italic">
                   Correction limit reached — edit fields directly.
                 </p>
               ) : (
@@ -272,14 +272,14 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                   <button
                     type="button"
                     onClick={handleCorrectionSubmit}
-                    className="shrink-0 p-2 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                    className="shrink-0 p-2 rounded-full bg-purple-600 dark:bg-purple-500 text-white hover:bg-purple-700 dark:hover:bg-purple-400 transition-colors"
                   >
                     <ArrowUp className="h-4 w-4" />
                   </button>
                 </div>
               )}
               {photo.correctionCount > 0 && photo.correctionCount < MAX_CORRECTIONS && (
-                <p className="text-[11px] text-[var(--text-tertiary)]">
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
                   {MAX_CORRECTIONS - photo.correctionCount} correction{MAX_CORRECTIONS - photo.correctionCount !== 1 ? 's' : ''} remaining
                 </p>
               )}
@@ -297,7 +297,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               <button
                 type="button"
                 onClick={() => setAiSetupExpanded(!aiSetupExpanded)}
-                className="text-[12px] text-[var(--accent)] font-medium flex items-center gap-0.5"
+                className="text-[12px] text-purple-600 dark:text-purple-400 font-medium flex items-center gap-0.5"
               >
                 Configure AI provider
                 {aiSetupExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -401,7 +401,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               <Button
                 variant="ghost"
                 onClick={handleSkip}
-                className="rounded-[var(--radius-full)] text-[var(--text-tertiary)]"
+                className="rounded-[var(--radius-full)] text-gray-500 dark:text-gray-400"
               >
                 <SkipForward className="h-4 w-4 mr-1" />
                 Skip

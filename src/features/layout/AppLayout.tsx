@@ -2,7 +2,7 @@ import { Download, X } from 'lucide-react';
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { PageTransition } from '@/components/page-transition';
-import { Button } from '@chakra-ui/react';
+import { Button } from '@/components/ui/button';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
 import { useLocationList } from '@/features/locations/useLocations';
@@ -13,7 +13,7 @@ import { TagColorsProvider } from '@/features/tags/TagColorsContext';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { useNavigationGuard } from '@/lib/navigationGuard';
-import { useColorMode } from '@/components/ui/color-mode';
+import { useTheme } from '@/lib/theme';
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
 import { toggleSidebarCollapsed, useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
 import { cn } from '@/lib/utils';
@@ -31,7 +31,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function AppLayout() {
-  useColorMode();
+  useTheme();
   const { isCollapsed: sidebarCollapsed } = useSidebarCollapsed();
   const { settings } = useAppSettings();
   const { activeLocationId, setActiveLocationId, demoMode } = useAuth();
@@ -122,10 +122,10 @@ export function AppLayout() {
 
   return (
     <TagColorsProvider>
-    <div className="min-h-dvh bg-[var(--bg-base)] text-[var(--text-primary)] transition-colors duration-300">
+    <div className="min-h-dvh bg-gray-100 dark:bg-gray-950 transition-colors duration-300">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-[var(--radius-full)] focus:bg-[var(--accent)] focus:text-[var(--text-on-accent)] focus:text-[14px] focus:font-medium focus:shadow-lg"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-[var(--radius-full)] focus:bg-purple-600 dark:bg-purple-500 focus:text-white focus:text-[14px] focus:font-medium focus:shadow-lg"
       >
         Skip to main content
       </a>
@@ -168,9 +168,9 @@ export function AppLayout() {
       )}
       {/* PWA install toast — fixed bottom-left (mobile) / bottom-right (desktop) */}
       {installPrompt && !dismissed && (
-        <div className="fixed z-40 bottom-[calc(16px+var(--safe-bottom))] lg:bottom-6 left-4 right-4 lg:left-auto lg:right-6 lg:w-[360px] rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 shadow-lg fade-in-fast">
-          <Download className="h-5 w-5 text-[var(--accent)] shrink-0" />
-          <p className="flex-1 text-[14px] text-[var(--text-primary)]">
+        <div className="fixed z-40 bottom-[calc(16px+var(--safe-bottom))] lg:bottom-6 left-4 right-4 lg:left-auto lg:right-6 lg:w-[360px] glass-heavy rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 shadow-lg fade-in-fast">
+          <Download className="h-5 w-5 text-purple-600 dark:text-purple-400 shrink-0" />
+          <p className="flex-1 text-[14px]">
             Install {settings.appName}
           </p>
           <Button
@@ -184,7 +184,7 @@ export function AppLayout() {
             type="button"
             onClick={() => { setDismissed(true); localStorage.setItem('openbin-install-dismissed', '1'); }}
             aria-label="Dismiss install prompt"
-            className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] p-1"
+            className="text-gray-500 dark:text-gray-400 hover:p-1"
           >
             <X className="h-4 w-4" />
           </button>

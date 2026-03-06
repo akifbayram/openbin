@@ -136,7 +136,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <Label htmlFor="ai-toggle" className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" />AI Features</Label>
-            <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
+            <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
               Photo analysis, item extraction, and AI commands
             </p>
           </div>
@@ -154,14 +154,14 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
               aiEnabled ? 'opacity-100' : 'opacity-0',
             )}>
               {settings === null && !touched && (
-                <p className="text-[13px] text-[var(--text-secondary)] mt-3">
+                <p className="text-[13px] text-gray-600 dark:text-gray-300 mt-3">
                   Connect an AI provider to unlock photo analysis, item extraction from text and voice, and natural language commands for managing your bins.
                 </p>
               )}
 
               {settings?.source === 'env' && (
-                <div className="mt-3 px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 border border-[var(--accent)]/20">
-                  <p className="text-[13px] text-[var(--text-secondary)]">
+                <div className="mt-3 px-3 py-2 rounded-[var(--radius-sm)] bg-purple-600/10 dark:bg-purple-500/10 border border-purple-600/20 dark:border-purple-500/20">
+                  <p className="text-[13px] text-gray-600 dark:text-gray-300">
                     AI configured by server. Save your own settings to override.
                   </p>
                 </div>
@@ -177,7 +177,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
 
                 {/* API Key */}
                 <div className="space-y-1.5">
-                  <label htmlFor="ai-api-key" className="text-[13px] text-[var(--text-secondary)]">API Key</label>
+                  <label htmlFor="ai-api-key" className="text-[13px] text-gray-600 dark:text-gray-300">API Key</label>
                   <div className="relative">
                     <Input
                       id="ai-api-key"
@@ -190,7 +190,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     <button
                       type="button"
                       onClick={() => setup.setShowKey(!setup.showKey)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300"
                     >
                       {setup.showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -199,7 +199,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
 
                 {/* Model */}
                 <div className="space-y-1.5">
-                  <label htmlFor="ai-model" className="text-[13px] text-[var(--text-secondary)]">Model</label>
+                  <label htmlFor="ai-model" className="text-[13px] text-gray-600 dark:text-gray-300">Model</label>
                   <Input
                     id="ai-model"
                     value={setup.model}
@@ -211,7 +211,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                 {/* Endpoint URL — only for openai-compatible */}
                 {setup.provider === 'openai-compatible' && (
                   <div className="space-y-1.5">
-                    <label htmlFor="ai-endpoint" className="text-[13px] text-[var(--text-secondary)]">Endpoint URL</label>
+                    <label htmlFor="ai-endpoint" className="text-[13px] text-gray-600 dark:text-gray-300">Endpoint URL</label>
                     <Input
                       id="ai-endpoint"
                       value={setup.endpointUrl}
@@ -223,7 +223,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
 
                 {/* Required fields hint */}
                 {touched && !setup.apiKey && !setup.model && (
-                  <p className="text-[12px] text-[var(--text-tertiary)]">
+                  <p className="text-[12px] text-gray-500 dark:text-gray-400">
                     API key and model are required.
                   </p>
                 )}
@@ -237,7 +237,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     structure: { value: structurePrompt, set: setStructurePrompt },
                   };
                   const helpText: Record<PromptTab, React.ReactNode> = {
-                    analysis: <>Use <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--bg-input)]">{'{available_tags}'}</code> to inject existing tags. Leave empty for default.</>,
+                    analysis: <>Use <code className="text-[11px] px-1 py-0.5 rounded bg-gray-500/12 dark:bg-gray-500/24">{'{available_tags}'}</code> to inject existing tags. Leave empty for default.</>,
                     command: 'Customize how commands are parsed. Leave empty for default.',
                     query: 'Customize how inventory queries are answered. Leave empty for default.',
                     structure: 'Customize how text is parsed into item lists. Leave empty for default.',
@@ -257,7 +257,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                               <span className="hidden sm:inline">{opt.label}</span>
                               {promptMap[opt.key as PromptTab].value.trim() && (
                                 <span className={cn('absolute top-1/2 -translate-y-1/2 -right-0.5 h-1.5 w-1.5 rounded-full',
-                                  active ? 'bg-[var(--text-primary)]' : 'bg-[var(--accent)]'
+                                  active ? 'bg-gray-900 dark:bg-gray-100' : 'bg-purple-600 dark:bg-purple-500'
                                 )} />
                               )}
                             </span>
@@ -271,12 +271,12 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           maxLength={10000}
                         />
                         <div className="flex items-center justify-between">
-                          <p className="text-[12px] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
+                          <p className="text-[12px] text-gray-500 dark:text-gray-400">{helpText[activePromptTab]}</p>
                           {active.value.trim() ? (
                             <button
                               type="button"
                               onClick={() => active.set('')}
-                              className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
+                              className="flex items-center gap-1 text-[12px] text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors shrink-0 ml-2"
                             >
                               <RotateCcw className="h-3 w-3" />
                               Reset to Default
@@ -285,7 +285,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                             <button
                               type="button"
                               onClick={() => active.set(defaultPrompts?.[activePromptTab] ?? '')}
-                              className="text-[12px] text-[var(--accent)] hover:underline shrink-0 ml-2"
+                              className="text-[12px] text-purple-600 dark:text-purple-400 hover:underline shrink-0 ml-2"
                             >
                               Load default to customize
                             </button>
@@ -303,7 +303,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                 >
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <label htmlFor="ai-temperature" className="text-[13px] text-[var(--text-secondary)]">Temperature</label>
+                      <label htmlFor="ai-temperature" className="text-[13px] text-gray-600 dark:text-gray-300">Temperature</label>
                       <div className="relative">
                         <Input
                           id="ai-temperature"
@@ -316,15 +316,15 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           placeholder="Default"
                         />
                         {temperature && (
-                          <button type="button" onClick={() => setTemperature('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                          <button type="button" onClick={() => setTemperature('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300">
                             <RotateCcw className="h-3 w-3" />
                           </button>
                         )}
                       </div>
-                      <p className="text-[11px] text-[var(--text-tertiary)]">0.0–2.0</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">0.0–2.0</p>
                     </div>
                     <div className="space-y-1.5">
-                      <label htmlFor="ai-max-tokens" className="text-[13px] text-[var(--text-secondary)]">Max Tokens</label>
+                      <label htmlFor="ai-max-tokens" className="text-[13px] text-gray-600 dark:text-gray-300">Max Tokens</label>
                       <div className="relative">
                         <Input
                           id="ai-max-tokens"
@@ -337,15 +337,15 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           placeholder="Default"
                         />
                         {maxTokens && (
-                          <button type="button" onClick={() => setMaxTokens('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                          <button type="button" onClick={() => setMaxTokens('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300">
                             <RotateCcw className="h-3 w-3" />
                           </button>
                         )}
                       </div>
-                      <p className="text-[11px] text-[var(--text-tertiary)]">100–16,000</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">100–16,000</p>
                     </div>
                     <div className="space-y-1.5">
-                      <label htmlFor="ai-top-p" className="text-[13px] text-[var(--text-secondary)]">Top P</label>
+                      <label htmlFor="ai-top-p" className="text-[13px] text-gray-600 dark:text-gray-300">Top P</label>
                       <div className="relative">
                         <Input
                           id="ai-top-p"
@@ -358,15 +358,15 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           placeholder="Default"
                         />
                         {topP && (
-                          <button type="button" onClick={() => setTopP('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                          <button type="button" onClick={() => setTopP('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300">
                             <RotateCcw className="h-3 w-3" />
                           </button>
                         )}
                       </div>
-                      <p className="text-[11px] text-[var(--text-tertiary)]">0.0–1.0</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">0.0–1.0</p>
                     </div>
                     <div className="space-y-1.5">
-                      <label htmlFor="ai-timeout" className="text-[13px] text-[var(--text-secondary)]">Timeout (s)</label>
+                      <label htmlFor="ai-timeout" className="text-[13px] text-gray-600 dark:text-gray-300">Timeout (s)</label>
                       <div className="relative">
                         <Input
                           id="ai-timeout"
@@ -379,12 +379,12 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                           placeholder="Default (30)"
                         />
                         {requestTimeout && (
-                          <button type="button" onClick={() => setRequestTimeout('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                          <button type="button" onClick={() => setRequestTimeout('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300">
                             <RotateCcw className="h-3 w-3" />
                           </button>
                         )}
                       </div>
-                      <p className="text-[11px] text-[var(--text-tertiary)]">10–300 seconds</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">10–300 seconds</p>
                     </div>
                   </div>
                 </Disclosure>
@@ -394,7 +394,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                   <p className="text-[13px] text-green-600 dark:text-green-400">Connected to {setup.model} successfully</p>
                 )}
                 {setup.testResult === 'error' && (
-                  <p className="text-[13px] text-[var(--destructive)]">{testError}</p>
+                  <p className="text-[13px] text-red-500 dark:text-red-400">{testError}</p>
                 )}
 
                 {/* Buttons */}
@@ -417,7 +417,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     <Button
                       variant="ghost"
                       onClick={handleRemove}
-                      className="text-[var(--destructive)]"
+                      className="text-red-500 dark:text-red-400"
                     >
                       Remove AI Settings
                     </Button>

@@ -10,7 +10,7 @@ import type { SortDirection } from '@/components/ui/sort-header';
 import { useAuth } from '@/lib/auth';
 import { resolveColor } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
-import { useColorMode } from '@/components/ui/color-mode';
+import { useTheme } from '@/lib/theme';
 import { useDebounce } from '@/lib/useDebounce';
 import { useTagColorsContext } from './TagColorsContext';
 import { type TagSortColumn, TagTableView } from './TagTableView';
@@ -26,7 +26,7 @@ export function TagsPage() {
   const t = useTerminology();
   const { tags, totalCount, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedTagList(debouncedSearch, sortColumn, sortDirection);
   const { tagColors } = useTagColorsContext();
-  const { colorMode } = useColorMode();
+  const { theme } = useTheme();
 
   const handleSortChange = useCallback((column: TagSortColumn, direction: SortDirection) => {
     setSortColumn(column);
@@ -45,7 +45,7 @@ export function TagsPage() {
     if (!preset) return undefined;
     return {
       backgroundColor: preset.bgCss,
-      color: colorMode === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
+      color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
     };
   }
 
@@ -66,11 +66,11 @@ export function TagsPage() {
         skeleton={
           <div className="flex flex-col gap-4">
             <Skeleton className="h-10 w-full rounded-[var(--radius-full)]" />
-            <div className="rounded-[var(--radius-md)] overflow-hidden">
-              <div className="h-9 bg-[var(--bg-hover)] border-b border-[var(--border-subtle)]" />
+            <div className="glass-card rounded-[var(--radius-md)] overflow-hidden">
+              <div className="h-9 bg-gray-500/8 dark:bg-gray-500/18 border-b border-black/6 dark:border-white/6" />
               <SkeletonList count={6}>
                 {() => (
-                  <div className="px-3 py-2.5 border-b border-[var(--border-subtle)] flex items-center gap-3">
+                  <div className="px-3 py-2.5 border-b border-black/6 dark:border-white/6 flex items-center gap-3">
                     <Skeleton className="h-6 w-20" />
                     <Skeleton className="h-4 w-12 flex-1" />
                     <Skeleton className="h-6 w-6 rounded-full" />

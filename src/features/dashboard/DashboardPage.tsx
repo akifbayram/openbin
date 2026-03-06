@@ -92,10 +92,10 @@ function StatCard({
         {...(onClick ? { onClick } : {})}
       >
         <CardContent className="py-3 px-4">
-          <p className="text-[24px] font-bold text-[var(--text-primary)] leading-tight">
+          <p className="text-[24px] font-bold leading-tight">
             {animatedValue}
           </p>
-          <p className="text-[13px] text-[var(--text-tertiary)]">{label}</p>
+          <p className="text-[13px] text-gray-500 dark:text-gray-400">{label}</p>
         </CardContent>
       </Wrapper>
     </Card>
@@ -111,14 +111,14 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
+      <h2 className="text-[17px] font-semibold">
         {title}
       </h2>
       {action && (
         <button
           type="button"
           onClick={action.onClick}
-          className="flex items-center gap-0.5 text-[13px] font-medium text-[var(--accent)]"
+          className="flex items-center gap-0.5 text-[13px] font-medium text-purple-600 dark:text-purple-400"
         >
           {action.label}
           <ChevronRight className="h-3.5 w-3.5" />
@@ -373,13 +373,13 @@ export function DashboardPage() {
                 <Inbox className="h-[18px] w-[18px] text-amber-500" />
               </div>
               <div className="text-left">
-                <p className="text-[15px] font-semibold text-[var(--text-primary)]">
+                <p className="text-[15px] font-semibold">
                   {needsOrganizing} {needsOrganizing !== 1 ? t.bins : t.bin} need{needsOrganizing === 1 ? 's' : ''} organizing
                 </p>
-                <p className="text-[12px] text-[var(--text-tertiary)]">No tags, area, or items</p>
+                <p className="text-[12px] text-gray-500 dark:text-gray-400">No tags, area, or items</p>
               </div>
             </div>
-            <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400" />
           </button>
         )}
 

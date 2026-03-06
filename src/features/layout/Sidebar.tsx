@@ -32,7 +32,7 @@ const manageItems: { path: string; label: string; icon: React.ComponentType<{ cl
   { path: '/scan', label: 'Scan', icon: ScanLine },
 ];
 
-const brandIcon = <BrandIcon className="h-5.5 w-5.5 text-[var(--accent)] shrink-0" />;
+const brandIcon = <BrandIcon className="h-5.5 w-5.5 text-purple-600 dark:text-purple-400 shrink-0" />;
 
 const discordIcon = (
   <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
@@ -62,11 +62,11 @@ function NavButton({ path, label, icon: Icon, currentPath, navigate, onClick, co
       className={cn(
         'flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full overflow-hidden whitespace-nowrap text-left',
         isActive
-          ? 'text-[var(--text-primary)]'
-          : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
+          ? 'glass-card'
+          : 'text-gray-500 dark:text-gray-400 hover:bg-gray-500/8 dark:hover:bg-gray-500/18'
       )}
     >
-      <Icon className={cn('h-5 w-5 shrink-0', isActive && 'text-[var(--accent)]')} />
+      <Icon className={cn('h-5 w-5 shrink-0', isActive && 'text-purple-600 dark:text-purple-400')} />
       <span className={cn('truncate', collapsed && 'w-0 opacity-0')} aria-hidden={collapsed || undefined}>
         {label}
       </span>
@@ -100,7 +100,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
           {brandIcon}
           {/* biome-ignore lint/a11y/useHeadingContent: heading has dynamic text content and aria-label */}
           <h1 className={cn(
-            'text-[22px] font-bold text-[var(--text-primary)] tracking-tight leading-none truncate',
+            'text-[22px] font-bold tracking-tight leading-none truncate',
             collapsed && 'w-0 opacity-0'
           )} aria-hidden={collapsed || undefined} aria-label={settings.appName}>
             {settings.appName}
@@ -116,8 +116,8 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
                 type="button"
                 onClick={() => { navigate('/locations'); onItemClick?.(); }}
                 aria-label={t.Locations ?? 'Locations'}
-                className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full text-[var(--text-tertiary)]
-  hover:bg-[var(--bg-hover)]"
+                className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full text-gray-500 dark:text-gray-400
+  hover:bg-gray-500/8 dark:hover:bg-gray-500/18"
               >
                 <MapPin className="h-5 w-5 shrink-0" />
               </button>
@@ -141,7 +141,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
         {/* Manage section */}
         <div className="space-y-1">
           <p className={cn(
-            'px-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] overflow-hidden',
+            'px-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 overflow-hidden',
             collapsed ? 'h-0 opacity-0' : 'pb-1'
           )} aria-hidden={collapsed || undefined}>
             Manage
@@ -169,9 +169,9 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
       </div>
 
       {/* Administration section */}
-      <div className="py-4 border-t border-[var(--border-subtle)] px-3">
+      <div className="py-4 border-t border-black/6 dark:border-white/6 px-3">
         <p className={cn(
-          'px-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] overflow-hidden',
+          'px-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 overflow-hidden',
           collapsed ? 'h-0 opacity-0' : 'pb-1'
         )} aria-hidden={collapsed || undefined}>
           Administration
@@ -186,8 +186,8 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
               className={cn(
                 'flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full overflow-hidden whitespace-nowrap text-left',
                 location.pathname === '/profile'
-                  ? 'text-[var(--text-primary)]'
-                  : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
+                  ? 'glass-card'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-500/8 dark:hover:bg-gray-500/18'
               )}
             >
               <UserAvatar
@@ -206,7 +206,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
             type="button"
             onClick={() => { logout(); onItemClick?.(); }}
             aria-label="Sign Out"
-            className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]
+            className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-gray-500 dark:text-gray-400 hover:bg-gray-500/8 dark:hover:bg-gray-500/18
   w-full overflow-hidden whitespace-nowrap"
           >
             <LogOut className="h-5 w-5 shrink-0" />
@@ -218,21 +218,21 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
       </div>
 
       {/* External links + version */}
-      <div className="flex items-center gap-3 px-5 py-3 border-t border-[var(--border-subtle)]">
+      <div className="flex items-center gap-3 px-5 py-3 border-t border-black/6 dark:border-white/6">
         <a href="https://docs.openbin.app/" target="_blank" rel="noopener noreferrer" title="Documentation"
-          className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
+          className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors">
           <BookOpen className="h-4 w-4" />
         </a>
         <a href="https://discord.gg/W6JPZCqqx9" target="_blank" rel="noopener noreferrer" title="Discord"
-          className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
+          className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors">
           {discordIcon}
         </a>
         <a href="https://github.com/akifbayram/openbin" target="_blank" rel="noopener noreferrer" title="GitHub"
-          className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
+          className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors">
           <Github className="h-4 w-4" />
         </a>
         <span className={cn(
-          'ml-auto text-xs text-[var(--text-tertiary)] tabular-nums',
+          'ml-auto text-xs text-gray-500 dark:text-gray-400 tabular-nums',
           collapsed && 'w-0 opacity-0 overflow-hidden'
         )} aria-hidden={collapsed || undefined}>
           v{__APP_VERSION__}
@@ -255,7 +255,7 @@ export function Sidebar({ locations, activeLocationId, onLocationChange, onScanC
   return (
     <aside
       aria-label="Main navigation"
-      className="hidden lg:flex flex-col h-dvh fixed left-0 top-0 z-30 bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] print-hide
+      className="hidden lg:flex flex-col h-dvh fixed left-0 top-0 z-30 bg-gray-200 dark:bg-gray-900 border-r border-black/6 dark:border-white/6 print-hide
   transition-[width] duration-200 ease-in-out"
       style={{ width: isCollapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)' }}
     >
@@ -270,8 +270,8 @@ export function Sidebar({ locations, activeLocationId, onLocationChange, onScanC
         onClick={toggle}
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         aria-expanded={!isCollapsed}
-        className="absolute top-[43px] right-0 translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-7 h-7 rounded-full
-  text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--accent)]
+        className="absolute top-[43px] right-0 translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-7 h-7 rounded-full glass-heavy
+  text-gray-500 dark:text-gray-400 transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-purple-600 dark:focus-visible:ring-purple-500
   focus-visible:outline-none"
       >
         {isCollapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}

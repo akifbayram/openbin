@@ -38,14 +38,14 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
           onClick={() => onExpandedChange(!expanded)}
         >
           <div className="flex items-center gap-2">
-            <LayoutGrid className="h-4 w-4 text-[var(--text-tertiary)]" />
-            <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Format</Label>
+            <LayoutGrid className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <Label className="text-[15px] font-semibold normal-case tracking-normal pointer-events-none">Label Format</Label>
             {!expanded && (
-              <span className="text-[13px] text-[var(--text-tertiary)]">({f.baseFormat.name})</span>
+              <span className="text-[13px] text-gray-500 dark:text-gray-400">({f.baseFormat.name})</span>
             )}
           </div>
           <ChevronDown className={cn(
-            'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
+            'h-5 w-5 text-gray-500 dark:text-gray-400 transition-transform duration-200',
             expanded && 'rotate-180'
           )} />
         </button>
@@ -54,19 +54,19 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
           <>
             {/* Format search */}
             <div className="relative mt-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-tertiary)] pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search by Avery product number..."
                 value={formatSearch}
                 onChange={(e) => setFormatSearch(e.target.value)}
-                className="w-full h-9 rounded-[var(--radius-full)] bg-[var(--bg-input)] pl-9 pr-8 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-2 focus:ring-[var(--accent)]/30 transition-shadow"
+                className="w-full h-9 rounded-[var(--radius-full)] bg-gray-500/12 dark:bg-gray-500/24 pl-9 pr-8 text-[14px] placeholder:text-gray-500 dark:text-gray-400 outline-none focus:ring-2 focus:ring-purple-600/30 dark:focus:ring-purple-500/30 transition-shadow"
               />
               {formatSearch && (
                 <button
                   type="button"
                   onClick={() => setFormatSearch('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -81,17 +81,17 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                     <button
                       type="button"
                       key={fmt.key}
-                      className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
+                      className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 w-full text-left hover:bg-gray-500/8 dark:hover:bg-gray-500/18 active:bg-gray-500/16 dark:active:bg-gray-500/28 transition-colors"
                       onClick={() => f.handleFormatChange(fmt.key)}
                     >
                       {f.formatKey === fmt.key ? (
-                        <CheckCircle2 className="h-[20px] w-[20px] text-[var(--accent)] shrink-0" />
+                        <CheckCircle2 className="h-[20px] w-[20px] text-purple-600 dark:text-purple-400 shrink-0" />
                       ) : (
-                        <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
+                        <Circle className="h-[20px] w-[20px] text-gray-500 dark:text-gray-400 shrink-0" />
                       )}
                       <div className="min-w-0">
-                        <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
-                        <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
+                        <span className="text-[15px]">{fmt.name}</span>
+                        <span className="text-[13px] text-gray-500 dark:text-gray-400 ml-2">
                           {computeLabelsPerPage(fmt) > 1 ? `${computeLabelsPerPage(fmt)} per page` : 'single label'}
                         </span>
                       </div>
@@ -99,30 +99,30 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                   ))}
                 </div>
               ) : (
-                <p className="text-[13px] text-[var(--text-tertiary)] py-6 text-center">
+                <p className="text-[13px] text-gray-500 dark:text-gray-400 py-6 text-center">
                   No matching label formats
                 </p>
               );
             })()}
 
             {f.savedPresets.length > 0 && (
-              <div className="space-y-1 mt-2 pt-2 border-t border-[var(--border-subtle)]">
-                <span className="text-[12px] text-[var(--text-tertiary)] font-medium px-3">Saved Presets</span>
+              <div className="space-y-1 mt-2 pt-2 border-t border-black/6 dark:border-white/6">
+                <span className="text-[12px] text-gray-500 dark:text-gray-400 font-medium px-3">Saved Presets</span>
                 {f.savedPresets.map((fmt) => (
                   <div key={fmt.key} className="flex items-center group">
                     <button
                       type="button"
-                      className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 flex-1 min-w-0 text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
+                      className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 flex-1 min-w-0 text-left hover:bg-gray-500/8 dark:hover:bg-gray-500/18 active:bg-gray-500/16 dark:active:bg-gray-500/28 transition-colors"
                       onClick={() => f.handleFormatChange(fmt.key)}
                     >
                       {f.formatKey === fmt.key ? (
-                        <CheckCircle2 className="h-[20px] w-[20px] text-[var(--accent)] shrink-0" />
+                        <CheckCircle2 className="h-[20px] w-[20px] text-purple-600 dark:text-purple-400 shrink-0" />
                       ) : (
-                        <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
+                        <Circle className="h-[20px] w-[20px] text-gray-500 dark:text-gray-400 shrink-0" />
                       )}
                       <div className="min-w-0 truncate">
-                        <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
-                        <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
+                        <span className="text-[15px]">{fmt.name}</span>
+                        <span className="text-[13px] text-gray-500 dark:text-gray-400 ml-2">
                           {f.displayUnit === 'mm'
                             ? `${inchesToMm(parseFloat(String(fmt.cellWidth).replace(/in$/, '')))}mm × ${inchesToMm(parseFloat(String(fmt.cellHeight).replace(/in$/, '')))}mm`
                             : `${fmt.cellWidth} × ${fmt.cellHeight}`}
@@ -132,7 +132,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                     <Tooltip content={`Delete ${fmt.name}`}>
                       <button
                         type="button"
-                        className="shrink-0 p-2 mr-1 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        className="shrink-0 p-2 mr-1 rounded-[var(--radius-sm)] text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-500/8 dark:hover:bg-gray-500/18 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                         onClick={() => f.handleDeletePreset(fmt.key)}
                         aria-label={`Delete ${fmt.name}`}
                       >
@@ -145,8 +145,8 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
             )}
 
             {/* Orientation toggle */}
-            <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[var(--border-subtle)] px-1">
-              <span className="text-[12px] text-[var(--text-secondary)] font-medium mr-2">Orientation</span>
+            <div className="flex items-center gap-1 mt-3 pt-3 border-t border-black/6 dark:border-white/6 px-1">
+              <span className="text-[12px] text-gray-600 dark:text-gray-300 font-medium mr-2">Orientation</span>
               <OptionGroup
                 options={[
                   { key: 'landscape' as const, label: 'Landscape', icon: RectangleHorizontal },
@@ -167,21 +167,21 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
             </div>
 
             {/* Customize toggle */}
-            <div className="mt-3 pt-3 border-t border-[var(--border-subtle)]">
+            <div className="mt-3 pt-3 border-t border-black/6 dark:border-white/6">
               <label htmlFor="customize-dimensions" className="flex items-center gap-3 px-3 py-1 cursor-pointer">
                 <Checkbox
                   id="customize-dimensions"
                   checked={f.customState.customizing}
                   onCheckedChange={f.toggleCustomize}
                 />
-                <span className="text-[15px] text-[var(--text-primary)]">Customize dimensions</span>
+                <span className="text-[15px]">Customize dimensions</span>
               </label>
             </div>
 
             {f.customState.customizing && (
               <>
                 <div className="flex items-center gap-1 mt-3 px-1">
-                  <span className="text-[12px] text-[var(--text-secondary)] font-medium mr-2">Units</span>
+                  <span className="text-[12px] text-gray-600 dark:text-gray-300 font-medium mr-2">Units</span>
                   <OptionGroup
                     options={[
                       { key: 'in' as const, label: 'Inches' },
@@ -200,7 +200,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                     const min = f.displayUnit === 'mm' && field.isDimensional ? String(inchesToMm(field.minIn)) : String(field.minIn);
                     return (
                       <div key={field.key} className="flex flex-col gap-1">
-                        <label htmlFor={`custom-field-${field.key}`} className="text-[12px] text-[var(--text-secondary)] font-medium">
+                        <label htmlFor={`custom-field-${field.key}`} className="text-[12px] text-gray-600 dark:text-gray-300 font-medium">
                           {field.label}{unitSuffix}
                         </label>
                         <input
@@ -211,7 +211,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                           max={field.max}
                           value={f.getOverrideValue(field.key)}
                           onChange={(e) => f.updateOverride(field.key, e.target.value)}
-                          className="h-9 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
+                          className="h-9 rounded-[var(--radius-sm)] border border-black/6 dark:border-white/6 bg-white/70 dark:bg-gray-800/70 px-2.5 text-[14px] outline-none focus:border-purple-600 dark:border-purple-500 transition-colors"
                         />
                       </div>
                     );
@@ -226,7 +226,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                       value={presetName}
                       onChange={(e) => setPresetName(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                      className="h-9 flex-1 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
+                      className="h-9 flex-1 rounded-[var(--radius-sm)] border border-black/6 dark:border-white/6 bg-white/70 dark:bg-gray-800/70 px-2.5 text-[14px] outline-none focus:border-purple-600 dark:border-purple-500 transition-colors"
                     />
                     <Button size="sm" onClick={handleSave} disabled={!presetName.trim()} className="h-9 px-3">
                       Save
@@ -235,7 +235,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                       variant="ghost"
                       size="sm"
                       onClick={() => { setShowSaveInput(false); setPresetName(''); }}
-                      className="h-9 px-2.5 text-[var(--text-tertiary)]"
+                      className="h-9 px-2.5 text-gray-500 dark:text-gray-400"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -245,7 +245,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowSaveInput(true)}
-                    className="mt-3 mx-1 text-[13px] text-[var(--accent)] h-9 px-3"
+                    className="mt-3 mx-1 text-[13px] text-purple-600 dark:text-purple-400 h-9 px-3"
                   >
                     <Save className="h-4 w-4 mr-1.5" />
                     Save as Preset

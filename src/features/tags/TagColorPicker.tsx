@@ -62,7 +62,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
             e.stopPropagation();
             toggle();
           }}
-          className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-[var(--bg-active)] transition-colors shrink-0"
+          className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-gray-500/16 dark:hover:bg-gray-500/28 transition-colors shrink-0"
           aria-label="Pick tag color"
         >
           {currentPreset ? (
@@ -71,7 +71,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               style={{ backgroundColor: currentPreset.bgCss }}
             />
           ) : (
-            <Palette className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+            <Palette className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
           )}
         </button>
       </Tooltip>
@@ -90,14 +90,14 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               className={cn(
                 'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all',
                 !currentColor
-                  ? 'border-[var(--accent)] bg-[var(--bg-base)]'
-                  : 'border-[var(--border-glass)] bg-[var(--bg-base)] hover:border-[var(--text-tertiary)]'
+                  ? 'border-purple-600 dark:border-purple-500 bg-gray-100 dark:bg-gray-950'
+                  : 'border-[var(--border-glass)] bg-gray-100 dark:bg-gray-950 hover:border-gray-500 dark:hover:border-gray-400'
               )}
               aria-label="No color"
               title="None"
             >
               {!currentColor && (
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-purple-600 dark:bg-purple-500" />
               )}
             </button>
             <button
@@ -110,7 +110,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               className={cn(
                 'h-5 w-5 rounded-full transition-colors',
                 isBlack
-                  ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-base)]'
+                  ? 'ring-2 ring-purple-600 dark:ring-purple-500 ring-offset-1 ring-offset-gray-100 dark:ring-offset-gray-950'
                   : 'hover:opacity-80'
               )}
               style={{ backgroundColor: '#1C1C1E' }}
@@ -123,9 +123,9 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               }}
               title="White"
               className={cn(
-                'h-5 w-5 rounded-full border border-[var(--border-subtle)] transition-colors',
+                'h-5 w-5 rounded-full border border-black/6 dark:border-white/6 transition-colors',
                 isWhite
-                  ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-base)]'
+                  ? 'ring-2 ring-purple-600 dark:ring-purple-500 ring-offset-1 ring-offset-gray-100 dark:ring-offset-gray-950'
                   : 'hover:opacity-80'
               )}
               style={{ backgroundColor: '#F2F2F7' }}
@@ -140,7 +140,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               className={cn(
                 'h-5 w-5 rounded-full transition-colors',
                 isNeutral
-                  ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-base)]'
+                  ? 'ring-2 ring-purple-600 dark:ring-purple-500 ring-offset-1 ring-offset-gray-100 dark:ring-offset-gray-950'
                   : 'hover:opacity-80'
               )}
               style={{ backgroundColor: hslToHex(0, 0, 52) }}
