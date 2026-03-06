@@ -91,7 +91,7 @@ function StatCard({
         className="w-full text-left"
         {...(onClick ? { onClick } : {})}
       >
-        <CardContent className="py-3 px-4">
+        <CardContent padding="compact">
           <p className="text-[24px] font-bold text-[var(--text-primary)] leading-tight">
             {animatedValue}
           </p>
@@ -314,7 +314,7 @@ export function DashboardPage() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {[1, 2].map((i) => (
                     <Card key={i}>
-                      <CardContent className="py-3 px-4 space-y-2">
+                      <CardContent padding="compact" spacing="sm">
                         <Skeleton className="h-5 w-2/3" />
                         <Skeleton className="h-4 w-1/2" />
                       </CardContent>
@@ -331,7 +331,7 @@ export function DashboardPage() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {[1, 2, 3].map((i) => (
                     <Card key={i}>
-                      <CardContent className="py-3 px-4 space-y-2">
+                      <CardContent padding="compact" spacing="sm">
                         <Skeleton className="h-5 w-2/3" />
                         <Skeleton className="h-4 w-1/2" />
                       </CardContent>

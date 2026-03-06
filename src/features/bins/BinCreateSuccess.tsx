@@ -76,7 +76,7 @@ export function BinCreateSuccess({ createdBins, onCreateAnother, onClose }: BinC
 
       {/* Action buttons */}
       <div className="flex w-full flex-col gap-2 scan-text-fade-delay">
-        <Button className="w-full" onClick={onCreateAnother}>
+        <Button fullWidth onClick={onCreateAnother}>
           <CirclePlus className="mr-2 h-4 w-4" />
           Create another
         </Button>

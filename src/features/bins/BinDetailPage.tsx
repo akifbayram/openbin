@@ -87,7 +87,7 @@ export function BinDetailPage() {
 
   const photosSection = (
     <Card>
-      <CardContent className="!py-0">
+      <CardContent padding="none">
         <button
           type="button"
           onClick={() => setPhotosExpanded(!photosExpanded)}

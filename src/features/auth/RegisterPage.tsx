@@ -98,7 +98,7 @@ export function RegisterPage() {
         </div>
 
         <Card>
-          <CardContent className="py-6">
+          <CardContent padding="relaxed">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="reg-username">Username</Label>
@@ -170,7 +170,8 @@ export function RegisterPage() {
               <Button
                 type="submit"
                 disabled={!username.trim() || !password || !confirmPassword || loading}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+                fullWidth
+                className="rounded-[var(--radius-md)] h-11 text-[15px]"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 {loading ? 'Creating account...' : 'Create Account'}

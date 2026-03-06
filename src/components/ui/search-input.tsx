@@ -1,13 +1,18 @@
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
 interface SearchInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   containerClassName?: string;
+  /** Content rendered between the search icon and the input (e.g. filter badges) */
+  children?: ReactNode;
+  /** Show a clear button and call this when clicked */
+  onClear?: () => void;
 }
 
 const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
-  ({ containerClassName, className, ...props }, ref) => {
+  ({ containerClassName, className, children, onClear, ...props }, ref) => {
     return (
       <div
         className={cn(
@@ -16,6 +21,7 @@ const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
         )}
       >
         <Search className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+        {children}
         <input
           ref={ref}
           type="text"
@@ -25,6 +31,16 @@ const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
           )}
           {...props}
         />
+        {onClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            aria-label="Clear search"
+            className="p-1 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-active)] shrink-0"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
     );
   },

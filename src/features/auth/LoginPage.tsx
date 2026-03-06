@@ -98,7 +98,7 @@ export function LoginPage() {
         ) : (
           <>
             <Card>
-              <CardContent className="py-6">
+              <CardContent padding="relaxed">
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="login-username">Username</Label>
@@ -127,7 +127,8 @@ export function LoginPage() {
                   <Button
                     type="submit"
                     disabled={!username.trim() || !password || loading}
-                    className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+                    fullWidth
+                    className="rounded-[var(--radius-md)] h-11 text-[15px]"
                   >
                     <LogIn className="h-4 w-4 mr-2" />
                     {loading ? 'Signing in...' : 'Sign In'}

@@ -107,7 +107,7 @@ export function BinViewContent({
       {/* Area & Tags card */}
       {(bin.area_name || hasTags) && (
         <Card>
-          <CardContent className="space-y-4">
+          <CardContent spacing="md">
             {bin.area_name && (
               <div>
                 <Label>{t.Area}</Label>
@@ -147,7 +147,7 @@ export function BinViewContent({
 
       {/* QR Code & Info */}
       <Card>
-        <CardContent className="!py-0">
+        <CardContent padding="none">
           <button
             type="button"
             onClick={() => setQrExpanded(!qrExpanded)}

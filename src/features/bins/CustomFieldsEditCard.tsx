@@ -18,7 +18,7 @@ export function CustomFieldsEditCard({ fields, values, onChange }: CustomFieldsE
 
   return (
     <Card>
-      <CardContent className="space-y-4 py-5">
+      <CardContent spacing="md" className="py-5">
         <Label>Custom Fields</Label>
         {fields.map((field) => (
           <div key={field.id} className="space-y-1.5">

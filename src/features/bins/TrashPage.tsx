@@ -72,7 +72,7 @@ export function TrashPage() {
         <SkeletonList count={3} className="flex flex-col gap-3">
           {() => (
             <Card>
-              <CardContent className="py-3 px-4">
+              <CardContent padding="compact">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
                     <Skeleton className="h-5 w-2/3" />
@@ -97,7 +97,7 @@ export function TrashPage() {
         <div className="space-y-3">
           {bins.map((bin) => (
             <Card key={bin.id}>
-              <CardContent className="py-3 px-4">
+              <CardContent padding="compact">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">

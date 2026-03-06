@@ -13,7 +13,7 @@ export function CustomFieldsViewCard({ fields, values }: CustomFieldsViewCardPro
 
   return (
     <Card>
-      <CardContent className="space-y-4">
+      <CardContent spacing="md">
         <Label>Custom Fields</Label>
         {populated.map((field) => (
           <div key={field.id}>
