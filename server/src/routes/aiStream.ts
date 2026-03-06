@@ -275,4 +275,46 @@ streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correctio
   });
 }));
 
+// POST /api/ai/reorganize/stream
+streamRouter.post('/reorganize/stream', aiLimiter, requireLocationMember(), aiRouteHandler('stream reorganization', async (req, res) => {
+  const { locationId, bins: inputBins, maxBins, areaName } = req.body;
+
+  if (!Array.isArray(inputBins) || inputBins.length === 0) {
+    throw new (await import('../lib/httpErrors.js')).ValidationError('bins array is required');
+  }
+  if (maxBins != null && (typeof maxBins !== 'number' || maxBins < 1)) {
+    throw new (await import('../lib/httpErrors.js')).ValidationError('maxBins must be a positive number');
+  }
+
+  const { settings, model } = await resolveUserModel(req.user!.id);
+
+  // Build system prompt
+  const { DEFAULT_REORGANIZATION_PROMPT } = await import('../lib/defaultPrompts.js');
+  const maxBinsInstruction = maxBins ? `Create at most ${maxBins} bins.` : 'Choose the optimal number of bins.';
+  const areaInstruction = areaName ? `These bins are in the "${areaName}" area.` : '';
+  const system = DEFAULT_REORGANIZATION_PROMPT
+    .replace('{max_bins_instruction}', maxBinsInstruction)
+    .replace('{area_instruction}', areaInstruction);
+
+  // Build user message: list of bins with items
+  const binDescriptions = inputBins.map((b: { name: string; items: string[] }) =>
+    `- ${b.name}: ${b.items.length > 0 ? b.items.join(', ') : '(empty)'}`
+  ).join('\n');
+  const userContent = `Here are the bins to reorganize:\n\n${binDescriptions}`;
+
+  if (config.aiMock) {
+    await sendMockJsonStream(res, {
+      bins: [{ name: 'Reorganized Bin', items: inputBins.flatMap((b: { items: string[] }) => b.items) }],
+      summary: 'Mock reorganization result.',
+    });
+    return;
+  }
+
+  await pipeAiStreamToResponse(res, model, {
+    system,
+    userContent,
+    ...streamOpts(settings, { temperature: 0.3, maxTokens: 4000 }),
+  });
+}));
+
 export { streamRouter };
