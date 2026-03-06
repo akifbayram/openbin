@@ -35,7 +35,7 @@ export function SortMenu({ sort, onSortChange }: SortMenuProps) {
           className="shrink-0 h-10 w-10 rounded-full relative"
           aria-label={`Sort by ${sortLabels[sort]}`}
         >
-          <ArrowUpDown className="icon-md" />
+          <ArrowUpDown className="h-4 w-4" />
           {sort !== 'updated' && (
             <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[var(--accent)]" />
           )}
@@ -50,7 +50,7 @@ export function SortMenu({ sort, onSortChange }: SortMenuProps) {
               onClick={() => { onSortChange(key); close(); }}
               className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
             >
-              <Check className={cn('icon-md', sort === key ? 'text-[var(--accent)]' : 'invisible')} />
+              <Check className={cn('h-4 w-4', sort === key ? 'text-[var(--accent)]' : 'invisible')} />
               {sortLabels[key]}
             </button>
           ))}

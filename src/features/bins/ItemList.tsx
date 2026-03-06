@@ -139,7 +139,7 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
               className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
               aria-label="Remove item"
             >
-              <X className="icon-sm" />
+              <X className="h-3.5 w-3.5" />
             </button>
           </Tooltip>
         )}
@@ -218,7 +218,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
             onClick={cycleSortMode}
             className="shrink-0 gap-1.5 h-8 px-3"
           >
-            <ArrowUpDown className="icon-sm" />
+            <ArrowUpDown className="h-3.5 w-3.5" />
             <span className="text-[13px]">{sortLabel}</span>
           </Button>
         )}

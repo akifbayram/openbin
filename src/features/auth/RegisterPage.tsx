@@ -99,8 +99,8 @@ export function RegisterPage() {
 
         <Card>
           <CardContent className="py-6">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
+            <form onSubmit={handleSubmit} className="stack-lg">
+              <div className="stack-sm">
                 <Label htmlFor="reg-username">Username</Label>
                 <Input
                   id="reg-username"
@@ -112,7 +112,7 @@ export function RegisterPage() {
                   required
                 />
               </div>
-              <div className="space-y-2">
+              <div className="stack-sm">
                 <Label htmlFor="reg-display-name">Display Name</Label>
                 <Input
                   id="reg-display-name"
@@ -122,7 +122,7 @@ export function RegisterPage() {
                   autoComplete="name"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="stack-sm">
                 <Label htmlFor="reg-password">Password</Label>
                 <Input
                   id="reg-password"
@@ -143,7 +143,7 @@ export function RegisterPage() {
                     ] as const).map(([key, label]) => (
                       <li key={key} className="flex items-center gap-1.5">
                         {passwordChecks[key] ? (
-                          <Check className="icon-sm text-[var(--accent)] shrink-0" />
+                          <Check className="h-3.5 w-3.5 text-[var(--accent)] shrink-0" />
                         ) : (
                           <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--border-default)]" />
                         )}
@@ -155,7 +155,7 @@ export function RegisterPage() {
                   </ul>
                 )}
               </div>
-              <div className="space-y-2">
+              <div className="stack-sm">
                 <Label htmlFor="reg-confirm">Confirm Password</Label>
                 <Input
                   id="reg-confirm"
@@ -172,7 +172,7 @@ export function RegisterPage() {
                 disabled={!username.trim() || !password || !confirmPassword || loading}
                 className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
               >
-                <UserPlus className="icon-md mr-2" />
+                <UserPlus className="h-4 w-4 mr-2" />
                 {loading ? 'Creating account...' : 'Create Account'}
               </Button>
             </form>

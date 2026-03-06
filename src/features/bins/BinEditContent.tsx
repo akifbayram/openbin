@@ -80,11 +80,11 @@ export function BinEditContent({
       {/* Organization: Area + Tags */}
       <Card>
         <CardContent className="space-y-5 py-5">
-          <div className="space-y-2">
+          <div className="stack-sm">
             <Label>{t.Area}</Label>
             <AreaPicker locationId={activeLocationId} value={edit.areaId} onChange={edit.setAreaId} />
           </div>
-          <div className="space-y-2">
+          <div className="stack-sm">
             <Label>Tags</Label>
             <TagInput tags={edit.tags} onChange={edit.setTags} suggestions={allTags} />
           </div>
@@ -115,11 +115,11 @@ export function BinEditContent({
               areaName={editAreaName}
             />
           </div>
-          <div className="space-y-2">
+          <div className="stack-sm">
             <Label>Icon</Label>
             <IconPicker value={edit.icon} onChange={edit.setIcon} />
           </div>
-          <div className="space-y-2">
+          <div className="stack-sm">
             <Label>Color</Label>
             <ColorPicker
               value={edit.color}
@@ -129,7 +129,7 @@ export function BinEditContent({
               onSecondaryChange={secondaryInfo ? (c) => edit.setCardStyle(setSecondaryColor(edit.cardStyle, c)) : undefined}
             />
           </div>
-          <div className="space-y-2">
+          <div className="stack-sm">
             <Label>Style</Label>
             <StylePicker value={edit.cardStyle} color={edit.color} onChange={edit.setCardStyle} photos={photos} />
           </div>

@@ -19,8 +19,8 @@ export function InlineAiSetup({ expanded, onExpandedChange, setup, label = 'Set 
         onClick={() => onExpandedChange(!expanded)}
         className="flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
       >
-        <ChevronRight className={cn('icon-sm transition-transform', expanded && 'rotate-90')} />
-        <Sparkles className="icon-sm" />
+        <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')} />
+        <Sparkles className="h-3.5 w-3.5" />
         {label}
       </button>
       {expanded && (
@@ -47,7 +47,7 @@ export function InlineAiSetup({ expanded, onExpandedChange, setup, label = 'Set 
               onClick={() => setup.setShowKey(!setup.showKey)}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
             >
-              {setup.showKey ? <EyeOff className="icon-sm" /> : <Eye className="icon-sm" />}
+              {setup.showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
             </button>
           </div>
           {/* Model */}
@@ -102,7 +102,7 @@ export function InlineAiSetup({ expanded, onExpandedChange, setup, label = 'Set 
 export function AiConfiguredIndicator({ children }: { children?: React.ReactNode }) {
   return (
     <div className="flex items-center gap-1.5 text-[12px] text-[var(--accent)]">
-      <Check className="icon-sm" />
+      <Check className="h-3.5 w-3.5" />
       <span>AI configured</span>
       {children}
     </div>

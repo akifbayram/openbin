@@ -115,7 +115,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                 className="shrink-0"
                 aria-label="Copy invite code"
               >
-                {copied ? <Check className="icon-md text-green-500" /> : <Copy className="icon-md" />}
+                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
               </Button>
             </Tooltip>
             {isAdmin && (
@@ -128,7 +128,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                   className="shrink-0"
                   aria-label="Regenerate invite code"
                 >
-                  <RefreshCw className={`icon-md ${regenerating ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
                 </Button>
               </Tooltip>
             )}
@@ -166,7 +166,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                   </div>
                   {memberIsAdmin && (
                     <Badge variant="secondary" className="text-[11px] gap-1 py-0 shrink-0">
-                      <Shield className="icon-xs" />
+                      <Shield className="h-3 w-3" />
                       Admin
                     </Badge>
                   )}
@@ -185,7 +185,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                         onClick={() => handleRemoveMember(member.user_id)}
                         aria-label="Remove member"
                       >
-                        <UserMinus className="icon-sm" />
+                        <UserMinus className="h-3.5 w-3.5" />
                       </Button>
                     </Tooltip>
                   )}
@@ -202,7 +202,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
             onClick={handleLeave}
             className="w-full rounded-[var(--radius-sm)]"
           >
-            <LogOut className="icon-md mr-2" />
+            <LogOut className="h-4 w-4 mr-2" />
             Leave Location
           </Button>
         )}
@@ -247,7 +247,7 @@ function RoleToggle({ currentRole, onChangeRole }: { currentRole: string; onChan
         className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
       >
         {currentRole === 'admin' ? 'Admin' : 'Member'}
-        <ChevronDown className="icon-xs" />
+        <ChevronDown className="h-3 w-3" />
       </button>
       {open && pos && createPortal(
         <div

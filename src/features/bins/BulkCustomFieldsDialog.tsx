@@ -66,7 +66,7 @@ export function BulkCustomFieldsDialog({ open, onOpenChange, binIds, onDone }: B
             </p>
           ) : (
             fields.map((field) => (
-              <div key={field.id} className="space-y-1.5">
+              <div key={field.id} className="stack-xs">
                 <Label htmlFor={`bulk-cf-${field.id}`}>{field.name}</Label>
                 <Input
                   id={`bulk-cf-${field.id}`}

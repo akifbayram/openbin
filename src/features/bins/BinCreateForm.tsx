@@ -182,11 +182,11 @@ export function BinCreateForm({
     : header;
 
   return (
-    <form onSubmit={handleFormSubmit} className={cn(isFull ? 'space-y-5' : 'space-y-3', className)}>
+    <form onSubmit={handleFormSubmit} className={cn(isFull ? 'stack-lg' : 'space-y-3', className)}>
       {renderedHeader}
 
       {/* Name + short code */}
-      <div className={isFull ? 'space-y-2' : undefined}>
+      <div className={isFull ? 'stack-sm' : undefined}>
         {isFull && <Label htmlFor="bin-name">Name</Label>}
         <Input
           id={isFull ? 'bin-name' : undefined}
@@ -199,7 +199,7 @@ export function BinCreateForm({
       </div>
 
       {/* Items */}
-      <div className={isFull ? 'space-y-2' : 'text-left'}>
+      <div className={isFull ? 'stack-sm' : 'text-left'}>
         <ItemsInput
           items={items}
           onChange={setItems}
@@ -213,7 +213,7 @@ export function BinCreateForm({
 
       {/* Notes (full mode only) */}
       {isFull && (
-        <div className="space-y-2">
+        <div className="stack-sm">
           <Label htmlFor="bin-notes">Notes</Label>
           <Textarea
             id="bin-notes"
@@ -227,12 +227,12 @@ export function BinCreateForm({
 
       {/* Organization: Area + Tags */}
       {isFull ? (
-        <div className="space-y-5">
-          <div className="space-y-2">
+        <div className="stack-lg">
+          <div className="stack-sm">
             <Label>{t.Area}</Label>
             <AreaPicker locationId={locationId} value={areaId} onChange={setAreaId} />
           </div>
-          <div className="space-y-2">
+          <div className="stack-sm">
             <Label>Tags</Label>
             <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
           </div>
@@ -286,7 +286,7 @@ export function BinCreateForm({
 
       {/* Appearance */}
       {isFull ? (
-        <div className="space-y-5">
+        <div className="stack-lg">
           <Label>Appearance</Label>
           <BinPreviewCard
             name={name}
@@ -297,11 +297,11 @@ export function BinCreateForm({
             cardStyle={cardStyle}
             areaName={areaName}
           />
-          <div className="space-y-2">
+          <div className="stack-sm">
             <Label>Icon</Label>
             <IconPicker value={icon} onChange={setIcon} />
           </div>
-          <div className="space-y-2">
+          <div className="stack-sm">
             <Label>Color</Label>
             <ColorPicker
               value={color}
@@ -311,7 +311,7 @@ export function BinCreateForm({
               onSecondaryChange={secondaryInfo ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
             />
           </div>
-          <div className="space-y-2">
+          <div className="stack-sm">
             <Label>Style</Label>
             <StylePicker value={cardStyle} color={color} onChange={setCardStyle} />
           </div>
@@ -341,7 +341,7 @@ export function BinCreateForm({
 
       {/* Visibility (full mode only) */}
       {isFull && (
-        <div className="space-y-2">
+        <div className="stack-sm">
           <Label>Visibility</Label>
           <VisibilityPicker value={visibility} onChange={setVisibility} />
         </div>
@@ -353,7 +353,7 @@ export function BinCreateForm({
           {aiConfiguredInline ? (
             <AiConfiguredIndicator>
               {photos.length > 0 && (
-                <span className="text-[var(--text-tertiary)]">— tap <Sparkles className="icon-xs inline" /> to analyze</span>
+                <span className="text-[var(--text-tertiary)]">— tap <Sparkles className="h-3 w-3 inline" /> to analyze</span>
               )}
             </AiConfiguredIndicator>
           ) : (

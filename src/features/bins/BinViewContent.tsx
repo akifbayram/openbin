@@ -165,7 +165,7 @@ export function BinViewContent({
             />
           </button>
           {qrExpanded && (
-            <div className="pb-4 space-y-4">
+            <div className="pb-4 stack-md">
               <div className="flex flex-col items-center">
                 <QRCodeDisplay binId={bin.id} size={160} />
               </div>

@@ -138,7 +138,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       <CardContent>
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
-            <Label htmlFor="ai-toggle" className="inline-flex items-center gap-1.5"><Sparkles className="icon-sm" />AI Features</Label>
+            <Label htmlFor="ai-toggle" className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" />AI Features</Label>
             <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
               Photo analysis, item extraction, and AI commands
             </p>
@@ -179,7 +179,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                 />
 
                 {/* API Key */}
-                <div className="space-y-1.5">
+                <div className="stack-xs">
                   <label htmlFor="ai-api-key" className="text-[13px] text-[var(--text-secondary)]">API Key</label>
                   <div className="relative">
                     <Input
@@ -195,13 +195,13 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                       onClick={() => setup.setShowKey(!setup.showKey)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
                     >
-                      {setup.showKey ? <EyeOff className="icon-md" /> : <Eye className="icon-md" />}
+                      {setup.showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
 
                 {/* Model */}
-                <div className="space-y-1.5">
+                <div className="stack-xs">
                   <label htmlFor="ai-model" className="text-[13px] text-[var(--text-secondary)]">Model</label>
                   <Input
                     id="ai-model"
@@ -213,7 +213,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
 
                 {/* Endpoint URL — only for openai-compatible */}
                 {setup.provider === 'openai-compatible' && (
-                  <div className="space-y-1.5">
+                  <div className="stack-xs">
                     <label htmlFor="ai-endpoint" className="text-[13px] text-[var(--text-secondary)]">Endpoint URL</label>
                     <Input
                       id="ai-endpoint"
@@ -248,7 +248,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                   const active = promptMap[activePromptTab];
                   return (
                     <Disclosure label="Custom Prompts">
-                      <div className="space-y-2">
+                      <div className="stack-sm">
                         <OptionGroup
                           options={PROMPT_TAB_META.map((tab) => ({ key: tab.key, label: tab.label, shortLabel: tab.shortLabel }))}
                           value={activePromptTab}
@@ -281,7 +281,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                               onClick={() => active.set('')}
                               className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0 ml-2"
                             >
-                              <RotateCcw className="icon-xs" />
+                              <RotateCcw className="h-3 w-3" />
                               Reset to Default
                             </button>
                           ) : (
@@ -305,7 +305,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                   indicator={!!(temperature || maxTokens || topP || requestTimeout)}
                 >
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
+                    <div className="stack-xs">
                       <label htmlFor="ai-temperature" className="text-[13px] text-[var(--text-secondary)]">Temperature</label>
                       <div className="relative">
                         <Input
@@ -320,13 +320,13 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         />
                         {temperature && (
                           <button type="button" onClick={() => setTemperature('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                            <RotateCcw className="icon-xs" />
+                            <RotateCcw className="h-3 w-3" />
                           </button>
                         )}
                       </div>
                       <p className="text-[11px] text-[var(--text-tertiary)]">0.0–2.0</p>
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="stack-xs">
                       <label htmlFor="ai-max-tokens" className="text-[13px] text-[var(--text-secondary)]">Max Tokens</label>
                       <div className="relative">
                         <Input
@@ -341,13 +341,13 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         />
                         {maxTokens && (
                           <button type="button" onClick={() => setMaxTokens('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                            <RotateCcw className="icon-xs" />
+                            <RotateCcw className="h-3 w-3" />
                           </button>
                         )}
                       </div>
                       <p className="text-[11px] text-[var(--text-tertiary)]">100–16,000</p>
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="stack-xs">
                       <label htmlFor="ai-top-p" className="text-[13px] text-[var(--text-secondary)]">Top P</label>
                       <div className="relative">
                         <Input
@@ -362,13 +362,13 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         />
                         {topP && (
                           <button type="button" onClick={() => setTopP('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                            <RotateCcw className="icon-xs" />
+                            <RotateCcw className="h-3 w-3" />
                           </button>
                         )}
                       </div>
                       <p className="text-[11px] text-[var(--text-tertiary)]">0.0–1.0</p>
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="stack-xs">
                       <label htmlFor="ai-timeout" className="text-[13px] text-[var(--text-secondary)]">Timeout (s)</label>
                       <div className="relative">
                         <Input
@@ -383,7 +383,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         />
                         {requestTimeout && (
                           <button type="button" onClick={() => setRequestTimeout('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                            <RotateCcw className="icon-xs" />
+                            <RotateCcw className="h-3 w-3" />
                           </button>
                         )}
                       </div>
@@ -407,7 +407,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     onClick={handleTest}
                     disabled={setup.testing || !setup.apiKey || !setup.model}
                   >
-                    {setup.testing ? <Loader2 className="icon-md mr-1.5 animate-spin" /> : null}
+                    {setup.testing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
                     Test Connection
                   </Button>
                   <Button

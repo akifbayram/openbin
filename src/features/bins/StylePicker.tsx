@@ -64,7 +64,7 @@ function VariantPreview({ variant, color, rectangular }: { variant: CardStyleVar
   if (variant === 'photo') {
     return (
       <div className={cn(baseClass, 'bg-[var(--bg-secondary)] flex items-center justify-center')}>
-        <ImageIcon className="icon-md text-[var(--text-tertiary)]" />
+        <ImageIcon className="h-4 w-4 text-[var(--text-tertiary)]" />
       </div>
     );
   }
@@ -101,7 +101,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
   }
 
   return (
-    <div className="space-y-2">
+    <div className="stack-sm">
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -111,7 +111,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
           <VariantPreview variant={currentVariant} color={color} />
         </div>
         <span className="flex-1 text-left">{displayLabel}</span>
-        {open ? <ChevronUp className="icon-md text-[var(--text-tertiary)]" /> : <ChevronDown className="icon-md text-[var(--text-tertiary)]" />}
+        {open ? <ChevronUp className="h-4 w-4 text-[var(--text-tertiary)]" /> : <ChevronDown className="h-4 w-4 text-[var(--text-tertiary)]" />}
       </button>
       {open && (
         <div className="space-y-3 p-3 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
@@ -134,7 +134,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
           {/* Outline non-color controls */}
           {currentVariant === 'border' && (
             <div className="space-y-2.5">
-              <div className="space-y-1.5">
+              <div className="stack-xs">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Border Style</p>
                 <OptionGroup
                   options={BORDER_STYLES}
@@ -142,7 +142,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
                   onChange={(borderStyle) => updateStyle({ borderStyle })}
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="stack-xs">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Thickness</p>
                 <OptionGroup
                   options={BORDER_WIDTHS.map((w) => ({ key: w, label: `${w}px` }))}
@@ -157,7 +157,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
           {/* Stripe non-color controls */}
           {currentVariant === 'stripe' && (
             <div className="space-y-2.5">
-              <div className="space-y-1.5">
+              <div className="stack-xs">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Position</p>
                 <OptionGroup
                   options={STRIPE_POSITIONS}
@@ -165,7 +165,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
                   onChange={(stripePosition) => updateStyle({ stripePosition })}
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="stack-xs">
                 <p className="text-[12px] text-[var(--text-tertiary)]">Thickness</p>
                 <OptionGroup
                   options={STRIPE_WIDTHS.map((w) => ({ key: w, label: `${w}px` }))}
@@ -182,7 +182,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
             <div className="space-y-3">
               {/* Premade backgrounds — always visible when assets have src */}
               {PREMADE_BACKGROUNDS.some((bg) => bg.src) && (
-                <div className="space-y-1.5">
+                <div className="stack-xs">
                   <p className="text-[12px] text-[var(--text-tertiary)]">Backgrounds</p>
                   <div className="grid grid-cols-4 gap-1.5">
                     {PREMADE_BACKGROUNDS.filter((bg) => bg.src).map((bg) => {
@@ -215,7 +215,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
 
               {/* User-uploaded photos */}
               {hasPhotos && (
-                <div className="space-y-1.5">
+                <div className="stack-xs">
                   <p className="text-[12px] text-[var(--text-tertiary)]">Your photos</p>
                   <div className="grid grid-cols-4 gap-1.5">
                     {photos?.map((photo) => {

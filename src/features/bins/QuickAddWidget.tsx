@@ -37,7 +37,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
                 className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors disabled:opacity-50"
                 aria-label="Add item"
               >
-                <Plus className="icon-md" />
+                <Plus className="h-4 w-4" />
               </button>
             </Tooltip>
           )}
@@ -49,7 +49,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
                 className="shrink-0 rounded-full p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
                 aria-label="Add with AI"
               >
-                <Sparkles className="icon-md" />
+                <Sparkles className="h-4 w-4" />
               </button>
             </Tooltip>
           )}
@@ -57,7 +57,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
       )}
 
       {(quickAdd.state === 'expanded' || quickAdd.state === 'processing') && (
-        <div className="space-y-2">
+        <div className="stack-sm">
           <textarea
             autoComplete="off"
             value={quickAdd.expandedText}
@@ -88,9 +88,9 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               className="gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
             >
               {quickAdd.isStructuring ? (
-                <Loader2 className="icon-sm animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Sparkles className="icon-sm" />
+                <Sparkles className="h-3.5 w-3.5" />
               )}
               {quickAdd.isStructuring ? 'Thinking...' : 'Go'}
             </Button>
@@ -99,7 +99,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
       )}
 
       {quickAdd.state === 'preview' && quickAdd.structuredItems && (
-        <div className="space-y-2">
+        <div className="stack-sm">
           <div className="flex flex-wrap gap-1.5">
             {quickAdd.structuredItems.map((item, i) => {
               const checked = quickAdd.checked.get(i) !== false;
@@ -114,7 +114,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
                       : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] line-through'
                   }`}
                 >
-                  {checked && <Check className="icon-xs" />}
+                  {checked && <Check className="h-3 w-3" />}
                   {item}
                 </button>
               );
@@ -128,7 +128,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               onClick={quickAdd.backToExpanded}
               className="gap-0.5"
             >
-              <ChevronLeft className="icon-md" />
+              <ChevronLeft className="h-4 w-4" />
               Back
             </Button>
             <div className="flex-1" />

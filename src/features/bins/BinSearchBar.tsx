@@ -46,7 +46,7 @@ export function BinSearchBar({
     <div className="flex items-center gap-2.5">
       {/* Unified search bar with inline filter badges */}
       <div className="flex flex-1 min-w-0 items-center gap-1.5 bg-[var(--bg-input)] px-3.5 min-h-10 py-1.5 focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:shadow-[0_0_0_4px_var(--accent-glow)] transition-all duration-200">
-        <Search className="icon-md text-[var(--text-tertiary)] shrink-0" />
+        <Search className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
         {hasBadges && (
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide min-w-0 shrink">
             {filters.tags.map((tag) => (
@@ -120,7 +120,7 @@ export function BinSearchBar({
             aria-label="Clear all filters"
             className="p-1 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-active)] shrink-0"
           >
-            <X className="icon-sm" />
+            <X className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
@@ -137,7 +137,7 @@ export function BinSearchBar({
           className="shrink-0 relative"
           aria-label={`Filter ${t.bins}`}
         >
-          <SlidersHorizontal className="icon-md" />
+          <SlidersHorizontal className="h-4 w-4" />
           {activeCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 rounded-full bg-[var(--accent)] text-[10px] font-bold text-white flex items-center justify-center px-1">
               {activeCount}

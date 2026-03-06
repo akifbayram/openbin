@@ -66,7 +66,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
               className="shrink-0"
               aria-label="Save"
             >
-              <Check className="icon-md text-[var(--accent)]" />
+              <Check className="h-4 w-4 text-[var(--accent)]" />
             </Button>
           </Tooltip>
           <Tooltip content="Cancel">
@@ -77,7 +77,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
               className="shrink-0"
               aria-label="Cancel"
             >
-              <X className="icon-md" />
+              <X className="h-4 w-4" />
             </Button>
           </Tooltip>
         </div>
@@ -124,7 +124,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
               className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus:opacity-100 transition-opacity"
               aria-label="More actions"
             >
-              <MoreHorizontal className="icon-sm" />
+              <MoreHorizontal className="h-3.5 w-3.5" />
             </Button>
           </Tooltip>
           <AreaActionMenu
@@ -173,7 +173,7 @@ export function CreateAreaCard({ onCreate }: CreateCardProps) {
       className="rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] border-2 border-dashed border-[var(--border-glass)] bg-transparent flex items-center gap-3 text-[var(--text-tertiary)]"
     >
       <div className="h-9 w-9 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-glass)] flex items-center justify-center shrink-0">
-        <Plus className="icon-md" />
+        <Plus className="h-4 w-4" />
       </div>
       <span className="text-[13px] font-medium">{`Create ${t.Area}`}</span>
     </button>

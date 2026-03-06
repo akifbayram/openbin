@@ -164,7 +164,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
               aria-label="Delete photo"
               className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
             >
-              <Trash2 className="icon-lg" />
+              <Trash2 className="h-5 w-5" />
             </Button>
           </Tooltip>
           <Tooltip content="Close" side="bottom">
@@ -175,7 +175,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
               aria-label="Close"
               className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)]"
             >
-              <X className="icon-lg" />
+              <X className="h-5 w-5" />
             </Button>
           </Tooltip>
         </div>

@@ -14,15 +14,15 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
   const displayName = value || 'Package';
 
   return (
-    <div className="space-y-2">
+    <div className="stack-sm">
       <button
         type="button"
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors border border-[var(--border-subtle)]"
       >
-        <CurrentIcon className="icon-lg text-[var(--text-tertiary)]" />
+        <CurrentIcon className="h-5 w-5 text-[var(--text-tertiary)]" />
         <span className="flex-1 text-left">{displayName}</span>
-        {open ? <ChevronUp className="icon-md text-[var(--text-tertiary)]" /> : <ChevronDown className="icon-md text-[var(--text-tertiary)]" />}
+        {open ? <ChevronUp className="h-4 w-4 text-[var(--text-tertiary)]" /> : <ChevronDown className="h-4 w-4 text-[var(--text-tertiary)]" />}
       </button>
       {open && (
         <div className="grid grid-cols-6 gap-1.5 p-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
@@ -45,7 +45,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                 )}
               >
-                <Icon className="icon-lg" />
+                <Icon className="h-5 w-5" />
               </button>
             );
           })}

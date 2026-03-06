@@ -132,7 +132,7 @@ export function BinListPage() {
                   className="h-10 w-10 rounded-full"
                   aria-label="Scan QR code"
                 >
-                  <ScanLine className="icon-lg" />
+                  <ScanLine className="h-5 w-5" />
                 </Button>
               </Tooltip>
               {aiEnabled && (
@@ -144,7 +144,7 @@ export function BinListPage() {
                     className="h-10 w-10 rounded-full"
                     aria-label="Ask AI"
                   >
-                    <Sparkles className="icon-lg" />
+                    <Sparkles className="h-5 w-5" />
                   </Button>
                 </Tooltip>
               )}
@@ -156,7 +156,7 @@ export function BinListPage() {
                 className="h-10 w-10 rounded-full"
                 aria-label={`New ${t.bin}`}
               >
-                <Plus className="icon-lg" />
+                <Plus className="h-5 w-5" />
               </Button>
             </Tooltip>
           </div>
@@ -199,7 +199,7 @@ export function BinListPage() {
           subtitle={`Create or join a ${t.location} to start organizing ${t.bins}`}
         >
           <Button onClick={() => navigate('/locations')} variant="outline" className="mt-1">
-            <MapPin className="icon-md mr-2" />
+            <MapPin className="h-4 w-4 mr-2" />
             {`Manage ${t.Locations}`}
           </Button>
         </EmptyState>
@@ -218,7 +218,7 @@ export function BinListPage() {
             >
               {!search && activeCount === 0 && (
                 <Button onClick={() => setCreateOpen(true)} variant="outline" className="mt-1">
-                  <Plus className="icon-md mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   {`Create ${t.Bin}`}
                 </Button>
               )}

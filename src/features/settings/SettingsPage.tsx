@@ -80,7 +80,7 @@ export function SettingsPage() {
       {user && (
         <Card>
           <CardContent>
-            <Label className="inline-flex items-center gap-1.5"><UserCircle className="icon-sm" />Account</Label>
+            <Label className="inline-flex items-center gap-1.5"><UserCircle className="h-3.5 w-3.5" />Account</Label>
             <div className="flex flex-col gap-3 mt-3">
               <button
                 type="button"
@@ -98,14 +98,14 @@ export function SettingsPage() {
                   </p>
                   <p className="text-[13px] text-[var(--text-tertiary)]">@{user.username}</p>
                 </div>
-                <ChevronRight className="icon-md text-[var(--text-tertiary)] shrink-0" />
+                <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
               </button>
               <Button
                 variant="outline"
                 onClick={logout}
                 className="justify-start rounded-[var(--radius-sm)] h-11 text-[var(--destructive)]"
               >
-                <LogOut className="icon-md mr-2.5" />
+                <LogOut className="h-4 w-4 mr-2.5" />
                 Sign Out
               </Button>
             </div>
@@ -146,8 +146,8 @@ export function SettingsPage() {
       {/* About */}
       <Card>
         <CardContent>
-          <Label className="inline-flex items-center gap-1.5"><Info className="icon-sm" />About</Label>
-          <div className="mt-3 space-y-2 text-[15px] text-[var(--text-secondary)]">
+          <Label className="inline-flex items-center gap-1.5"><Info className="h-3.5 w-3.5" />About</Label>
+          <div className="mt-3 stack-sm text-[15px] text-[var(--text-secondary)]">
             <div className="flex items-baseline gap-2">
               <p className="font-semibold text-[var(--text-primary)]">{settings.appName}</p>
               <span className="text-[13px] text-[var(--text-tertiary)]">v{__APP_VERSION__}</span>
@@ -170,7 +170,7 @@ export function SettingsPage() {
               className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
             >
               GitHub
-              <ExternalLink className="icon-xs" />
+              <ExternalLink className="h-3 w-3" />
             </a>
           </div>
         </CardContent>

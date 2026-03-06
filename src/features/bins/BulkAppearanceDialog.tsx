@@ -71,15 +71,15 @@ export function BulkAppearanceDialog({ open, onOpenChange, binIds, onDone }: Bul
             Customize {binIds.length} selected bin{binIds.length !== 1 ? 's' : ''}. Only modified sections will be applied.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-5">
-          <div className="space-y-2">
+        <div className="stack-lg">
+          <div className="stack-sm">
             <Label className="flex items-center gap-1.5">
               Icon
               {iconDirty && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
             </Label>
             <IconPicker value={icon} onChange={(v) => { setIcon(v); setIconDirty(true); }} />
           </div>
-          <div className="space-y-2">
+          <div className="stack-sm">
             <Label className="flex items-center gap-1.5">
               Color
               {colorDirty && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
@@ -96,7 +96,7 @@ export function BulkAppearanceDialog({ open, onOpenChange, binIds, onDone }: Bul
               } : undefined}
             />
           </div>
-          <div className="space-y-2">
+          <div className="stack-sm">
             <Label className="flex items-center gap-1.5">
               Style
               {styleDirty && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}

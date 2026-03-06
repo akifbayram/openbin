@@ -49,7 +49,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
       visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
     )}>
     <div className="glass-heavy rounded-[var(--radius-full)] flex items-center gap-2 px-4 py-2.5 shadow-lg">
-      <CheckCircle2 className="icon-md text-[var(--accent)]" />
+      <CheckCircle2 className="h-4 w-4 text-[var(--accent)]" />
       <span className="text-[13px] font-medium text-[var(--text-secondary)] whitespace-nowrap">
         {selectedCount} selected
       </span>
@@ -62,7 +62,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
             onClick={onTag}
             aria-label="Tag"
           >
-            <Tag className="icon-sm sm:mr-1.5" />
+            <Tag className="h-3.5 w-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Tag</span>
           </Button>
         </Tooltip>
@@ -76,7 +76,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
             onClick={onMove}
             aria-label="Move"
           >
-            <MapPin className="icon-sm sm:mr-1.5" />
+            <MapPin className="h-3.5 w-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Move</span>
           </Button>
         </Tooltip>
@@ -90,7 +90,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
             onClick={onDelete}
             aria-label="Delete"
           >
-            <Trash2 className="icon-sm sm:mr-1.5" />
+            <Trash2 className="h-3.5 w-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Delete</span>
           </Button>
         </Tooltip>
@@ -105,7 +105,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
               onClick={() => setMoreOpen((o) => !o)}
               aria-label="More actions"
             >
-              <MoreHorizontal className="icon-md" />
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </Tooltip>
           {moreOpen && (
@@ -115,7 +115,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                 onClick={() => handleMoreAction(onAppearance)}
               >
-                <Paintbrush className="icon-md text-[var(--text-tertiary)]" />
+                <Paintbrush className="h-4 w-4 text-[var(--text-tertiary)]" />
                 Appearance
               </button>
               <button
@@ -123,7 +123,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                 onClick={() => handleMoreAction(onVisibility)}
               >
-                <Eye className="icon-md text-[var(--text-tertiary)]" />
+                <Eye className="h-4 w-4 text-[var(--text-tertiary)]" />
                 Change Visibility
               </button>
               <button
@@ -131,7 +131,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                 onClick={() => handleMoreAction(onMoveLocation)}
               >
-                <ArrowRightLeft className="icon-md text-[var(--text-tertiary)]" />
+                <ArrowRightLeft className="h-4 w-4 text-[var(--text-tertiary)]" />
                 Move to Location
               </button>
               <button
@@ -139,7 +139,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                 onClick={() => handleMoreAction(onPin)}
               >
-                <Pin className="icon-md text-[var(--text-tertiary)]" />
+                <Pin className="h-4 w-4 text-[var(--text-tertiary)]" />
                 {pinLabel}
               </button>
               <button
@@ -147,7 +147,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                 onClick={() => handleMoreAction(onDuplicate)}
               >
-                <Copy className="icon-md text-[var(--text-tertiary)]" />
+                <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
                 Duplicate
               </button>
               {onCustomFields && (
@@ -156,7 +156,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                   className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                   onClick={() => handleMoreAction(onCustomFields)}
                 >
-                  <List className="icon-md text-[var(--text-tertiary)]" />
+                  <List className="h-4 w-4 text-[var(--text-tertiary)]" />
                   Custom Fields
                 </button>
               )}
@@ -169,7 +169,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                   className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                   onClick={() => handleMoreAction(onCopyStyle)}
                 >
-                  <Clipboard className="icon-md text-[var(--text-tertiary)]" />
+                  <Clipboard className="h-4 w-4 text-[var(--text-tertiary)]" />
                   Copy Style
                 </button>
               )}
@@ -179,7 +179,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
                   className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                   onClick={() => handleMoreAction(onPasteStyle)}
                 >
-                  <ClipboardPaste className="icon-md text-[var(--text-tertiary)]" />
+                  <ClipboardPaste className="h-4 w-4 text-[var(--text-tertiary)]" />
                   Paste Style
                 </button>
               )}
@@ -195,7 +195,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
           onClick={onClear}
           aria-label="Clear selection"
         >
-          <X className="icon-md" />
+          <X className="h-4 w-4" />
         </Button>
       </Tooltip>
     </div>

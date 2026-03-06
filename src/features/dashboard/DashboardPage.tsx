@@ -121,7 +121,7 @@ function SectionHeader({
           className="flex items-center gap-0.5 text-[13px] font-medium text-[var(--accent)]"
         >
           {action.label}
-          <ChevronRight className="icon-sm" />
+          <ChevronRight className="h-3.5 w-3.5" />
         </button>
       )}
     </div>
@@ -228,7 +228,7 @@ export function DashboardPage() {
             variant="outline"
             className="mt-1"
           >
-            <MapPin className="icon-md mr-2" />
+            <MapPin className="h-4 w-4 mr-2" />
             {`Manage ${t.Locations}`}
           </Button>
         </EmptyState>
@@ -251,7 +251,7 @@ export function DashboardPage() {
                   className="h-10 w-10 rounded-full"
                   aria-label="Scan QR code"
                 >
-                  <ScanLine className="icon-lg" />
+                  <ScanLine className="h-5 w-5" />
                 </Button>
               </Tooltip>
               {aiEnabled && (
@@ -263,7 +263,7 @@ export function DashboardPage() {
                     className="h-10 w-10 rounded-full"
                     aria-label="Ask AI"
                   >
-                    <Sparkles className="icon-lg" />
+                    <Sparkles className="h-5 w-5" />
                   </Button>
                 </Tooltip>
               )}
@@ -275,7 +275,7 @@ export function DashboardPage() {
                 className="h-10 w-10 rounded-full"
                 aria-label={`New ${t.bin}`}
               >
-                <Plus className="icon-lg" />
+                <Plus className="h-5 w-5" />
               </Button>
             </Tooltip>
           </div>
@@ -380,7 +380,7 @@ export function DashboardPage() {
                 <p className="text-[12px] text-[var(--text-tertiary)]">No tags, area, or items</p>
               </div>
             </div>
-            <ChevronRight className="icon-md text-[var(--text-tertiary)]" />
+            <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)]" />
           </button>
         )}
 
@@ -456,7 +456,7 @@ export function DashboardPage() {
               variant="outline"
               className="mt-1"
             >
-              <Settings className="icon-md mr-2" />
+              <Settings className="h-4 w-4 mr-2" />
               Dashboard Settings
             </Button>
           </EmptyState>

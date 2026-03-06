@@ -117,12 +117,12 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
                   <div className="h-14 w-14 rounded-full bg-[var(--destructive)] bg-opacity-10 flex items-center justify-center">
                     <AlertCircle className="h-7 w-7 text-[var(--destructive)]" />
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="stack-xs">
                     <p className="text-[17px] font-semibold text-[var(--text-primary)]">Not a {t.Bin} QR Code</p>
                     <p className="text-[13px] text-[var(--text-tertiary)] break-all max-w-xs mx-auto leading-relaxed">{error}</p>
                   </div>
                   <Button variant="outline" onClick={handleRetry} className="mt-1">
-                    <RotateCcw className="icon-md mr-1.5" />
+                    <RotateCcw className="h-4 w-4 mr-1.5" />
                     Scan Again
                   </Button>
                 </div>
@@ -135,7 +135,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
                   <div className="h-14 w-14 rounded-full bg-[var(--accent)] bg-opacity-10 flex items-center justify-center">
                     <ScanLine className="h-7 w-7 text-[var(--accent)]" />
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="stack-xs">
                     <p className="text-[17px] font-semibold text-[var(--text-primary)]">{t.Bin} Not Found</p>
                     <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed">
                       This QR code points to a {t.bin} that doesn't exist yet.
@@ -143,11 +143,11 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
                   </div>
                   <div className="flex gap-2.5 mt-1">
                     <Button variant="outline" onClick={handleRetry}>
-                      <RotateCcw className="icon-md mr-1.5" />
+                      <RotateCcw className="h-4 w-4 mr-1.5" />
                       Scan Again
                     </Button>
                     <Button onClick={() => setCreateOpen(true)}>
-                      <Plus className="icon-md mr-1.5" />
+                      <Plus className="h-4 w-4 mr-1.5" />
                       Create {t.Bin}
                     </Button>
                   </div>
@@ -200,7 +200,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
                 disabled={!manualCode.trim() || manualLoading}
                 className="rounded-[var(--radius-md)] shrink-0"
               >
-                <Search className="icon-md mr-1.5" />
+                <Search className="h-4 w-4 mr-1.5" />
                 Look Up
               </Button>
             </div>

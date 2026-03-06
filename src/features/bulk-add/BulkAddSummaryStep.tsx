@@ -37,7 +37,7 @@ export function BulkAddSummaryStep({
   const totalToCreate = createReady.length + failed.length;
 
   return (
-    <div className="space-y-5">
+    <div className="stack-lg">
       <div>
         <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
           {isCreating
@@ -64,7 +64,7 @@ export function BulkAddSummaryStep({
       )}
 
       {/* Confirmed bins list */}
-      <div className="space-y-2">
+      <div className="stack-sm">
         {confirmedWithName.map((photo) => {
           const Icon = resolveIcon(photo.icon);
           const colorPreset = photo.color ? resolveColor(photo.color) : undefined;
@@ -82,7 +82,7 @@ export function BulkAddSummaryStep({
                 className="h-10 w-10 rounded-[var(--radius-md)] object-cover shrink-0"
               />
               <div className="h-8 w-8 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0">
-                <Icon className="icon-md text-[var(--text-secondary)]" />
+                <Icon className="h-4 w-4 text-[var(--text-secondary)]" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
@@ -102,13 +102,13 @@ export function BulkAddSummaryStep({
                 </p>
               </div>
               {photo.status === 'created' && (
-                <Check className="icon-lg text-green-500 shrink-0" />
+                <Check className="h-5 w-5 text-green-500 shrink-0" />
               )}
               {photo.status === 'creating' && (
-                <Loader2 className="icon-lg text-[var(--accent)] shrink-0 animate-spin" />
+                <Loader2 className="h-5 w-5 text-[var(--accent)] shrink-0 animate-spin" />
               )}
               {photo.status === 'failed' && (
-                <AlertCircle className="icon-lg text-[var(--destructive)] shrink-0" />
+                <AlertCircle className="h-5 w-5 text-[var(--destructive)] shrink-0" />
               )}
               {!isCreating && photo.status !== 'created' && photo.status !== 'failed' && (
                 <button
@@ -120,7 +120,7 @@ export function BulkAddSummaryStep({
                   }}
                   className="p-1.5 rounded-full hover:bg-[var(--bg-active)] transition-colors shrink-0"
                 >
-                  <Pencil className="icon-sm text-[var(--text-tertiary)]" />
+                  <Pencil className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
                 </button>
               )}
             </div>
@@ -130,7 +130,7 @@ export function BulkAddSummaryStep({
 
       {/* Failed items */}
       {failed.length > 0 && (
-        <div className="space-y-2">
+        <div className="stack-sm">
           <p className="text-[13px] font-medium text-[var(--destructive)]">
             {failed.length} failed to create
           </p>
@@ -139,7 +139,7 @@ export function BulkAddSummaryStep({
               key={photo.id}
               className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 border border-red-500/20"
             >
-              <AlertCircle className="icon-lg text-[var(--destructive)] shrink-0" />
+              <AlertCircle className="h-5 w-5 text-[var(--destructive)] shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
                   {photo.name}
@@ -160,14 +160,14 @@ export function BulkAddSummaryStep({
             className="flex items-center gap-1.5 text-[13px] font-medium text-[var(--text-secondary)]"
           >
             {skippedExpanded ? (
-              <ChevronUp className="icon-sm" />
+              <ChevronUp className="h-3.5 w-3.5" />
             ) : (
-              <ChevronDown className="icon-sm" />
+              <ChevronDown className="h-3.5 w-3.5" />
             )}
             Skipped photos ({skipped.length})
           </button>
           {skippedExpanded && (
-            <div className="mt-2 space-y-2">
+            <div className="mt-2 stack-sm">
               {skipped.map((photo) => (
                 <div
                   key={photo.id}
@@ -190,7 +190,7 @@ export function BulkAddSummaryStep({
                     }}
                     className="h-7 px-2 text-[12px]"
                   >
-                    <Plus className="icon-xs mr-1" />
+                    <Plus className="h-3 w-3 mr-1" />
                     Include
                   </Button>
                 </div>
@@ -210,7 +210,7 @@ export function BulkAddSummaryStep({
           }}
           disabled={isCreating}
         >
-          <ChevronLeft className="icon-md mr-1" />
+          <ChevronLeft className="h-4 w-4 mr-1" />
           Back
         </Button>
         {!allCreated && (
@@ -218,7 +218,7 @@ export function BulkAddSummaryStep({
             onClick={failed.length > 0 ? onRetryFailed : onCreateAll}
             disabled={isCreating || (createReady.length === 0 && failed.length === 0)}
           >
-            {isCreating && <Loader2 className="icon-md mr-1.5 animate-spin" />}
+            {isCreating && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
             {isCreating
               ? `Creating...`
               : failed.length > 0

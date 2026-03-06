@@ -66,7 +66,7 @@ function NavButton({ path, label, icon: Icon, currentPath, navigate, onClick, co
           : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
       )}
     >
-      <Icon className={cn('icon-lg shrink-0', isActive && 'text-[var(--accent)]')} />
+      <Icon className={cn('h-5 w-5 shrink-0', isActive && 'text-[var(--accent)]')} />
       <span className={cn('truncate', collapsed && 'w-0 opacity-0')} aria-hidden={collapsed || undefined}>
         {label}
       </span>
@@ -119,7 +119,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
                 className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full text-[var(--text-tertiary)]
   hover:bg-[var(--bg-hover)]"
               >
-                <MapPin className="icon-lg shrink-0" />
+                <MapPin className="h-5 w-5 shrink-0" />
               </button>
             )
           ) : (
@@ -209,7 +209,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
             className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]
   w-full overflow-hidden whitespace-nowrap"
           >
-            <LogOut className="icon-lg shrink-0" />
+            <LogOut className="h-5 w-5 shrink-0" />
             <span className={cn('truncate', collapsed && 'w-0 opacity-0')} aria-hidden={collapsed || undefined}>
               Sign Out
             </span>
@@ -221,7 +221,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
       <div className="flex items-center gap-3 px-5 py-3 border-t border-[var(--border-subtle)]">
         <a href="https://docs.openbin.app/" target="_blank" rel="noopener noreferrer" title="Documentation"
           className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
-          <BookOpen className="icon-md" />
+          <BookOpen className="h-4 w-4" />
         </a>
         <a href="https://discord.gg/W6JPZCqqx9" target="_blank" rel="noopener noreferrer" title="Discord"
           className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
@@ -229,7 +229,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
         </a>
         <a href="https://github.com/akifbayram/openbin" target="_blank" rel="noopener noreferrer" title="GitHub"
           className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
-          <Github className="icon-md" />
+          <Github className="h-4 w-4" />
         </a>
         <span className={cn(
           'ml-auto text-xs text-[var(--text-tertiary)] tabular-nums',
@@ -274,7 +274,7 @@ export function Sidebar({ locations, activeLocationId, onLocationChange, onScanC
   text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--accent)]
   focus-visible:outline-none"
       >
-        {isCollapsed ? <PanelLeftOpen className="icon-sm" /> : <PanelLeftClose className="icon-sm" />}
+        {isCollapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
       </button>
     </aside>
   );

@@ -213,7 +213,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   }
 
   return (
-    <div className="space-y-5">
+    <div className="stack-lg">
       {/* Photo counter */}
       <div className="flex items-center justify-between text-[13px] text-[var(--text-secondary)]">
         <span>Photo {currentIndex + 1} of {photos.length}</span>
@@ -250,14 +250,14 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                     : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]'
                 }`}
               >
-                <Sparkles className="icon-md" />
+                <Sparkles className="h-4 w-4" />
               </button>
             )}
           </div>
 
           {/* Correction bar */}
           {correctionOpen && photo.status === 'reviewed' && (
-            <div className="space-y-1.5">
+            <div className="stack-xs">
               {photo.correctionCount >= MAX_CORRECTIONS ? (
                 <p className="text-[12px] text-[var(--text-tertiary)] italic">
                   Correction limit reached — edit fields directly.
@@ -276,7 +276,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                     onClick={handleCorrectionSubmit}
                     className="shrink-0 p-2 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
                   >
-                    <ArrowUp className="icon-md" />
+                    <ArrowUp className="h-4 w-4" />
                   </button>
                 </div>
               )}
@@ -302,7 +302,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                 className="text-[12px] text-[var(--accent)] font-medium flex items-center gap-0.5"
               >
                 Configure AI provider
-                {aiSetupExpanded ? <ChevronUp className="icon-xs" /> : <ChevronDown className="icon-xs" />}
+                {aiSetupExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </button>
             </div>
           )}
@@ -311,8 +311,8 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
           {aiEnabled && aiSetupExpanded && !aiSettings && <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />}
 
           {/* Form Fields */}
-          <div className="space-y-4">
-            <div className="space-y-2">
+          <div className="stack-md">
+            <div className="stack-sm">
               <Label htmlFor={`name-${photo.id}`}>Name</Label>
               <Input
                 id={`name-${photo.id}`}
@@ -324,7 +324,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="stack-sm">
               <ItemsInput
                 items={photo.items}
                 onChange={(items) =>
@@ -333,7 +333,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="stack-sm">
               <Label>Area</Label>
               <AreaPicker
                 locationId={activeLocationId ?? undefined}
@@ -344,7 +344,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="stack-sm">
               <Label htmlFor={`notes-${photo.id}`}>Notes</Label>
               <Textarea
                 id={`notes-${photo.id}`}
@@ -357,7 +357,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="stack-sm">
               <Label>Tags</Label>
               <TagInput
                 tags={photo.tags}
@@ -368,7 +368,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="stack-sm">
               <Label>Icon</Label>
               <IconPicker
                 value={photo.icon}
@@ -378,7 +378,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="stack-sm">
               <Label>Color</Label>
               <ColorPicker
                 value={photo.color}
@@ -395,7 +395,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               variant="ghost"
               onClick={handleBack}
               >
-              <ChevronLeft className="icon-md mr-1" />
+              <ChevronLeft className="h-4 w-4 mr-1" />
               Back
             </Button>
             <div className="flex items-center gap-2">
@@ -404,14 +404,14 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                 onClick={handleSkip}
                 className="rounded-[var(--radius-full)] text-[var(--text-tertiary)]"
               >
-                <SkipForward className="icon-md mr-1" />
+                <SkipForward className="h-4 w-4 mr-1" />
                 Skip
               </Button>
               <Button
                 onClick={handleNext}
                   >
                 {isLast ? 'Done' : 'Next'}
-                {!isLast && <ChevronRight className="icon-md ml-1" />}
+                {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}
               </Button>
             </div>
           </div>

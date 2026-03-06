@@ -213,7 +213,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   }
 
   return (
-    <div className="space-y-5">
+    <div className="stack-lg">
       <StepIndicator steps={steps} currentStepIndex={currentStepIndex} />
 
       {(isAnalyzing || isCorrecting) ? (
@@ -260,14 +260,14 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                     : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]'
                 }`}
               >
-                <Sparkles className="icon-md" />
+                <Sparkles className="h-4 w-4" />
               </button>
             )}
           </div>
 
           {/* Correction bar */}
           <div className={correctionOpen && name ? 'ai-correction-enter' : 'hidden'}>
-            <div className="space-y-1.5">
+            <div className="stack-xs">
               {correctionCount >= MAX_CORRECTIONS ? (
                 <p className="text-[12px] text-[var(--text-tertiary)] italic">
                   Correction limit reached — edit fields directly.
@@ -286,7 +286,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                     onClick={handleCorrectionSubmit}
                     className="shrink-0 p-2 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
                   >
-                    <ArrowUp className="icon-md" />
+                    <ArrowUp className="h-4 w-4" />
                   </button>
                 </div>
               )}
@@ -309,7 +309,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                 className="text-[12px] text-[var(--accent)] font-medium flex items-center gap-0.5"
               >
                 Configure AI provider
-                {aiSetupExpanded ? <ChevronUp className="icon-xs" /> : <ChevronDown className="icon-xs" />}
+                {aiSetupExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </button>
             </div>
           )}
@@ -320,8 +320,8 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
           )}
 
           {/* Form Fields */}
-          <div className="space-y-4">
-            <div className="space-y-2">
+          <div className="stack-md">
+            <div className="stack-sm">
               <Label htmlFor="single-bin-name">Name</Label>
               <Input
                 id="single-bin-name"
@@ -331,11 +331,11 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="stack-sm">
               <ItemsInput items={items} onChange={setItems} />
             </div>
 
-            <div className="space-y-2">
+            <div className="stack-sm">
               <Label>Area</Label>
               <AreaPicker
                 locationId={activeLocationId ?? undefined}
@@ -344,7 +344,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="stack-sm">
               <Label htmlFor="single-bin-notes">Notes</Label>
               <Textarea
                 id="single-bin-notes"
@@ -355,17 +355,17 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="stack-sm">
               <Label>Tags</Label>
               <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
             </div>
 
-            <div className="space-y-2">
+            <div className="stack-sm">
               <Label>Icon</Label>
               <IconPicker value={icon} onChange={setIcon} />
             </div>
 
-            <div className="space-y-2">
+            <div className="stack-sm">
               <Label>Color</Label>
               <ColorPicker value={color} onChange={setColor} />
             </div>
@@ -377,7 +377,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               variant="ghost"
               onClick={handleBack}
               >
-              <ChevronLeft className="icon-md mr-1" />
+              <ChevronLeft className="h-4 w-4 mr-1" />
               Back
             </Button>
             <Button
@@ -386,7 +386,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               >
               {isCreating ? (
                 <>
-                  <Loader2 className="icon-md mr-1 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                   Creating...
                 </>
               ) : (

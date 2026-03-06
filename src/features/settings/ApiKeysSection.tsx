@@ -89,14 +89,14 @@ export function ApiKeysSection() {
       <Card>
         <CardContent>
           <div className="flex items-baseline justify-between">
-            <Label className="inline-flex items-center gap-1.5"><KeyRound className="icon-sm" />API Keys</Label>
+            <Label className="inline-flex items-center gap-1.5"><KeyRound className="h-3.5 w-3.5" />API Keys</Label>
             <Tooltip content="Create API key" side="bottom">
               <Button
                 onClick={() => setCreateOpen(true)}
                 size="icon-sm"
                 aria-label="Create API key"
               >
-                <Plus className="icon-md" />
+                <Plus className="h-4 w-4" />
               </Button>
             </Tooltip>
           </div>
@@ -115,7 +115,7 @@ export function ApiKeysSection() {
                   key={k.id}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)]"
                 >
-                  <Key className="icon-md text-[var(--text-tertiary)] shrink-0" />
+                  <Key className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[14px] font-medium text-[var(--text-primary)] truncate">
                       {k.name || k.key_prefix}
@@ -133,7 +133,7 @@ export function ApiKeysSection() {
                       onClick={() => setRevokeId(k.id)}
                       aria-label="Revoke API key"
                     >
-                      <Trash2 className="icon-sm" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </Tooltip>
                 </div>
@@ -155,7 +155,7 @@ export function ApiKeysSection() {
             </DialogDescription>
           </DialogHeader>
           {newKey ? (
-            <div className="space-y-4">
+            <div className="stack-md">
               <div className="flex items-center gap-2">
                 <code className="flex-1 text-[13px] bg-[var(--bg-input)] px-3 py-2 rounded-[var(--radius-sm)] break-all select-all font-mono">
                   {newKey}
@@ -166,7 +166,7 @@ export function ApiKeysSection() {
                   className="shrink-0"
                   onClick={handleCopy}
                 >
-                  {copied ? <Check className="icon-md text-green-600" /> : <Copy className="icon-md" />}
+                  {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
               <DialogFooter>
@@ -176,8 +176,8 @@ export function ApiKeysSection() {
               </DialogFooter>
             </div>
           ) : (
-            <form onSubmit={handleCreate} className="space-y-5">
-              <div className="space-y-2">
+            <form onSubmit={handleCreate} className="stack-lg">
+              <div className="stack-sm">
                 <Label htmlFor="key-name">Name</Label>
                 <Input
                   id="key-name"

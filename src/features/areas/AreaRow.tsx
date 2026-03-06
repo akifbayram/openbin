@@ -55,7 +55,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
             className="shrink-0"
             aria-label="Save"
           >
-            <Check className="icon-md text-[var(--accent)]" />
+            <Check className="h-4 w-4 text-[var(--accent)]" />
           </Button>
         </Tooltip>
         <Tooltip content="Cancel">
@@ -66,7 +66,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
             className="shrink-0"
             aria-label="Cancel"
           >
-            <X className="icon-md" />
+            <X className="h-4 w-4" />
           </Button>
         </Tooltip>
       </div>
@@ -96,7 +96,7 @@ export function AreaRow({ id, name, binCount, isAdmin, onNavigate, onRename, onD
               onClick={(e) => { e.stopPropagation(); toggle(); }}
               aria-label="More actions"
             >
-              <MoreHorizontal className="icon-sm" />
+              <MoreHorizontal className="h-3.5 w-3.5" />
             </Button>
           </Tooltip>
           <AreaActionMenu

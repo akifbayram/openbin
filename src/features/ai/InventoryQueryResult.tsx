@@ -17,7 +17,7 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
   const matches = queryResult?.matches ?? [];
 
   return (
-    <div className="space-y-4">
+    <div className="stack-md">
       <div className="ai-content-enter">
         <StreamingText
           text={answer}
@@ -27,7 +27,7 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
       </div>
 
       {matches.length > 0 && (
-        <div className="space-y-2">
+        <div className="stack-sm">
           {matches.map((match, i) => (
             <button
               key={match.bin_id}
@@ -37,8 +37,8 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
               onClick={() => onBinClick(match.bin_id, match.is_trashed)}
             >
               {match.is_trashed
-                ? <Trash2 className="icon-md shrink-0 text-[var(--text-tertiary)]" />
-                : <Search className="icon-md shrink-0 text-[var(--accent)]" />
+                ? <Trash2 className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+                : <Search className="h-4 w-4 shrink-0 text-[var(--accent)]" />
               }
               <div className="flex-1 min-w-0">
                 <p className="text-[14px] font-medium text-[var(--text-primary)] truncate">{match.name}</p>
@@ -49,7 +49,7 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
                   <p className="text-[12px] text-[var(--text-secondary)] truncate">{match.items.join(', ')}</p>
                 )}
               </div>
-              <ChevronRight className="icon-md shrink-0 text-[var(--text-tertiary)]" />
+              <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
             </button>
           ))}
         </div>
@@ -57,7 +57,7 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
 
       {!isStreaming && (
         <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-          <ChevronLeft className="icon-md mr-0.5" />
+          <ChevronLeft className="h-4 w-4 mr-0.5" />
           Back
         </Button>
       )}

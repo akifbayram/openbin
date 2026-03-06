@@ -181,7 +181,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
 
   if (state.step === 'review') {
     return (
-      <div className="space-y-4">
+      <div className="stack-md">
         <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
         <BulkAddReviewStep
           photos={state.photos}
@@ -194,7 +194,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
 
   if (state.step === 'summary') {
     return (
-      <div className="space-y-4">
+      <div className="stack-md">
         <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} />
         <BulkAddSummaryStep
           photos={state.photos}
@@ -212,7 +212,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   const singleBinDisabled = state.photos.length > MAX_AI_PHOTOS;
 
   return (
-    <div className="space-y-4">
+    <div className="stack-md">
       <StepIndicator steps={BULK_ADD_STEPS} currentStepIndex={stepIndex} className="mb-2" />
 
       <input
@@ -238,7 +238,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
               onClick={() => handleRemove(photo.id)}
               className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors opacity-0 group-hover:opacity-100"
             >
-              <X className="icon-xs" />
+              <X className="h-3 w-3" />
             </button>
           </div>
         ))}
@@ -248,7 +248,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
             onClick={() => fileInputRef.current?.click()}
             className="aspect-square flex flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
           >
-            <Camera className="icon-md" />
+            <Camera className="h-4 w-4" />
             <span className="text-[10px]">Add more</span>
           </button>
         )}
@@ -272,7 +272,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       </p>
 
       {/* Shared area picker */}
-      <div className="space-y-1.5">
+      <div className="stack-xs">
         <Label className="text-[13px]">
           {mode === 'single-bin' ? `${t.Area} (optional)` : `${t.Area} for all ${t.bins} (optional)`}
         </Label>
@@ -290,7 +290,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           size="sm"
           onClick={onBack}
         >
-          <ChevronLeft className="icon-md mr-0.5" />
+          <ChevronLeft className="h-4 w-4 mr-0.5" />
           Back
         </Button>
         <Button

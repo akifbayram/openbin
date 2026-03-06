@@ -195,7 +195,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                   className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
                   aria-label={`Remove ${item}`}
                 >
-                  <X className="icon-sm" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
@@ -222,7 +222,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                   className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
                   aria-label="Add item"
                 >
-                  <Plus className="icon-md" />
+                  <Plus className="h-4 w-4" />
                 </button>
               </Tooltip>
             )}
@@ -234,7 +234,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                   className="shrink-0 rounded-full p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
                   aria-label="Add with AI"
                 >
-                  <Sparkles className="icon-md" />
+                  <Sparkles className="h-4 w-4" />
                 </button>
               </Tooltip>
             )}
@@ -242,7 +242,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
         )}
 
         {(state === 'expanded' || state === 'processing') && (
-          <div className="space-y-2">
+          <div className="stack-sm">
             <textarea
               ref={textareaRef}
               autoComplete="off"
@@ -274,9 +274,9 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 className="rounded-[var(--radius-full)] gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
               >
                 {isStructuring ? (
-                  <Loader2 className="icon-sm animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Sparkles className="icon-sm" />
+                  <Sparkles className="h-3.5 w-3.5" />
                 )}
                 {isStructuring ? 'Thinking...' : 'Go'}
               </Button>
@@ -285,7 +285,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
         )}
 
         {state === 'preview' && structuredItems && (
-          <div className="space-y-2">
+          <div className="stack-sm">
             <div className="flex flex-wrap gap-1.5">
               {structuredItems.map((item, i) => {
                 const checked = checkedItems.get(i) !== false;
@@ -300,7 +300,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                         : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] line-through'
                     }`}
                   >
-                    {checked && <Check className="icon-xs" />}
+                    {checked && <Check className="h-3 w-3" />}
                     {item}
                   </button>
                 );
@@ -314,7 +314,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 onClick={handleBack}
                 className="rounded-[var(--radius-full)] gap-0.5"
               >
-                <ChevronLeft className="icon-md" />
+                <ChevronLeft className="h-4 w-4" />
                 Back
               </Button>
               <div className="flex-1" />

@@ -77,7 +77,7 @@ export function BinDetailToolbar({
           aria-label="Go back"
           className="hidden lg:flex shrink-0 text-[var(--accent)]"
         >
-          <ChevronLeft className="icon-lg" />
+          <ChevronLeft className="h-5 w-5" />
         </Button>
       )}
       {!editing && <BinIcon className="hidden lg:block h-5 w-5 text-[var(--text-secondary)] shrink-0" />}
@@ -94,7 +94,7 @@ export function BinDetailToolbar({
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-[17px] font-semibold text-[var(--text-primary)] leading-tight truncate">{bin.name}</span>
             {bin.visibility === 'private' && (
-              <Lock className="icon-sm text-[var(--text-tertiary)] shrink-0" />
+              <Lock className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
             )}
           </div>
         )}
@@ -107,7 +107,7 @@ export function BinDetailToolbar({
             onClick={onCancelEdit}
             className="lg:w-auto lg:px-3"
           >
-            <X className="icon-md lg:hidden" />
+            <X className="h-4 w-4 lg:hidden" />
             <span className="hidden lg:inline text-sm">Cancel</span>
           </Button>
           <Button
@@ -116,8 +116,8 @@ export function BinDetailToolbar({
             disabled={!editNameValid}
             className="lg:w-auto lg:px-3"
           >
-            <Check className="icon-md lg:hidden" />
-            <Save className="icon-md mr-1.5 hidden lg:block" />
+            <Check className="h-4 w-4 lg:hidden" />
+            <Save className="h-4 w-4 mr-1.5 hidden lg:block" />
             <span className="hidden lg:inline text-sm">Save</span>
           </Button>
         </div>
@@ -180,7 +180,7 @@ export function BinDetailToolbar({
                   className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
                   onClick={() => handleItem(onDuplicate)}
                 >
-                  <Copy className="icon-md text-[var(--text-tertiary)]" />
+                  <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
                   Duplicate
                 </button>
                 <button
@@ -188,7 +188,7 @@ export function BinDetailToolbar({
                   className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
                   onClick={() => handleItem(onPrint)}
                 >
-                  <Printer className="icon-md text-[var(--text-tertiary)]" />
+                  <Printer className="h-4 w-4 text-[var(--text-tertiary)]" />
                   Print Label
                 </button>
                 {otherLocations.length > 0 && (
@@ -197,7 +197,7 @@ export function BinDetailToolbar({
                     className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
                     onClick={() => handleItem(onMove)}
                   >
-                    <ArrowRightLeft className="icon-md text-[var(--text-tertiary)]" />
+                    <ArrowRightLeft className="h-4 w-4 text-[var(--text-tertiary)]" />
                     Move
                   </button>
                 )}
@@ -209,7 +209,7 @@ export function BinDetailToolbar({
                       className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
                       onClick={() => handleItem(onDelete)}
                     >
-                      <Trash2 className="icon-md" />
+                      <Trash2 className="h-4 w-4" />
                       Delete
                     </button>
                   </>

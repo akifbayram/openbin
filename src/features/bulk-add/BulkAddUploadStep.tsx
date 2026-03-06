@@ -67,7 +67,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
           <span className="text-[13px]">One photo per {t.bin}, up to {MAX_PHOTOS}</span>
         </button>
       ) : (
-        <div className="space-y-4">
+        <div className="stack-md">
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
             {photos.map((photo) => (
               <div key={photo.id} className="relative aspect-square group">
@@ -81,7 +81,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
                   onClick={() => handleRemove(photo.id)}
                   className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors opacity-0 group-hover:opacity-100"
                 >
-                  <X className="icon-sm" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </div>
             ))}
@@ -91,7 +91,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
                 onClick={() => fileInputRef.current?.click()}
                 className="aspect-square flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
               >
-                <Camera className="icon-lg" />
+                <Camera className="h-5 w-5" />
                 <span className="text-[11px]">Add more</span>
               </button>
             )}
@@ -101,7 +101,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
             <p className="text-[13px] text-amber-500">Maximum of {MAX_PHOTOS} photos reached.</p>
           )}
 
-          <div className="space-y-2">
+          <div className="stack-sm">
             <Label>{t.Area} for all {t.bins} (optional)</Label>
             <AreaPicker
               locationId={activeLocationId ?? undefined}

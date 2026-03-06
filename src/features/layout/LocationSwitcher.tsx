@@ -47,9 +47,9 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <MapPin className="icon-md text-[var(--text-tertiary)] shrink-0" />
+        <MapPin className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
         <span className="flex-1 truncate">{active?.name ?? 'Select location'}</span>
-        <ChevronsUpDown className="icon-sm text-[var(--text-tertiary)] shrink-0" />
+        <ChevronsUpDown className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
       </button>
 
       {visible && (
@@ -76,7 +76,7 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
                     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                 )}
               >
-                <Check className={cn('icon-md shrink-0', isActive ? 'text-[var(--accent)]' : 'invisible')} />
+                <Check className={cn('h-4 w-4 shrink-0', isActive ? 'text-[var(--accent)]' : 'invisible')} />
                 <span className="flex-1 truncate">{loc.name}</span>
                 {loc.role && (
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0">

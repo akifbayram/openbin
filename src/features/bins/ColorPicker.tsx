@@ -165,7 +165,7 @@ function ColorDot({ colorKey }: { colorKey: string }) {
   }
   return (
     <span
-      className="icon-md rounded-full shrink-0"
+      className="h-4 w-4 rounded-full shrink-0"
       style={{ background: 'conic-gradient(from 0deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)' }}
     />
   );
@@ -181,7 +181,7 @@ export function ColorPicker({ value, onChange, secondaryLabel, secondaryValue, o
   const secondaryDisplayLabel = secondaryPreset?.label ?? 'None';
 
   return (
-    <div className="space-y-2">
+    <div className="stack-sm">
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -201,7 +201,7 @@ export function ColorPicker({ value, onChange, secondaryLabel, secondaryValue, o
             <span className="flex-1 text-left">{primaryLabel}</span>
           </>
         )}
-        {open ? <ChevronUp className="icon-md text-[var(--text-tertiary)]" /> : <ChevronDown className="icon-md text-[var(--text-tertiary)]" />}
+        {open ? <ChevronUp className="h-4 w-4 text-[var(--text-tertiary)]" /> : <ChevronDown className="h-4 w-4 text-[var(--text-tertiary)]" />}
       </button>
       {open && (
         <div className="space-y-3 p-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">

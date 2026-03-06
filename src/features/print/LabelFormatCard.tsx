@@ -38,7 +38,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
           onClick={() => onExpandedChange(!expanded)}
         >
           <div className="flex items-center gap-2">
-            <LayoutGrid className="icon-md text-[var(--text-tertiary)]" />
+            <LayoutGrid className="h-4 w-4 text-[var(--text-tertiary)]" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Format</Label>
             {!expanded && (
               <span className="text-[13px] text-[var(--text-tertiary)]">({f.baseFormat.name})</span>
@@ -68,7 +68,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                   onClick={() => setFormatSearch('')}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                 >
-                  <X className="icon-sm" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
@@ -136,7 +136,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                         onClick={() => f.handleDeletePreset(fmt.key)}
                         aria-label={`Delete ${fmt.name}`}
                       >
-                        <X className="icon-md" />
+                        <X className="h-4 w-4" />
                       </button>
                     </Tooltip>
                   </div>
@@ -237,7 +237,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                       onClick={() => { setShowSaveInput(false); setPresetName(''); }}
                       className="h-9 px-2.5 text-[var(--text-tertiary)]"
                     >
-                      <X className="icon-md" />
+                      <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
@@ -247,7 +247,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                     onClick={() => setShowSaveInput(true)}
                     className="mt-3 mx-1 text-[13px] text-[var(--accent)] h-9 px-3"
                   >
-                    <Save className="icon-md mr-1.5" />
+                    <Save className="h-4 w-4 mr-1.5" />
                     Save as Preset
                   </Button>
                 )}

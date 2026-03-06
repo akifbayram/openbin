@@ -33,7 +33,7 @@ export function SearchBarOverflowMenu({ viewMode, onViewModeChange, applicableFi
         aria-haspopup="menu"
         aria-expanded={isOpen}
       >
-        <MoreHorizontal className="icon-md" />
+        <MoreHorizontal className="h-4 w-4" />
       </Button>
       {visible && (
         <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 mt-1 w-56 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg overflow-hidden z-20`}>

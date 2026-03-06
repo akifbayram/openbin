@@ -76,7 +76,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
                 className="absolute top-1 right-1 h-7 w-7 rounded-full bg-[var(--overlay-button)] text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
                 aria-label="Delete photo"
               >
-                <Trash2 className="icon-sm" />
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </Tooltip>
           </div>

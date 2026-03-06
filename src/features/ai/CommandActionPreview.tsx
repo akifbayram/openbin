@@ -31,10 +31,10 @@ export function CommandActionPreview({
   const t = useTerminology();
 
   return (
-    <div className="space-y-4">
+    <div className="stack-md">
       {interpretation && (
         <div className="flex items-start gap-2 rounded-[var(--radius-sm)] bg-[var(--accent)]/5 px-3 py-2">
-          <Sparkles className="icon-md shrink-0 mt-0.5 text-[var(--accent)]" />
+          <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-[var(--accent)]" />
           <p className="text-[13px] text-[var(--text-secondary)] italic">
             {interpretation}
           </p>
@@ -46,7 +46,7 @@ export function CommandActionPreview({
           No matching {t.bins} found, or the command was ambiguous. Try using exact {t.bin} names.
         </p>
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="stack-xs">
           {actions.map((action, i) => {
             const checked = checkedActions.get(i) !== false;
             const Icon = getActionIcon(action);
@@ -70,7 +70,7 @@ export function CommandActionPreview({
                         : 'border-[var(--border-primary)] bg-transparent',
                     )}
                   >
-                    {checked && <Check className="icon-xs text-white" />}
+                    {checked && <Check className="h-3 w-3 text-white" />}
                   </span>
                   <Icon className={cn(
                     'h-4 w-4 shrink-0 mt-0.5',
@@ -108,7 +108,7 @@ export function CommandActionPreview({
 
       <div className="flex gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-          <ChevronLeft className="icon-md mr-0.5" />
+          <ChevronLeft className="h-4 w-4 mr-0.5" />
           Back
         </Button>
         <Button
@@ -120,7 +120,7 @@ export function CommandActionPreview({
         >
           {isExecuting ? (
             <>
-              <Loader2 className="icon-md mr-1.5 animate-spin" />
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
               Applying {executingProgress.current} of {executingProgress.total}...
             </>
           ) : (

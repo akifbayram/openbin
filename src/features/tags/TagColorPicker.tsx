@@ -67,17 +67,17 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
         >
           {currentPreset ? (
             <span
-              className="icon-md rounded-full"
+              className="h-4 w-4 rounded-full"
               style={{ backgroundColor: currentPreset.bgCss }}
             />
           ) : (
-            <Palette className="icon-sm text-[var(--text-tertiary)]" />
+            <Palette className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
           )}
         </button>
       </Tooltip>
 
       {visible && (
-        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 shadow-lg min-w-[180px] space-y-2`}>
+        <div className={`${animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter'} absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 shadow-lg min-w-[180px] stack-sm`}>
           {/* None + Black/White + Gray buttons */}
           <div className="flex gap-1.5">
             <button
