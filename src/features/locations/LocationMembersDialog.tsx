@@ -103,8 +103,8 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
 
         {/* Invite Code */}
         {location?.invite_code && (
-          <div className="row p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
-            <span className="flex-1 min-w-0 text-[14px] font-mono text-[var(--text-primary)] tracking-wider truncate">
+          <div className="flex items-center gap-2 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+            <span className="flex-fill text-[14px] font-mono text-[var(--text-primary)] tracking-wider truncate">
               {location.invite_code}
             </span>
             <Tooltip content="Copy invite code" side="bottom">
@@ -159,7 +159,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                     displayName={member.display_name || member.user_id}
                     size="sm"
                   />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-fill">
                     <span className="text-[14px] text-[var(--text-primary)] truncate block">
                       {isSelf ? 'You' : member.display_name || member.user_id.slice(0, 8)}
                     </span>
@@ -244,7 +244,7 @@ function RoleToggle({ currentRole, onChangeRole }: { currentRole: string; onChan
         type="button"
         ref={triggerRef}
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+        className="flex items-center gap-1 caption hover:text-[var(--text-secondary)] transition-colors"
       >
         {currentRole === 'admin' ? 'Admin' : 'Member'}
         <ChevronDown className="h-3 w-3" />

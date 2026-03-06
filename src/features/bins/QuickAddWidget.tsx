@@ -13,7 +13,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
   return (
     <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
       {quickAdd.state === 'input' && (
-        <div className="row-tight">
+        <div className="flex items-center gap-1.5">
           <Input
             value={quickAdd.value}
             onChange={(e) => quickAdd.setValue(e.target.value)}
@@ -71,7 +71,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
           {quickAdd.structureError && (
             <p className="text-[13px] text-[var(--destructive)]">{quickAdd.structureError}</p>
           )}
-          <div className="row">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={quickAdd.cancelExpanded}
@@ -120,7 +120,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               );
             })}
           </div>
-          <div className="row pt-1">
+          <div className="flex items-center gap-2 pt-1">
             <Button
               type="button"
               variant="ghost"

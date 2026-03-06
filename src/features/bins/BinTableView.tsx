@@ -187,7 +187,7 @@ const BinTableRow = React.memo(function BinTableRow({
       </div>
 
       {/* Name (with icon) */}
-      <div className="flex-[2] min-w-0 row">
+      <div className="flex-[2] min-w-0 flex items-center gap-2">
         {isVisible?.('icon') !== false && (
           <BinIcon className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
         )}
@@ -201,7 +201,7 @@ const BinTableRow = React.memo(function BinTableRow({
 
       {/* Area */}
       {isVisible?.('area') !== false && (
-        <div className="hidden md:block flex-1 min-w-0">
+        <div className="hidden md:block flex-fill">
           {bin.area_name && (
             <Badge variant="outline" className="text-[11px] truncate max-w-full">
               <Highlight text={bin.area_name} query={searchQuery} />
@@ -214,7 +214,7 @@ const BinTableRow = React.memo(function BinTableRow({
       {isVisible?.('items') !== false && (
         <div className="hidden lg:block flex-[1.5] min-w-0">
           {bin.items.length > 0 && (
-            <span className="text-[12px] text-[var(--text-tertiary)] truncate block">
+            <span className="caption truncate block">
               <Highlight text={bin.items.map((i) => i.name).join(', ')} query={searchQuery} />
             </span>
           )}
@@ -245,9 +245,9 @@ const BinTableRow = React.memo(function BinTableRow({
 
       {/* Notes */}
       {isVisible?.('notes') && (
-        <div className="hidden lg:block flex-1 min-w-0">
+        <div className="hidden lg:block flex-fill">
           {bin.notes && (
-            <span className="text-[12px] text-[var(--text-tertiary)] truncate block italic">
+            <span className="caption truncate block italic">
               {bin.notes}
             </span>
           )}
@@ -256,9 +256,9 @@ const BinTableRow = React.memo(function BinTableRow({
 
       {/* Custom Fields */}
       {isVisible?.('customFields') && (
-        <div className="hidden lg:block flex-1 min-w-0">
+        <div className="hidden lg:block flex-fill">
           {bin.custom_fields && Object.keys(bin.custom_fields).length > 0 && (
-            <span className="text-[12px] text-[var(--text-tertiary)] truncate block">
+            <span className="caption truncate block">
               {Object.values(bin.custom_fields).filter(Boolean).join(' · ')}
             </span>
           )}
@@ -267,21 +267,21 @@ const BinTableRow = React.memo(function BinTableRow({
 
       {/* Created By */}
       {isVisible?.('createdBy') && (
-        <span className="hidden md:block w-24 shrink-0 text-[12px] text-[var(--text-tertiary)] truncate">
+        <span className="hidden md:block w-24 shrink-0 caption truncate">
           {bin.created_by_name}
         </span>
       )}
 
       {/* Created */}
       {isVisible?.('created') && (
-        <span className="w-20 shrink-0 text-[12px] text-[var(--text-tertiary)] text-right">
+        <span className="w-20 shrink-0 caption text-right">
           {formatDate(bin.created_at)}
         </span>
       )}
 
       {/* Updated */}
       {isVisible?.('updated') !== false && (
-        <span className="w-20 shrink-0 text-[12px] text-[var(--text-tertiary)] text-right">
+        <span className="w-20 shrink-0 caption text-right">
           {formatDate(bin.updated_at)}
         </span>
       )}

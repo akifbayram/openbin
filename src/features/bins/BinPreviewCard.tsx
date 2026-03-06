@@ -48,7 +48,7 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
           {name || <span>My bin</span>}
         </h3>
         {areaName && (
-          <p className="text-[12px] text-[var(--text-tertiary)] truncate leading-relaxed" style={secondaryStyle}>
+          <p className="caption truncate leading-relaxed" style={secondaryStyle}>
             {areaName}
           </p>
         )}

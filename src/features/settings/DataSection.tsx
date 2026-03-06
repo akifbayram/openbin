@@ -39,7 +39,7 @@ function SectionLabel({ children, trailing }: { children: React.ReactNode; trail
         {children}
       </span>
       {trailing && (
-        <span className="text-[12px] text-[var(--text-tertiary)]">{trailing}</span>
+        <span className="caption">{trailing}</span>
       )}
     </div>
   );
@@ -90,7 +90,7 @@ function SettingsRow({
           destructive ? 'text-[var(--destructive)]' : 'text-[var(--text-tertiary)]'
         }`}
       />
-      <div className="flex-1 min-w-0">
+      <div className="flex-fill">
         <p
           className={`text-[15px] font-medium leading-snug ${
             destructive ? 'text-[var(--destructive)]' : 'text-[var(--text-primary)]'

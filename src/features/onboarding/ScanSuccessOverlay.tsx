@@ -36,7 +36,7 @@ export function ScanSuccessOverlay({ onDismiss, title = 'First scan complete!', 
       <p className="mt-8 text-[22px] font-bold text-[var(--text-primary)] scan-text-fade">
         {title}
       </p>
-      <p className="mt-2 text-[14px] text-[var(--text-tertiary)] scan-text-fade-delay">
+      <p className="mt-2 hint scan-text-fade-delay">
         {subtitle}
       </p>
     </div>

@@ -94,7 +94,7 @@ export function RegisterPage() {
           <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight">
             {settings.appName}
           </h1>
-          <p className="text-[14px] text-[var(--text-tertiary)] mt-1">Create your account</p>
+          <p className="hint mt-1">Create your account</p>
         </div>
 
         <Card>
@@ -141,7 +141,7 @@ export function RegisterPage() {
                       ['lowercase', 'Contains a lowercase letter'],
                       ['digit', 'Contains a number'],
                     ] as const).map(([key, label]) => (
-                      <li key={key} className="row-tight">
+                      <li key={key} className="flex items-center gap-1.5">
                         {passwordChecks[key] ? (
                           <Check className="h-3.5 w-3.5 text-[var(--accent)] shrink-0" />
                         ) : (

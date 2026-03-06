@@ -84,11 +84,11 @@ export function BulkAddSummaryStep({
               <div className="h-8 w-8 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0">
                 <Icon className="h-4 w-4 text-[var(--text-secondary)]" />
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="flex-fill">
                 <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
                   {photo.name}
                 </p>
-                <p className="text-[12px] text-[var(--text-tertiary)]">
+                <p className="caption">
                   {[
                     photo.items.length
                       ? `${photo.items.length} item${photo.items.length !== 1 ? 's' : ''}`
@@ -140,7 +140,7 @@ export function BulkAddSummaryStep({
               className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 border border-red-500/20"
             >
               <AlertCircle className="h-5 w-5 text-[var(--destructive)] shrink-0" />
-              <div className="flex-1 min-w-0">
+              <div className="flex-fill">
                 <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
                   {photo.name}
                 </p>
@@ -157,7 +157,7 @@ export function BulkAddSummaryStep({
           <button
             type="button"
             onClick={() => setSkippedExpanded(!skippedExpanded)}
-            className="row-tight text-[13px] font-medium text-[var(--text-secondary)]"
+            className="flex items-center gap-1.5 text-[13px] font-medium text-[var(--text-secondary)]"
           >
             {skippedExpanded ? (
               <ChevronUp className="h-3.5 w-3.5" />
@@ -201,7 +201,7 @@ export function BulkAddSummaryStep({
       )}
 
       {/* Actions */}
-      <div className="row-spread pt-2">
+      <div className="flex items-center justify-between pt-2">
         <Button
           variant="ghost"
           onClick={() => {

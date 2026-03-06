@@ -265,7 +265,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       />
 
       {/* Helper text */}
-      <p className="text-[12px] text-[var(--text-tertiary)]">
+      <p className="caption">
         {mode === 'per-photo'
           ? `Each photo will create a separate ${t.bin}`
           : `All photos will be analyzed together as one ${t.bin}`}
@@ -284,7 +284,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       </div>
 
       {/* Actions */}
-      <div className="row-spread pt-1">
+      <div className="flex items-center justify-between pt-1">
         <Button
           variant="ghost"
           size="sm"

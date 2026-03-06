@@ -58,7 +58,7 @@ export function PhotoUploadSection({
       ) : (
         <div className="space-y-2">
           <div className={cn(
-            'row overflow-x-auto',
+            'flex items-center gap-2 overflow-x-auto',
             !isFull && 'rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2'
           )}>
             {photoPreviews.map((preview, i) => (
@@ -117,7 +117,7 @@ export function PhotoUploadSection({
               type="button"
               onClick={onAnalyze}
               disabled={analyzing}
-              className="row-tight text-[13px] text-[var(--ai-accent)] hover:opacity-80 transition-opacity disabled:opacity-50"
+              className="flex items-center gap-1.5 text-[13px] text-[var(--ai-accent)] hover:opacity-80 transition-opacity disabled:opacity-50"
             >
               {analyzing ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

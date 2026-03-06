@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export function BinDetailSkeleton() {
   return (
     <div className="flex flex-col gap-4 px-5 pt-2 lg:pt-4 pb-2">
-      <div className="row">
+      <div className="flex items-center gap-2">
         <MenuButton />
         <Skeleton className="hidden lg:block h-9 w-9 rounded-full shrink-0" />
         <Skeleton className="hidden lg:block h-5 w-5 rounded shrink-0" />

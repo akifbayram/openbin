@@ -26,7 +26,7 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
         <div className="flex gap-2 overflow-x-auto">
           {previewUrls.map((url, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: preview URLs have no stable identity
-            <div key={i} className={`shrink-0 flex-1 min-w-0 ${shimmerClass}`}>
+            <div key={i} className={`shrink-0 flex-fill ${shimmerClass}`}>
               <img src={url} alt={`Upload ${i + 1}`} className={imgClass} />
             </div>
           ))}
@@ -53,7 +53,7 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
         </ul>
       )}
 
-      <div className="row text-[13px] text-[var(--text-tertiary)]">
+      <div className="flex items-center gap-2 text-[13px] text-[var(--text-tertiary)]">
         <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--accent)]" />
         <span>{hasStreamedData ? 'Finding more items...' : initialStatusLabel}</span>
       </div>

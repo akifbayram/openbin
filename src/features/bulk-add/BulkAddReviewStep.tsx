@@ -215,7 +215,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
   return (
     <div className="space-y-5">
       {/* Photo counter */}
-      <div className="row-spread text-[13px] text-[var(--text-secondary)]">
+      <div className="flex items-center justify-between text-[13px] text-[var(--text-secondary)]">
         <span>Photo {currentIndex + 1} of {photos.length}</span>
         <span>{reviewedCount}/{photos.length} reviewed</span>
       </div>
@@ -259,11 +259,11 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
           {correctionOpen && photo.status === 'reviewed' && (
             <div className="space-y-1.5">
               {photo.correctionCount >= MAX_CORRECTIONS ? (
-                <p className="text-[12px] text-[var(--text-tertiary)] italic">
+                <p className="caption italic">
                   Correction limit reached — edit fields directly.
                 </p>
               ) : (
-                <div className="row">
+                <div className="flex items-center gap-2">
                   <Input
                     value={correctionText}
                     onChange={(e) => setCorrectionText(e.target.value)}
@@ -390,7 +390,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
           </div>
 
           {/* Navigation */}
-          <div className="row-spread pt-2">
+          <div className="flex items-center justify-between pt-2">
             <Button
               variant="ghost"
               onClick={handleBack}
@@ -398,7 +398,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               <ChevronLeft className="h-4 w-4 mr-1" />
               Back
             </Button>
-            <div className="row">
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 onClick={handleSkip}

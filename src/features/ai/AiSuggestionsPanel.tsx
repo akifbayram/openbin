@@ -92,10 +92,10 @@ export function AiSuggestionsPanel({
               onChange={(e) => setAcceptName(e.target.checked)}
               className="mt-1 accent-[var(--accent)]"
             />
-            <div className="flex-1 min-w-0">
+            <div className="flex-fill">
               <p className="text-[13px] font-medium text-[var(--text-secondary)]">Name</p>
               <p className="text-[15px] text-[var(--text-primary)] font-semibold">{suggestions.name}</p>
-              <p className="text-[12px] text-[var(--text-tertiary)]">Current: {currentName}</p>
+              <p className="caption">Current: {currentName}</p>
             </div>
           </label>
         )}
@@ -109,7 +109,7 @@ export function AiSuggestionsPanel({
               onChange={(e) => setAcceptItems(e.target.checked)}
               className="mt-1 accent-[var(--accent)]"
             />
-            <div className="flex-1 min-w-0">
+            <div className="flex-fill">
               <p className="text-[13px] font-medium text-[var(--text-secondary)]">Items</p>
               <ul className="mt-1 space-y-0.5">
                 {suggestions.items.map((item, i) => (
@@ -121,7 +121,7 @@ export function AiSuggestionsPanel({
                 ))}
               </ul>
               {currentItems.length > 0 && (
-                <p className="text-[12px] text-[var(--text-tertiary)] mt-1">
+                <p className="caption mt-1">
                   Will replace current {currentItems.length} item{currentItems.length !== 1 ? 's' : ''}
                 </p>
               )}
@@ -138,7 +138,7 @@ export function AiSuggestionsPanel({
               onChange={(e) => setAcceptTags(e.target.checked)}
               className="mt-1 accent-[var(--accent)]"
             />
-            <div className="flex-1 min-w-0">
+            <div className="flex-fill">
               <p className="text-[13px] font-medium text-[var(--text-secondary)]">Tags</p>
               <div className="flex flex-wrap gap-1.5 mt-1">
                 {suggestions.tags.map((tag) => (
@@ -146,7 +146,7 @@ export function AiSuggestionsPanel({
                 ))}
               </div>
               {currentTags.length > 0 && (
-                <p className="text-[12px] text-[var(--text-tertiary)] mt-1">
+                <p className="caption mt-1">
                   Will add to existing tags
                 </p>
               )}
@@ -163,11 +163,11 @@ export function AiSuggestionsPanel({
               onChange={(e) => setAcceptNotes(e.target.checked)}
               className="mt-1 accent-[var(--accent)]"
             />
-            <div className="flex-1 min-w-0">
+            <div className="flex-fill">
               <p className="text-[13px] font-medium text-[var(--text-secondary)]">Notes</p>
               <p className="text-[14px] text-[var(--text-primary)] whitespace-pre-wrap mt-0.5">{suggestions.notes}</p>
               {currentNotes && (
-                <p className="text-[12px] text-[var(--text-tertiary)] mt-1">Will replace current notes</p>
+                <p className="caption mt-1">Will replace current notes</p>
               )}
             </div>
           </label>
@@ -182,7 +182,7 @@ export function AiSuggestionsPanel({
               onChange={(e) => setAcceptCustomFields(e.target.checked)}
               className="mt-1 accent-[var(--accent)]"
             />
-            <div className="flex-1 min-w-0">
+            <div className="flex-fill">
               <p className="text-[13px] font-medium text-[var(--text-secondary)]">Custom Fields</p>
               <div className="mt-1 space-y-1">
                 {suggestedCfEntries.map((entry) => (

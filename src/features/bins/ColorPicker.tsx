@@ -185,10 +185,10 @@ export function ColorPicker({ value, onChange, secondaryLabel, secondaryValue, o
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="row w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors border border-[var(--border-subtle)]"
+        className="flex items-center gap-2 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors border border-[var(--border-subtle)]"
       >
         {hasSecondary ? (
-          <span className="flex-1 row-tight min-w-0">
+          <span className="flex-1 flex items-center gap-1.5 min-w-0">
             <ColorDot colorKey={value} />
             <span className="truncate">{primaryLabel}</span>
             <span className="text-[var(--text-tertiary)]">/</span>
@@ -206,12 +206,12 @@ export function ColorPicker({ value, onChange, secondaryLabel, secondaryValue, o
       {open && (
         <div className="space-y-3 p-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
           {hasSecondary && (
-            <p className="text-[12px] text-[var(--text-tertiary)]">Color</p>
+            <p className="caption">Color</p>
           )}
           <HueGradientPicker value={value} onChange={onChange} />
           {hasSecondary && (
             <>
-              <p className="text-[12px] text-[var(--text-tertiary)]">{secondaryLabel}</p>
+              <p className="caption">{secondaryLabel}</p>
               <HueGradientPicker
                 value={secondaryValue ?? ''}
                 onChange={(v) => onSecondaryChange?.(v)}

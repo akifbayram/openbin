@@ -109,7 +109,7 @@ export function BinFilterDialog({
 
           {/* Tags */}
           <div className="space-y-2.5">
-            <div className="row-spread">
+            <div className="flex items-center justify-between">
               <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
                 Tags
               </span>
@@ -257,14 +257,14 @@ export function BinFilterDialog({
             <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
               Content
             </span>
-            <div className="row-spread py-2.5">
+            <div className="flex items-center justify-between py-2.5">
               <span className="text-[15px] text-[var(--text-primary)]">Has items</span>
               <Checkbox
                 checked={draft.hasItems}
                 onCheckedChange={(v) => setDraft((d) => ({ ...d, hasItems: v }))}
               />
             </div>
-            <div className="row-spread py-2.5">
+            <div className="flex items-center justify-between py-2.5">
               <span className="text-[15px] text-[var(--text-primary)]">Has notes</span>
               <Checkbox
                 checked={draft.hasNotes}
@@ -275,13 +275,13 @@ export function BinFilterDialog({
         </div>
 
         <DialogFooter>
-          <div className="row-spread w-full">
-            <div className="row">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
               <Button variant="ghost" onClick={reset}>
                 Reset
               </Button>
             </div>
-            <div className="row">
+            <div className="flex items-center gap-2">
               {(searchQuery || countActiveFilters(draft) > 0) && (
                 <Button
                   variant="ghost"

@@ -110,7 +110,7 @@ function SectionHeader({
   action?: { label: string; onClick: () => void };
 }) {
   return (
-    <div className="row-spread">
+    <div className="flex items-center justify-between">
       <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
         {title}
       </h2>
@@ -241,7 +241,7 @@ export function DashboardPage() {
       <PageHeader
         title="Dashboard"
         actions={
-          <div className="row">
+          <div className="flex items-center gap-2">
             <div className="flex items-center">
               <Tooltip content="Scan QR code" side="bottom">
                 <Button
@@ -367,7 +367,7 @@ export function DashboardPage() {
           <button
             type="button"
             onClick={() => navigate('/bins?needs_organizing=true')}
-            className="glass-card rounded-[var(--radius-lg)] px-4 py-3 row-spread"
+            className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-full bg-amber-500/10 flex items-center justify-center">
@@ -377,7 +377,7 @@ export function DashboardPage() {
                 <p className="text-[15px] font-semibold text-[var(--text-primary)]">
                   {needsOrganizing} {needsOrganizing !== 1 ? t.bins : t.bin} need{needsOrganizing === 1 ? 's' : ''} organizing
                 </p>
-                <p className="text-[12px] text-[var(--text-tertiary)]">No tags, area, or items</p>
+                <p className="caption">No tags, area, or items</p>
               </div>
             </div>
             <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)]" />

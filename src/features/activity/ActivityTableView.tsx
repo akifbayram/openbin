@@ -70,7 +70,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
                   {getActionLabel(entry, t)}
                 </p>
                 {changeDiffs && (
-                  <p className="text-[12px] text-[var(--text-tertiary)] truncate">
+                  <p className="caption truncate">
                     {changeDiffs.map((d, i) => (
                       <span key={d.field}>
                         {i > 0 && ', '}
@@ -82,7 +82,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
               </div>
 
               {/* User */}
-              <div className="hidden md:flex flex-1 min-w-0 items-center gap-1.5">
+              <div className="hidden md:flex flex-fill items-center gap-1.5">
                 <span className="text-[13px] text-[var(--text-secondary)] truncate">{entry.display_name}</span>
                 {entry.auth_method === 'api_key' && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
@@ -99,7 +99,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
               </div>
 
               {/* Time */}
-              <span className="w-24 shrink-0 text-[12px] text-[var(--text-tertiary)] text-right">
+              <span className="w-24 shrink-0 caption text-right">
                 {formatTimeAgo(entry.created_at)}
               </span>
             </TableRow>

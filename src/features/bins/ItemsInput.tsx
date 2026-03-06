@@ -177,7 +177,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
 
   return (
     <div>
-      <div className="row-spread mb-2 min-h-8">
+      <div className="flex items-center justify-between mb-2 min-h-8">
         <Label>{items.length} {items.length === 1 ? 'Item' : 'Items'}</Label>
       </div>
 
@@ -187,8 +187,8 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
             // biome-ignore lint/suspicious/noArrayIndexKey: items may contain duplicates
             <div key={index}>
               {index > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-              <div className="group row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors">
-                <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">{item}</span>
+              <div className="group flex items-center gap-1.5 px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors">
+                <span className="flex-fill text-[15px] text-[var(--text-primary)] leading-relaxed">{item}</span>
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
@@ -205,7 +205,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
 
       <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
         {state === 'input' && (
-          <div className="row-tight">
+          <div className="flex items-center gap-1.5">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -257,7 +257,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
             {error && (
               <p className="text-[13px] text-[var(--destructive)]">{error}</p>
             )}
-            <div className="row">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleCollapse}
@@ -306,7 +306,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                 );
               })}
             </div>
-            <div className="row pt-1">
+            <div className="flex items-center gap-2 pt-1">
               <Button
                 type="button"
                 variant="ghost"

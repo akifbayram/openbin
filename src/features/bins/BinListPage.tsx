@@ -122,7 +122,7 @@ export function BinListPage() {
       <PageHeader
         title={t.Bins}
         actions={activeLocationId ? (
-          <div className="row">
+          <div className="flex items-center gap-2">
             <div className="flex items-center">
               <Tooltip content="Scan QR code" side="bottom">
                 <Button

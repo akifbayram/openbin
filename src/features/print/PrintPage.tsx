@@ -26,7 +26,7 @@ export function PrintPage() {
   if (isLoading) {
     return (
       <div className="page-content print-hide max-w-6xl">
-        <div className="row mb-4">
+        <div className="flex items-center gap-2 mb-4">
           <MenuButton />
           <Skeleton className="h-9 w-16" />
         </div>
@@ -35,7 +35,7 @@ export function PrintPage() {
             {[1, 2, 3, 4].map((i) => (
               <Card key={i}>
                 <CardContent>
-                  <div className="row">
+                  <div className="flex items-center gap-2">
                     <Skeleton className="h-4 w-4 rounded shrink-0" />
                     <Skeleton className="h-4 w-28" />
                   </div>

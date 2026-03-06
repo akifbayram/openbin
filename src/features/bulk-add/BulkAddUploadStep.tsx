@@ -108,7 +108,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
               value={sharedAreaId}
               onChange={(areaId) => dispatch({ type: 'SET_SHARED_AREA', areaId })}
             />
-            <p className="text-[12px] text-[var(--text-tertiary)]">
+            <p className="caption">
               Applied to all new {t.bins}. You can change this per {t.bin} during review.
             </p>
           </div>

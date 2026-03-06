@@ -242,7 +242,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                   <img key={i}
                     src={url}
                     alt={`Upload ${i + 1}`}
-                    className={`shrink-0 flex-1 min-w-0 rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out ${
+                    className={`shrink-0 flex-fill rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out ${
                       name ? 'max-h-20 opacity-80' : 'aspect-square'
                     }`}
                   />
@@ -269,11 +269,11 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
           <div className={correctionOpen && name ? 'ai-correction-enter' : 'hidden'}>
             <div className="space-y-1.5">
               {correctionCount >= MAX_CORRECTIONS ? (
-                <p className="text-[12px] text-[var(--text-tertiary)] italic">
+                <p className="caption italic">
                   Correction limit reached — edit fields directly.
                 </p>
               ) : (
-                <div className="row">
+                <div className="flex items-center gap-2">
                   <Input
                     value={correctionText}
                     onChange={(e) => setCorrectionText(e.target.value)}
@@ -372,7 +372,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
           </div>
 
           {/* Navigation */}
-          <div className="row-spread pt-2">
+          <div className="flex items-center justify-between pt-2">
             <Button
               variant="ghost"
               onClick={handleBack}

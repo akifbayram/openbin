@@ -29,10 +29,10 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
       <CardContent>
         <button
           type="button"
-          className="row-spread w-full"
+          className="flex items-center justify-between w-full"
           onClick={() => onExpandedChange(!expanded)}
         >
-          <div className="row">
+          <div className="flex items-center gap-2">
             <SlidersHorizontal className="h-4 w-4 text-[var(--text-tertiary)]" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Options</Label>
           </div>

@@ -57,7 +57,7 @@ export function CommandIdleInput({
       </div>
 
       {/* Collapsible examples */}
-      <div className="text-[12px] text-[var(--text-tertiary)] leading-relaxed">
+      <div className="caption leading-relaxed">
         <button
           type="button"
           onClick={() => setExamplesOpen((v) => !v)}

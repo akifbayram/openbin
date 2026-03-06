@@ -73,14 +73,14 @@ export function BulkAppearanceDialog({ open, onOpenChange, binIds, onDone }: Bul
         </DialogHeader>
         <div className="space-y-5">
           <div className="space-y-2">
-            <Label className="row-tight">
+            <Label className="flex items-center gap-1.5">
               Icon
               {iconDirty && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
             </Label>
             <IconPicker value={icon} onChange={(v) => { setIcon(v); setIconDirty(true); }} />
           </div>
           <div className="space-y-2">
-            <Label className="row-tight">
+            <Label className="flex items-center gap-1.5">
               Color
               {colorDirty && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
             </Label>
@@ -97,7 +97,7 @@ export function BulkAppearanceDialog({ open, onOpenChange, binIds, onDone }: Bul
             />
           </div>
           <div className="space-y-2">
-            <Label className="row-tight">
+            <Label className="flex items-center gap-1.5">
               Style
               {styleDirty && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
             </Label>

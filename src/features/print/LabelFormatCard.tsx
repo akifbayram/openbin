@@ -34,10 +34,10 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
       <CardContent>
         <button
           type="button"
-          className="row-spread w-full"
+          className="flex items-center justify-between w-full"
           onClick={() => onExpandedChange(!expanded)}
         >
-          <div className="row">
+          <div className="flex items-center gap-2">
             <LayoutGrid className="h-4 w-4 text-[var(--text-tertiary)]" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Label Format</Label>
             {!expanded && (
@@ -107,12 +107,12 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
 
             {f.savedPresets.length > 0 && (
               <div className="space-y-1 mt-2 pt-2 border-t border-[var(--border-subtle)]">
-                <span className="text-[12px] text-[var(--text-tertiary)] font-medium px-3">Saved Presets</span>
+                <span className="caption font-medium px-3">Saved Presets</span>
                 {f.savedPresets.map((fmt) => (
                   <div key={fmt.key} className="flex items-center group">
                     <button
                       type="button"
-                      className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 flex-1 min-w-0 text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
+                      className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 flex-fill text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
                       onClick={() => f.handleFormatChange(fmt.key)}
                     >
                       {f.formatKey === fmt.key ? (
@@ -219,7 +219,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                 </div>
 
                 {showSaveInput ? (
-                  <div className="row mt-3 px-1">
+                  <div className="flex items-center gap-2 mt-3 px-1">
                     <input
                       type="text"
                       placeholder="Preset name"
