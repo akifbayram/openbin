@@ -1,3 +1,4 @@
+import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -51,8 +52,8 @@ describe('ColumnVisibilityMenu', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle field visibility' }));
 
-    const switches = screen.getAllByRole('switch');
-    fireEvent.click(switches[0]);
+    // The wrapper div with the field label handles the click
+    fireEvent.click(screen.getByText('Icon'));
     expect(onToggle).toHaveBeenCalledWith('icon');
   });
 
@@ -62,7 +63,7 @@ describe('ColumnVisibilityMenu', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle field visibility' }));
 
-    const switches = screen.getAllByRole('switch');
+    const switches = screen.getAllByRole('checkbox');
     expect(switches).toHaveLength(fields.length);
   });
 });

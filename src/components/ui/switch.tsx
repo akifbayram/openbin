@@ -1,3 +1,4 @@
+import { Switch as ChakraSwitch } from '@chakra-ui/react';
 import { cn } from '@/lib/utils';
 
 interface SwitchProps {
@@ -10,26 +11,16 @@ interface SwitchProps {
 
 export function Switch({ checked, onCheckedChange, id, disabled, className }: SwitchProps) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      id={id}
+    <ChakraSwitch.Root
+      checked={checked}
+      onCheckedChange={(e) => onCheckedChange(e.checked)}
       disabled={disabled}
-      onClick={() => onCheckedChange(!checked)}
-      className={cn(
-        'relative inline-flex h-[28px] w-[50px] shrink-0 cursor-pointer rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40',
-        checked ? 'bg-[var(--accent)]' : 'bg-[var(--bg-active)]',
-        className,
-      )}
+      className={cn(className)}
     >
-      <span
-        className={cn(
-          'pointer-events-none inline-block h-[24px] w-[24px] rounded-full bg-white shadow-sm transition-transform duration-200',
-          checked ? 'translate-x-[24px]' : 'translate-x-[2px]',
-          'mt-[2px]',
-        )}
-      />
-    </button>
+      <ChakraSwitch.HiddenInput id={id} />
+      <ChakraSwitch.Control>
+        <ChakraSwitch.Thumb />
+      </ChakraSwitch.Control>
+    </ChakraSwitch.Root>
   );
 }

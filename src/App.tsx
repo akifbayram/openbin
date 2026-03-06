@@ -1,3 +1,4 @@
+import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { AlertCircle, ChevronLeft } from 'lucide-react';
 import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
@@ -171,6 +172,7 @@ function NotFoundPage() {
 
 export default function App() {
   return (
+    <ChakraProvider value={defaultSystem}>
     <ErrorBoundary>
       <BrowserRouter>
         <NavigationGuardProvider>
@@ -304,5 +306,6 @@ export default function App() {
         </NavigationGuardProvider>
       </BrowserRouter>
     </ErrorBoundary>
+    </ChakraProvider>
   );
 }

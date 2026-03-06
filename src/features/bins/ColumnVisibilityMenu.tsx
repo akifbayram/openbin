@@ -16,18 +16,18 @@ export function FieldToggleList({ fields, visibility, onToggle }: {
   return (
     <>
       {fields.map((field) => (
-        <label
+        <button
           key={field}
-          htmlFor={`field-toggle-${field}`}
+          type="button"
           className="w-full flex items-center justify-between px-3.5 py-2 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
+          onClick={() => onToggle(field)}
         >
           {FIELD_LABELS[field]}
           <Switch
-            id={`field-toggle-${field}`}
             checked={visibility[field]}
             onCheckedChange={() => onToggle(field)}
           />
-        </label>
+        </button>
       ))}
     </>
   );

@@ -1,3 +1,4 @@
+import { Skeleton as ChakraSkeleton } from '@chakra-ui/react';
 import { cn } from '@/lib/utils';
 
 interface SkeletonProps {
@@ -6,9 +7,9 @@ interface SkeletonProps {
 
 export function Skeleton({ className }: SkeletonProps) {
   return (
-    <div
+    <ChakraSkeleton
       className={cn(
-        'animate-shimmer rounded-[var(--radius-md)]',
+        'rounded-[var(--radius-md)]',
         className
       )}
     />
