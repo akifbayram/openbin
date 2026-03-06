@@ -3,7 +3,7 @@ import { DEFAULT_COMMAND_PROMPT } from './defaultPrompts.js';
 export interface BinSummary {
   id: string;
   name: string;
-  items: Array<{ id: string; name: string }>;
+  items: Array<{ id: string; name: string; quantity: number | null }>;
   tags: string[];
   area_id: string | null;
   area_name: string;
@@ -21,10 +21,10 @@ export interface AreaSummary {
 }
 
 export type CommandAction =
-  | { type: 'add_items'; bin_id: string; bin_name: string; items: string[] }
+  | { type: 'add_items'; bin_id: string; bin_name: string; items: (string | { name: string; quantity?: number })[] }
   | { type: 'remove_items'; bin_id: string; bin_name: string; items: string[] }
   | { type: 'modify_item'; bin_id: string; bin_name: string; old_item: string; new_item: string }
-  | { type: 'create_bin'; name: string; area_name?: string; tags?: string[]; items?: string[]; color?: string; icon?: string; notes?: string; card_style?: string; custom_fields?: Record<string, string> }
+  | { type: 'create_bin'; name: string; area_name?: string; tags?: string[]; items?: (string | { name: string; quantity?: number })[]; color?: string; icon?: string; notes?: string; card_style?: string; custom_fields?: Record<string, string> }
   | { type: 'delete_bin'; bin_id: string; bin_name: string }
   | { type: 'add_tags'; bin_id: string; bin_name: string; tags: string[] }
   | { type: 'remove_tags'; bin_id: string; bin_name: string; tags: string[] }
@@ -65,10 +65,10 @@ export function buildSystemPrompt(request: CommandRequest, customPrompt?: string
   return `${basePrompt}
 
 Available action types:
-- add_items: Add items to an existing bin. Fields: bin_id, bin_name, items[]
-- remove_items: Remove items from an existing bin. Fields: bin_id, bin_name, items[]
+- add_items: Add items to an existing bin. Fields: bin_id, bin_name, items[] (each item can be a string or {"name":"...","quantity":N})
+- remove_items: Remove items from an existing bin. Fields: bin_id, bin_name, items[] (item name strings)
 - modify_item: Change an item's name in a bin. Fields: bin_id, bin_name, old_item, new_item
-- create_bin: Create a new bin. Fields: name, area_name (include when user specifies a location/area), tags[], items[] (ALWAYS include items when user mentions contents), color?, icon?, notes?
+- create_bin: Create a new bin. Fields: name, area_name (include when user specifies a location/area), tags[], items[] (ALWAYS include items when user mentions contents; each item can be a string or {"name":"...","quantity":N}), color?, icon?, notes?
 - delete_bin: Delete a bin. Fields: bin_id, bin_name
 - add_tags: Add tags to a bin. Fields: bin_id, bin_name, tags[]
 - remove_tags: Remove tags from a bin. Fields: bin_id, bin_name, tags[]

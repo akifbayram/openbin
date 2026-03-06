@@ -189,7 +189,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
     if (!structuredItems) return;
     const selected = structuredItems.filter((_, i) => checkedItems.get(i) !== false);
     if (selected.length > 0) {
-      onChange([...items, ...selected]);
+      onChange([...items, ...selected.map((i) => i.name)]);
     }
     setState('input');
     setExpandedText('');
@@ -388,7 +388,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
                     )}
                   >
                     {checked && <Check className="h-3 w-3" />}
-                    {item}
+                    {item.quantity ? `${item.name} (×${item.quantity})` : item.name}
                   </button>
                 );
               })}

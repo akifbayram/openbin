@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { StepIndicator } from '@/components/ui/stepper';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
+import { buildQuantityMap, mergeItemQuantities } from '@/lib/itemQuantities';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
 import { BinCreateSuccess } from '@/features/bins/BinCreateSuccess';
@@ -48,6 +49,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
   const [name, setName] = useState('');
   const [items, setItems] = useState<string[]>([]);
+  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [areaId, setAreaId] = useState<string | null>(sharedAreaId);
@@ -112,7 +114,8 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     const result = await streamAnalyze(formData);
     if (result) {
       setName(result.name);
-      setItems(result.items);
+      setItems(result.items.map((i) => i.name));
+      setItemQuantities(buildQuantityMap(result.items));
       setTags(result.tags);
       setNotes(result.notes);
     }
@@ -127,7 +130,8 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     });
     if (result) {
       setName(result.name);
-      setItems(result.items);
+      setItems(result.items.map((i) => i.name));
+      setItemQuantities(buildQuantityMap(result.items));
       setTags(result.tags);
       setNotes(result.notes);
       setCorrectionCount((c) => c + 1);
@@ -167,10 +171,11 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     if (!name.trim() || !activeLocationId) return;
     setIsCreating(true);
     try {
+      const itemsWithQty = mergeItemQuantities(items, itemQuantities);
       const createdBin = await addBin({
         name: name.trim(),
         locationId: activeLocationId,
-        items,
+        items: itemsWithQty,
         notes: notes.trim(),
         tags,
         areaId,

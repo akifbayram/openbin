@@ -141,7 +141,9 @@ export function useQuickAdd(options: UseQuickAddOptions) {
 
   async function handleConfirmAdd() {
     if (!structuredItems || !binId) return;
-    const selected = structuredItems.filter((_, i) => checked.get(i) !== false);
+    const selected = structuredItems
+      .filter((_, i) => checked.get(i) !== false)
+      .map((item) => item.quantity ? { name: item.name, quantity: item.quantity } : item.name);
     if (selected.length === 0) return;
     try {
       await addItemsToBin(binId, selected);

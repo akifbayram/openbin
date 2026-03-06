@@ -1,6 +1,8 @@
 import { generateObject } from 'ai';
 import type { AiProviderConfig } from './aiCaller.js';
 import { mapSdkError, validateEndpointUrl } from './aiCaller.js';
+import type { AiSuggestedItem } from './aiProviders.js';
+import { normalizeAiItems } from './aiProviders.js';
 import { StructureTextSchema } from './aiSchemas.js';
 import { DEFAULT_STRUCTURE_PROMPT } from './defaultPrompts.js';
 import { createSdkModel } from './sdkProviderFactory.js';
@@ -15,7 +17,7 @@ export interface StructureTextRequest {
 }
 
 export interface StructureTextResult {
-  items: string[];
+  items: AiSuggestedItem[];
 }
 
 export function buildPrompt(request: StructureTextRequest, customPrompt?: string): string {
@@ -34,13 +36,9 @@ export function buildPrompt(request: StructureTextRequest, customPrompt?: string
 
 function validateItems(raw: unknown): StructureTextResult {
   const obj = raw as Record<string, unknown>;
-  let items: string[] = [];
+  let items: AiSuggestedItem[] = [];
   if (Array.isArray(obj.items)) {
-    items = obj.items
-      .filter((i): i is string => typeof i === 'string')
-      .map((i) => i.trim())
-      .filter(Boolean)
-      .slice(0, 500);
+    items = normalizeAiItems(obj.items).slice(0, 500);
   }
   return { items };
 }

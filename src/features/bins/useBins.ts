@@ -226,7 +226,7 @@ export function useBin(id: string | undefined) {
 export interface AddBinOptions {
   name: string;
   locationId: string;
-  items?: string[];
+  items?: (string | { name: string; quantity?: number | null })[];
   notes?: string;
   tags?: string[];
   areaId?: string | null;
@@ -261,7 +261,7 @@ export async function addBin(options: AddBinOptions): Promise<Bin> {
 
 export async function updateBin(
   id: string,
-  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color' | 'card_style' | 'visibility'>> & { areaId?: string | null; items?: (string | { name: string; quantity: number | null })[]; cardStyle?: string; customFields?: Record<string, string> }
+  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color' | 'card_style' | 'visibility'>> & { areaId?: string | null; items?: (string | { name: string; quantity?: number | null })[]; cardStyle?: string; customFields?: Record<string, string> }
 ): Promise<void> {
   await apiFetch(`/api/bins/${id}`, {
     method: 'PUT',
@@ -270,7 +270,7 @@ export async function updateBin(
   notifyBinsChanged();
 }
 
-export async function addItemsToBin(binId: string, items: string[]): Promise<BinItem[]> {
+export async function addItemsToBin(binId: string, items: (string | { name: string; quantity?: number | null })[]): Promise<BinItem[]> {
   const result = await apiFetch<{ items: BinItem[] }>(`/api/bins/${binId}/items`, {
     method: 'POST',
     body: { items },

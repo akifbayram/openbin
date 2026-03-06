@@ -46,6 +46,7 @@ export function useEditBinForm(id: string | undefined) {
     customFields, setCustomFields,
   } = useBinFormFields();
   const [quantities, setQuantities] = useState<(number | null)[]>([]);
+  const itemsRef = useRef<string[]>([]);
   const originalRef = useRef<OriginalSnapshot | null>(null);
 
   const isDirty = useMemo(() => {
@@ -77,25 +78,24 @@ export function useEditBinForm(id: string | undefined) {
 
   // Wrap setItems to keep quantities in sync
   const setItemsWithQuantities = useCallback((newItems: string[]) => {
+    const prevItems = itemsRef.current;
     setItems(newItems);
+    itemsRef.current = newItems;
     setQuantities((prev) => {
       if (newItems.length > prev.length) {
-        // Items appended
         return [...prev, ...Array<null>(newItems.length - prev.length).fill(null)];
       }
-      if (newItems.length < prev.length) {
-        // Item removed — find removed index by comparing with current items
-        const newQ = [...prev];
-        // Walk backwards to find the first mismatch (removed index)
-        for (let i = prev.length - 1; i >= 0; i--) {
-          if (i >= newItems.length) {
-            newQ.splice(i, 1);
-            break;
+      if (newItems.length < prev.length && prevItems.length === prev.length) {
+        // Detect which index was removed by comparing old and new item arrays
+        for (let i = 0; i < prevItems.length; i++) {
+          if (newItems[i] !== prevItems[i]) {
+            return [...prev.slice(0, i), ...prev.slice(i + 1)];
           }
         }
-        return newQ.slice(0, newItems.length);
+        // Last item was removed
+        return prev.slice(0, newItems.length);
       }
-      return prev;
+      return prev.slice(0, newItems.length);
     });
   }, [setItems]);
 
@@ -105,6 +105,7 @@ export function useEditBinForm(id: string | undefined) {
     setName(bin.name);
     setAreaId(bin.area_id);
     setItems(itemNames);
+    itemsRef.current = itemNames;
     setQuantities(itemQuantities);
     setNotes(bin.notes);
     setTags([...bin.tags]);

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { buildQuantityMap } from '@/lib/itemQuantities';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { AiAnalyzeError, AiStreamingPreview } from '@/features/ai/AiStreamingPreview';
 import { parsePartialAnalysis } from '@/features/ai/parsePartialAnalysis';
@@ -116,11 +117,13 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
           dispatch({ type: 'UPDATE_STREAM', id: target.id, name: partial.name, items: partial.items });
         } else if (event.type === 'done') {
           const result: AiSuggestions = JSON.parse(event.text);
+          const qtyMap = buildQuantityMap(result.items);
           dispatch({
             type: 'SET_ANALYZE_RESULT',
             id: target.id,
             name: result.name,
-            items: result.items,
+            items: result.items.map((i) => i.name),
+            itemQuantities: qtyMap,
             tags: result.tags,
             notes: result.notes,
           });
@@ -155,11 +158,13 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
     });
 
     if (result) {
+      const qtyMap = buildQuantityMap(result.items);
       dispatch({
         type: 'SET_ANALYZE_RESULT',
         id: target.id,
         name: result.name,
-        items: result.items,
+        items: result.items.map((i) => i.name),
+        itemQuantities: qtyMap,
         tags: result.tags,
         notes: result.notes,
       });

@@ -8,6 +8,7 @@ import { AreaPicker } from '@/features/areas/AreaPicker';
 import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
 import { BinCreateSuccess } from '@/features/bins/BinCreateSuccess';
 import { addBin, notifyBinsChanged } from '@/features/bins/useBins';
+import { mergeItemQuantities } from '@/lib/itemQuantities';
 import { BulkAddReviewStep } from '@/features/bulk-add/BulkAddReviewStep';
 import { BulkAddSummaryStep } from '@/features/bulk-add/BulkAddSummaryStep';
 import type { BulkAddPhoto, BulkAddState } from '@/features/bulk-add/useBulkAdd';
@@ -89,10 +90,11 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       for (const photo of toCreate) {
         dispatch({ type: 'SET_CREATING', id: photo.id });
         try {
+          const itemsWithQty = mergeItemQuantities(photo.items, photo.itemQuantities);
           const createdBin = await addBin({
             name: photo.name.trim(),
             locationId: activeLocationId,
-            items: photo.items,
+            items: itemsWithQty,
             notes: photo.notes.trim(),
             tags: photo.tags,
             areaId: photo.areaId,

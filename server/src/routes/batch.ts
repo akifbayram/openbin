@@ -67,7 +67,7 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
           name: op.name.trim(),
           area_name: typeof op.area_name === 'string' ? op.area_name.trim() : undefined,
           tags: Array.isArray(op.tags) ? op.tags.filter((t: unknown): t is string => typeof t === 'string') : undefined,
-          items: Array.isArray(op.items) ? op.items.filter((i: unknown): i is string => typeof i === 'string') : undefined,
+          items: Array.isArray(op.items) ? op.items.filter((i: unknown) => typeof i === 'string' || (i && typeof i === 'object' && typeof (i as Record<string, unknown>).name === 'string')) : undefined,
           color: typeof op.color === 'string' ? op.color : undefined,
           icon: typeof op.icon === 'string' ? op.icon : undefined,
           notes: typeof op.notes === 'string' ? op.notes : undefined,
@@ -104,16 +104,41 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
         actions.push({ type: op.type, bin_id: op.bin_id, bin_name: (op.bin_name as string) || '' });
         break;
 
-      case 'add_items':
-      case 'remove_items':
+      case 'add_items': {
         if (!op.bin_id || typeof op.bin_id !== 'string') {
-          throw new ValidationError(`operations[${i}]: ${op.type} requires "bin_id"`);
+          throw new ValidationError(`operations[${i}]: add_items requires "bin_id"`);
         }
         if (!Array.isArray(op.items) || op.items.length === 0) {
-          throw new ValidationError(`operations[${i}]: ${op.type} requires non-empty "items" array`);
+          throw new ValidationError(`operations[${i}]: add_items requires non-empty "items" array`);
+        }
+        // Accept both strings and {name, quantity} objects
+        const addItems: (string | { name: string; quantity?: number })[] = [];
+        for (const item of op.items) {
+          if (typeof item === 'string' && item.trim()) {
+            addItems.push(item.trim());
+          } else if (item && typeof item === 'object' && typeof item.name === 'string' && item.name.trim()) {
+            const entry: { name: string; quantity?: number } = { name: item.name.trim() };
+            if (typeof item.quantity === 'number' && item.quantity > 0) entry.quantity = item.quantity;
+            addItems.push(entry);
+          }
         }
         actions.push({
-          type: op.type,
+          type: 'add_items',
+          bin_id: op.bin_id,
+          bin_name: (op.bin_name as string) || '',
+          items: addItems,
+        });
+        break;
+      }
+      case 'remove_items':
+        if (!op.bin_id || typeof op.bin_id !== 'string') {
+          throw new ValidationError(`operations[${i}]: remove_items requires "bin_id"`);
+        }
+        if (!Array.isArray(op.items) || op.items.length === 0) {
+          throw new ValidationError(`operations[${i}]: remove_items requires non-empty "items" array`);
+        }
+        actions.push({
+          type: 'remove_items',
           bin_id: op.bin_id,
           bin_name: (op.bin_name as string) || '',
           items: op.items.filter((i: unknown): i is string => typeof i === 'string').map((i: string) => i.trim()).filter(Boolean),

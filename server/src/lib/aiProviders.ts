@@ -7,9 +7,33 @@ import { AI_CORRECTION_PROMPT, DEFAULT_AI_PROMPT } from './defaultPrompts.js';
 import { createSdkModel } from './sdkProviderFactory.js';
 
 
+export interface AiSuggestedItem {
+  name: string;
+  quantity?: number | null;
+}
+
+/** Normalize a raw AI items array into typed AiSuggestedItem[]. Accepts strings or {name, quantity} objects. */
+export function normalizeAiItems(raw: unknown[]): AiSuggestedItem[] {
+  return raw
+    .map((i): AiSuggestedItem | null => {
+      if (typeof i === 'string') {
+        const name = i.trim();
+        return name ? { name } : null;
+      }
+      if (i && typeof i === 'object' && typeof (i as Record<string, unknown>).name === 'string') {
+        const name = ((i as Record<string, unknown>).name as string).trim();
+        const rawQty = (i as Record<string, unknown>).quantity;
+        const quantity = typeof rawQty === 'number' && rawQty > 0 ? rawQty : null;
+        return name ? { name, quantity } : null;
+      }
+      return null;
+    })
+    .filter((i): i is AiSuggestedItem => i !== null);
+}
+
 export interface AiSuggestionsResult {
   name: string;
-  items: string[];
+  items: AiSuggestedItem[];
   tags: string[];
   notes: string;
   customFields?: Record<string, string>;
@@ -77,13 +101,9 @@ function validateSuggestions(raw: unknown): AiSuggestionsResult {
   let name = typeof obj.name === 'string' ? obj.name.trim() : '';
   if (name.length > 255) name = name.slice(0, 255);
 
-  let items: string[] = [];
+  let items: AiSuggestedItem[] = [];
   if (Array.isArray(obj.items)) {
-    items = obj.items
-      .filter((i): i is string => typeof i === 'string')
-      .map((i) => i.trim())
-      .filter(Boolean)
-      .slice(0, 100);
+    items = normalizeAiItems(obj.items).slice(0, 100);
   }
 
   let tags: string[] = [];

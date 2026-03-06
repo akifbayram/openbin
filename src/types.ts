@@ -222,9 +222,14 @@ export interface ApiKey {
   revoked_at: string | null;
 }
 
+export interface AiSuggestedItem {
+  name: string;
+  quantity?: number | null;
+}
+
 export interface AiSuggestions {
   name: string;
-  items: string[];
+  items: AiSuggestedItem[];
   tags: string[];
   notes: string;
   customFields?: Record<string, string>;

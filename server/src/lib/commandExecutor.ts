@@ -96,14 +96,18 @@ function executeSingleAction(
       if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
       const maxResult = querySync<{ max_pos: number | null }>('SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1', [action.bin_id]);
       let nextPos = (maxResult.rows[0]?.max_pos ?? -1) + 1;
-      for (const itemName of action.items) {
-        querySync('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, NULL, $4)', [generateUuid(), action.bin_id, itemName, nextPos++]);
+      const itemNames: string[] = [];
+      for (const item of action.items) {
+        const itemName = typeof item === 'string' ? item : item.name;
+        const qty = typeof item === 'object' && typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : null;
+        querySync('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)', [generateUuid(), action.bin_id, itemName, qty, nextPos++]);
+        itemNames.push(itemName);
       }
       querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
       pendingActivities.push({
         locationId, userId, userName, authMethod, apiKeyId,
         action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
-        changes: { items_added: { old: null, new: action.items } },
+        changes: { items_added: { old: null, new: itemNames } },
       });
       return { type: 'add_items', success: true, details: `Added ${action.items.length} item(s) to ${action.bin_name}`, bin_id: action.bin_id, bin_name: action.bin_name };
     }
@@ -183,10 +187,13 @@ function executeSingleAction(
       }
 
       // Insert items into bin_items
-      const createItems: string[] = action.items || [];
+      const createItems = action.items || [];
       if (createItems.length > MAX_ITEMS_PER_ACTION) throw new Error('Too many items per action (max 500)');
       for (let i = 0; i < createItems.length; i++) {
-        querySync('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, NULL, $4)', [crypto.randomUUID(), binId, createItems[i], i]);
+        const item = createItems[i];
+        const itemName = typeof item === 'string' ? item : item.name;
+        const qty = typeof item === 'object' && typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : null;
+        querySync('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)', [crypto.randomUUID(), binId, itemName, qty, i]);
       }
 
       // Insert custom field values

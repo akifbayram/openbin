@@ -117,7 +117,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
                   )}
                 >
                   {checked && <Check className="h-3 w-3" />}
-                  {item}
+                  {item.quantity ? `${item.name} (×${item.quantity})` : item.name}
                 </button>
               );
             })}
