@@ -367,7 +367,7 @@ streamRouter.post('/reorganize/stream', aiLimiter, requireLocationMember(), aiRo
   await pipeAiStreamToResponse(res, model, {
     system,
     userContent,
-    ...streamOpts(settings, { temperature: 0.3, maxTokens: 4000 }),
+    ...streamOpts(settings, { temperature: 0.3, maxTokens: 16000 }),
   });
 }));
 

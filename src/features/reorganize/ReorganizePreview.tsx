@@ -1,4 +1,4 @@
-import { Loader2, Package } from 'lucide-react';
+import { Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import type { PartialReorgResult } from './parsePartialReorg';
@@ -40,9 +40,6 @@ export function ReorganizePreview({
         <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal">Proposal</Label>
         <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums">
           {originalCount} → {displayBins.length} bin{displayBins.length !== 1 ? 's' : ''} · {totalItems} item{totalItems !== 1 ? 's' : ''}
-          {isStreaming && (
-            <Loader2 className="inline-block h-3 w-3 ml-1.5 animate-spin" />
-          )}
         </span>
       </div>
 

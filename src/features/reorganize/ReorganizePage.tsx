@@ -1,14 +1,15 @@
 import { ChevronDown, SlidersHorizontal, Sparkles } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { OptionGroup } from '@/components/ui/option-group';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useBinList } from '@/features/bins/useBins';
 import { BinSelectorCard } from '@/features/print/BinSelectorCard';
@@ -39,6 +40,7 @@ export function ReorganizePage() {
   const [maxItemsPerBin, setMaxItemsPerBin] = useState<string>('');
   const [binsExpanded, setBinsExpanded] = useState(true);
   const [optionsExpanded, setOptionsExpanded] = useState(true);
+  const reorgRef = useRef<HTMLDivElement>(null);
 
   const {
     result,
@@ -51,6 +53,21 @@ export function ReorganizePage() {
     apply,
     clear,
   } = useReorganize();
+
+  // Show progress bar during streaming, then hold at 100% briefly before revealing proposal
+  const [showProgress, setShowProgress] = useState(false);
+  const progressComplete = !isStreaming && !!result;
+
+  useEffect(() => {
+    if (isStreaming) {
+      setShowProgress(true);
+      return;
+    }
+    if (!progressComplete) return;
+    // Hold the completed bar for 800ms, then fade out
+    const id = setTimeout(() => setShowProgress(false), 800);
+    return () => clearTimeout(id);
+  }, [isStreaming, progressComplete]);
 
   // Derive area from selected bins (if all in same area)
   const selectedAreaId = useMemo(() => {
@@ -77,6 +94,7 @@ export function ReorganizePage() {
       minItemsPerBin: minItemsPerBin ? Number.parseInt(minItemsPerBin, 10) : undefined,
       maxItemsPerBin: maxItemsPerBin ? Number.parseInt(maxItemsPerBin, 10) : undefined,
     });
+    reorgRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [selection.selectedBins, maxBins, startReorg, selectedAreaId, selectedAreaName, userNotes, strictness, granularity, ambiguousPolicy, duplicates, outliers, minItemsPerBin, maxItemsPerBin]);
 
   const handleAccept = useCallback(() => {
@@ -300,7 +318,7 @@ export function ReorganizePage() {
         </div>
 
         {/* Right column — preview (sticky on desktop) */}
-        <div className="lg:sticky lg:top-6 flex flex-col gap-4">
+        <div ref={reorgRef} className="lg:sticky lg:top-6 flex flex-col gap-4">
           <Button
             onClick={handleReorganize}
             disabled={selection.selectedIds.size < 2 || isStreaming}
@@ -321,15 +339,24 @@ export function ReorganizePage() {
           {(hasProposal || isStreaming) ? (
             <Card>
               <CardContent>
-                <ReorganizePreview
-                  result={result}
-                  partialResult={partialResult}
-                  isStreaming={isStreaming}
-                  isApplying={isApplying}
-                  originalCount={selection.selectedIds.size}
-                  onAccept={handleAccept}
-                  onCancel={clear}
-                />
+                {showProgress ? (
+                  <AiProgressBar
+                    active={isStreaming}
+                    complete={progressComplete}
+                    label={isStreaming ? 'Reorganizing bins' : 'Complete'}
+                    showElapsed
+                  />
+                ) : (
+                  <ReorganizePreview
+                    result={result}
+                    partialResult={partialResult}
+                    isStreaming={isStreaming}
+                    isApplying={isApplying}
+                    originalCount={selection.selectedIds.size}
+                    onAccept={handleAccept}
+                    onCancel={clear}
+                  />
+                )}
               </CardContent>
             </Card>
           ) : (
