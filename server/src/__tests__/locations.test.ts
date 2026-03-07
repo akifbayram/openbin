@@ -293,3 +293,57 @@ describe('POST /api/locations/:id/regenerate-invite', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('default_join_role', () => {
+  it('joins with default role of member', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const { token: joinerToken } = await createTestUser(app);
+    const res = await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${joinerToken}`)
+      .send({ inviteCode: location.invite_code });
+    expect(res.status).toBe(201);
+    expect(res.body.role).toBe('member');
+  });
+
+  it('joins with viewer role when location default is viewer', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    await request(app)
+      .put(`/api/locations/${location.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ default_join_role: 'viewer' });
+    const { token: joinerToken } = await createTestUser(app);
+    const res = await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${joinerToken}`)
+      .send({ inviteCode: location.invite_code });
+    expect(res.status).toBe(201);
+    expect(res.body.role).toBe('viewer');
+  });
+
+  it('returns default_join_role in location list', async () => {
+    const { token } = await createTestUser(app);
+    await createTestLocation(app, token);
+    const res = await request(app)
+      .get('/api/locations')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.body.results[0].default_join_role).toBe('member');
+  });
+
+  it('admin can change role to viewer', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const { token: memberToken, user: memberUser } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ inviteCode: location.invite_code });
+    const res = await request(app)
+      .put(`/api/locations/${location.id}/members/${memberUser.id}/role`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ role: 'viewer' });
+    expect(res.status).toBe(200);
+  });
+});

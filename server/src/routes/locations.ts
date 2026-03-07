@@ -19,7 +19,7 @@ function generateInviteCode(): string {
 // GET /api/locations — list user's locations
 router.get('/', asyncHandler(async (req, res) => {
   const result = await query(
-    `SELECT l.id, l.name, l.created_by, l.invite_code, l.activity_retention_days, l.trash_retention_days, l.app_name, l.term_bin, l.term_location, l.term_area, l.created_at, l.updated_at,
+    `SELECT l.id, l.name, l.created_by, l.invite_code, l.activity_retention_days, l.trash_retention_days, l.app_name, l.term_bin, l.term_location, l.term_area, l.default_join_role, l.created_at, l.updated_at,
             lm.role,
             (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count,
             (SELECT COUNT(*) FROM areas WHERE location_id = l.id) AS area_count,
@@ -41,6 +41,7 @@ router.get('/', asyncHandler(async (req, res) => {
     term_bin: row.term_bin,
     term_location: row.term_location,
     term_area: row.term_area,
+    default_join_role: row.default_join_role,
     role: row.role,
     member_count: row.member_count,
     area_count: row.area_count,
@@ -61,7 +62,7 @@ router.post('/', asyncHandler(async (req, res) => {
   const inviteCode = generateInviteCode();
   const locationId = generateUuid();
   const locationResult = await query(
-    'INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4) RETURNING id, name, invite_code, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, created_at, updated_at',
+    'INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4) RETURNING id, name, invite_code, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, default_join_role, created_at, updated_at',
     [locationId, name.trim(), req.user!.id, inviteCode]
   );
 
@@ -96,6 +97,7 @@ router.post('/', asyncHandler(async (req, res) => {
     term_bin: location.term_bin,
     term_location: location.term_location,
     term_area: location.term_area,
+    default_join_role: location.default_join_role,
     role: 'admin',
     member_count: 1,
     area_count: 0,
@@ -107,14 +109,14 @@ router.post('/', asyncHandler(async (req, res) => {
 // PUT /api/locations/:id — update location (admin only)
 router.put('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area } = req.body;
+  const { name, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, default_join_role } = req.body;
 
   if (!await isLocationAdmin(id, req.user!.id)) {
     throw new ForbiddenError('Only admins can update this location');
   }
 
   // At least one field must be provided
-  if (name === undefined && activity_retention_days === undefined && trash_retention_days === undefined && app_name === undefined && term_bin === undefined && term_location === undefined && term_area === undefined) {
+  if (name === undefined && activity_retention_days === undefined && trash_retention_days === undefined && app_name === undefined && term_bin === undefined && term_location === undefined && term_area === undefined && default_join_role === undefined) {
     throw new ValidationError('At least one field must be provided');
   }
 
@@ -141,8 +143,12 @@ router.put('/:id', asyncHandler(async (req, res) => {
     }
   }
 
+  if (default_join_role !== undefined && !['member', 'viewer'].includes(default_join_role)) {
+    throw new ValidationError('default_join_role must be "member" or "viewer"');
+  }
+
   // Get old state for activity log
-  const oldResult = await query('SELECT name, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area FROM locations WHERE id = $1', [id]);
+  const oldResult = await query('SELECT name, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, default_join_role FROM locations WHERE id = $1', [id]);
   if (oldResult.rows.length === 0) {
     throw new NotFoundError('Location not found');
   }
@@ -180,12 +186,16 @@ router.put('/:id', asyncHandler(async (req, res) => {
     setClauses.push(`term_area = $${paramIdx++}`);
     params.push(term_area.trim());
   }
+  if (default_join_role !== undefined) {
+    setClauses.push(`default_join_role = $${paramIdx++}`);
+    params.push(default_join_role);
+  }
 
   params.push(id);
 
   const result = await query(
     `UPDATE locations SET ${setClauses.join(', ')} WHERE id = $${paramIdx}
-     RETURNING id, name, created_by, invite_code, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, created_at, updated_at`,
+     RETURNING id, name, created_by, invite_code, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, default_join_role, created_at, updated_at`,
     params
   );
 
@@ -200,6 +210,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
   if (term_bin !== undefined) newObj.term_bin = term_bin.trim();
   if (term_location !== undefined) newObj.term_location = term_location.trim();
   if (term_area !== undefined) newObj.term_area = term_area.trim();
+  if (default_join_role !== undefined) newObj.default_join_role = default_join_role;
   const changes = computeChanges(oldLoc, newObj, Object.keys(newObj));
   if (changes) {
     logActivity({
@@ -227,6 +238,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
     term_bin: location.term_bin,
     term_location: location.term_location,
     term_area: location.term_area,
+    default_join_role: location.default_join_role,
     created_at: location.created_at,
     updated_at: location.updated_at,
   });
@@ -258,7 +270,7 @@ router.post('/join', asyncHandler(async (req, res) => {
   }
 
   const locationResult = await query(
-    'SELECT id, name, created_by, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, created_at, updated_at FROM locations WHERE invite_code = $1',
+    'SELECT id, name, created_by, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, default_join_role, created_at, updated_at FROM locations WHERE invite_code = $1',
     [inviteCode.trim()]
   );
 
@@ -275,7 +287,7 @@ router.post('/join', asyncHandler(async (req, res) => {
 
   await query(
     'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
-    [generateUuid(), location.id, req.user!.id, 'member']
+    [generateUuid(), location.id, req.user!.id, location.default_join_role]
   );
 
   logActivity({
@@ -310,7 +322,7 @@ router.post('/join', asyncHandler(async (req, res) => {
     term_bin: location.term_bin,
     term_location: location.term_location,
     term_area: location.term_area,
-    role: 'member',
+    role: location.default_join_role,
     member_count: memberCountResult.rows[0]?.member_count ?? 0,
     area_count: areaCountResult.rows[0]?.area_count ?? 0,
     created_at: location.created_at,
@@ -402,8 +414,8 @@ router.put('/:id/members/:userId/role', asyncHandler(async (req, res) => {
   const { id, userId } = req.params;
   const { role } = req.body;
 
-  if (!role || !['admin', 'member'].includes(role)) {
-    throw new ValidationError('Role must be "admin" or "member"');
+  if (!role || !['admin', 'member', 'viewer'].includes(role)) {
+    throw new ValidationError('Role must be "admin", "member", or "viewer"');
   }
 
   // Requester must be admin
@@ -423,7 +435,7 @@ router.put('/:id/members/:userId/role', asyncHandler(async (req, res) => {
   }
 
   // Last-admin guard: prevent demoting the sole admin
-  if (targetRole === 'admin' && role === 'member') {
+  if (targetRole === 'admin' && role !== 'admin') {
     const adminCount = await query(
       "SELECT COUNT(*) AS cnt FROM location_members WHERE location_id = $1 AND role = 'admin'",
       [id]
