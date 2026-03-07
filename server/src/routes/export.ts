@@ -11,7 +11,6 @@ import {
   type ExportBin,
   type ExportData,
   type ExportPhoto,
-  extractItemNames,
   extractItemsWithQuantity,
   fetchLocationBins,
   importPhotosSync,
@@ -192,7 +191,7 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
   await archive.finalize();
 }));
 
-// GET /api/locations/:id/export/csv — export bins as CSV
+// GET /api/locations/:id/export/csv — export bins as CSV (one row per item)
 router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
 
@@ -210,29 +209,31 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
     return val;
   }
 
-  const header = 'Name,Area,Items,Tags,Notes,Icon,Color,Card Style,Short Code,Created,Updated';
-  const rows = bins.map((bin) => {
-    const items = extractItemNames(bin.items).join('; ');
-    const tags = Array.isArray(bin.tags) ? bin.tags.join('; ') : '';
-    return [
-      csvEscape(bin.name),
-      csvEscape(bin.area_name),
-      csvEscape(items),
-      csvEscape(tags),
-      csvEscape(bin.notes || ''),
-      csvEscape(bin.icon || ''),
-      csvEscape(bin.color || ''),
-      csvEscape(bin.card_style || ''),
-      csvEscape(bin.id || ''),
-      bin.created_at?.includes('T') ? bin.created_at : `${bin.created_at.replace(' ', 'T')}Z`,
-      bin.updated_at?.includes('T') ? bin.updated_at : `${bin.updated_at.replace(' ', 'T')}Z`,
-    ].join(',');
-  });
+  const header = 'Bin Name,Area,Item,Quantity,Tags';
+  const rows: string[] = [];
+
+  for (const bin of bins) {
+    const items = extractItemsWithQuantity(bin.items);
+    const tags = Array.isArray(bin.tags) ? bin.tags.join(',') : '';
+    const binName = csvEscape(bin.name);
+    const area = csvEscape(bin.area_name);
+    const tagsField = csvEscape(tags);
+
+    if (items.length === 0) {
+      rows.push([binName, area, '', '', tagsField].join(','));
+    } else {
+      for (const item of items) {
+        const name = typeof item === 'string' ? item : item.name;
+        const qty = typeof item === 'string' ? '' : String(item.quantity);
+        rows.push([binName, area, csvEscape(name), qty, tagsField].join(','));
+      }
+    }
+  }
 
   const csv = [header, ...rows].join('\n');
 
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="openbin-bins-${new Date().toISOString().slice(0, 10)}.csv"`);
+  res.setHeader('Content-Disposition', `attachment; filename="openbin-inventory-${new Date().toISOString().slice(0, 10)}.csv"`);
   res.send(csv);
 }));
 

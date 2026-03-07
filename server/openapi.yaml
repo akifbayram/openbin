@@ -3488,8 +3488,9 @@ paths:
       tags: [Export]
       summary: Export location as CSV
       description: |
-        Returns a CSV spreadsheet with columns: name, area, items (semicolon-separated),
-        tags (semicolon-separated), notes, icon, color, id.
+        Returns a CSV spreadsheet with one row per item. Columns: Bin Name, Area, Item,
+        Quantity, Tags (comma-separated). Bins with no items get a single row with empty
+        Item and Quantity fields.
       parameters:
         - name: id
           in: path
