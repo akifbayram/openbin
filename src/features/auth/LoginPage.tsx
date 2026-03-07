@@ -13,7 +13,7 @@ import { cycleThemePreference, useTheme } from '@/lib/theme';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, refreshSession } = useAuth();
   const { showToast } = useToast();
   const { settings } = useAppSettings();
   const { preference, setThemePreference } = useTheme();
@@ -40,10 +40,13 @@ export function LoginPage() {
     let cancelled = false;
     setDemoLoading(true);
     apiFetch('/api/auth/demo-login', { method: 'POST' })
-      .then(() => {
+      .then(async () => {
         if (!cancelled) {
           localStorage.setItem('openbin-theme', 'light');
-          window.location.href = '/';
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+          await refreshSession();
+          navigate('/');
         }
       })
       .catch(() => {

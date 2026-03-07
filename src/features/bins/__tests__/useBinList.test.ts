@@ -58,6 +58,7 @@ function authWith(token: string | null, activeLocationId: string | null) {
     login: vi.fn(),
     register: vi.fn(),
     logout: vi.fn(),
+    refreshSession: vi.fn(),
     setActiveLocationId: vi.fn(),
     updateUser: vi.fn(),
     deleteAccount: vi.fn(),
