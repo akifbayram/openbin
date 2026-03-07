@@ -19,7 +19,8 @@ Go to **Settings → Data** to access export options. Exports always include all
 
 Downloads a structured JSON file (`openbin-backup-YYYY-MM-DD.json`) containing:
 
-- All bins (name, items with quantities, tags, notes, icon, color, card style, short code, area, visibility, timestamps)
+- All bins (name, items with quantities, tags, notes, icon, color, card style, short code, area, visibility, custom field values, timestamps)
+- Tag color assignments for the location
 - Photos embedded as base64 strings inside each bin's data
 
 JSON is the recommended format for full-fidelity backups. It preserves all metadata and photos.
@@ -35,9 +36,9 @@ ZIP is preferable when you want to preserve original photo quality without base6
 
 ### CSV Export
 
-Downloads a spreadsheet-compatible CSV file (`openbin-bins-YYYY-MM-DD.csv`) with one row per bin:
+Downloads a spreadsheet-compatible CSV file (`openbin-bins-YYYY-MM-DD.csv`) with one row per item:
 
-- Bin name, area, items (semicolon-separated within the cell; items with quantities appear as `"Item Name (×3)"`), tags, notes
+- Bin name, area, item name, quantity, tags (semicolon-separated), notes
 
 CSV does not include photos or card style settings. Use it when you need to open your inventory in a spreadsheet application.
 
@@ -51,7 +52,8 @@ Go to **Settings → Data → Import** and drag-and-drop a file or click to sele
 
 Full-fidelity import. Restores:
 
-- Bin name, items (with quantities), tags, notes, icon, color, card style
+- Bin name, items (with quantities), tags, notes, icon, color, card style, visibility, custom field values
+- Tag color assignments
 - Photos (re-attached from embedded base64 data)
 - Short codes are re-generated to avoid conflicts with existing bins
 

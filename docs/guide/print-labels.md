@@ -34,6 +34,17 @@ The preview panel on the right updates as you change the selection.
 | `icon-only` | Large icon with the bin name below it. No QR code. Useful for large, clearly-labeled storage. |
 | `text-only` | Bin name and items list as plain text. No QR code. Useful for shelf labels or inventories. |
 
+## Item List Mode
+
+In addition to label sheets, you can print a text-based item list:
+
+1. Switch the **Print Mode** toggle from **Labels** to **Item List**.
+2. Select the bins to include.
+3. Configure options: whether to show areas, tags, quantities, and how items are grouped.
+4. Click **Print** or **Download PDF**.
+
+Item list mode is useful for inventory checklists, packing lists, or auditing what's in each bin without QR codes.
+
 ## Orientation
 
 Switch between **Portrait** and **Landscape** for any page format.

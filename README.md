@@ -1,23 +1,20 @@
-# OpenBin
+<h1>
+  <img src="public/logo.svg" alt="" width="28" />&nbsp;<span style="font-size:32px;line-height:32px;">OpenBin</span>
+</h1>
 
-Self-hosted inventory system for organizing physical storage bins with QR codes. Print labels, scan to find contents, and optionally connect your own AI to do the heavy lifting: snap a photo and it names the bin, lists every item, and tags it for search. Ask "where are the batteries?" and get an answer.
+Self-hosted inventory system for organizing physical storage bins with optional AI-powered cataloging. Snap photos and AI names the bins, lists every item, and tags them for search. Ask "where are the batteries?" or say "move the drill to the garage." Reorganize entire locations with AI suggestions. Print QR labels and scan to find contents instantly.
 
-**[Demo](https://demo.openbin.app)** | **[Documentation](https://akifbayram.github.io/openbin/)** | **[Discord](https://discord.gg/W6JPZCqqx9)**
+<a href="https://demo.openbin.app"><strong>Demo</strong></a> · <a href="https://akifbayram.github.io/openbin/"><strong>Docs</strong></a> · <a href="https://discord.gg/W6JPZCqqx9"><strong>Discord</strong></a>
 
-## Features
+## Highlights
 
-- **AI-powered cataloging** - Snap a photo and AI names the bin, lists every item with quantities, and tags it. Ask "where are the batteries?" or say "move the drill to the garage." Fully optional
-- **Print & scan QR labels** - Generate label sheets, stick them on bins, scan with your phone camera to instantly see contents
-- **Multi-user locations** - Share a location with invite codes, split bins into areas, track all changes in the activity log
-- **MCP server included** - Connect Claude and other AI assistants directly to your inventory via Model Context Protocol
-- **Your data, your server** - Single Docker container, single SQLite file, full JSON/ZIP export with photos. BYO AI.
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Frontend | React 18, TypeScript, Vite 5, Tailwind CSS 4 |
-| Backend | Express 4, SQLite (better-sqlite3), JWT auth |
+- **AI-powered cataloging** — Snap a photo and AI names the bin, lists every item with quantities, and tags it. Bring your own AI.
+- **Natural language commands** — Ask "where are the batteries?" to search, or "move the drill to the garage" to reorganize
+- **AI reorganization** — Let AI suggest how to restructure an entire location's bins, areas, and tags, then apply changes in bulk
+- **Print & scan QR labels** — Generate customizable label sheets, stick them on bins, scan with your phone to see contents
+- **Multi-user locations** — Invite others with a code, assign roles (admin/member/viewer), split bins into areas, track changes in the activity log
+- **MCP server included** — Connect Claude and other AI assistants directly to your inventory via Model Context Protocol
+- **Export everything** — Full JSON/CSV/ZIP export with photos, import from backup anytime
 
 ## Quick Start
 
@@ -48,23 +45,12 @@ docker compose up -d
 
 Open `http://localhost:1453`. Register an account, create a location, and start adding bins.
 
-### Local Development
-
-**Prerequisites:** Node.js 20+
-
-```bash
-npm install                 # Install frontend dependencies
-cd server && npm install    # Install server dependencies
-```
-
-```bash
-cd server && npm run dev   # API server at http://localhost:1453
-npm run dev                 # Frontend dev server at http://localhost:5173
-```
-
 ## Configuration
 
-Optional. Set environment variables or create a `.env` file to override defaults:
+All settings are optional. Set environment variables or create a `.env` file to override defaults. See [`.env.example`](.env.example) for the full list.
+
+<details>
+<summary>Environment variables</summary>
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -79,7 +65,7 @@ Optional. Set environment variables or create a `.env` file to override defaults
 | `ACCESS_TOKEN_EXPIRES_IN` | Short-lived access token lifetime | `15m` |
 | `REFRESH_TOKEN_MAX_DAYS` | Refresh token lifetime in days (1–90) | `7` |
 | `BCRYPT_ROUNDS` | Password hashing rounds | `12` |
-| `REGISTRATION_ENABLED` | Allow new user registration | `true` |
+| `REGISTRATION_MODE` | Registration policy: `open`, `invite` (require location invite code), or `closed` | `open` |
 | **Uploads** | | |
 | `MAX_PHOTO_SIZE_MB` | Max photo upload size in MB | `5` |
 | `MAX_AVATAR_SIZE_MB` | Max avatar upload size in MB | `2` |
@@ -94,8 +80,14 @@ Optional. Set environment variables or create a `.env` file to override defaults
 | `BACKUP_INTERVAL` | Backup schedule (hourly/daily/weekly/cron) | `daily` |
 | `BACKUP_RETENTION` | Backup retention in days | `7` |
 | `BACKUP_WEBHOOK_URL` | Webhook URL for backup notifications | — |
+| **Rate Limiting** | | |
+| `AI_RATE_LIMIT` | Max AI requests per hour per user | `30` |
+| `AI_RATE_LIMIT_API_KEY` | Max AI requests per hour per API key | `1000` |
+| `DISABLE_RATE_LIMIT` | Set `true` to disable all rate limiters (dev only) | `false` |
+| **Demo** | | |
+| `DEMO_MODE` | Auto-login visitors with pre-populated sample data; resets on restart | `false` |
 
-See [`.env.example`](.env.example) for the full list of supported variables.
+</details>
 
 ## Updating
 
@@ -106,11 +98,30 @@ docker compose up -d
 
 The database schema is auto-migrated on startup. Your data volume is preserved across updates.
 
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, TypeScript, Vite 5, Tailwind CSS 4 |
+| Backend | Express 4, SQLite (better-sqlite3), JWT auth |
+
 ## API Documentation
 
-OpenAPI spec at [`server/openapi.yaml`](server/openapi.yaml). Swagger UI available at `/api-docs/` when running behind Nginx.
+OpenAPI spec at [`server/openapi.yaml`](server/openapi.yaml). See the full [API reference](https://akifbayram.github.io/openbin/api/) in the docs.
 
-See the full [API reference](https://akifbayram.github.io/openbin/api/) in the docs.
+## Local Development
+
+**Prerequisites:** Node.js 20+
+
+```bash
+npm install                 # Install frontend dependencies
+cd server && npm install    # Install server dependencies
+```
+
+```bash
+cd server && npm run dev   # API server at http://localhost:1453
+npm run dev                 # Frontend dev server at http://localhost:5173
+```
 
 ## AI Disclosure
 
@@ -120,4 +131,4 @@ The full source is available for you to audit. If you find a bug or security iss
 
 ## License
 
-[GPL-3.0](LICENSE)
+[AGPL-3.0](LICENSE)

@@ -93,12 +93,24 @@ Do I have any sandpaper?
 
 OpenBin searches your bins and returns matching results with an explanation of why each bin matched.
 
+## AI Reorganization
+
+The Reorganize page lets AI suggest how to restructure an entire location's bins, areas, and tags — then apply those changes in bulk.
+
+1. Navigate to **Reorganize** from the sidebar.
+2. Select the bins to include (defaults to all).
+3. Click **Suggest Reorganization** — AI streams back proposed changes: renaming bins, moving them between areas, updating tags, and creating new areas.
+4. Review the preview showing all proposed changes side-by-side with current state.
+5. Click **Apply** to execute the changes or dismiss individual suggestions.
+
+A custom reorganization prompt can be set in **Settings → AI → Advanced** to guide the AI's restructuring logic (e.g. "group by room" or "consolidate similar items").
+
 ## Custom Prompts
 
 Advanced users can override the default AI prompts for each operation:
 
 1. Go to **Settings → AI → Advanced**.
-2. Enter a custom prompt for photo analysis, commands, search queries, or text structuring.
+2. Enter a custom prompt for photo analysis, commands, search queries, text structuring, or reorganization.
 3. Save.
 
 Custom prompts are useful for domain-specific terminology, non-English languages, or specialized inventory contexts.
@@ -123,5 +135,6 @@ These settings apply per provider configuration.
 ## Related
 
 - [Bulk Add](/guide/bulk-add) — Create multiple bins from photos using AI
+- [Bulk Operations](/guide/bulk-operations) — Multi-select bins for batch editing
 - [Photos](/guide/photos) — Attach and manage bin photos
 - [Configuration](/getting-started/configuration) — Server-wide AI environment variables

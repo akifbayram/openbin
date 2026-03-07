@@ -55,7 +55,7 @@ Key variables for local development:
 | `DATABASE_PATH` | `./data/openbin.db` | SQLite file path; created automatically on first run |
 | `CORS_ORIGIN` | `http://localhost:5173` | Must match the Vite dev server URL |
 | `PORT` | `1453` | Express server port |
-| `REGISTRATION_ENABLED` | `true` | Set to `false` to lock sign-ups |
+| `REGISTRATION_MODE` | `open` | `open`, `invite` (require invite code), or `closed` (no sign-ups) |
 
 ::: tip
 For most local development workflows you do not need a `.env` file at all. The defaults work with the standard Vite + Express setup.

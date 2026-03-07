@@ -36,7 +36,7 @@ Uncomment only the lines you need to change. The file is loaded automatically by
 | `REFRESH_TOKEN_MAX_DAYS` | `7` | Refresh token lifetime in days. Accepted range: 1–90. |
 | `COOKIE_SECURE` | _(auto)_ | Forces the `Secure` flag on cookies. Defaults to `true` in production automatically. Set explicitly if needed. |
 | `BCRYPT_ROUNDS` | `12` | Password hashing cost factor. Range: 4–31. Higher values are more secure but slower. |
-| `REGISTRATION_ENABLED` | `true` | Set to `false` to disable new user registration. Existing users can still log in. |
+| `REGISTRATION_MODE` | `open` | Registration policy. `open` — anyone can register. `invite` — new users must enter a location invite code during sign-up. `closed` — no new registrations; existing users can still log in. |
 
 ---
 
@@ -99,6 +99,17 @@ Backup files are written to `/data/backups/` inside the container (`BACKUP_PATH`
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DISABLE_RATE_LIMIT` | `false` | Set to `true` to disable all rate limiters. Useful in development or automated test environments. Do not disable in production. |
+| `AI_RATE_LIMIT` | `30` | Maximum AI requests per hour per user (JWT auth). |
+| `AI_RATE_LIMIT_API_KEY` | `1000` | Maximum AI requests per hour per API key. |
+
+---
+
+### Demo
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DEMO_MODE` | `false` | When `true`, visitors are auto-logged in with pre-populated sample data. The database resets on every container restart. Intended for public demos. |
+| `AI_MOCK` | `false` | Returns fake AI responses without calling a real provider. Useful for testing the AI flow without an API key. |
 
 ---
 

@@ -245,12 +245,15 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     structure: { value: structurePrompt, set: setStructurePrompt },
                     reorganization: { value: reorganizationPrompt, set: setReorganizationPrompt },
                   };
+                  const V = ({ children }: { children: string }) => (
+                    <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--bg-input)]">{children}</code>
+                  );
                   const helpText: Record<PromptTab, React.ReactNode> = {
-                    analysis: <>Use <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--bg-input)]">{'{available_tags}'}</code> to inject existing tags. Leave empty for default.</>,
-                    command: 'Customize how commands are parsed. Leave empty for default.',
-                    query: 'Customize how inventory queries are answered. Leave empty for default.',
-                    structure: 'Customize how text is parsed into item lists. Leave empty for default.',
-                    reorganization: 'Customize how bins are reorganized by AI. Leave empty for default.',
+                    analysis: <>Available variables: <V>{'{available_tags}'}</V>. Custom fields are appended automatically.</>,
+                    command: <>Inventory context (bins, items, areas, tags, colors, icons) is passed automatically. This prompt defines the instructions only.</>,
+                    query: <>Inventory context (bins, items, areas, tags) is passed automatically. This prompt defines the instructions only.</>,
+                    structure: <>Bin name and existing items are appended automatically. This prompt defines the extraction rules.</>,
+                    reorganization: <>Available variables: <V>{'{available_tags}'}</V> <V>{'{max_bins_instruction}'}</V> <V>{'{area_instruction}'}</V> <V>{'{strictness_instruction}'}</V> <V>{'{granularity_instruction}'}</V> <V>{'{duplicates_instruction}'}</V> <V>{'{ambiguous_instruction}'}</V> <V>{'{outliers_instruction}'}</V> <V>{'{items_per_bin_instruction}'}</V> <V>{'{notes_instruction}'}</V></>,
                   };
                   const active = promptMap[activePromptTab];
                   return (

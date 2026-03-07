@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   ChevronRight,
   Clock,
+  Compass,
   Database,
   Download,
   FileArchive,
@@ -146,27 +147,32 @@ export function DataSection({
     <>
       <Card>
         <CardContent>
-          <Label className="inline-flex items-center gap-1.5"><Database className="h-3.5 w-3.5" />Data</Label>
+          <Label className="inline-flex items-center gap-1.5"><Compass className="h-3.5 w-3.5" />Navigation</Label>
+          <div className="mt-3">
+            <RowGroup>
+              <SettingsRow
+                icon={Clock}
+                label="Activity Log"
+                description="View changes and actions"
+                onClick={() => navigate('/activity')}
+                chevron
+              />
+              <RowDivider />
+              <SettingsRow
+                icon={Trash2}
+                label="Trash"
+                description="Restore or permanently delete"
+                onClick={() => navigate('/trash')}
+                chevron
+              />
+            </RowGroup>
+          </div>
+        </CardContent>
+      </Card>
 
-          {/* Navigation */}
-          <SectionLabel>Navigation</SectionLabel>
-          <RowGroup>
-            <SettingsRow
-              icon={Clock}
-              label="Activity Log"
-              description="View changes and actions"
-              onClick={() => navigate('/activity')}
-              chevron
-            />
-            <RowDivider />
-            <SettingsRow
-              icon={Trash2}
-              label="Trash"
-              description="Restore or permanently delete"
-              onClick={() => navigate('/trash')}
-              chevron
-            />
-          </RowGroup>
+      <Card>
+        <CardContent>
+          <Label className="inline-flex items-center gap-1.5"><Database className="h-3.5 w-3.5" />Data</Label>
 
           {/* Export */}
           <SectionLabel trailing={statsText}>Export</SectionLabel>

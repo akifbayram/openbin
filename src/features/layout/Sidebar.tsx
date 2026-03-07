@@ -138,11 +138,9 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
           ))}
         </div>
 
-        {/* Spacer top */}
-        <div className="flex-1" />
-
-        {/* Manage section */}
-        <div className="space-y-1">
+        {/* Manage section — scrollable when viewport is short */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="space-y-1 pt-4">
           <p className={cn(
             'px-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] overflow-hidden',
             collapsed ? 'h-0 opacity-0' : 'pb-1'
@@ -166,9 +164,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
             )
           )}
         </div>
-
-        {/* Spacer bottom */}
-        <div className="flex-1" />
+        </div>
       </div>
 
       {/* Administration section */}

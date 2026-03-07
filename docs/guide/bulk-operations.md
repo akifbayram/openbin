@@ -9,7 +9,7 @@ next:
 
 # Bulk Operations
 
-Bulk operations let you perform the same action on many bins at once — saving time when reorganizing, retagging, or cleaning up a large collection.
+Bulk operations let you perform the same action on many bins at once — saving time when reorganizing, retagging, or cleaning up a large collection. Multi-select is available from both the bin list and the [dashboard](/guide/dashboard).
 
 ## Entering Multi-Select Mode
 
@@ -52,6 +52,10 @@ Set the icon, color, and card style across all selected bins in one operation.
 - The dialog shows separate sections for icon, color, and card style.
 - Only the sections you actually change are applied — a dirty-flag system tracks which fields were modified.
 - For example, if you change the color but not the icon, existing icons on the selected bins are preserved.
+
+### Bulk Custom Fields
+
+Set custom field values across all selected bins. Only fields you modify are applied — existing values in unchanged fields are preserved.
 
 ### Bulk Visibility
 

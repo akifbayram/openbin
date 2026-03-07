@@ -229,7 +229,8 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
     setLoading(true);
     try {
       // Only create a location if one wasn't already created in step 0
-      if (!locationId) {
+      // and we're not in demo mode (which already has an active location)
+      if (!locationId && !demoMode) {
         const loc = await createLocation(`My ${t.Location}`);
         setActiveLocationId(loc.id);
       }

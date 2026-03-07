@@ -55,6 +55,10 @@ These are bins that were created but not fully set up. The count gives you a cle
 
 A summary of how many bins are in each area, sorted by bin count descending. Unassigned bins appear at the bottom if any exist.
 
+## Bulk Actions
+
+You can multi-select bins directly from the dashboard to perform bulk operations. Enter multi-select mode the same way as the bin list (long-press on mobile, checkbox on desktop). The bulk action bar appears at the bottom with options to tag, move, restyle, or delete the selected bins. See [Bulk Operations](/guide/bulk-operations) for details.
+
 ## Saved Views
 
 Saved filter/sort presets (created from the bin list — see [Search & Filter](/guide/search-filter#saved-views)) appear on the dashboard as quick-access buttons. Clicking one opens the bin list with those filters pre-applied.

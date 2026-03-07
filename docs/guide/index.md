@@ -42,7 +42,7 @@ Structure your inventory and make it your own.
 
 Let AI help manage your inventory.
 
-- **[AI Features](/guide/ai)** — Photo analysis, natural language commands, and inventory search
+- **[AI Features](/guide/ai)** — Photo analysis, natural language commands, inventory search, and AI reorganization
 - **[Bulk Add](/guide/bulk-add)** — Upload photos and let AI create bins in batch
 - **[API Keys](/guide/api-keys)** — Create long-lived tokens for scripts and automation
 - **[MCP Server](/guide/mcp-server)** — Connect AI assistants like Claude directly to OpenBin

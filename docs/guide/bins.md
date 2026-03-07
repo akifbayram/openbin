@@ -77,6 +77,23 @@ Card style controls the visual treatment of the bin card beyond just color. The 
 | `stripe` | Colored stripe on one side of the card. Configure position (left, right, top, bottom) and width (1–10 units). |
 | `photo` | Uses one of the bin's attached photos as the full card background image. |
 
+## Custom Fields
+
+Admins can define location-scoped custom fields that appear on every bin. Custom fields are key–value pairs useful for tracking domain-specific metadata like "Purchase Date", "Serial Number", or "Warranty Expires".
+
+### Managing Custom Fields
+
+1. Go to **Location Settings → Custom Fields**.
+2. Add a field name and confirm.
+3. Drag to reorder fields — the order is reflected on every bin.
+4. Rename or delete fields as needed. Deleting a field removes its values from all bins.
+
+### Using Custom Fields
+
+When creating or editing a bin, custom fields appear as text inputs below the standard fields. Leave a field blank to skip it — blank fields are hidden in view mode.
+
+Custom field values are included in JSON/ZIP exports and AI suggestions.
+
 ## Visibility
 
 | Value | Who can see it |

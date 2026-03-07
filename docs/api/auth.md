@@ -20,15 +20,18 @@ Returns server configuration flags relevant to the auth UI. No authentication re
 
 ```json
 {
-  "registrationEnabled": true
+  "registrationEnabled": true,
+  "registrationMode": "open"
 }
 ```
+
+`registrationMode` is one of `"open"`, `"invite"`, or `"closed"`. `registrationEnabled` is `true` unless mode is `"closed"` (kept for backward compatibility).
 
 ---
 
 ### POST /api/auth/register
 
-Creates a new user account. Rate limited to 3 per hour. Returns 403 if registration is disabled via the `REGISTRATION_ENABLED` environment variable.
+Creates a new user account. Rate limited to 3 per hour. Returns 403 if registration is disabled via `REGISTRATION_MODE=closed`. When `REGISTRATION_MODE=invite`, the request must include a valid location invite code.
 
 **Request body**
 
