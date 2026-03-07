@@ -6,7 +6,7 @@ You may receive 1–5 photos of the same bin from different angles. Cross-refere
 
 "items" — An array of item objects, each with "name" (string) and optionally "quantity" (number, omit or null if unknown/not applicable). One entry per distinct item type. Be specific: "adjustable crescent wrench" not just "wrench"; "AA batteries" not "batteries". Include brand names, model numbers, or sizes when clearly readable on labels. For sealed/packaged items, describe the product, not the packaging. Omit the bin or container itself. Order from most prominent to least prominent. Include quantity when you can count or clearly estimate the number of identical items (e.g. 3 rolls of tape). Omit quantity for single items or when the count is uncertain.
 
-"tags" — 2–5 lowercase single-word category labels for filtering. Each tag MUST be a single word (never multi-word). Use plural nouns: "tools", "cables", "batteries". Start broad, then add 1–2 specific subcategories: ["tools", "screwdrivers"] or ["electronics", "cables", "usb"]. Prefer standard terms: tools, electronics, hardware, office, kitchen, craft, seasonal, automotive, outdoor, clothing, toys, cleaning, medical, plumbing, electrical, cables, batteries, fasteners, adhesives, paint, garden, sports, storage, lighting, sewing.
+"tags" — 2–5 lowercase single-word category labels for filtering. Each tag MUST be a single word (never multi-word). Use plural nouns: "tools", "cables", "batteries". Start broad, then add 1–2 specific subcategories: ["tools", "screwdrivers"] or ["electronics", "cables", "usb"]. Strongly prefer reusing tags already in the inventory over inventing new ones. Preferred standard terms: tools, electronics, hardware, office, kitchen, craft, seasonal, automotive, outdoor, clothing, toys, cleaning, medical, plumbing, electrical, cables, batteries, fasteners, adhesives, paint, garden, sports, storage, lighting, sewing.
 
 "notes" — One sentence on organization or condition. Mention: how contents are arranged (sorted by size, loosely mixed, in original packaging), condition (new, used, worn), or any notable labels/markings. Use empty string "" if nothing notable.
 
@@ -73,7 +73,7 @@ export const AI_CORRECTION_PROMPT = `You are an inventory cataloging assistant c
 
 "items" — An array of item objects, each with "name" (string) and optionally "quantity" (number). One entry per distinct item type. Be specific. Order from most prominent to least prominent.
 
-"tags" — 2–5 lowercase single-word category labels for filtering. Each tag MUST be a single word. Use plural nouns.
+"tags" — 2–5 lowercase single-word category labels for filtering. Each tag MUST be a single word. Use plural nouns. Strongly prefer reusing existing tags over creating new ones.
 
 "notes" — One sentence on organization or condition. Use empty string "" if nothing notable.
 
@@ -86,7 +86,9 @@ export const DEFAULT_REORGANIZATION_PROMPT = `You are a storage reorganization a
 Rules:
 - Group related items together logically (e.g., all fasteners in one bin, all adhesives in another).
 - Give each bin a clear, descriptive name.
-- Respond with valid JSON only: { "bins": [{ "name": "Bin Name", "items": ["item1", "item2"] }], "summary": "Brief explanation of the reorganization." }
+- Assign 2–5 lowercase single-word tags to each bin for filtering. Strongly prefer reusing tags from the input bins. Only create new tags when no existing tag covers the category.
+- Respond with valid JSON only: { "bins": [{ "name": "Bin Name", "items": ["item1", "item2"], "tags": ["tag1", "tag2"] }], "summary": "Brief explanation of the reorganization." }
+{available_tags}
 {max_bins_instruction}
 {area_instruction}
 {strictness_instruction}

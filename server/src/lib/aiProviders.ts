@@ -44,55 +44,34 @@ export interface ImageInput {
   mimeType: string;
 }
 
+function buildTagBlock(existingTags?: string[]): string {
+  if (!existingTags || existingTags.length === 0) return '';
+  return `EXISTING TAGS in this inventory: [${existingTags.join(', ')}]
+You MUST use tags from this list whenever they are even loosely relevant. Do NOT create synonyms, abbreviations, or variations of existing tags (e.g., if "tools" exists, never output "tool", "tooling", or "hand-tools"). Only create a new tag when the bin's contents represent a category not covered by ANY existing tag. New tags should be rare.`;
+}
+
+function appendCustomFieldsDef(prompt: string, customFieldDefs?: CustomFieldDef[]): string {
+  if (!customFieldDefs || customFieldDefs.length === 0) return prompt;
+  const fieldList = customFieldDefs.map((f) => `"${f.name}" (id: ${f.id})`).join(', ');
+  return `${prompt}\n\nCUSTOM FIELDS defined for this location: [${fieldList}]
+If any of these fields are relevant to the bin's contents, include a "customFields" object in your response mapping field IDs to suggested values. Only include fields where you can provide a meaningful value.`;
+}
+
+function injectTagBlock(basePrompt: string, tagBlock: string): string {
+  if (!tagBlock) return basePrompt.replace(/\{available_tags\}/g, '');
+  if (basePrompt.includes('{available_tags}')) return basePrompt.replace(/\{available_tags\}/g, tagBlock);
+  return `${basePrompt}\n\n${tagBlock}`;
+}
+
 export function buildSystemPrompt(existingTags?: string[], customPrompt?: string | null, customFieldDefs?: CustomFieldDef[]): string {
   const basePrompt = customPrompt || DEFAULT_AI_PROMPT;
-
-  let prompt: string;
-  if (!existingTags || existingTags.length === 0) {
-    prompt = basePrompt.replace(/\{available_tags\}/g, '');
-  } else {
-    const tagBlock = `EXISTING TAGS in this inventory: [${existingTags.join(', ')}]
-When a relevant existing tag fits the bin's contents, reuse it instead of creating a new synonym. Only create new tags when no existing tag is appropriate.`;
-
-    if (basePrompt.includes('{available_tags}')) {
-      prompt = basePrompt.replace(/\{available_tags\}/g, tagBlock);
-    } else {
-      prompt = `${basePrompt}\n\n${tagBlock}`;
-    }
-  }
-
-  if (customFieldDefs && customFieldDefs.length > 0) {
-    const fieldList = customFieldDefs.map((f) => `"${f.name}" (id: ${f.id})`).join(', ');
-    prompt += `\n\nCUSTOM FIELDS defined for this location: [${fieldList}]
-If any of these fields are relevant to the bin's contents, include a "customFields" object in your response mapping field IDs to suggested values. Only include fields where you can provide a meaningful value.`;
-  }
-
-  return prompt;
+  const prompt = injectTagBlock(basePrompt, buildTagBlock(existingTags));
+  return appendCustomFieldsDef(prompt, customFieldDefs);
 }
 
 export function buildCorrectionPrompt(existingTags?: string[], customFieldDefs?: CustomFieldDef[]): string {
-  let prompt = AI_CORRECTION_PROMPT;
-
-  if (!existingTags || existingTags.length === 0) {
-    prompt = prompt.replace(/\{available_tags\}/g, '');
-  } else {
-    const tagBlock = `EXISTING TAGS in this inventory: [${existingTags.join(', ')}]
-When a relevant existing tag fits the bin's contents, reuse it instead of creating a new synonym. Only create new tags when no existing tag is appropriate.`;
-
-    if (prompt.includes('{available_tags}')) {
-      prompt = prompt.replace(/\{available_tags\}/g, tagBlock);
-    } else {
-      prompt = `${prompt}\n\n${tagBlock}`;
-    }
-  }
-
-  if (customFieldDefs && customFieldDefs.length > 0) {
-    const fieldList = customFieldDefs.map((f) => `"${f.name}" (id: ${f.id})`).join(', ');
-    prompt += `\n\nCUSTOM FIELDS defined for this location: [${fieldList}]
-If any of these fields are relevant to the bin's contents, include a "customFields" object in your response mapping field IDs to suggested values. Only include fields where you can provide a meaningful value.`;
-  }
-
-  return prompt;
+  const prompt = injectTagBlock(AI_CORRECTION_PROMPT, buildTagBlock(existingTags));
+  return appendCustomFieldsDef(prompt, customFieldDefs);
 }
 
 function validateSuggestions(raw: unknown): AiSuggestionsResult {

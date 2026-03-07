@@ -1,12 +1,9 @@
 import { Package } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import type { PartialReorgResult } from './parsePartialReorg';
-
-interface ReorgResponse {
-  bins: Array<{ name: string; items: string[] }>;
-  summary: string;
-}
+import type { ReorgResponse } from './useReorganize';
 
 interface ReorganizePreviewProps {
   result: ReorgResponse | null;
@@ -65,6 +62,15 @@ export function ReorganizePreview({
                   </li>
                 ))}
               </ul>
+            )}
+            {(bin.tags ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-1 pl-6">
+                {(bin.tags ?? []).map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-[11px]">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             )}
           </div>
         ))}

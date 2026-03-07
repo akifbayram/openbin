@@ -62,6 +62,12 @@ export interface CommandResult {
 export function buildSystemPrompt(request: CommandRequest, customPrompt?: string): string {
   const basePrompt = customPrompt || DEFAULT_COMMAND_PROMPT;
 
+  // Extract unique tags from bins already in context
+  const existingTags = [...new Set(request.context.bins.flatMap((b) => b.tags))].sort();
+  const tagBlock = existingTags.length > 0
+    ? `\nExisting tags in this inventory: [${existingTags.join(', ')}]\nWhen adding tags (add_tags, create_bin, update_bin), you MUST reuse tags from this list whenever they are even loosely relevant. Only create a new tag when no existing tag covers the category. Do NOT create synonyms or variations of existing tags.`
+    : '';
+
   return `${basePrompt}
 
 Available action types:
@@ -97,7 +103,7 @@ IMPORTANT RULES:
 
 Example responses:
 {"actions":[{"type":"remove_items","bin_id":"abc","bin_name":"Tools","items":["Hammer"]},{"type":"add_items","bin_id":"def","bin_name":"Garage","items":["Hammer"]}],"interpretation":"Move hammer from Tools to Garage"}
-{"actions":[{"type":"create_bin","name":"Holiday Lights","area_name":"Garage","items":["LED string lights","Extension cord","Light clips"],"tags":["seasonal","holiday"]}],"interpretation":"Create a Holiday Lights bin in the Garage with 3 items."}`;
+{"actions":[{"type":"create_bin","name":"Holiday Lights","area_name":"Garage","items":["LED string lights","Extension cord","Light clips"],"tags":["seasonal","holiday"]}],"interpretation":"Create a Holiday Lights bin in the Garage with 3 items."}${tagBlock}`;
 }
 
 export function buildUserMessage(request: CommandRequest): string {

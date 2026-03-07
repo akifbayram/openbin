@@ -339,6 +339,15 @@ streamRouter.post('/reorganize/stream', aiLimiter, requireLocationMember(), aiRo
 
   const notesInstruction = userNotes?.trim() ? `Additional user guidance: ${userNotes.trim()}` : '';
 
+  // Extract unique tags from input bins for reuse guidance
+  const existingTags = [...new Set(
+    inputBins.flatMap((b: { tags?: string[] }) => b.tags ?? [])
+  )].sort();
+
+  const tagBlock = existingTags.length > 0
+    ? `EXISTING TAGS from these bins: [${existingTags.join(', ')}]\nYou MUST reuse these tags whenever they are even loosely relevant. Only create a new tag when no existing tag covers the category.`
+    : '';
+
   const system = basePrompt
     .replace('{max_bins_instruction}', maxBinsInstruction)
     .replace('{area_instruction}', areaInstruction)
@@ -348,7 +357,8 @@ streamRouter.post('/reorganize/stream', aiLimiter, requireLocationMember(), aiRo
     .replace('{ambiguous_instruction}', ambiguousInstruction)
     .replace('{outliers_instruction}', outliersInstruction)
     .replace('{items_per_bin_instruction}', itemsPerBinInstruction)
-    .replace('{notes_instruction}', notesInstruction);
+    .replace('{notes_instruction}', notesInstruction)
+    .replace('{available_tags}', tagBlock);
 
   // Build user message: list of bins with items
   const binDescriptions = inputBins.map((b: { name: string; items: string[] }) =>

@@ -1,6 +1,7 @@
 export interface PartialReorgBin {
   name: string;
   items: string[];
+  tags: string[];
 }
 
 export interface PartialReorgResult {
@@ -9,6 +10,22 @@ export interface PartialReorgResult {
 }
 
 /** Extract completed bins and summary from a partial JSON stream of { bins: [...], summary: "..." }. */
+const TAGS_PATTERN = /"tags"\s*:\s*\[([^\]]*)\]/;
+const QUOTED_STRING = /"((?:[^"\\]|\\.)*)"/g;
+
+/** Find the index of the closing `}` for a bin object starting after `startIdx` in `text`. */
+function findBinObjectEnd(text: string, startIdx: number): number {
+  let depth = 1;
+  for (let i = startIdx; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    else if (text[i] === '}') {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
 export function parsePartialReorg(text: string): PartialReorgResult {
   const bins: PartialReorgBin[] = [];
   let summary = '';
@@ -39,8 +56,7 @@ export function parsePartialReorg(text: string): PartialReorgResult {
     const region = closeBracket !== -1 ? remaining.slice(0, closeBracket) : remaining;
 
     // Match complete quoted strings
-    const itemPattern = /"((?:[^"\\]|\\.)*)"/g;
-    for (const itemMatch of region.matchAll(itemPattern)) {
+    for (const itemMatch of region.matchAll(QUOTED_STRING)) {
       items.push(itemMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
     }
 
@@ -53,7 +69,23 @@ export function parsePartialReorg(text: string): PartialReorgResult {
       }
     }
 
-    bins.push({ name, items });
+    // Extract tags array if present — scoped to the current bin object only
+    const tags: string[] = [];
+    if (closeBracket !== -1) {
+      const afterItemsOffset = itemsStart + closeBracket + 1;
+      // Find the closing brace of this bin object to scope the search
+      const binEnd = findBinObjectEnd(afterBracket, match.index + 1);
+      const searchEnd = binEnd !== -1 ? binEnd : afterBracket.length;
+      const binRemainder = afterBracket.slice(afterItemsOffset, searchEnd);
+      const tagsMatch = binRemainder.match(TAGS_PATTERN);
+      if (tagsMatch) {
+        for (const tagMatch of tagsMatch[1].matchAll(QUOTED_STRING)) {
+          tags.push(tagMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
+        }
+      }
+    }
+
+    bins.push({ name, items, tags });
   }
 
   return { bins, summary };
