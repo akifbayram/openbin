@@ -18,7 +18,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { activeLocationId } = useAuth();
-  const { isAdmin, canEditBin, canChangeVisibility } = usePermissions();
+  const { isAdmin, canWrite, canEditBin, canChangeVisibility, canPin, canEditItems } = usePermissions();
   const { aiEnabled } = useAiEnabled();
   const t = useTerminology();
 
@@ -129,8 +129,9 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     }
   }
 
-  const canEdit = bin ? canEditBin(bin.created_by) : false;
+  const canEdit = bin ? canWrite : false;
   const canDelete = isAdmin;
+  const canEditMeta = bin ? canEditBin(bin.created_by) : false;
   const showAiButton = aiEnabled && photos.length > 0 && !editing;
   const hasNotes = !!bin?.notes;
   const hasTags = (bin?.tags.length ?? 0) > 0;
@@ -155,7 +156,10 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     quickAdd,
     // Flags
     canEdit,
+    canEditMeta,
+    canEditItems,
     canDelete,
+    canPin,
     canChangeVisibility,
     showAiButton,
     hasNotes,

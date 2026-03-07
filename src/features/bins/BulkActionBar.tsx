@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 interface BulkActionBarProps {
   selectedCount: number;
   isAdmin: boolean;
+  canWrite?: boolean;
   onTag: () => void;
   onMove: () => void;
   onDelete: () => void;
@@ -25,7 +26,7 @@ interface BulkActionBarProps {
   canPasteStyle?: boolean;
 }
 
-export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel, onCustomFields, onCopyStyle, onPasteStyle, canCopyStyle, canPasteStyle }: BulkActionBarProps) {
+export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel, onCustomFields, onCopyStyle, onPasteStyle, canCopyStyle, canPasteStyle }: BulkActionBarProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -35,6 +36,8 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
   }, []);
+
+  if (!canWrite) return null;
 
   function handleMoreAction(action: () => void) {
     setMoreOpen(false);

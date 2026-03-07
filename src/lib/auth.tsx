@@ -13,7 +13,7 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string, displayName: string) => Promise<void>;
+  register: (username: string, password: string, displayName: string, inviteCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   setActiveLocationId: (id: string | null) => void;
@@ -130,19 +130,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const register = useCallback(async (username: string, password: string, displayName: string) => {
+  const register = useCallback(async (username: string, password: string, displayName: string, inviteCode?: string) => {
+    const body: Record<string, string> = { username, password, displayName };
+    if (inviteCode) body.inviteCode = inviteCode;
     const data = await apiFetch<{ token: string; user: User; activeLocationId?: string }>('/api/auth/register', {
       method: 'POST',
-      body: { username, password, displayName },
+      body,
     });
-    // New registrations have no locations — clear any stale value from a previous session
-    localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
-    setState((s) => ({
-      ...s,
-      user: data.user,
-      token: 'cookie',
-      activeLocationId: null,
-    }));
+    if (data.activeLocationId) {
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, data.activeLocationId);
+      setState((s) => ({
+        ...s,
+        user: data.user,
+        token: 'cookie',
+        activeLocationId: data.activeLocationId ?? null,
+      }));
+    } else {
+      // New registrations have no locations — clear any stale value from a previous session
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
+      setState((s) => ({
+        ...s,
+        user: data.user,
+        token: 'cookie',
+        activeLocationId: null,
+      }));
+    }
   }, []);
 
   const logout = useCallback(async () => {

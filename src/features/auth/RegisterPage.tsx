@@ -1,6 +1,6 @@
 import { Check, Monitor, Moon, Sun, UserPlus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,50}$/;
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { register } = useAuth();
   const { showToast } = useToast();
   const { settings } = useAppSettings();
@@ -23,16 +24,19 @@ export function RegisterPage() {
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState(searchParams.get('invite') ?? '');
+  const [registrationMode, setRegistrationMode] = useState<'open' | 'invite'>('open');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/status')
       .then((r) => r.json())
       .then((data) => {
-        if (data.registrationEnabled === false) {
+        if (data.registrationMode === 'closed' || data.registrationEnabled === false) {
           showToast({ message: 'Registration is currently disabled', variant: 'warning' });
           navigate('/login');
         }
+        setRegistrationMode(data.registrationMode ?? 'open');
       })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -55,6 +59,9 @@ export function RegisterPage() {
     if (password !== confirmPassword) {
       return 'Passwords do not match';
     }
+    if (registrationMode === 'invite' && !inviteCode.trim()) {
+      return 'An invite code is required to register';
+    }
     return null;
   }
 
@@ -67,7 +74,7 @@ export function RegisterPage() {
     }
     setLoading(true);
     try {
-      await register(username.trim(), password, displayName.trim() || username.trim());
+      await register(username.trim(), password, displayName.trim() || username.trim(), inviteCode.trim() || undefined);
       navigate('/');
     } catch (err) {
       showToast({
@@ -165,6 +172,17 @@ export function RegisterPage() {
                   placeholder="Repeat password"
                   autoComplete="new-password"
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reg-invite">
+                  {registrationMode === 'invite' ? 'Invite Code (required)' : 'Invite Code'}
+                </Label>
+                <Input
+                  id="reg-invite"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  placeholder="Paste invite code to auto-join a location"
                 />
               </div>
               <Button
