@@ -88,7 +88,7 @@ export function AiProgressBar({
         className={cn(
           'ai-progress-track relative overflow-hidden rounded-full',
           'bg-[var(--bg-input)] border border-[var(--border-glass)]',
-          compact ? 'h-1.5' : 'h-2',
+          compact ? 'h-1.5' : 'h-3',
         )}
       >
         {/* Glow backdrop */}
