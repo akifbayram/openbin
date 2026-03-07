@@ -1,4 +1,5 @@
 import { CheckCircle2, ChevronDown, Circle, Package } from 'lucide-react';
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -32,6 +33,17 @@ export function BinSelectorCard({
 }: BinSelectorCardProps) {
   const t = useTerminology();
 
+  const grouped = useMemo(() => {
+    const namedGroups: { label: string; bins: Bin[] }[] = [];
+    for (const area of areas) {
+      const areaBins = allBins.filter((b) => b.area_id === area.id);
+      if (areaBins.length > 0) namedGroups.push({ label: area.name, bins: areaBins });
+    }
+    const unassigned = allBins.filter((b) => !b.area_id);
+    if (unassigned.length > 0) namedGroups.push({ label: 'Unassigned', bins: unassigned });
+    return namedGroups;
+  }, [allBins, areas]);
+
   return (
     <Card>
       <CardContent>
@@ -39,19 +51,26 @@ export function BinSelectorCard({
           <button
             type="button"
             className="row flex-1 min-w-0"
+            aria-expanded={expanded}
             onClick={() => onExpandedChange(!expanded)}
           >
             <Package className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Select {t.Bins}</Label>
             <span className="text-[13px] text-[var(--text-tertiary)]">({selectedIds.size} selected)</span>
-            <ChevronDown className={cn(
-              'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
-              expanded && 'rotate-180'
-            )} />
           </button>
-          <div className="flex gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <Button variant="ghost" size="sm" onClick={selectAll} className="text-[13px] text-[var(--accent)] h-8 px-2.5">All</Button>
             <Button variant="ghost" size="sm" onClick={selectNone} className="text-[13px] text-[var(--accent)] h-8 px-2.5">None</Button>
+            <button
+              type="button"
+              className="p-1"
+              onClick={() => onExpandedChange(!expanded)}
+            >
+              <ChevronDown className={cn(
+                'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
+                expanded && 'rotate-180'
+              )} />
+            </button>
           </div>
         </div>
 
@@ -67,7 +86,7 @@ export function BinSelectorCard({
                       key={area.id}
                       type="button"
                       onClick={() => selectByArea(area.id)}
-                      className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)] transition-colors"
+                      className="inline-flex items-center px-3 py-1.5 rounded-[var(--radius-full)] border border-[var(--border-glass)] text-[12px] font-medium bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)] hover:border-[var(--border-default)] transition-colors"
                     >
                       {area.name}
                       <span className="ml-1 text-[var(--text-tertiary)]">({count})</span>
@@ -78,7 +97,7 @@ export function BinSelectorCard({
                   <button
                     type="button"
                     onClick={() => selectByArea(null)}
-                    className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors italic"
+                    className="inline-flex items-center px-3 py-1.5 rounded-[var(--radius-full)] border border-[var(--border-glass)] text-[12px] font-medium bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] hover:border-[var(--border-default)] transition-colors italic"
                   >
                     Unassigned
                     <span className="ml-1">({allBins.filter((b) => !b.area_id).length})</span>
@@ -92,31 +111,40 @@ export function BinSelectorCard({
               </p>
             ) : (
               <div className="space-y-0.5 max-h-80 overflow-y-auto -mx-2">
-                {allBins.map((bin) => {
-                  const checked = selectedIds.has(bin.id);
-                  const colorPreset = bin.color ? resolveColor(bin.color) : null;
-                  return (
-                    <button
-                      type="button"
-                      key={bin.id}
-                      className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-3 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
-                      onClick={() => toggleBin(bin.id)}
-                    >
-                      {checked ? (
-                        <CheckCircle2 className="h-[22px] w-[22px] text-[var(--accent)] shrink-0" />
-                      ) : (
-                        <Circle className="h-[22px] w-[22px] text-[var(--text-tertiary)] shrink-0" />
-                      )}
-                      {colorPreset && (
-                        <div
-                          className="h-2.5 w-2.5 rounded-full shrink-0 ring-1 ring-[var(--border-subtle)]"
-                          style={{ backgroundColor: colorPreset.bg }}
-                        />
-                      )}
-                      <span className="text-[15px] text-[var(--text-primary)] truncate">{bin.name}</span>
-                    </button>
-                  );
-                })}
+                {grouped.map((group) => (
+                  <div key={group.label}>
+                    {grouped.length > 1 && (
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] px-3 pt-3 pb-1">
+                        {group.label}
+                      </div>
+                    )}
+                    {group.bins.map((bin) => {
+                      const checked = selectedIds.has(bin.id);
+                      const colorPreset = bin.color ? resolveColor(bin.color) : null;
+                      return (
+                        <button
+                          type="button"
+                          key={bin.id}
+                          className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-3 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
+                          onClick={() => toggleBin(bin.id)}
+                        >
+                          {checked ? (
+                            <CheckCircle2 className="h-[22px] w-[22px] text-[var(--accent)] shrink-0" />
+                          ) : (
+                            <Circle className="h-[22px] w-[22px] text-[var(--text-tertiary)] shrink-0" />
+                          )}
+                          {colorPreset && (
+                            <div
+                              className="h-2.5 w-2.5 rounded-full shrink-0 ring-1 ring-[var(--border-subtle)]"
+                              style={{ backgroundColor: colorPreset.bg }}
+                            />
+                          )}
+                          <span className="text-[15px] text-[var(--text-primary)] truncate">{bin.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             )}
           </>
