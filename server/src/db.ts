@@ -35,6 +35,32 @@ for (const colDef of aiSettingsMigrations) {
 
 try { db.exec('ALTER TABLE bin_items ADD COLUMN quantity INTEGER DEFAULT NULL'); } catch { /* column already exists */ }
 
+// Viewer role: add default_join_role to locations
+try { db.exec("ALTER TABLE locations ADD COLUMN default_join_role TEXT NOT NULL DEFAULT 'member' CHECK (default_join_role IN ('member', 'viewer'))"); } catch { /* column already exists */ }
+
+// Viewer role: widen location_members.role CHECK constraint to include 'viewer'
+// SQLite can't ALTER CHECK constraints, so recreate the table if the old constraint exists
+{
+  const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='location_members'").get() as { sql: string } | undefined;
+  if (tableInfo?.sql && !tableInfo.sql.includes("'viewer'")) {
+    db.exec(`
+      CREATE TABLE location_members_new (
+        id            TEXT PRIMARY KEY,
+        location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+        user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role          TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member', 'viewer')),
+        joined_at     TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(location_id, user_id)
+      );
+      INSERT INTO location_members_new SELECT * FROM location_members;
+      DROP TABLE location_members;
+      ALTER TABLE location_members_new RENAME TO location_members;
+      CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id);
+      CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id);
+    `);
+  }
+}
+
 /** Word-boundary search: returns 1 if `term` appears at a word boundary in `text` */
 db.function('word_match', { deterministic: true }, (text: unknown, term: unknown) => {
   if (!text || !term) return 0;
