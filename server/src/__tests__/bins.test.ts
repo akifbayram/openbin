@@ -60,6 +60,26 @@ describe('POST /api/bins', () => {
     expect(res.status).toBe(403);
   });
 
+  it('returns 403 for viewer creating a bin', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const { token: viewerToken, user: viewerUser } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ inviteCode: location.invite_code });
+    const { query: dbQuery } = await import('../db.js');
+    await dbQuery(
+      "UPDATE location_members SET role = 'viewer' WHERE location_id = $1 AND user_id = $2",
+      [location.id, viewerUser.id]
+    );
+    const res = await request(app)
+      .post('/api/bins')
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ locationId: location.id, name: 'Viewer Bin' });
+    expect(res.status).toBe(403);
+  });
+
   it('returns 422 for missing name', async () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
@@ -223,6 +243,79 @@ describe('PUT /api/bins/:id', () => {
   });
 });
 
+describe('PUT /api/bins/:id — role permissions', () => {
+  it('returns 403 for viewer editing a bin', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const bin = await createTestBin(app, adminToken, location.id);
+    const { token: viewerToken, user: viewerUser } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ inviteCode: location.invite_code });
+    const { query: dbQuery } = await import('../db.js');
+    await dbQuery(
+      "UPDATE location_members SET role = 'viewer' WHERE location_id = $1 AND user_id = $2",
+      [location.id, viewerUser.id]
+    );
+    const res = await request(app)
+      .put(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ items: ['test item'] });
+    expect(res.status).toBe(403);
+  });
+
+  it('member can edit items on any bin', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const bin = await createTestBin(app, adminToken, location.id);
+    const { token: memberToken } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ inviteCode: location.invite_code });
+    const res = await request(app)
+      .put(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ items: ['added by member'] });
+    expect(res.status).toBe(200);
+    expect(res.body.items).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'added by member' })]));
+  });
+
+  it('member cannot edit metadata on bin they did not create', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const bin = await createTestBin(app, adminToken, location.id);
+    const { token: memberToken } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ inviteCode: location.invite_code });
+    const res = await request(app)
+      .put(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ name: 'renamed by member' });
+    expect(res.status).toBe(403);
+  });
+
+  it('member can edit metadata on bin they created', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const { token: memberToken } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ inviteCode: location.invite_code });
+    const bin = await createTestBin(app, memberToken, location.id);
+    const res = await request(app)
+      .put(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ name: 'renamed by creator' });
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('renamed by creator');
+  });
+});
+
 describe('DELETE /api/bins/:id (soft delete)', () => {
   it('soft-deletes a bin', async () => {
     const { token } = await createTestUser(app);
@@ -374,6 +467,26 @@ describe('POST /api/bins/:id/pin and DELETE /api/bins/:id/pin', () => {
 
     expect(unpinRes.status).toBe(200);
     expect(unpinRes.body.pinned).toBe(false);
+  });
+
+  it('returns 403 for viewer pinning a bin', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const bin = await createTestBin(app, adminToken, location.id);
+    const { token: viewerToken, user: viewerUser } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ inviteCode: location.invite_code });
+    const { query: dbQuery } = await import('../db.js');
+    await dbQuery(
+      "UPDATE location_members SET role = 'viewer' WHERE location_id = $1 AND user_id = $2",
+      [location.id, viewerUser.id]
+    );
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/pin`)
+      .set('Authorization', `Bearer ${viewerToken}`);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -586,5 +699,28 @@ describe('POST /api/bins/:id/duplicate', () => {
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('Copy of Empty Bin');
     expect(res.body.items).toEqual([]);
+  });
+});
+
+describe('POST /api/bins/:id/photos — viewer restriction', () => {
+  it('returns 403 for viewer uploading a photo', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const bin = await createTestBin(app, adminToken, location.id);
+    const { token: viewerToken, user: viewerUser } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ inviteCode: location.invite_code });
+    const { query: dbQuery } = await import('../db.js');
+    await dbQuery(
+      "UPDATE location_members SET role = 'viewer' WHERE location_id = $1 AND user_id = $2",
+      [location.id, viewerUser.id]
+    );
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/photos`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .attach('photo', Buffer.from('fake-image-data'), 'test.jpg');
+    expect(res.status).toBe(403);
   });
 });

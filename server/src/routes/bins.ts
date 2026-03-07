@@ -4,7 +4,7 @@ import { Router } from 'express';
 import { getDb, query } from '../db.js';
 import { logActivity } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { getMemberRole, isBinCreator, requireAdmin, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
+import { getMemberRole, isBinCreator, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
 import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinItems } from '../lib/binUpdateHelpers.js';
 import { validateBinFields } from '../lib/binValidation.js';
@@ -47,9 +47,7 @@ router.post('/', asyncHandler(async (req, res) => {
   validateBinName(name);
   validateBinFields({ items, tags, notes, icon, color, cardStyle, visibility, customFields });
 
-  if (!await verifyLocationMembership(locationId, req.user!.id)) {
-    throw new ForbiddenError('Not a member of this location');
-  }
+  await requireMemberOrAbove(locationId, req.user!.id, 'create bins');
 
   if (areaId) await verifyAreaInLocation(areaId, locationId);
 
@@ -249,13 +247,23 @@ router.put('/:id', asyncHandler(async (req, res) => {
     throw new NotFoundError('Bin not found');
   }
 
-  // Members can only edit bins they created; admins can edit any bin
+  // Viewers cannot edit at all
   const role = await getMemberRole(access.locationId, req.user!.id);
-  if (role === 'member' && !await isBinCreator(id, req.user!.id)) {
-    throw new ForbiddenError('Only admins or the bin creator can edit this bin');
+  if (role === 'viewer') {
+    throw new ForbiddenError('Viewers cannot edit bins');
   }
 
   const { name, areaId, items, notes, tags, icon, color, cardStyle, visibility, customFields } = req.body;
+
+  // Determine if this update contains metadata changes (anything besides items)
+  const hasMetadataChanges = name !== undefined || areaId !== undefined || notes !== undefined
+    || tags !== undefined || icon !== undefined || color !== undefined
+    || cardStyle !== undefined || visibility !== undefined || customFields !== undefined;
+
+  // Members can edit items on any bin, but metadata only on bins they created
+  if (role === 'member' && hasMetadataChanges && !await isBinCreator(id, req.user!.id)) {
+    throw new ForbiddenError('Only admins or the bin creator can edit bin metadata');
+  }
 
   if (name !== undefined) {
     validateBinName(name);
@@ -399,6 +407,7 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
   if (!access) {
     throw new NotFoundError('Bin not found');
   }
+  await requireMemberOrAbove(access.locationId, req.user!.id, 'upload photos');
   next();
 }), binPhotoUpload.single('photo'), asyncHandler(async (req, res) => {
   const binId = req.params.id;
@@ -455,6 +464,8 @@ router.post('/:id/pin', asyncHandler(async (req, res) => {
   if (!access) {
     throw new NotFoundError('Bin not found');
   }
+
+  await requireMemberOrAbove(access.locationId, req.user!.id, 'pin bins');
 
   // Check pin count limit per location
   const countResult = await query(
