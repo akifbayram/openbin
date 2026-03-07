@@ -24,7 +24,7 @@ features:
     linkText: Learn more
   - icon: 🤖
     title: AI Photo Analysis
-    details: Snap a photo of a bin and AI names it, lists every item, suggests tags, and adds notes.
+    details: Snap a photo of a bin and AI names it, lists every item with quantities, suggests tags, and adds notes.
     link: /guide/ai
     linkText: Learn more
   - icon: 🖨️

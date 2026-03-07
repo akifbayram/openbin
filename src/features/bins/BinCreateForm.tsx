@@ -12,9 +12,10 @@ import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
+import { buildQuantityMap, mergeItemQuantities } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
-import type { BinVisibility } from '@/types';
+import type { AiSuggestedItem, BinVisibility } from '@/types';
 import { BinPreviewCard } from './BinPreviewCard';
 import { ColorPicker } from './ColorPicker';
 import { CustomFieldsEditCard } from './CustomFieldsEditCard';
@@ -30,7 +31,7 @@ import { VisibilityPicker } from './VisibilityPicker';
 
 export interface BinCreateFormData {
   name: string;
-  items: string[];
+  items: (string | { name: string; quantity?: number | null })[];
   notes: string;
   tags: string[];
   areaId: string | null;
@@ -91,6 +92,12 @@ export function BinCreateForm({
   } = useBinFormFields({ initialName: prefillName });
 
   const { fields: customFieldDefs } = useCustomFields(locationId);
+  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
+
+  function applyAiItems(aiItems: AiSuggestedItem[]) {
+    setItems(aiItems.map((i) => i.name));
+    setItemQuantities(buildQuantityMap(aiItems));
+  }
 
   // Onboarding-specific: inline AI setup
   const [aiExpanded, setAiExpanded] = useState(false);
@@ -114,7 +121,7 @@ export function BinCreateForm({
     aiConfigured: mode === 'full' ? !!aiSettings : aiConfiguredInline,
     onApplyDirect: (result) => {
       if (result.name) setName(result.name);
-      if (result.items?.length) setItems(result.items);
+      if (result.items?.length) applyAiItems(result.items);
       if (result.tags?.length) setTags(result.tags.map(t => t.toLowerCase()));
     },
     onAiSetupNeeded: () => {
@@ -133,9 +140,9 @@ export function BinCreateForm({
     }
   }, [suggestions]);
 
-  function handleApplySuggestions(changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string; customFields: Record<string, string> }>) {
+  function handleApplySuggestions(changes: Partial<{ name: string; items: AiSuggestedItem[]; tags: string[]; notes: string; customFields: Record<string, string> }>) {
     if (changes.name !== undefined) setName(changes.name);
-    if (changes.items !== undefined) setItems(changes.items);
+    if (changes.items !== undefined) applyAiItems(changes.items);
     if (changes.tags !== undefined) setTags(changes.tags);
     if (changes.notes !== undefined) setNotes(changes.notes);
     if (changes.customFields !== undefined) setCustomFields(changes.customFields);
@@ -145,9 +152,10 @@ export function BinCreateForm({
   function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
+    const itemsWithQty = mergeItemQuantities(items, itemQuantities);
     onSubmit({
       name: name.trim(),
-      items,
+      items: itemsWithQty,
       notes: notes.trim(),
       tags,
       areaId,
@@ -259,7 +267,7 @@ export function BinCreateForm({
           <AiSuggestionsPanel
             suggestions={suggestions}
             currentName={name}
-            currentItems={items.map((name, i) => ({ id: String(i), name }))}
+            currentItems={items.map((name, i) => ({ id: String(i), name, quantity: null }))}
             currentTags={tags}
             currentNotes={notes}
             customFieldDefs={customFieldDefs}

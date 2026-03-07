@@ -84,7 +84,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     }
   }
 
-  async function handleApplySuggestions(changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string; customFields: Record<string, string> }>) {
+  async function handleApplySuggestions(changes: Partial<{ name: string; items: { name: string; quantity?: number | null }[]; tags: string[]; notes: string; customFields: Record<string, string> }>) {
     if (!id || Object.keys(changes).length === 0) return;
     try {
       await updateBin(id, changes);

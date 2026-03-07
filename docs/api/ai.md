@@ -81,11 +81,17 @@ Sends one or more stored photos (already uploaded to a bin) to the configured AI
 ```json
 {
   "name": "Power Tools",
-  "items": ["Cordless drill", "Jigsaw", "Sander"],
+  "items": [
+    { "name": "Cordless drill", "quantity": null },
+    { "name": "Drill bits", "quantity": 12 },
+    { "name": "Sander", "quantity": null }
+  ],
   "tags": ["tools", "electric"],
   "notes": "Stored in the original cases"
 }
 ```
+
+Items are returned as objects with a `name` and optional `quantity`. When the AI can identify a countable quantity (e.g. "12 drill bits"), it includes it; otherwise `quantity` is `null`.
 
 ---
 
@@ -93,7 +99,7 @@ Sends one or more stored photos (already uploaded to a bin) to the configured AI
 
 Directly uploads images for AI analysis without storing them first. Used during onboarding. Accepts up to 5 images, 5MB each, via `multipart/form-data` with a `photos` file field. Rate limited to 30 per hour.
 
-**Response (200)**: Same `AiSuggestions` shape as `/ai/analyze`.
+**Response (200)**: Same `AiSuggestions` shape as `/ai/analyze` (items include quantities when detectable).
 
 ---
 
@@ -131,9 +137,15 @@ Sends raw dictated or typed text to the AI provider, which extracts and normaliz
 
 ```json
 {
-  "items": ["Phillips screwdriver", "Flat-head screwdriver", "Allen key set"]
+  "items": [
+    { "name": "Phillips screwdriver", "quantity": null },
+    { "name": "Flat-head screwdriver", "quantity": 2 },
+    { "name": "Allen key set", "quantity": null }
+  ]
 }
 ```
+
+Items include `quantity` when the AI can extract a count from the dictated text (e.g. "two flat-head screwdrivers").
 
 ---
 
@@ -153,14 +165,16 @@ Parses a natural language command into structured inventory actions for client-s
 ```json
 {
   "actions": [
-    { "type": "add_items", "bin_id": "...", "items": ["AAA batteries"] },
+    { "type": "add_items", "bin_id": "...", "items": [{ "name": "AAA batteries", "quantity": 4 }] },
     { "type": "add_tags", "bin_id": "...", "tags": ["consumables"] }
   ],
-  "interpretation": "Add AAA batteries to the Electronics bin and tag it as consumables"
+  "interpretation": "Add 4 AAA batteries to the Electronics bin and tag it as consumables"
 }
 ```
 
 Supported action types: `add_items`, `remove_items`, `modify_item`, `create_bin`, `delete_bin`, `add_tags`, `remove_tags`, `modify_tag`, `set_area`, `set_notes`, `set_icon`, `set_color`.
+
+Items in `add_items` and `create_bin` actions may include quantities as `{ name, quantity }` objects.
 
 ---
 

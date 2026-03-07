@@ -4,7 +4,7 @@ You may receive 1–5 photos of the same bin from different angles. Cross-refere
 
 "name" — A concise title for the bin's contents (2–5 words, title case). Describe WHAT is stored, not the container. Good: "Assorted Screwdrivers", "Holiday Lights", "USB Cables". Bad: "Red Bin", "Stuff", "Miscellaneous Items".
 
-"items" — A flat array of distinct items. One entry per distinct item type, no quantities. Be specific: "adjustable crescent wrench" not just "wrench"; "AA batteries" not "batteries". Include brand names, model numbers, or sizes when clearly readable on labels. For sealed/packaged items, describe the product, not the packaging. Omit the bin or container itself. Order from most prominent to least prominent.
+"items" — An array of item objects, each with "name" (string) and optionally "quantity" (number, omit or null if unknown/not applicable). One entry per distinct item type. Be specific: "adjustable crescent wrench" not just "wrench"; "AA batteries" not "batteries". Include brand names, model numbers, or sizes when clearly readable on labels. For sealed/packaged items, describe the product, not the packaging. Omit the bin or container itself. Order from most prominent to least prominent. Include quantity when you can count or clearly estimate the number of identical items (e.g. 3 rolls of tape). Omit quantity for single items or when the count is uncertain.
 
 "tags" — 2–5 lowercase single-word category labels for filtering. Each tag MUST be a single word (never multi-word). Use plural nouns: "tools", "cables", "batteries". Start broad, then add 1–2 specific subcategories: ["tools", "screwdrivers"] or ["electronics", "cables", "usb"]. Prefer standard terms: tools, electronics, hardware, office, kitchen, craft, seasonal, automotive, outdoor, clothing, toys, cleaning, medical, plumbing, electrical, cables, batteries, fasteners, adhesives, paint, garden, sports, storage, lighting, sewing.
 
@@ -18,7 +18,8 @@ export const DEFAULT_COMMAND_PROMPT = `You are an inventory management assistant
 
 Rules:
 - Use EXACT bin_id values from the provided inventory context. Never invent bin IDs.
-- For item removal, use the exact item string from the bin's items list when possible.
+- For item removal, use the exact item name from the bin's items list when possible.
+- Items have an optional quantity field. When the user mentions a count (e.g. "add 5 screwdrivers"), include it. Items in the context include id, name, and quantity (null if not set).
 - Fuzzy match bin names: "garden bin" should match a bin named "Garden Tools" or "Garden".
 - Compound commands: "move X from A to B" = remove_items from A + add_items to B.
 - "Rename item X to Y in bin Z" = modify_item with old_item=X, new_item=Y.
@@ -47,19 +48,20 @@ Rules:
 - Sort matches by relevance (most relevant first)
 - Return at most 8 matching bins. For each bin, include only the most relevant items (up to 10), not the entire list.
 - Visibility, pin status, photo counts, and trash bins are available in the inventory context — use them to answer questions like "which bins are private?", "what's pinned?", "which bins have photos?", or "what's in the trash?"
+- Items may include a quantity (e.g. "Screwdrivers (×3)"). Reference quantities in your answer when relevant (e.g. "You have 3 screwdrivers in the Tools bin").
 - When including trash bins in matches, set "is_trashed": true so the UI can link to the trash page instead of the bin detail page.`;
 
 export const DEFAULT_STRUCTURE_PROMPT = `You are an inventory item extractor. The user will dictate or type a description of items in a storage bin. Your job is to parse this into a clean, structured list of individual items.
 
 Rules:
-- Each entry should be one distinct item type
-- List each item once without quantities
-- Normalize spoken numbers: "three pairs of socks" → "Socks"
+- Each entry should be an object with "name" (string) and optionally "quantity" (number)
+- List each item once; use "quantity" when a count is mentioned
+- Extract spoken numbers as quantity: "three pairs of socks" → {"name": "Socks", "quantity": 3}
 - Be specific: "Phillips screwdriver" not just "screwdriver"
 - Capitalize the first letter of each item
 - Remove filler words (um, uh, like, basically, etc.)
 - Remove conversational phrases ("I think there's", "and also", "let me see")
-- Deduplicate items — if the same item is mentioned multiple times, list it once
+- Deduplicate items — if the same item is mentioned multiple times, list it once (sum quantities if applicable)
 - Order from first mentioned to last mentioned
 - Do NOT include the bin or container itself
 
@@ -69,7 +71,7 @@ export const AI_CORRECTION_PROMPT = `You are an inventory cataloging assistant c
 
 "name" — A concise title for the bin's contents (2–5 words, title case). Describe WHAT is stored, not the container.
 
-"items" — A flat array of distinct items. One entry per distinct item type, no quantities. Be specific. Order from most prominent to least prominent.
+"items" — An array of item objects, each with "name" (string) and optionally "quantity" (number). One entry per distinct item type. Be specific. Order from most prominent to least prominent.
 
 "tags" — 2–5 lowercase single-word category labels for filtering. Each tag MUST be a single word. Use plural nouns.
 
@@ -79,10 +81,27 @@ Respond with ONLY valid JSON, no markdown fences, no extra text.
 
 {available_tags}`;
 
+export const DEFAULT_REORGANIZATION_PROMPT = `You are a storage reorganization assistant. You receive a list of bins with their items and must propose a new, better-organized set of bins.
+
+Rules:
+- Group related items together logically (e.g., all fasteners in one bin, all adhesives in another).
+- Give each bin a clear, descriptive name.
+- Respond with valid JSON only: { "bins": [{ "name": "Bin Name", "items": ["item1", "item2"] }], "summary": "Brief explanation of the reorganization." }
+{max_bins_instruction}
+{area_instruction}
+{strictness_instruction}
+{granularity_instruction}
+{duplicates_instruction}
+{ambiguous_instruction}
+{outliers_instruction}
+{items_per_bin_instruction}
+{notes_instruction}`;
+
 export const ALL_DEFAULT_PROMPTS = {
   analysis: DEFAULT_AI_PROMPT,
   command: DEFAULT_COMMAND_PROMPT,
   query: DEFAULT_QUERY_PROMPT,
   structure: DEFAULT_STRUCTURE_PROMPT,
   correction: AI_CORRECTION_PROMPT,
+  reorganization: DEFAULT_REORGANIZATION_PROMPT,
 };

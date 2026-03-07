@@ -418,6 +418,10 @@ components:
           format: uuid
         name:
           type: string
+        quantity:
+          type: integer
+          nullable: true
+          description: Optional quantity (null = not tracked)
 
     BinVisibility:
       type: string
@@ -2611,7 +2615,15 @@ paths:
                 items:
                   type: array
                   items:
-                    type: string
+                    oneOf:
+                      - type: string
+                      - type: object
+                        properties:
+                          name:
+                            type: string
+                          quantity:
+                            type: integer
+                        required: [name]
       responses:
         '201':
           description: Items added
@@ -2658,9 +2670,13 @@ paths:
               properties:
                 name:
                   type: string
+                quantity:
+                  type: integer
+                  nullable: true
+                  description: Optional quantity (null to clear)
       responses:
         '200':
-          description: Item renamed
+          description: Item updated
           content:
             application/json:
               schema:
@@ -2694,6 +2710,53 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /bins/{id}/items/{itemId}/quantity:
+    patch:
+      tags: [Bins]
+      summary: Update item quantity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity:
+                  type: integer
+                  description: New quantity (0 or negative removes the item)
+      responses:
+        '200':
+          description: Quantity updated or item removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  quantity:
+                    type: integer
+                  removed:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /bins/{id}/items/reorder:
     put:

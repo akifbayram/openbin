@@ -22,7 +22,7 @@ Creates a new bin. The bin ID is an auto-generated 6-character alphanumeric shor
 |---|---|---|---|
 | `name` | string | Yes | Max 255 characters |
 | `locationId` | UUID | Yes | Location to create the bin in |
-| `items` | string[] | No | Up to 500 initial items |
+| `items` | (string \| object)[] | No | Up to 500 initial items. Each element can be a plain string or an object `{ name, quantity? }`. See [Item format](#item-format). |
 | `notes` | string | No | Max 10,000 characters |
 | `tags` | string[] | No | Up to 50 tags |
 | `areaId` | UUID | No | Area to assign the bin to |
@@ -144,7 +144,7 @@ Updates a bin. All fields are optional; only provided fields are changed.
 |---|---|---|
 | `name` | string | Max 255 characters |
 | `areaId` | UUID or null | Area assignment; null to unassign |
-| `items` | string[] | Replaces all existing items (up to 500) |
+| `items` | (string \| object)[] | Replaces all existing items (up to 500). Accepts strings or `{ name, quantity? }` objects. |
 | `notes` | string | Max 10,000 characters |
 | `tags` | string[] | Replaces all existing tags (up to 50) |
 | `icon` | string | PascalCase Lucide icon name |
@@ -258,23 +258,26 @@ Appends items to a bin's item list.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `items` | string[] | Yes | Item names to add |
+| `items` | (string \| object)[] | Yes | Items to add. Each element can be a plain string (`"Screwdriver"`) or an object (`{ "name": "AA Battery", "quantity": 12 }`). |
 
 **Response (201)**
 
 ```json
 {
   "items": [
-    { "id": "uuid", "name": "Phillips screwdriver" }
+    { "id": "uuid", "name": "AA Battery", "quantity": 12 },
+    { "id": "uuid", "name": "Flashlight", "quantity": null }
   ]
 }
 ```
+
+Items with no quantity specified return `quantity: null`, meaning quantity is not tracked for that item.
 
 ---
 
 ### PUT /api/bins/`{id}`/items/`{itemId}`
 
-Renames a single item within a bin.
+Renames a single item within a bin and optionally updates its quantity.
 
 **Path parameters**: `id` (bin ID), `itemId` (item UUID)
 
@@ -283,8 +286,35 @@ Renames a single item within a bin.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | Yes | New item name |
+| `quantity` | integer or null | No | New quantity. Pass `null` to clear quantity tracking. Omit to leave unchanged. |
 
-**Response (200)**: Updated `BinItem` object `{ id, name }`.
+**Response (200)**: Updated `BinItem` object `{ id, name, quantity }`.
+
+---
+
+### PATCH /api/bins/`{id}`/items/`{itemId}`/quantity
+
+Updates only the quantity of a single item. If the new quantity is 0 or negative, the item is removed from the bin.
+
+**Path parameters**: `id` (bin ID), `itemId` (item UUID)
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `quantity` | integer | Yes | New quantity. 0 or negative removes the item. |
+
+**Response (200)**
+
+```json
+{
+  "id": "uuid",
+  "quantity": 10,
+  "removed": false
+}
+```
+
+When the item is removed (quantity ≤ 0), `removed` is `true`.
 
 ---
 
@@ -295,6 +325,23 @@ Removes a single item from a bin.
 **Path parameters**: `id` (bin ID), `itemId` (item UUID)
 
 **Response (200)**: Empty body.
+
+---
+
+## Item Format {#item-format}
+
+Throughout the API, items can be provided as either:
+
+- **String**: `"Screwdriver"` — creates an item with no quantity tracked.
+- **Object**: `{ "name": "AA Battery", "quantity": 12 }` — creates an item with a tracked quantity.
+
+When returned, every item includes all three fields:
+
+```json
+{ "id": "uuid", "name": "AA Battery", "quantity": 12 }
+```
+
+A `quantity` of `null` means the item does not track quantity. Quantity must be a positive integer (minimum 1) when set.
 
 ---
 

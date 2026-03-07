@@ -44,7 +44,7 @@ export function getActionIcon(action: CommandAction) {
 export function describeAction(action: CommandAction, t: Terminology): string {
   switch (action.type) {
     case 'add_items':
-      return `Add ${action.items.join(', ')} to "${action.bin_name}"`;
+      return `Add ${action.items.map((i) => typeof i === 'string' ? i : (i.quantity ? `${i.name} (×${i.quantity})` : i.name)).join(', ')} to "${action.bin_name}"`;
     case 'remove_items':
       return `Remove ${action.items.join(', ')} from "${action.bin_name}"`;
     case 'modify_item':

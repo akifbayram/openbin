@@ -20,6 +20,7 @@ import { compressImage } from '@/features/photos/compressImage';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { apiStream } from '@/lib/apiStream';
 import { useAuth } from '@/lib/auth';
+import { buildQuantityMap } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 import type { AiSuggestions } from '@/types';
@@ -116,11 +117,13 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
           dispatch({ type: 'UPDATE_STREAM', id: target.id, name: partial.name, items: partial.items });
         } else if (event.type === 'done') {
           const result: AiSuggestions = JSON.parse(event.text);
+          const qtyMap = buildQuantityMap(result.items);
           dispatch({
             type: 'SET_ANALYZE_RESULT',
             id: target.id,
             name: result.name,
-            items: result.items,
+            items: result.items.map((i) => i.name),
+            itemQuantities: qtyMap,
             tags: result.tags,
             notes: result.notes,
           });
@@ -155,11 +158,13 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
     });
 
     if (result) {
+      const qtyMap = buildQuantityMap(result.items);
       dispatch({
         type: 'SET_ANALYZE_RESULT',
         id: target.id,
         name: result.name,
-        items: result.items,
+        items: result.items.map((i) => i.name),
+        itemQuantities: qtyMap,
         tags: result.tags,
         notes: result.notes,
       });

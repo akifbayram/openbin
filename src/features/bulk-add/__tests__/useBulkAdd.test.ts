@@ -16,6 +16,7 @@ function photo(overrides?: Partial<BulkAddPhoto>): BulkAddPhoto {
     status: 'pending',
     name: '',
     items: [],
+    itemQuantities: {},
     notes: '',
     tags: [],
     areaId: null,
@@ -127,6 +128,7 @@ describe('bulkAddReducer', () => {
         id: 'p1',
         name: 'Cables',
         items: ['USB-C', 'HDMI'],
+        itemQuantities: {},
         tags: ['electronics'],
         notes: 'Mixed cables',
       });

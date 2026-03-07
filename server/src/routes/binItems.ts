@@ -38,16 +38,19 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
   );
   let nextPos = (maxResult.rows[0]?.max_pos ?? -1) + 1;
 
-  const newItems: Array<{ id: string; name: string }> = [];
+  const newItems: Array<{ id: string; name: string; quantity: number | null }> = [];
   for (const item of items) {
     const name = typeof item === 'string' ? item : (item as { name: string }).name;
     if (!name || !name.trim()) continue;
+    const qty = typeof item === 'object' && item !== null && typeof (item as { quantity?: number }).quantity === 'number'
+      ? Math.max(1, Math.floor((item as { quantity: number }).quantity))
+      : null;
     const itemId = generateUuid();
     await query(
-      'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
-      [itemId, id, name.trim(), nextPos++]
+      'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)',
+      [itemId, id, name.trim(), qty, nextPos++]
     );
-    newItems.push({ id: itemId, name: name.trim() });
+    newItems.push({ id: itemId, name: name.trim(), quantity: qty });
   }
 
   await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
@@ -127,10 +130,10 @@ router.put('/:id/items/reorder', asyncHandler(async (req, res) => {
   res.json({ success: true });
 }));
 
-// PUT /api/bins/:id/items/:itemId — rename item
+// PUT /api/bins/:id/items/:itemId — rename item (and optionally update quantity)
 router.put('/:id/items/:itemId', asyncHandler(async (req, res) => {
   const { id, itemId } = req.params;
-  const { name } = req.body;
+  const { name, quantity } = req.body;
 
   if (!name || typeof name !== 'string' || !name.trim()) {
     throw new ValidationError('name is required');
@@ -138,8 +141,8 @@ router.put('/:id/items/:itemId', asyncHandler(async (req, res) => {
 
   const access = await verifyBinEditAccess(id, req.user!.id);
 
-  const itemResult = await query<{ name: string }>(
-    'SELECT name FROM bin_items WHERE id = $1 AND bin_id = $2',
+  const itemResult = await query<{ name: string; quantity: number | null }>(
+    'SELECT name, quantity FROM bin_items WHERE id = $1 AND bin_id = $2',
     [itemId, id]
   );
   if (itemResult.rows.length === 0) {
@@ -147,9 +150,90 @@ router.put('/:id/items/:itemId', asyncHandler(async (req, res) => {
   }
 
   const oldName = itemResult.rows[0].name;
+  const oldQuantity = itemResult.rows[0].quantity;
+  const newQuantity = quantity === null ? null : (typeof quantity === 'number' ? Math.max(1, Math.floor(quantity)) : oldQuantity);
+
   await query(
-    "UPDATE bin_items SET name = $1, updated_at = datetime('now') WHERE id = $2 AND bin_id = $3",
-    [name.trim(), itemId, id]
+    "UPDATE bin_items SET name = $1, quantity = $2, updated_at = datetime('now') WHERE id = $3 AND bin_id = $4",
+    [name.trim(), newQuantity, itemId, id]
+  );
+  await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
+
+  const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
+  const changes: Record<string, { old: unknown; new: unknown }> = {};
+  if (oldName !== name.trim()) {
+    changes.items_renamed = { old: oldName, new: name.trim() };
+  }
+  if (oldQuantity !== newQuantity) {
+    changes.items_quantity = { old: { name: name.trim(), qty: oldQuantity }, new: { name: name.trim(), qty: newQuantity } };
+  }
+  if (Object.keys(changes).length > 0) {
+    logActivity({
+      locationId: access.locationId,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      action: 'update',
+      entityType: 'bin',
+      entityId: id,
+      entityName: binResult.rows[0]?.name,
+      changes,
+      authMethod: req.authMethod,
+      apiKeyId: req.apiKeyId,
+    });
+  }
+
+  res.json({ id: itemId, name: name.trim(), quantity: newQuantity });
+}));
+
+// PATCH /api/bins/:id/items/:itemId/quantity — update item quantity (stepper)
+router.patch('/:id/items/:itemId/quantity', asyncHandler(async (req, res) => {
+  const { id, itemId } = req.params;
+  const { quantity } = req.body;
+
+  if (typeof quantity !== 'number' || !Number.isFinite(quantity)) {
+    throw new ValidationError('quantity must be a number');
+  }
+
+  const access = await verifyBinEditAccess(id, req.user!.id);
+
+  const itemResult = await query<{ name: string; quantity: number | null }>(
+    'SELECT name, quantity FROM bin_items WHERE id = $1 AND bin_id = $2',
+    [itemId, id]
+  );
+  if (itemResult.rows.length === 0) {
+    throw new NotFoundError('Item not found');
+  }
+
+  const itemName = itemResult.rows[0].name;
+  const oldQuantity = itemResult.rows[0].quantity;
+  const newQuantity = Math.floor(quantity);
+
+  if (newQuantity <= 0) {
+    // Remove item
+    await query('DELETE FROM bin_items WHERE id = $1 AND bin_id = $2', [itemId, id]);
+    await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
+
+    const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
+    logActivity({
+      locationId: access.locationId,
+      userId: req.user!.id,
+      userName: req.user!.username,
+      action: 'update',
+      entityType: 'bin',
+      entityId: id,
+      entityName: binResult.rows[0]?.name,
+      changes: { items_removed: { old: [itemName], new: null } },
+      authMethod: req.authMethod,
+      apiKeyId: req.apiKeyId,
+    });
+
+    res.json({ id: itemId, removed: true });
+    return;
+  }
+
+  await query(
+    "UPDATE bin_items SET quantity = $1, updated_at = datetime('now') WHERE id = $2 AND bin_id = $3",
+    [newQuantity, itemId, id]
   );
   await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
 
@@ -162,12 +246,12 @@ router.put('/:id/items/:itemId', asyncHandler(async (req, res) => {
     entityType: 'bin',
     entityId: id,
     entityName: binResult.rows[0]?.name,
-    changes: { items_renamed: { old: oldName, new: name.trim() } },
+    changes: { items_quantity: { old: { name: itemName, qty: oldQuantity }, new: { name: itemName, qty: newQuantity } } },
     authMethod: req.authMethod,
     apiKeyId: req.apiKeyId,
   });
 
-  res.json({ id: itemId, name: name.trim() });
+  res.json({ id: itemId, quantity: newQuantity });
 }));
 
 export default router;

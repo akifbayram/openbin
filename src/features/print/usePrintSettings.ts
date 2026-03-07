@@ -52,6 +52,20 @@ export interface LabelOptions {
   showColorSwatch: boolean;
 }
 
+export type PrintMode = 'labels' | 'items';
+
+export interface ItemListOptions {
+  showCheckboxes: boolean;
+  showQuantity: boolean;
+  showBinCode: boolean;
+}
+
+export const DEFAULT_ITEM_LIST_OPTIONS: ItemListOptions = {
+  showCheckboxes: true,
+  showQuantity: true,
+  showBinCode: true,
+};
+
 export interface CustomState {
   customizing: boolean;
   overrides: Partial<LabelFormat>;
@@ -67,6 +81,8 @@ export interface PrintSettings {
   orientation?: 'landscape' | 'portrait';
   displayUnit?: DisplayUnit;
   qrStyle?: QrStyleOptions;
+  printMode?: PrintMode;
+  itemListOptions?: ItemListOptions;
 }
 
 export const DEFAULT_LABEL_OPTIONS: LabelOptions = {
@@ -87,6 +103,8 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   customState: DEFAULT_CUSTOM_STATE,
   labelOptions: DEFAULT_LABEL_OPTIONS,
   presets: [],
+  printMode: 'labels',
+  itemListOptions: DEFAULT_ITEM_LIST_OPTIONS,
 };
 
 export async function savePrintSettings(settings: PrintSettings): Promise<void> {
@@ -183,6 +201,14 @@ export function usePrintSettings() {
     update({ qrStyle });
   }
 
+  function updatePrintMode(printMode: PrintMode) {
+    update({ printMode });
+  }
+
+  function updateItemListOptions(itemListOptions: ItemListOptions) {
+    update({ itemListOptions });
+  }
+
   return {
     settings,
     isLoading,
@@ -194,5 +220,7 @@ export function usePrintSettings() {
     updateQrStyle,
     addPreset,
     removePreset,
+    updatePrintMode,
+    updateItemListOptions,
   };
 }

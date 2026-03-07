@@ -1,4 +1,4 @@
-import { BookOpen, ClipboardList, Github, LayoutDashboard, LogOut, MapPin, Package, PanelLeftClose, PanelLeftOpen, Printer, ScanLine, Settings, Tags } from
+import { BookOpen, ClipboardList, Github, LayoutDashboard, LogOut, MapPin, Package, PanelLeftClose, PanelLeftOpen, Printer, ScanLine, Settings, Sparkles, Tags } from
   'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BrandIcon } from '@/components/BrandIcon';
@@ -30,6 +30,7 @@ const manageItems: { path: string; label: string; icon: React.ComponentType<{ cl
   { path: '/tags', label: 'Tags', icon: Tags },
   { path: '/print', label: 'Print', icon: Printer },
   { path: '/scan', label: 'Scan', icon: ScanLine },
+  { path: '/reorganize', label: 'Reorganize', icon: Sparkles },
 ];
 
 const brandIcon = <BrandIcon className="h-5.5 w-5.5 text-[var(--accent)] shrink-0" />;

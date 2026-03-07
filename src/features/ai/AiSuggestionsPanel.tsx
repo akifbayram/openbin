@@ -3,7 +3,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import type { AiSuggestions, BinItem, CustomField } from '@/types';
+import type { AiSuggestedItem, AiSuggestions, BinItem, CustomField } from '@/types';
+
+export type AiSuggestionChanges = Partial<{ name: string; items: AiSuggestedItem[]; tags: string[]; notes: string; customFields: Record<string, string> }>;
 
 interface AiSuggestionsPanelProps {
   suggestions: AiSuggestions;
@@ -13,7 +15,7 @@ interface AiSuggestionsPanelProps {
   currentNotes: string;
   customFieldDefs?: CustomField[];
   currentCustomFields?: Record<string, string>;
-  onApply: (changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string; customFields: Record<string, string> }>) => void;
+  onApply: (changes: AiSuggestionChanges) => void;
   onDismiss: () => void;
 }
 
@@ -53,7 +55,7 @@ export function AiSuggestionsPanel({
   const hasCustomFields = suggestedCfEntries.length > 0;
 
   function handleApply() {
-    const changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string; customFields: Record<string, string> }> = {};
+    const changes: AiSuggestionChanges = {};
     if (acceptName && hasName) changes.name = suggestions.name;
     if (acceptItems && hasItems) changes.items = suggestions.items;
     if (acceptTags && hasTags) {
@@ -116,7 +118,7 @@ export function AiSuggestionsPanel({
                   // biome-ignore lint/suspicious/noArrayIndexKey: items may contain duplicates
                   <li key={i} className="text-[14px] text-[var(--text-primary)] flex items-start gap-1.5">
                     <span className="text-[var(--text-tertiary)]">•</span>
-                    {item}
+                    {item.quantity ? `${item.name} (×${item.quantity})` : item.name}
                   </li>
                 ))}
               </ul>

@@ -12,7 +12,7 @@ interface QuickAddWidgetProps {
 
 export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
   return (
-    <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
+    <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:shadow-[0_0_0_4px_var(--accent-glow)]">
       {quickAdd.state === 'input' && (
         <div className="row-tight">
           <Input
@@ -27,7 +27,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
             onPaste={quickAdd.handlePaste}
             placeholder="Add item..."
             disabled={quickAdd.saving}
-            className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0"
+            className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0 focus-visible:shadow-none"
           />
           {quickAdd.value.trim() && (
             <Tooltip content="Add item">
@@ -117,7 +117,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
                   )}
                 >
                   {checked && <Check className="h-3 w-3" />}
-                  {item}
+                  {item.quantity ? `${item.name} (×${item.quantity})` : item.name}
                 </button>
               );
             })}

@@ -6,6 +6,7 @@ interface DefaultPrompts {
   command: string;
   query: string;
   structure: string;
+  reorganization: string;
 }
 
 let cached: DefaultPrompts | null = null;

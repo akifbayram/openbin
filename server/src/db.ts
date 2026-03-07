@@ -27,10 +27,13 @@ const aiSettingsMigrations = [
   'max_tokens INTEGER',
   'top_p REAL',
   'request_timeout INTEGER',
+  'reorganization_prompt TEXT',
 ];
 for (const colDef of aiSettingsMigrations) {
   try { db.exec(`ALTER TABLE user_ai_settings ADD COLUMN ${colDef}`); } catch { /* column already exists */ }
 }
+
+try { db.exec('ALTER TABLE bin_items ADD COLUMN quantity INTEGER DEFAULT NULL'); } catch { /* column already exists */ }
 
 /** Word-boundary search: returns 1 if `term` appears at a word boundary in `text` */
 db.function('word_match', { deterministic: true }, (text: unknown, term: unknown) => {

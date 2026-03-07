@@ -12,6 +12,8 @@ type InputState = 'input' | 'expanded' | 'processing' | 'preview';
 interface ItemsInputProps {
   items: string[];
   onChange: (items: string[]) => void;
+  quantities?: (number | null)[];
+  onQuantityChange?: (index: number, quantity: number | null) => void;
   showAi?: boolean;
   aiConfigured?: boolean;
   onAiSetupNeeded?: () => void;
@@ -19,11 +21,14 @@ interface ItemsInputProps {
   locationId?: string;
 }
 
-export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNeeded, binName, locationId }: ItemsInputProps) {
+export function ItemsInput({ items, onChange, quantities, onQuantityChange, showAi, aiConfigured, onAiSetupNeeded, binName, locationId }: ItemsInputProps) {
   const [input, setInput] = useState('');
   const [state, setState] = useState<InputState>('input');
   const [expandedText, setExpandedText] = useState('');
   const [checkedItems, setCheckedItems] = useState<Map<number, boolean>>(new Map());
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { structuredItems, isStructuring, error, structure, clearStructured } = useTextStructuring();
 
@@ -50,6 +55,14 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
       textareaRef.current.focus();
     }
   }, [state]);
+
+  // Focus edit input when editing an item
+  useEffect(() => {
+    if (editingIndex !== null && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingIndex]);
 
   function addItem() {
     const trimmed = input.trim();
@@ -88,6 +101,28 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
 
   function removeItem(index: number) {
     onChange(items.filter((_, i) => i !== index));
+  }
+
+  function startEditing(index: number) {
+    setEditingIndex(index);
+    setEditValue(items[index]);
+  }
+
+  function commitEdit() {
+    if (editingIndex === null) return;
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== items[editingIndex]) {
+      const updated = [...items];
+      updated[editingIndex] = trimmed;
+      onChange(updated);
+    }
+    setEditingIndex(null);
+    setEditValue('');
+  }
+
+  function cancelEdit() {
+    setEditingIndex(null);
+    setEditValue('');
   }
 
   function handleSparklesClick() {
@@ -154,7 +189,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
     if (!structuredItems) return;
     const selected = structuredItems.filter((_, i) => checkedItems.get(i) !== false);
     if (selected.length > 0) {
-      onChange([...items, ...selected]);
+      onChange([...items, ...selected.map((i) => i.name)]);
     }
     setState('input');
     setExpandedText('');
@@ -184,12 +219,63 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
 
       {items.length > 0 && (
         <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden">
+          {onQuantityChange && (
+            <div className="row-tight px-3.5 pt-1.5 pb-0.5">
+              <span className="shrink-0 w-8 text-center text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Qty</span>
+              <span className="flex-1 text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Name</span>
+            </div>
+          )}
           {items.map((item, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: items may contain duplicates
             <div key={index}>
               {index > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
               <div className="group row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors">
-                <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">{item}</span>
+                {onQuantityChange && (
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={quantities?.[index] ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value.trim();
+                      if (val === '') {
+                        onQuantityChange(index, null);
+                      } else {
+                        const num = Number.parseInt(val, 10);
+                        if (!Number.isNaN(num) && num >= 0) onQuantityChange(index, num);
+                      }
+                    }}
+                    placeholder="1"
+                    className="shrink-0 w-8 text-center text-[13px] tabular-nums text-[var(--text-tertiary)] bg-transparent outline-none focus:text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)]"
+                    aria-label={`Quantity for ${item}`}
+                  />
+                )}
+                {!onQuantityChange && quantities?.[index] != null && (
+                  <span className="shrink-0 text-[13px] text-[var(--text-tertiary)] tabular-nums">
+                    {quantities[index]}
+                  </span>
+                )}
+                {editingIndex === index ? (
+                  <input
+                    ref={editInputRef}
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); commitEdit(); }
+                      else if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+                    }}
+                    onBlur={commitEdit}
+                    className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed bg-transparent outline-none"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onTouchEnd={(e) => { e.preventDefault(); startEditing(index); }}
+                    onClick={() => startEditing(index)}
+                    className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed text-left cursor-text truncate"
+                  >
+                    {item}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
@@ -204,7 +290,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
         </div>
       )}
 
-      <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
+      <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:shadow-[0_0_0_4px_var(--accent-glow)]">
         {state === 'input' && (
           <div className="row-tight">
             <Input
@@ -213,7 +299,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
               onKeyDown={handleInputKeyDown}
               onPaste={handlePaste}
               placeholder="Add item..."
-              className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0"
+              className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0 focus-visible:shadow-none"
             />
             {input.trim() && (
               <Tooltip content="Add item">
@@ -303,7 +389,7 @@ export function ItemsInput({ items, onChange, showAi, aiConfigured, onAiSetupNee
                     )}
                   >
                     {checked && <Check className="h-3 w-3" />}
-                    {item}
+                    {item.quantity ? `${item.name} (×${item.quantity})` : item.name}
                   </button>
                 );
               })}

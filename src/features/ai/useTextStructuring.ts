@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import type { AiSuggestedItem } from '@/types';
 import { mapAiError } from './aiErrors';
 
 interface StructureTextOptions {
@@ -13,7 +14,7 @@ interface StructureTextOptions {
 }
 
 interface StructureTextResult {
-  items: string[];
+  items: AiSuggestedItem[];
 }
 
 /** @deprecated Use mapAiError from aiErrors.ts instead */
@@ -21,7 +22,7 @@ export function mapStructureErrorMessage(err: unknown): string {
   return mapAiError(err, 'Couldn\'t find items — try describing them differently');
 }
 
-export async function structureTextItems(options: StructureTextOptions): Promise<string[]> {
+export async function structureTextItems(options: StructureTextOptions): Promise<AiSuggestedItem[]> {
   const result = await apiFetch<StructureTextResult>('/api/ai/structure-text', {
     method: 'POST',
     body: {
@@ -35,17 +36,17 @@ export async function structureTextItems(options: StructureTextOptions): Promise
 }
 
 export function useTextStructuring() {
-  const [structuredItems, setStructuredItems] = useState<string[] | null>(null);
+  const [structuredItems, setAiSuggestedItems] = useState<AiSuggestedItem[] | null>(null);
   const [isStructuring, setIsStructuring] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const structure = useCallback(async (options: StructureTextOptions) => {
     setIsStructuring(true);
     setError(null);
-    setStructuredItems(null);
+    setAiSuggestedItems(null);
     try {
       const items = await structureTextItems(options);
-      setStructuredItems(items);
+      setAiSuggestedItems(items);
       return items;
     } catch (err) {
       setError(mapAiError(err, 'Couldn\'t extract items — try describing them differently'));
@@ -56,7 +57,7 @@ export function useTextStructuring() {
   }, []);
 
   const clearStructured = useCallback(() => {
-    setStructuredItems(null);
+    setAiSuggestedItems(null);
     setError(null);
   }, []);
 

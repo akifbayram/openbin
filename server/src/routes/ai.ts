@@ -27,6 +27,7 @@ const MOCK_AI_SETTINGS = {
   commandPrompt: null,
   queryPrompt: null,
   structurePrompt: null,
+  reorganizationPrompt: null,
   temperature: null,
   maxTokens: null,
   topP: null,
@@ -46,7 +47,7 @@ router.use(authenticate);
 // GET /api/ai/settings — get user's AI config
 router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
   const result = await query(
-    'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, temperature, max_tokens, top_p, request_timeout, is_active FROM user_ai_settings WHERE user_id = $1',
+    'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, is_active FROM user_ai_settings WHERE user_id = $1',
     [req.user!.id]
   );
 
@@ -64,6 +65,7 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
         commandPrompt: null,
         queryPrompt: null,
         structurePrompt: null,
+        reorganizationPrompt: null,
         temperature: null,
         maxTokens: null,
         topP: null,
@@ -103,6 +105,7 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
     commandPrompt: activeRow.command_prompt || null,
     queryPrompt: activeRow.query_prompt || null,
     structurePrompt: activeRow.structure_prompt || null,
+    reorganizationPrompt: activeRow.reorganization_prompt || null,
     temperature: activeRow.temperature ?? null,
     maxTokens: activeRow.max_tokens ?? null,
     topP: activeRow.top_p ?? null,
@@ -114,7 +117,7 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
 
 // PUT /api/ai/settings — upsert AI config
 router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
-  const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt } = req.body;
+  const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt, reorganizationPrompt } = req.body;
   const { temperature: rawTemp, maxTokens: rawMaxTokens, topP: rawTopP, requestTimeout: rawTimeout } = req.body;
 
   if (!provider || !apiKey || !model) {
@@ -145,6 +148,11 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
 
   if (structurePrompt && typeof structurePrompt === 'string' && structurePrompt.length > 10000) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Structure prompt must be 10000 characters or less' });
+    return;
+  }
+
+  if (reorganizationPrompt && typeof reorganizationPrompt === 'string' && reorganizationPrompt.length > 10000) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Reorganization prompt must be 10000 characters or less' });
     return;
   }
 
@@ -179,6 +187,7 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
   const finalCommandPrompt = (commandPrompt && typeof commandPrompt === 'string' && commandPrompt.trim()) ? commandPrompt.trim() : null;
   const finalQueryPrompt = (queryPrompt && typeof queryPrompt === 'string' && queryPrompt.trim()) ? queryPrompt.trim() : null;
   const finalStructurePrompt = (structurePrompt && typeof structurePrompt === 'string' && structurePrompt.trim()) ? structurePrompt.trim() : null;
+  const finalReorganizationPrompt = (reorganizationPrompt && typeof reorganizationPrompt === 'string' && reorganizationPrompt.trim()) ? reorganizationPrompt.trim() : null;
 
   // Deactivate all other rows for this user
   await query(
@@ -189,12 +198,12 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
   // Upsert the row for this (user, provider) and set it active
   const newId = generateUuid();
   const result = await query(
-    `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, temperature, max_tokens, top_p, request_timeout, is_active)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 1)
+    `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, is_active)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 1)
      ON CONFLICT (user_id, provider) DO UPDATE SET
-       api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, temperature = $11, max_tokens = $12, top_p = $13, request_timeout = $14, is_active = 1, updated_at = datetime('now')
-     RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, temperature, max_tokens, top_p, request_timeout`,
-    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt, finalTemperature, finalMaxTokens, finalTopP, finalTimeout]
+       api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, reorganization_prompt = $11, temperature = $12, max_tokens = $13, top_p = $14, request_timeout = $15, is_active = 1, updated_at = datetime('now')
+     RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout`,
+    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt, finalReorganizationPrompt, finalTemperature, finalMaxTokens, finalTopP, finalTimeout]
   );
 
   // Fetch all rows to build providerConfigs
@@ -222,6 +231,7 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
     commandPrompt: row.command_prompt || null,
     queryPrompt: row.query_prompt || null,
     structurePrompt: row.structure_prompt || null,
+    reorganizationPrompt: row.reorganization_prompt || null,
     temperature: row.temperature ?? null,
     maxTokens: row.max_tokens ?? null,
     topP: row.top_p ?? null,

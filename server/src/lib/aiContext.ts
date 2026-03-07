@@ -14,7 +14,7 @@ async function fetchLocationData(locationId: string, userId: string) {
   const [binsResult, areasResult, trashResult, cfResult] = await Promise.all([
     query(
       `SELECT b.id, b.name,
-        COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name)) FROM (SELECT id, name FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
+        COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name, 'quantity', bi.quantity)) FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
         b.tags, b.area_id, COALESCE(a.name, '') AS area_name, b.notes, b.icon, b.color,
         b.visibility,
         (SELECT COUNT(*) FROM photos WHERE photos.bin_id = b.id) AS photo_count,
@@ -69,7 +69,7 @@ export async function buildCommandContext(locationId: string, userId: string): P
     return {
       id: binId,
       name: r.name as string,
-      items: r.items as Array<{ id: string; name: string }>,
+      items: r.items as Array<{ id: string; name: string; quantity: number | null }>,
       tags: r.tags as string[],
       area_id: r.area_id as string | null,
       area_name: r.area_name as string,
@@ -107,7 +107,7 @@ export async function buildInventoryContext(locationId: string, userId: string):
       return {
         id: binId,
         name: r.name as string,
-        items: (r.items as Array<{ id: string; name: string }>).map((i) => i.name),
+        items: (r.items as Array<{ id: string; name: string; quantity: number | null }>).map((i) => i.quantity ? `${i.name} (×${i.quantity})` : i.name),
         tags: r.tags as string[],
         area_name: r.area_name as string,
         notes: truncateNotes(r.notes),

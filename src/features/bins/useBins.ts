@@ -226,7 +226,7 @@ export function useBin(id: string | undefined) {
 export interface AddBinOptions {
   name: string;
   locationId: string;
-  items?: string[];
+  items?: (string | { name: string; quantity?: number | null })[];
   notes?: string;
   tags?: string[];
   areaId?: string | null;
@@ -261,7 +261,7 @@ export async function addBin(options: AddBinOptions): Promise<Bin> {
 
 export async function updateBin(
   id: string,
-  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color' | 'card_style' | 'visibility'>> & { areaId?: string | null; items?: string[]; cardStyle?: string; customFields?: Record<string, string> }
+  changes: Partial<Pick<Bin, 'name' | 'notes' | 'tags' | 'icon' | 'color' | 'card_style' | 'visibility'>> & { areaId?: string | null; items?: (string | { name: string; quantity?: number | null })[]; cardStyle?: string; customFields?: Record<string, string> }
 ): Promise<void> {
   await apiFetch(`/api/bins/${id}`, {
     method: 'PUT',
@@ -270,7 +270,7 @@ export async function updateBin(
   notifyBinsChanged();
 }
 
-export async function addItemsToBin(binId: string, items: string[]): Promise<BinItem[]> {
+export async function addItemsToBin(binId: string, items: (string | { name: string; quantity?: number | null })[]): Promise<BinItem[]> {
   const result = await apiFetch<{ items: BinItem[] }>(`/api/bins/${binId}/items`, {
     method: 'POST',
     body: { items },
@@ -284,12 +284,23 @@ export async function removeItemFromBin(binId: string, itemId: string): Promise<
   notifyBinsChanged();
 }
 
-export async function renameItem(binId: string, itemId: string, name: string): Promise<void> {
+export async function renameItem(binId: string, itemId: string, name: string, quantity?: number | null): Promise<void> {
+  const body: { name: string; quantity?: number | null } = { name };
+  if (quantity !== undefined) body.quantity = quantity;
   await apiFetch(`/api/bins/${binId}/items/${itemId}`, {
     method: 'PUT',
-    body: { name },
+    body,
   });
   notifyBinsChanged();
+}
+
+export async function updateItemQuantity(binId: string, itemId: string, quantity: number): Promise<{ id: string; quantity?: number; removed?: boolean }> {
+  const result = await apiFetch<{ id: string; quantity?: number; removed?: boolean }>(`/api/bins/${binId}/items/${itemId}/quantity`, {
+    method: 'PATCH',
+    body: { quantity },
+  });
+  notifyBinsChanged();
+  return result;
 }
 
 export async function reorderItems(binId: string, itemIds: string[]): Promise<void> {

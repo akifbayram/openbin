@@ -19,14 +19,24 @@ export function parsePartialAnalysis(text: string): PartialAnalysis {
   const bracketStart = text.indexOf('[', itemsStart);
   if (bracketStart === -1) return { name, items };
 
-  // Extract all complete quoted strings from the items array region
+  // Extract the items array region
   const afterBracket = text.slice(bracketStart + 1);
   const bracketEnd = afterBracket.indexOf(']');
   const region = bracketEnd !== -1 ? afterBracket.slice(0, bracketEnd) : afterBracket;
 
-  const itemPattern = /"((?:[^"\\]|\\.)*)"/g;
-  for (const match of region.matchAll(itemPattern)) {
-    items.push(match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
+  // Handle both old format ["item1", "item2"] and new format [{"name": "item1", ...}, ...]
+  if (region.includes('{')) {
+    // Object format: extract "name" values from each item object
+    const namePattern = /"name"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+    for (const match of region.matchAll(namePattern)) {
+      items.push(match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
+    }
+  } else {
+    // String format: extract quoted strings
+    const itemPattern = /"((?:[^"\\]|\\.)*)"/g;
+    for (const match of region.matchAll(itemPattern)) {
+      items.push(match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
+    }
   }
 
   return { name, items };

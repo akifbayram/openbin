@@ -67,6 +67,7 @@ export type BinVisibility = 'location' | 'private';
 export interface BinItem {
   id: string;
   name: string;
+  quantity: number | null;
 }
 
 export interface Bin {
@@ -200,6 +201,7 @@ export interface AiSettings {
   commandPrompt: string | null;
   queryPrompt: string | null;
   structurePrompt: string | null;
+  reorganizationPrompt: string | null;
   temperature: number | null;
   maxTokens: number | null;
   topP: number | null;
@@ -221,9 +223,14 @@ export interface ApiKey {
   revoked_at: string | null;
 }
 
+export interface AiSuggestedItem {
+  name: string;
+  quantity?: number | null;
+}
+
 export interface AiSuggestions {
   name: string;
-  items: string[];
+  items: AiSuggestedItem[];
   tags: string[];
   notes: string;
   customFields?: Record<string, string>;

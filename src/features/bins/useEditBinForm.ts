@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import type { Bin, BinVisibility } from '@/types';
 import { useBinFormFields } from './useBinFormFields';
@@ -45,6 +45,8 @@ export function useEditBinForm(id: string | undefined) {
     visibility, setVisibility,
     customFields, setCustomFields,
   } = useBinFormFields();
+  const [quantities, setQuantities] = useState<(number | null)[]>([]);
+  const itemsRef = useRef<string[]>([]);
   const originalRef = useRef<OriginalSnapshot | null>(null);
 
   const isDirty = useMemo(() => {
@@ -74,11 +76,37 @@ export function useEditBinForm(id: string | undefined) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [editing, isDirty]);
 
+  // Wrap setItems to keep quantities in sync
+  const setItemsWithQuantities = useCallback((newItems: string[]) => {
+    const prevItems = itemsRef.current;
+    setItems(newItems);
+    itemsRef.current = newItems;
+    setQuantities((prev) => {
+      if (newItems.length > prev.length) {
+        return [...prev, ...Array<null>(newItems.length - prev.length).fill(null)];
+      }
+      if (newItems.length < prev.length && prevItems.length === prev.length) {
+        // Detect which index was removed by comparing old and new item arrays
+        for (let i = 0; i < prevItems.length; i++) {
+          if (newItems[i] !== prevItems[i]) {
+            return [...prev.slice(0, i), ...prev.slice(i + 1)];
+          }
+        }
+        // Last item was removed
+        return prev.slice(0, newItems.length);
+      }
+      return prev.slice(0, newItems.length);
+    });
+  }, [setItems]);
+
   function startEdit(bin: Bin) {
     const itemNames = bin.items.map((i) => i.name);
+    const itemQuantities = bin.items.map((i) => i.quantity);
     setName(bin.name);
     setAreaId(bin.area_id);
     setItems(itemNames);
+    itemsRef.current = itemNames;
+    setQuantities(itemQuantities);
     setNotes(bin.notes);
     setTags([...bin.tags]);
     setIcon(bin.icon);
@@ -104,10 +132,11 @@ export function useEditBinForm(id: string | undefined) {
   async function saveEdit() {
     if (!id || !name.trim()) return;
     try {
+      const itemsWithQty = items.map((name, i) => ({ name, quantity: quantities[i] ?? null }));
       await updateBin(id, {
         name: name.trim(),
         areaId,
-        items,
+        items: itemsWithQty,
         notes: notes.trim(),
         tags,
         icon,
@@ -128,12 +157,20 @@ export function useEditBinForm(id: string | undefined) {
     originalRef.current = null;
   }
 
+  const setQuantity = useCallback((index: number, quantity: number | null) => {
+    setQuantities((prev) => {
+      const next = [...prev];
+      next[index] = quantity;
+      return next;
+    });
+  }, []);
+
   return {
     editing,
     isDirty,
     name, setName,
     areaId, setAreaId,
-    items, setItems,
+    items, setItems: setItemsWithQuantities, quantities, setQuantity,
     notes, setNotes,
     tags, setTags,
     icon, setIcon,

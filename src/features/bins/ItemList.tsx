@@ -18,32 +18,38 @@ type SortMode = 'manual' | 'az' | 'za';
 
 interface ItemRowProps {
   text: string;
+  quantity: number | null;
   isEditing: boolean;
   onStartEdit: () => void;
-  onSave: (value: string) => void;
+  onSave: (value: string, quantity: number | null) => void;
   onCancel: () => void;
   onDelete: () => void;
 }
 
 const SWIPE_THRESHOLD = 80;
 
-function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: ItemRowProps) {
+function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onDelete }: ItemRowProps) {
   const [editValue, setEditValue] = useState(text);
+  const [editQuantity, setEditQuantity] = useState<string>(quantity != null ? String(quantity) : '');
   const [swipeX, setSwipeX] = useState(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const swipingRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
 
   function handleStartEdit() {
     setEditValue(text);
+    setEditQuantity(quantity != null ? String(quantity) : '');
     onStartEdit();
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
   function handleSave() {
     const trimmed = editValue.trim();
-    if (trimmed && trimmed !== text) {
-      onSave(trimmed);
+    const parsedQty = editQuantity.trim() === '' ? null : Number.parseInt(editQuantity, 10);
+    const finalQty = parsedQty != null && Number.isFinite(parsedQty) && parsedQty >= 1 ? parsedQty : (editQuantity.trim() === '' ? null : quantity);
+    if (trimmed && (trimmed !== text || finalQty !== quantity)) {
+      onSave(trimmed, finalQty);
     } else {
       onCancel();
     }
@@ -94,6 +100,7 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
 
       {/* Foreground row */}
       <div
+        ref={rowRef}
         className={cn(
           'relative row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors',
           !isEditing && 'group'
@@ -103,26 +110,49 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
+        <input
+          value={isEditing ? editQuantity : (quantity != null ? String(quantity) : '')}
+          onChange={(e) => {
+            const val = e.target.value.replace(/[^0-9]/g, '');
+            if (!isEditing) {
+              const num = val === '' ? null : Number.parseInt(val, 10);
+              const finalQty = num != null && Number.isFinite(num) && num >= 0 ? num : null;
+              onSave(text, finalQty);
+            } else {
+              setEditQuantity(val);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (isEditing) {
+              if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
+              else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+            }
+          }}
+          onBlur={isEditing ? () => { requestAnimationFrame(() => { if (!rowRef.current?.contains(document.activeElement)) handleSave(); }); } : undefined}
+          placeholder="1"
+          className="shrink-0 w-8 text-center text-[13px] tabular-nums text-[var(--text-tertiary)] bg-transparent outline-none focus:text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)]"
+          inputMode="numeric"
+          aria-label="Quantity"
+        />
+
         {isEditing ? (
-          <input
-            ref={inputRef}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSave();
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                onCancel();
-              }
-            }}
-            onBlur={handleSave}
-            className="flex-1 min-w-0 bg-transparent text-[15px] text-[var(--text-primary)] outline-none"
-          />
+          <div className="flex-1 min-w-0">
+            <input
+              ref={inputRef}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
+                else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+              }}
+              onBlur={() => { requestAnimationFrame(() => { if (!rowRef.current?.contains(document.activeElement)) handleSave(); }); }}
+              className="w-full bg-transparent text-[15px] text-[var(--text-primary)] leading-relaxed outline-none"
+            />
+          </div>
         ) : (
           <button
             type="button"
+            onTouchEnd={(e) => { if (!swipingRef.current) { e.preventDefault(); handleStartEdit(); } }}
             onClick={handleStartEdit}
             className="flex-1 min-w-0 text-left text-[15px] text-[var(--text-primary)] leading-relaxed cursor-text"
           >
@@ -136,7 +166,7 @@ function ItemRow({ text, isEditing, onStartEdit, onSave, onCancel, onDelete }: I
             <button
               type="button"
               onClick={onDelete}
-              className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
+              className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity"
               aria-label="Remove item"
             >
               <X className="h-3.5 w-3.5" />
@@ -184,12 +214,12 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
     handleSort(next);
   }
 
-  async function handleSaveEdit(itemId: string, value: string) {
+  async function handleSaveEdit(itemId: string, value: string, quantity: number | null) {
     setEditingId(null);
     try {
-      await renameItem(binId, itemId, value);
+      await renameItem(binId, itemId, value, quantity);
     } catch {
-      showToast({ message: 'Failed to rename item', variant: 'error' });
+      showToast({ message: 'Failed to update item', variant: 'error' });
     }
   }
 
@@ -227,14 +257,21 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
         <p className="text-[15px] text-[var(--text-tertiary)] italic">No items yet</p>
       ) : (
         <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden">
+          {!readOnly && (
+            <div className="row-tight px-3.5 pt-1.5 pb-0.5">
+              <span className="shrink-0 w-8 text-center text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Qty</span>
+              <span className="flex-1 text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Name</span>
+            </div>
+          )}
           {items.map((item, i) => readOnly ? (
             <div key={item.id}>
               {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-              <div
-                className={cn(
-                  'row-tight px-3.5 py-1',
+              <div className="row-tight px-3.5 py-1">
+                {item.quantity != null && (
+                  <span className="shrink-0 text-[13px] text-[var(--text-tertiary)] tabular-nums">
+                    {item.quantity}
+                  </span>
                 )}
-              >
                 <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
                   {item.name}
                 </span>
@@ -250,9 +287,10 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
               >
                 <ItemRow
                   text={item.name}
+                  quantity={item.quantity}
                   isEditing={editingId === item.id}
                   onStartEdit={() => setEditingId(item.id)}
-                  onSave={(value) => handleSaveEdit(item.id, value)}
+                  onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
                   onCancel={() => setEditingId(null)}
                   onDelete={() => handleDelete(item.id)}
                 />

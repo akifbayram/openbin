@@ -751,7 +751,7 @@ export function seedDemoData(): void {
 
       for (let i = 0; i < bin.items.length; i++) {
         querySync(
-          'INSERT INTO bin_items (id, bin_id, name, position) VALUES ($1, $2, $3, $4)',
+          'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, NULL, $4)',
           [generateUuid(), binId, bin.items[i], i],
         );
       }

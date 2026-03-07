@@ -26,12 +26,15 @@ The short code is auto-generated from the bin name and appears on printed QR lab
 
 ## Items
 
-Items are a discrete, ordered list of things inside the bin. Each item is a separate entry — not a freeform block of text.
+Items are a discrete, ordered list of things inside the bin. Each item is a separate entry — not a freeform block of text. Items optionally track a **quantity** — useful for consumables, fasteners, or anything you count.
 
 - **Add**: type a name and press Enter or tap Add.
 - **Remove**: tap the delete icon next to an item.
 - **Rename**: tap the item name to edit it inline.
 - **Reorder**: drag and drop items to rearrange them.
+- **Quantity**: tap the quantity field next to an item to set or edit the count. Leave it blank for items where quantity is not relevant — the field is optional and defaults to untracked.
+
+When a quantity is set, it is displayed next to the item name throughout the app (bin detail, item search results, exports, and AI suggestions).
 
 ::: tip
 Items are searchable. Searching "screwdriver" will find bins that have "screwdriver" in their items list.

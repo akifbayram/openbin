@@ -17,6 +17,7 @@ The Items page lists every item across all bins in the active location.
 
 - **Search** by item name to find which bin holds a specific thing.
 - **Sort** by item name (alphabetical) or by bin name to group items by their container.
+- **Quantity** is shown next to each item when tracked — items without a quantity display no count.
 - **Paginated** results keep the page fast even for locations with thousands of items.
 
 Clicking an item navigates directly to its parent bin's detail page.

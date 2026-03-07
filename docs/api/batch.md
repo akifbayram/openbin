@@ -33,7 +33,7 @@ Rate limits: 60/hour for JWT auth; 600/hour for API keys.
 | `bin_id` | UUID | All except `create_bin` | Target bin ID |
 | `bin_name` | string | All except `create_bin` | Bin name (for logging) |
 | `name` | string | `create_bin`, `update_bin` | Bin name |
-| `items` | string[] | `add_items`, `remove_items`, `create_bin` | Item names |
+| `items` | (string \| object)[] | `add_items`, `remove_items`, `create_bin` | Item names or `{ name, quantity? }` objects. Quantity is supported for `add_items` and `create_bin`. |
 | `tags` | string[] | `add_tags`, `remove_tags`, `create_bin`, `update_bin` | Tag names |
 | `notes` | string | `set_notes`, `create_bin`, `update_bin` | Notes text |
 | `mode` | `"set"`, `"append"`, `"clear"` | `set_notes` | Notes update mode |
@@ -70,7 +70,7 @@ Rate limits: 60/hour for JWT auth; 600/hour for API keys.
     {
       "type": "create_bin",
       "name": "New Bin",
-      "items": ["item1"],
+      "items": [{ "name": "AA Battery", "quantity": 24 }, "Flashlight"],
       "tags": ["new"]
     }
   ]

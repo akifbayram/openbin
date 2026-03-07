@@ -149,7 +149,7 @@ The MCP server exposes 43 tools organized into 9 categories.
 | Tool | Description |
 |---|---|
 | `search_items` | Search items across all bins in a location with optional text query, sort, and pagination |
-| `add_items` | Add one or more items to a bin |
+| `add_items` | Add one or more items to a bin (supports optional quantity per item) |
 | `remove_item` | Remove a single item from a bin by item UUID or name (case-insensitive) |
 | `rename_item` | Rename an item within a bin by item UUID or name |
 | `reorder_items` | Reorder items within a bin by providing UUIDs or names in the desired order |
@@ -217,9 +217,9 @@ Claude will call `create_bin` with the name, area, and item list. If the Garage 
 
 ### Updating inventory
 
-> "Add 'batteries' and 'charger' to the Power Tools bin"
+> "Add 4 AA batteries and a charger to the Power Tools bin"
 
-Claude will search for the bin by name, then call `add_items` to append the new items without removing existing ones.
+Claude will search for the bin by name, then call `add_items` to append the new items (with quantities when specified) without removing existing ones.
 
 ### Bulk operations
 

@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CommandActionPreview } from './CommandActionPreview';
 import { CommandIdleInput } from './CommandIdleInput';
@@ -56,6 +57,29 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
   // Augment state with executor state
   const effectiveState = isExecuting ? 'executing' : state;
 
+  // Progress bar: show during parsing, hold at 100% briefly after completion
+  const isParsing = effectiveState === 'parsing' || effectiveState === 'querying';
+  const parseDone = !isParsing && (effectiveState === 'preview' || effectiveState === 'query-result');
+  const [showProgress, setShowProgress] = useState(false);
+
+  useEffect(() => {
+    if (isParsing) {
+      setShowProgress(true);
+      return;
+    }
+    if (parseDone) {
+      const id = setTimeout(() => setShowProgress(false), 800);
+      return () => clearTimeout(id);
+    }
+    // Error or back to idle — hide immediately
+    setShowProgress(false);
+  }, [isParsing, parseDone]);
+
+  // Reset progress when dialog closes
+  useEffect(() => {
+    if (!open) setShowProgress(false);
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
@@ -71,6 +95,15 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
               initialFiles={initialFiles}
               onClose={() => handleClose(false)}
               onBack={() => { setPhotoMode(false); setInitialFiles([]); }}
+            />
+          </div>
+        ) : showProgress ? (
+          <div key="progress" className="ai-content-enter py-4">
+            <AiProgressBar
+              active={isParsing}
+              complete={parseDone}
+              label={isParsing ? 'Processing' : 'Complete'}
+              showElapsed
             />
           </div>
         ) : effectiveState === 'success' && executionResult ? (
@@ -115,7 +148,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
             <CommandIdleInput
               text={text}
               setText={setText}
-              isLoading={effectiveState === 'parsing' || effectiveState === 'querying' || effectiveState === 'executing'}
+              isLoading={false}
               examplesOpen={examplesOpen}
               setExamplesOpen={setExamplesOpen}
               error={error}

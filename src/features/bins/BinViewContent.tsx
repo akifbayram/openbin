@@ -32,7 +32,7 @@ interface BinViewContentProps {
   hasNotes: boolean;
   hasTags: boolean;
   customFields: CustomField[];
-  onApplySuggestions: (changes: Partial<{ name: string; items: string[]; tags: string[]; notes: string; customFields: Record<string, string> }>) => void;
+  onApplySuggestions: (changes: Partial<{ name: string; items: { name: string; quantity?: number | null }[]; tags: string[]; notes: string; customFields: Record<string, string> }>) => void;
   onClearSuggestions: () => void;
 }
 
