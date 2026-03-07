@@ -95,10 +95,10 @@ export function ReorganizePage() {
 
       {!hasProposal && !isStreaming && (
         <Card className="p-5 stack-4">
-          <div className="stack-1">
-            <label className="text-sm font-medium text-[var(--text-secondary)]">
+          <label className="stack-1">
+            <span className="text-sm font-medium text-[var(--text-secondary)]">
               Area (optional)
-            </label>
+            </span>
             <select
               value={selectedArea}
               onChange={(e) => {
@@ -115,12 +115,12 @@ export function ReorganizePage() {
                 </option>
               ))}
             </select>
-          </div>
+          </label>
 
-          <div className="stack-1">
-            <label className="text-sm font-medium text-[var(--text-secondary)]">
+          <label className="stack-1">
+            <span className="text-sm font-medium text-[var(--text-secondary)]">
               Max bins (optional)
-            </label>
+            </span>
             <input
               type="number"
               min={1}
@@ -129,7 +129,7 @@ export function ReorganizePage() {
               placeholder="AI decides"
               className="w-full rounded-lg border border-[var(--border-primary)] bg-[var(--bg-base)] px-3 py-2 text-sm"
             />
-          </div>
+          </label>
 
           <div className="stack-2">
             <div className="flex-row-2 items-center justify-between">

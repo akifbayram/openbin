@@ -48,8 +48,8 @@ export function ReorganizePreview({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {displayBins.map((bin, i) => (
-          <Card key={i} className="p-4 stack-2">
+        {displayBins.map((bin) => (
+          <Card key={bin.name} className="p-4 stack-2">
             <div className="flex-row-2 items-center">
               <Package className="icon-4 text-[var(--text-tertiary)]" />
               <span className="font-medium text-sm">{bin.name || '\u2026'}</span>
@@ -59,8 +59,8 @@ export function ReorganizePreview({
             </div>
             {bin.items.length > 0 && (
               <ul className="stack-1 pl-6 text-xs text-[var(--text-secondary)]">
-                {bin.items.map((item, j) => (
-                  <li key={j} className="list-disc">
+                {bin.items.map((item) => (
+                  <li key={item} className="list-disc">
                     {item}
                   </li>
                 ))}

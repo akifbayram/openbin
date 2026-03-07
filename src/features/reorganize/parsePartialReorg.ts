@@ -28,8 +28,7 @@ export function parsePartialReorg(text: string): PartialReorgResult {
 
   // Extract each bin object: find {"name": "...", "items": [...]}
   const binPattern = /\{\s*"name"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"items"\s*:\s*\[/g;
-  let match: RegExpExecArray | null;
-  while ((match = binPattern.exec(afterBracket)) !== null) {
+  for (const match of afterBracket.matchAll(binPattern)) {
     const name = match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
     const items: string[] = [];
 

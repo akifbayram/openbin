@@ -4,7 +4,7 @@ import { addBin, deleteBin } from '@/features/bins/useBins';
 import { useAuth } from '@/lib/auth';
 import { Events, notify } from '@/lib/eventBus';
 import type { Bin } from '@/types';
-import { parsePartialReorg, type PartialReorgResult } from './parsePartialReorg';
+import { type PartialReorgResult, parsePartialReorg } from './parsePartialReorg';
 
 interface ReorgResponse {
   bins: Array<{ name: string; items: string[] }>;
