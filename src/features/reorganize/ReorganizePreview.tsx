@@ -1,6 +1,6 @@
-import { Package } from 'lucide-react';
+import { Loader2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import type { PartialReorgResult } from './parsePartialReorg';
 
 interface ReorgResponse {
@@ -35,45 +35,48 @@ export function ReorganizePreview({
   const totalItems = displayBins.reduce((sum, b) => sum + b.items.length, 0);
 
   return (
-    <div className="stack-3">
-      {summary && (
-        <p className="text-sm text-[var(--text-secondary)]">{summary}</p>
-      )}
-
-      <div className="text-xs text-[var(--text-tertiary)]">
-        {originalCount} bin{originalCount !== 1 ? 's' : ''} →{' '}
-        {displayBins.length} bin{displayBins.length !== 1 ? 's' : ''} ·{' '}
-        {totalItems} item{totalItems !== 1 ? 's' : ''}
-        {isStreaming && ' · streaming\u2026'}
+    <div className="space-y-4">
+      <div className="row-spread">
+        <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal">Proposal</Label>
+        <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums">
+          {originalCount} → {displayBins.length} bin{displayBins.length !== 1 ? 's' : ''} · {totalItems} item{totalItems !== 1 ? 's' : ''}
+          {isStreaming && (
+            <Loader2 className="inline-block h-3 w-3 ml-1.5 animate-spin" />
+          )}
+        </span>
       </div>
+
+      {summary && (
+        <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">{summary}</p>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         {displayBins.map((bin) => (
-          <Card key={bin.name} className="p-4 stack-2">
-            <div className="flex-row-2 items-center">
-              <Package className="icon-4 text-[var(--text-tertiary)]" />
-              <span className="font-medium text-sm">{bin.name || '\u2026'}</span>
-              <span className="ml-auto text-xs text-[var(--text-tertiary)]">
-                {bin.items.length} item{bin.items.length !== 1 ? 's' : ''}
+          <div key={bin.name} className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-input)] p-3.5 space-y-2">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+              <span className="font-medium text-[14px] text-[var(--text-primary)] truncate">{bin.name || '\u2026'}</span>
+              <span className="ml-auto text-[12px] text-[var(--text-tertiary)] shrink-0">
+                {bin.items.length}
               </span>
             </div>
             {bin.items.length > 0 && (
-              <ul className="stack-1 pl-6 text-xs text-[var(--text-secondary)]">
+              <ul className="space-y-0.5 pl-6">
                 {bin.items.map((item) => (
-                  <li key={item} className="list-disc">
+                  <li key={item} className="list-disc text-[13px] text-[var(--text-secondary)]">
                     {item}
                   </li>
                 ))}
               </ul>
             )}
-          </Card>
+          </div>
         ))}
       </div>
 
       {!isStreaming && result && (
-        <div className="flex-row-2 justify-end pt-2">
-          <Button variant="outline" onClick={onCancel} disabled={isApplying}>
-            Cancel
+        <div className="flex gap-2 justify-end pt-1">
+          <Button variant="ghost" onClick={onCancel} disabled={isApplying}>
+            Discard
           </Button>
           <Button onClick={onAccept} disabled={isApplying}>
             {isApplying ? 'Applying\u2026' : 'Accept & Apply'}

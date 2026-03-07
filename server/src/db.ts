@@ -27,6 +27,7 @@ const aiSettingsMigrations = [
   'max_tokens INTEGER',
   'top_p REAL',
   'request_timeout INTEGER',
+  'reorganization_prompt TEXT',
 ];
 for (const colDef of aiSettingsMigrations) {
   try { db.exec(`ALTER TABLE user_ai_settings ADD COLUMN ${colDef}`); } catch { /* column already exists */ }

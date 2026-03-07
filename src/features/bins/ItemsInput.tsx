@@ -290,7 +290,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
         </div>
       )}
 
-      <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200">
+      <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:shadow-[0_0_0_4px_var(--accent-glow)]">
         {state === 'input' && (
           <div className="row-tight">
             <Input
@@ -299,7 +299,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
               onKeyDown={handleInputKeyDown}
               onPaste={handlePaste}
               placeholder="Add item..."
-              className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0"
+              className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0 focus-visible:shadow-none"
             />
             {input.trim() && (
               <Tooltip content="Add item">

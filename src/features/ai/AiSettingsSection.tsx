@@ -15,13 +15,14 @@ import { useAiProviderSetup } from './useAiProviderSetup';
 import { deleteAiSettings, saveAiSettings, testAiConnection, useAiSettings } from './useAiSettings';
 import { useDefaultPrompts } from './useDefaultPrompts';
 
-type PromptTab = 'analysis' | 'command' | 'query' | 'structure';
+type PromptTab = 'analysis' | 'command' | 'query' | 'structure' | 'reorganization';
 
 const PROMPT_TAB_META = [
   { key: 'analysis', label: 'Photo Analysis', shortLabel: 'Photos' },
   { key: 'command', label: 'Commands', shortLabel: 'Cmds' },
   { key: 'query', label: 'Queries', shortLabel: 'Queries' },
   { key: 'structure', label: 'Extraction', shortLabel: 'Extract' },
+  { key: 'reorganization', label: 'Reorganize', shortLabel: 'Reorg' },
 ] as const;
 
 interface AiSettingsSectionProps {
@@ -40,6 +41,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
   const [commandPrompt, setCommandPrompt] = useState('');
   const [queryPrompt, setQueryPrompt] = useState('');
   const [structurePrompt, setStructurePrompt] = useState('');
+  const [reorganizationPrompt, setReorganizationPrompt] = useState('');
   const [activePromptTab, setActivePromptTab] = useState<PromptTab>('analysis');
   const [temperature, setTemperature] = useState<string>('');
   const [maxTokens, setMaxTokens] = useState<string>('');
@@ -59,6 +61,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setCommandPrompt(settings.commandPrompt || '');
       setQueryPrompt(settings.queryPrompt || '');
       setStructurePrompt(settings.structurePrompt || '');
+      setReorganizationPrompt(settings.reorganizationPrompt || '');
       setTemperature(settings.temperature != null ? String(settings.temperature) : '');
       setMaxTokens(settings.maxTokens != null ? String(settings.maxTokens) : '');
       setTopP(settings.topP != null ? String(settings.topP) : '');
@@ -96,6 +99,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
         commandPrompt: commandPrompt.trim() || null,
         queryPrompt: queryPrompt.trim() || null,
         structurePrompt: structurePrompt.trim() || null,
+        reorganizationPrompt: reorganizationPrompt.trim() || null,
         temperature: temperature ? Number(temperature) : null,
         maxTokens: maxTokens ? Number(maxTokens) : null,
         topP: topP ? Number(topP) : null,
@@ -120,6 +124,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setCommandPrompt('');
       setQueryPrompt('');
       setStructurePrompt('');
+      setReorganizationPrompt('');
       setTemperature('');
       setMaxTokens('');
       setTopP('');
@@ -238,12 +243,14 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     command:   { value: commandPrompt,   set: setCommandPrompt },
                     query:     { value: queryPrompt,     set: setQueryPrompt },
                     structure: { value: structurePrompt, set: setStructurePrompt },
+                    reorganization: { value: reorganizationPrompt, set: setReorganizationPrompt },
                   };
                   const helpText: Record<PromptTab, React.ReactNode> = {
                     analysis: <>Use <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--bg-input)]">{'{available_tags}'}</code> to inject existing tags. Leave empty for default.</>,
                     command: 'Customize how commands are parsed. Leave empty for default.',
                     query: 'Customize how inventory queries are answered. Leave empty for default.',
                     structure: 'Customize how text is parsed into item lists. Leave empty for default.',
+                    reorganization: 'Customize how bins are reorganized by AI. Leave empty for default.',
                   };
                   const active = promptMap[activePromptTab];
                   return (

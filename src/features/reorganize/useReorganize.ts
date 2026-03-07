@@ -11,6 +11,17 @@ interface ReorgResponse {
   summary: string;
 }
 
+export interface ReorgOptions {
+  userNotes?: string;
+  strictness?: 'conservative' | 'moderate' | 'aggressive';
+  granularity?: 'broad' | 'medium' | 'specific';
+  ambiguousPolicy?: 'best-fit' | 'multi-bin' | 'misc-bin';
+  duplicates?: 'allow' | 'force-single';
+  outliers?: 'dedicated' | 'force-closest';
+  minItemsPerBin?: number;
+  maxItemsPerBin?: number;
+}
+
 export function useReorganize() {
   const { activeLocationId } = useAuth();
   const { result, isStreaming, error, partialText, stream, cancel, clear } =
@@ -23,7 +34,7 @@ export function useReorganize() {
     : { bins: [], summary: '' };
 
   const startReorg = useCallback(
-    (bins: Bin[], maxBins?: number, areaId?: string, areaName?: string) => {
+    (bins: Bin[], maxBins?: number, areaId?: string, areaName?: string, options?: ReorgOptions) => {
       if (!activeLocationId) return;
       setApplyError(null);
       stream({
@@ -38,6 +49,7 @@ export function useReorganize() {
         maxBins: maxBins || undefined,
         areaId: areaId || undefined,
         areaName: areaName || undefined,
+        ...options,
       });
     },
     [activeLocationId, stream],

@@ -201,6 +201,7 @@ export interface AiSettings {
   commandPrompt: string | null;
   queryPrompt: string | null;
   structurePrompt: string | null;
+  reorganizationPrompt: string | null;
   temperature: number | null;
   maxTokens: number | null;
   topP: number | null;

@@ -85,11 +85,17 @@ export const DEFAULT_REORGANIZATION_PROMPT = `You are a storage reorganization a
 
 Rules:
 - Group related items together logically (e.g., all fasteners in one bin, all adhesives in another).
-- Every item from the input MUST appear in exactly one output bin. Do not drop or duplicate items.
 - Give each bin a clear, descriptive name.
 - Respond with valid JSON only: { "bins": [{ "name": "Bin Name", "items": ["item1", "item2"] }], "summary": "Brief explanation of the reorganization." }
 {max_bins_instruction}
-{area_instruction}`;
+{area_instruction}
+{strictness_instruction}
+{granularity_instruction}
+{duplicates_instruction}
+{ambiguous_instruction}
+{outliers_instruction}
+{items_per_bin_instruction}
+{notes_instruction}`;
 
 export const ALL_DEFAULT_PROMPTS = {
   analysis: DEFAULT_AI_PROMPT,

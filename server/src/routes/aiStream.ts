@@ -277,7 +277,9 @@ streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correctio
 
 // POST /api/ai/reorganize/stream
 streamRouter.post('/reorganize/stream', aiLimiter, requireLocationMember(), aiRouteHandler('stream reorganization', async (req, res) => {
-  const { locationId, bins: inputBins, maxBins, areaName } = req.body;
+  const { locationId, bins: inputBins, maxBins, areaName,
+    userNotes, strictness, granularity, ambiguousPolicy, duplicates, outliers,
+    minItemsPerBin, maxItemsPerBin } = req.body;
 
   if (!Array.isArray(inputBins) || inputBins.length === 0) {
     throw new (await import('../lib/httpErrors.js')).ValidationError('bins array is required');
@@ -290,11 +292,63 @@ streamRouter.post('/reorganize/stream', aiLimiter, requireLocationMember(), aiRo
 
   // Build system prompt
   const { DEFAULT_REORGANIZATION_PROMPT } = await import('../lib/defaultPrompts.js');
+  const basePrompt = settings.reorganization_prompt || DEFAULT_REORGANIZATION_PROMPT;
   const maxBinsInstruction = maxBins ? `Create at most ${maxBins} bins.` : 'Choose the optimal number of bins.';
   const areaInstruction = areaName ? `These bins are in the "${areaName}" area.` : '';
-  const system = DEFAULT_REORGANIZATION_PROMPT
+
+  const strictnessInstruction = strictness === 'conservative'
+    ? 'Be conservative: prefer fewer moves from original bins. Only regroup when the benefit is clear.'
+    : strictness === 'aggressive'
+      ? 'Be aggressive: maximize consolidation and create tightly themed bins, even if it means moving most items.'
+      : 'Use moderate grouping: balance specificity and consolidation.';
+
+  const granularityInstruction = granularity === 'broad'
+    ? 'Use broad category names (e.g., "Hardware", "Electronics") rather than specific ones.'
+    : granularity === 'specific'
+      ? 'Use highly specific, narrow bin names that describe exact item types (e.g., "M3 Hex Bolts", "USB-C Cables").'
+      : 'Use medium granularity for bin names.';
+
+  // Resolve potentially contradictory combinations:
+  // - multi-bin policy implies duplicates are allowed
+  // - misc-bin policy implies a catch-all bin exists (don't also say "no outlier bin")
+  const effectiveDuplicates = ambiguousPolicy === 'multi-bin' ? 'allow' : (duplicates ?? 'force-single');
+
+  const duplicatesInstruction = effectiveDuplicates === 'allow'
+    ? 'Items may appear in more than one output bin when they fit multiple categories.'
+    : 'Every item from the input MUST appear in exactly one output bin. Do not drop or duplicate items.';
+
+  const ambiguousInstruction = ambiguousPolicy === 'multi-bin'
+    ? 'If an item could belong to multiple bins, place it in all applicable bins.'
+    : ambiguousPolicy === 'misc-bin'
+      ? 'If an item does not clearly fit any group, place it in a dedicated "Miscellaneous" bin rather than forcing it.'
+      : 'If an item could belong to multiple bins, assign it to the single best-fitting bin.';
+
+  // When misc-bin is active, a catch-all already exists — don't contradict it
+  const effectiveOutliers = ambiguousPolicy === 'misc-bin' ? 'dedicated' : (outliers ?? 'force-closest');
+
+  const outliersInstruction = effectiveOutliers === 'dedicated'
+    ? 'Collect items that do not fit any natural group into a dedicated "Miscellaneous" bin.'
+    : 'Force every item into the closest matching group; do not create an outlier or miscellaneous bin.';
+
+  const itemsPerBinParts: string[] = [];
+  if (typeof minItemsPerBin === 'number' && minItemsPerBin >= 1) itemsPerBinParts.push(`at least ${minItemsPerBin}`);
+  if (typeof maxItemsPerBin === 'number' && maxItemsPerBin >= 1) itemsPerBinParts.push(`at most ${maxItemsPerBin}`);
+  const itemsPerBinInstruction = itemsPerBinParts.length > 0
+    ? `Each bin should contain ${itemsPerBinParts.join(' and ')} items.`
+    : '';
+
+  const notesInstruction = userNotes?.trim() ? `Additional user guidance: ${userNotes.trim()}` : '';
+
+  const system = basePrompt
     .replace('{max_bins_instruction}', maxBinsInstruction)
-    .replace('{area_instruction}', areaInstruction);
+    .replace('{area_instruction}', areaInstruction)
+    .replace('{strictness_instruction}', strictnessInstruction)
+    .replace('{granularity_instruction}', granularityInstruction)
+    .replace('{duplicates_instruction}', duplicatesInstruction)
+    .replace('{ambiguous_instruction}', ambiguousInstruction)
+    .replace('{outliers_instruction}', outliersInstruction)
+    .replace('{items_per_bin_instruction}', itemsPerBinInstruction)
+    .replace('{notes_instruction}', notesInstruction);
 
   // Build user message: list of bins with items
   const binDescriptions = inputBins.map((b: { name: string; items: string[] }) =>

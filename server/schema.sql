@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS user_ai_settings (
   command_prompt  TEXT,
   query_prompt    TEXT,
   structure_prompt TEXT,
+  reorganization_prompt TEXT,
   temperature     REAL,
   max_tokens      INTEGER,
   top_p           REAL,
