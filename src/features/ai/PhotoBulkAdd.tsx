@@ -8,7 +8,6 @@ import { AreaPicker } from '@/features/areas/AreaPicker';
 import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
 import { BinCreateSuccess } from '@/features/bins/BinCreateSuccess';
 import { addBin, notifyBinsChanged } from '@/features/bins/useBins';
-import { mergeItemQuantities } from '@/lib/itemQuantities';
 import { BulkAddReviewStep } from '@/features/bulk-add/BulkAddReviewStep';
 import { BulkAddSummaryStep } from '@/features/bulk-add/BulkAddSummaryStep';
 import type { BulkAddPhoto, BulkAddState } from '@/features/bulk-add/useBulkAdd';
@@ -16,6 +15,7 @@ import { BULK_ADD_STEPS, bulkAddReducer, bulkAddStepIndex, createBulkAddPhoto, i
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { useAuth } from '@/lib/auth';
+import { mergeItemQuantities } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { SingleBinReview } from './SingleBinReview';
 import { MAX_AI_PHOTOS } from './useAiAnalysis';

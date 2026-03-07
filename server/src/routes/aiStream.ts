@@ -277,7 +277,7 @@ streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correctio
 
 // POST /api/ai/reorganize/stream
 streamRouter.post('/reorganize/stream', aiLimiter, requireLocationMember(), aiRouteHandler('stream reorganization', async (req, res) => {
-  const { locationId, bins: inputBins, maxBins, areaName,
+  const { locationId: _locationId, bins: inputBins, maxBins, areaName,
     userNotes, strictness, granularity, ambiguousPolicy, duplicates, outliers,
     minItemsPerBin, maxItemsPerBin } = req.body;
 

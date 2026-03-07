@@ -69,8 +69,8 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
           completedActions.push(selected[i]);
           if (r.type === 'create_bin' || r.type === 'duplicate_bin') {
             createdBins.push({
-              id: r.bin_id!,
-              name: r.bin_name!,
+              id: r.bin_id ?? '',
+              name: r.bin_name ?? '',
               icon: (selected[i] as { icon?: string }).icon || '',
               color: (selected[i] as { color?: string }).color || '',
             });
