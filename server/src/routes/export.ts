@@ -8,17 +8,24 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { verifyLocationMembership } from '../lib/binAccess.js';
 import { config } from '../lib/config.js';
 import {
+  buildFieldIdToNameMap,
   type ExportBin,
   type ExportData,
   type ExportPhoto,
   extractItemsWithQuantity,
   fetchLocationBins,
+  fetchLocationFieldDefs,
+  fetchLocationTagColors,
   importPhotosSync,
+  importTagColorsSync,
   insertBinItemsSync,
   insertBinWithShortCode,
   loadBinPhotoMeta,
   loadBinPhotosBase64,
+  mapCustomFieldsToIds,
+  mapCustomFieldsToNames,
   resolveAreaSync,
+  resolveCustomFieldDefsSync,
 } from '../lib/exportHelpers.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { safePath } from '../lib/pathSafety.js';
@@ -64,15 +71,20 @@ router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async 
   }
 
   const locationName = locationResult.rows[0].name;
-  const bins = await fetchLocationBins(locationId);
+  const [bins, tagColors, fieldDefs, fieldIdToName] = await Promise.all([
+    fetchLocationBins(locationId),
+    fetchLocationTagColors(locationId),
+    fetchLocationFieldDefs(locationId),
+    buildFieldIdToNameMap(locationId),
+  ]);
 
   const exportBins: ExportBin[] = [];
   for (const bin of bins) {
     const photos = await loadBinPhotosBase64(bin.id);
-    // custom_fields is already deserialized by db.ts JSON_COLUMNS
+    // Map custom field values from fieldId-keyed to fieldName-keyed for portability
     const customFields =
       bin.custom_fields && typeof bin.custom_fields === 'object' && Object.keys(bin.custom_fields).length > 0
-        ? (bin.custom_fields as Record<string, string>)
+        ? mapCustomFieldsToNames(bin.custom_fields as Record<string, string>, fieldIdToName)
         : undefined;
 
     exportBins.push({
@@ -85,6 +97,7 @@ router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async 
       icon: bin.icon,
       color: bin.color,
       cardStyle: bin.card_style || undefined,
+      visibility: bin.visibility !== 'location' ? bin.visibility : undefined,
       customFields,
       shortCode: bin.id,
       createdAt: bin.created_at,
@@ -98,6 +111,8 @@ router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async 
     exportedAt: new Date().toISOString(),
     locationName,
     bins: exportBins,
+    tagColors: tagColors.length > 0 ? tagColors : undefined,
+    customFieldDefinitions: fieldDefs.length > 0 ? fieldDefs : undefined,
   };
 
   res.setHeader('Content-Disposition', `attachment; filename="openbin-export-${locationId}.json"`);
@@ -114,7 +129,12 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
   }
 
   const locationName = locationResult.rows[0].name;
-  const dbBins = await fetchLocationBins(locationId);
+  const [dbBins, tagColors, fieldDefs, fieldIdToName] = await Promise.all([
+    fetchLocationBins(locationId),
+    fetchLocationTagColors(locationId),
+    fetchLocationFieldDefs(locationId),
+    buildFieldIdToNameMap(locationId),
+  ]);
 
   const bins = [];
   const photosToInclude: Array<{ binId: string; photoId: string; filename: string; storagePath: string }> = [];
@@ -140,6 +160,11 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
       });
     }
 
+    const customFields =
+      bin.custom_fields && typeof bin.custom_fields === 'object' && Object.keys(bin.custom_fields).length > 0
+        ? mapCustomFieldsToNames(bin.custom_fields as Record<string, string>, fieldIdToName)
+        : undefined;
+
     bins.push({
       id: bin.id,
       name: bin.name,
@@ -150,6 +175,8 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
       icon: bin.icon,
       color: bin.color,
       cardStyle: bin.card_style || undefined,
+      visibility: bin.visibility !== 'location' ? bin.visibility : undefined,
+      customFields,
       shortCode: bin.id,
       createdAt: bin.created_at,
       updatedAt: bin.updated_at,
@@ -164,6 +191,8 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
     locationName,
     binCount: bins.length,
     photoCount: photosToInclude.length,
+    tagColors: tagColors.length > 0 ? tagColors : undefined,
+    customFieldDefinitions: fieldDefs.length > 0 ? fieldDefs : undefined,
   };
 
   // Stream ZIP response
@@ -240,7 +269,12 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
 // POST /api/locations/:id/import — import bins + photos
 router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLocationMember(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
-  const { bins, mode } = req.body as { bins: ExportBin[]; mode: 'merge' | 'replace' };
+  const { bins, mode, tagColors, customFieldDefinitions } = req.body as {
+    bins: ExportBin[];
+    mode: 'merge' | 'replace';
+    tagColors?: Array<{ tag: string; color: string }>;
+    customFieldDefinitions?: Array<{ name: string; position: number }>;
+  };
 
   if (!bins || !Array.isArray(bins)) {
     throw new ValidationError('bins array is required');
@@ -267,6 +301,17 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
       }
     }
 
+    // Import tag colors if provided
+    if (tagColors && Array.isArray(tagColors)) {
+      importTagColorsSync(locationId, tagColors);
+    }
+
+    // Resolve custom field definitions (create if missing) and build name→id map
+    let fieldNameToId: Map<string, string> | undefined;
+    if (customFieldDefinitions && Array.isArray(customFieldDefinitions)) {
+      fieldNameToId = resolveCustomFieldDefsSync(locationId, customFieldDefinitions);
+    }
+
     let binsImported = 0;
     let binsSkipped = 0;
     let photosImported = 0;
@@ -282,6 +327,12 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
 
       const areaId = resolveAreaSync(locationId, bin.location || '', userId);
 
+      // Map name-keyed custom fields to fieldId-keyed if we have definitions
+      let resolvedCustomFields = bin.customFields;
+      if (resolvedCustomFields && fieldNameToId && fieldNameToId.size > 0) {
+        resolvedCustomFields = mapCustomFieldsToIds(resolvedCustomFields, fieldNameToId);
+      }
+
       const binId = insertBinWithShortCode('', locationId, {
         name: bin.name,
         notes: bin.notes || '',
@@ -289,7 +340,8 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
         icon: bin.icon || '',
         color: bin.color || '',
         cardStyle: bin.cardStyle,
-        customFields: bin.customFields,
+        visibility: bin.visibility,
+        customFields: resolvedCustomFields,
         shortCode: bin.shortCode,
         createdAt: bin.createdAt || new Date().toISOString(),
         updatedAt: bin.updatedAt || new Date().toISOString(),

@@ -120,8 +120,11 @@ function SWUpdateNotifier() {
 
     // When a new SW takes control (e.g. skipWaiting after autoUpdate),
     // reload once so the page uses fresh assets matching the new cache.
+    // Skip if there's no existing controller — that means this is the
+    // first install, not an update, so no reload is needed.
+    const hadController = !!navigator.serviceWorker.controller;
     const onControllerChange = () => {
-      if (controllerChangeReloaded) return;
+      if (!hadController || controllerChangeReloaded) return;
       controllerChangeReloaded = true;
       window.location.reload();
     };

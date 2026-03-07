@@ -97,7 +97,7 @@ export function validateExportData(data: unknown): data is ExportData {
     if (isV2) {
       return (
         Array.isArray(bin.items) &&
-        (bin.items as unknown[]).every((i) => typeof i === 'string') &&
+        (bin.items as unknown[]).every((i) => typeof i === 'string' || (typeof i === 'object' && i !== null && typeof (i as Record<string, unknown>).name === 'string')) &&
         typeof bin.notes === 'string'
       );
     }
@@ -181,9 +181,13 @@ export async function importData(
     }));
   }
 
+  // Pass tag colors and custom field definitions if present (V2 format)
+  const tagColors = d.tagColors;
+  const customFieldDefinitions = d.customFieldDefinitions;
+
   return apiFetch<ImportResult>(`/api/locations/${locationId}/import`, {
     method: 'POST',
-    body: { bins, mode },
+    body: { bins, mode, tagColors, customFieldDefinitions },
   });
 }
 

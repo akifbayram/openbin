@@ -22,6 +22,7 @@ export interface ExportBin {
   icon: string;
   color: string;
   cardStyle?: string;
+  visibility?: 'location' | 'private';
   customFields?: Record<string, string>;
   shortCode?: string;
   createdAt: string;
@@ -36,11 +37,23 @@ export interface ExportPhoto {
   data: string; // base64
 }
 
+export interface ExportTagColor {
+  tag: string;
+  color: string;
+}
+
+export interface ExportCustomFieldDef {
+  name: string;
+  position: number;
+}
+
 export interface ExportData {
   version: 2;
   exportedAt: string;
   locationName: string;
   bins: ExportBin[];
+  tagColors?: ExportTagColor[];
+  customFieldDefinitions?: ExportCustomFieldDef[];
 }
 
 /**
@@ -52,7 +65,7 @@ export async function fetchLocationBins(locationId: string) {
     `SELECT b.id, b.name, COALESCE(a.name, '') AS area_name,
        COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name, 'quantity', bi.quantity))
          FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
-       b.notes, b.tags, b.icon, b.color, b.card_style,
+       b.notes, b.tags, b.icon, b.color, b.card_style, b.visibility,
        COALESCE((SELECT json_group_object(bcfv.field_id, bcfv.value) FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
        b.created_at, b.updated_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
@@ -144,7 +157,7 @@ export function resolveAreaSync(locationId: string, areaName: string, userId: st
 export function insertBinWithShortCode(
   _binId: string,
   locationId: string,
-  bin: { name: string; notes: string; tags: string[]; icon: string; color: string; cardStyle?: string; customFields?: Record<string, string>; shortCode?: string; createdAt: string; updatedAt: string },
+  bin: { name: string; notes: string; tags: string[]; icon: string; color: string; cardStyle?: string; visibility?: 'location' | 'private'; customFields?: Record<string, string>; shortCode?: string; createdAt: string; updatedAt: string },
   areaId: string | null,
   userId: string,
 ): string {
@@ -153,9 +166,9 @@ export function insertBinWithShortCode(
     const id = attempt === 0 && validCode ? validCode : generateShortCode(bin.name);
     try {
       querySync(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [id, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle || '', userId, bin.createdAt, bin.updatedAt]
+        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, visibility, created_by, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        [id, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle || '', bin.visibility || 'location', userId, bin.createdAt, bin.updatedAt]
       );
       if (bin.customFields && Object.keys(bin.customFields).length > 0) {
         replaceCustomFieldValuesSync(id, bin.customFields, locationId);
@@ -183,6 +196,109 @@ export function insertBinItemsSync(binId: string, items: Array<string | { name: 
       [generateUuid(), binId, name, qty, i]
     );
   }
+}
+
+/** Fetch tag colors for a location. */
+export async function fetchLocationTagColors(locationId: string): Promise<ExportTagColor[]> {
+  const result = await query<{ tag: string; color: string }>(
+    'SELECT tag, color FROM tag_colors WHERE location_id = $1',
+    [locationId]
+  );
+  return result.rows;
+}
+
+/** Fetch custom field definitions for a location. */
+export async function fetchLocationFieldDefs(locationId: string): Promise<ExportCustomFieldDef[]> {
+  const result = await query<{ name: string; position: number }>(
+    'SELECT name, position FROM location_custom_fields WHERE location_id = $1 ORDER BY position',
+    [locationId]
+  );
+  return result.rows;
+}
+
+/** Build a fieldId → fieldName map for a location. */
+export async function buildFieldIdToNameMap(locationId: string): Promise<Map<string, string>> {
+  const result = await query<{ id: string; name: string }>(
+    'SELECT id, name FROM location_custom_fields WHERE location_id = $1',
+    [locationId]
+  );
+  const map = new Map<string, string>();
+  for (const row of result.rows) {
+    map.set(row.id, row.name);
+  }
+  return map;
+}
+
+/** Convert custom field values from fieldId-keyed to fieldName-keyed. */
+export function mapCustomFieldsToNames(
+  fields: Record<string, string>,
+  idToName: Map<string, string>,
+): Record<string, string> | undefined {
+  const mapped: Record<string, string> = {};
+  let hasValues = false;
+  for (const [id, value] of Object.entries(fields)) {
+    if (!value) continue;
+    const name = idToName.get(id);
+    if (name) {
+      mapped[name] = value;
+      hasValues = true;
+    }
+  }
+  return hasValues ? mapped : undefined;
+}
+
+/** Import tag colors for a location. Synchronous (for transactions). */
+export function importTagColorsSync(locationId: string, tagColors: ExportTagColor[]): void {
+  for (const tc of tagColors) {
+    if (!tc.tag || !tc.color) continue;
+    querySync(
+      `INSERT INTO tag_colors (id, location_id, tag, color) VALUES ($1, $2, $3, $4)
+       ON CONFLICT(location_id, tag) DO UPDATE SET color = excluded.color, updated_at = datetime('now')`,
+      [generateUuid(), locationId, tc.tag, tc.color]
+    );
+  }
+}
+
+/** Ensure custom field definitions exist, returning a name → fieldId map. Synchronous (for transactions). */
+export function resolveCustomFieldDefsSync(
+  locationId: string,
+  defs: ExportCustomFieldDef[],
+): Map<string, string> {
+  const nameToId = new Map<string, string>();
+  for (const def of defs) {
+    if (!def.name) continue;
+    const existing = querySync<{ id: string }>(
+      'SELECT id FROM location_custom_fields WHERE location_id = $1 AND name = $2',
+      [locationId, def.name]
+    );
+    if (existing.rows.length > 0) {
+      nameToId.set(def.name, existing.rows[0].id);
+    } else {
+      const id = generateUuid();
+      querySync(
+        'INSERT INTO location_custom_fields (id, location_id, name, position) VALUES ($1, $2, $3, $4)',
+        [id, locationId, def.name, def.position]
+      );
+      nameToId.set(def.name, id);
+    }
+  }
+  return nameToId;
+}
+
+/** Convert name-keyed custom fields to fieldId-keyed using a name→id map. */
+export function mapCustomFieldsToIds(
+  fields: Record<string, string>,
+  nameToId: Map<string, string>,
+): Record<string, string> {
+  const mapped: Record<string, string> = {};
+  for (const [name, value] of Object.entries(fields)) {
+    if (!value) continue;
+    const id = nameToId.get(name);
+    if (id) {
+      mapped[id] = value;
+    }
+  }
+  return mapped;
 }
 
 /** Import photos from base64 data into storage. Synchronous (for use in transactions). */

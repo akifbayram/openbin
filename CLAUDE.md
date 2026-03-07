@@ -19,10 +19,10 @@ Multi-user web app for organizing physical storage bins with QR codes. Data pers
 - **Named exports only** — no default exports except `App.tsx`.
 - **Feature hooks pattern**: each feature exposes a hook (e.g. `useBinList`) for data via `apiFetch()` with event-based refresh, and plain async functions (e.g. `addBin`) for mutations. Same file.
 - **Data hooks return `{ data, isLoading }`** — e.g. `useBinList()` → `{ bins, isLoading }`.
-- **Key utilities**: `apiFetch()` in `lib/api.ts`, `useAuth()` in `lib/auth.tsx`, `useAppSettings()` in `lib/appSettings.ts`, `LocationProvider` in `features/locations/useLocations.tsx`. Read the source for signatures.
+- **Key utilities**: `apiFetch()` in `lib/api.ts`, `useAuth()` in `lib/auth.tsx`, `useAppSettings()` in `lib/appSettings.ts`, `LocationProvider` in `features/locations/useLocations.tsx`, `usePermissions()` in `lib/usePermissions.ts`, `cn()` in `lib/utils.ts`. Read the source for signatures.
 - **Soft deletes**: `DELETE /api/bins/:id` sets `deleted_at`. All bin queries filter `WHERE deleted_at IS NULL`.
 - **API response envelopes**: Lists return `{ results: T[], count }`. Errors return `{ error: "CODE", message }`. See `server/openapi.yaml` for details.
-- **CSS**: use `var(--token)` design tokens, not raw colors. Glass effects via `glass-card`, `glass-nav`, `glass-heavy`.
+- **CSS**: use `var(--token)` design tokens, not raw colors. Glass effects via `glass-card`, `glass-nav`, `glass-heavy`, `glass-popover`. Use `cn()` from `lib/utils.ts` (clsx + tailwind-merge) for className composition.
 - **Responsive**: mobile-first. Breakpoint `lg` (1024px) — bottom nav on mobile, sidebar on desktop.
 - **Server error handling**: Routes use `throw new ValidationError(...)` etc. from `server/src/lib/httpErrors.ts`, wrapped in `asyncHandler()` to forward to the global error handler.
 - **Event bus**: `notify()` and `useRefreshOn()` from `lib/eventBus.ts`. 7 event types: `BINS`, `LOCATIONS`, `PHOTOS`, `PINS`, `AREAS`, `TAG_COLORS`, `SCAN_HISTORY`.
@@ -46,6 +46,8 @@ OpenAPI spec at `server/openapi.yaml`.
 - **JWT secret** auto-generated and persisted to `/data/.jwt_secret` if `JWT_SECRET` env var unset.
 - **AI API key encryption**: AES-256-GCM when `AI_ENCRYPTION_KEY` env var set. Graceful fallback to plaintext.
 - **Dual auth**: Middleware supports JWT tokens and API keys (`sk_openbin_` prefix). `req.authMethod` is `'jwt' | 'api_key'`.
+- **Roles**: Three-tier role system — `admin`, `member`, `viewer`. Viewers are read-only (no create/edit/delete/pin). Use `usePermissions()` hook for client-side guards and `requireMemberOrAbove()` middleware for server-side.
+- **Registration modes**: `REGISTRATION_MODE` env var — `open` (default), `invite` (require location invite code), `closed` (no sign-ups).
 
 ## Development
 
