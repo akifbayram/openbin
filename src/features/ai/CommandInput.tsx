@@ -67,9 +67,12 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
       setShowProgress(true);
       return;
     }
-    if (!parseDone) return;
-    const id = setTimeout(() => setShowProgress(false), 800);
-    return () => clearTimeout(id);
+    if (parseDone) {
+      const id = setTimeout(() => setShowProgress(false), 800);
+      return () => clearTimeout(id);
+    }
+    // Error or back to idle — hide immediately
+    setShowProgress(false);
   }, [isParsing, parseDone]);
 
   // Reset progress when dialog closes
