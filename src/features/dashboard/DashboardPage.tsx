@@ -157,7 +157,7 @@ export function DashboardPage() {
     return result;
   }, [pinnedBins, recentlyScanned, recentlyUpdated]);
 
-  const { isAdmin } = usePermissions();
+  const { isAdmin, canWrite, canCreateBin } = usePermissions();
   const allTags = useAllTags();
   const bulk = useBulkDialogs();
   const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(allDashboardBins, [activeLocationId]);
@@ -268,16 +268,18 @@ export function DashboardPage() {
                 </Tooltip>
               )}
             </div>
-            <Tooltip content={`New ${t.bin}`} side="bottom">
-              <Button
-                onClick={() => setCreateOpen(true)}
-                size="icon"
-                className="h-10 w-10 rounded-full"
-                aria-label={`New ${t.bin}`}
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
-            </Tooltip>
+            {canCreateBin && (
+              <Tooltip content={`New ${t.bin}`} side="bottom">
+                <Button
+                  onClick={() => setCreateOpen(true)}
+                  size="icon"
+                  className="h-10 w-10 rounded-full"
+                  aria-label={`New ${t.bin}`}
+                >
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </Tooltip>
+            )}
           </div>
         }
       />
@@ -475,6 +477,7 @@ export function DashboardPage() {
         <BulkActionBar
           selectedCount={selectedIds.size}
           isAdmin={isAdmin}
+          canWrite={canWrite}
           onTag={() => bulk.open('tag')}
           onMove={() => bulk.open('area')}
           onDelete={() => setBulkDeleteOpen(true)}

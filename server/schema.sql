@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS locations (
   term_bin                TEXT NOT NULL DEFAULT '',
   term_location           TEXT NOT NULL DEFAULT '',
   term_area               TEXT NOT NULL DEFAULT '',
+  default_join_role       TEXT NOT NULL DEFAULT 'member' CHECK (default_join_role IN ('member', 'viewer')),
   created_at              TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at              TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -29,7 +30,7 @@ CREATE TABLE IF NOT EXISTS location_members (
   id            TEXT PRIMARY KEY,
   location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
   user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role          TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member')),
+  role          TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member', 'viewer')),
   joined_at     TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(location_id, user_id)
 );

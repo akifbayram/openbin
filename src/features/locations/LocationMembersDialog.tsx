@@ -1,6 +1,5 @@
-import { Check, ChevronDown, Copy, LogOut, RefreshCw, Shield, UserMinus } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { Check, Copy, LogOut, RefreshCw, Shield, UserMinus } from 'lucide-react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -68,7 +67,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
     }
   }
 
-  async function handleRoleChange(userId: string, newRole: 'admin' | 'member') {
+  async function handleRoleChange(userId: string, newRole: 'admin' | 'member' | 'viewer') {
     try {
       await changeMemberRole(locationId, userId, newRole);
       showToast({ message: `Role updated to ${newRole}`, variant: 'success' });
@@ -172,7 +171,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                     </Badge>
                   )}
                   {isAdmin && !isSelf && (
-                    <RoleToggle
+                    <RoleSelector
                       currentRole={member.role}
                       onChangeRole={(role) => handleRoleChange(member.user_id, role)}
                     />
@@ -212,67 +211,25 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   );
 }
 
-function RoleToggle({ currentRole, onChangeRole }: { currentRole: string; onChangeRole: (role: 'admin' | 'member') => void }) {
-  const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-
-  const reposition = useCallback(() => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + 4, left: rect.right });
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    reposition();
-    function handleClick(e: MouseEvent) {
-      if (
-        menuRef.current && !menuRef.current.contains(e.target as Node) &&
-        triggerRef.current && !triggerRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [open, reposition]);
-
+function RoleSelector({ currentRole, onChangeRole }: { currentRole: string; onChangeRole: (role: 'admin' | 'member' | 'viewer') => void }) {
+  const roles = ['viewer', 'member', 'admin'] as const;
   return (
-    <div className="shrink-0">
-      <button
-        type="button"
-        ref={triggerRef}
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
-      >
-        {currentRole === 'admin' ? 'Admin' : 'Member'}
-        <ChevronDown className="h-3 w-3" />
-      </button>
-      {open && pos && createPortal(
-        <div
-          ref={menuRef}
-          className="fixed z-[100] min-w-[120px] rounded-[var(--radius-lg)] py-1 glass-popover"
-          style={{ top: pos.top, left: pos.left, transform: 'translateX(-100%)' }}
+    <div className="flex gap-0.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] p-0.5">
+      {roles.map((r) => (
+        <button
+          key={r}
+          type="button"
+          onClick={() => onChangeRole(r)}
+          className={cn(
+            'px-2 py-1 text-[12px] font-medium rounded-[var(--radius-xs)] capitalize transition-colors',
+            currentRole === r
+              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm'
+              : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+          )}
         >
-          <button
-            type="button"
-            onClick={() => { setOpen(false); if (currentRole !== 'admin') onChangeRole('admin'); }}
-            className={cn('w-full text-left px-3 py-2 text-[13px] transition-colors', currentRole === 'admin' ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]')}
-          >
-            Admin
-          </button>
-          <button
-            type="button"
-            onClick={() => { setOpen(false); if (currentRole !== 'member') onChangeRole('member'); }}
-            className={cn('w-full text-left px-3 py-2 text-[13px] transition-colors', currentRole === 'member' ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]')}
-          >
-            Member
-          </button>
-        </div>,
-        document.body,
-      )}
+          {r}
+        </button>
+      ))}
     </div>
   );
 }

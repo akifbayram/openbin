@@ -1,5 +1,5 @@
-import { Check, Copy, LogIn, MapPin, MapPinned, Plus, Shield, User, Users } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Copy, Eye, LogIn, MapPin, MapPinned, Plus, QrCode, Shield, User, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
@@ -17,6 +17,7 @@ import { leaveLocation, useLocationList } from '@/features/locations/useLocation
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import { usePermissions } from '@/lib/usePermissions';
 import { cn } from '@/lib/utils';
 import { AreaCard, CreateAreaCard, UnassignedAreaCard } from './AreaCard';
 import { LocationSettingsMenu } from './LocationSettingsMenu';
@@ -57,9 +58,27 @@ export function AreasPage() {
 
   // Invite code copy state
   const [copied, setCopied] = useState(false);
+  const [inviteQrOpen, setInviteQrOpen] = useState(false);
+  const [inviteQrUrl, setInviteQrUrl] = useState<string | null>(null);
 
   const activeLocation = locations.find((l) => l.id === activeLocationId);
-  const isAdmin = activeLocation?.role === 'admin';
+
+  // Generate invite QR code data URL when toggled open
+  useEffect(() => {
+    if (!inviteQrOpen || !activeLocation?.invite_code) {
+      setInviteQrUrl(null);
+      return;
+    }
+    let cancelled = false;
+    const inviteLink = `${window.location.origin}/register?invite=${encodeURIComponent(activeLocation.invite_code)}`;
+    import('qrcode').then((QRCode) => {
+      QRCode.default.toDataURL(inviteLink, { width: 256, margin: 2 }).then((url) => {
+        if (!cancelled) setInviteQrUrl(url);
+      });
+    });
+    return () => { cancelled = true; };
+  }, [inviteQrOpen, activeLocation?.invite_code]);
+  const { isAdmin, isViewer } = usePermissions();
 
   async function handleCopyInvite() {
     if (!activeLocation?.invite_code) return;
@@ -226,8 +245,8 @@ export function AreasPage() {
                 <div className="flex items-center gap-3 min-w-0 overflow-hidden">
                   <div className="row shrink-0">
                     <span className={cn('inline-flex items-center gap-1.5 text-[12px] font-medium px-2 py-1 rounded-[var(--radius-full)]', isAdmin ? 'bg-[var(--accent)]/10 text-[var(--accent)]' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]')}>
-                      {isAdmin ? <Shield className="h-3 w-3" /> : <User className="h-3 w-3" />}
-                      {isAdmin ? 'Admin' : 'Member'}
+                      {isAdmin ? <Shield className="h-3 w-3" /> : isViewer ? <Eye className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                      {isAdmin ? 'Admin' : isViewer ? 'Viewer' : 'Member'}
                     </span>
                   </div>
                   <span className="text-[var(--text-tertiary)] opacity-30 shrink-0">&middot;</span>
@@ -254,6 +273,14 @@ export function AreasPage() {
                           : <Copy className="h-3.5 w-3.5 shrink-0" />}
                         <span className="truncate">{activeLocation.invite_code}</span>
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setInviteQrOpen((o) => !o)}
+                        className="inline-flex items-center text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0"
+                        title="Show invite QR code"
+                      >
+                        <QrCode className="h-3.5 w-3.5" />
+                      </button>
                     </>
                   )}
                 </div>
@@ -268,6 +295,23 @@ export function AreasPage() {
                 />
               </div>
             </div>
+
+            {/* Invite QR code */}
+            {inviteQrOpen && activeLocation.invite_code && isAdmin && (
+              <div className="glass-card rounded-[var(--radius-lg)] p-4 flex flex-col items-center gap-3">
+                <p className="text-[13px] font-medium text-[var(--text-secondary)]">
+                  Scan to register and join this {t.location}
+                </p>
+                {inviteQrUrl ? (
+                  <img src={inviteQrUrl} alt="Invite QR code" className="w-48 h-48 rounded-[var(--radius-md)]" />
+                ) : (
+                  <Skeleton className="w-48 h-48" />
+                )}
+                <p className="text-[11px] text-[var(--text-tertiary)] font-mono break-all text-center max-w-xs">
+                  {`${window.location.origin}/register?invite=${activeLocation.invite_code}`}
+                </p>
+              </div>
+            )}
 
             {/* Area grid */}
             {areas.length === 0 && unassignedCount === 0 ? (

@@ -54,6 +54,17 @@ export async function requireAdmin(locationId: string, userId: string, action: s
   }
 }
 
+/** Throw ForbiddenError if the user is a viewer (or not a member at all) */
+export async function requireMemberOrAbove(locationId: string, userId: string, action: string): Promise<void> {
+  const role = await getMemberRole(locationId, userId);
+  if (!role) {
+    throw new ForbiddenError(`Not a member of this location`);
+  }
+  if (role === 'viewer') {
+    throw new ForbiddenError(`Only members and admins can ${action}`);
+  }
+}
+
 /** Verify user has access to a soft-deleted bin (visibility-aware). */
 export async function verifyDeletedBinAccess(
   binId: string,

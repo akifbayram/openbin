@@ -62,7 +62,7 @@ export function BinListPage() {
   }, [location.state]);
 
   const { activeLocationId } = useAuth();
-  const { isAdmin } = usePermissions();
+  const { isAdmin, canWrite, canCreateBin } = usePermissions();
   const resetPage = useCallback(() => setPage(1), [setPage]);
   const { pageSize, setPageSize, pageSizeOptions } = usePageSize(resetPage);
   const { bins, totalCount, totalPages, isLoading } = usePaginatedBinList(debouncedSearch, sort, sortDir, filters, page, pageSize, setPage);
@@ -149,16 +149,18 @@ export function BinListPage() {
                 </Tooltip>
               )}
             </div>
-            <Tooltip content={`New ${t.bin}`} side="bottom">
-              <Button
-                onClick={() => setCreateOpen(true)}
-                size="icon"
-                className="h-10 w-10 rounded-full"
-                aria-label={`New ${t.bin}`}
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
-            </Tooltip>
+            {canCreateBin && (
+              <Tooltip content={`New ${t.bin}`} side="bottom">
+                <Button
+                  onClick={() => setCreateOpen(true)}
+                  size="icon"
+                  className="h-10 w-10 rounded-full"
+                  aria-label={`New ${t.bin}`}
+                >
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </Tooltip>
+            )}
           </div>
         ) : undefined}
       />
@@ -216,7 +218,7 @@ export function BinListPage() {
               title={search || activeCount > 0 ? `No ${t.bins} match your filters` : `No ${t.bins} yet`}
               subtitle={!search && activeCount === 0 ? `Create your first ${t.bin} to get started` : undefined}
             >
-              {!search && activeCount === 0 && (
+              {!search && activeCount === 0 && canCreateBin && (
                 <Button onClick={() => setCreateOpen(true)} variant="outline" className="mt-1">
                   <Plus className="h-4 w-4 mr-2" />
                   {`Create ${t.Bin}`}
@@ -309,6 +311,7 @@ export function BinListPage() {
         <BulkActionBar
           selectedCount={selectedIds.size}
           isAdmin={isAdmin}
+          canWrite={canWrite}
           onTag={() => bulk.open('tag')}
           onMove={() => bulk.open('area')}
           onDelete={() => setBulkDeleteOpen(true)}

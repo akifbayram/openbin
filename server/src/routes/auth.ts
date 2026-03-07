@@ -17,7 +17,11 @@ const router = Router();
 
 // GET /api/auth/status — public (no auth required)
 router.get('/status', (_req, res) => {
-  res.json({ registrationEnabled: config.registrationEnabled, demoMode: config.demoMode });
+  res.json({
+    registrationEnabled: config.registrationMode !== 'closed',
+    registrationMode: config.registrationMode,
+    demoMode: config.demoMode,
+  });
 });
 
 // POST /api/auth/demo-login — log in as demo user (only when DEMO_MODE is enabled)
@@ -67,11 +71,29 @@ router.post('/demo-login', asyncHandler(async (_req, res) => {
 
 // POST /api/auth/register
 router.post('/register', asyncHandler(async (req, res) => {
-  if (!config.registrationEnabled) {
+  if (config.registrationMode === 'closed') {
     throw new ForbiddenError('Registration is currently disabled');
   }
 
-  const { username, password, displayName } = req.body;
+  const { username, password, displayName, inviteCode } = req.body;
+
+  // In invite mode, invite code is required
+  if (config.registrationMode === 'invite' && !inviteCode) {
+    throw new ValidationError('An invite code is required to register');
+  }
+
+  // Validate invite code if provided (in any mode)
+  let locationToJoin: { id: string; default_join_role: string } | null = null;
+  if (inviteCode && typeof inviteCode === 'string') {
+    const locResult = await query(
+      'SELECT id, default_join_role FROM locations WHERE invite_code = $1',
+      [inviteCode.trim()]
+    );
+    if (locResult.rows.length === 0) {
+      throw new NotFoundError('Invalid invite code');
+    }
+    locationToJoin = locResult.rows[0] as { id: string; default_join_role: string };
+  }
 
   validateUsername(username);
   validatePassword(password);
@@ -94,6 +116,16 @@ router.post('/register', asyncHandler(async (req, res) => {
   }
 
   const user = result.rows[0] as { id: string; username: string; display_name: string; created_at: string };
+
+  // Auto-join location if invite code was valid
+  if (locationToJoin) {
+    await query(
+      'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
+      [generateUuid(), locationToJoin.id, user.id, locationToJoin.default_join_role]
+    );
+    await query('UPDATE users SET active_location_id = $1 WHERE id = $2', [locationToJoin.id, user.id]);
+  }
+
   const token = signToken({ id: user.id, username: user.username });
   const refresh = await createRefreshToken(user.id);
 

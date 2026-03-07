@@ -433,6 +433,54 @@ describe('PUT /api/auth/password', () => {
   });
 });
 
+describe('GET /api/auth/status — registration mode', () => {
+  it('returns registrationMode', async () => {
+    const res = await request(app).get('/api/auth/status');
+    expect(res.status).toBe(200);
+    expect(res.body.registrationMode).toBe('open');
+  });
+});
+
+describe('POST /api/auth/register — invite code', () => {
+  it('registers and auto-joins location when inviteCode provided', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        username: `inviteuser_${Date.now()}`,
+        password: 'TestPass123!',
+        inviteCode: location.invite_code,
+      });
+
+    expect(res.status).toBe(201);
+
+    // Extract access token from cookies to verify location membership
+    const accessToken = getAccessCookie(res);
+    expect(accessToken).toBeDefined();
+
+    const locRes = await request(app)
+      .get('/api/locations')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(locRes.body.count).toBe(1);
+    expect(locRes.body.results[0].id).toBe(location.id);
+  });
+
+  it('returns 404 for invalid invite code during registration', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        username: `badinvite_${Date.now()}`,
+        password: 'TestPass123!',
+        inviteCode: 'nonexistent-code',
+      });
+
+    expect(res.status).toBe(404);
+  });
+});
+
 describe('PUT /api/auth/active-location', () => {
   it('sets active location', async () => {
     const { token } = await createTestUser(app);

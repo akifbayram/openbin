@@ -47,6 +47,12 @@ export const config = Object.freeze({
   cookieSecure: parseBool(process.env.COOKIE_SECURE, process.env.NODE_ENV === 'production'),
   bcryptRounds: clamp(parseInt(process.env.BCRYPT_ROUNDS || '12', 10), 10, 31, 12),
   registrationEnabled: parseBool(process.env.REGISTRATION_ENABLED, true),
+  registrationMode: (() => {
+    const mode = process.env.REGISTRATION_MODE;
+    if (mode === 'invite' || mode === 'closed') return mode;
+    if (!parseBool(process.env.REGISTRATION_ENABLED, true)) return 'closed' as const;
+    return 'open' as const;
+  })(),
   trustProxy: parseBool(process.env.TRUST_PROXY, false),
   demoMode: parseBool(process.env.DEMO_MODE, false),
   aiMock: parseBool(process.env.AI_MOCK, false),

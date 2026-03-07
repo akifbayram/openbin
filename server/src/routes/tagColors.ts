@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { verifyLocationMembership } from '../lib/binAccess.js';
+import { requireMemberOrAbove, verifyLocationMembership } from '../lib/binAccess.js';
 import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -36,9 +36,7 @@ router.put('/', asyncHandler(async (req, res) => {
     throw new ValidationError('locationId and tag are required');
   }
 
-  if (!await verifyLocationMembership(locationId, req.user!.id)) {
-    throw new ForbiddenError('Not a member of this location');
-  }
+  await requireMemberOrAbove(locationId, req.user!.id, 'manage tag colors');
 
   // If color is empty, remove the tag color
   if (!color) {
@@ -71,9 +69,7 @@ router.delete('/:tag', asyncHandler(async (req, res) => {
     throw new ValidationError('location_id query parameter is required');
   }
 
-  if (!await verifyLocationMembership(locationId, req.user!.id)) {
-    throw new ForbiddenError('Not a member of this location');
-  }
+  await requireMemberOrAbove(locationId, req.user!.id, 'manage tag colors');
 
   await query(
     'DELETE FROM tag_colors WHERE location_id = $1 AND tag = $2',
