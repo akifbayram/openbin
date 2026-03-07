@@ -7,6 +7,7 @@ import { getAvatarUrl } from '@/lib/api';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import type { TermKey } from '@/lib/navItems';
+import { usePermissions } from '@/lib/usePermissions';
 import { useNavigationGuard } from '@/lib/navigationGuard';
 import { useTerminology } from '@/lib/terminology';
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
@@ -24,13 +25,13 @@ const topItems: { path: string; label: string; icon: React.ComponentType<{ class
   { path: '/bins', label: 'Bins', icon: Package, termKey: 'Bins' },
 ];
 
-const manageItems: { path: string; label: string; icon: React.ComponentType<{ className?: string }>; termKey?: TermKey }[] = [
+const manageItems: { path: string; label: string; icon: React.ComponentType<{ className?: string }>; termKey?: TermKey; requireWrite?: boolean }[] = [
   { path: '/locations', label: 'Locations', icon: MapPin, termKey: 'Locations' },
   { path: '/items', label: 'Items', icon: ClipboardList },
   { path: '/tags', label: 'Tags', icon: Tags },
   { path: '/print', label: 'Print', icon: Printer },
   { path: '/scan', label: 'Scan', icon: ScanLine },
-  { path: '/reorganize', label: 'Reorganize', icon: Boxes },
+  { path: '/reorganize', label: 'Reorganize', icon: Boxes, requireWrite: true },
 ];
 
 const brandIcon = <BrandIcon className="h-5.5 w-5.5 text-[var(--accent)] shrink-0" />;
@@ -92,6 +93,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
   const { settings } = useAppSettings();
   const t = useTerminology();
   const { user, logout } = useAuth();
+  const { canWrite } = usePermissions();
 
   return (
     <>
@@ -147,7 +149,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
           )} aria-hidden={collapsed || undefined}>
             Manage
           </p>
-          {manageItems.map((item) =>
+          {manageItems.filter((item) => !item.requireWrite || canWrite).map((item) =>
             item.path === '/scan' ? (
               <NavButton
                 key={item.path}

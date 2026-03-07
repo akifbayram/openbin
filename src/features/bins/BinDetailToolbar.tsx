@@ -14,6 +14,7 @@ interface BinDetailToolbarProps {
   bin: Bin;
   editing: boolean;
   canEdit: boolean;
+  canPin: boolean;
   canDelete: boolean;
   binIcon: LucideIcon;
   editingName: string;
@@ -38,6 +39,7 @@ export function BinDetailToolbar({
   bin,
   editing,
   canEdit,
+  canPin,
   canDelete,
   binIcon: BinIcon,
   editingName,
@@ -141,16 +143,18 @@ export function BinDetailToolbar({
               </Button>
             </Tooltip>
           )}
-          <Tooltip content={bin.is_pinned ? 'Unpin' : 'Pin'} side="bottom">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onTogglePin}
-              aria-label={bin.is_pinned ? `Unpin ${t.bin}` : `Pin ${t.bin}`}
-            >
-              <Pin className="h-[18px] w-[18px]" fill={bin.is_pinned ? 'currentColor' : 'none'} />
-            </Button>
-          </Tooltip>
+          {canPin && (
+            <Tooltip content={bin.is_pinned ? 'Unpin' : 'Pin'} side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onTogglePin}
+                aria-label={bin.is_pinned ? `Unpin ${t.bin}` : `Pin ${t.bin}`}
+              >
+                <Pin className="h-[18px] w-[18px]" fill={bin.is_pinned ? 'currentColor' : 'none'} />
+              </Button>
+            </Tooltip>
+          )}
           {canEdit && (
             <Tooltip content="Edit" side="bottom">
               <Button
@@ -179,14 +183,16 @@ export function BinDetailToolbar({
                 animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
                 'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] py-1 glass-popover',
               )}>
-                <button
-                  type="button"
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
-                  onClick={() => handleItem(onDuplicate)}
-                >
-                  <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
-                  Duplicate
-                </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
+                    onClick={() => handleItem(onDuplicate)}
+                  >
+                    <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
+                    Duplicate
+                  </button>
+                )}
                 <button
                   type="button"
                   className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
@@ -195,7 +201,7 @@ export function BinDetailToolbar({
                   <Printer className="h-4 w-4 text-[var(--text-tertiary)]" />
                   Print Label
                 </button>
-                {otherLocations.length > 0 && (
+                {canEdit && otherLocations.length > 0 && (
                   <button
                     type="button"
                     className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"

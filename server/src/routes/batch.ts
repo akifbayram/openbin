@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { requireMemberOrAbove } from '../lib/binAccess.js';
 import { executeActions } from '../lib/commandExecutor.js';
 import type { CommandAction } from '../lib/commandParser.js';
 import { config } from '../lib/config.js';
@@ -36,6 +37,8 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
   if (!locationId || typeof locationId !== 'string') {
     throw new ValidationError('locationId is required');
   }
+
+  await requireMemberOrAbove(locationId, req.user!.id, 'perform batch operations');
 
   if (!Array.isArray(operations) || operations.length === 0) {
     throw new ValidationError('operations must be a non-empty array');

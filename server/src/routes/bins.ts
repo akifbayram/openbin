@@ -562,6 +562,8 @@ router.post('/:id/duplicate', asyncHandler(async (req, res) => {
     throw new NotFoundError('Bin not found');
   }
 
+  await requireMemberOrAbove(access.locationId, req.user!.id, 'duplicate bins');
+
   // Fetch the source bin
   const src = await fetchBinById(id, { excludeDeleted: true });
   if (!src) {
@@ -626,6 +628,8 @@ router.put('/:id/add-tags', asyncHandler(async (req, res) => {
   if (!access) {
     throw new NotFoundError('Bin not found');
   }
+
+  await requireMemberOrAbove(access.locationId, req.user!.id, 'add tags to bins');
 
   // Fetch existing tags, merge in JS, then update
   const existing = await query<{ tags: string[] }>(

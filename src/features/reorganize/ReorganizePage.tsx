@@ -16,6 +16,7 @@ import { BinSelectorCard } from '@/features/print/BinSelectorCard';
 import { useBinSelection } from '@/features/print/useBinSelection';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import { usePermissions } from '@/lib/usePermissions';
 import { cn } from '@/lib/utils';
 import { ReorganizePreview } from './ReorganizePreview';
 import type { ReorgOptions } from './useReorganize';
@@ -25,6 +26,7 @@ export function ReorganizePage() {
   const navigate = useNavigate();
   const t = useTerminology();
   const { activeLocationId } = useAuth();
+  const { canWrite, isLoading: permissionsLoading } = usePermissions();
   const { bins: allBins, isLoading } = useBinList(undefined, 'name');
   const { areas } = useAreaList(activeLocationId);
   const selection = useBinSelection(allBins);
@@ -108,6 +110,16 @@ export function ReorganizePage() {
 
   const hasProposal = result || partialResult.bins.length > 0;
   const itemCount = selection.selectedBins.reduce((sum, b) => sum + b.items.length, 0);
+
+  useEffect(() => {
+    if (!permissionsLoading && !canWrite) {
+      navigate('/', { replace: true });
+    }
+  }, [permissionsLoading, canWrite, navigate]);
+
+  if (!permissionsLoading && !canWrite) {
+    return null;
+  }
 
   if (isLoading) {
     return (

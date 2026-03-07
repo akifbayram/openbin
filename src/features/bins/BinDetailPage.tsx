@@ -119,6 +119,7 @@ export function BinDetailPage() {
         bin={bin}
         editing={edit.editing}
         canEdit={actions.canEdit}
+        canPin={actions.canPin}
         canDelete={actions.canDelete}
         binIcon={HeaderIcon}
         editingName={edit.name}
