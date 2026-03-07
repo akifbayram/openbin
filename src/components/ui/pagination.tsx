@@ -63,7 +63,7 @@ function PageSizeSelect({ value, options, onChange }: { value: number; options: 
           role="listbox"
           className={cn(
             animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-            'absolute bottom-full mb-1.5 right-0 z-50 glass-heavy rounded-[var(--radius-md)] py-1 shadow-lg border border-[var(--border-glass)] min-w-[100px]',
+            'absolute bottom-full mb-1.5 right-0 z-50 rounded-[var(--radius-md)] py-1 glass-popover min-w-[100px]',
           )}
         >
           {options.map((opt) => (

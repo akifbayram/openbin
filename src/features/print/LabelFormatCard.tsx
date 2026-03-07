@@ -60,7 +60,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                 placeholder="Search by Avery product number..."
                 value={formatSearch}
                 onChange={(e) => setFormatSearch(e.target.value)}
-                className="w-full h-9 bg-[var(--bg-input)] pl-9 pr-8 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-2 focus:ring-[var(--accent)]/30 transition-shadow"
+                className="w-full h-9 rounded-full bg-[var(--bg-input)] pl-9 pr-8 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-2 focus:ring-[var(--accent)]/30 transition-shadow"
               />
               {formatSearch && (
                 <button
@@ -73,40 +73,8 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
               )}
             </div>
 
-            {(() => {
-              const filteredFormats = filterLabelFormats(formatSearch);
-              return filteredFormats.length > 0 ? (
-                <div className="space-y-1 mt-2">
-                  {filteredFormats.map((fmt) => (
-                    <button
-                      type="button"
-                      key={fmt.key}
-                      className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
-                      onClick={() => f.handleFormatChange(fmt.key)}
-                    >
-                      {f.formatKey === fmt.key ? (
-                        <CheckCircle2 className="h-[20px] w-[20px] text-[var(--accent)] shrink-0" />
-                      ) : (
-                        <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
-                      )}
-                      <div className="min-w-0">
-                        <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
-                        <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
-                          {computeLabelsPerPage(fmt) > 1 ? `${computeLabelsPerPage(fmt)} per page` : 'single label'}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[13px] text-[var(--text-tertiary)] py-6 text-center">
-                  No matching label formats
-                </p>
-              );
-            })()}
-
             {f.savedPresets.length > 0 && (
-              <div className="space-y-1 mt-2 pt-2 border-t border-[var(--border-subtle)]">
+              <div className="space-y-1 mt-2">
                 <span className="text-[12px] text-[var(--text-tertiary)] font-medium px-3">Saved Presets</span>
                 {f.savedPresets.map((fmt) => (
                   <div key={fmt.key} className="flex items-center group">
@@ -143,6 +111,38 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                 ))}
               </div>
             )}
+
+            {(() => {
+              const filteredFormats = filterLabelFormats(formatSearch);
+              return filteredFormats.length > 0 ? (
+                <div className={cn('space-y-1 mt-2', f.savedPresets.length > 0 && 'pt-2 border-t border-[var(--border-subtle)]')}>
+                  {filteredFormats.map((fmt) => (
+                    <button
+                      type="button"
+                      key={fmt.key}
+                      className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
+                      onClick={() => f.handleFormatChange(fmt.key)}
+                    >
+                      {f.formatKey === fmt.key ? (
+                        <CheckCircle2 className="h-[20px] w-[20px] text-[var(--accent)] shrink-0" />
+                      ) : (
+                        <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
+                        <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
+                          {computeLabelsPerPage(fmt) > 1 ? `${computeLabelsPerPage(fmt)} per page` : 'single label'}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[13px] text-[var(--text-tertiary)] py-6 text-center">
+                  No matching label formats
+                </p>
+              );
+            })()}
 
             {/* Orientation toggle */}
             <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[var(--border-subtle)] px-1">

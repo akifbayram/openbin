@@ -57,7 +57,7 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
           role="listbox"
           className={cn(
             animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-            'absolute left-0 right-0 top-full mt-1.5 z-50 glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)] max-h-64 overflow-y-auto',
+            'absolute left-0 right-0 top-full mt-1.5 z-50 rounded-[var(--radius-lg)] py-1 glass-popover max-h-64 overflow-y-auto',
           )}
         >
           {locations.map((loc) => {

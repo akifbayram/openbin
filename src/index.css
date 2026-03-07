@@ -9,6 +9,7 @@
   --bg-elevated: rgba(255, 255, 255, 0.72);
   --bg-glass: rgba(255, 255, 255, 0.55);
   --bg-glass-heavy: rgba(255, 255, 255, 0.78);
+  --bg-popover: #ffffff;
   --bg-input: rgba(120, 120, 128, 0.12);
   --bg-hover: rgba(120, 120, 128, 0.08);
   --bg-active: rgba(120, 120, 128, 0.16);
@@ -54,6 +55,7 @@
   --bg-elevated: rgba(28, 28, 30, 0.72);
   --bg-glass: rgba(44, 44, 46, 0.55);
   --bg-glass-heavy: rgba(44, 44, 46, 0.78);
+  --bg-popover: #2c2c2e;
   --bg-input: rgba(120, 120, 128, 0.24);
   --bg-hover: rgba(120, 120, 128, 0.18);
   --bg-active: rgba(120, 120, 128, 0.28);
@@ -115,6 +117,12 @@ body {
   backdrop-filter: blur(60px) saturate(200%);
   -webkit-backdrop-filter: blur(60px) saturate(200%);
   border: 0.5px solid var(--border-glass);
+  box-shadow: var(--shadow-elevated);
+}
+
+.glass-popover {
+  background: var(--bg-popover);
+  border: 0.5px solid var(--border-subtle);
   box-shadow: var(--shadow-elevated);
 }
 

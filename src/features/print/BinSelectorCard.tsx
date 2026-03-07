@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { resolveColor } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
-import { cn } from '@/lib/utils';
+import { categoryHeader, cn } from '@/lib/utils';
 import type { Area, Bin } from '@/types';
 
 interface BinSelectorCardProps {
@@ -15,7 +15,7 @@ interface BinSelectorCardProps {
   toggleBin: (id: string) => void;
   selectAll: () => void;
   selectNone: () => void;
-  selectByArea: (areaId: string | null) => void;
+  toggleArea: (areaId: string | null) => void;
   expanded: boolean;
   onExpandedChange: (v: boolean) => void;
 }
@@ -27,21 +27,21 @@ export function BinSelectorCard({
   toggleBin,
   selectAll,
   selectNone,
-  selectByArea,
+  toggleArea,
   expanded,
   onExpandedChange,
 }: BinSelectorCardProps) {
   const t = useTerminology();
 
   const grouped = useMemo(() => {
-    const namedGroups: { label: string; bins: Bin[] }[] = [];
+    const groups: { areaId: string | null; label: string; bins: Bin[] }[] = [];
     for (const area of areas) {
       const areaBins = allBins.filter((b) => b.area_id === area.id);
-      if (areaBins.length > 0) namedGroups.push({ label: area.name, bins: areaBins });
+      if (areaBins.length > 0) groups.push({ areaId: area.id, label: area.name, bins: areaBins });
     }
     const unassigned = allBins.filter((b) => !b.area_id);
-    if (unassigned.length > 0) namedGroups.push({ label: 'Unassigned', bins: unassigned });
-    return namedGroups;
+    if (unassigned.length > 0) groups.push({ areaId: null, label: 'Unassigned', bins: unassigned });
+    return groups;
   }, [allBins, areas]);
 
   return (
@@ -56,7 +56,6 @@ export function BinSelectorCard({
           >
             <Package className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Select {t.Bins}</Label>
-            <span className="text-[13px] text-[var(--text-tertiary)]">({selectedIds.size} selected)</span>
           </button>
           <div className="flex items-center gap-1.5 shrink-0">
             <Button variant="ghost" size="sm" onClick={selectAll} className="text-[13px] text-[var(--accent)] h-8 px-2.5">All</Button>
@@ -75,46 +74,41 @@ export function BinSelectorCard({
         </div>
 
         {expanded && (
-          <>
-            {areas.length > 0 && allBins.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
-                {areas.map((area) => {
-                  const count = allBins.filter((b) => b.area_id === area.id).length;
-                  if (count === 0) return null;
-                  return (
-                    <button
-                      key={area.id}
-                      type="button"
-                      onClick={() => selectByArea(area.id)}
-                      className="inline-flex items-center px-3 py-1.5 rounded-[var(--radius-full)] border border-[var(--border-glass)] text-[12px] font-medium bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)] hover:border-[var(--border-default)] transition-colors"
-                    >
-                      {area.name}
-                      <span className="ml-1 text-[var(--text-tertiary)]">({count})</span>
-                    </button>
-                  );
-                })}
-                {allBins.some((b) => !b.area_id) && (
-                  <button
-                    type="button"
-                    onClick={() => selectByArea(null)}
-                    className="inline-flex items-center px-3 py-1.5 rounded-[var(--radius-full)] border border-[var(--border-glass)] text-[12px] font-medium bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] hover:border-[var(--border-default)] transition-colors italic"
-                  >
-                    Unassigned
-                    <span className="ml-1">({allBins.filter((b) => !b.area_id).length})</span>
-                  </button>
-                )}
-              </div>
-            )}
-            {allBins.length === 0 ? (
-              <p className="text-[13px] text-[var(--text-tertiary)] py-8 text-center">
-                No {t.bins} to print. Create some {t.bins} first.
-              </p>
-            ) : (
+          allBins.length === 0 ? (
+            <p className="text-[13px] text-[var(--text-tertiary)] py-8 text-center">
+              No {t.bins} to print. Create some {t.bins} first.
+            </p>
+          ) : (
+            <>
+              {grouped.length > 1 && (
+                <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
+                  {grouped.map((group) => {
+                    const allSelected = group.bins.length > 0 && group.bins.every((b) => selectedIds.has(b.id));
+                    return (
+                      <button
+                        key={group.areaId ?? 'unassigned'}
+                        type="button"
+                        onClick={() => toggleArea(group.areaId)}
+                        className={cn(
+                          'inline-flex items-center px-3 py-1.5 rounded-[var(--radius-full)] text-[12px] font-medium transition-colors',
+                          allSelected
+                            ? 'bg-[var(--accent)] text-white'
+                            : 'bg-[var(--bg-input)] hover:bg-[var(--bg-active)]',
+                          !allSelected && (group.areaId != null ? 'text-[var(--text-secondary)]' : 'text-[var(--text-tertiary)] italic')
+                        )}
+                      >
+                        {group.label}
+                        <span className={cn('ml-1', allSelected ? 'text-white/70' : 'text-[var(--text-tertiary)]')}>({group.bins.length})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <div className="space-y-0.5 max-h-80 overflow-y-auto -mx-2">
                 {grouped.map((group) => (
-                  <div key={group.label}>
+                  <div key={group.areaId ?? 'unassigned'}>
                     {grouped.length > 1 && (
-                      <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] px-3 pt-3 pb-1">
+                      <div className={cn(categoryHeader, 'px-3 pt-3 pb-1')}>
                         {group.label}
                       </div>
                     )}
@@ -146,8 +140,8 @@ export function BinSelectorCard({
                   </div>
                 ))}
               </div>
-            )}
-          </>
+            </>
+          )
         )}
       </CardContent>
     </Card>

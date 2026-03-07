@@ -39,7 +39,7 @@ export function ReorganizePage() {
   const [minItemsPerBin, setMinItemsPerBin] = useState<string>('');
   const [maxItemsPerBin, setMaxItemsPerBin] = useState<string>('');
   const [binsExpanded, setBinsExpanded] = useState(true);
-  const [optionsExpanded, setOptionsExpanded] = useState(true);
+  const [optionsExpanded, setOptionsExpanded] = useState(false);
   const reorgRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -153,7 +153,7 @@ export function ReorganizePage() {
             toggleBin={selection.toggleBin}
             selectAll={selection.selectAll}
             selectNone={selection.selectNone}
-            selectByArea={selection.selectByArea}
+            toggleArea={selection.toggleArea}
             expanded={binsExpanded}
             onExpandedChange={setBinsExpanded}
           />
@@ -308,7 +308,7 @@ export function ReorganizePage() {
                   </div>
 
                   <div className="px-1 text-[12px] text-[var(--text-tertiary)]">
-                    {selection.selectedIds.size} {selection.selectedIds.size === 1 ? t.bin : t.bins} selected · {itemCount} item{itemCount !== 1 ? 's' : ''}
+                    {itemCount} item{itemCount !== 1 ? 's' : ''} across selected {t.bins}
                   </div>
                 </div>
               )}
@@ -344,7 +344,6 @@ export function ReorganizePage() {
                     active={isStreaming}
                     complete={progressComplete}
                     label={isStreaming ? 'Reorganizing bins' : 'Complete'}
-                    showElapsed
                   />
                 ) : (
                   <ReorganizePreview

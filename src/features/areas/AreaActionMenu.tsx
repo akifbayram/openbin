@@ -13,7 +13,7 @@ export function AreaActionMenu({ visible, animating, onRename, onDelete }: AreaA
   return (
     <div className={cn(
       animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-      'absolute right-0 top-full mt-1.5 z-50 min-w-[140px] glass-heavy rounded-[var(--radius-lg)] shadow-lg border border-[var(--border-glass)] overflow-hidden',
+      'absolute right-0 top-full mt-1.5 z-50 min-w-[140px] rounded-[var(--radius-lg)] glass-popover overflow-hidden',
     )}>
       <button
         type="button"

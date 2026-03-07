@@ -159,40 +159,42 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
       {visible && pos && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[100] max-h-48 overflow-auto rounded-[var(--radius-lg)] bg-[var(--bg-elevated)] backdrop-blur-xl shadow-lg border border-[var(--border)] p-2 flex flex-wrap gap-1.5"
+          className="fixed z-[100] rounded-[var(--radius-md)] glass-popover overflow-hidden"
           style={{ top: pos.top, left: pos.left, width: pos.width }}
         >
-          {filtered.map((tag, i) => {
-            const baseStyle = getTagStyle(tag);
-            const isHighlighted = i === highlightIndex;
-            const style: React.CSSProperties = baseStyle
-              ? {
-                  ...baseStyle,
-                  ...(isHighlighted ? { outline: '2px solid var(--accent)', outlineOffset: '1px' } : {}),
-                }
-              : {
-                  ...(isHighlighted
-                    ? { backgroundColor: 'var(--accent)', color: 'white' }
-                    : {}),
-                };
-            return (
-              <button
-                key={tag}
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  addTag(tag);
-                }}
-                className={cn(
-                  'inline-flex items-center px-2.5 py-0.5 text-[12px] font-medium transition-colors cursor-pointer',
-                  !baseStyle && !isHighlighted && 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]',
-                )}
-                style={style}
-              >
-                {tag}
-              </button>
-            );
-          })}
+          <div className="max-h-48 overflow-auto p-2 flex flex-wrap gap-1.5">
+            {filtered.map((tag, i) => {
+              const baseStyle = getTagStyle(tag);
+              const isHighlighted = i === highlightIndex;
+              const style: React.CSSProperties = baseStyle
+                ? {
+                    ...baseStyle,
+                    ...(isHighlighted ? { outline: '2px solid var(--accent)', outlineOffset: '1px' } : {}),
+                  }
+                : {
+                    ...(isHighlighted
+                      ? { backgroundColor: 'var(--accent)', color: 'white' }
+                      : {}),
+                  };
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    addTag(tag);
+                  }}
+                  className={cn(
+                    'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-0.5 text-[12px] font-medium transition-colors cursor-pointer',
+                    !baseStyle && !isHighlighted && 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]',
+                  )}
+                  style={style}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
         </div>,
         dialogPortal ?? document.body,
       )}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Bin } from '@/types';
 
@@ -13,7 +13,7 @@ export function useBinSelection(allBins: Bin[]) {
     }
   }, [searchParams]);
 
-  const selectedBins = allBins.filter((b) => selectedIds.has(b.id));
+  const selectedBins = useMemo(() => allBins.filter((b) => selectedIds.has(b.id)), [allBins, selectedIds]);
 
   function toggleBin(id: string) {
     setSelectedIds((prev) => {
@@ -32,10 +32,18 @@ export function useBinSelection(allBins: Bin[]) {
     setSelectedIds(new Set());
   }
 
-  function selectByArea(areaId: string | null) {
-    const ids = allBins.filter((b) => b.area_id === areaId).map((b) => b.id);
-    setSelectedIds(new Set(ids));
+  function toggleArea(areaId: string | null) {
+    const areaIds = allBins.filter((b) => b.area_id === areaId).map((b) => b.id);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (areaIds.every((id) => prev.has(id))) {
+        for (const id of areaIds) next.delete(id);
+      } else {
+        for (const id of areaIds) next.add(id);
+      }
+      return next;
+    });
   }
 
-  return { selectedIds, selectedBins, toggleBin, selectAll, selectNone, selectByArea };
+  return { selectedIds, selectedBins, toggleBin, selectAll, selectNone, toggleArea };
 }

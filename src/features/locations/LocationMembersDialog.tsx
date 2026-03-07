@@ -253,7 +253,7 @@ function RoleToggle({ currentRole, onChangeRole }: { currentRole: string; onChan
       {open && pos && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[100] min-w-[120px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]"
+          className="fixed z-[100] min-w-[120px] rounded-[var(--radius-lg)] py-1 glass-popover"
           style={{ top: pos.top, left: pos.left, transform: 'translateX(-100%)' }}
         >
           <button

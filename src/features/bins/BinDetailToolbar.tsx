@@ -177,7 +177,7 @@ export function BinDetailToolbar({
             {visible && (
               <div className={cn(
                 animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-                'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] glass-heavy rounded-[var(--radius-lg)] py-1 shadow-lg border border-[var(--border-glass)]',
+                'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] py-1 glass-popover',
               )}>
                 <button
                   type="button"

@@ -25,7 +25,7 @@ export function PageHeader({ title, actions, back, className }: PageHeaderProps)
               variant="ghost"
               size="icon-sm"
               onClick={() => navigate(-1)}
-              className="shrink-0"
+              className="hidden lg:inline-flex shrink-0"
               aria-label="Go back"
             >
               <ChevronLeft className="h-5 w-5" />

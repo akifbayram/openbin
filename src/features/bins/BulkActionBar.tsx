@@ -109,7 +109,7 @@ export function BulkActionBar({ selectedCount, isAdmin, onTag, onMove, onDelete,
             </Button>
           </Tooltip>
           {moreOpen && (
-            <div className="absolute bottom-full mb-2 right-0 glass-heavy rounded-[var(--radius-md)] py-1 min-w-[180px] z-50 shadow-lg">
+            <div className="absolute bottom-full mb-2 right-0 rounded-[var(--radius-md)] py-1 min-w-[180px] z-50 glass-popover">
               <button
                 type="button"
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"

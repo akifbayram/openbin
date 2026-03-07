@@ -66,7 +66,7 @@ export function PrintPage() {
   return (
     <>
       <div className="page-content print-hide max-w-6xl">
-        <PageHeader title="Print" />
+        <PageHeader title="Print" back />
 
         <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
         {/* Left column — settings */}
@@ -87,7 +87,7 @@ export function PrintPage() {
             toggleBin={selection.toggleBin}
             selectAll={selection.selectAll}
             selectNone={selection.selectNone}
-            selectByArea={selection.selectByArea}
+            toggleArea={selection.toggleArea}
             expanded={ui.binsExpanded}
             onExpandedChange={ui.setBinsExpanded}
           />

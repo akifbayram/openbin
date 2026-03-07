@@ -11,8 +11,8 @@ import type { BinFilters, SortOption } from './useBins';
 import { countActiveFilters, EMPTY_FILTERS } from './useBins';
 
 const sortLabels: Record<SortOption, string> = {
-  updated: 'Recently Updated',
-  created: 'Recently Created',
+  updated: 'Updated',
+  created: 'Created',
   name: 'Name',
   area: 'Area',
 };

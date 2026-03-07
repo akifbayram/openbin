@@ -32,7 +32,7 @@ export interface SelectionState {
   toggleBin: (id: string) => void;
   selectAll: () => void;
   selectNone: () => void;
-  selectByArea: (areaId: string | null) => void;
+  toggleArea: (areaId: string | null) => void;
 }
 
 export interface FormatState {

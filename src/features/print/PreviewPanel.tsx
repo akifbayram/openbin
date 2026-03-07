@@ -21,37 +21,38 @@ interface PreviewPanelProps {
 
 export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelSheetProps, printMode, itemSheetProps }: PreviewPanelProps) {
   const t = useTerminology();
+  const hasSelection = selectedBins.length > 0;
+  const noun = printMode === 'items' ? 'List' : 'Label';
+  const printLabel = selectedBins.length !== 1 ? `${noun}s` : noun;
+  const pageCount = printMode === 'labels' && hasSelection
+    ? Math.ceil(selectedBins.length / computeLabelsPerPage(labelSheetProps.format ?? getLabelFormat(DEFAULT_LABEL_FORMAT)))
+    : 0;
 
-  if (selectedBins.length > 0) {
-    const noun = printMode === 'items' ? 'List' : 'Label';
-    const printLabel = selectedBins.length !== 1 ? `${noun}s` : noun;
-    const pageCount = printMode === 'labels'
-      ? Math.ceil(selectedBins.length / computeLabelsPerPage(labelSheetProps.format ?? getLabelFormat(DEFAULT_LABEL_FORMAT)))
-      : 0;
-
-    return (
-      <>
-        <div className="flex gap-2">
+  return (
+    <>
+      <div className="flex gap-2">
+        <Button
+          onClick={() => window.print()}
+          disabled={!hasSelection}
+          className="flex-1 rounded-[var(--radius-md)] h-12 text-[17px] shadow-[0_2px_12px_var(--accent-glow)]"
+        >
+          <Printer className="h-5 w-5 mr-2.5" />
+          {hasSelection ? `Print ${selectedBins.length} ${printLabel}` : 'Print'}
+        </Button>
+        {printMode === 'labels' && (
           <Button
-            onClick={() => window.print()}
-            className="flex-1 rounded-[var(--radius-md)] h-12 text-[17px] shadow-[0_2px_12px_var(--accent-glow)]"
+            variant="outline"
+            onClick={onDownloadPDF}
+            disabled={!hasSelection || pdfLoading}
+            className="rounded-[var(--radius-md)] h-12 px-4 text-[15px]"
           >
-            <Printer className="h-5 w-5 mr-2.5" />
-            Print {selectedBins.length} {printLabel}
+            <Download className={cn('h-5 w-5 mr-1.5', pdfLoading && 'animate-pulse')} />
+            PDF
           </Button>
-          {printMode === 'labels' && (
-            <Button
-              variant="outline"
-              onClick={onDownloadPDF}
-              disabled={pdfLoading}
-              className="rounded-[var(--radius-md)] h-12 px-4 text-[15px]"
-            >
-              <Download className={cn('h-5 w-5 mr-1.5', pdfLoading && 'animate-pulse')} />
-              PDF
-            </Button>
-          )}
-        </div>
+        )}
+      </div>
 
+      {hasSelection ? (
         <Card>
           <CardContent>
             <div className="row-spread mb-3">
@@ -71,21 +72,19 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
             </div>
           </CardContent>
         </Card>
-      </>
-    );
-  }
-
-  return (
-    <div className="hidden lg:block">
-      <div className="rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--border-subtle)]">
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="rounded-full bg-[var(--bg-input)] p-3.5 mb-4">
-            <FileText className="h-6 w-6 text-[var(--text-tertiary)]" />
+      ) : (
+        <div className="hidden lg:block">
+          <div className="rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--border-subtle)]">
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="rounded-full bg-[var(--bg-input)] p-3.5 mb-4">
+                <FileText className="h-6 w-6 text-[var(--text-tertiary)]" />
+              </div>
+              <p className="text-[15px] font-medium text-[var(--text-secondary)] mb-1">No {t.bins} selected</p>
+              <p className="text-[13px] text-[var(--text-tertiary)]">Choose {t.bins} to preview and print labels</p>
+            </div>
           </div>
-          <p className="text-[15px] font-medium text-[var(--text-secondary)] mb-1">No {t.bins} selected</p>
-          <p className="text-[13px] text-[var(--text-tertiary)]">Choose {t.bins} to preview and print labels</p>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 }

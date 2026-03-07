@@ -103,7 +103,6 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
               active={isParsing}
               complete={parseDone}
               label={isParsing ? 'Processing' : 'Complete'}
-              showElapsed
             />
           </div>
         ) : effectiveState === 'success' && executionResult ? (

@@ -9,28 +9,9 @@ interface AiProgressBarProps {
   complete?: boolean;
   /** Status text shown below the bar */
   label?: string;
-  /** Show elapsed time counter */
-  showElapsed?: boolean;
   /** Compact height variant for inline use */
   compact?: boolean;
   className?: string;
-}
-
-function useElapsed(enabled: boolean) {
-  const start = useRef(Date.now());
-  const [elapsed, setElapsed] = useState(0);
-
-  useEffect(() => {
-    if (!enabled) return;
-    start.current = Date.now();
-    setElapsed(0);
-    const id = setInterval(() => setElapsed(Date.now() - start.current), 1000);
-    return () => clearInterval(id);
-  }, [enabled]);
-
-  const secs = Math.floor(elapsed / 1000);
-  if (secs < 60) return `${secs}s`;
-  return `${Math.floor(secs / 60)}m ${secs % 60}s`;
 }
 
 /**
@@ -74,12 +55,10 @@ export function AiProgressBar({
   active,
   complete = false,
   label,
-  showElapsed = false,
   compact = false,
   className,
 }: AiProgressBarProps) {
   const progress = useAsymptoticProgress(active, complete);
-  const elapsed = useElapsed(active);
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
@@ -110,30 +89,21 @@ export function AiProgressBar({
       </div>
 
       {/* Label row */}
-      {(label || showElapsed) && (
-        <div className="flex items-center justify-between gap-2">
-          {label && (
-            <div className="flex items-center gap-1.5 min-w-0">
-              {complete ? (
-                <Check className="h-3 w-3 text-emerald-500 shrink-0" />
-              ) : (
-                <Sparkles className="h-3 w-3 text-[var(--ai-accent)] shrink-0 ai-thinking-pulse" />
-              )}
-              <span
-                className={cn(
-                  'text-[12px] font-medium truncate',
-                  complete ? 'text-emerald-500' : 'text-[var(--text-tertiary)]',
-                )}
-              >
-                {label}
-              </span>
-            </div>
+      {label && (
+        <div className="flex items-center gap-1.5 min-w-0">
+          {complete ? (
+            <Check className="h-3 w-3 text-emerald-500 shrink-0" />
+          ) : (
+            <Sparkles className="h-3 w-3 text-[var(--ai-accent)] shrink-0 ai-thinking-pulse" />
           )}
-          {showElapsed && (
-            <span className="text-[11px] tabular-nums text-[var(--text-tertiary)] shrink-0">
-              {elapsed}
-            </span>
-          )}
+          <span
+            className={cn(
+              'text-[12px] font-medium truncate',
+              complete ? 'text-emerald-500' : 'text-[var(--text-tertiary)]',
+            )}
+          >
+            {label}
+          </span>
         </div>
       )}
     </div>
