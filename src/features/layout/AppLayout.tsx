@@ -190,7 +190,7 @@ export function AppLayout() {
           </button>
         </div>
       )}
-      {onboarding.isOnboarding && !onboarding.isLoading && !locationsLoading && (locations.length === 0 || onboarding.step > 0 || demoMode) && (
+      {onboarding.isOnboarding && !onboarding.isLoading && (locationsLoading ? onboarding.step > 0 : (locations.length === 0 || onboarding.step > 0 || demoMode)) && (
         <OnboardingOverlay
           step={onboarding.step}
           totalSteps={onboarding.totalSteps}

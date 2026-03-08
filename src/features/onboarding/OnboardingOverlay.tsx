@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
+import { AreaPicker } from '@/features/areas/AreaPicker';
 import { createArea } from '@/features/areas/useAreas';
 import { BinPreviewCard } from '@/features/bins/BinPreviewCard';
 import { ItemsInput } from '@/features/bins/ItemsInput';
@@ -143,6 +144,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
   // Step 1 state
   const [binName, setBinName] = useState('');
   const [binItems, setBinItems] = useState<string[]>([]);
+  const [binAreaId, setBinAreaId] = useState<string | null>(null);
   // Loading
   const [loading, setLoading] = useState(false);
   // Created bin for QR preview
@@ -215,6 +217,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
         name: binName.trim(),
         locationId,
         items: binItems.length > 0 ? binItems : undefined,
+        areaId: binAreaId,
       });
       setCreatedBin(bin);
       advanceStep();
@@ -417,6 +420,13 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
                   autoFocus
                   className="rounded-[var(--radius-md)]"
                 />
+                {areaNames.length > 0 && (
+                  <AreaPicker
+                    locationId={locationId}
+                    value={binAreaId}
+                    onChange={setBinAreaId}
+                  />
+                )}
                 <ItemsInput
                   items={binItems}
                   onChange={setBinItems}

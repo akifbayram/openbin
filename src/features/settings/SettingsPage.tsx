@@ -127,6 +127,7 @@ export function SettingsPage() {
         <DataSection
           activeLocationId={activeLocationId}
           actions={dataActions}
+          locationName={activeLocation?.name}
           binCount={activeLocation?.bin_count ?? undefined}
           areaCount={activeLocation?.area_count ?? undefined}
           binLabel={binCount !== 1 ? t.bins : t.bin}

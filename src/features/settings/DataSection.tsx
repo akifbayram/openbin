@@ -28,6 +28,7 @@ import type { useDataSectionActions } from './useDataSectionActions';
 interface DataSectionProps {
   activeLocationId: string | null | undefined;
   actions: ReturnType<typeof useDataSectionActions>;
+  locationName?: string;
   binCount?: number;
   areaCount?: number;
   binLabel?: string;
@@ -112,6 +113,7 @@ function SettingsRow({
 export function DataSection({
   activeLocationId,
   actions,
+  locationName,
   binCount,
   areaCount,
   binLabel = 'bins',
@@ -175,7 +177,7 @@ export function DataSection({
           <Label className="inline-flex items-center gap-1.5"><Database className="h-3.5 w-3.5" />Data</Label>
 
           {/* Export */}
-          <SectionLabel trailing={statsText}>Export</SectionLabel>
+          <SectionLabel trailing={statsText}>Export{locationName ? ` \u2014 ${locationName}` : ''}</SectionLabel>
           <RowGroup>
             <SettingsRow
               icon={FileArchive}
@@ -209,7 +211,7 @@ export function DataSection({
           </RowGroup>
 
           {/* Import */}
-          <SectionLabel>Import</SectionLabel>
+          <SectionLabel>Import{locationName ? ` \u2014 ${locationName}` : ''}</SectionLabel>
           <RowGroup>
             <SettingsRow
               icon={Upload}
