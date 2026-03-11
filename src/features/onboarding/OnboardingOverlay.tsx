@@ -1,248 +1,43 @@
 import '@/components/ui/animations.css';
-import { Camera, ListChecks, MessageSquare, PackagePlus, Plus, Printer, QrCode, Search, Settings, Sparkles, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { PackagePlus, Printer, QrCode, Settings, Sparkles, X } from 'lucide-react';
 import { BrandIcon } from '@/components/BrandIcon';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/toast';
-import { AreaPicker } from '@/features/areas/AreaPicker';
-import { createArea } from '@/features/areas/useAreas';
-import { BinPreviewCard } from '@/features/bins/BinPreviewCard';
-import { ItemsInput } from '@/features/bins/ItemsInput';
-import { addBin } from '@/features/bins/useBins';
-import { createLocation } from '@/features/locations/useLocations';
-import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
-import { useAuth } from '@/lib/auth';
-import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
-import type { Bin } from '@/types';
+import type { OnboardingActions } from './onboardingConstants';
+import { AiShowcaseStep } from './steps/AiShowcaseStep';
+import type { CompletionAction } from './steps/CompletionStep';
+import { CompletionStep } from './steps/CompletionStep';
+import { CreateBinStep } from './steps/CreateBinStep';
+import { DemoAiShowcase } from './steps/DemoAiShowcase';
+import { DemoBrowseStep } from './steps/DemoBrowseStep';
+import { DemoWelcomeStep } from './steps/DemoWelcomeStep';
+import { QrPreviewStep } from './steps/QrPreviewStep';
+import { WelcomeStep } from './steps/WelcomeStep';
+import { useOnboardingActions } from './useOnboardingActions';
 
+export type { OnboardingActions };
 
-export interface OnboardingActions {
-  step: number;
-  totalSteps: number;
-  locationId?: string;
-  advanceWithLocation: (id: string) => void;
-  advanceStep: () => void;
-  complete: () => void;
-  demoMode?: boolean;
-  activeLocationId?: string;
-}
+const DEMO_COMPLETION_ACTIONS: CompletionAction[] = [
+  { icon: PackagePlus, label: 'Browse all bins', path: '/bins' },
+  { icon: Printer, label: 'Print labels', path: '/print' },
+  { icon: QrCode, label: 'Scan a QR code', path: '/scan' },
+  { icon: Settings, label: 'Explore settings', path: '/settings' },
+];
 
-const AI_FEATURES = [
-  { icon: Camera, title: 'Photo Analysis', desc: 'Snap a photo, AI catalogs everything inside' },
-  { icon: MessageSquare, title: 'Natural Language', desc: "'Add screwdriver to the tools bin'" },
-  { icon: Search, title: 'Inventory Search', desc: "'Where is the glass cleaner?'" },
-  { icon: ListChecks, title: 'Smart Lists', desc: 'Dictate items, AI extracts a clean list' },
-] as const;
+const PROD_COMPLETION_ACTIONS: CompletionAction[] = [
+  { icon: PackagePlus, label: 'Create more bins', path: '/bins' },
+  { icon: QrCode, label: 'Scan a QR code', path: '/scan' },
+  { icon: Settings, label: 'Explore settings', path: '/settings' },
+];
 
-/** Hardcoded Camping Gear bin data shared by demo steps 1 (AI) and 2 (browse). */
-const DEMO_BIN = {
-  name: 'Camping Gear',
-  shortCode: 'CMPTCK',
-  icon: 'Leaf',
-  color: '140:3',
-  items: ['Tent', 'Sleeping bags (x4)', 'Headlamps', 'Camping stove', 'Water filter', 'Tarp', 'Cooler (hard shell)', 'Fire starters'],
-  tags: ['outdoor', 'seasonal', 'family'],
-  areaName: 'Garage',
-} as const;
-
-function DemoAiShowcase({ onNext }: { onNext: () => void }) {
-  const [visibleCount, setVisibleCount] = useState(0);
-  const [photoCollapsed, setPhotoCollapsed] = useState(false);
-
-  useEffect(() => {
-    // Collapse photo just before items start appearing
-    const collapseTimeout = setTimeout(() => setPhotoCollapsed(true), 2500);
-    let interval: ReturnType<typeof setInterval> | undefined;
-    const startTimeout = setTimeout(() => {
-      interval = setInterval(() => {
-        setVisibleCount((c) => {
-          if (c >= DEMO_BIN.items.length) {
-            clearInterval(interval);
-            return c;
-          }
-          return c + 1;
-        });
-      }, 300);
-    }, 3000);
-    return () => {
-      clearTimeout(collapseTimeout);
-      clearTimeout(startTimeout);
-      if (interval !== undefined) clearInterval(interval);
-    };
-  }, []);
-
-  return (
-    <div className="flex flex-col items-center text-center">
-      <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
-        <Sparkles className="h-8 w-8 text-[var(--accent)]" />
-      </div>
-      <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-        AI-powered organization
-      </h2>
-      <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-        Snap a photo, and AI catalogs everything inside.
-      </p>
-      {/* Mock photo area */}
-      <div className={cn(
-        'w-full rounded-[var(--radius-md)] bg-[var(--bg-active)] flex items-center justify-center overflow-hidden transition-all duration-500 ease-in-out',
-        photoCollapsed ? 'max-h-0 opacity-0 mb-0' : 'ai-photo-shimmer max-h-32 opacity-100 mb-4'
-      )}>
-        <Camera className="h-10 w-10 text-[var(--text-tertiary)] opacity-40 my-[2.75rem]" />
-      </div>
-      {/* Revealed items */}
-      {visibleCount > 0 && (
-        <div className="w-full rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden mb-5">
-          {DEMO_BIN.items.slice(0, visibleCount).map((item, i) => (
-            <div key={item} className="ai-item-reveal" style={{ animationDelay: `${i * 0.05}s` }}>
-              {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-              <div className="px-3.5 py-1">
-                <span className="text-[15px] text-[var(--text-primary)] leading-relaxed">
-                  {item}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      <Button
-        type="button"
-        onClick={onNext}
-        className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
-      >
-        Next
-      </Button>
-    </div>
-  );
-}
-
-function DemoQrPreview({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn('rounded-[var(--radius-lg)] p-3 flex flex-col items-center', className)}
-    >
-      <QRCodeDisplay binId={DEMO_BIN.shortCode} size={120} shortCode={DEMO_BIN.shortCode} hideActions />
-    </div>
-  );
-}
-
-export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLocation, advanceStep, complete, demoMode, activeLocationId }: OnboardingActions) {
-  const t = useTerminology();
+export function OnboardingOverlay(props: OnboardingActions) {
+  const { step, totalSteps, locationId, advanceWithLocation, advanceStep, complete, demoMode, activeLocationId } = props;
+  const state = useOnboardingActions(props);
+  const { displayedStep, transitioning, loading, navigate } = state;
   const dots = Array.from({ length: totalSteps });
-  const navigate = useNavigate();
-  const { setActiveLocationId } = useAuth();
-  const { showToast } = useToast();
 
-  // Step 0 state
-  const [locationName, setLocationName] = useState('');
-  const [areaNames, setAreaNames] = useState<string[]>([]);
-  const [areaInput, setAreaInput] = useState('');
-  const [showAreaInput, setShowAreaInput] = useState(false);
-  // Step 1 state
-  const [binName, setBinName] = useState('');
-  const [binItems, setBinItems] = useState<string[]>([]);
-  const [binAreaId, setBinAreaId] = useState<string | null>(null);
-  // Loading
-  const [loading, setLoading] = useState(false);
-  // Created bin for QR preview
-  const [createdBin, setCreatedBin] = useState<Bin | null>(null);
-  // Step transition: fade out old content, then fade in new
-  const [displayedStep, setDisplayedStep] = useState(step);
-  const transitioning = step !== displayedStep;
-
-  useEffect(() => {
-    if (step === displayedStep) return;
-    const timer = setTimeout(() => setDisplayedStep(step), 200);
-    return () => clearTimeout(timer);
-  }, [step, displayedStep]);
-
-  // Lock body scroll
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
-  // If we reach QR step without a created bin (e.g. page refresh), auto-advance
-  useEffect(() => {
-    if (step === 2 && !createdBin && !demoMode) {
-      advanceStep();
-    }
-  }, [step, createdBin, advanceStep, demoMode]);
-
-  function handleAddArea() {
-    const name = areaInput.trim();
-    if (!name || areaNames.includes(name)) return;
-    setAreaNames((prev) => [...prev, name]);
-    setAreaInput('');
-  }
-
-  function handleRemoveArea(name: string) {
-    setAreaNames((prev) => prev.filter((a) => a !== name));
-  }
-
-  async function handleCreateLocation() {
-    if (!locationName.trim()) return;
-    setLoading(true);
-    try {
-      const loc = await createLocation(locationName.trim());
-      // Advance step BEFORE setting active location — createLocation fires
-      // notifyLocationsChanged() which refetches the location list. If locations.length
-      // becomes > 0 while step is still 0, the overlay's mount condition briefly fails
-      // and causes a white flash.
-      advanceWithLocation(loc.id);
-      setActiveLocationId(loc.id);
-      // Create areas (best-effort)
-      for (const name of areaNames) {
-        try {
-          await createArea(loc.id, name);
-        } catch {
-          // Skip failures
-        }
-      }
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.location}`, variant: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleCreateBin() {
-    if (!locationId || !binName.trim()) return;
-    setLoading(true);
-    try {
-      const bin = await addBin({
-        name: binName.trim(),
-        locationId,
-        items: binItems.length > 0 ? binItems : undefined,
-        areaId: binAreaId,
-      });
-      setCreatedBin(bin);
-      advanceStep();
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.bin}`, variant: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleSkipSetup() {
-    setLoading(true);
-    try {
-      // Only create a location if one wasn't already created in step 0
-      // and we're not in demo mode (which already has an active location)
-      if (!locationId && !demoMode) {
-        const loc = await createLocation(`My ${t.Location}`);
-        setActiveLocationId(loc.id);
-      }
-      complete();
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to skip setup', variant: 'error' });
-    } finally {
-      setLoading(false);
-    }
+  function handleNavigate(path: string) {
+    complete();
+    navigate(path);
   }
 
   return (
@@ -251,7 +46,7 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
         {/* Close button */}
         <button
           type="button"
-          onClick={handleSkipSetup}
+          onClick={state.handleSkipSetup}
           disabled={loading}
           aria-label="Close setup"
           className="absolute top-4 right-4 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-40 p-1 z-10"
@@ -281,352 +76,61 @@ export function OnboardingOverlay({ step, totalSteps, locationId, advanceWithLoc
           key={displayedStep}
           className={cn('onboarding-step-enter', transitioning && 'onboarding-step-exit')}
         >
-          {/* Step 0: Welcome (demo) */}
           {displayedStep === 0 && demoMode && activeLocationId && (
-            <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
-                <BrandIcon className="h-8 w-8 text-[var(--accent)]" />
-              </div>
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                Welcome to OpenBin
-              </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
-                We've set up a family home with 40+ organized bins — tools, kids' stuff, camping gear, and more. Let's take a quick tour.
-              </p>
-              <Button
-                type="button"
-                onClick={() => advanceWithLocation(activeLocationId)}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
-              >
-                Get Started
-              </Button>
-            </div>
+            <DemoWelcomeStep activeLocationId={activeLocationId} onAdvance={advanceWithLocation} />
           )}
-          {/* Step 0: Welcome + Location + Areas (production) */}
           {displayedStep === 0 && !demoMode && (
-            <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
-                <BrandIcon className="h-8 w-8 text-[var(--accent)]" />
-              </div>
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                Welcome to OpenBin
-              </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
-                Start by naming your first {t.location} — a space where your {t.bins} live, like your home, garage, or office.
-              </p>
-              <Input
-                value={locationName}
-                onChange={(e) => setLocationName(e.target.value.slice(0, 50))}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleCreateLocation(); }}
-                placeholder="e.g., My House"
-                maxLength={50}
-                autoFocus
-                className="mb-4 text-center"
-              />
-
-              {/* Areas section */}
-              {!showAreaInput ? (
-                <button
-                  type="button"
-                  onClick={() => setShowAreaInput(true)}
-                  className="text-[13px] text-[var(--accent)] hover:opacity-80 transition-opacity mb-4"
-                >
-                  + Add {t.areas} (optional)
-                </button>
-              ) : (
-                <div className="w-full text-left mb-4 space-y-2">
-                  <label htmlFor="onboarding-area-input" className="text-[13px] text-[var(--text-tertiary)] block">
-                    {t.Areas} <span className="text-[var(--text-tertiary)] opacity-60">(optional)</span>
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="onboarding-area-input"
-                      value={areaInput}
-                      onChange={(e) => setAreaInput(e.target.value.slice(0, 50))}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddArea(); } }}
-                      placeholder={`e.g., Garage, Kitchen`}
-                      maxLength={50}
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleAddArea}
-                      disabled={!areaInput.trim()}
-                      className="h-10 px-3"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {areaNames.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {areaNames.map((name) => (
-                        <Badge key={name} variant="secondary" className="text-[12px] gap-1 pr-1">
-                          {name}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveArea(name)}
-                            className="hover:text-[var(--destructive)] transition-colors ml-0.5"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <Button
-                type="button"
-                onClick={handleCreateLocation}
-                disabled={!locationName.trim() || loading}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
-              >
-                {loading ? 'Creating...' : 'Continue'}
-              </Button>
-            </div>
+            <WelcomeStep
+              locationName={state.locationName} setLocationName={state.setLocationName}
+              areaNames={state.areaNames} areaInput={state.areaInput} setAreaInput={state.setAreaInput}
+              showAreaInput={state.showAreaInput} setShowAreaInput={state.setShowAreaInput}
+              handleAddArea={state.handleAddArea} handleRemoveArea={state.handleRemoveArea}
+              handleCreateLocation={state.handleCreateLocation} loading={loading} t={state.t}
+            />
           )}
-
-          {/* Demo Step 1: AI Showcase */}
           {displayedStep === 1 && demoMode && (
             <DemoAiShowcase onNext={advanceStep} />
           )}
-
-          {/* Step 1: Create First Bin (production) */}
           {displayedStep === 1 && !demoMode && locationId && (
-            <div className="flex flex-col items-center text-center">
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                Create your first {t.bin}
-              </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-                A {t.bin} is any container you want to track — a box, drawer, shelf, etc.
-              </p>
-              <BinPreviewCard
-                name={binName || `My ${t.Bin}`}
-                color=""
-                items={binItems}
-                tags={[]}
-                className="mb-5"
-              />
-              <div className="w-full space-y-3 text-left">
-                <Input
-                  value={binName}
-                  onChange={(e) => setBinName(e.target.value.slice(0, 100))}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && binName.trim()) handleCreateBin(); }}
-                  placeholder={`${t.Bin} name`}
-                  maxLength={100}
-                  autoFocus
-                  className="rounded-[var(--radius-md)]"
-                />
-                {areaNames.length > 0 && (
-                  <AreaPicker
-                    locationId={locationId}
-                    value={binAreaId}
-                    onChange={setBinAreaId}
-                  />
-                )}
-                <ItemsInput
-                  items={binItems}
-                  onChange={setBinItems}
-                  showAi={false}
-                />
-              </div>
-              <Button
-                type="button"
-                onClick={handleCreateBin}
-                disabled={!binName.trim() || loading}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px] mt-5"
-              >
-                {loading ? 'Creating...' : `Create ${t.Bin}`}
-              </Button>
-            </div>
+            <CreateBinStep
+              locationId={locationId} binName={state.binName} setBinName={state.setBinName}
+              binItems={state.binItems} setBinItems={state.setBinItems}
+              binAreaId={state.binAreaId} setBinAreaId={state.setBinAreaId}
+              areaNames={state.areaNames} handleCreateBin={state.handleCreateBin} loading={loading} t={state.t}
+            />
           )}
-
-          {/* Demo Step 2: Browse bin preview */}
           {displayedStep === 2 && demoMode && (
-            <div className="flex flex-col items-center text-center">
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                Everything in its place
-              </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-                Items, tags, area, notes, and a QR code.
-              </p>
-              <BinPreviewCard
-                name={DEMO_BIN.name}
-                color={DEMO_BIN.color}
-                icon={DEMO_BIN.icon}
-                items={[...DEMO_BIN.items]}
-                tags={[...DEMO_BIN.tags]}
-                areaName={DEMO_BIN.areaName}
-                className="mb-4"
-              />
-              <DemoQrPreview className="mb-5" />
-              <Button
-                type="button"
-                onClick={advanceStep}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
-              >
-                Next
-              </Button>
-            </div>
+            <DemoBrowseStep onNext={advanceStep} />
           )}
-
-          {/* Step 2: QR Preview (production) */}
-          {displayedStep === 2 && !demoMode && createdBin && (
-            <div className="flex flex-col items-center text-center">
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                Scan to find anything
-              </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-                Print this label and stick it on your {t.bin}. Scan with any phone camera to instantly see what's inside.
-              </p>
-              <QRCodeDisplay binId={createdBin.id} size={160} shortCode={createdBin.id} hideActions />
-              <div className="flex gap-3 w-full mt-6">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => { complete(); navigate('/print'); }}
-                  className="flex-1 rounded-[var(--radius-md)] h-11 text-[15px] gap-1.5"
-                >
-                  <Printer className="h-4 w-4" />
-                  Print Label
-                </Button>
-                <Button
-                  type="button"
-                  onClick={advanceStep}
-                  className="flex-1 rounded-[var(--radius-md)] h-11 text-[15px]"
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+          {displayedStep === 2 && !demoMode && state.createdBin && (
+            <QrPreviewStep
+              createdBin={state.createdBin}
+              onPrint={() => handleNavigate('/print')}
+              onNext={advanceStep}
+              t={state.t}
+            />
           )}
-
-          {/* Demo Step 3: Ready to go */}
           {displayedStep === 3 && demoMode && (
-            <div className="flex flex-col items-center text-center">
-              <div className="h-24 w-24 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
-                <BrandIcon className="h-14 w-14 text-[var(--accent)]" />
-              </div>
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                You're ready to go
-              </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-                Here are a few things you can do next.
-              </p>
-              <div className="w-full space-y-2 mb-6">
-                {([
-                  { icon: PackagePlus, label: 'Browse all bins', path: '/bins' },
-                  { icon: Printer, label: 'Print labels', path: '/print' },
-                  { icon: QrCode, label: 'Scan a QR code', path: '/scan' },
-                  { icon: Settings, label: 'Explore settings', path: '/settings' },
-                ] as const).map(({ icon: Icon, label, path }) => (
-                  <button
-                    key={path}
-                    type="button"
-                    onClick={() => { complete(); navigate(path); }}
-                    className="w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-[var(--bg-active)] hover:bg-[var(--bg-hover)] transition-colors text-left"
-                  >
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
-                      <Icon className="h-4 w-4 text-[var(--accent)]" />
-                    </div>
-                    <span className="text-[14px] font-medium text-[var(--text-primary)]">{label}</span>
-                  </button>
-                ))}
-              </div>
-              <Button
-                type="button"
-                onClick={() => { complete(); navigate('/'); }}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
-              >
-                Go to Dashboard
-              </Button>
-            </div>
+            <CompletionStep
+              icon={<div className="h-24 w-24 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10"><BrandIcon className="h-14 w-14 text-[var(--accent)]" /></div>}
+              actions={DEMO_COMPLETION_ACTIONS}
+              onAction={handleNavigate}
+              onDashboard={() => handleNavigate('/')}
+            />
           )}
-
-          {/* Step 3: AI Feature Showcase (production) */}
           {displayedStep === 3 && !demoMode && (
-            <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
-                <Sparkles className="h-8 w-8 text-[var(--accent)]" />
-              </div>
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                Supercharge with AI
-              </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-                Bring your own API key from OpenAI, Anthropic, Google, or any compatible provider.
-              </p>
-              <div className="w-full space-y-2 mb-6">
-                {AI_FEATURES.map(({ icon: Icon, title, desc }) => (
-                  <div key={title} className="onboarding-feature-card flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 bg-[var(--bg-active)] text-left">
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
-                      <Icon className="h-4 w-4 text-[var(--accent)]" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[13px] font-semibold text-[var(--text-primary)]">{title}</div>
-                      <div className="text-[12px] text-[var(--text-tertiary)] leading-snug">{desc}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Button
-                type="button"
-                onClick={() => { complete(); navigate('/settings#ai-settings'); }}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
-              >
-                Set Up Now
-              </Button>
-              <button
-                type="button"
-                onClick={advanceStep}
-                className="mt-3 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
-              >
-                Maybe Later
-              </button>
-            </div>
+            <AiShowcaseStep
+              onSetUpNow={() => handleNavigate('/settings#ai-settings')}
+              onSkip={advanceStep}
+            />
           )}
-
-          {/* Step 4: Completion with Next Steps (production) */}
           {displayedStep === 4 && !demoMode && (
-            <div className="flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
-                <Sparkles className="h-8 w-8 text-[var(--accent)]" />
-              </div>
-              <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-                You're ready to go
-              </h2>
-              <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-                Here are a few things you can do next.
-              </p>
-              <div className="w-full space-y-2 mb-6">
-                {([
-                  { icon: PackagePlus, label: 'Create more bins', path: '/bins' },
-                  { icon: QrCode, label: 'Scan a QR code', path: '/scan' },
-                  { icon: Settings, label: 'Explore settings', path: '/settings' },
-                ] as const).map(({ icon: Icon, label, path }) => (
-                  <button
-                    key={path}
-                    type="button"
-                    onClick={() => { complete(); navigate(path); }}
-                    className="w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-[var(--bg-active)] hover:bg-[var(--bg-hover)] transition-colors text-left"
-                  >
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
-                      <Icon className="h-4 w-4 text-[var(--accent)]" />
-                    </div>
-                    <span className="text-[14px] font-medium text-[var(--text-primary)]">{label}</span>
-                  </button>
-                ))}
-              </div>
-              <Button
-                type="button"
-                onClick={() => { complete(); navigate('/'); }}
-                className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
-              >
-                Go to Dashboard
-              </Button>
-            </div>
+            <CompletionStep
+              icon={<div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10"><Sparkles className="h-8 w-8 text-[var(--accent)]" /></div>}
+              actions={PROD_COMPLETION_ACTIONS}
+              onAction={handleNavigate}
+              onDashboard={() => handleNavigate('/')}
+            />
           )}
         </div>
 
