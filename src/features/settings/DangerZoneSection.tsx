@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
@@ -40,8 +41,8 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
     <>
       <Card>
         <CardContent>
-          <Label className="inline-flex items-center gap-1.5"><ShieldAlert className="h-3.5 w-3.5" />Danger Zone</Label>
-          <div className="flex flex-col gap-2 mt-3">
+          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><ShieldAlert className="h-3.5 w-3.5" />Danger Zone</span>} labelClassName="text-[15px] font-semibold">
+          <div className="flex flex-col gap-2 mt-1">
             <Button
               variant="destructive"
               onClick={() => setDeleteOpen(true)}
@@ -51,6 +52,7 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
               Delete Account
             </Button>
           </div>
+          </Disclosure>
         </CardContent>
       </Card>
 

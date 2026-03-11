@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { Disclosure } from '@/components/ui/disclosure';
 import { cn } from '@/lib/utils';
 import type { useDataSectionActions } from './useDataSectionActions';
 
@@ -149,8 +149,8 @@ export function DataSection({
     <>
       <Card>
         <CardContent>
-          <Label className="inline-flex items-center gap-1.5"><Compass className="h-3.5 w-3.5" />Navigation</Label>
-          <div className="mt-3">
+          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Compass className="h-3.5 w-3.5" />Navigation</span>} labelClassName="text-[15px] font-semibold">
+          <div className="mt-1">
             <RowGroup>
               <SettingsRow
                 icon={Clock}
@@ -169,12 +169,13 @@ export function DataSection({
               />
             </RowGroup>
           </div>
+          </Disclosure>
         </CardContent>
       </Card>
 
       <Card>
         <CardContent>
-          <Label className="inline-flex items-center gap-1.5"><Database className="h-3.5 w-3.5" />Data</Label>
+          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Database className="h-3.5 w-3.5" />Data</span>} labelClassName="text-[15px] font-semibold">
 
           {/* Export */}
           <SectionLabel trailing={statsText}>Export{locationName ? ` \u2014 ${locationName}` : ''}</SectionLabel>
@@ -245,6 +246,7 @@ export function DataSection({
             className="hidden"
             onChange={(e) => handleReplaceFileSelected(e.target.files)}
           />
+          </Disclosure>
         </CardContent>
       </Card>
 

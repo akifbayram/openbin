@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
+import { Disclosure } from '@/components/ui/disclosure';
 import { OptionGroup } from '@/components/ui/option-group';
 import { PageHeader } from '@/components/ui/page-header';
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -80,8 +80,8 @@ export function SettingsPage() {
       {user && (
         <Card>
           <CardContent>
-            <Label className="inline-flex items-center gap-1.5"><UserCircle className="h-3.5 w-3.5" />Account</Label>
-            <div className="flex flex-col gap-3 mt-3">
+            <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><UserCircle className="h-3.5 w-3.5" />Account</span>} labelClassName="text-[15px] font-semibold">
+            <div className="flex flex-col gap-3 mt-1">
               <button
                 type="button"
                 onClick={() => navigate('/profile')}
@@ -109,6 +109,7 @@ export function SettingsPage() {
                 Sign Out
               </Button>
             </div>
+            </Disclosure>
           </CardContent>
         </Card>
       )}
@@ -147,8 +148,8 @@ export function SettingsPage() {
       {/* About */}
       <Card>
         <CardContent>
-          <Label className="inline-flex items-center gap-1.5"><Info className="h-3.5 w-3.5" />About</Label>
-          <div className="mt-3 space-y-2 text-[15px] text-[var(--text-secondary)]">
+          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Info className="h-3.5 w-3.5" />About</span>} labelClassName="text-[15px] font-semibold">
+          <div className="mt-1 space-y-2 text-[15px] text-[var(--text-secondary)]">
             <div className="flex items-baseline gap-2">
               <p className="font-semibold text-[var(--text-primary)]">{settings.appName}</p>
               <span className="text-[13px] text-[var(--text-tertiary)]">v{__APP_VERSION__}</span>
@@ -174,6 +175,7 @@ export function SettingsPage() {
               <ExternalLink className="h-3 w-3" />
             </a>
           </div>
+          </Disclosure>
         </CardContent>
       </Card>
 

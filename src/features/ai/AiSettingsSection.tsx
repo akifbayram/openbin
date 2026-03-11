@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { OptionGroup } from '@/components/ui/option-group';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -141,13 +140,11 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
   return (
     <Card id="ai-settings">
       <CardContent>
-        <div className="row-spread">
-          <div className="flex-1 min-w-0">
-            <Label htmlFor="ai-toggle" className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" />AI Features</Label>
-            <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
-              Photo analysis, item extraction, and AI commands
-            </p>
-          </div>
+        <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Sparkles className="h-3.5 w-3.5" />AI Features</span>} labelClassName="text-[15px] font-semibold">
+        <div className="row-spread mt-1">
+          <p className="text-[13px] text-[var(--text-tertiary)]">
+            Photo analysis, item extraction, and AI commands
+          </p>
           <Switch id="ai-toggle" checked={aiEnabled} onCheckedChange={onToggle} />
         </div>
 
@@ -439,6 +436,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
             </div>
           </div>
         </div>
+        </Disclosure>
       </CardContent>
     </Card>
   );

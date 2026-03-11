@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
@@ -94,8 +95,11 @@ export function ApiKeysSection() {
     <>
       <Card>
         <CardContent>
-          <div className="flex items-baseline justify-between">
-            <Label className="inline-flex items-center gap-1.5"><KeyRound className="h-3.5 w-3.5" />API Keys</Label>
+          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><KeyRound className="h-3.5 w-3.5" />API Keys</span>} labelClassName="text-[15px] font-semibold">
+          <div className="flex items-baseline justify-between mt-1">
+            <p className="text-[13px] text-[var(--text-tertiary)]">
+              Use API keys for smart home integrations and headless access.
+            </p>
             <Tooltip content="Create API key" side="bottom">
               <Button
                 onClick={() => setCreateOpen(true)}
@@ -106,9 +110,6 @@ export function ApiKeysSection() {
               </Button>
             </Tooltip>
           </div>
-          <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
-            Use API keys for smart home integrations and headless access.
-          </p>
 
           {keys.length === 0 ? (
             <p className="text-[13px] text-[var(--text-tertiary)] py-4 text-center">
@@ -146,6 +147,7 @@ export function ApiKeysSection() {
               ))}
             </div>
           )}
+          </Disclosure>
         </CardContent>
       </Card>
 
