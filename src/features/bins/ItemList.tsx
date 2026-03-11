@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useClickOutside } from '@/lib/useClickOutside';
+import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
 import type { BinItem } from '@/types';
 import { removeItemFromBin, renameItem, reorderItems } from './useBins';
@@ -221,21 +223,9 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
     }
   }, [items, binId, showToast]);
 
-  const [sortOpen, setSortOpen] = useState(false);
+  const { visible: sortOpen, animating: sortAnimating, close: sortClose, toggle: sortToggle } = usePopover();
   const sortRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!sortOpen) return;
-    function onClickOutside(e: MouseEvent) {
-      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false);
-    }
-    function onEscape(e: KeyboardEvent) {
-      if (e.key === 'Escape') setSortOpen(false);
-    }
-    document.addEventListener('mousedown', onClickOutside);
-    document.addEventListener('keydown', onEscape);
-    return () => { document.removeEventListener('mousedown', onClickOutside); document.removeEventListener('keydown', onEscape); };
-  }, [sortOpen]);
+  useClickOutside(sortRef, sortClose);
 
   async function handleSaveEdit(itemId: string, value: string, quantity: number | null) {
     setEditingId(null);
@@ -276,25 +266,25 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setSortOpen((o) => !o)}
+              onClick={sortToggle}
               className="shrink-0 gap-1.5 h-8 px-3"
             >
               <ArrowUpDown className="h-3.5 w-3.5" />
               <span className="text-[13px]">{sortMode === 'manual' ? 'Sort' : sortLabel}</span>
             </Button>
             {sortOpen && (
-              <div className="glass-popover absolute right-0 top-full mt-1 z-20 min-w-[160px] py-1">
+              <div className={cn(
+                sortAnimating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
+                'absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] glass-popover overflow-hidden z-20',
+              )}>
                 {sortOptions.map((opt) => (
                   <button
                     key={opt.key}
                     type="button"
-                    onClick={() => { handleSort(opt.key); setSortOpen(false); }}
-                    className={cn(
-                      'w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-left transition-colors hover:bg-[var(--bg-hover)]',
-                      sortMode === opt.key ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]',
-                    )}
+                    onClick={() => { handleSort(opt.key); sortClose(); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                   >
-                    <Check className={cn('h-3.5 w-3.5 shrink-0', sortMode === opt.key ? 'opacity-100' : 'opacity-0')} />
+                    <Check className={cn('h-4 w-4', sortMode === opt.key ? 'text-[var(--accent)]' : 'invisible')} />
                     {opt.label}
                   </button>
                 ))}
