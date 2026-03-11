@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -34,8 +34,12 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
   const [aiSetupOpen, setAiSetupOpen] = useState(false);
   const [successInfo, setSuccessInfo] = useState<CreatedBinInfo[] | null>(null);
 
+  // Reset success state when dialog opens (not on close, to avoid flash during exit animation)
+  useEffect(() => {
+    if (open) setSuccessInfo(null);
+  }, [open]);
+
   function handleOpenChange(open: boolean) {
-    if (!open) setSuccessInfo(null);
     onOpenChange(open);
   }
 

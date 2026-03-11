@@ -1,5 +1,5 @@
 import { Check, Copy, Key, KeyRound, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -75,11 +75,17 @@ export function ApiKeysSection() {
     }
   }
 
+  // Reset form state when dialog opens (not on close, to avoid flash during exit animation)
+  useEffect(() => {
+    if (createOpen) {
+      setNewKey(null);
+      setKeyName('');
+      setCopied(false);
+    }
+  }, [createOpen]);
+
   function handleCloseCreate() {
     setCreateOpen(false);
-    setNewKey(null);
-    setKeyName('');
-    setCopied(false);
   }
 
   if (isLoading) return null;
