@@ -191,20 +191,20 @@ export function ReorganizePage() {
                 <div className="mt-3 space-y-4">
                   <div className="px-1">
                     <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
-                      Max {t.bins} (optional)
+                      Number of {t.bins}
                     </span>
                     <Input
                       type="number"
                       min={1}
                       value={maxBins}
                       onChange={(e) => setMaxBins(e.target.value)}
-                      placeholder="AI decides"
+                      placeholder="Auto"
                     />
                   </div>
 
                   <div className="px-1">
                     <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
-                      Items per {t.bin} (optional)
+                      Items per {t.bin}
                     </span>
                     <div className="flex gap-2">
                       <Input
@@ -226,7 +226,7 @@ export function ReorganizePage() {
 
                   <div className="px-1">
                     <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
-                      Notes for AI (optional)
+                      Additional instructions
                     </span>
                     <Textarea
                       value={userNotes}
@@ -238,13 +238,13 @@ export function ReorganizePage() {
 
                   <div className="px-1">
                     <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
-                      Strictness
+                      Change level
                     </span>
                     <OptionGroup
                       options={[
-                        { key: 'conservative', label: 'Conservative' },
+                        { key: 'conservative', label: 'Light' },
                         { key: 'moderate', label: 'Moderate' },
-                        { key: 'aggressive', label: 'Aggressive' },
+                        { key: 'aggressive', label: 'Thorough' },
                       ]}
                       value={strictness}
                       onChange={setStrictness}
@@ -255,7 +255,7 @@ export function ReorganizePage() {
 
                   <div className="px-1">
                     <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
-                      Topic Granularity
+                      Grouping
                     </span>
                     <OptionGroup
                       options={[
@@ -272,13 +272,13 @@ export function ReorganizePage() {
 
                   <div className="px-1">
                     <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
-                      Ambiguous Items
+                      Unmatched items
                     </span>
                     <OptionGroup
                       options={[
-                        { key: 'best-fit', label: 'Best Fit' },
-                        { key: 'multi-bin', label: 'Multi-Bin' },
-                        { key: 'misc-bin', label: 'Misc Bin' },
+                        { key: 'best-fit', label: 'Best match' },
+                        { key: 'multi-bin', label: 'Place in multiple' },
+                        { key: 'misc-bin', label: `Misc ${t.bin}` },
                       ]}
                       value={ambiguousPolicy}
                       onChange={setAmbiguousPolicy}
@@ -289,12 +289,12 @@ export function ReorganizePage() {
 
                   <div className="px-1">
                     <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
-                      Duplicates
+                      Duplicate items
                     </span>
                     <OptionGroup
                       options={[
-                        { key: 'force-single', label: 'Single Placement' },
-                        { key: 'allow', label: 'Allow Duplicates' },
+                        { key: 'force-single', label: `One ${t.bin} only` },
+                        { key: 'allow', label: 'Allow copies' },
                       ]}
                       value={duplicates}
                       onChange={setDuplicates}
@@ -305,12 +305,12 @@ export function ReorganizePage() {
 
                   <div className="px-1">
                     <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">
-                      Outlier Items
+                      Outlier items
                     </span>
                     <OptionGroup
                       options={[
-                        { key: 'force-closest', label: 'Force Closest' },
-                        { key: 'dedicated', label: 'Outlier Bin' },
+                        { key: 'force-closest', label: 'Nearest match' },
+                        { key: 'dedicated', label: `Separate ${t.bin}` },
                       ]}
                       value={outliers}
                       onChange={setOutliers}
