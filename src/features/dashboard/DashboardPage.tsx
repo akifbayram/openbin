@@ -1,31 +1,18 @@
 import { ChevronRight, Inbox, MapPin, Plus, ScanLine, Settings, Sparkles } from 'lucide-react';
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 
 import { SavedViewChips } from '@/components/saved-view-chips';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { SearchInput } from '@/components/ui/search-input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { BinCard } from '@/features/bins/BinCard';
-import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
-import { BulkActionBar } from '@/features/bins/BulkActionBar';
-import { BulkAppearanceDialog } from '@/features/bins/BulkAppearanceDialog';
-import { BulkAreaDialog } from '@/features/bins/BulkAreaDialog';
-import { BulkCustomFieldsDialog } from '@/features/bins/BulkCustomFieldsDialog';
-import { BulkLocationDialog } from '@/features/bins/BulkLocationDialog';
-import { BulkTagDialog } from '@/features/bins/BulkTagDialog';
-import { BulkVisibilityDialog } from '@/features/bins/BulkVisibilityDialog';
-import { DeleteBinDialog } from '@/features/bins/DeleteBinDialog';
 import { buildViewSearchParams } from '@/features/bins/useBinSearchParams';
-import { updateBin, useAllTags } from '@/features/bins/useBins';
+import { useAllTags } from '@/features/bins/useBins';
 import { useBulkActions } from '@/features/bins/useBulkActions';
 import { useBulkDialogs } from '@/features/bins/useBulkDialogs';
 import { useBulkSelection } from '@/features/bins/useBulkSelection';
@@ -39,94 +26,10 @@ import { useDebounce } from '@/lib/useDebounce';
 import { usePermissions } from '@/lib/usePermissions';
 import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
+import { DashboardDialogs } from './DashboardDialogs';
+import { DashboardSkeleton } from './DashboardSkeleton';
+import { SectionHeader, StatCard } from './DashboardWidgets';
 import { useDashboard } from './useDashboard';
-
-function useAnimatedNumber(target: number, duration = 400) {
-  const [display, setDisplay] = useState(target);
-  const rafRef = useRef<number>();
-
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setDisplay(target);
-      return;
-    }
-    const start = display;
-    const delta = target - start;
-    if (delta === 0) return;
-    const startTime = performance.now();
-
-    function tick(now: number) {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      // Cubic ease-out
-      const eased = 1 - (1 - progress) ** 3;
-      setDisplay(Math.round(start + delta * eased));
-      if (progress < 1) {
-        rafRef.current = requestAnimationFrame(tick);
-      }
-    }
-    rafRef.current = requestAnimationFrame(tick);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-    // Only re-run when target changes, not display
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target, duration]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return display;
-}
-
-function StatCard({
-  label,
-  value,
-  onClick,
-}: {
-  label: string;
-  value: number;
-  onClick?: () => void;
-}) {
-  const animatedValue = useAnimatedNumber(value);
-  const Wrapper = onClick ? 'button' : 'div';
-  return (
-    <Card className="flex-1 shadow-none">
-      <Wrapper
-        className="w-full text-left"
-        {...(onClick ? { onClick } : {})}
-      >
-        <CardContent className="py-3 px-4">
-          <p className="text-[24px] font-bold text-[var(--text-primary)] leading-tight">
-            {animatedValue}
-          </p>
-          <p className="text-[13px] text-[var(--text-tertiary)]">{label}</p>
-        </CardContent>
-      </Wrapper>
-    </Card>
-  );
-}
-
-function SectionHeader({
-  title,
-  action,
-}: {
-  title: string;
-  action?: { label: string; onClick: () => void };
-}) {
-  return (
-    <div className="row-spread">
-      <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
-        {title}
-      </h2>
-      {action && (
-        <button
-          type="button"
-          onClick={action.onClick}
-          className="flex items-center gap-0.5 text-[13px] font-medium text-[var(--accent)]"
-        >
-          {action.label}
-          <ChevronRight className="h-3.5 w-3.5" />
-        </button>
-      )}
-    </div>
-  );
-}
 
 export function DashboardPage() {
   const t = useTerminology();
@@ -162,31 +65,12 @@ export function DashboardPage() {
   const bulk = useBulkDialogs();
   const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(allDashboardBins, [activeLocationId]);
   const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(allDashboardBins, selectedIds, clearSelection, showToast, t);
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [copiedStyle, setCopiedStyle] = useState<{ icon: string; color: string; card_style: string } | null>(null);
 
   const binIndexMap = useMemo(() => {
     const map = new Map<string, number>();
     for (let i = 0; i < allDashboardBins.length; i++) map.set(allDashboardBins[i].id, i);
     return map;
   }, [allDashboardBins]);
-
-  const handleCopyStyle = useCallback(() => {
-    const [id] = selectedIds;
-    const bin = allDashboardBins.find((b) => b.id === id);
-    if (!bin) return;
-    setCopiedStyle({ icon: bin.icon, color: bin.color, card_style: bin.card_style });
-    clearSelection();
-    showToast({ message: 'Style copied', variant: 'success' });
-  }, [selectedIds, allDashboardBins, clearSelection, showToast]);
-
-  const handlePasteStyle = useCallback(async () => {
-    if (!copiedStyle) return;
-    const ids = [...selectedIds];
-    await Promise.all(ids.map((id) => updateBin(id, { icon: copiedStyle.icon, color: copiedStyle.color, cardStyle: copiedStyle.card_style })));
-    clearSelection();
-    showToast({ message: `Style applied to ${ids.length} ${ids.length === 1 ? t.bin : t.bins}`, variant: 'success' });
-  }, [copiedStyle, selectedIds, clearSelection, showToast, t]);
 
   useEffect(() => {
     if (sessionStorage.getItem('openbin-demo-toast')) return;
@@ -295,55 +179,7 @@ export function DashboardPage() {
 
       <Crossfade
         isLoading={isLoading}
-        skeleton={
-          <>
-            {/* Stats skeleton */}
-            {dashSettings.showStats && (
-              <div className="flex gap-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex-1 glass-card rounded-[var(--radius-lg)] p-4">
-                    <Skeleton className="h-7 w-12 mb-1" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Pinned Bins skeleton */}
-            {dashSettings.showPinnedBins && (
-              <div className="flex flex-col gap-3">
-                <Skeleton className="h-5 w-16" />
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {[1, 2].map((i) => (
-                    <Card key={i}>
-                      <CardContent className="py-3 px-4 space-y-2">
-                        <Skeleton className="h-5 w-2/3" />
-                        <Skeleton className="h-4 w-1/2" />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Recently Updated skeleton */}
-            {dashSettings.showRecentlyUpdated && (
-              <div className="flex flex-col gap-3">
-                <Skeleton className="h-5 w-32" />
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {[1, 2, 3].map((i) => (
-                    <Card key={i}>
-                      <CardContent className="py-3 px-4 space-y-2">
-                        <Skeleton className="h-5 w-2/3" />
-                        <Skeleton className="h-4 w-1/2" />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        }
+        skeleton={<DashboardSkeleton settings={dashSettings} />}
       >
         {/* Stats */}
         {dashSettings.showStats && (
@@ -465,43 +301,15 @@ export function DashboardPage() {
         )}
       </Crossfade>
 
-      <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
-      {aiEnabled && (
-        <Suspense fallback={null}>
-          {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
-        </Suspense>
-      )}
-
-      {/* Bulk selection */}
-      {selectable && (
-        <BulkActionBar
-          selectedCount={selectedIds.size}
-          isAdmin={isAdmin}
-          canWrite={canWrite}
-          onTag={() => bulk.open('tag')}
-          onMove={() => bulk.open('area')}
-          onDelete={() => setBulkDeleteOpen(true)}
-          onClear={clearSelection}
-          onAppearance={() => bulk.open('appearance')}
-          onVisibility={() => bulk.open('visibility')}
-          onMoveLocation={() => bulk.open('location')}
-          onPin={bulkPinToggle}
-          onDuplicate={bulkDuplicate}
-          pinLabel={pinLabel}
-          onCustomFields={() => bulk.open('customFields')}
-          onCopyStyle={handleCopyStyle}
-          onPasteStyle={handlePasteStyle}
-          canCopyStyle={selectedIds.size === 1}
-          canPasteStyle={copiedStyle !== null}
-        />
-      )}
-      <BulkTagDialog open={bulk.isOpen('tag')} onOpenChange={(v) => v ? bulk.open('tag') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} allTags={allTags} />
-      <BulkAreaDialog open={bulk.isOpen('area')} onOpenChange={(v) => v ? bulk.open('area') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} />
-      <BulkAppearanceDialog open={bulk.isOpen('appearance')} onOpenChange={(v) => v ? bulk.open('appearance') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} />
-      <BulkVisibilityDialog open={bulk.isOpen('visibility')} onOpenChange={(v) => v ? bulk.open('visibility') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} />
-      <BulkCustomFieldsDialog open={bulk.isOpen('customFields')} onOpenChange={(v) => v ? bulk.open('customFields') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} />
-      <BulkLocationDialog open={bulk.isOpen('location')} onOpenChange={(v) => v ? bulk.open('location') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} />
-      <DeleteBinDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen} binName={`${selectedIds.size} ${selectedIds.size === 1 ? t.bin : t.bins}`} onConfirm={bulkDelete} />
+      <DashboardDialogs
+        createOpen={createOpen} setCreateOpen={setCreateOpen}
+        commandOpen={commandOpen} setCommandOpen={setCommandOpen}
+        aiEnabled={aiEnabled}
+        bulk={bulk} selectedIds={selectedIds} clearSelection={clearSelection}
+        allTags={allTags} selectable={selectable} isAdmin={isAdmin} canWrite={canWrite}
+        bulkDelete={bulkDelete} bulkPinToggle={bulkPinToggle} bulkDuplicate={bulkDuplicate}
+        pinLabel={pinLabel} bins={allDashboardBins} t={t}
+      />
     </div>
   );
 }
