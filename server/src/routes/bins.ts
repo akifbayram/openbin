@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 import { getDb, query } from '../db.js';
-import { logActivity } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isBinCreator, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
@@ -12,27 +11,13 @@ import { replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
+import { logRouteActivity } from '../lib/routeHelpers.js';
 import { purgeExpiredTrash } from '../lib/trashPurge.js';
 import { binPhotoUpload, validateFileType } from '../lib/uploadConfig.js';
 import { validateBinName } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
-
-/** Thin wrapper: fills auth context from req and sets entityType to 'bin'. */
-function logBinActivity(
-  req: Express.Request,
-  opts: { locationId: string; action: string; entityId?: string; entityName?: string; changes?: Record<string, { old: unknown; new: unknown }> },
-): void {
-  logActivity({
-    ...opts,
-    entityType: 'bin',
-    userId: req.user!.id,
-    userName: req.user!.username,
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
-  });
-}
 
 router.use(authenticate);
 
@@ -66,7 +51,7 @@ router.post('/', asyncHandler(async (req, res) => {
     customFields: customFields || undefined,
   });
 
-  logBinActivity(req, { locationId, action: 'create', entityId: bin.id, entityName: bin.name });
+  logRouteActivity(req, { entityType: 'bin', locationId, action: 'create', entityId: bin.id, entityName: bin.name });
 
   res.status(201).json(bin);
 }));
@@ -315,7 +300,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
       itemChanges,
     );
     if (changes) {
-      logBinActivity(req, { locationId: access.locationId, action: 'update', entityId: id, entityName: bin.name, changes });
+      logRouteActivity(req, { entityType: 'bin', locationId: access.locationId, action: 'update', entityId: id, entityName: bin.name, changes });
     }
   }
 
@@ -342,7 +327,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   // Soft delete
   await query("UPDATE bins SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = $1", [id]);
 
-  logBinActivity(req, { locationId: access.locationId, action: 'delete', entityId: id, entityName: bin.name });
+  logRouteActivity(req, { entityType: 'bin', locationId: access.locationId, action: 'delete', entityId: id, entityName: bin.name });
 
   res.json(bin);
 }));
@@ -366,7 +351,7 @@ router.post('/:id/restore', asyncHandler(async (req, res) => {
 
   const bin = (await fetchBinById(id))!;
 
-  logBinActivity(req, { locationId, action: 'restore', entityId: id, entityName: bin.name });
+  logRouteActivity(req, { entityType: 'bin', locationId, action: 'restore', entityId: id, entityName: bin.name });
 
   res.json(bin);
 }));
@@ -394,7 +379,7 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
 
   cleanupBinPhotos(id, photosResult.rows);
 
-  logBinActivity(req, { locationId, action: 'permanent_delete', entityId: id, entityName: binName });
+  logRouteActivity(req, { entityType: 'bin', locationId, action: 'permanent_delete', entityId: id, entityName: binName });
 
   res.json({ message: 'Bin permanently deleted' });
 }));
@@ -452,7 +437,7 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
 
   // Get bin name for activity log
   const binResult = await query('SELECT name FROM bins WHERE id = $1', [binId]);
-  logBinActivity(req, { locationId: access.locationId, action: 'add_photo', entityId: binId, entityName: binResult.rows[0]?.name });
+  logRouteActivity(req, { entityType: 'bin', locationId: access.locationId, action: 'add_photo', entityId: binId, entityName: binResult.rows[0]?.name });
 
   res.status(201).json({ id: photo.id });
 }));
@@ -545,10 +530,10 @@ router.post('/:id/move', asyncHandler(async (req, res) => {
   const changes = { location: { old: sourceName, new: targetName } };
 
   // Log in source location
-  logBinActivity(req, { locationId: access.locationId, action: 'move_out', entityId: id, entityName: bin.name, changes });
+  logRouteActivity(req, { entityType: 'bin', locationId: access.locationId, action: 'move_out', entityId: id, entityName: bin.name, changes });
 
   // Log in target location
-  logBinActivity(req, { locationId: targetLocationId, action: 'move_in', entityId: id, entityName: bin.name, changes });
+  logRouteActivity(req, { entityType: 'bin', locationId: targetLocationId, action: 'move_in', entityId: id, entityName: bin.name, changes });
 
   res.json(bin);
 }));
@@ -600,7 +585,7 @@ router.post('/:id/duplicate', asyncHandler(async (req, res) => {
     customFields: srcCustomFields,
   });
 
-  logBinActivity(req, { locationId: access.locationId, action: 'duplicate', entityId: newBin.id, entityName: newBin.name });
+  logRouteActivity(req, { entityType: 'bin', locationId: access.locationId, action: 'duplicate', entityId: newBin.id, entityName: newBin.name });
 
   res.status(201).json(newBin);
 }));

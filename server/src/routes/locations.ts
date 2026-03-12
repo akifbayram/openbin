@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
 import { generateUuid, query } from '../db.js';
-import { computeChanges, logActivity } from '../lib/activityLog.js';
+import { computeChanges } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { logRouteActivity } from '../lib/routeHelpers.js';
 import { validateRetentionDays } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -74,16 +75,12 @@ router.post('/', asyncHandler(async (req, res) => {
     [generateUuid(), location.id, req.user!.id, 'admin']
   );
 
-  logActivity({
+  logRouteActivity(req, {
     locationId: location.id,
-    userId: req.user!.id,
-    userName: req.user!.username,
     action: 'create',
     entityType: 'location',
     entityId: location.id,
     entityName: location.name,
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
   });
 
   res.status(201).json({
@@ -213,17 +210,13 @@ router.put('/:id', asyncHandler(async (req, res) => {
   if (default_join_role !== undefined) newObj.default_join_role = default_join_role;
   const changes = computeChanges(oldLoc, newObj, Object.keys(newObj));
   if (changes) {
-    logActivity({
+    logRouteActivity(req, {
       locationId: id,
-      userId: req.user!.id,
-      userName: req.user!.username,
       action: 'update',
       entityType: 'location',
       entityId: id,
       entityName: location.name,
       changes,
-      authMethod: req.authMethod,
-      apiKeyId: req.apiKeyId,
     });
   }
 
@@ -290,15 +283,11 @@ router.post('/join', asyncHandler(async (req, res) => {
     [generateUuid(), location.id, req.user!.id, location.default_join_role]
   );
 
-  logActivity({
+  logRouteActivity(req, {
     locationId: location.id,
-    userId: req.user!.id,
-    userName: req.user!.username,
     action: 'join',
     entityType: 'member',
     entityName: req.user!.username,
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
   });
 
   // Get area count for the joined location
@@ -395,15 +384,11 @@ router.delete('/:id/members/:userId', asyncHandler(async (req, res) => {
   }
 
   const action = requesterId === userId ? 'leave' : 'remove_member';
-  logActivity({
+  logRouteActivity(req, {
     locationId: id,
-    userId: req.user!.id,
-    userName: req.user!.username,
     action,
     entityType: 'member',
     entityName: removedUsername,
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
   });
 
   res.json({ message: 'Member removed' });
@@ -454,16 +439,12 @@ router.put('/:id/members/:userId/role', asyncHandler(async (req, res) => {
   const userResult = await query('SELECT username FROM users WHERE id = $1', [userId]);
   const targetUsername = userResult.rows[0]?.username ?? 'unknown';
 
-  logActivity({
+  logRouteActivity(req, {
     locationId: id,
-    userId: req.user!.id,
-    userName: req.user!.username,
     action: 'change_role',
     entityType: 'member',
     entityName: targetUsername,
     changes: { role: { old: targetRole, new: role } },
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
   });
 
   res.json({ message: `Role updated to ${role}` });
@@ -487,15 +468,11 @@ router.post('/:id/regenerate-invite', asyncHandler(async (req, res) => {
     throw new NotFoundError('Location not found');
   }
 
-  logActivity({
+  logRouteActivity(req, {
     locationId: id,
-    userId: req.user!.id,
-    userName: req.user!.username,
     action: 'regenerate_invite',
     entityType: 'location',
     entityId: id,
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
   });
 
   res.json({ inviteCode: result.rows[0].invite_code });

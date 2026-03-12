@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { generateUuid, query } from '../db.js';
-import { logActivity } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { ConflictError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { logRouteActivity } from '../lib/routeHelpers.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationAdmin, requireLocationMember } from '../middleware/locationAccess.js';
 
@@ -47,16 +47,12 @@ router.post('/:locationId/areas', requireLocationAdmin('locationId'), asyncHandl
 
     const area = result.rows[0];
 
-    logActivity({
+    logRouteActivity(req, {
       locationId,
-      userId: req.user!.id,
-      userName: req.user!.username,
       action: 'create',
       entityType: 'area',
       entityId: area.id,
       entityName: area.name,
-      authMethod: req.authMethod,
-      apiKeyId: req.apiKeyId,
     });
 
     res.status(201).json(area);
@@ -97,16 +93,13 @@ router.put('/:locationId/areas/:areaId', requireLocationAdmin('locationId'), asy
     const area = result.rows[0];
 
     if (oldName && oldName !== name.trim()) {
-      logActivity({
+      logRouteActivity(req, {
         locationId,
-        userId: req.user!.id,
-        userName: req.user!.username,
         action: 'update',
         entityType: 'area',
         entityId: areaId,
         entityName: area.name,
         changes: { name: { old: oldName, new: name.trim() } },
-        authMethod: req.authMethod,
       });
     }
 
@@ -137,15 +130,12 @@ router.delete('/:locationId/areas/:areaId', requireLocationAdmin('locationId'), 
     throw new NotFoundError('Area not found');
   }
 
-  logActivity({
+  logRouteActivity(req, {
     locationId,
-    userId: req.user!.id,
-    userName: req.user!.username,
     action: 'delete',
     entityType: 'area',
     entityId: areaId,
     entityName: areaName,
-    authMethod: req.authMethod,
   });
 
   res.json({ message: 'Area deleted' });

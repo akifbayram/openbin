@@ -11,6 +11,7 @@ import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import { config, getEnvAiConfig } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
 import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
+import { ValidationError } from '../lib/httpErrors.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
 import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
@@ -131,29 +132,10 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
     return;
   }
 
-  if (customPrompt && typeof customPrompt === 'string' && customPrompt.length > 10000) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Custom prompt must be 10000 characters or less' });
-    return;
-  }
-
-  if (commandPrompt && typeof commandPrompt === 'string' && commandPrompt.length > 10000) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Command prompt must be 10000 characters or less' });
-    return;
-  }
-
-  if (queryPrompt && typeof queryPrompt === 'string' && queryPrompt.length > 10000) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Query prompt must be 10000 characters or less' });
-    return;
-  }
-
-  if (structurePrompt && typeof structurePrompt === 'string' && structurePrompt.length > 10000) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Structure prompt must be 10000 characters or less' });
-    return;
-  }
-
-  if (reorganizationPrompt && typeof reorganizationPrompt === 'string' && reorganizationPrompt.length > 10000) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Reorganization prompt must be 10000 characters or less' });
-    return;
+  for (const [field, value] of [['customPrompt', customPrompt], ['commandPrompt', commandPrompt], ['queryPrompt', queryPrompt], ['structurePrompt', structurePrompt], ['reorganizationPrompt', reorganizationPrompt]] as const) {
+    if (value && typeof value === 'string' && value.length > 10000) {
+      throw new ValidationError(`${field.replace(/([A-Z])/g, ' $1').toLowerCase().trim()} must be 10000 characters or less`);
+    }
   }
 
   // Validate advanced AI parameters

@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { generateUuid, query } from '../db.js';
-import { logActivity } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { isLocationAdmin, verifyBinAccess } from '../lib/binAccess.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { logRouteActivity } from '../lib/routeHelpers.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -57,17 +57,13 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
 
   // Get bin name for activity log
   const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
-  logActivity({
+  logRouteActivity(req, {
     locationId: access.locationId,
-    userId: req.user!.id,
-    userName: req.user!.username,
     action: 'update',
     entityType: 'bin',
     entityId: id,
     entityName: binResult.rows[0]?.name,
     changes: { items_added: { old: null, new: newItems.map((i) => i.name) } },
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
   });
 
   res.status(201).json({ items: newItems });
@@ -93,17 +89,13 @@ router.delete('/:id/items/:itemId', asyncHandler(async (req, res) => {
   await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
 
   const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
-  logActivity({
+  logRouteActivity(req, {
     locationId: access.locationId,
-    userId: req.user!.id,
-    userName: req.user!.username,
     action: 'update',
     entityType: 'bin',
     entityId: id,
     entityName: binResult.rows[0]?.name,
     changes: { items_removed: { old: [itemName], new: null } },
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
   });
 
   res.json({ success: true });
@@ -168,17 +160,13 @@ router.put('/:id/items/:itemId', asyncHandler(async (req, res) => {
     changes.items_quantity = { old: { name: name.trim(), qty: oldQuantity }, new: { name: name.trim(), qty: newQuantity } };
   }
   if (Object.keys(changes).length > 0) {
-    logActivity({
+    logRouteActivity(req, {
       locationId: access.locationId,
-      userId: req.user!.id,
-      userName: req.user!.username,
       action: 'update',
       entityType: 'bin',
       entityId: id,
       entityName: binResult.rows[0]?.name,
       changes,
-      authMethod: req.authMethod,
-      apiKeyId: req.apiKeyId,
     });
   }
 
@@ -214,17 +202,13 @@ router.patch('/:id/items/:itemId/quantity', asyncHandler(async (req, res) => {
     await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
 
     const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
-    logActivity({
+    logRouteActivity(req, {
       locationId: access.locationId,
-      userId: req.user!.id,
-      userName: req.user!.username,
       action: 'update',
       entityType: 'bin',
       entityId: id,
       entityName: binResult.rows[0]?.name,
       changes: { items_removed: { old: [itemName], new: null } },
-      authMethod: req.authMethod,
-      apiKeyId: req.apiKeyId,
     });
 
     res.json({ id: itemId, removed: true });
@@ -238,17 +222,13 @@ router.patch('/:id/items/:itemId/quantity', asyncHandler(async (req, res) => {
   await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
 
   const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
-  logActivity({
+  logRouteActivity(req, {
     locationId: access.locationId,
-    userId: req.user!.id,
-    userName: req.user!.username,
     action: 'update',
     entityType: 'bin',
     entityId: id,
     entityName: binResult.rows[0]?.name,
     changes: { items_quantity: { old: { name: itemName, qty: oldQuantity }, new: { name: itemName, qty: newQuantity } } },
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
   });
 
   res.json({ id: itemId, quantity: newQuantity });

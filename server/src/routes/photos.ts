@@ -2,11 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 import { query } from '../db.js';
-import { logActivity } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { safePath } from '../lib/pathSafety.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
+import { logRouteActivity } from '../lib/routeHelpers.js';
 import { PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -184,16 +184,12 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 
   // Get bin name for activity log
   const binResult = await query('SELECT name FROM bins WHERE id = $1', [access.binId]);
-  logActivity({
+  logRouteActivity(req, {
     locationId: access.locationId,
-    userId: req.user!.id,
-    userName: req.user!.username,
     action: 'delete_photo',
     entityType: 'bin',
     entityId: access.binId,
     entityName: binResult.rows[0]?.name,
-    authMethod: req.authMethod,
-    apiKeyId: req.apiKeyId,
   });
 
   res.json({ message: 'Photo deleted' });
