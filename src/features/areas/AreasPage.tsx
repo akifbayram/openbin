@@ -3,9 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
@@ -20,15 +18,10 @@ import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
 import { cn } from '@/lib/utils';
 import { AreaCard, CreateAreaCard, UnassignedAreaCard } from './AreaCard';
+import { CreateAreaDialog, DeleteAreaDialog } from './AreaDialogs';
 import { LocationSettingsMenu } from './LocationSettingsMenu';
 import { LocationTabs } from './LocationTabs';
-import { createArea, deleteArea, updateArea, useAreaList } from './useAreas';
-
-interface DeleteAreaTarget {
-  id: string;
-  name: string;
-  binCount: number;
-}
+import { updateArea, useAreaList } from './useAreas';
 
 export function AreasPage() {
   const t = useTerminology();
@@ -49,12 +42,9 @@ export function AreasPage() {
 
   // Create area state
   const [createAreaOpen, setCreateAreaOpen] = useState(false);
-  const [newAreaName, setNewAreaName] = useState('');
-  const [creatingArea, setCreatingArea] = useState(false);
 
   // Delete area state
-  const [deleteTarget, setDeleteTarget] = useState<DeleteAreaTarget | null>(null);
-  const [deletingArea, setDeletingArea] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; binCount: number } | null>(null);
 
   // Invite code copy state
   const [copied, setCopied] = useState(false);
@@ -99,21 +89,6 @@ export function AreasPage() {
     navigate('/bins?areas=__unassigned__');
   }
 
-  async function handleCreateArea(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newAreaName.trim() || !activeLocationId) return;
-    setCreatingArea(true);
-    try {
-      await createArea(activeLocationId, newAreaName.trim());
-      setNewAreaName('');
-      setCreateAreaOpen(false);
-    } catch (err) {
-      showToast({ message: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong', variant: 'error' });
-    } finally {
-      setCreatingArea(false);
-    }
-  }
-
   async function handleRenameArea(areaId: string, newName: string) {
     if (!activeLocationId) return;
     try {
@@ -126,19 +101,6 @@ export function AreasPage() {
 
   function handleDeleteAreaRequest(areaId: string, name: string, binCount: number) {
     setDeleteTarget({ id: areaId, name, binCount });
-  }
-
-  async function handleDeleteArea() {
-    if (!deleteTarget || !activeLocationId) return;
-    setDeletingArea(true);
-    try {
-      await deleteArea(activeLocationId, deleteTarget.id);
-      setDeleteTarget(null);
-    } catch {
-      showToast({ message: 'Something went wrong', variant: 'error' });
-    } finally {
-      setDeletingArea(false);
-    }
   }
 
   async function handleLeave(locationId: string) {
@@ -359,62 +321,9 @@ export function AreasPage() {
         )}
       </Crossfade>
 
-      {/* Create Area Dialog */}
-      <Dialog open={createAreaOpen} onOpenChange={setCreateAreaOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{`Create ${t.Area}`}</DialogTitle>
-            <DialogDescription>
-              {`${t.Areas} help organize ${t.bins} by zone (e.g. Garage, Kitchen, Closet).`}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreateArea} className="space-y-5">
-            <div className="space-y-2">
-              <Input
-                value={newAreaName}
-                onChange={(e) => setNewAreaName(e.target.value)}
-                placeholder={`${t.Area} name...`}
-                autoFocus
-                required
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setCreateAreaOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!newAreaName.trim() || creatingArea}>
-                {creatingArea ? 'Creating...' : 'Create'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Area Confirmation */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{`Delete ${t.area}?`}</DialogTitle>
-            <DialogDescription>
-              {deleteTarget && deleteTarget.binCount > 0
-                ? `"${deleteTarget.name}" has ${deleteTarget.binCount} ${deleteTarget.binCount !== 1 ? t.bins : t.bin}. They will become unassigned.`
-                : `Delete "${deleteTarget?.name}"?`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteArea}
-              disabled={deletingArea}
-            >
-              {deletingArea ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Area Dialogs */}
+      <CreateAreaDialog open={createAreaOpen} onOpenChange={setCreateAreaOpen} locationId={activeLocationId} />
+      <DeleteAreaDialog target={deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} locationId={activeLocationId} />
 
       {/* Location Dialogs */}
       <LocationCreateDialog open={createLocationOpen} onOpenChange={setCreateLocationOpen} />
