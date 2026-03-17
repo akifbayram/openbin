@@ -111,6 +111,20 @@
   }
 }
 
+/* ─── Name Cards ─── */
+.name-cell {
+  box-sizing: border-box;
+  overflow: hidden;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+@media print {
+  .name-cell {
+    break-inside: avoid;
+  }
+}
+
 /* ─── Item Sheet ─── */
 .item-sheet {
   color: black;
