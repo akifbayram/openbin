@@ -4,8 +4,8 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
-import { config } from './lib/config.js';
 import { getDb } from './db.js';
+import { config } from './lib/config.js';
 import { HttpError } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
 import { apiLimiter, authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
@@ -60,7 +60,7 @@ export function createApp(): express.Express {
     // CSP hashes must match the inline scripts in index.html — update if those scripts change
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; img-src 'self' data: blob:; script-src 'self' https://static.cloudflareinsights.com 'sha256-7KadoKzu1sd1+0LivMFrmxISBXbhj6nm/vOZqEaVC5I=' 'sha256-4kldY8Nv9iluY61Doo0WCNi1p1qCWgXWfSgXIX8g3g0='; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self' blob:;",
+      "default-src 'self'; img-src 'self' data: blob:; script-src 'self' 'sha256-7KadoKzu1sd1+0LivMFrmxISBXbhj6nm/vOZqEaVC5I=' 'sha256-4kldY8Nv9iluY61Doo0WCNi1p1qCWgXWfSgXIX8g3g0='; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self' blob:;",
     );
     next();
   });
@@ -83,7 +83,7 @@ export function createApp(): express.Express {
       } else {
         res.status(503).json({ status: 'error', message: 'Database check failed' });
       }
-    } catch (err) {
+    } catch {
       res.status(503).json({ status: 'error', message: 'Database unreachable' });
     }
   });

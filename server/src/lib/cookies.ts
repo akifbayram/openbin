@@ -8,7 +8,7 @@ export function setAccessTokenCookie(res: Response, token: string): void {
   res.cookie(ACCESS_COOKIE, token, {
     httpOnly: true,
     secure: config.cookieSecure,
-    sameSite: 'strict',
+    sameSite: 'lax',
     path: '/',
     maxAge: 15 * 60 * 1000, // 15 minutes
   });
@@ -18,7 +18,7 @@ export function setRefreshTokenCookie(res: Response, token: string): void {
   res.cookie(REFRESH_COOKIE, token, {
     httpOnly: true,
     secure: config.cookieSecure,
-    sameSite: 'strict',
+    sameSite: 'lax',
     path: '/api/auth/refresh',
     maxAge: config.refreshTokenMaxDays * 24 * 60 * 60 * 1000,
   });
