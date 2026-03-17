@@ -1,6 +1,7 @@
 import '@/components/ui/animations.css';
 import { PackagePlus, Printer, QrCode, Settings, Sparkles, X } from 'lucide-react';
 import { BrandIcon } from '@/components/BrandIcon';
+import { AnimatedHeight } from '@/components/ui/animated-height';
 import { cn } from '@/lib/utils';
 import type { OnboardingActions } from './onboardingConstants';
 import { AiShowcaseStep } from './steps/AiShowcaseStep';
@@ -42,7 +43,7 @@ export function OnboardingOverlay(props: OnboardingActions) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-backdrop)] backdrop-blur-sm">
-      <div className="glass-heavy rounded-[var(--radius-xl)] w-full max-w-sm mx-5 px-8 py-8 relative max-h-[85vh] overflow-y-auto">
+      <div className="glass-heavy rounded-[var(--radius-xl)] w-full max-w-sm mx-5 px-8 py-8 relative max-h-[85vh] overflow-hidden flex flex-col">
         {/* Close button */}
         <button
           type="button"
@@ -72,10 +73,11 @@ export function OnboardingOverlay(props: OnboardingActions) {
         </div>
 
         {/* Step content */}
-        <div
-          key={displayedStep}
-          className={cn('onboarding-step-enter', transitioning && 'onboarding-step-exit')}
-        >
+        <AnimatedHeight className="overflow-y-auto min-h-0">
+          <div
+            key={displayedStep}
+            className={cn('onboarding-step-enter', transitioning && 'onboarding-step-exit')}
+          >
           {displayedStep === 0 && demoMode && activeLocationId && (
             <DemoWelcomeStep activeLocationId={activeLocationId} onAdvance={advanceWithLocation} />
           )}
@@ -132,7 +134,8 @@ export function OnboardingOverlay(props: OnboardingActions) {
               onDashboard={() => handleNavigate('/')}
             />
           )}
-        </div>
+          </div>
+        </AnimatedHeight>
 
       </div>
     </div>
