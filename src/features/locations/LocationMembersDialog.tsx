@@ -1,6 +1,6 @@
-import { Check, Copy, KeyRound, LogOut, RefreshCw, Shield, UserMinus } from 'lucide-react';
-import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { Check, Copy, EllipsisVertical, KeyRound, LogOut, RefreshCw, UserMinus } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -8,6 +8,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  useDialogPortal,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
@@ -15,6 +16,7 @@ import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/lib/auth';
+import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
 import { changeMemberRole, leaveLocation, regenerateInvite, removeMember, resetMemberPassword, useLocationList, useLocationMembers } from './useLocations';
 
@@ -174,7 +176,6 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
           <div className="space-y-1 py-2">
             {members.map((member) => {
               const isSelf = member.user_id === user?.id;
-              const memberIsAdmin = member.role === 'admin';
               return (
                 <div
                   key={member.id}
@@ -189,12 +190,6 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                       {isSelf ? 'You' : member.display_name || member.user_id.slice(0, 8)}
                     </span>
                   </div>
-                  {memberIsAdmin && (
-                    <Badge variant="secondary" className="text-[11px] gap-1 py-0 shrink-0">
-                      <Shield className="h-3 w-3" />
-                      Admin
-                    </Badge>
-                  )}
                   {isAdmin && !isSelf && (
                     <RoleSelector
                       currentRole={member.role}
@@ -202,30 +197,10 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                     />
                   )}
                   {isAdmin && !isSelf && (
-                    <Tooltip content="Reset password" side="bottom">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="shrink-0"
-                        onClick={() => handleResetPassword(member.user_id)}
-                        aria-label="Reset password"
-                      >
-                        <KeyRound className="h-3.5 w-3.5" />
-                      </Button>
-                    </Tooltip>
-                  )}
-                  {isAdmin && !isSelf && (
-                    <Tooltip content="Remove member" side="bottom">
-                      <Button
-                        variant="destructive-ghost"
-                        size="icon-sm"
-                        className="shrink-0"
-                        onClick={() => handleRemoveMember(member.user_id)}
-                        aria-label="Remove member"
-                      >
-                        <UserMinus className="h-3.5 w-3.5" />
-                      </Button>
-                    </Tooltip>
+                    <MemberActionMenu
+                      onResetPassword={() => handleResetPassword(member.user_id)}
+                      onRemove={() => handleRemoveMember(member.user_id)}
+                    />
                   )}
                 </div>
               );
@@ -268,6 +243,78 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function MemberActionMenu({ onResetPassword, onRemove }: { onResetPassword: () => void; onRemove: () => void }) {
+  const dialogPortal = useDialogPortal();
+  const { visible, animating, isOpen, toggle, close } = usePopover();
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+
+  const reposition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    reposition();
+    function handleClick(e: MouseEvent) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) close();
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [isOpen, close, reposition]);
+
+  const menu = visible && pos && (
+    <div
+      ref={menuRef}
+      className={cn(
+        animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
+        'fixed z-[100] min-w-[170px] rounded-[var(--radius-lg)] glass-popover overflow-hidden',
+      )}
+      style={{ top: pos.top, right: pos.right }}
+    >
+      <button
+        type="button"
+        onClick={() => { close(); onResetPassword(); }}
+        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+      >
+        <KeyRound className="h-4 w-4" />
+        Reset password
+      </button>
+      <div className="my-1 border-t border-[var(--border-glass)]" />
+      <button
+        type="button"
+        onClick={() => { close(); onRemove(); }}
+        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors"
+      >
+        <UserMinus className="h-4 w-4" />
+        Remove member
+      </button>
+    </div>
+  );
+
+  return (
+    <div ref={triggerRef} className="shrink-0">
+      <Tooltip content="More actions" side="bottom">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={toggle}
+          aria-label="More actions"
+        >
+          <EllipsisVertical className="h-3.5 w-3.5" />
+        </Button>
+      </Tooltip>
+      {dialogPortal ? createPortal(menu, dialogPortal) : menu}
+    </div>
   );
 }
 
