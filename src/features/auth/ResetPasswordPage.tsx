@@ -57,7 +57,7 @@ export function ResetPasswordPage() {
       </button>
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight">
+          <h1 className="font-heading text-[28px] font-bold text-[var(--text-primary)] tracking-tight">
             {settings.appName}
           </h1>
         </div>

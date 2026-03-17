@@ -162,7 +162,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
               size="icon"
               onClick={() => onDelete(photo)}
               aria-label="Delete photo"
-              className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] hover:text-red-400"
+              className="rounded-full h-10 w-10 bg-[var(--overlay-button)] text-white hover:bg-[var(--overlay-button-hover)] hover:text-[var(--destructive)]"
             >
               <Trash2 className="h-5 w-5" />
             </Button>

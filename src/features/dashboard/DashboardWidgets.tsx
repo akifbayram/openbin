@@ -1,6 +1,9 @@
 import { ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
+import { resolveIcon } from '@/lib/iconMap';
+import { cn } from '@/lib/utils';
+import type { Bin } from '@/types';
 
 export function useAnimatedNumber(target: number, duration = 400) {
   const [display, setDisplay] = useState(target);
@@ -47,19 +50,20 @@ export function StatCard({
   const animatedValue = useAnimatedNumber(value);
   const Wrapper = onClick ? 'button' : 'div';
   return (
-    <Card className="flex-1 shadow-none">
+    <div className="flex-1">
       <Wrapper
-        className="w-full text-left"
+        className={cn(
+          "w-full text-left rounded-[var(--radius-md)] bg-[var(--bg-input)] px-4 py-3",
+          onClick && "hover:bg-[var(--bg-active)] transition-colors duration-150",
+        )}
         {...(onClick ? { onClick } : {})}
       >
-        <CardContent className="py-3 px-4">
-          <p className="text-[24px] font-bold text-[var(--text-primary)] leading-tight">
-            {animatedValue}
-          </p>
-          <p className="text-[13px] text-[var(--text-tertiary)]">{label}</p>
-        </CardContent>
+        <p className="text-[28px] font-bold text-[var(--text-primary)] leading-tight tabular-nums">
+          {animatedValue}
+        </p>
+        <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">{label}</p>
       </Wrapper>
-    </Card>
+    </div>
   );
 }
 
@@ -86,5 +90,27 @@ export function SectionHeader({
         </button>
       )}
     </div>
+  );
+}
+
+export function ScannedBinCard({ bin }: { bin: Bin }) {
+  const navigate = useNavigate();
+  const BinIcon = resolveIcon(bin.icon);
+  const iconStyle = bin.color ? { color: bin.color } : undefined;
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate(`/bins/${bin.id}`)}
+      className="flex items-center gap-2.5 shrink-0 rounded-[var(--radius-md)] bg-[var(--bg-input)] px-3 py-2.5 hover:bg-[var(--bg-active)] transition-colors duration-150 w-[176px] text-left"
+    >
+      <BinIcon className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" style={iconStyle} />
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-medium text-[var(--text-primary)] truncate leading-snug">{bin.name}</p>
+        {bin.area_name && (
+          <p className="text-[11px] text-[var(--text-tertiary)] truncate leading-snug">{bin.area_name}</p>
+        )}
+      </div>
+    </button>
   );
 }

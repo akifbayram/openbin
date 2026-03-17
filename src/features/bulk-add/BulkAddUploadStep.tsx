@@ -98,7 +98,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
           </div>
 
           {photos.length >= MAX_PHOTOS && (
-            <p className="text-[13px] text-amber-500">Maximum of {MAX_PHOTOS} photos reached.</p>
+            <p className="text-[13px] text-[var(--color-warning)]">Maximum of {MAX_PHOTOS} photos reached.</p>
           )}
 
           <div className="space-y-2">

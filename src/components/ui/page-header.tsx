@@ -32,7 +32,7 @@ export function PageHeader({ title, actions, back, className }: PageHeaderProps)
             </Button>
           </Tooltip>
         )}
-        <h1 className="text-[28px] lg:text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
+        <h1 className="font-heading text-[28px] lg:text-[34px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
           {title}
         </h1>
       </div>

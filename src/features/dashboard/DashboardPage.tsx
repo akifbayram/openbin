@@ -1,4 +1,4 @@
-import { ChevronRight, Inbox, MapPin, Plus, ScanLine, Settings, Sparkles } from 'lucide-react';
+import { ChevronRight, Inbox, MapPin, Plus, ScanLine, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,6 +8,7 @@ import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { SearchInput } from '@/components/ui/search-input';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { BinCard } from '@/features/bins/BinCard';
@@ -28,7 +29,7 @@ import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { DashboardDialogs } from './DashboardDialogs';
 import { DashboardSkeleton } from './DashboardSkeleton';
-import { SectionHeader, StatCard } from './DashboardWidgets';
+import { ScannedBinCard, SectionHeader, StatCard } from './DashboardWidgets';
 import { useDashboard } from './useDashboard';
 
 export function DashboardPage() {
@@ -40,7 +41,7 @@ export function DashboardPage() {
   const { showToast } = useToast();
   const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, recentlyUpdated, pinnedBins, isLoading } =
     useDashboard();
-  const { settings: dashSettings } = useDashboardSettings();
+  const { settings: dashSettings, updateSettings: updateDashSettings } = useDashboardSettings();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const { views: savedViews } = useSavedViews();
@@ -106,10 +107,10 @@ export function DashboardPage() {
           icon={MapPin}
           title={`No ${t.location} selected`}
           subtitle={`Create or join a ${t.location} to start organizing ${t.bins}`}
+          variant="onboard"
         >
           <Button
             onClick={() => navigate('/locations')}
-            variant="outline"
             className="mt-1"
           >
             <MapPin className="h-4 w-4 mr-2" />
@@ -174,6 +175,7 @@ export function DashboardPage() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder={`Search ${t.bins}...`}
+        aria-label={`Search ${t.bins}`}
         containerClassName="flex-1"
       />
 
@@ -205,11 +207,11 @@ export function DashboardPage() {
           <button
             type="button"
             onClick={() => navigate('/bins?needs_organizing=true')}
-            className="glass-card rounded-[var(--radius-lg)] px-4 py-3 row-spread"
+            className="rounded-[var(--radius-md)] border-l-[3px] border-[var(--color-warning-border)] bg-[var(--color-warning-soft)] px-4 py-3 row-spread hover:brightness-[0.97] transition-colors duration-150"
           >
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <Inbox className="h-[18px] w-[18px] text-amber-500" />
+              <div className="h-9 w-9 rounded-full bg-[var(--color-warning-soft)] flex items-center justify-center">
+                <Inbox className="h-[18px] w-[18px] text-[var(--color-warning)]" />
               </div>
               <div className="text-left">
                 <p className="text-[15px] font-semibold text-[var(--text-primary)]">
@@ -218,7 +220,7 @@ export function DashboardPage() {
                 <p className="text-[12px] text-[var(--text-tertiary)]">No tags, area, or items</p>
               </div>
             </div>
-            <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <ChevronRight className="h-4 w-4 text-[var(--color-warning)] opacity-60" />
           </button>
         )}
 
@@ -236,38 +238,40 @@ export function DashboardPage() {
           />
         )}
 
-        {/* Pinned Bins */}
+        {/* Pinned Bins — hero treatment: first card spans 2 cols */}
         {dashSettings.showPinnedBins && pinnedBins.length > 0 && (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 mt-2">
             <SectionHeader title="Pinned" />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {pinnedBins.map((bin) => (
-                <BinCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id)} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+              {pinnedBins.map((bin, i) => (
+                <div key={bin.id} className={cn(i === 0 && pinnedBins.length > 1 && 'sm:col-span-2')}>
+                  <BinCard bin={bin} index={binIndexMap.get(bin.id)} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+                </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Recently Scanned */}
+        {/* Recently Scanned — compact horizontal strip (temporal, not primary) */}
         {dashSettings.showRecentlyScanned && recentlyScanned.length > 0 && (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2 -mt-1">
             <SectionHeader title="Recently Scanned" />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {recentlyScanned.map((bin) => (
-                <BinCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id)} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+                <ScannedBinCard key={bin.id} bin={bin} />
               ))}
             </div>
           </div>
         )}
 
-        {/* Recently Updated */}
+        {/* Recently Updated — compressed: tighter grid, fewer columns */}
         {dashSettings.showRecentlyUpdated && recentlyUpdated.length > 0 && (
-          <div className={cn("flex flex-col gap-3", selectable && "pb-16")}>
+          <div className={cn("flex flex-col gap-2 -mt-1", selectable && "pb-16")}>
             <SectionHeader
               title="Recently Updated"
               action={{ label: `All ${t.Bins}`, onClick: () => navigate('/bins') }}
             />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {recentlyUpdated.map((bin) => (
                 <BinCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id)} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
               ))}
@@ -283,21 +287,30 @@ export function DashboardPage() {
           (dashSettings.showRecentlyScanned && recentlyScanned.length > 0) ||
           (dashSettings.showRecentlyUpdated && recentlyUpdated.length > 0)
         ) && (
-          <EmptyState
-            icon={Settings}
-            title="Your dashboard is empty"
-            subtitle="Choose which sections to display in settings"
-            compact
-          >
-            <Button
-              onClick={() => navigate('/settings#dashboard-settings')}
-              variant="outline"
-              className="mt-1"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Dashboard Settings
-            </Button>
-          </EmptyState>
+          <div className="flex flex-col items-center justify-center gap-4 py-6 text-[var(--text-tertiary)]">
+            <div className="text-center space-y-1.5">
+              <p className="text-[17px] font-semibold text-[var(--text-secondary)]">Your dashboard is empty</p>
+              <p className="text-[13px]">Turn on sections to see your data</p>
+            </div>
+            <div className="w-full max-w-xs space-y-1">
+              {([
+                { key: 'showStats' as const, label: 'Stats' },
+                { key: 'showNeedsOrganizing' as const, label: 'Needs Organizing' },
+                { key: 'showSavedViews' as const, label: 'Saved Views' },
+                { key: 'showPinnedBins' as const, label: `Pinned ${t.Bins}` },
+                { key: 'showRecentlyScanned' as const, label: 'Recently Scanned' },
+                { key: 'showRecentlyUpdated' as const, label: 'Recently Updated' },
+              ]).map(({ key, label }) => (
+                <div key={key} className="flex items-center justify-between py-2 px-3 rounded-[var(--radius-md)]">
+                  <span className="text-[14px] text-[var(--text-primary)]">{label}</span>
+                  <Switch
+                    checked={dashSettings[key]}
+                    onCheckedChange={(checked) => updateDashSettings({ [key]: checked })}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </Crossfade>
 

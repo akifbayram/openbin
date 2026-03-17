@@ -175,6 +175,7 @@ export function AreasPage() {
             icon={MapPin}
             title="No locations yet"
             subtitle="Create a location or join one with an invite code"
+            variant="onboard"
           >
             <div className="flex gap-2.5">
               <Button onClick={() => setJoinLocationOpen(true)} variant="outline">
@@ -231,7 +232,7 @@ export function AreasPage() {
                         title="Copy invite code"
                       >
                         {copied
-                          ? <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                          ? <Check className="h-3.5 w-3.5 shrink-0 text-[var(--color-success)]" />
                           : <Copy className="h-3.5 w-3.5 shrink-0" />}
                         <span className="truncate">{activeLocation.invite_code}</span>
                       </button>

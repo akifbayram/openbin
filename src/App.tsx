@@ -97,7 +97,7 @@ class ErrorBoundary extends React.Component<
       return (
         <div className="min-h-dvh flex flex-col items-center justify-center gap-5 px-6 bg-[var(--bg-base)] text-[var(--text-primary)]">
           <AlertCircle className="h-16 w-16 text-[var(--destructive)] opacity-60" />
-          <h1 className="text-[22px] font-bold">Something went wrong</h1>
+          <h1 className="font-heading text-[22px] font-bold">Something went wrong</h1>
           <p className="text-[15px] text-[var(--text-secondary)] text-center max-w-sm">
             An unexpected error occurred. Please reload the app to continue.
           </p>
@@ -172,7 +172,7 @@ function NotFoundPage() {
   const navigate = useNavigate();
   return (
     <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-      <p className="text-[48px] font-bold text-[var(--text-primary)]">404</p>
+      <p className="font-heading text-[48px] font-bold text-[var(--text-primary)]">404</p>
       <p className="text-[17px] font-semibold text-[var(--text-secondary)]">Page not found</p>
       <Button variant="outline" onClick={() => navigate('/')}>
         <ChevronLeft className="h-4 w-4 mr-1" />

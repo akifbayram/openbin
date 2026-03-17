@@ -32,7 +32,7 @@ const t = DEFAULT_TERMINOLOGY;
 
 describe('getActionColor', () => {
   it('returns green for create', () => {
-    expect(getActionColor('create')).toBe('text-green-500');
+    expect(getActionColor('create')).toBe('text-[var(--color-success)]');
   });
 
   it('returns destructive for delete', () => {
@@ -48,15 +48,15 @@ describe('getActionColor', () => {
   });
 
   it('returns amber for update', () => {
-    expect(getActionColor('update')).toBe('text-amber-500');
+    expect(getActionColor('update')).toBe('text-[var(--color-warning)]');
   });
 
   it('returns blue for move_in', () => {
-    expect(getActionColor('move_in')).toBe('text-blue-500');
+    expect(getActionColor('move_in')).toBe('text-[var(--color-info)]');
   });
 
   it('returns blue for move_out', () => {
-    expect(getActionColor('move_out')).toBe('text-blue-500');
+    expect(getActionColor('move_out')).toBe('text-[var(--color-info)]');
   });
 
   it('returns tertiary for unknown action', () => {

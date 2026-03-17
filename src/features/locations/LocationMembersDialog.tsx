@@ -142,7 +142,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                 className="shrink-0"
                 aria-label="Copy invite code"
               >
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                {copied ? <Check className="h-4 w-4 text-[var(--color-success)]" /> : <Copy className="h-4 w-4" />}
               </Button>
             </Tooltip>
             {isAdmin && (
@@ -224,7 +224,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                 className="shrink-0"
                 aria-label="Copy reset link"
               >
-                {resetCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                {resetCopied ? <Check className="h-4 w-4 text-[var(--color-success)]" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
           </div>

@@ -92,6 +92,7 @@ export function TrashPage() {
           icon={Trash2}
           title="Trash is empty"
           subtitle={`Deleted ${t.bins} will appear here`}
+          variant="positive"
         />
       ) : (
         <div className="space-y-3">

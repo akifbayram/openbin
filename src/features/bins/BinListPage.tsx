@@ -199,8 +199,9 @@ export function BinListPage() {
           icon={MapPin}
           title={`No ${t.location} selected`}
           subtitle={`Create or join a ${t.location} to start organizing ${t.bins}`}
+          variant="onboard"
         >
-          <Button onClick={() => navigate('/locations')} variant="outline" className="mt-1">
+          <Button onClick={() => navigate('/locations')} className="mt-1">
             <MapPin className="h-4 w-4 mr-2" />
             {`Manage ${t.Locations}`}
           </Button>
@@ -213,18 +214,45 @@ export function BinListPage() {
             skeleton={<BinListSkeleton viewMode={viewMode} />}
           >
           {bins.length === 0 ? (
-            <EmptyState
-              icon={PackageOpen}
-              title={search || activeCount > 0 ? `No ${t.bins} match your filters` : `No ${t.bins} yet`}
-              subtitle={!search && activeCount === 0 ? `Create your first ${t.bin} to get started` : undefined}
-            >
-              {!search && activeCount === 0 && canCreateBin && (
-                <Button onClick={() => setCreateOpen(true)} variant="outline" className="mt-1">
-                  <Plus className="h-4 w-4 mr-2" />
-                  {`Create ${t.Bin}`}
-                </Button>
-              )}
-            </EmptyState>
+            search || activeCount > 0 ? (
+              <EmptyState
+                icon={PackageOpen}
+                title={`No ${t.bins} match your filters`}
+                variant="search"
+              />
+            ) : (
+              <EmptyState
+                icon={PackageOpen}
+                title={`No ${t.bins} yet`}
+                subtitle={`Create your first ${t.bin} to get started`}
+                variant="onboard"
+              >
+                {canCreateBin && (
+                  <>
+                    <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-2 text-[12px] text-[var(--text-tertiary)]">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)]/10 text-[10px] font-bold text-[var(--accent)]">1</span>
+                        Create {t.bin}
+                      </span>
+                      <span className="opacity-30">→</span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)]/10 text-[10px] font-bold text-[var(--accent)]">2</span>
+                        Add items
+                      </span>
+                      <span className="opacity-30">→</span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)]/10 text-[10px] font-bold text-[var(--accent)]">3</span>
+                        Print QR
+                      </span>
+                    </div>
+                    <Button onClick={() => setCreateOpen(true)} className="mt-2">
+                      <Plus className="h-4 w-4 mr-2" />
+                      {`Create ${t.Bin}`}
+                    </Button>
+                  </>
+                )}
+              </EmptyState>
+            )
           ) : viewMode === 'compact' ? (
             <div className={cn(selectable && "pb-16")}>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">

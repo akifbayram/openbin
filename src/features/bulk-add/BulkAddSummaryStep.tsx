@@ -102,7 +102,7 @@ export function BulkAddSummaryStep({
                 </p>
               </div>
               {photo.status === 'created' && (
-                <Check className="h-5 w-5 text-green-500 shrink-0" />
+                <Check className="h-5 w-5 text-[var(--color-success)] shrink-0" />
               )}
               {photo.status === 'creating' && (
                 <Loader2 className="h-5 w-5 text-[var(--accent)] shrink-0 animate-spin" />
@@ -137,7 +137,7 @@ export function BulkAddSummaryStep({
           {failed.map((photo) => (
             <div
               key={photo.id}
-              className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 border border-red-500/20"
+              className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 border border-[var(--destructive)]/20"
             >
               <AlertCircle className="h-5 w-5 text-[var(--destructive)] shrink-0" />
               <div className="flex-1 min-w-0">

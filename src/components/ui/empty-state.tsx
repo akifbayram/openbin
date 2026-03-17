@@ -6,18 +6,37 @@ interface EmptyStateProps {
   subtitle?: string;
   compact?: boolean;
   children?: React.ReactNode;
+  variant?: 'default' | 'onboard' | 'positive' | 'search';
 }
 
-export function EmptyState({ icon: Icon, title, subtitle, compact, children }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, subtitle, compact, children, variant = 'default' }: EmptyStateProps) {
   return (
     <div className={cn(
-      'flex flex-col items-center justify-center gap-5 text-[var(--text-tertiary)]',
-      compact ? 'py-4' : 'py-24'
+      'flex flex-col items-center justify-center text-[var(--text-tertiary)]',
+      variant === 'search' ? 'gap-3' : 'gap-5',
+      compact ? 'py-4' : variant === 'onboard' ? 'py-20' : variant === 'search' ? 'py-16' : 'py-24'
     )}>
-      <Icon className="h-16 w-16 opacity-40" />
-      <div className="text-center space-y-1.5">
-        <p className="text-[17px] font-semibold text-[var(--text-secondary)]">{title}</p>
-        {subtitle && <p className="text-[13px]">{subtitle}</p>}
+      {variant === 'onboard' ? (
+        <div className="h-20 w-20 rounded-full bg-[var(--accent)]/10 flex items-center justify-center">
+          <Icon className="h-10 w-10 text-[var(--accent)] opacity-80" />
+        </div>
+      ) : variant === 'positive' ? (
+        <div className="h-16 w-16 rounded-full bg-[var(--color-success-soft)] flex items-center justify-center">
+          <Icon className="h-8 w-8 text-[var(--color-success)]" />
+        </div>
+      ) : variant === 'search' ? (
+        <Icon className="h-10 w-10 opacity-25" />
+      ) : (
+        <Icon className="h-16 w-16 opacity-40" />
+      )}
+      <div className={cn('text-center', variant === 'search' ? 'space-y-1' : 'space-y-1.5')}>
+        <p className={cn(
+          'font-semibold text-[var(--text-secondary)]',
+          variant === 'onboard' ? 'text-[19px]' : 'text-[17px]'
+        )}>{title}</p>
+        {subtitle && <p className={cn(
+          variant === 'onboard' ? 'text-[14px] max-w-xs mx-auto' : 'text-[13px]'
+        )}>{subtitle}</p>}
       </div>
       {children}
     </div>

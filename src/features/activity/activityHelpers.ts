@@ -48,11 +48,11 @@ export function getActionIcon(entry: ActivityLogEntry): ReactNode {
 }
 
 export function getActionColor(action: string): string {
-  if (action === 'create') return 'text-green-500';
+  if (action === 'create') return 'text-[var(--color-success)]';
   if (action === 'delete' || action === 'permanent_delete') return 'text-[var(--destructive)]';
   if (action === 'restore') return 'text-[var(--accent)]';
-  if (action === 'update') return 'text-amber-500';
-  if (action === 'move_in' || action === 'move_out') return 'text-blue-500';
+  if (action === 'update') return 'text-[var(--color-warning)]';
+  if (action === 'move_in' || action === 'move_out') return 'text-[var(--color-info)]';
   return 'text-[var(--text-tertiary)]';
 }
 

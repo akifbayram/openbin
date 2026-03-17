@@ -401,7 +401,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
 
                 {/* Test result */}
                 {setup.testResult === 'success' && (
-                  <p className="text-[13px] text-green-600 dark:text-green-400">Connected to {setup.model} successfully</p>
+                  <p className="text-[13px] text-[var(--color-success)]">Connected to {setup.model} successfully</p>
                 )}
                 {setup.testResult === 'error' && (
                   <p className="text-[13px] text-[var(--destructive)]">{testError}</p>

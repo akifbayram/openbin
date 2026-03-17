@@ -70,7 +70,7 @@ export function InlineAiSetup({ expanded, onExpandedChange, setup, label = 'Set 
           )}
           {/* Test result */}
           {setup.testResult && (
-            <p className={cn('text-[12px]', setup.testResult === 'success' ? 'text-green-500' : 'text-red-500')}>
+            <p className={cn('text-[12px]', setup.testResult === 'success' ? 'text-[var(--color-success)]' : 'text-[var(--destructive)]')}>
               {setup.testResult === 'success' ? 'Connection successful' : 'Connection failed — check settings'}
             </p>
           )}

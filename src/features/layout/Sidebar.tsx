@@ -103,7 +103,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
           {brandIcon}
           {/* biome-ignore lint/a11y/useHeadingContent: heading has dynamic text content and aria-label */}
           <h1 className={cn(
-            'text-[22px] font-bold text-[var(--text-primary)] tracking-tight leading-none truncate',
+            'font-heading text-[22px] font-bold text-[var(--text-primary)] tracking-tight leading-none truncate',
             collapsed && 'w-0 opacity-0'
           )} aria-hidden={collapsed || undefined} aria-label={settings.appName}>
             {settings.appName}

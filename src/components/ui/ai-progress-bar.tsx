@@ -92,14 +92,14 @@ export function AiProgressBar({
       {label && (
         <div className="flex items-center gap-1.5 min-w-0">
           {complete ? (
-            <Check className="h-3 w-3 text-emerald-500 shrink-0" />
+            <Check className="h-3 w-3 text-[var(--color-success)] shrink-0" />
           ) : (
             <Sparkles className="h-3 w-3 text-[var(--ai-accent)] shrink-0 ai-thinking-pulse" />
           )}
           <span
             className={cn(
               'text-[12px] font-medium truncate',
-              complete ? 'text-emerald-500' : 'text-[var(--text-tertiary)]',
+              complete ? 'text-[var(--color-success)]' : 'text-[var(--text-tertiary)]',
             )}
           >
             {label}

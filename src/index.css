@@ -4,6 +4,7 @@
 
 /* ─── iOS 26 Liquid Glass Design Tokens ─── */
 :root {
+  --font-heading: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
   --bg-base: #f2f2f7;
   --bg-sidebar: #e8e8ed;
   --bg-elevated: rgba(255, 255, 255, 0.72);
@@ -46,6 +47,14 @@
   --accent-active: #4520b8;
   --destructive-active: #b52a22;
   --accent-glow: rgba(94, 47, 224, 0.15);
+  --color-success: #34c759;
+  --color-success-soft: rgba(52, 199, 89, 0.12);
+  --color-success-ring: rgba(52, 199, 89, 0.25);
+  --color-warning: #f59e0b;
+  --color-warning-soft: rgba(245, 158, 11, 0.08);
+  --color-warning-ring: rgba(245, 158, 11, 0.25);
+  --color-warning-border: rgba(245, 158, 11, 0.5);
+  --color-info: #3b82f6;
   color-scheme: light;
 }
 
@@ -80,7 +89,20 @@
   --accent-active: #6842d4;
   --destructive-active: #d63a32;
   --accent-glow: rgba(123, 82, 245, 0.2);
+  --color-success: #30d158;
+  --color-success-soft: rgba(48, 209, 88, 0.15);
+  --color-success-ring: rgba(48, 209, 88, 0.3);
+  --color-warning: #fbbf24;
+  --color-warning-soft: rgba(251, 191, 36, 0.1);
+  --color-warning-ring: rgba(251, 191, 36, 0.3);
+  --color-warning-border: rgba(251, 191, 36, 0.5);
+  --color-info: #60a5fa;
   color-scheme: dark;
+}
+
+/* ─── Heading Font ─── */
+.font-heading {
+  font-family: var(--font-heading);
 }
 
 /* ─── Base ─── */
@@ -198,6 +220,22 @@ body {
   .print-show {
     display: block !important;
   }
+}
+
+/* ─── Auth Background Pattern ─── */
+.auth-pattern {
+  position: relative;
+}
+.auth-pattern::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(var(--text-tertiary) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+  opacity: 0.1;
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 45%, black 10%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 45%, black 10%, transparent 70%);
+  pointer-events: none;
 }
 
 /* ─── Page Content Wrapper ─── */
@@ -380,17 +418,17 @@ body {
 .ai-progress-fill-complete {
   background: linear-gradient(
     90deg,
-    #34d399,
-    #6ee7b7,
-    #34d399
+    var(--color-success),
+    color-mix(in srgb, var(--color-success) 60%, white 40%),
+    var(--color-success)
   );
   background-size: 200% 100%;
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.3), 0 0 2px #34d399;
+  box-shadow: 0 0 8px var(--color-success-ring), 0 0 2px var(--color-success);
   transition: width 500ms ease-out;
 }
 
 .ai-progress-glow-complete {
-  background: radial-gradient(ellipse at 50% 50%, rgba(52, 211, 153, 0.2), transparent 70%);
+  background: radial-gradient(ellipse at 50% 50%, var(--color-success-soft), transparent 70%);
   opacity: 0.7;
 }
 

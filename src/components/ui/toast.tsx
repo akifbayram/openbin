@@ -6,16 +6,16 @@ type ToastVariant = 'default' | 'success' | 'error' | 'warning';
 
 const variantStyles: Record<ToastVariant, string> = {
   default: '',
-  success: 'bg-emerald-500/10 ring-1 ring-emerald-500/20',
+  success: 'bg-[var(--color-success-soft)] ring-1 ring-[var(--color-success-ring)]',
   error: 'bg-[var(--destructive)]/10 ring-1 ring-[var(--destructive)]/20',
-  warning: 'bg-amber-500/10 ring-1 ring-amber-500/20',
+  warning: 'bg-[var(--color-warning-soft)] ring-1 ring-[var(--color-warning-ring)]',
 };
 
 const variantIcons: Record<ToastVariant, React.ReactNode> = {
   default: <Info className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />,
-  success: <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />,
+  success: <CheckCircle className="h-4 w-4 text-[var(--color-success)] shrink-0" />,
   error: <XCircle className="h-4 w-4 text-[var(--destructive)] shrink-0" />,
-  warning: <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />,
+  warning: <AlertTriangle className="h-4 w-4 text-[var(--color-warning)] shrink-0" />,
 };
 
 interface Toast {

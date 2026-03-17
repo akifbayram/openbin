@@ -66,7 +66,7 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
 /** Inline error banner with retry button for AI analysis failures. */
 export function AiAnalyzeError({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
-    <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-red-500/10 px-3 py-2.5">
+    <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-[var(--destructive)]/10 px-3 py-2.5">
       <AlertCircle className="h-4 w-4 text-[var(--destructive)] shrink-0 mt-0.5" />
       <div className="flex-1">
         <p className="text-[13px] text-[var(--destructive)]">{error}</p>

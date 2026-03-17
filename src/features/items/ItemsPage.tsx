@@ -61,6 +61,7 @@ export function ItemsPage() {
             icon={ClipboardList}
             title={search ? 'No items match your search' : 'No items yet'}
             subtitle={search ? undefined : `Items added to ${t.bins} will appear here`}
+            variant={search ? 'search' : undefined}
           />
         ) : (
           <ItemTableView

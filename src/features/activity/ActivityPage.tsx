@@ -80,6 +80,7 @@ export function ActivityPage() {
                 ? 'Try a different filter'
                 : `Actions like creating, editing, and deleting ${t.bins} will appear here`
             }
+            variant={entityTypeFilter ? 'search' : undefined}
           />
         ) : (
           <ActivityTableView
