@@ -2,14 +2,10 @@ import { resolveColor } from '@/lib/colorPalette';
 import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
 import { computeLabelsPerPage, computePageSize } from './labelFormats';
-import { computeContrastFg, computeNameFontSize, ICON_GAP_RATIO, ICON_SCALE } from './nameCardLayout';
-import { parsePaddingPt } from './pdfUnits';
+import { computeContrastFg, computeNameFontSize, computeUniformFontSize, ICON_GAP_RATIO, ICON_SCALE, maxPaddingPt, NAME_CARD_NEUTRAL_BG } from './nameCardLayout';
 import type { NameCardOptions } from './usePrintSettings';
 
 type JsPDF = import('jspdf').jsPDF;
-
-/** Neutral background for name cells when color is off (print uses hardcoded hex). */
-const NEUTRAL_BG = '#f5f5f5';
 
 interface GenerateNamePDFParams {
   bins: Bin[];
@@ -69,23 +65,15 @@ export async function generateNamePDF(params: GenerateNamePDFParams): Promise<Bl
   const marginLeft = parseFloat(format.pageMarginLeft);
   const cellW = parseFloat(format.cellWidth);
   const cellH = parseFloat(format.cellHeight);
-  const pad = parsePaddingPt(format.padding);
-  const paddingPt = Math.max(pad.top, pad.bottom, pad.left, pad.right);
+  const paddingPt = maxPaddingPt(format.padding);
   const padIn = paddingPt / 72;
   const cellWPt = cellW * 72;
   const cellHPt = cellH * 72;
 
   // Pre-compute uniform font size if needed
-  let uniformFontSizePt: number | undefined;
-  if (nameCardOptions.sizingMode === 'uniform') {
-    uniformFontSizePt = Math.min(
-      ...bins.map((bin) => {
-        const displayName = bin.name || bin.id;
-        const hasIcon = nameCardOptions.showIcon && !!bin.icon;
-        return computeNameFontSize({ cellWidthPt: cellWPt, cellHeightPt: cellHPt, paddingPt, name: displayName, hasIcon }).fontSizePt;
-      }),
-    );
-  }
+  const uniformFontSizePt = nameCardOptions.sizingMode === 'uniform'
+    ? computeUniformFontSize(bins, cellWPt, cellHPt, paddingPt, nameCardOptions.showIcon)
+    : undefined;
 
   for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {
     if (pageIdx > 0) doc.addPage([pageWidth, pageHeight], pageWidth > pageHeight ? 'landscape' : 'portrait');
@@ -110,7 +98,7 @@ export async function generateNamePDF(params: GenerateNamePDFParams): Promise<Bl
       const hasIcon = nameCardOptions.showIcon && !!bin.icon;
 
       // Draw background (bin color or neutral fallback)
-      setFillHex(doc, bgColor ?? NEUTRAL_BG);
+      setFillHex(doc, bgColor ?? NAME_CARD_NEUTRAL_BG);
       doc.rect(cellX, cellY, cellW, cellH, 'F');
 
       // Compute font size
@@ -122,14 +110,9 @@ export async function generateNamePDF(params: GenerateNamePDFParams): Promise<Bl
       const iconSizeIn = iconSizePt / 72;
       const gapIn = (fontSizePt * ICON_GAP_RATIO) / 72;
 
-      // Draw icon
-      let iconWidth = 0;
-      if (hasIcon) {
-        const iconDataUrl = iconMap.get(bin.icon);
-        if (iconDataUrl) {
-          iconWidth = iconSizeIn + gapIn;
-        }
-      }
+      // Resolve icon data URL once
+      const iconDataUrl = hasIcon ? iconMap.get(bin.icon) : undefined;
+      const iconWidth = iconDataUrl ? iconSizeIn + gapIn : 0;
 
       // Compute text position
       doc.setFont('helvetica', 'bold');
@@ -144,11 +127,8 @@ export async function generateNamePDF(params: GenerateNamePDFParams): Promise<Bl
       const startX = contentX + (contentW - totalW) / 2;
       const centerY = contentY + contentH / 2;
 
-      if (hasIcon && iconWidth > 0) {
-        const iconDataUrl = iconMap.get(bin.icon);
-        if (iconDataUrl) {
-          doc.addImage(iconDataUrl, 'PNG', startX, centerY - iconSizeIn / 2, iconSizeIn, iconSizeIn);
-        }
+      if (iconDataUrl) {
+        doc.addImage(iconDataUrl, 'PNG', startX, centerY - iconSizeIn / 2, iconSizeIn, iconSizeIn);
       }
 
       // Draw text — baseline is approx 0.35 * fontSize below center

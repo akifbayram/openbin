@@ -2,8 +2,7 @@ import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
 import { computeLabelsPerPage, computePageSize } from './labelFormats';
 import { NameCell } from './NameCell';
-import { computeNameFontSize } from './nameCardLayout';
-import { parsePaddingPt } from './pdfUnits';
+import { computeUniformFontSize, maxPaddingPt } from './nameCardLayout';
 
 interface NameSheetProps {
   bins: Bin[];
@@ -14,22 +13,15 @@ interface NameSheetProps {
 }
 
 export function NameSheet({ bins, format, showIcon, showColor, sizingMode }: NameSheetProps) {
-  // Pre-compute uniform font size if needed
-  let uniformFontSizePt: number | undefined;
-  if (sizingMode === 'uniform') {
-    const pad = parsePaddingPt(format.padding);
-    const cellWPt = parseFloat(format.cellWidth) * 72;
-    const cellHPt = parseFloat(format.cellHeight) * 72;
-    const paddingPt = Math.max(pad.top, pad.bottom, pad.left, pad.right);
+  // Hoist format-derived constants (same for every cell)
+  const cellWPt = parseFloat(format.cellWidth) * 72;
+  const cellHPt = parseFloat(format.cellHeight) * 72;
+  const paddingPt = maxPaddingPt(format.padding);
 
-    uniformFontSizePt = Math.min(
-      ...bins.map((bin) => {
-        const displayName = bin.name || bin.id;
-        const hasIcon = showIcon && !!bin.icon;
-        return computeNameFontSize({ cellWidthPt: cellWPt, cellHeightPt: cellHPt, paddingPt, name: displayName, hasIcon }).fontSizePt;
-      }),
-    );
-  }
+  // Pre-compute uniform font size if needed
+  const uniformFontSizePt = sizingMode === 'uniform'
+    ? computeUniformFontSize(bins, cellWPt, cellHPt, paddingPt, showIcon)
+    : undefined;
 
   const perPage = computeLabelsPerPage(format);
   const pages: Bin[][] = [];
@@ -71,6 +63,9 @@ export function NameSheet({ bins, format, showIcon, showColor, sizingMode }: Nam
                 format={format}
                 showIcon={showIcon}
                 showColor={showColor}
+                cellWPt={cellWPt}
+                cellHPt={cellHPt}
+                paddingPt={paddingPt}
                 overrideFontSizePt={uniformFontSizePt}
               />
             ))}

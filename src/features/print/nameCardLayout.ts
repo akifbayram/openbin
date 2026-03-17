@@ -1,4 +1,9 @@
 import { relativeLuminance } from '@/lib/colorPalette';
+import type { Bin } from '@/types';
+import { parsePaddingPt } from './pdfUnits';
+
+/** Neutral background for name cells when color is disabled. */
+export const NAME_CARD_NEUTRAL_BG = '#ffffff';
 
 /** Average character width ratio for bold sans-serif (approximate). */
 const AVG_CHAR_WIDTH_RATIO = 0.6;
@@ -56,4 +61,27 @@ export function computeNameFontSize(input: NameFontSizeInput): NameFontSizeResul
  */
 export function computeContrastFg(bgHex: string): '#FFFFFF' | '#000000' {
   return relativeLuminance(bgHex) > 0.179 ? '#000000' : '#FFFFFF';
+}
+
+/** Collapse 4-sided CSS padding into a single max value in points. */
+export function maxPaddingPt(padding: string): number {
+  const pad = parsePaddingPt(padding);
+  return Math.max(pad.top, pad.right, pad.bottom, pad.left);
+}
+
+/** Compute the minimum font size across all bins (for uniform sizing mode). */
+export function computeUniformFontSize(
+  bins: Bin[],
+  cellWPt: number,
+  cellHPt: number,
+  paddingPt: number,
+  showIcon: boolean,
+): number {
+  return Math.min(
+    ...bins.map((bin) => {
+      const displayName = bin.name || bin.id;
+      const hasIcon = showIcon && !!bin.icon;
+      return computeNameFontSize({ cellWidthPt: cellWPt, cellHeightPt: cellHPt, paddingPt, name: displayName, hasIcon }).fontSizePt;
+    }),
+  );
 }

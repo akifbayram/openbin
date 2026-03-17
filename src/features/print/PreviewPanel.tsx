@@ -18,7 +18,7 @@ interface PreviewPanelProps {
   labelSheetProps: React.ComponentProps<typeof LabelSheet>;
   printMode: PrintMode;
   itemSheetProps: React.ComponentProps<typeof ItemSheet>;
-  nameSheetProps?: React.ComponentProps<typeof NameSheet>;
+  nameSheetProps: React.ComponentProps<typeof NameSheet>;
 }
 
 export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelSheetProps, printMode, itemSheetProps, nameSheetProps }: PreviewPanelProps) {
@@ -68,7 +68,7 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
             <div className="bg-white rounded-[var(--radius-md)] p-4 max-h-[50vh] lg:max-h-[70vh] overflow-y-auto shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
               {printMode === 'items' ? (
                 <ItemSheet {...itemSheetProps} />
-              ) : printMode === 'names' && nameSheetProps ? (
+              ) : printMode === 'names' ? (
                 <NameSheet {...nameSheetProps} />
               ) : (
                 <LabelSheet {...labelSheetProps} />

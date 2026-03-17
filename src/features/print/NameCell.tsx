@@ -1,33 +1,27 @@
 import { resolveColor } from '@/lib/colorPalette';
 import { resolveIcon } from '@/lib/iconMap';
-import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
-import { computeContrastFg, computeNameFontSize, ICON_GAP_RATIO, ICON_SCALE } from './nameCardLayout';
-import { parsePaddingPt } from './pdfUnits';
-
-/** Neutral background for name cells when color is off (matches PDF fallback). */
-const NEUTRAL_BG = 'var(--color-neutral-100, #f5f5f5)';
+import { computeContrastFg, computeNameFontSize, ICON_GAP_RATIO, ICON_SCALE, NAME_CARD_NEUTRAL_BG } from './nameCardLayout';
 
 interface NameCellProps {
   bin: Bin;
   format: LabelFormat;
   showIcon: boolean;
   showColor: boolean;
+  /** Pre-computed format dimensions (hoisted from NameSheet to avoid per-cell parsing). */
+  cellWPt: number;
+  cellHPt: number;
+  paddingPt: number;
   overrideFontSizePt?: number;
 }
 
-export function NameCell({ bin, format, showIcon, showColor, overrideFontSizePt }: NameCellProps) {
+export function NameCell({ bin, format, showIcon, showColor, cellWPt, cellHPt, paddingPt, overrideFontSizePt }: NameCellProps) {
   const displayName = bin.name || bin.id;
   const colorPreset = showColor && bin.color ? resolveColor(bin.color) : null;
   const bgColor = colorPreset?.bg;
   const textColor = bgColor ? computeContrastFg(bgColor) : '#000000';
   const Icon = showIcon && bin.icon ? resolveIcon(bin.icon) : null;
-
-  const pad = parsePaddingPt(format.padding);
-  const cellWPt = parseFloat(format.cellWidth) * 72;
-  const cellHPt = parseFloat(format.cellHeight) * 72;
-  const paddingPt = Math.max(pad.top, pad.bottom, pad.left, pad.right);
 
   const { fontSizePt, iconSizePt } = overrideFontSizePt != null
     ? { fontSizePt: overrideFontSizePt, iconSizePt: overrideFontSizePt * ICON_SCALE }
@@ -35,12 +29,12 @@ export function NameCell({ bin, format, showIcon, showColor, overrideFontSizePt 
 
   return (
     <div
-      className={cn('name-cell flex items-center justify-center overflow-hidden')}
+      className="name-cell flex items-center justify-center overflow-hidden"
       style={{
         width: format.cellWidth,
         height: format.cellHeight,
         padding: format.padding,
-        backgroundColor: bgColor ?? NEUTRAL_BG,
+        backgroundColor: bgColor ?? NAME_CARD_NEUTRAL_BG,
         color: textColor,
         gap: `${(fontSizePt * ICON_GAP_RATIO).toFixed(1)}pt`,
       }}
