@@ -140,7 +140,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
   return (
     <Card id="ai-settings">
       <CardContent>
-        <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Sparkles className="h-3.5 w-3.5" />AI Features</span>} labelClassName="text-[15px] font-semibold">
+        <Disclosure defaultOpen={window.location.hash === '#ai-settings'} label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Sparkles className="h-3.5 w-3.5" />AI Features</span>} labelClassName="text-[15px] font-semibold">
         <div className="row-spread mt-1">
           <p className="text-[13px] text-[var(--text-tertiary)]">
             Photo analysis, item extraction, and AI commands
