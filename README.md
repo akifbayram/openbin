@@ -2,14 +2,14 @@
   <img src="public/logo.svg" alt="" width="28" />&nbsp;<span style="font-size:32px;line-height:32px;">OpenBin</span>
 </h1>
 
-Self-hosted inventory system for organizing physical storage bins with optional AI-powered cataloging. Snap photos and AI names the bins, lists every item, and tags them for search. Ask "where are the batteries?" or say "move the drill to the garage." Reorganize entire locations with AI suggestions. Print QR labels and scan to find contents instantly.
+Self-hosted inventory system for organizing physical storage bins with optional AI-powered cataloging. Snap photos and AI names the bins, lists every item, and tags them for search. Tell it to "add batteries to the tools bin" or "move everything to the garage" and review changes before applying. Reorganize entire locations with AI suggestions. Print QR labels and scan to find contents instantly.
 
 <a href="https://demo.openbin.app"><strong>Demo</strong></a> · <a href="https://akifbayram.github.io/openbin/"><strong>Docs</strong></a> · <a href="https://discord.gg/W6JPZCqqx9"><strong>Discord</strong></a>
 
 ## Highlights
 
 - **AI-powered cataloging** — Snap a photo and AI names the bin, lists every item with quantities, and tags it. Bring your own AI.
-- **Natural language commands** — Ask "where are the batteries?" to search, or "move the drill to the garage" to reorganize
+- **Natural language commands** — "Add batteries to the tools bin" or "move everything to the garage"
 - **AI reorganization** — Let AI suggest how to restructure an entire location's bins, areas, and tags, then apply changes in bulk
 - **Print & scan QR labels** — Generate customizable label sheets, stick them on bins, scan with your phone to see contents
 - **Multi-user locations** — Invite others with a code, assign roles (admin/member/viewer), split bins into areas, track changes in the activity log

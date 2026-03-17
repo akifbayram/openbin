@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, Loader2, Plus, Sparkles, X } from 'lucide-react';
+import { Check, ChevronLeft, Loader2, Plus, Search, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
 import { cn } from '@/lib/utils';
+import { useCollapsibleList } from './useCollapsibleList';
 
 type InputState = 'input' | 'expanded' | 'processing' | 'preview';
 
@@ -31,6 +32,9 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
   const editInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { structuredItems, isStructuring, error, structure, clearStructured } = useTextStructuring();
+
+  const { showFilter, filterQuery, setFilterQuery, filteredCount, visibleIndices, hiddenCount, expand, collapse, canCollapse } =
+    useCollapsibleList(items.length, (i) => items[i]);
 
   // Sync processing state
   useEffect(() => {
@@ -214,8 +218,34 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
   return (
     <div>
       <div className="row-spread mb-2 min-h-8">
-        <Label>{items.length} {items.length === 1 ? 'Item' : 'Items'}</Label>
+        <Label>
+          {filterQuery
+            ? `${filteredCount} of ${items.length} ${items.length === 1 ? 'Item' : 'Items'}`
+            : `${items.length} ${items.length === 1 ? 'Item' : 'Items'}`}
+        </Label>
       </div>
+
+      {showFilter && (
+        <div className="relative mb-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-quaternary)]" />
+          <input
+            value={filterQuery}
+            onChange={(e) => setFilterQuery(e.target.value)}
+            placeholder="Filter items..."
+            className="w-full h-8 pl-8 pr-8 rounded-[var(--radius-md)] bg-[var(--bg-input)] text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)] outline-none focus:ring-2 focus:ring-[var(--accent)]"
+          />
+          {filterQuery && (
+            <button
+              type="button"
+              onClick={() => setFilterQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+              aria-label="Clear filter"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
 
       {items.length > 0 && (
         <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden">
@@ -225,68 +255,97 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
               <span className="flex-1 text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Name</span>
             </div>
           )}
-          {items.map((item, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: items may contain duplicates
-            <div key={index}>
-              {index > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-              <div className="group row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors">
-                {onQuantityChange && (
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={quantities?.[index] ?? ''}
-                    onChange={(e) => {
-                      const val = e.target.value.trim();
-                      if (val === '') {
-                        onQuantityChange(index, null);
-                      } else {
-                        const num = Number.parseInt(val, 10);
-                        if (!Number.isNaN(num) && num >= 0) onQuantityChange(index, num);
-                      }
-                    }}
-                    placeholder="1"
-                    className="shrink-0 w-8 text-center text-[13px] tabular-nums text-[var(--text-tertiary)] bg-transparent outline-none focus:text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)]"
-                    aria-label={`Quantity for ${item}`}
-                  />
-                )}
-                {!onQuantityChange && quantities?.[index] != null && (
-                  <span className="shrink-0 text-[13px] text-[var(--text-tertiary)] tabular-nums">
-                    {quantities[index]}
-                  </span>
-                )}
-                {editingIndex === index ? (
-                  <input
-                    ref={editInputRef}
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') { e.preventDefault(); commitEdit(); }
-                      else if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
-                    }}
-                    onBlur={commitEdit}
-                    className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed bg-transparent outline-none"
-                  />
-                ) : (
+          {visibleIndices.length === 0 && filterQuery ? (
+            <p className="px-3.5 py-3 text-[14px] text-[var(--text-tertiary)] italic">
+              No items match &ldquo;{filterQuery}&rdquo;
+            </p>
+          ) : (
+            visibleIndices.map((idx, i) => (
+              <div key={idx}>
+                {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+                <div className="group row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors">
+                  {onQuantityChange && (
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={quantities?.[idx] ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value.trim();
+                        if (val === '') {
+                          onQuantityChange(idx, null);
+                        } else {
+                          const num = Number.parseInt(val, 10);
+                          if (!Number.isNaN(num) && num >= 0) onQuantityChange(idx, num);
+                        }
+                      }}
+                      placeholder="1"
+                      className="shrink-0 w-8 text-center text-[13px] tabular-nums text-[var(--text-tertiary)] bg-transparent outline-none focus:text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)]"
+                      aria-label={`Quantity for ${items[idx]}`}
+                    />
+                  )}
+                  {!onQuantityChange && quantities?.[idx] != null && (
+                    <span className="shrink-0 text-[13px] text-[var(--text-tertiary)] tabular-nums">
+                      {quantities[idx]}
+                    </span>
+                  )}
+                  {editingIndex === idx ? (
+                    <input
+                      ref={editInputRef}
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); commitEdit(); }
+                        else if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+                      }}
+                      onBlur={commitEdit}
+                      className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed bg-transparent outline-none"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onTouchEnd={(e) => { e.preventDefault(); startEditing(idx); }}
+                      onClick={() => startEditing(idx)}
+                      className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed text-left cursor-text truncate"
+                    >
+                      {items[idx]}
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onTouchEnd={(e) => { e.preventDefault(); startEditing(index); }}
-                    onClick={() => startEditing(index)}
-                    className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed text-left cursor-text truncate"
+                    onClick={() => removeItem(idx)}
+                    className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
+                    aria-label={`Remove ${items[idx]}`}
                   >
-                    {item}
+                    <X className="h-3.5 w-3.5" />
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => removeItem(index)}
-                  className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
-                  aria-label={`Remove ${item}`}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
+          {hiddenCount > 0 && (
+            <>
+              <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />
+              <button
+                type="button"
+                onClick={expand}
+                className="w-full py-2.5 text-[13px] font-medium text-[var(--accent)] hover:bg-[var(--bg-hover)] transition-colors"
+              >
+                Show {hiddenCount} more {hiddenCount === 1 ? 'item' : 'items'}
+              </button>
+            </>
+          )}
+          {canCollapse && (
+            <>
+              <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />
+              <button
+                type="button"
+                onClick={collapse}
+                className="w-full py-2.5 text-[13px] font-medium text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
+              >
+                Show less
+              </button>
+            </>
+          )}
         </div>
       )}
 

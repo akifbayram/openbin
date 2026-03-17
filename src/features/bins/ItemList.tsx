@@ -1,5 +1,5 @@
-import { ArrowUpDown, Check, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowUpDown, Check, Search, X } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
@@ -9,6 +9,7 @@ import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
 import type { BinItem } from '@/types';
 import { removeItemFromBin, renameItem, reorderItems } from './useBins';
+import { useCollapsibleList } from './useCollapsibleList';
 
 interface ItemListProps {
   items: BinItem[];
@@ -185,15 +186,9 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
   const [sortMode, setSortMode] = useState<SortMode>('manual');
   const { showToast } = useToast();
   const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
-  const knownIdsRef = useRef<Set<string>>(new Set(items.map((i) => i.id)));
-  const newIds = new Set<string>();
-  for (const item of items) {
-    if (!knownIdsRef.current.has(item.id)) newIds.add(item.id);
-  }
-  // Update known IDs after render
-  useEffect(() => {
-    knownIdsRef.current = new Set(items.map((i) => i.id));
-  }, [items]);
+
+  const { showFilter, filterQuery, setFilterQuery, filteredCount, visibleIndices, hiddenCount, expand, collapse, canCollapse } =
+    useCollapsibleList(items.length, (i) => items[i].name);
 
   const handleSort = useCallback(async (mode: SortMode) => {
     setSortMode(mode);
@@ -260,7 +255,11 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
   return (
     <div>
       <div className="row-spread mb-2 min-h-8">
-        <Label>{items.length} {items.length === 1 ? 'Item' : 'Items'}</Label>
+        <Label>
+          {filterQuery
+            ? `${filteredCount} of ${items.length} ${items.length === 1 ? 'Item' : 'Items'}`
+            : `${items.length} ${items.length === 1 ? 'Item' : 'Items'}`}
+        </Label>
         {!readOnly && items.length >= 2 && (
           <div ref={sortRef} className="relative">
             <Button
@@ -293,6 +292,29 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
           </div>
         )}
       </div>
+
+      {showFilter && (
+        <div className="relative mb-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-quaternary)]" />
+          <input
+            value={filterQuery}
+            onChange={(e) => setFilterQuery(e.target.value)}
+            placeholder="Filter items..."
+            className="w-full h-8 pl-8 pr-8 rounded-[var(--radius-md)] bg-[var(--bg-input)] text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)] outline-none focus:ring-2 focus:ring-[var(--accent)]"
+          />
+          {filterQuery && (
+            <button
+              type="button"
+              onClick={() => setFilterQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+              aria-label="Clear filter"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       {items.length === 0 ? (
         <p className="text-[15px] text-[var(--text-tertiary)] italic">No items yet</p>
       ) : (
@@ -303,40 +325,73 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
               <span className="flex-1 text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Name</span>
             </div>
           )}
-          {items.map((item, i) => readOnly ? (
-            <div key={item.id}>
-              {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-              <div className="row-tight px-3.5 py-1">
-                {item.quantity != null && (
-                  <span className="shrink-0 text-[13px] text-[var(--text-tertiary)] tabular-nums">
-                    {item.quantity}
-                  </span>
-                )}
-                <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
-                  {item.name}
-                </span>
-              </div>
-            </div>
+          {visibleIndices.length === 0 && filterQuery ? (
+            <p className="px-3.5 py-3 text-[14px] text-[var(--text-tertiary)] italic">
+              No items match &ldquo;{filterQuery}&rdquo;
+            </p>
           ) : (
-            <div key={item.id}>
-              {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-              <div
-                className={cn(
-                  exitingIds.has(item.id) && 'animate-shrink-out',
-                )}
+            visibleIndices.map((idx, i) => {
+              const item = items[idx];
+              return readOnly ? (
+                <div key={item.id}>
+                  {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+                  <div className="row-tight px-3.5 py-1">
+                    {item.quantity != null && (
+                      <span className="shrink-0 text-[13px] text-[var(--text-tertiary)] tabular-nums">
+                        {item.quantity}
+                      </span>
+                    )}
+                    <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
+                      {item.name}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div key={item.id}>
+                  {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+                  <div
+                    className={cn(
+                      exitingIds.has(item.id) && 'animate-shrink-out',
+                    )}
+                  >
+                    <ItemRow
+                      text={item.name}
+                      quantity={item.quantity}
+                      isEditing={editingId === item.id}
+                      onStartEdit={() => setEditingId(item.id)}
+                      onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
+                      onCancel={() => setEditingId(null)}
+                      onDelete={() => handleDelete(item.id)}
+                    />
+                  </div>
+                </div>
+              );
+            })
+          )}
+          {hiddenCount > 0 && (
+            <>
+              <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />
+              <button
+                type="button"
+                onClick={expand}
+                className="w-full py-2.5 text-[13px] font-medium text-[var(--accent)] hover:bg-[var(--bg-hover)] transition-colors"
               >
-                <ItemRow
-                  text={item.name}
-                  quantity={item.quantity}
-                  isEditing={editingId === item.id}
-                  onStartEdit={() => setEditingId(item.id)}
-                  onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
-                  onCancel={() => setEditingId(null)}
-                  onDelete={() => handleDelete(item.id)}
-                />
-              </div>
-            </div>
-          ))}
+                Show {hiddenCount} more {hiddenCount === 1 ? 'item' : 'items'}
+              </button>
+            </>
+          )}
+          {canCollapse && (
+            <>
+              <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />
+              <button
+                type="button"
+                onClick={collapse}
+                className="w-full py-2.5 text-[13px] font-medium text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
+              >
+                Show less
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
