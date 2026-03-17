@@ -1,8 +1,8 @@
 import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
 import { computeLabelsPerPage, computePageSize } from './labelFormats';
-import { computeNameFontSize } from './nameCardLayout';
 import { NameCell } from './NameCell';
+import { computeNameFontSize } from './nameCardLayout';
 import { parsePaddingPt } from './pdfUnits';
 
 interface NameSheetProps {
@@ -43,9 +43,8 @@ export function NameSheet({ bins, format, showIcon, showColor, sizingMode }: Nam
     <>
       <style>{`@media print { @page { size: ${pageWidth}in ${pageHeight}in; margin: 0; } }`}</style>
       {pages.map((pageBins, pageIdx) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: page order is stable
         <div
-          key={pageIdx}
+          key={pageBins[0]?.id ?? pageIdx}
           className="label-page"
           style={{
             width: `${pageWidth}in`,

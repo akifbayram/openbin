@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { ItemSheet } from './ItemSheet';
 import { LabelSheet } from './LabelSheet';
-import { NameSheet } from './NameSheet';
 import { computeLabelsPerPage, DEFAULT_LABEL_FORMAT, getLabelFormat } from './labelFormats';
+import { NameSheet } from './NameSheet';
 import type { PrintMode } from './usePrintSettings';
 
 interface PreviewPanelProps {
