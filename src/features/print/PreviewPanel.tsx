@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { ItemSheet } from './ItemSheet';
 import { LabelSheet } from './LabelSheet';
+import { NameSheet } from './NameSheet';
 import { computeLabelsPerPage, DEFAULT_LABEL_FORMAT, getLabelFormat } from './labelFormats';
 import type { PrintMode } from './usePrintSettings';
 
@@ -17,14 +18,15 @@ interface PreviewPanelProps {
   labelSheetProps: React.ComponentProps<typeof LabelSheet>;
   printMode: PrintMode;
   itemSheetProps: React.ComponentProps<typeof ItemSheet>;
+  nameSheetProps?: React.ComponentProps<typeof NameSheet>;
 }
 
-export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelSheetProps, printMode, itemSheetProps }: PreviewPanelProps) {
+export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelSheetProps, printMode, itemSheetProps, nameSheetProps }: PreviewPanelProps) {
   const t = useTerminology();
   const hasSelection = selectedBins.length > 0;
-  const noun = printMode === 'items' ? 'List' : 'Label';
+  const noun = printMode === 'items' ? 'List' : printMode === 'names' ? 'Name' : 'Label';
   const printLabel = selectedBins.length !== 1 ? `${noun}s` : noun;
-  const pageCount = printMode === 'labels' && hasSelection
+  const pageCount = (printMode === 'labels' || printMode === 'names') && hasSelection
     ? Math.ceil(selectedBins.length / computeLabelsPerPage(labelSheetProps.format ?? getLabelFormat(DEFAULT_LABEL_FORMAT)))
     : 0;
 
@@ -39,7 +41,7 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
           <Printer className="h-5 w-5 mr-2.5" />
           {hasSelection ? `Print ${selectedBins.length} ${printLabel}` : 'Print'}
         </Button>
-        {printMode === 'labels' && (
+        {(printMode === 'labels' || printMode === 'names') && (
           <Button
             variant="outline"
             onClick={onDownloadPDF}
@@ -57,7 +59,7 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
           <CardContent>
             <div className="row-spread mb-3">
               <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal">Preview</Label>
-              {printMode === 'labels' && (
+              {(printMode === 'labels' || printMode === 'names') && (
                 <span className="text-[12px] text-[var(--text-tertiary)] tabular-nums">
                   {pageCount} {pageCount !== 1 ? 'pages' : 'page'}
                 </span>
@@ -66,6 +68,8 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
             <div className="bg-white rounded-[var(--radius-md)] p-4 max-h-[50vh] lg:max-h-[70vh] overflow-y-auto shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
               {printMode === 'items' ? (
                 <ItemSheet {...itemSheetProps} />
+              ) : printMode === 'names' && nameSheetProps ? (
+                <NameSheet {...nameSheetProps} />
               ) : (
                 <LabelSheet {...labelSheetProps} />
               )}

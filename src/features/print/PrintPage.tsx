@@ -1,5 +1,5 @@
 import './print.css';
-import { List, Tag } from 'lucide-react';
+import { List, Tag, Type } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MenuButton } from '@/components/ui/menu-button';
 import { OptionGroup } from '@/components/ui/option-group';
@@ -11,6 +11,8 @@ import { ItemSheet } from './ItemSheet';
 import { LabelFormatCard } from './LabelFormatCard';
 import { LabelOptionsCard } from './LabelOptionsCard';
 import { LabelSheet } from './LabelSheet';
+import { NameCardOptionsCard } from './NameCardOptionsCard';
+import { NameSheet } from './NameSheet';
 import { PreviewPanel } from './PreviewPanel';
 import { QrStyleCard } from './QrStyleCard';
 import { usePrintPageActions } from './usePrintPageActions';
@@ -25,6 +27,8 @@ export function PrintPage() {
     printMode, handlePrintModeChange,
     itemListOptions, handleUpdateItemListOption,
     itemSheetProps,
+    nameCardOptions, handleUpdateNameCardOption,
+    nameSheetProps,
     ui,
     pdfLoading, handleDownloadPDF,
     labelSheetProps,
@@ -74,6 +78,7 @@ export function PrintPage() {
           <OptionGroup
             options={[
               { key: 'labels', label: 'Labels', icon: Tag },
+              { key: 'names', label: 'Names', icon: Type },
               { key: 'items', label: 'Item List', icon: List },
             ]}
             value={printMode}
@@ -92,14 +97,16 @@ export function PrintPage() {
             onExpandedChange={ui.setBinsExpanded}
           />
 
+          {(printMode === 'labels' || printMode === 'names') && (
+            <LabelFormatCard
+              format={format}
+              expanded={ui.formatExpanded}
+              onExpandedChange={ui.setFormatExpanded}
+            />
+          )}
+
           {printMode === 'labels' && (
             <>
-              <LabelFormatCard
-                format={format}
-                expanded={ui.formatExpanded}
-                onExpandedChange={ui.setFormatExpanded}
-              />
-
               <LabelOptionsCard
                 labelOptions={labelOptions}
                 onUpdateOption={handleUpdateLabelOption}
@@ -114,6 +121,15 @@ export function PrintPage() {
                 onExpandedChange={ui.setQrStyleExpanded}
               />
             </>
+          )}
+
+          {printMode === 'names' && (
+            <NameCardOptionsCard
+              options={nameCardOptions}
+              onUpdate={handleUpdateNameCardOption}
+              expanded={ui.nameCardOptionsExpanded}
+              onExpandedChange={ui.setNameCardOptionsExpanded}
+            />
           )}
 
           {printMode === 'items' && (
@@ -135,6 +151,7 @@ export function PrintPage() {
             labelSheetProps={labelSheetProps}
             printMode={printMode}
             itemSheetProps={itemSheetProps}
+            nameSheetProps={nameSheetProps}
           />
         </div>
         </div>
@@ -143,6 +160,8 @@ export function PrintPage() {
       <div className="print-show">
         {printMode === 'items' ? (
           <ItemSheet {...itemSheetProps} />
+        ) : printMode === 'names' ? (
+          <NameSheet {...nameSheetProps} />
         ) : (
           <LabelSheet {...labelSheetProps} />
         )}
