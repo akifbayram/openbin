@@ -23,6 +23,7 @@ export default defineConfig({
             { text: 'Overview', link: '/getting-started/' },
             { text: 'Docker', link: '/getting-started/docker' },
             { text: 'Local Development', link: '/getting-started/local-dev' },
+            { text: 'Reverse Proxy', link: '/getting-started/reverse-proxy' },
             { text: 'Configuration', link: '/getting-started/configuration' }
           ]
         }
@@ -115,7 +116,7 @@ export default defineConfig({
       text: 'Edit this page on GitHub'
     },
     footer: {
-      message: 'Released under the GPL-3.0 License.',
+      message: 'Released under the AGPL-3.0 License.',
       copyright: 'OpenBin'
     }
   }

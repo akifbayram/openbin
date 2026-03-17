@@ -121,4 +121,4 @@ If you place OpenBin behind Nginx, Caddy, or another reverse proxy, set `TRUST_P
 TRUST_PROXY=true
 ```
 
-The API documentation (OpenAPI spec) is available at `server/openapi.yaml`. A Swagger UI is available at `/api-docs/` when running behind Nginx.
+See [Reverse Proxy](./reverse-proxy) for copy-paste configs for Nginx, Caddy, and Traefik.
