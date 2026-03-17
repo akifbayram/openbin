@@ -103,3 +103,12 @@ export async function changeMemberRole(locationId: string, userId: string, role:
   });
   notifyLocationsChanged();
 }
+
+export async function resetMemberPassword(
+  locationId: string,
+  userId: string,
+): Promise<{ token: string; expiresAt: string }> {
+  return apiFetch(`/api/locations/${locationId}/members/${userId}/reset-password`, {
+    method: 'POST',
+  });
+}

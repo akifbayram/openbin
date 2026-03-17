@@ -1,4 +1,4 @@
-import { Check, Copy, LogOut, RefreshCw, Shield, UserMinus } from 'lucide-react';
+import { Check, Copy, KeyRound, LogOut, RefreshCw, Shield, UserMinus } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
-import { changeMemberRole, leaveLocation, regenerateInvite, removeMember, useLocationList, useLocationMembers } from './useLocations';
+import { changeMemberRole, leaveLocation, regenerateInvite, removeMember, resetMemberPassword, useLocationList, useLocationMembers } from './useLocations';
 
 interface LocationMembersDialogProps {
   locationId: string;
@@ -31,6 +31,8 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [resetToken, setResetToken] = useState<{ token: string; userId: string } | null>(null);
+  const [resetCopied, setResetCopied] = useState(false);
 
   const location = locations.find((h) => h.id === locationId);
   const isAdmin = location?.role === 'admin';
@@ -91,8 +93,31 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
     }
   }
 
+  async function handleResetPassword(userId: string) {
+    try {
+      const { token } = await resetMemberPassword(locationId, userId);
+      setResetToken({ token, userId });
+      showToast({ message: 'Reset link generated', variant: 'success' });
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : 'Failed to generate reset link', variant: 'error' });
+    }
+  }
+
+  const resetLink = resetToken ? `${window.location.origin}/reset-password?token=${resetToken.token}` : '';
+
+  async function handleCopyResetLink() {
+    if (!resetLink) return;
+    try {
+      await navigator.clipboard.writeText(resetLink);
+      setResetCopied(true);
+      setTimeout(() => setResetCopied(false), 2000);
+    } catch {
+      showToast({ message: 'Failed to copy', variant: 'error' });
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) setResetToken(null); onOpenChange(v); }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{location?.name ?? 'Location'} Members</DialogTitle>
@@ -177,6 +202,19 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                     />
                   )}
                   {isAdmin && !isSelf && (
+                    <Tooltip content="Reset password" side="bottom">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="shrink-0"
+                        onClick={() => handleResetPassword(member.user_id)}
+                        aria-label="Reset password"
+                      >
+                        <KeyRound className="h-3.5 w-3.5" />
+                      </Button>
+                    </Tooltip>
+                  )}
+                  {isAdmin && !isSelf && (
                     <Tooltip content="Remove member" side="bottom">
                       <Button
                         variant="destructive-ghost"
@@ -192,6 +230,28 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {resetToken && (
+          <div className="space-y-2 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+            <p className="text-[13px] text-[var(--text-secondary)]">
+              Share this link with the member to reset their password:
+            </p>
+            <div className="row gap-2">
+              <code className="flex-1 min-w-0 text-[12px] text-[var(--text-primary)] break-all">
+                {resetLink}
+              </code>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleCopyResetLink}
+                className="shrink-0"
+                aria-label="Copy reset link"
+              >
+                {resetCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
         )}
 

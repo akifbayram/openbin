@@ -27,6 +27,10 @@ const RegisterPage = lazyWithRetry(() =>
   import('@/features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage }))
 );
 
+const ResetPasswordPage = lazyWithRetry(() =>
+  import('@/features/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage }))
+);
+
 const PrintPage = lazyWithRetry(() =>
   import('@/features/print/PrintPage').then((m) => ({ default: m.PrintPage }))
 );
@@ -201,6 +205,14 @@ export default function App() {
                 element={
                   <Suspense fallback={<LoadingFallback />}>
                     <RegisterPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/reset-password"
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <ResetPasswordPage />
                   </Suspense>
                 }
               />

@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { generateUuid, getDb, query } from '../db.js';
 import { config } from './config.js';
 
-function hashToken(raw: string): string {
+export function hashToken(raw: string): string {
   return crypto.createHash('sha256').update(raw).digest('hex');
 }
 

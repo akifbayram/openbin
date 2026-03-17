@@ -5,6 +5,7 @@ import { computeChanges } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { validateRetentionDays } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
@@ -448,6 +449,43 @@ router.put('/:id/members/:userId/role', asyncHandler(async (req, res) => {
   });
 
   res.json({ message: `Role updated to ${role}` });
+}));
+
+// POST /api/locations/:id/members/:userId/reset-password — admin generates reset token
+router.post('/:id/members/:userId/reset-password', asyncHandler(async (req, res) => {
+  const { id, userId } = req.params;
+
+  // Requester must be admin
+  if (!await isLocationAdmin(id, req.user!.id)) {
+    throw new ForbiddenError('Only admins can reset member passwords');
+  }
+
+  // Target must be a member of this location
+  const targetRole = await getMemberRole(id, userId);
+  if (!targetRole) {
+    throw new NotFoundError('Member not found');
+  }
+
+  // Cannot reset your own password this way (use profile password change)
+  if (userId === req.user!.id) {
+    throw new ValidationError('Use the profile page to change your own password');
+  }
+
+  const { rawToken, expiresAt } = await createPasswordResetToken(userId, req.user!.id);
+
+  // Get username for activity log
+  const userResult = await query('SELECT username FROM users WHERE id = $1', [userId]);
+  const targetUsername = userResult.rows[0]?.username ?? 'unknown';
+
+  logRouteActivity(req, {
+    locationId: id,
+    action: 'reset_password',
+    entityType: 'member',
+    entityId: userId,
+    entityName: targetUsername,
+  });
+
+  res.json({ token: rawToken, expiresAt });
 }));
 
 // POST /api/locations/:id/regenerate-invite — new invite code (admin only)

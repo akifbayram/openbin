@@ -1,0 +1,94 @@
+import crypto from 'node:crypto';
+import bcrypt from 'bcrypt';
+import { generateUuid, query } from '../db.js';
+import { config } from './config.js';
+import { UnauthorizedError } from './httpErrors.js';
+import { hashToken, revokeAllUserTokens } from './refreshTokens.js';
+import { validatePassword } from './validation.js';
+
+const TOKEN_EXPIRY_HOURS = 24;
+
+export interface ResetTokenResult {
+  rawToken: string;
+  expiresAt: string;
+}
+
+/** Create a password reset token for a user. Returns the raw token (show once). */
+export async function createPasswordResetToken(
+  userId: string,
+  createdBy: string | null,
+): Promise<ResetTokenResult> {
+  // Invalidate any existing unused tokens for this user
+  await query(
+    `UPDATE password_reset_tokens SET used_at = datetime('now')
+     WHERE user_id = $1 AND used_at IS NULL`,
+    [userId],
+  );
+
+  const rawToken = crypto.randomBytes(32).toString('base64url');
+  const tokenHash = hashToken(rawToken);
+  const id = generateUuid();
+  const expiresAt = new Date(
+    Date.now() + TOKEN_EXPIRY_HOURS * 60 * 60 * 1000,
+  ).toISOString();
+
+  await query(
+    `INSERT INTO password_reset_tokens (id, user_id, token_hash, created_by, expires_at)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [id, userId, tokenHash, createdBy, expiresAt],
+  );
+
+  return { rawToken, expiresAt };
+}
+
+/** Consume a reset token and set the new password. Throws on invalid/expired token. */
+export async function consumeResetToken(
+  rawToken: string,
+  newPassword: string,
+): Promise<{ userId: string }> {
+  validatePassword(newPassword);
+
+  const tokenHash = hashToken(rawToken);
+
+  const result = await query<{
+    id: string;
+    user_id: string;
+    expires_at: string;
+    used_at: string | null;
+  }>(
+    `SELECT id, user_id, expires_at, used_at FROM password_reset_tokens WHERE token_hash = $1`,
+    [tokenHash],
+  );
+
+  if (result.rows.length === 0) {
+    throw new UnauthorizedError('Invalid or expired reset token');
+  }
+
+  const token = result.rows[0];
+
+  if (token.used_at) {
+    throw new UnauthorizedError('This reset token has already been used');
+  }
+
+  if (new Date(token.expires_at) < new Date()) {
+    throw new UnauthorizedError('This reset token has expired');
+  }
+
+  // Hash new password and update user
+  const passwordHash = await bcrypt.hash(newPassword, config.bcryptRounds);
+  await query(
+    `UPDATE users SET password_hash = $1, updated_at = datetime('now') WHERE id = $2`,
+    [passwordHash, token.user_id],
+  );
+
+  // Mark token as used
+  await query(
+    `UPDATE password_reset_tokens SET used_at = datetime('now') WHERE id = $1`,
+    [token.id],
+  );
+
+  // Revoke all refresh tokens (force re-login on all devices)
+  await revokeAllUserTokens(token.user_id);
+
+  return { userId: token.user_id };
+}

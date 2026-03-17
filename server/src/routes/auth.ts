@@ -6,6 +6,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '../lib/cookies.js';
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
+import { consumeResetToken } from '../lib/passwordReset.js';
 import { safePath } from '../lib/pathSafety.js';
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
@@ -470,6 +471,22 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
   clearAuthCookies(res);
 
   res.json({ message: 'Account deleted' });
+}));
+
+// POST /api/auth/reset-password — consume reset token and set new password (no auth)
+router.post('/reset-password', asyncHandler(async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || typeof token !== 'string') {
+    throw new ValidationError('Reset token is required');
+  }
+  if (!newPassword) {
+    throw new ValidationError('New password is required');
+  }
+
+  await consumeResetToken(token, newPassword);
+
+  res.json({ message: 'Password has been reset successfully' });
 }));
 
 export default router;

@@ -96,6 +96,7 @@ export function createApp(): express.Express {
   app.use('/api/auth/refresh', sensitiveAuthLimiter);
   app.use('/api/auth/password', sensitiveAuthLimiter);
   app.use('/api/auth/account', sensitiveAuthLimiter);
+  app.use('/api/auth/reset-password', sensitiveAuthLimiter);
   app.use('/api/auth', authRoutes);
   app.use('/api/auth', avatarRoutes);
   app.use('/api/locations/join', joinLimiter);
