@@ -73,10 +73,13 @@ export function OnboardingOverlay(props: OnboardingActions) {
         </div>
 
         {/* Step content */}
-        <AnimatedHeight className="overflow-y-auto min-h-0">
+        <AnimatedHeight className="overflow-y-auto min-h-0" disableTransition={displayedStep === 1 && demoMode}>
           <div
             key={displayedStep}
-            className={cn('onboarding-step-enter', transitioning && 'onboarding-step-exit')}
+            className={cn(
+              !(displayedStep === 1 && demoMode) && 'onboarding-step-enter',
+              transitioning && !(displayedStep === 1 && demoMode) && 'onboarding-step-exit',
+            )}
           >
           {displayedStep === 0 && demoMode && activeLocationId && (
             <DemoWelcomeStep activeLocationId={activeLocationId} onAdvance={advanceWithLocation} />

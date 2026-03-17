@@ -18,13 +18,28 @@ export const AI_FEATURES = [
   { icon: ListChecks, title: 'Smart Lists', desc: 'Dictate items, AI extracts a clean list' },
 ] as const;
 
-/** Hardcoded Camping Gear bin data shared by demo steps 1 (AI) and 2 (browse). */
+/** Hardcoded Tech Accessories bin data shared by demo steps 1 (AI) and 2 (browse). */
 export const DEMO_BIN = {
-  name: 'Camping Gear',
-  shortCode: 'CMPTCK',
-  icon: 'Leaf',
-  color: '140:3',
-  items: ['Tent', 'Sleeping bags (x4)', 'Headlamps', 'Camping stove', 'Water filter', 'Tarp', 'Cooler (hard shell)', 'Fire starters'],
-  tags: ['outdoor', 'seasonal', 'family'],
-  areaName: 'Garage',
+  name: 'Tech Accessories',
+  shortCode: 'TCHACC',
+  icon: 'Laptop',
+  color: '220:3',
+  items: [
+    'Sonoff Zigbee 3.0 USB Dongle Plus',
+    'Raspberry Pi 4 Model B',
+    'Logitech C920 Webcam',
+    'White outdoor security camera',
+    'Nooelec NESDR Nano 3',
+    '5-port Ethernet switch',
+    'Yubico YubiKey',
+    'MicroSD cards',
+    'Ethernet cables',
+    'USB cables',
+    'USB power adapters',
+    'Roll of hook-and-loop cable ties',
+    'Electronic modules in anti-static bags',
+    'Arduino-style microcontroller board',
+  ],
+  tags: ['electronics', 'networking', 'iot'],
+  areaName: 'Office',
 } as const;

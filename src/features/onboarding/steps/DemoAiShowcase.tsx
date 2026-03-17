@@ -1,5 +1,6 @@
-import { Camera, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import demoBinPhoto from '@/assets/premade-backgrounds/demo_bin.jpg';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { DEMO_BIN } from '../onboardingConstants';
@@ -41,12 +42,12 @@ export function DemoAiShowcase({ onNext }: { onNext: () => void }) {
       <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
         Snap a photo, and AI catalogs everything inside.
       </p>
-      {/* Mock photo area */}
+      {/* Demo photo */}
       <div className={cn(
-        'w-full rounded-[var(--radius-md)] bg-[var(--bg-active)] flex items-center justify-center overflow-hidden transition-all duration-500 ease-in-out',
-        photoCollapsed ? 'max-h-0 opacity-0 mb-0' : 'ai-photo-shimmer max-h-32 opacity-100 mb-4'
+        'w-full rounded-[var(--radius-md)] overflow-hidden transition-all duration-500 ease-in-out',
+        photoCollapsed ? 'max-h-0 opacity-0 mb-0' : 'ai-photo-shimmer max-h-40 opacity-100 mb-4'
       )}>
-        <Camera className="h-10 w-10 text-[var(--text-tertiary)] opacity-40 my-[2.75rem]" />
+        <img src={demoBinPhoto} alt="Bin contents" className="w-full h-40 object-cover" />
       </div>
       {/* Revealed items */}
       {visibleCount > 0 && (

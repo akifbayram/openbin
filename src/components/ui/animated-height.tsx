@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 /** Wrapper that measures children and smoothly animates height changes via ResizeObserver. */
-export function AnimatedHeight({ children, className }: { children: React.ReactNode; className?: string }) {
+export function AnimatedHeight({ children, className, disableTransition }: { children: React.ReactNode; className?: string; disableTransition?: boolean }) {
   const outerRef = React.useRef<HTMLDivElement>(null);
   const innerRef = React.useRef<HTMLDivElement>(null);
   const [height, setHeight] = React.useState<number | undefined>(undefined);
@@ -35,7 +35,7 @@ export function AnimatedHeight({ children, className }: { children: React.ReactN
       className={className}
       style={{
         height: height != null ? height : undefined,
-        transition: shouldAnimate ? 'height 0.2s ease' : undefined,
+        transition: shouldAnimate && !disableTransition ? 'height 0.1s ease' : undefined,
       }}
     >
       <div ref={innerRef}>
