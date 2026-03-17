@@ -60,7 +60,7 @@ export function useQuickAdd(options: UseQuickAddOptions) {
 
   async function handleAdd() {
     const trimmed = value.trim();
-    if (!trimmed || !binId) return;
+    if (!trimmed || !binId || saving) return;
     setSaving(true);
     try {
       if (trimmed.includes(',')) {

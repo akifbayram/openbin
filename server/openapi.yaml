@@ -54,6 +54,8 @@ tags:
     description: Item search across all bins in a location
   - name: Batch
     description: Execute multiple bin operations in a single transaction
+  - name: Health
+    description: Health check for monitoring and orchestration
 
 
 components:
@@ -1119,6 +1121,40 @@ components:
             message: Too many attempts, please try again later
 
 paths:
+  # ════════════════════════════════════════════════════════
+  # Health
+  # ════════════════════════════════════════════════════════
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Returns application health status including database connectivity. No authentication or rate limiting.
+      security: []
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+        '503':
+          description: Unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  message:
+                    type: string
+                    example: Database unreachable
+
   # ════════════════════════════════════════════════════════
   # Auth
   # ════════════════════════════════════════════════════════

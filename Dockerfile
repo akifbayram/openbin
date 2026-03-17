@@ -30,4 +30,6 @@ COPY --chown=node:node --from=frontend-builder /app/dist ./public
 RUN mkdir -p /data/photos /data/backups && chown -R node:node /data
 USER node
 EXPOSE 1453
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:1453/api/health || exit 1
 CMD ["node", "dist/start.js"]

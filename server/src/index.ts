@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 import { config } from './lib/config.js';
+import { getDb } from './db.js';
 import { HttpError } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
 import { apiLimiter, authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
@@ -71,6 +72,21 @@ export function createApp(): express.Express {
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
   app.use(requestLogger);
+
+  // Health check (no auth, no rate limit)
+  app.get('/api/health', (_req, res) => {
+    try {
+      const db = getDb();
+      const row = db.prepare('SELECT 1 AS ok').get() as { ok: number } | undefined;
+      if (row?.ok === 1) {
+        res.json({ status: 'ok' });
+      } else {
+        res.status(503).json({ status: 'error', message: 'Database check failed' });
+      }
+    } catch (err) {
+      res.status(503).json({ status: 'error', message: 'Database unreachable' });
+    }
+  });
 
   // Routes
   app.use('/api', apiLimiter);
