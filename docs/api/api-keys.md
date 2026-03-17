@@ -1,8 +1,8 @@
 ---
-title: ApiKeys
+title: API Keys
 ---
 
-# ApiKeys
+# API Keys
 
 ::: tip User Guide
 For a user-facing walkthrough, see [API Keys](/guide/api-keys).

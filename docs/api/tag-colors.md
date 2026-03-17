@@ -1,8 +1,8 @@
 ---
-title: TagColors
+title: Tag Colors
 ---
 
-# TagColors
+# Tag Colors
 
 ::: tip User Guide
 For a user-facing walkthrough, see [Items & Tags](/guide/items-tags).

@@ -1,8 +1,8 @@
 ---
-title: PrintSettings
+title: Print Settings
 ---
 
-# PrintSettings
+# Print Settings
 
 ::: tip User Guide
 For a user-facing walkthrough, see [Print Labels](/guide/print-labels).

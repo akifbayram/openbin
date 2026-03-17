@@ -1,8 +1,8 @@
 ---
-title: ScanHistory
+title: Scan History
 ---
 
-# ScanHistory
+# Scan History
 
 ::: tip User Guide
 For a user-facing walkthrough, see [QR Scanning](/guide/qr-scanning).

@@ -1,8 +1,8 @@
 ---
-title: UserPreferences
+title: User Preferences
 ---
 
-# UserPreferences
+# User Preferences
 
 Arbitrary per-user application preference storage.
 

@@ -65,8 +65,6 @@ Set `AI_ENCRYPTION_KEY` to an AES-256-GCM key to encrypt stored API keys at rest
 4. Review the AI's suggestions: bin name, items list (with quantities when applicable), tags, and notes.
 5. Apply any or all suggestions — each field can be accepted or dismissed independently.
 
-Photo analysis is useful for quickly populating a bin's metadata from a single photo without typing everything manually.
-
 ## Natural Language Commands
 
 The AI command bar (accessible from the bin list) accepts natural language instructions:

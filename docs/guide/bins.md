@@ -9,7 +9,7 @@ next:
 
 # Bins
 
-Bins are the core objects in OpenBin. Each bin represents a physical storage container — a box, drawer, shelf, or bin — and holds a structured list of items along with tags, notes, and visual appearance settings.
+Bins are the core objects in OpenBin. Each bin represents a physical storage container (a box, drawer, shelf, or bin) and holds a structured list of items along with tags, notes, and visual appearance settings.
 
 ## What is a Bin?
 

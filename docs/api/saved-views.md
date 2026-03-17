@@ -1,8 +1,8 @@
 ---
-title: SavedViews
+title: Saved Views
 ---
 
-# SavedViews
+# Saved Views
 
 ::: tip User Guide
 Saved views are managed from the [Dashboard](/guide/dashboard).

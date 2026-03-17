@@ -39,7 +39,7 @@ You can:
 - **Retry** — re-run AI analysis on a single photo if the first suggestion was off.
 
 ::: tip
-Bulk Add works without AI configured, but you will need to fill in all bin details manually for each photo. Configuring an AI provider (see [AI Features](/guide/ai)) makes this step significantly faster.
+Bulk Add works without AI configured, but you will need to fill in all bin details manually for each photo. With an AI provider configured (see [AI Features](/guide/ai)), suggestions are generated automatically.
 :::
 
 ## Step 3 — Create

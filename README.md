@@ -2,13 +2,13 @@
   <img src="public/logo.svg" alt="" width="28" />&nbsp;<span style="font-size:32px;line-height:32px;">OpenBin</span>
 </h1>
 
-Self-hosted inventory system for organizing physical storage bins with optional AI-powered cataloging. Snap photos and AI names the bins, lists every item, and tags them for search. Tell it to "add batteries to the tools bin" or "move everything to the garage" and review changes before applying. Reorganize entire locations with AI suggestions. Print QR labels and scan to find contents instantly.
+Self-hosted inventory system for organizing physical storage bins with optional AI-powered cataloging. Snap photos and AI names the bins, lists every item, and tags them for search. Tell it to "add batteries to the tools bin" or "move everything to the garage" and review changes before applying. Reorganize entire locations with AI suggestions. Print QR labels and scan to find contents.
 
 <a href="https://demo.openbin.app"><strong>Demo</strong></a> · <a href="https://akifbayram.github.io/openbin/"><strong>Docs</strong></a> · <a href="https://discord.gg/W6JPZCqqx9"><strong>Discord</strong></a>
 
 ## Highlights
 
-- **AI-powered cataloging** — Snap a photo and AI names the bin, lists every item with quantities, and tags it. Bring your own AI.
+- **AI-powered cataloging** — Point your phone at a bin and AI fills in the name, items with quantities, and tags. Bring your own API key.
 - **Natural language commands** — "Add batteries to the tools bin" or "move everything to the garage"
 - **AI reorganization** — Let AI suggest how to restructure an entire location's bins, areas, and tags, then apply changes in bulk
 - **Print & scan QR labels** — Generate customizable label sheets, stick them on bins, scan with your phone to see contents
@@ -98,12 +98,34 @@ docker compose up -d
 
 The database schema is auto-migrated on startup. Your data volume is preserved across updates.
 
-## Tech Stack
+## Architecture
+
+Single Node.js process. All data lives in one SQLite file and a photos directory. No external services, no background workers, no telemetry, no phoning home. The app never makes outbound network requests unless you explicitly configure AI features (bring-your-own API key). Works fully offline on a LAN.
+
+```
+┌──────────────────────────────────────┐
+│          Node.js (Express)           │
+│                                      │
+│   GET /api/*   ←→  SQLite (WAL)     │
+│   GET /*       →   Static frontend  │
+└──────────┬───────────────────────────┘
+           │
+     /data (Docker volume)
+     ├── openbin.db        ← single database file
+     ├── .jwt_secret       ← auto-generated if JWT_SECRET unset
+     ├── photos/           ← uploaded images
+     └── backups/          ← scheduled DB snapshots (opt-in)
+```
 
 | Layer | Technology |
 |-------|------------|
 | Frontend | React 18, TypeScript, Vite 5, Tailwind CSS 4 |
 | Backend | Express 4, SQLite (better-sqlite3), JWT auth |
+| Container | Single-stage Alpine image, runs as non-root `node` user |
+
+**What writes to disk:** The SQLite database (`openbin.db` + WAL journal), uploaded photos, optional backups, and a `.jwt_secret` file if you don't provide `JWT_SECRET`. Nothing else.
+
+**Network access:** Zero outbound connections by default. If you configure an AI provider, the server calls that provider's API on demand. No other external calls, ever.
 
 ## API Documentation
 
@@ -125,7 +147,7 @@ npm run dev                 # Frontend dev server at http://localhost:5173
 
 ## AI Disclosure
 
-The majority of this codebase, including features, tests, and documentation, was written by AI ([Claude Code](https://docs.anthropic.com/en/docs/claude-code)). A human directs architecture, priorities, and design decisions but has not reviewed most code line-by-line. Type checking, linting, and an automated test suite serve as the primary quality gates.
+Most of this codebase—features, tests, documentation—was written by AI ([Claude Code](https://docs.anthropic.com/en/docs/claude-code)). A human directs architecture, priorities, and design decisions but has not reviewed most code line-by-line. Type checking, linting, and an automated test suite are the primary quality gates.
 
 The full source is available for you to audit. If you find a bug or security issue, please [open an issue](https://github.com/akifbayram/openbin/issues).
 

@@ -9,7 +9,7 @@ next:
 
 # Dashboard
 
-The Dashboard is the home screen after login. It provides an at-a-glance overview of your location's inventory and quick access to frequently-used bins and views.
+The Dashboard is the home screen after login. It shows your location's stats, pinned bins, recent scans, and saved views.
 
 ## Stats Bar
 
