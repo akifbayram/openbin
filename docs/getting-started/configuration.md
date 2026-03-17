@@ -87,7 +87,7 @@ Copy the output into your `.env` file as `AI_ENCRYPTION_KEY=<value>`. Do not cha
 |----------|---------|-------------|
 | `BACKUP_ENABLED` | `false` | Set to `true` to enable automatic database backups. |
 | `BACKUP_INTERVAL` | `daily` | Backup schedule. See [Backup Schedule Formats](#backup-schedule-formats) below. |
-| `BACKUP_RETENTION` | `7` | Number of days to keep backup files before they are automatically deleted. Accepted range: 1–365. |
+| `BACKUP_RETENTION` | `7` | Number of backup files to keep. When a new backup is created, the oldest archives beyond this count are deleted. Accepted range: 1–365. |
 | `BACKUP_WEBHOOK_URL` | _(unset)_ | Optional URL that receives a POST request on backup failure. Payload: `{ event, error, timestamp }`. |
 
 Backup files are written to `/data/backups/` inside the container (`BACKUP_PATH` in docker-compose.yml maps to the `api_data` volume).
@@ -129,8 +129,8 @@ The `BACKUP_INTERVAL` variable accepts the following values:
 | Value | Behavior |
 |-------|----------|
 | `hourly` | Runs a backup every hour |
-| `daily` | Runs a backup once per day at midnight |
-| `weekly` | Runs a backup once per week |
+| `daily` | Runs a backup once per day at 2:00 AM |
+| `weekly` | Runs a backup once per week on Sunday at 2:00 AM |
 | Custom cron expression | Any valid 5-field cron expression |
 
 **Custom cron examples:**
