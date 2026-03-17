@@ -67,8 +67,8 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
 
     const codeLabel = layout.codeUnderQr ? (
       <div
-        className={cn('label-code font-mono font-bold text-center', !layout.useColoredCard && 'text-gray-700')}
-        style={{ fontSize: qrCodeFontSize, width: format.qrSize }}
+        className={cn('label-code font-mono font-bold', !layout.useColoredCard && 'text-gray-700')}
+        style={{ fontSize: qrCodeFontSize }}
       >
         {bin.id}
       </div>
