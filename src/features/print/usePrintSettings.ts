@@ -52,7 +52,7 @@ export interface LabelOptions {
   showColorSwatch: boolean;
 }
 
-export type PrintMode = 'labels' | 'items';
+export type PrintMode = 'labels' | 'names' | 'items';
 
 export interface ItemListOptions {
   showCheckboxes: boolean;
@@ -64,6 +64,18 @@ export const DEFAULT_ITEM_LIST_OPTIONS: ItemListOptions = {
   showCheckboxes: true,
   showQuantity: true,
   showBinCode: true,
+};
+
+export interface NameCardOptions {
+  showIcon: boolean;
+  showColor: boolean;
+  sizingMode: 'auto' | 'uniform';
+}
+
+export const DEFAULT_NAME_CARD_OPTIONS: NameCardOptions = {
+  showIcon: true,
+  showColor: true,
+  sizingMode: 'auto',
 };
 
 export interface CustomState {
@@ -83,6 +95,7 @@ export interface PrintSettings {
   qrStyle?: QrStyleOptions;
   printMode?: PrintMode;
   itemListOptions?: ItemListOptions;
+  nameCardOptions?: NameCardOptions;
 }
 
 export const DEFAULT_LABEL_OPTIONS: LabelOptions = {
@@ -105,6 +118,7 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   presets: [],
   printMode: 'labels',
   itemListOptions: DEFAULT_ITEM_LIST_OPTIONS,
+  nameCardOptions: DEFAULT_NAME_CARD_OPTIONS,
 };
 
 export async function savePrintSettings(settings: PrintSettings): Promise<void> {
@@ -209,6 +223,10 @@ export function usePrintSettings() {
     update({ itemListOptions });
   }
 
+  function updateNameCardOptions(nameCardOptions: NameCardOptions) {
+    update({ nameCardOptions });
+  }
+
   return {
     settings,
     isLoading,
@@ -222,5 +240,6 @@ export function usePrintSettings() {
     removePreset,
     updatePrintMode,
     updateItemListOptions,
+    updateNameCardOptions,
   };
 }
