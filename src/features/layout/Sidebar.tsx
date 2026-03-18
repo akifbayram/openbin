@@ -142,12 +142,6 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
         {/* Manage section — scrollable when viewport is short */}
         <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="space-y-1 pt-4">
-          <p className={cn(
-            'px-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] overflow-hidden',
-            collapsed ? 'h-0 opacity-0' : 'pb-1'
-          )} aria-hidden={collapsed || undefined}>
-            Manage
-          </p>
           {manageItems.filter((item) => !item.requireWrite || canWrite).map((item) =>
             item.path === '/scan' ? (
               <NavButton
@@ -168,14 +162,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
         </div>
       </div>
 
-      {/* Administration section */}
       <div className="py-4 border-t border-[var(--border-subtle)] px-3">
-        <p className={cn(
-          'px-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] overflow-hidden',
-          collapsed ? 'h-0 opacity-0' : 'pb-1'
-        )} aria-hidden={collapsed || undefined}>
-          Administration
-        </p>
         <div className="space-y-1">
           {user && (
             <button

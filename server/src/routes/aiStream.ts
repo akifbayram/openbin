@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { validateEndpointUrl } from '../lib/aiCaller.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
-import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildCorrectionPrompt } from '../lib/aiProviders.js';
+import { IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE, buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildCorrectionPrompt } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { QueryResultSchema } from '../lib/aiSchemas.js';
 import type { UserAiSettings } from '../lib/aiSettings.js';
@@ -16,7 +16,7 @@ import { fetchCustomFieldDefs } from '../lib/customFieldHelpers.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
 import { createSdkModel } from '../lib/sdkProviderFactory.js';
-import { buildPrompt as buildStructurePrompt } from '../lib/structureText.js';
+import { STRUCTURE_TEXT_TOKENS, buildPrompt as buildStructurePrompt } from '../lib/structureText.js';
 import { memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
@@ -57,7 +57,7 @@ async function resolveUserModel(userId: string) {
 /** Build common StreamOptions from user AI settings. */
 function streamOpts(settings: UserAiSettings, overrides?: { maxTokens?: number; temperature?: number }) {
   return {
-    maxTokens: overrides?.maxTokens ?? settings.max_tokens ?? 2000,
+    maxTokens: overrides?.maxTokens ?? settings.max_tokens ?? 4096,
     temperature: overrides?.temperature ?? settings.temperature ?? 0.3,
     topP: settings.top_p ?? undefined,
     abortSignal: settings.request_timeout
@@ -79,7 +79,7 @@ streamRouter.post('/query/stream', aiLimiter, requireLocationMember(), aiRouteHa
     schema: QueryResultSchema,
     system: buildQuerySysPrompt(settings.query_prompt ?? undefined),
     userContent: buildQueryUserMsg(question, context),
-    ...streamOpts(settings, { maxTokens: Math.max(settings.max_tokens ?? 4096, 4096) }),
+    ...streamOpts(settings, { maxTokens: 4096 }),
   });
 }));
 
@@ -99,7 +99,7 @@ streamRouter.post('/command/stream', aiLimiter, requireLocationMember(), aiRoute
   await pipeAiStreamToResponse(res, model, {
     system: buildCommandSysPrompt(request, settings.command_prompt ?? undefined),
     userContent: buildCommandUserMsg(request),
-    ...streamOpts(settings, { temperature: 0.2 }),
+    ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
   });
 }));
 
@@ -116,7 +116,7 @@ streamRouter.post('/ask/stream', aiLimiter, requireLocationMember(), aiRouteHand
   await pipeAiStreamToResponse(res, model, {
     system: buildUnifiedSystemPrompt(request, settings.command_prompt ?? undefined, settings.query_prompt ?? undefined),
     userContent: buildCommandUserMsg(request),
-    ...streamOpts(settings, { temperature: 0.2 }),
+    ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
   });
 }));
 
@@ -129,7 +129,7 @@ streamRouter.post('/structure-text/stream', aiLimiter, aiRouteHandler('stream st
   await pipeAiStreamToResponse(res, model, {
     system: buildStructurePrompt({ text, mode: 'items', context }, settings.structure_prompt ?? undefined),
     userContent: text,
-    ...streamOpts(settings, { maxTokens: 800, temperature: 0.2 }),
+    ...streamOpts(settings, { maxTokens: STRUCTURE_TEXT_TOKENS, temperature: 0.2 }),
   });
 }));
 
@@ -170,7 +170,7 @@ streamRouter.post('/analyze-image/stream', aiLimiter, memoryPhotoUpload.fields([
   await pipeAiStreamToResponse(res, model, {
     system: buildAnalysisPrompt(existingTags, settings.custom_prompt, customFieldDefs),
     userContent: [...imageParts, { type: 'text' as const, text: buildAnalysisUserText(allFiles.length) }],
-    ...streamOpts(settings, { maxTokens: allFiles.length > 1 ? 2000 : 1500 }),
+    ...streamOpts(settings, { maxTokens: allFiles.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE }),
   });
 }));
 
@@ -210,7 +210,7 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
   await pipeAiStreamToResponse(res, model, {
     system: buildAnalysisPrompt(loaded.existingTags, settings.custom_prompt, loaded.customFieldDefs),
     userContent: [...imageParts, { type: 'text' as const, text: buildAnalysisUserText(loaded.images.length) }],
-    ...streamOpts(settings, { maxTokens: loaded.images.length > 1 ? 2000 : 1500 }),
+    ...streamOpts(settings, { maxTokens: loaded.images.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE }),
   });
 }));
 
@@ -271,7 +271,7 @@ streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correctio
   await pipeAiStreamToResponse(res, model, {
     system,
     userContent: userMessage,
-    ...streamOpts(settings, { maxTokens: 1500 }),
+    ...streamOpts(settings, { maxTokens: 2500 }),
   });
 }));
 

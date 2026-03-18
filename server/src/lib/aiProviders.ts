@@ -111,6 +111,11 @@ function validateSuggestions(raw: unknown): AiSuggestionsResult {
   return { name, items, tags, notes, customFields };
 }
 
+/** Default maxOutputTokens for image analysis (single image). */
+export const IMAGE_TOKENS_SINGLE = 2500;
+/** Default maxOutputTokens for image analysis (multiple images). */
+export const IMAGE_TOKENS_MULTI = 3000;
+
 export interface AiOverrides {
   temperature?: number | null;
   max_tokens?: number | null;
@@ -156,7 +161,7 @@ export async function analyzeImages(
         role: 'user' as const,
         content: [...imageParts, { type: 'text' as const, text: userText }],
       }],
-      maxOutputTokens: overrides?.max_tokens ?? (images.length > 1 ? 2000 : 1500),
+      maxOutputTokens: overrides?.max_tokens ?? (images.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE),
       temperature: overrides?.temperature ?? 0.3,
       topP: overrides?.top_p ?? undefined,
       abortSignal: overrides?.request_timeout

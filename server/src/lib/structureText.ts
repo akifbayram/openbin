@@ -43,6 +43,9 @@ function validateItems(raw: unknown): StructureTextResult {
   return { items };
 }
 
+/** Default maxOutputTokens for structure-text parsing. */
+export const STRUCTURE_TEXT_TOKENS = 1200;
+
 export interface StructureTextOverrides {
   temperature?: number | null;
   max_tokens?: number | null;
@@ -69,7 +72,7 @@ export async function structureText(
       schema: StructureTextSchema,
       system: buildPrompt(request, customPrompt),
       messages: [{ role: 'user' as const, content: request.text }],
-      maxOutputTokens: overrides?.max_tokens ?? 800,
+      maxOutputTokens: overrides?.max_tokens ?? STRUCTURE_TEXT_TOKENS,
       temperature: overrides?.temperature ?? 0.2,
       topP: overrides?.top_p ?? undefined,
       abortSignal: overrides?.request_timeout
