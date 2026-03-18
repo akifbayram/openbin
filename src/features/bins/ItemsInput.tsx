@@ -349,7 +349,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
         </div>
       )}
 
-      <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:shadow-[0_0_0_4px_var(--accent-glow)]">
+      <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)] ">
         {state === 'input' && (
           <div className="row-tight">
             <Input

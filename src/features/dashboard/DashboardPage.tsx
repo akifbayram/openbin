@@ -133,7 +133,7 @@ export function DashboardPage() {
                   onClick={() => openScanDialog()}
                   size="icon"
                   variant="ghost"
-                  className="h-10 w-10 rounded-full"
+                  className="h-10 w-10 rounded-[var(--radius-sm)]"
                   aria-label="Scan QR code"
                 >
                   <ScanLine className="h-5 w-5" />
@@ -145,7 +145,7 @@ export function DashboardPage() {
                     onClick={() => setCommandOpen(true)}
                     size="icon"
                     variant="ghost"
-                    className="h-10 w-10 rounded-full"
+                    className="h-10 w-10 rounded-[var(--radius-sm)]"
                     aria-label="Ask AI"
                   >
                     <Sparkles className="h-5 w-5" />
@@ -158,7 +158,7 @@ export function DashboardPage() {
                 <Button
                   onClick={() => setCreateOpen(true)}
                   size="icon"
-                  className="h-10 w-10 rounded-full"
+                  className="h-10 w-10 rounded-[var(--radius-sm)]"
                   aria-label={`New ${t.bin}`}
                 >
                   <Plus className="h-5 w-5" />

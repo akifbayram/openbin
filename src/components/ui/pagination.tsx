@@ -151,7 +151,7 @@ export function Pagination({
                   className={cn(
                     'flex items-center justify-center h-11 min-w-11 px-2 rounded-[var(--radius-md)] text-sm font-medium transition-colors',
                     p === currentPage
-                      ? 'bg-[var(--bg-elevated)] dark:bg-[var(--bg-active)] shadow-sm text-[var(--text-primary)] font-semibold'
+                      ? 'bg-[var(--bg-elevated)] dark:bg-[var(--bg-active)] border border-[var(--border-glass)] text-[var(--text-primary)] font-semibold'
                       : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
                   )}
                 >

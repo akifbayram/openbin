@@ -8,7 +8,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttribu
         autoComplete="off"
         className={cn(
           'flex min-h-0', inputBase,
-          'focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-0 focus-visible:shadow-[0_0_0_4px_var(--accent-glow)] resize-none',
+          'focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-0 resize-none',
           className
         )}
         ref={ref}

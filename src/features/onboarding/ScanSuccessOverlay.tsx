@@ -17,7 +17,7 @@ export function ScanSuccessOverlay({ onDismiss, title = 'First scan complete!', 
     // biome-ignore lint/a11y/noStaticElementInteractions: overlay dismisses on click
     <div
       role="presentation"
-      className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-[var(--overlay-backdrop)] backdrop-blur-md scan-success-enter"
+      className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-[var(--overlay-backdrop)] scan-success-enter"
       onClick={onDismiss}
     >
       {/* Expanding rings */}

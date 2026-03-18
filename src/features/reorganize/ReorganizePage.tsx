@@ -334,7 +334,7 @@ export function ReorganizePage() {
           <Button
             onClick={handleReorganize}
             disabled={selection.selectedIds.size < 2 || isStreaming}
-            className="h-12 text-[17px] shadow-[0_2px_12px_var(--accent-glow)] rounded-[var(--radius-md)]"
+            className="h-12 text-[17px] rounded-[var(--radius-md)]"
             fullWidth
           >
             <Sparkles className="h-5 w-5 mr-2.5" />

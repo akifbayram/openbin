@@ -8,7 +8,7 @@ const badgeVariants = {
   outline: 'border border-[var(--border-glass)] text-[var(--text-secondary)]',
 };
 
-const BASE = 'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-0.5 text-[12px] font-medium transition-colors';
+const BASE = 'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-0.5 text-[12px] font-medium transition-colors';
 
 export interface BadgeProps {
   variant?: keyof typeof badgeVariants;

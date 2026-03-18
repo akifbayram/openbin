@@ -330,7 +330,7 @@ function RoleSelector({ currentRole, onChangeRole }: { currentRole: string; onCh
           className={cn(
             'px-2 py-1 text-[12px] font-medium rounded-[var(--radius-xs)] capitalize transition-colors',
             currentRole === r
-              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm'
+              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-glass)]'
               : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
           )}
         >
