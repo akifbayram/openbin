@@ -51,9 +51,10 @@ function PageSizeSelect({ value, options, onChange }: { value: number; options: 
       <button
         type="button"
         onClick={toggle}
-        className="flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+        className="flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
         aria-haspopup="listbox"
         aria-expanded={visible}
+        aria-label="Items per page"
       >
         {value} per page
         <ChevronsUpDown className="h-3 w-3 text-[var(--text-tertiary)]" />
@@ -122,7 +123,7 @@ export function Pagination({
               disabled={currentPage <= 1}
               aria-label="Previous page"
               className={cn(
-                'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
+                'flex items-center justify-center h-11 w-11 rounded-[var(--radius-md)] text-sm transition-colors',
                 currentPage <= 1
                   ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
@@ -137,7 +138,7 @@ export function Pagination({
             {pages.map((p, i) =>
               p === 'ellipsis' ? (
                 // biome-ignore lint/suspicious/noArrayIndexKey: ellipsis separators have no stable identity
-                <span key={`e${i}`} className="flex items-center justify-center h-9 w-9 text-sm text-[var(--text-muted)]">
+                <span key={`e${i}`} aria-hidden="true" className="flex items-center justify-center h-11 w-11 text-sm text-[var(--text-muted)]">
                   &hellip;
                 </span>
               ) : (
@@ -148,7 +149,7 @@ export function Pagination({
                   aria-label={`Page ${p}`}
                   aria-current={p === currentPage ? 'page' : undefined}
                   className={cn(
-                    'flex items-center justify-center h-9 min-w-9 px-2 rounded-[var(--radius-md)] text-sm font-medium transition-colors',
+                    'flex items-center justify-center h-11 min-w-11 px-2 rounded-[var(--radius-md)] text-sm font-medium transition-colors',
                     p === currentPage
                       ? 'bg-[var(--bg-elevated)] dark:bg-[var(--bg-active)] shadow-sm text-[var(--text-primary)] font-semibold'
                       : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
@@ -162,7 +163,8 @@ export function Pagination({
 
           {/* Mobile: page X of Y */}
           <span className="flex sm:hidden items-center px-3 text-sm text-[var(--text-secondary)]">
-            {currentPage} / {totalPages}
+            <span className="sr-only">Page {currentPage} of {totalPages}</span>
+            <span aria-hidden="true">{currentPage} / {totalPages}</span>
           </span>
 
           {/* Next */}
@@ -173,7 +175,7 @@ export function Pagination({
               disabled={currentPage >= totalPages}
               aria-label="Next page"
               className={cn(
-                'flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] text-sm transition-colors',
+                'flex items-center justify-center h-11 w-11 rounded-[var(--radius-md)] text-sm transition-colors',
                 currentPage >= totalPages
                   ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',

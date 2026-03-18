@@ -4,10 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Highlight } from '@/components/ui/highlight';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { resolveIcon } from '@/lib/iconMap';
+import { observeResize } from '@/lib/sharedResizeObserver';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
-import { computeBinCardStyles } from './binCardStyles';
+import { computeBinCardStyles, TAG_PHOTO_STYLE } from './binCardStyles';
 import { areCommonBinCardPropsEqual } from './binMemoUtils';
 import { useBinCardInteraction } from './useBinCardInteraction';
 import type { FieldKey } from './useColumnVisibility';
@@ -82,15 +83,13 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
     const el = tagsRef.current;
     if (!el) return;
     let prevWidth = el.clientWidth;
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0].contentRect.width;
+    return observeResize(el, (entry) => {
+      const w = entry.contentRect.width;
       if (Math.abs(w - prevWidth) > 1) {
         prevWidth = w;
         setVisibleTagCount(tagsLenRef.current);
       }
     });
-    ro.observe(el);
-    return () => ro.disconnect();
   }, []);
 
   const hiddenTagCount = bin.tags.length - visibleTagCount;
@@ -111,7 +110,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
       )}
       style={!selected ? secondaryBorderStyle : undefined}
     >
-      {selected && <Check className="h-3 w-3 text-white animate-check-pop" strokeWidth={3} />}
+      {selected && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
     </div>
   );
 
@@ -171,7 +170,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
                 variant="secondary"
                 className="shrink-0 max-w-[8rem] truncate cursor-pointer text-[11px] hover:bg-[var(--bg-active)] transition-colors"
                 style={isPhoto
-                  ? { backgroundColor: 'rgba(0,0,0,0.4)', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }
+                  ? TAG_PHOTO_STYLE
                   : getTagStyle(tag) ?? tagDefaultStyle
                 }
                 onClick={(e) => {
@@ -187,7 +186,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
                 variant="secondary"
                 className="shrink-0 text-[11px] opacity-70"
                 style={isPhoto
-                  ? { backgroundColor: 'rgba(0,0,0,0.4)', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }
+                  ? TAG_PHOTO_STYLE
                   : tagDefaultStyle
                 }
               >
@@ -240,6 +239,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
     <div
       tabIndex={0}
       role="button"
+      aria-label={bin.name}
       aria-pressed={selectable ? selected : undefined}
       className={cn(
         'group h-full rounded-[var(--radius-lg)] px-4 py-3.5 cursor-pointer transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none bin-card-shadow',

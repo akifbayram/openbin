@@ -33,11 +33,11 @@ export function QRCodeDisplay({ binId, size = 200, shortCode, hideActions }: QRC
 
   return (
     <div className="flex flex-col items-center gap-5">
-      <div className="rounded-[var(--radius-lg)] bg-white p-3.5 shadow-sm flex flex-col items-center">
+      <div className="rounded-[var(--radius-lg)] bg-[var(--bg-print-surface)] p-3.5 shadow-sm flex flex-col items-center">
         <img src={dataUrl} alt="QR Code" width={size} height={size} />
         {shortCode && (
           <p
-            className="font-mono font-bold tracking-wider text-gray-400 text-center"
+            className="font-mono font-bold tracking-wider text-[var(--text-tertiary)] text-center"
             style={{ fontSize: `${size / (shortCode.length * 0.6 + (shortCode.length - 1) * 0.2)}px` }}
           >
             {shortCode}

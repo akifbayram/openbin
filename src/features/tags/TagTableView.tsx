@@ -56,6 +56,7 @@ export function TagTableView({
             key={entry.tag}
             tabIndex={0}
             role="button"
+            aria-label={`Filter by tag: ${entry.tag}`}
             onClick={() => navigate(`/bins?tags=${encodeURIComponent(entry.tag)}`)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') navigate(`/bins?tags=${encodeURIComponent(entry.tag)}`);

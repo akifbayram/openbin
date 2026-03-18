@@ -16,8 +16,8 @@ export function MenuButton({ className }: { className?: string }) {
         className,
       )}
     >
-      <span className="block w-[18px] h-[2px] rounded-full bg-[var(--text-primary)]" />
-      <span className="block w-[18px] h-[2px] rounded-full bg-[var(--text-primary)]" />
+      <span aria-hidden="true" className="block w-[18px] h-[2px] rounded-full bg-[var(--text-primary)]" />
+      <span aria-hidden="true" className="block w-[18px] h-[2px] rounded-full bg-[var(--text-primary)]" />
     </button>
   );
 }

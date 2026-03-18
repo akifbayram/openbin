@@ -41,25 +41,27 @@ export const BinCompactCard = React.memo(function BinCompactCard({
   const checkbox = (
     <div
       className={cn(
-        'mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
+        'h-5 w-5 shrink-0 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
         selected
           ? 'bg-[var(--accent)] border-[var(--accent)]'
           : 'border-[var(--text-tertiary)]',
       )}
       style={!selected ? secondaryBorderStyle : undefined}
     >
-      {selected && <Check className="h-3 w-3 text-white animate-check-pop" strokeWidth={3} />}
+      {selected && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
     </div>
   );
 
   const cardContent = (
-    <div className="flex items-start gap-2">
+    <div className="flex items-center gap-2">
       <div className="min-w-0 flex-1">
         <h3
-          className="font-semibold text-[13px] text-[var(--text-primary)] truncate leading-snug flex items-center gap-1"
+          className="font-semibold text-[13px] text-[var(--text-primary)] leading-snug flex items-center gap-1"
           style={nameStyle}
         >
-          <Highlight text={bin.name} query={searchQuery} />
+          <span className="truncate min-w-0">
+            <Highlight text={bin.name} query={searchQuery} />
+          </span>
           {bin.visibility === 'private' && (
             <Lock className="h-3 w-3 shrink-0 text-[var(--text-tertiary)]" style={secondaryStyle} />
           )}
@@ -78,7 +80,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
         <button
           type="button"
           tabIndex={0}
-          className="relative mt-0.5 h-5 w-5 shrink-0 appearance-none bg-transparent border-none p-0"
+          className="relative h-5 w-5 shrink-0 appearance-none bg-transparent border-none p-0"
           onClick={(e) => { e.stopPropagation(); onSelect(bin.id, index, e.shiftKey); }}
           aria-label="Select"
         >
@@ -95,7 +97,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
           </div>
         </button>
       ) : isVisible?.('icon') !== false ? (
-        <BinIcon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-tertiary)]" style={iconStyle} />
+        <BinIcon className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" style={iconStyle} />
       ) : null}
     </div>
   );
@@ -105,6 +107,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
     <div
       tabIndex={0}
       role="button"
+      aria-label={bin.name}
       aria-pressed={selectable ? selected : undefined}
       className={cn(
         'group rounded-[var(--radius-md)] px-3 py-2.5 cursor-pointer transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] select-none bin-card-shadow',

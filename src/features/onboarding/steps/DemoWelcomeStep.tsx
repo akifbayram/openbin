@@ -11,14 +11,14 @@ export function DemoWelcomeStep({ activeLocationId, onAdvance }: { activeLocatio
         Welcome to OpenBin
       </h2>
       <p className="text-[14px] text-[var(--text-tertiary)] mb-6 leading-relaxed">
-        We've set up a family home with 40+ organized bins — tools, kids' stuff, camping gear, and more. Let's take a quick tour.
+        This demo has a pre-built home with 40+ bins already organized. We'll walk through the key features in under a minute.
       </p>
       <Button
         type="button"
         onClick={() => onAdvance(activeLocationId)}
         className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
       >
-        Get Started
+        Start Tour
       </Button>
     </div>
   );

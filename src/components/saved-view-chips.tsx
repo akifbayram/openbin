@@ -11,27 +11,28 @@ export function SavedViewChips({ views, onApply, onDelete }: SavedViewChipsProps
   if (views.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2">
-      <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
+    <div className="flex flex-col gap-1.5">
+      <h2 className="text-[13px] font-medium text-[var(--text-secondary)] uppercase tracking-wide">
         Saved Searches
       </h2>
-      <div className="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-5 px-5 pt-1 pb-3">
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5 pt-0.5">
         {views.map((view) => (
           // biome-ignore lint/a11y/useSemanticElements: container with nested interactive delete button cannot be a plain button
           <div
             key={view.id}
             role="button"
             tabIndex={0}
+            aria-label={`Apply saved view: ${view.name}`}
             onClick={() => onApply(view)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onApply(view); } }}
-            className="group/chip shrink-0 rounded-[var(--radius-lg)] px-3.5 py-2.5 flex items-center gap-2.5 max-w-[200px] transition-colors duration-150 cursor-pointer bg-[var(--accent)]/18 [@media(hover:hover)]:hover:bg-[var(--accent)]/28"
+            className="group/chip shrink-0 rounded-[var(--radius-md)] px-3 py-2 flex items-center gap-2 max-w-[200px] transition-colors duration-150 cursor-pointer bg-[var(--accent)]/18 [@media(hover:hover)]:hover:bg-[var(--accent)]/28"
           >
-            <Bookmark className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" strokeWidth={2.5} />
-            <span className="text-[14px] font-medium text-[var(--text-primary)] truncate">{view.name}</span>
+            <Bookmark className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)]" />
+            <span className="text-[13px] font-medium text-[var(--text-primary)] truncate">{view.name}</span>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onDelete(view.id); }}
-              className="ml-auto p-0.5 rounded-full hover:bg-[var(--bg-active)] [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/chip:opacity-100 transition-opacity"
+              className="ml-auto -mr-0.5 p-1.5 rounded-full hover:bg-[var(--bg-active)] [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/chip:opacity-100 transition-opacity"
               aria-label={`Remove saved view ${view.name}`}
             >
               <X className="h-3 w-3 text-[var(--text-tertiary)]" />

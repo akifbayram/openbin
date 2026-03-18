@@ -32,7 +32,7 @@ const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
         )}
         onClick={() => onCheckedChange?.(!checked)}
       >
-        {checked && <Check className="h-3.5 w-3.5 text-white animate-check-pop" strokeWidth={3} />}
+        {checked && <Check className="h-3.5 w-3.5 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
       </button>
     );
   }

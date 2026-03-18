@@ -90,6 +90,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
     <div
       role="button"
       tabIndex={0}
+      aria-label={name}
       onClick={() => onNavigate(id)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(id); } }}
       className={cn(

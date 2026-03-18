@@ -65,7 +65,7 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
                 </span>
               )}
             </div>
-            <div className="bg-white rounded-[var(--radius-md)] p-4 max-h-[50vh] lg:max-h-[70vh] overflow-y-auto shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+            <div className="bg-[var(--bg-print-surface)] rounded-[var(--radius-md)] p-4 max-h-[50vh] lg:max-h-[70vh] overflow-y-auto shadow-[inset_0_0_0_1px_var(--border-preview)]">
               {printMode === 'items' ? (
                 <ItemSheet {...itemSheetProps} />
               ) : printMode === 'names' ? (

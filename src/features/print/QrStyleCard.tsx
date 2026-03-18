@@ -95,7 +95,7 @@ function MiniPreview({ style }: { style: QrStyleOptions }) {
   return (
     <div className="flex items-center justify-center py-1">
       <div
-        className="relative bg-white dark:bg-[#f8f8f8] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)]"
+        className="relative bg-[var(--bg-print-surface)] shadow-[inset_0_0_0_1px_var(--border-preview)]"
         style={{
           padding: QR_PREVIEW_PAD,
           borderRadius: QR_PREVIEW_RADIUS,

@@ -7,10 +7,10 @@ export function DemoBrowseStep({ onNext }: { onNext: () => void }) {
   return (
     <div className="flex flex-col items-center text-center">
       <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-        Everything in its place
+        Your bin, organized
       </h2>
       <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-        Items, tags, area, notes, and a QR code.
+        Each bin gets a card with its contents, tags, and a QR code you can print and stick on the container.
       </p>
       <BinPreviewCard
         name={DEMO_BIN.name}
@@ -29,7 +29,7 @@ export function DemoBrowseStep({ onNext }: { onNext: () => void }) {
         onClick={onNext}
         className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
       >
-        Next
+        Finish Tour
       </Button>
     </div>
   );

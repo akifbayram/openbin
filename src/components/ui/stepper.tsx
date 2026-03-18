@@ -36,7 +36,7 @@ function StepIndicator({ steps, currentStepIndex, className }: StepIndicatorProp
                     'flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-semibold',
                     'transition-all duration-300 ease-out',
                     status === 'active' &&
-                      'bg-[var(--accent)] text-[var(--text-on-accent)] shadow-[0_0_12px_var(--accent-glow),0_2px_8px_rgba(0,0,0,0.1)] scale-110',
+                      'bg-[var(--accent)] text-[var(--text-on-accent)] shadow-[0_0_12px_var(--accent-glow),0_2px_8px_var(--border-preview)] scale-110',
                     status === 'complete' &&
                       'bg-[var(--accent)] text-[var(--text-on-accent)] opacity-70',
                     status === 'upcoming' &&

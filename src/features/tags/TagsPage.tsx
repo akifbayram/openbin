@@ -10,7 +10,6 @@ import type { SortDirection } from '@/components/ui/sort-header';
 import { useAuth } from '@/lib/auth';
 import { resolveColor } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
-import { useTheme } from '@/lib/theme';
 import { useDebounce } from '@/lib/useDebounce';
 import { useTagColorsContext } from './TagColorsContext';
 import { type TagSortColumn, TagTableView } from './TagTableView';
@@ -26,7 +25,6 @@ export function TagsPage() {
   const t = useTerminology();
   const { tags, totalCount, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedTagList(debouncedSearch, sortColumn, sortDirection);
   const { tagColors } = useTagColorsContext();
-  const { theme } = useTheme();
 
   const handleSortChange = useCallback((column: TagSortColumn, direction: SortDirection) => {
     setSortColumn(column);
@@ -45,7 +43,7 @@ export function TagsPage() {
     if (!preset) return undefined;
     return {
       backgroundColor: preset.bgCss,
-      color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
+      color: 'var(--tag-text-on-color)',
     };
   }
 

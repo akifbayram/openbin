@@ -10,7 +10,7 @@ import type { Photo } from '@/types';
 import { compressImage } from './compressImage';
 import { DeletePhotoDialog } from './DeletePhotoDialog';
 import { PhotoLightbox } from './PhotoLightbox';
-import { addPhoto, deletePhoto, getPhotoUrl, usePhotos } from './usePhotos';
+import { addPhoto, deletePhoto, getPhotoThumbUrl, usePhotos } from './usePhotos';
 
 interface PhotoGalleryProps {
   binId: string;
@@ -64,7 +64,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
               className="block w-20 h-20 rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-input)] snap-start"
             >
               <img
-                src={getPhotoUrl(photo.id)}
+                src={getPhotoThumbUrl(photo.id)}
                 alt={photo.filename}
                 className="w-full h-full object-cover"
               />
@@ -74,7 +74,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
                 variant="ghost"
                 size="icon"
                 onClick={() => setPhotoToDelete(photo)}
-                className="absolute top-1 right-1 h-7 w-7 rounded-full bg-[var(--overlay-button)] text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-[var(--destructive)]"
+                className="absolute top-1 right-1 h-8 w-8 rounded-full bg-[var(--overlay-button)] text-white opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-[var(--destructive)]"
                 aria-label="Delete photo"
               >
                 <Trash2 className="h-3.5 w-3.5" />

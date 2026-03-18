@@ -1,4 +1,4 @@
-import { cloneElement, type ReactElement, useCallback, useEffect, useRef, useState } from 'react';
+import { cloneElement, type ReactElement, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
@@ -6,7 +6,7 @@ const GAP = 6;
 
 interface TooltipProps {
   content: string;
-  children: ReactElement<{ onMouseEnter?: React.MouseEventHandler; onMouseLeave?: React.MouseEventHandler; onFocus?: React.FocusEventHandler; onBlur?: React.FocusEventHandler }>;
+  children: ReactElement<{ 'aria-describedby'?: string; onMouseEnter?: React.MouseEventHandler; onMouseLeave?: React.MouseEventHandler; onFocus?: React.FocusEventHandler; onBlur?: React.FocusEventHandler }>;
   side?: 'top' | 'bottom' | 'left' | 'right';
   className?: string;
 }
@@ -25,6 +25,7 @@ function computePosition(triggerRect: DOMRect, tooltipRect: DOMRect, side: 'top'
 }
 
 export function Tooltip({ content, children, side = 'top', className }: TooltipProps) {
+  const tooltipId = useId();
   const [visible, setVisible] = useState(false);
   const [positioned, setPositioned] = useState(false);
   const showTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
@@ -69,6 +70,7 @@ export function Tooltip({ content, children, side = 'top', className }: TooltipP
   return (
     <span ref={triggerRef} className={cn('inline-flex', className)}>
       {cloneElement(children, {
+        'aria-describedby': visible ? tooltipId : undefined,
         onMouseEnter: show,
         onMouseLeave: hide,
         onFocus: show,
@@ -76,6 +78,7 @@ export function Tooltip({ content, children, side = 'top', className }: TooltipP
       })}
       {visible && createPortal(
         <span
+          id={tooltipId}
           ref={tooltipRef}
           role="tooltip"
           className={cn(

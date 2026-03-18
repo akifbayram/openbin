@@ -21,7 +21,7 @@ export function UserAvatar({ avatarUrl, displayName, size = 'sm', className }: U
     return (
       <img
         src={avatarUrl}
-        alt=""
+        alt={displayName ? `${displayName}'s avatar` : 'User avatar'}
         className={cn('rounded-full object-cover shrink-0', sizeClasses[size], className)}
       />
     );
@@ -29,13 +29,15 @@ export function UserAvatar({ avatarUrl, displayName, size = 'sm', className }: U
 
   return (
     <div
+      role="img"
+      aria-label={displayName ?? 'User avatar'}
       className={cn(
         'rounded-full bg-[var(--bg-active)] flex items-center justify-center font-semibold text-[var(--text-secondary)] shrink-0',
         sizeClasses[size],
         className,
       )}
     >
-      {initial}
+      <span aria-hidden="true">{initial}</span>
     </div>
   );
 }

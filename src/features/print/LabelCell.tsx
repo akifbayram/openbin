@@ -57,7 +57,7 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
         {showIcon && (
           <div
             className="qr-icon-overlay"
-            style={{ width: '30%', height: '30%', ...(layout.useColoredCard ? { backgroundColor: colorPreset?.bg ?? 'white' } : {}) }}
+            style={{ width: '30%', height: '30%', ...(layout.useColoredCard ? { backgroundColor: colorPreset?.bg ?? '#fff' } : {}) }}
           >
             <Icon style={{ width: '100%', height: '100%' }} />
           </div>
@@ -67,7 +67,7 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
 
     const codeLabel = layout.codeUnderQr ? (
       <div
-        className={cn('label-code font-mono font-bold', !layout.useColoredCard && 'text-gray-700')}
+        className={cn('label-code font-mono font-bold', !layout.useColoredCard && 'text-[var(--text-primary)]')}
         style={{ fontSize: qrCodeFontSize }}
       >
         {bin.id}
@@ -113,7 +113,7 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
           />
         )}
         {!layout.codeUnderQr && showBinCode && bin.id && (
-          <div className="label-code text-gray-700 font-mono font-bold" style={{ fontSize: codeFontSize }}>
+          <div className="label-code text-[var(--text-primary)] font-mono font-bold" style={{ fontSize: codeFontSize }}>
             {bin.id}
           </div>
         )}

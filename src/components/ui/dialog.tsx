@@ -100,12 +100,12 @@ function DialogContent({
             <button
               type="button"
               aria-label="Close"
-              className="absolute right-5 top-5 z-10 rounded-full p-1.5 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-center"
+              className="absolute right-2.5 top-2.5 z-10 rounded-full h-10 w-10 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-center"
               onClick={() => onOpenChange(false)}
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </button>
-            <AnimatedHeight className="overflow-y-auto min-h-0 px-8 pt-7 pb-[calc(24px+var(--safe-bottom))] sm:pb-6">
+            <AnimatedHeight className="overflow-y-auto min-h-0 px-5 sm:px-8 pt-7 pb-[calc(24px+var(--safe-bottom))] sm:pb-6">
               {children}
             </AnimatedHeight>
           </div>

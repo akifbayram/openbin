@@ -9,10 +9,10 @@ export function AiShowcaseStep({ onSetUpNow, onSkip }: { onSetUpNow: () => void;
         <Sparkles className="h-8 w-8 text-[var(--accent)]" />
       </div>
       <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-        Supercharge with AI
+        Add AI superpowers
       </h2>
       <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-        Bring your own API key from OpenAI, Anthropic, Google, or any compatible provider.
+        Connect your own API key from OpenAI, Anthropic, or Google to unlock these features.
       </p>
       <div className="w-full space-y-2 mb-6">
         {AI_FEATURES.map(({ icon: Icon, title, desc }) => (

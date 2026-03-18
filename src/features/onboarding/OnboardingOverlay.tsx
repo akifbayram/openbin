@@ -18,16 +18,16 @@ import { useOnboardingActions } from './useOnboardingActions';
 export type { OnboardingActions };
 
 const DEMO_COMPLETION_ACTIONS: CompletionAction[] = [
-  { icon: PackagePlus, label: 'Browse all bins', path: '/bins' },
-  { icon: Printer, label: 'Print labels', path: '/print' },
-  { icon: QrCode, label: 'Scan a QR code', path: '/scan' },
-  { icon: Settings, label: 'Explore settings', path: '/settings' },
+  { icon: PackagePlus, label: 'Browse all bins', description: 'Explore the 40+ pre-built demo bins', path: '/bins' },
+  { icon: Printer, label: 'Print labels', description: 'Generate QR labels for your bins', path: '/print' },
+  { icon: QrCode, label: 'Scan a QR code', description: 'Try scanning a label with your camera', path: '/scan' },
+  { icon: Settings, label: 'Explore settings', description: 'Customize terminology, AI, and more', path: '/settings' },
 ];
 
 const PROD_COMPLETION_ACTIONS: CompletionAction[] = [
-  { icon: PackagePlus, label: 'Create more bins', path: '/bins' },
-  { icon: QrCode, label: 'Scan a QR code', path: '/scan' },
-  { icon: Settings, label: 'Explore settings', path: '/settings' },
+  { icon: PackagePlus, label: 'Create more bins', description: 'Add bins for your boxes, drawers, and shelves', path: '/bins' },
+  { icon: QrCode, label: 'Scan a QR code', description: 'Try scanning a label with your camera', path: '/scan' },
+  { icon: Settings, label: 'Explore settings', description: 'Customize terminology, AI, and more', path: '/settings' },
 ];
 
 export function OnboardingOverlay(props: OnboardingActions) {
@@ -73,7 +73,7 @@ export function OnboardingOverlay(props: OnboardingActions) {
         </div>
 
         {/* Step content */}
-        <AnimatedHeight className="overflow-y-auto min-h-0 -mx-2 px-2" disableTransition={displayedStep === 1 && demoMode}>
+        <AnimatedHeight className="overflow-y-auto scrollbar-hide min-h-0 -mx-2 px-2" disableTransition={displayedStep === 1 && demoMode}>
           <div
             key={displayedStep}
             className={cn(
@@ -118,6 +118,8 @@ export function OnboardingOverlay(props: OnboardingActions) {
           {displayedStep === 3 && demoMode && (
             <CompletionStep
               icon={<div className="h-24 w-24 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10"><BrandIcon className="h-14 w-14 text-[var(--accent)]" /></div>}
+              title="Tour complete"
+              subtitle="That's the essentials. Dive in and explore."
               actions={DEMO_COMPLETION_ACTIONS}
               onAction={handleNavigate}
               onDashboard={() => handleNavigate('/')}

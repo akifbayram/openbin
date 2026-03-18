@@ -37,10 +37,10 @@ export function DemoAiShowcase({ onNext }: { onNext: () => void }) {
         <Sparkles className="h-8 w-8 text-[var(--accent)]" />
       </div>
       <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
-        AI-powered organization
+        Photo to inventory
       </h2>
       <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-        Snap a photo, and AI catalogs everything inside.
+        Take a photo of any bin and AI identifies every item inside.
       </p>
       {/* Demo photo */}
       <div className={cn(
@@ -54,11 +54,13 @@ export function DemoAiShowcase({ onNext }: { onNext: () => void }) {
         <div className="w-full rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden mb-5">
           {DEMO_BIN.items.slice(0, visibleCount).map((item, i) => (
             <div key={item} className="ai-item-reveal" style={{ animationDelay: `${i * 0.05}s` }}>
-              {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-              <div className="px-3.5 py-1">
-                <span className="text-[15px] text-[var(--text-primary)] leading-relaxed">
-                  {item}
-                </span>
+              <div>
+                {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+                <div className="px-3.5 py-1">
+                  <span className="text-[15px] text-[var(--text-primary)] leading-relaxed">
+                    {item}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
@@ -69,7 +71,7 @@ export function DemoAiShowcase({ onNext }: { onNext: () => void }) {
         onClick={onNext}
         className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
       >
-        Next
+        See the Result
       </Button>
     </div>
   );

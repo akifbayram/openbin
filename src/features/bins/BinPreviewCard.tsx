@@ -38,7 +38,7 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
     ? { color: 'rgba(255,255,255,0.9)', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }
     : mutedColor ? { color: mutedColor } : undefined;
   const nameStyle: CSSProperties | undefined = isPhoto && coverImageSrc
-    ? { color: 'white', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }
+    ? { color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }
     : primaryColor ? { color: primaryColor } : undefined;
 
   const content = (

@@ -88,7 +88,7 @@ export function InlineAiSetup({ expanded, onExpandedChange, setup, label = 'Set 
               type="button"
               onClick={setup.handleSave}
               disabled={!setup.apiKey || !setup.model || setup.saving}
-              className="flex-1 h-7 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[12px] text-white disabled:opacity-40 transition-colors"
+              className="flex-1 h-7 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[12px] text-[var(--text-on-accent)] disabled:opacity-40 transition-colors"
             >
               {setup.saving ? 'Saving...' : 'Save'}
             </button>
@@ -132,7 +132,7 @@ export function AiSetupView({ onNavigate, onDismiss }: { onNavigate: () => void;
         <button
           type="button"
           onClick={onNavigate}
-          className="h-9 px-5 rounded-full bg-[var(--ai-accent)] text-[13px] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+          className="h-9 px-5 rounded-full bg-[var(--ai-accent)] text-[13px] text-[var(--text-on-accent)] hover:bg-[var(--ai-accent-hover)] transition-colors"
         >
           Go to Settings
         </button>

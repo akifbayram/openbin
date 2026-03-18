@@ -11,7 +11,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
-import { BinCard } from '@/features/bins/BinCard';
+import { BinCompactCard } from '@/features/bins/BinCompactCard';
 import { buildViewSearchParams } from '@/features/bins/useBinSearchParams';
 import { useAllTags } from '@/features/bins/useBins';
 import { useBulkActions } from '@/features/bins/useBulkActions';
@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { DashboardDialogs } from './DashboardDialogs';
 import { DashboardSkeleton } from './DashboardSkeleton';
-import { ScannedBinCard, SectionHeader, StatCard } from './DashboardWidgets';
+import { SectionHeader, StatCard } from './DashboardWidgets';
 import { useDashboard } from './useDashboard';
 
 export function DashboardPage() {
@@ -238,42 +238,40 @@ export function DashboardPage() {
           />
         )}
 
-        {/* Pinned Bins — hero treatment: first card spans 2 cols */}
+        {/* Pinned Bins */}
         {dashSettings.showPinnedBins && pinnedBins.length > 0 && (
-          <div className="flex flex-col gap-3 mt-2">
+          <div className="flex flex-col gap-2">
             <SectionHeader title="Pinned" />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {pinnedBins.map((bin, i) => (
-                <div key={bin.id} className={cn(i === 0 && pinnedBins.length > 1 && 'sm:col-span-2')}>
-                  <BinCard bin={bin} index={binIndexMap.get(bin.id)} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
-                </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {pinnedBins.map((bin) => (
+                <BinCompactCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
               ))}
             </div>
           </div>
         )}
 
-        {/* Recently Scanned — compact horizontal strip (temporal, not primary) */}
+        {/* Recently Scanned */}
         {dashSettings.showRecentlyScanned && recentlyScanned.length > 0 && (
-          <div className="flex flex-col gap-2 -mt-1">
+          <div className="flex flex-col gap-2">
             <SectionHeader title="Recently Scanned" />
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {recentlyScanned.map((bin) => (
-                <ScannedBinCard key={bin.id} bin={bin} />
+                <BinCompactCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
               ))}
             </div>
           </div>
         )}
 
-        {/* Recently Updated — compressed: tighter grid, fewer columns */}
+        {/* Recently Updated */}
         {dashSettings.showRecentlyUpdated && recentlyUpdated.length > 0 && (
-          <div className={cn("flex flex-col gap-2 -mt-1", selectable && "pb-16")}>
+          <div className={cn("flex flex-col gap-2", selectable && "pb-16")}>
             <SectionHeader
               title="Recently Updated"
               action={{ label: `All ${t.Bins}`, onClick: () => navigate('/bins') }}
             />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {recentlyUpdated.map((bin) => (
-                <BinCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id)} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+                <BinCompactCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
               ))}
             </div>
           </div>

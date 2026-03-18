@@ -82,7 +82,7 @@ export function LoginPage() {
       <button
         type="button"
         onClick={() => setThemePreference(cycleThemePreference(preference))}
-        aria-label={`Theme: ${preference}`}
+        aria-label={`Switch theme, currently ${preference}`}
         className="absolute top-4 right-4 z-10 p-2.5 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
       >
         <ThemeIcon className="h-5 w-5" />
@@ -99,10 +99,10 @@ export function LoginPage() {
         </div>
 
         {demoLoading ? (
-          <div className="text-center space-y-4">
-            <div className="h-8 w-8 mx-auto border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+          <output aria-label="Loading demo" className="block text-center space-y-4">
+            <span className="block h-8 w-8 mx-auto border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
             <p className="text-[14px] text-[var(--text-secondary)]">Entering demo...</p>
-          </div>
+          </output>
         ) : (
           <>
             <Card>

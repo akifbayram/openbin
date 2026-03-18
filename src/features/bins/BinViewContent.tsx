@@ -9,7 +9,6 @@ import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import { resolveColor } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
-import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 import type { AiSuggestions, Bin, CustomField } from '@/types';
 import { CustomFieldsViewCard } from './CustomFieldsViewCard';
@@ -50,7 +49,6 @@ export function BinViewContent({
   onApplySuggestions,
   onClearSuggestions,
 }: BinViewContentProps) {
-  const { theme } = useTheme();
   const { tagColors } = useTagColorsContext();
   const t = useTerminology();
   const [qrExpanded, setQrExpanded] = useState(false);
@@ -126,7 +124,7 @@ export function BinViewContent({
                     const tagStyle = tagPreset
                       ? {
                           backgroundColor: tagPreset.bgCss,
-                          color: theme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
+                          color: 'var(--tag-text-on-color)',
                         }
                       : undefined;
                     return (

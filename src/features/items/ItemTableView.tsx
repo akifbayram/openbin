@@ -53,6 +53,7 @@ export function ItemTableView({
               key={entry.id}
               tabIndex={0}
               role="button"
+              aria-label={`${entry.name} in ${entry.bin_name}`}
               onClick={() => navigate(`/bin/${entry.bin_id}`, { state: { backLabel: 'Items', backPath: '/items' } })}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') navigate(`/bin/${entry.bin_id}`, { state: { backLabel: 'Items', backPath: '/items' } });

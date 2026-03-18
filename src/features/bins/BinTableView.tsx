@@ -59,7 +59,7 @@ export function BinTableView({
                 allSelected ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)]',
               )}
             >
-              {allSelected && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+              {allSelected && <Check className="h-2.5 w-2.5 text-[var(--text-on-accent)]" strokeWidth={3} />}
             </button>
           )}
         </div>
@@ -142,6 +142,7 @@ const BinTableRow = React.memo(function BinTableRow({
     <BaseTableRow
       tabIndex={0}
       role="button"
+      aria-label={bin.name}
       aria-selected={selectable ? selected : undefined}
       className={cn('select-none', selected && 'bg-[var(--bg-active)]')}
       onClick={handleClick}
@@ -164,7 +165,7 @@ const BinTableRow = React.memo(function BinTableRow({
             onClick={(e) => { e.stopPropagation(); onSelect(bin.id, index, e.shiftKey); }}
             aria-label="Select"
           >
-            {selected && <Check className="h-2.5 w-2.5 text-white animate-check-pop" strokeWidth={3} />}
+            {selected && <Check className="h-2.5 w-2.5 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
           </button>
         ) : (
           <button

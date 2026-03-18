@@ -92,7 +92,7 @@ export function RegisterPage() {
       <button
         type="button"
         onClick={() => setThemePreference(cycleThemePreference(preference))}
-        aria-label={`Theme: ${preference}`}
+        aria-label={`Switch theme, currently ${preference}`}
         className="absolute top-4 right-4 z-10 p-2.5 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
       >
         <ThemeIcon className="h-5 w-5" />
@@ -143,18 +143,18 @@ export function RegisterPage() {
                   required
                 />
                 {password.length > 0 && (
-                  <ul className="space-y-1 pt-1.5 text-[13px]">
+                  <ul aria-label="Password requirements" className="space-y-1 pt-1.5 text-[13px]">
                     {([
                       ['length', 'At least 8 characters'],
                       ['uppercase', 'Contains an uppercase letter'],
                       ['lowercase', 'Contains a lowercase letter'],
                       ['digit', 'Contains a number'],
                     ] as const).map(([key, label]) => (
-                      <li key={key} className="row-tight">
+                      <li key={key} className="row-tight" aria-label={`${label} — ${passwordChecks[key] ? 'met' : 'not met'}`}>
                         {passwordChecks[key] ? (
-                          <Check className="h-3.5 w-3.5 text-[var(--accent)] shrink-0" />
+                          <Check className="h-3.5 w-3.5 text-[var(--accent)] shrink-0" aria-hidden="true" />
                         ) : (
-                          <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--border-default)]" />
+                          <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--border-default)]" aria-hidden="true" />
                         )}
                         <span className={passwordChecks[key] ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'}>
                           {label}

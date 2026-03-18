@@ -1,9 +1,6 @@
 import { ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { resolveIcon } from '@/lib/iconMap';
 import { cn } from '@/lib/utils';
-import type { Bin } from '@/types';
 
 export function useAnimatedNumber(target: number, duration = 400) {
   const [display, setDisplay] = useState(target);
@@ -83,7 +80,7 @@ export function SectionHeader({
         <button
           type="button"
           onClick={action.onClick}
-          className="flex items-center gap-0.5 text-[13px] font-medium text-[var(--accent)]"
+          className="flex items-center gap-0.5 text-[13px] font-medium text-[var(--accent)] py-2 -my-2 px-1 -mx-1"
         >
           {action.label}
           <ChevronRight className="h-3.5 w-3.5" />
@@ -93,24 +90,3 @@ export function SectionHeader({
   );
 }
 
-export function ScannedBinCard({ bin }: { bin: Bin }) {
-  const navigate = useNavigate();
-  const BinIcon = resolveIcon(bin.icon);
-  const iconStyle = bin.color ? { color: bin.color } : undefined;
-
-  return (
-    <button
-      type="button"
-      onClick={() => navigate(`/bins/${bin.id}`)}
-      className="flex items-center gap-2.5 shrink-0 rounded-[var(--radius-md)] bg-[var(--bg-input)] px-3 py-2.5 hover:bg-[var(--bg-active)] transition-colors duration-150 w-[176px] text-left"
-    >
-      <BinIcon className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" style={iconStyle} />
-      <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-medium text-[var(--text-primary)] truncate leading-snug">{bin.name}</p>
-        {bin.area_name && (
-          <p className="text-[11px] text-[var(--text-tertiary)] truncate leading-snug">{bin.area_name}</p>
-        )}
-      </div>
-    </button>
-  );
-}

@@ -94,6 +94,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
   const t = useTerminology();
   const { user, logout } = useAuth();
   const { canWrite } = usePermissions();
+  const footerLinkCls = 'p-2 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors';
 
   return (
     <>
@@ -217,18 +218,15 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
       </div>
 
       {/* External links + version */}
-      <div className="flex items-center gap-3 px-5 py-3 border-t border-[var(--border-subtle)]">
-        <a href="https://docs.openbin.app/" target="_blank" rel="noopener noreferrer" title="Documentation"
-          className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
-          <BookOpen className="h-4 w-4" />
+      <div className="flex items-center gap-1 px-3 py-3 border-t border-[var(--border-subtle)]">
+        <a href="https://docs.openbin.app/" target="_blank" rel="noopener noreferrer" aria-label="Documentation" className={footerLinkCls}>
+          <BookOpen aria-hidden="true" className="h-4 w-4" />
         </a>
-        <a href="https://discord.gg/W6JPZCqqx9" target="_blank" rel="noopener noreferrer" title="Discord"
-          className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
+        <a href="https://discord.gg/W6JPZCqqx9" target="_blank" rel="noopener noreferrer" aria-label="Discord" className={footerLinkCls}>
           {discordIcon}
         </a>
-        <a href="https://github.com/akifbayram/openbin" target="_blank" rel="noopener noreferrer" title="GitHub"
-          className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
-          <Github className="h-4 w-4" />
+        <a href="https://github.com/akifbayram/openbin" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className={footerLinkCls}>
+          <Github aria-hidden="true" className="h-4 w-4" />
         </a>
         <span className={cn(
           'ml-auto text-xs text-[var(--text-tertiary)] tabular-nums',

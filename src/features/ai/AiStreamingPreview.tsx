@@ -36,9 +36,11 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
       )}
 
       {streamedName && (
-        <p className="text-[15px] font-medium text-[var(--text-primary)] ai-item-reveal">
-          {streamedName}
-        </p>
+        <div className="ai-item-reveal">
+          <p className="text-[15px] font-medium text-[var(--text-primary)]">
+            {streamedName}
+          </p>
+        </div>
       )}
 
       {streamedItems.length > 0 && (
@@ -47,9 +49,11 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
             <li
               // biome-ignore lint/suspicious/noArrayIndexKey: streamed items have no stable identity
               key={i}
-              className="text-[13px] text-[var(--text-secondary)] pl-3 border-l-2 border-[var(--accent)] ai-item-reveal"
+              className="ai-item-reveal"
             >
-              {item}
+              <div className="text-[13px] text-[var(--text-secondary)] pl-3 border-l-2 border-[var(--accent)]">
+                {item}
+              </div>
             </li>
           ))}
         </ul>

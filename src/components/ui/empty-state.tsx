@@ -18,22 +18,22 @@ export function EmptyState({ icon: Icon, title, subtitle, compact, children, var
     )}>
       {variant === 'onboard' ? (
         <div className="h-20 w-20 rounded-full bg-[var(--accent)]/10 flex items-center justify-center">
-          <Icon className="h-10 w-10 text-[var(--accent)] opacity-80" />
+          <Icon aria-hidden="true" className="h-10 w-10 text-[var(--accent)] opacity-80" />
         </div>
       ) : variant === 'positive' ? (
         <div className="h-16 w-16 rounded-full bg-[var(--color-success-soft)] flex items-center justify-center">
-          <Icon className="h-8 w-8 text-[var(--color-success)]" />
+          <Icon aria-hidden="true" className="h-8 w-8 text-[var(--color-success)]" />
         </div>
       ) : variant === 'search' ? (
-        <Icon className="h-10 w-10 opacity-25" />
+        <Icon aria-hidden="true" className="h-10 w-10 opacity-25" />
       ) : (
-        <Icon className="h-16 w-16 opacity-40" />
+        <Icon aria-hidden="true" className="h-16 w-16 opacity-40" />
       )}
       <div className={cn('text-center', variant === 'search' ? 'space-y-1' : 'space-y-1.5')}>
-        <p className={cn(
+        <h3 className={cn(
           'font-semibold text-[var(--text-secondary)]',
           variant === 'onboard' ? 'text-[19px]' : 'text-[17px]'
-        )}>{title}</p>
+        )}>{title}</h3>
         {subtitle && <p className={cn(
           variant === 'onboard' ? 'text-[14px] max-w-xs mx-auto' : 'text-[13px]'
         )}>{subtitle}</p>}

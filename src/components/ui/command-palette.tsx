@@ -134,14 +134,19 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
           </svg>
           <input
             ref={inputRef}
+            role="combobox"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Type a command..."
+            aria-label="Search commands"
+            aria-expanded="true"
+            aria-controls="command-palette-listbox"
+            aria-activedescendant={flatItems[activeIndex] ? `cmd-${flatItems[activeIndex].id}` : undefined}
             className="flex-1 bg-transparent text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none py-3"
           />
         </div>
         {/* Results */}
-        <div ref={listRef} className="overflow-y-auto max-h-[50vh] py-2">
+        <div ref={listRef} id="command-palette-listbox" role="listbox" aria-label="Commands" className="overflow-y-auto max-h-[50vh] py-2">
           {flatItems.length === 0 ? (
             <p className="text-center text-[13px] text-[var(--text-tertiary)] py-6">No matching commands</p>
           ) : (
@@ -160,6 +165,9 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
                     return (
                       <button
                         type="button"
+                        role="option"
+                        id={`cmd-${item.id}`}
+                        aria-selected={isActive}
                         key={item.id}
                         data-active={isActive}
                         onClick={() => execute(item.id)}
