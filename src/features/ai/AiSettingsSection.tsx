@@ -376,7 +376,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                       <p className="text-[11px] text-[var(--text-tertiary)]">0.0–1.0</p>
                     </div>
                     <div className="space-y-1.5">
-                      <label htmlFor="ai-timeout" className="text-[13px] text-[var(--text-secondary)]">Timeout (s)</label>
+                      <label htmlFor="ai-timeout" className="text-[13px] text-[var(--text-secondary)]">Request Timeout</label>
                       <div className="relative">
                         <Input
                           id="ai-timeout"

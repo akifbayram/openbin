@@ -163,7 +163,7 @@ export function DataSection({
               <SettingsRow
                 icon={Trash2}
                 label="Trash"
-                description="Restore or permanently delete"
+                description="Recover or remove deleted bins"
                 onClick={() => navigate('/trash')}
                 chevron
               />
@@ -203,7 +203,7 @@ export function DataSection({
             <SettingsRow
               icon={FileSpreadsheet}
               label="Spreadsheet (CSV)"
-              description="Flat table for spreadsheets"
+              description="Open in Excel or Google Sheets"
               onClick={handleExportCsv}
               disabled={!activeLocationId}
               loading={exportingCsv}
