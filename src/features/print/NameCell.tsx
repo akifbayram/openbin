@@ -29,7 +29,7 @@ export function NameCell({ bin, format, showIcon, showColor, cellWPt, cellHPt, p
 
   return (
     <div
-      className="name-cell flex items-center justify-center overflow-hidden"
+      className="name-cell flex flex-wrap items-center justify-center overflow-hidden"
       style={{
         width: format.cellWidth,
         height: format.cellHeight,
@@ -45,8 +45,8 @@ export function NameCell({ bin, format, showIcon, showColor, cellWPt, cellHPt, p
         </span>
       )}
       <span
-        className="min-w-0 font-bold whitespace-nowrap overflow-hidden text-ellipsis"
-        style={{ fontSize: `${fontSizePt.toFixed(1)}pt`, lineHeight: 1.1 }}
+        className="min-w-0 font-bold text-center overflow-hidden"
+        style={{ fontSize: `${fontSizePt.toFixed(1)}pt`, lineHeight: 1.15, wordBreak: 'break-word' }}
       >
         {displayName}
       </span>

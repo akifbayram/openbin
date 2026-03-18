@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { Download, FileText, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,7 +8,7 @@ import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { ItemSheet } from './ItemSheet';
 import { LabelSheet } from './LabelSheet';
-import { computeLabelsPerPage, DEFAULT_LABEL_FORMAT, getLabelFormat } from './labelFormats';
+import { computeLabelsPerPage, computePageSize, DEFAULT_LABEL_FORMAT, getLabelFormat } from './labelFormats';
 import { NameSheet } from './NameSheet';
 import type { PrintMode } from './usePrintSettings';
 
@@ -29,6 +30,30 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
   const pageCount = (printMode === 'labels' || printMode === 'names') && hasSelection
     ? Math.ceil(selectedBins.length / computeLabelsPerPage(labelSheetProps.format ?? getLabelFormat(DEFAULT_LABEL_FORMAT)))
     : 0;
+
+  // Scale sheet content to fit preview container width
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const effectiveFormat = printMode === 'names'
+    ? nameSheetProps.format
+    : (labelSheetProps.format ?? getLabelFormat(DEFAULT_LABEL_FORMAT));
+  const pageWidthPx = printMode !== 'items'
+    ? computePageSize(effectiveFormat).width * 96
+    : 0;
+
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el || !pageWidthPx) {
+      setScale(1);
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      setScale(w > 0 && w < pageWidthPx ? w / pageWidthPx : 1);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [pageWidthPx]);
 
   return (
     <>
@@ -65,13 +90,17 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
                 </span>
               )}
             </div>
-            <div className="bg-[var(--bg-print-surface)] rounded-[var(--radius-md)] p-4 max-h-[50vh] lg:max-h-[70vh] overflow-y-auto shadow-[inset_0_0_0_1px_var(--border-preview)]">
+            <div ref={previewRef} className="bg-[var(--bg-print-surface)] rounded-[var(--radius-md)] px-4 py-6 max-h-[50vh] lg:max-h-[70vh] overflow-y-auto shadow-[inset_0_0_0_1px_var(--border-preview)]">
               {printMode === 'items' ? (
                 <ItemSheet {...itemSheetProps} />
-              ) : printMode === 'names' ? (
-                <NameSheet {...nameSheetProps} />
               ) : (
-                <LabelSheet {...labelSheetProps} />
+                <div style={scale < 1 ? { zoom: scale } : undefined}>
+                  {printMode === 'names' ? (
+                    <NameSheet {...nameSheetProps} />
+                  ) : (
+                    <LabelSheet {...labelSheetProps} />
+                  )}
+                </div>
               )}
             </div>
           </CardContent>

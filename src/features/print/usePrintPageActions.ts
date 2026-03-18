@@ -225,6 +225,7 @@ export function usePrintPageActions() {
     showIcon: nameCardOptions.showIcon,
     showColor: nameCardOptions.showColor,
     sizingMode: nameCardOptions.sizingMode,
+    fontScale: nameCardOptions.fontScale,
   };
 
   async function handleDownloadPDF() {

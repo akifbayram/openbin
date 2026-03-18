@@ -47,7 +47,7 @@ function setTextHex(doc: JsPDF, hex: string): void {
   doc.setTextColor(r, g, b);
 }
 
-/** Draw icon overlay in the center of a QR code with a circular background. */
+/** Draw icon overlay in the center of a QR code with a square background. */
 function drawIconOverlay(
   doc: JsPDF,
   iconDataUrl: string,
@@ -56,7 +56,7 @@ function drawIconOverlay(
   qrSize: number,
   bgColor?: string,
 ): void {
-  const circleR = qrSize * 0.15;
+  const halfSide = qrSize * 0.15;
   const cx = qrX + qrSize / 2;
   const cy = qrY + qrSize / 2;
   if (bgColor) {
@@ -64,8 +64,10 @@ function drawIconOverlay(
   } else {
     doc.setFillColor(255, 255, 255);
   }
-  doc.circle(cx, cy, circleR, 'F');
-  const iconDrawSize = circleR * 1.4;
+  const side = halfSide * 2;
+  const r = side * 0.1; // slight corner radius
+  doc.roundedRect(cx - halfSide, cy - halfSide, side, side, r, r, 'F');
+  const iconDrawSize = halfSide * 1.4;
   doc.addImage(iconDataUrl, 'PNG', cx - iconDrawSize / 2, cy - iconDrawSize / 2, iconDrawSize, iconDrawSize);
 }
 

@@ -70,9 +70,10 @@ export async function generateNamePDF(params: GenerateNamePDFParams): Promise<Bl
   const cellWPt = cellW * 72;
   const cellHPt = cellH * 72;
 
-  // Pre-compute uniform font size if needed
+  // Pre-compute uniform font size if needed, then apply font scale
+  const fontScale = nameCardOptions.fontScale ?? 1;
   const uniformFontSizePt = nameCardOptions.sizingMode === 'uniform'
-    ? computeUniformFontSize(bins, cellWPt, cellHPt, paddingPt, nameCardOptions.showIcon)
+    ? computeUniformFontSize(bins, cellWPt, cellHPt, paddingPt, nameCardOptions.showIcon) * fontScale
     : undefined;
 
   for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {

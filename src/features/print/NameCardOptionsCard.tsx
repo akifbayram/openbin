@@ -7,6 +7,13 @@ import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 import type { NameCardOptions } from './usePrintSettings';
 
+const FONT_SCALE_PRESETS = [
+  { label: 'S', value: 0.75 },
+  { label: 'Default', value: 1 },
+  { label: 'L', value: 1.25 },
+  { label: 'XL', value: 1.5 },
+];
+
 interface NameCardOptionsCardProps {
   options: NameCardOptions;
   onUpdate: <K extends keyof NameCardOptions>(key: K, value: NameCardOptions[K]) => void;
@@ -66,6 +73,18 @@ export function NameCardOptionsCard({ options, onUpdate, expanded, onExpandedCha
                 size="sm"
               />
             </div>
+
+            {options.sizingMode === 'uniform' && (
+              <div className="px-1">
+                <span className="text-[12px] text-[var(--text-secondary)] font-medium block mb-2">Font Size</span>
+                <OptionGroup
+                  options={FONT_SCALE_PRESETS.map((p) => ({ key: String(p.value), label: p.label }))}
+                  value={String(options.fontScale)}
+                  onChange={(v) => onUpdate('fontScale', Number(v))}
+                  size="sm"
+                />
+              </div>
+            )}
           </div>
         )}
       </CardContent>

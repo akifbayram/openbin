@@ -5,7 +5,7 @@
 }
 
 .label-page + .label-page {
-  border-top: 1px dashed #ccc;
+  margin-top: 16px;
 }
 
 .label-sheet {
@@ -40,7 +40,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   background: white;
-  border-radius: 50%;
+  border-radius: 2pt;
   padding: 2pt;
   line-height: 1;
   display: flex;
@@ -107,7 +107,7 @@
   }
 
   .label-page + .label-page {
-    border-top: none;
+    margin-top: 0;
   }
 }
 

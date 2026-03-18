@@ -14,6 +14,8 @@ export const ICON_SCALE = 0.9;
 export const ICON_GAP_RATIO = 0.3;
 /** Fallback character count for empty names (bin short code length). */
 const EMPTY_NAME_LENGTH = 6;
+/** Max characters to fit on a single line before wrapping. */
+const MAX_CHARS_PER_LINE = 20;
 
 export interface NameFontSizeInput {
   cellWidthPt: number;
@@ -34,18 +36,21 @@ export interface NameFontSizeResult {
  */
 export function computeNameFontSize(input: NameFontSizeInput): NameFontSizeResult {
   const { cellWidthPt, cellHeightPt, paddingPt, name, hasIcon } = input;
-  const nameLen = name.length || EMPTY_NAME_LENGTH;
+  const actualLen = name.length || EMPTY_NAME_LENGTH;
+  const fitLen = Math.min(actualLen, MAX_CHARS_PER_LINE);
+  const lineCount = Math.ceil(actualLen / MAX_CHARS_PER_LINE);
+  const lineHeight = 1.15;
 
-  const maxByHeight = (cellHeightPt - 2 * paddingPt) * 0.7;
+  const maxByHeight = (cellHeightPt - 2 * paddingPt) / (lineCount * lineHeight);
 
   const totalPad = 2 * paddingPt;
   let maxByWidth: number;
 
   if (hasIcon) {
-    const charUnits = nameLen * AVG_CHAR_WIDTH_RATIO + ICON_SCALE + ICON_GAP_RATIO;
+    const charUnits = fitLen * AVG_CHAR_WIDTH_RATIO + ICON_SCALE + ICON_GAP_RATIO;
     maxByWidth = (cellWidthPt - totalPad) / charUnits;
   } else {
-    maxByWidth = (cellWidthPt - totalPad) / (nameLen * AVG_CHAR_WIDTH_RATIO);
+    maxByWidth = (cellWidthPt - totalPad) / (fitLen * AVG_CHAR_WIDTH_RATIO);
   }
 
   const raw = Math.min(maxByHeight, maxByWidth);

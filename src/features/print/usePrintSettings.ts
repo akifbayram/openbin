@@ -70,12 +70,14 @@ export interface NameCardOptions {
   showIcon: boolean;
   showColor: boolean;
   sizingMode: 'auto' | 'uniform';
+  fontScale: number;
 }
 
 export const DEFAULT_NAME_CARD_OPTIONS: NameCardOptions = {
   showIcon: true,
   showColor: true,
   sizingMode: 'auto',
+  fontScale: 1,
 };
 
 export interface CustomState {

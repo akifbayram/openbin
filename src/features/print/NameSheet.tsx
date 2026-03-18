@@ -10,17 +10,18 @@ interface NameSheetProps {
   showIcon: boolean;
   showColor: boolean;
   sizingMode: 'auto' | 'uniform';
+  fontScale?: number;
 }
 
-export function NameSheet({ bins, format, showIcon, showColor, sizingMode }: NameSheetProps) {
+export function NameSheet({ bins, format, showIcon, showColor, sizingMode, fontScale = 1 }: NameSheetProps) {
   // Hoist format-derived constants (same for every cell)
   const cellWPt = parseFloat(format.cellWidth) * 72;
   const cellHPt = parseFloat(format.cellHeight) * 72;
   const paddingPt = maxPaddingPt(format.padding);
 
-  // Pre-compute uniform font size if needed
+  // Pre-compute uniform font size if needed, then apply font scale
   const uniformFontSizePt = sizingMode === 'uniform'
-    ? computeUniformFontSize(bins, cellWPt, cellHPt, paddingPt, showIcon)
+    ? computeUniformFontSize(bins, cellWPt, cellHPt, paddingPt, showIcon) * fontScale
     : undefined;
 
   const perPage = computeLabelsPerPage(format);
