@@ -210,7 +210,7 @@ export function DashboardPage() {
             className="rounded-[var(--radius-md)] border-l-[3px] border-[var(--color-warning-border)] bg-[var(--color-warning-soft)] px-4 py-3 row-spread hover:brightness-[0.97] transition-colors duration-150"
           >
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-[var(--color-warning-soft)] flex items-center justify-center">
+              <div className="h-9 w-9 rounded-[var(--radius-xl)] bg-[var(--color-warning-soft)] flex items-center justify-center">
                 <Inbox className="h-[18px] w-[18px] text-[var(--color-warning)]" />
               </div>
               <div className="text-left">

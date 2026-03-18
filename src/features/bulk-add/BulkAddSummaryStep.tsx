@@ -118,7 +118,7 @@ export function BulkAddSummaryStep({
                     dispatch({ type: 'SET_CURRENT_INDEX', index: idx });
                     dispatch({ type: 'GO_TO_REVIEW' });
                   }}
-                  className="p-1.5 rounded-full hover:bg-[var(--bg-active)] transition-colors shrink-0"
+                  className="p-1.5 rounded-[var(--radius-lg)] hover:bg-[var(--bg-active)] transition-colors shrink-0"
                 >
                   <Pencil className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
                 </button>

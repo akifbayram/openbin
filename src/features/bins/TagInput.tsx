@@ -135,7 +135,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
             <button
               type="button"
               onClick={() => removeTag(tag)}
-              className="mr-0.5 rounded-full p-0.5 hover:bg-[var(--bg-hover)] transition-colors"
+              className="mr-0.5 rounded-[var(--radius-lg)] p-0.5 hover:bg-[var(--bg-hover)] transition-colors"
             >
               <X className="h-2.5 w-2.5" />
             </button>

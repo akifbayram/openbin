@@ -51,7 +51,7 @@ export function CommandSuccess({ result, onAskAnother, onClose, onBinClick }: Co
               return (
                 <div
                   key={key}
-                  className="ai-stagger-item row rounded-lg px-3 py-2 text-sm text-[var(--text-primary)]"
+                  className="ai-stagger-item row rounded-[var(--radius-lg)] px-3 py-2 text-sm text-[var(--text-primary)]"
                   style={{ animationDelay: `${(createdBins.length + idx) * 60}ms` }}
                 >
                   <Check className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />

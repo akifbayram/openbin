@@ -36,7 +36,7 @@ export function CompletionStep({ icon, title, subtitle, actions, onAction, onDas
             className="onboarding-action-card w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-[var(--bg-active)] hover:bg-[var(--bg-hover)] transition-colors text-left"
             style={{ animationDelay: `${0.1 + i * 0.07}s` }}
           >
-            <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
+            <div className="h-8 w-8 rounded-[var(--radius-xl)] flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
               <Icon className="h-4 w-4 text-[var(--accent)]" />
             </div>
             <div className="min-w-0">

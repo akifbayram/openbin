@@ -145,7 +145,7 @@ export function TrashPage() {
             <DialogTitle>Permanently Delete</DialogTitle>
           </DialogHeader>
           <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-full bg-[var(--destructive)] bg-opacity-10 flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 rounded-[var(--radius-xl)] bg-[var(--destructive)] bg-opacity-10 flex items-center justify-center shrink-0">
               <AlertTriangle className="h-5 w-5 text-[var(--destructive)]" />
             </div>
             <div>

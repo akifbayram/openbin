@@ -32,7 +32,7 @@ export function SavedViewChips({ views, onApply, onDelete }: SavedViewChipsProps
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onDelete(view.id); }}
-              className="ml-auto -mr-0.5 p-1.5 rounded-full hover:bg-[var(--bg-active)] [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/chip:opacity-100 transition-opacity"
+              className="ml-auto -mr-0.5 p-1.5 rounded-[var(--radius-lg)] hover:bg-[var(--bg-active)] [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/chip:opacity-100 transition-opacity"
               aria-label={`Remove saved view ${view.name}`}
             >
               <X className="h-3 w-3 text-[var(--text-tertiary)]" />

@@ -124,7 +124,7 @@ export function AiSetupView({ onNavigate, onDismiss }: { onNavigate: () => void;
           <button
             type="button"
             onClick={onDismiss}
-            className="h-9 px-5 rounded-full text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+            className="h-9 px-5 rounded-[var(--radius-xl)] text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
           >
             Later
           </button>
@@ -132,7 +132,7 @@ export function AiSetupView({ onNavigate, onDismiss }: { onNavigate: () => void;
         <button
           type="button"
           onClick={onNavigate}
-          className="h-9 px-5 rounded-full bg-[var(--ai-accent)] text-[13px] text-[var(--text-on-accent)] hover:bg-[var(--ai-accent-hover)] transition-colors"
+          className="h-9 px-5 rounded-[var(--radius-xl)] bg-[var(--ai-accent)] text-[13px] text-[var(--text-on-accent)] hover:bg-[var(--ai-accent-hover)] transition-colors"
         >
           Go to Settings
         </button>

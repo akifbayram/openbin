@@ -17,11 +17,11 @@ export function EmptyState({ icon: Icon, title, subtitle, compact, children, var
       compact ? 'py-4' : variant === 'onboard' ? 'py-20' : variant === 'search' ? 'py-16' : 'py-24'
     )}>
       {variant === 'onboard' ? (
-        <div className="h-20 w-20 rounded-full bg-[var(--accent)]/10 flex items-center justify-center">
+        <div className="h-20 w-20 rounded-[var(--radius-xl)] bg-[var(--accent)]/10 flex items-center justify-center">
           <Icon aria-hidden="true" className="h-10 w-10 text-[var(--accent)] opacity-80" />
         </div>
       ) : variant === 'positive' ? (
-        <div className="h-16 w-16 rounded-full bg-[var(--color-success-soft)] flex items-center justify-center">
+        <div className="h-16 w-16 rounded-[var(--radius-xl)] bg-[var(--color-success-soft)] flex items-center justify-center">
           <Icon aria-hidden="true" className="h-8 w-8 text-[var(--color-success)]" />
         </div>
       ) : variant === 'search' ? (

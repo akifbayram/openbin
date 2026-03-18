@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Multi-user web app for organizing physical storage bins with QR codes. Data persists in SQLite via Express API. Liquid Glass design system.
+Multi-user web app for organizing physical storage bins with QR codes. Data persists in SQLite via Express API. Flat material design system.
 
 **Core flows**: Register/login -> Create/join location -> Create bin -> Print QR label -> Scan to find contents.
 
@@ -22,8 +22,8 @@ Multi-user web app for organizing physical storage bins with QR codes. Data pers
 - **Key utilities**: `apiFetch()` in `lib/api.ts`, `useAuth()` in `lib/auth.tsx`, `useAppSettings()` in `lib/appSettings.ts`, `LocationProvider` in `features/locations/useLocations.tsx`, `usePermissions()` in `lib/usePermissions.ts`, `cn()` in `lib/utils.ts`. Read the source for signatures.
 - **Soft deletes**: `DELETE /api/bins/:id` sets `deleted_at`. All bin queries filter `WHERE deleted_at IS NULL`.
 - **API response envelopes**: Lists return `{ results: T[], count }`. Errors return `{ error: "CODE", message }`. See `server/openapi.yaml` for details.
-- **CSS**: use `var(--token)` design tokens, not raw colors. Glass effects via `glass-card`, `glass-nav`, `glass-heavy`, `glass-popover`. Use `cn()` from `lib/utils.ts` (clsx + tailwind-merge) for className composition.
-- **Responsive**: mobile-first. Breakpoint `lg` (1024px) — bottom nav on mobile, sidebar on desktop.
+- **CSS**: use `var(--token)` design tokens, not raw colors. Surface classes `glass-card`, `glass-nav`, `glass-heavy`, `glass-popover` provide opaque backgrounds with solid borders — no blur, no shadow. Use `cn()` from `lib/utils.ts` (clsx + tailwind-merge) for className composition. **Do not** add `backdrop-blur-*`, `shadow-*`, or `rounded-full` (except pills/avatars) — the design is deliberately flat.
+- **Responsive**: mobile-first. Breakpoint `lg` (1024px).
 - **Server error handling**: Routes use `throw new ValidationError(...)` etc. from `server/src/lib/httpErrors.ts`, wrapped in `asyncHandler()` to forward to the global error handler.
 - **Event bus**: `notify()` and `useRefreshOn()` from `lib/eventBus.ts`. 7 event types: `BINS`, `LOCATIONS`, `PHOTOS`, `PINS`, `AREAS`, `TAG_COLORS`, `SCAN_HISTORY`.
 

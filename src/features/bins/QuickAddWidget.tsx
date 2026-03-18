@@ -34,7 +34,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
                 type="button"
                 onClick={quickAdd.handleAdd}
                 disabled={quickAdd.saving}
-                className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors disabled:opacity-50"
+                className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors disabled:opacity-50"
                 aria-label="Add item"
               >
                 <Plus className="h-4 w-4" />
@@ -46,7 +46,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               <button
                 type="button"
                 onClick={quickAdd.handleAiClick}
-                className="shrink-0 rounded-full p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
+                className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
                 aria-label="Add with AI"
               >
                 <Sparkles className="h-4 w-4" />

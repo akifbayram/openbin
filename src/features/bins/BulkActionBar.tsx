@@ -47,7 +47,7 @@ export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, 
   return (
     <div className={cn(
       'fixed z-50 left-1/2 -translate-x-1/2 lg:left-[calc(50%+130px)] max-w-[calc(100vw-2.5rem)]',
-      'bottom-[calc(76px+var(--safe-bottom))] lg:bottom-8',
+      'bottom-[calc(16px+var(--safe-bottom))] lg:bottom-8',
       'transition-all duration-200',
       visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
     )}>

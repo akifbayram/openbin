@@ -118,7 +118,7 @@ export function BinSearchBar({
             type="button"
             onClick={clearAll}
             aria-label="Clear all filters"
-            className="p-1 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-active)] shrink-0"
+            className="p-1 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-active)] shrink-0"
           >
             <X className="h-3.5 w-3.5" />
           </button>

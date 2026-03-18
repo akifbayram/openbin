@@ -254,7 +254,7 @@ export function Sidebar({ locations, activeLocationId, onLocationChange, onScanC
         onClick={toggle}
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         aria-expanded={!isCollapsed}
-        className="absolute top-[43px] right-0 translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-7 h-7 rounded-full glass-heavy
+        className="absolute top-[43px] right-0 translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-7 h-7 rounded-[var(--radius-lg)] glass-heavy
   text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--accent)]
   focus-visible:outline-none"
       >

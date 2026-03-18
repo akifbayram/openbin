@@ -7,11 +7,14 @@ import { DEMO_BIN } from '../onboardingConstants';
 
 export function DemoAiShowcase({ onNext }: { onNext: () => void }) {
   const [visibleCount, setVisibleCount] = useState(0);
-  const [photoCollapsed, setPhotoCollapsed] = useState(false);
+  const [photoState, setPhotoState] = useState<'hidden' | 'scanning' | 'collapsed'>('hidden');
+  const [showButton, setShowButton] = useState(false);
 
   useEffect(() => {
-    // Collapse photo just before items start appearing
-    const collapseTimeout = setTimeout(() => setPhotoCollapsed(true), 2500);
+    // Staged reveal: text enters first (step animation), then photo slides in
+    const revealTimeout = setTimeout(() => setPhotoState('scanning'), 400);
+    // Collapse photo before items start appearing
+    const collapseTimeout = setTimeout(() => setPhotoState('collapsed'), 3200);
     let interval: ReturnType<typeof setInterval> | undefined;
     const startTimeout = setTimeout(() => {
       interval = setInterval(() => {
@@ -23,8 +26,13 @@ export function DemoAiShowcase({ onNext }: { onNext: () => void }) {
           return c + 1;
         });
       }, 300);
-    }, 3000);
+    }, 3700);
+    // Show button after all items have finished their reveal animations
+    // Last item delay: (items.length - 1) * 0.05s = 0.3s, animation: 0.35s → ~650ms after last item added
+    const buttonTimeout = setTimeout(() => setShowButton(true), 3700 + DEMO_BIN.items.length * 300 + 650);
     return () => {
+      clearTimeout(buttonTimeout);
+      clearTimeout(revealTimeout);
       clearTimeout(collapseTimeout);
       clearTimeout(startTimeout);
       if (interval !== undefined) clearInterval(interval);
@@ -33,19 +41,21 @@ export function DemoAiShowcase({ onNext }: { onNext: () => void }) {
 
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
+      <div className="h-16 w-16 rounded-[var(--radius-xl)] flex items-center justify-center mb-5 bg-[var(--accent)]/10">
         <Sparkles className="h-8 w-8 text-[var(--accent)]" />
       </div>
       <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
         Photo to inventory
       </h2>
       <p className="text-[14px] text-[var(--text-tertiary)] mb-5 leading-relaxed">
-        Take a photo of any bin and AI identifies every item inside.
+        Take a photo of any bin and AI identifies the items inside.
       </p>
-      {/* Demo photo */}
+      {/* Demo photo — starts hidden, reveals with transition, then collapses */}
       <div className={cn(
-        'w-full rounded-[var(--radius-md)] overflow-hidden transition-all duration-500 ease-in-out',
-        photoCollapsed ? 'max-h-0 opacity-0 mb-0' : 'ai-photo-shimmer max-h-40 opacity-100 mb-4'
+        'w-full rounded-[var(--radius-md)] overflow-hidden transition-all ease-in-out',
+        photoState === 'scanning'
+          ? 'ai-photo-shimmer max-h-40 opacity-100 mb-4 duration-700'
+          : 'max-h-0 opacity-0 mb-0 duration-500'
       )}>
         <img src={demoBinPhoto} alt="Bin contents" className="w-full h-40 object-cover" />
       </div>
@@ -66,13 +76,15 @@ export function DemoAiShowcase({ onNext }: { onNext: () => void }) {
           ))}
         </div>
       )}
-      <Button
-        type="button"
-        onClick={onNext}
-        className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
-      >
-        See the Result
-      </Button>
+      {showButton && (
+        <Button
+          type="button"
+          onClick={onNext}
+          className="w-full rounded-[var(--radius-md)] h-11 text-[15px] onboarding-step-enter"
+        >
+          See the Result
+        </Button>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { AI_FEATURES } from '../onboardingConstants';
 export function AiShowcaseStep({ onSetUpNow, onSkip }: { onSetUpNow: () => void; onSkip: () => void }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
+      <div className="h-16 w-16 rounded-[var(--radius-xl)] flex items-center justify-center mb-5 bg-[var(--accent)]/10">
         <Sparkles className="h-8 w-8 text-[var(--accent)]" />
       </div>
       <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
@@ -17,7 +17,7 @@ export function AiShowcaseStep({ onSetUpNow, onSkip }: { onSetUpNow: () => void;
       <div className="w-full space-y-2 mb-6">
         {AI_FEATURES.map(({ icon: Icon, title, desc }) => (
           <div key={title} className="onboarding-feature-card flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 bg-[var(--bg-active)] text-left">
-            <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
+            <div className="h-8 w-8 rounded-[var(--radius-xl)] flex items-center justify-center shrink-0 bg-[var(--accent)]/10">
               <Icon className="h-4 w-4 text-[var(--accent)]" />
             </div>
             <div className="min-w-0">

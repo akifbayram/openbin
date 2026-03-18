@@ -114,7 +114,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
             <Card>
               <CardContent className="py-8">
                 <div className="flex flex-col items-center gap-5 text-center">
-                  <div className="h-14 w-14 rounded-full bg-[var(--destructive)] bg-opacity-10 flex items-center justify-center">
+                  <div className="h-14 w-14 rounded-[var(--radius-xl)] bg-[var(--destructive)] bg-opacity-10 flex items-center justify-center">
                     <AlertCircle className="h-7 w-7 text-[var(--destructive)]" />
                   </div>
                   <div className="space-y-1.5">
@@ -132,7 +132,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
             <Card>
               <CardContent className="py-8">
                 <div className="flex flex-col items-center gap-5 text-center">
-                  <div className="h-14 w-14 rounded-full bg-[var(--accent)] bg-opacity-10 flex items-center justify-center">
+                  <div className="h-14 w-14 rounded-[var(--radius-xl)] bg-[var(--accent)] bg-opacity-10 flex items-center justify-center">
                     <ScanLine className="h-7 w-7 text-[var(--accent)]" />
                   </div>
                   <div className="space-y-1.5">

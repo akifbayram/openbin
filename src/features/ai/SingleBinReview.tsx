@@ -289,7 +289,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                   <button
                     type="button"
                     onClick={handleCorrectionSubmit}
-                    className="shrink-0 p-2 rounded-full bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                    className="shrink-0 p-2 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
                   >
                     <ArrowUp className="h-4 w-4" />
                   </button>

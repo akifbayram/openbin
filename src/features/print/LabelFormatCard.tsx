@@ -66,7 +66,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                 <button
                   type="button"
                   onClick={() => setFormatSearch('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>

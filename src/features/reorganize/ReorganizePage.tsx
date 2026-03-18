@@ -374,7 +374,7 @@ export function ReorganizePage() {
             <div className="hidden lg:block">
               <div className="rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--border-subtle)]">
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="rounded-full bg-[var(--bg-input)] p-3.5 mb-4">
+                  <div className="rounded-[var(--radius-xl)] bg-[var(--bg-input)] p-3.5 mb-4">
                     <Sparkles className="h-6 w-6 text-[var(--text-tertiary)]" />
                   </div>
                   <p className="text-[15px] font-medium text-[var(--text-secondary)] mb-1">

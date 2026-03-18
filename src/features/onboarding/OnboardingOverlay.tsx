@@ -73,12 +73,12 @@ export function OnboardingOverlay(props: OnboardingActions) {
         </div>
 
         {/* Step content */}
-        <AnimatedHeight className="overflow-y-auto scrollbar-hide min-h-0 -mx-2 px-2" disableTransition={displayedStep === 1 && demoMode}>
+        <AnimatedHeight className="overflow-y-auto scrollbar-hide min-h-0 -mx-2 px-2">
           <div
             key={displayedStep}
             className={cn(
-              !(displayedStep === 1 && demoMode) && 'onboarding-step-enter',
-              transitioning && !(displayedStep === 1 && demoMode) && 'onboarding-step-exit',
+              'onboarding-step-enter',
+              transitioning && 'onboarding-step-exit',
             )}
           >
           {displayedStep === 0 && demoMode && activeLocationId && (
@@ -117,7 +117,7 @@ export function OnboardingOverlay(props: OnboardingActions) {
           )}
           {displayedStep === 3 && demoMode && (
             <CompletionStep
-              icon={<div className="h-24 w-24 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10"><BrandIcon className="h-14 w-14 text-[var(--accent)]" /></div>}
+              icon={<BrandIcon className="h-16 w-16 text-[var(--accent)] mb-5" />}
               title="Tour complete"
               subtitle="That's the essentials. Dive in and explore."
               actions={DEMO_COMPLETION_ACTIONS}
@@ -133,7 +133,7 @@ export function OnboardingOverlay(props: OnboardingActions) {
           )}
           {displayedStep === 4 && !demoMode && (
             <CompletionStep
-              icon={<div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10"><Sparkles className="h-8 w-8 text-[var(--accent)]" /></div>}
+              icon={<div className="h-16 w-16 rounded-[var(--radius-xl)] flex items-center justify-center mb-5 bg-[var(--accent)]/10"><Sparkles className="h-8 w-8 text-[var(--accent)]" /></div>}
               actions={PROD_COMPLETION_ACTIONS}
               onAction={handleNavigate}
               onDashboard={() => handleNavigate('/')}

@@ -62,7 +62,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
             e.stopPropagation();
             toggle();
           }}
-          className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-[var(--bg-active)] transition-colors shrink-0"
+          className="h-7 w-7 rounded-[var(--radius-lg)] flex items-center justify-center hover:bg-[var(--bg-active)] transition-colors shrink-0"
           aria-label="Pick tag color"
         >
           {currentPreset ? (

@@ -365,7 +365,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
                 <button
                   type="button"
                   onClick={addItem}
-                  className="shrink-0 rounded-full p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+                  className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
                   aria-label="Add item"
                 >
                   <Plus className="h-4 w-4" />
@@ -377,7 +377,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
                 <button
                   type="button"
                   onClick={handleSparklesClick}
-                  className="shrink-0 rounded-full p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
+                  className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
                   aria-label="Add with AI"
                 >
                   <Sparkles className="h-4 w-4" />
@@ -417,7 +417,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
                 size="sm"
                 onClick={handleExtract}
                 disabled={!expandedText.trim() || isStructuring}
-                className="rounded-[var(--radius-full)] gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
+                className="rounded-[var(--radius-lg)] gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)]"
               >
                 {isStructuring ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -459,7 +459,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
                 variant="ghost"
                 size="sm"
                 onClick={handleBack}
-                className="rounded-[var(--radius-full)] gap-0.5"
+                className="rounded-[var(--radius-lg)] gap-0.5"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back

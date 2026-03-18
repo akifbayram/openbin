@@ -28,7 +28,7 @@ export function WelcomeStep({
 }: WelcomeStepProps) {
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="h-16 w-16 rounded-full flex items-center justify-center mb-5 bg-[var(--accent)]/10">
+      <div className="h-16 w-16 rounded-[var(--radius-xl)] flex items-center justify-center mb-5 bg-[var(--accent)]/10">
         <BrandIcon className="h-8 w-8 text-[var(--accent)]" />
       </div>
       <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">

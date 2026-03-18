@@ -48,7 +48,7 @@ export function CommandIdleInput({
         <button
           type="button"
           onClick={onPhotoClick}
-          className="absolute right-2.5 bottom-2.5 p-1.5 rounded-full text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+          className="absolute right-2.5 bottom-2.5 p-1.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
           title={`Upload photos to auto-create ${t.bins} with AI`}
           aria-label="Upload photos"
         >
