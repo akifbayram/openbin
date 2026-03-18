@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DismissibleBadge } from '@/components/ui/dismissible-badge';
 import { Tooltip } from '@/components/ui/tooltip';
-import { HUE_RANGES } from '@/lib/colorPalette';
 import type { Terminology } from '@/lib/terminology';
 import type { Area } from '@/types';
 import type { BinFilters } from './useBins';
@@ -73,19 +72,6 @@ export function BinSearchBar({
                   ariaLabel={`Remove area filter ${areaName}`}
                 >
                   {areaName}
-                </DismissibleBadge>
-              );
-            })}
-            {filters.colors.map((rangeName) => {
-              const range = HUE_RANGES.find((r) => r.name === rangeName);
-              return (
-                <DismissibleBadge
-                  key={`color-${rangeName}`}
-                  onDismiss={() => setFilters({ ...filters, colors: filters.colors.filter((c) => c !== rangeName) })}
-                  ariaLabel={`Remove color filter ${range?.label ?? rangeName}`}
-                  dot={range?.dot}
-                >
-                  {range?.label ?? rangeName}
                 </DismissibleBadge>
               );
             })}

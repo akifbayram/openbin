@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { getHueRange } from '@/lib/colorPalette';
 import { Events, notify, useRefreshOn } from '@/lib/eventBus';
 import { useListData } from '@/lib/useListData';
 import { usePagedList } from '@/lib/usePagedList';
@@ -21,7 +20,6 @@ export type SortOption = 'updated' | 'created' | 'name' | 'area';
 export interface BinFilters {
   tags: string[];
   tagMode: 'any' | 'all';
-  colors: string[];
   areas: string[];
   hasItems: boolean;
   hasNotes: boolean;
@@ -29,13 +27,12 @@ export interface BinFilters {
 }
 
 export const EMPTY_FILTERS: BinFilters = {
-  tags: [], tagMode: 'any', colors: [], areas: [], hasItems: false, hasNotes: false,
+  tags: [], tagMode: 'any', areas: [], hasItems: false, hasNotes: false,
 };
 
 export function countActiveFilters(f: BinFilters): number {
   let n = 0;
   if (f.tags.length) n++;
-  if (f.colors.length) n++;
   if (f.areas.length) n++;
   if (f.hasItems) n++;
   if (f.hasNotes) n++;
@@ -77,13 +74,6 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
             return selectedTags.every((t) => binTags.includes(t));
           }
           return selectedTags.some((t) => binTags.includes(t));
-        });
-      }
-      if (filters.colors.length > 0) {
-        const rangeSet = new Set(filters.colors);
-        filtered = filtered.filter((bin) => {
-          const range = getHueRange(bin.color);
-          return range !== null && rangeSet.has(range);
         });
       }
       if (filters.areas.length > 0) {
@@ -149,7 +139,6 @@ function buildFilterParams(
       p.set('tags', filters.tags.join(','));
       if (filters.tagMode === 'all') p.set('tag_mode', 'all');
     }
-    if (filters.colors.length > 0) p.set('colors', filters.colors.join(','));
     if (filters.areas.length > 0) p.set('areas', filters.areas.join(','));
     if (filters.hasItems) p.set('has_items', 'true');
     if (filters.hasNotes) p.set('has_notes', 'true');

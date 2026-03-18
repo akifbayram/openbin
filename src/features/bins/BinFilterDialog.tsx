@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { OptionGroup } from '@/components/ui/option-group';
 import { useTagStyle } from '@/features/tags/useTagStyle';
-import { HUE_RANGES } from '@/lib/colorPalette';
 import { cn } from '@/lib/utils';
 import type { Area } from '@/types';
 import type { BinFilters, SortOption } from './useBins';
@@ -17,6 +14,21 @@ const sortLabels: Record<SortOption, string> = {
   name: 'Name',
   area: 'Area',
 };
+
+function SectionHeader({ label, count }: { label: string; count?: number }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
+        {label}
+      </span>
+      {count != null && count > 0 && (
+        <span className="text-[11px] font-semibold bg-[var(--accent)] text-[var(--text-on-accent)] rounded-[var(--radius-xs)] px-1.5 py-0.5 leading-none tabular-nums">
+          {count}
+        </span>
+      )}
+    </div>
+  );
+}
 
 interface BinFilterDialogProps {
   open: boolean;
@@ -62,15 +74,6 @@ export function BinFilterDialog({
     }));
   }
 
-  function toggleHueRange(rangeName: string) {
-    setDraft((d) => ({
-      ...d,
-      colors: d.colors.includes(rangeName)
-        ? d.colors.filter((c) => c !== rangeName)
-        : [...d.colors, rangeName],
-    }));
-  }
-
   function toggleArea(areaId: string) {
     setDraft((d) => ({
       ...d,
@@ -87,6 +90,8 @@ export function BinFilterDialog({
     setDraft(EMPTY_FILTERS);
   }
 
+  const activeCount = countActiveFilters(draft);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -94,10 +99,10 @@ export function BinFilterDialog({
           <DialogTitle>Filter Bins</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Sort */}
           <div className="space-y-2.5">
-            <Label>Sort</Label>
+            <SectionHeader label="Sort" />
             <OptionGroup
               options={(Object.keys(sortLabels) as SortOption[]).map((key) => ({ key, label: sortLabels[key] }))}
               value={sort}
@@ -109,7 +114,7 @@ export function BinFilterDialog({
           {/* Tags */}
           <div className="space-y-2.5">
             <div className="row-spread">
-              <Label>Tags</Label>
+              <SectionHeader label="Tags" count={draft.tags.length} />
               {draft.tags.length >= 2 && (
                 <OptionGroup
                   options={[
@@ -123,40 +128,33 @@ export function BinFilterDialog({
               )}
             </div>
             {availableTags.length === 0 ? (
-              <p className="text-[13px] text-[var(--text-tertiary)]">No tags in this location</p>
+              <p className="text-[13px] text-[var(--text-tertiary)] italic">No tags in this location</p>
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {(() => {
                   const TAG_LIMIT = 12;
-                  const sorted = [...availableTags].sort((a, b) => {
-                    const aSelected = draft.tags.includes(a);
-                    const bSelected = draft.tags.includes(b);
-                    if (aSelected !== bSelected) return aSelected ? -1 : 1;
-                    return a.localeCompare(b, undefined, { sensitivity: 'base' });
-                  });
-                  const canCollapse = sorted.length > TAG_LIMIT;
-                  const visible = canCollapse && !tagsExpanded ? sorted.slice(0, TAG_LIMIT) : sorted;
-                  const hiddenCount = sorted.length - TAG_LIMIT;
+                  const canCollapse = availableTags.length > TAG_LIMIT;
+                  const visible = canCollapse && !tagsExpanded ? availableTags.slice(0, TAG_LIMIT) : availableTags;
+                  const hiddenCount = availableTags.length - TAG_LIMIT;
 
                   return (
                     <>
                       {visible.map((tag) => {
                         const selected = draft.tags.includes(tag);
                         const tagStyle = getTagStyle(tag);
-
                         return (
                           <button
                             key={tag}
                             type="button"
                             onClick={() => toggleTag(tag)}
                             className={cn(
-                              'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
+                              'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all duration-150 cursor-pointer',
                               tagStyle
                                 ? selected
-                                  ? 'ring-2 ring-[var(--accent)] ring-offset-1'
-                                  : 'opacity-60 hover:opacity-80'
+                                  ? ''
+                                  : 'opacity-40 hover:opacity-60'
                                 : selected
-                                  ? 'bg-[var(--accent)] text-white'
+                                  ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
                                   : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
                             )}
                             style={tagStyle}
@@ -184,87 +182,42 @@ export function BinFilterDialog({
           {/* Area */}
           {areas.length > 0 && (
             <div className="space-y-2.5">
-              <Label>Area</Label>
+              <SectionHeader label="Area" count={draft.areas.length} />
               <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => toggleArea('__unassigned__')}
-                  className={cn(
-                    'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
-                    draft.areas.includes('__unassigned__')
-                      ? 'bg-[var(--accent)] text-white'
-                      : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
-                  )}
-                >
-                  Unassigned
-                </button>
-                {areas.map((area) => {
-                  const selected = draft.areas.includes(area.id);
-                  return (
-                    <button
-                      key={area.id}
-                      type="button"
-                      onClick={() => toggleArea(area.id)}
-                      className={cn(
-                        'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
-                        selected
-                          ? 'bg-[var(--accent)] text-white'
-                          : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
-                      )}
-                    >
-                      {area.name}
-                    </button>
-                  );
-                })}
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleArea('__unassigned__')}
+                    className={cn(
+                      'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all duration-150 cursor-pointer',
+                      draft.areas.includes('__unassigned__')
+                        ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
+                        : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
+                    )}
+                  >
+                    Unassigned
+                  </button>
+                  {areas.map((area) => {
+                    const selected = draft.areas.includes(area.id);
+                    return (
+                      <button
+                        key={area.id}
+                        type="button"
+                        onClick={() => toggleArea(area.id)}
+                        className={cn(
+                          'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all duration-150 cursor-pointer',
+                          selected
+                            ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
+                            : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
+                        )}
+                      >
+                        {area.name}
+                      </button>
+                    );
+                  })}
+                </div>
             </div>
           )}
 
-          {/* Color */}
-          <div className="space-y-2.5">
-            <Label>Color</Label>
-            <div className="flex flex-wrap gap-2">
-              {HUE_RANGES.map((range) => {
-                const selected = draft.colors.includes(range.name);
-                return (
-                  <button
-                    key={range.name}
-                    type="button"
-                    onClick={() => toggleHueRange(range.name)}
-                    title={range.label}
-                    className={cn(
-                      'h-8 w-8 rounded-full transition-colors',
-                      selected
-                        ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
-                        : 'hover:opacity-80'
-                    )}
-                    style={{ backgroundColor: range.dot }}
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="space-y-2.5">
-            <Label>Content</Label>
-            {/* biome-ignore lint/a11y/noLabelWithoutControl: checkbox inside label */}
-            <label className="row-spread py-2 text-[15px] text-[var(--text-primary)] cursor-pointer">
-              Has items
-              <Checkbox
-                checked={draft.hasItems}
-                onCheckedChange={(v) => setDraft((d) => ({ ...d, hasItems: v }))}
-              />
-            </label>
-            {/* biome-ignore lint/a11y/noLabelWithoutControl: checkbox inside label */}
-            <label className="row-spread py-2 text-[15px] text-[var(--text-primary)] cursor-pointer">
-              Has notes
-              <Checkbox
-                checked={draft.hasNotes}
-                onCheckedChange={(v) => setDraft((d) => ({ ...d, hasNotes: v }))}
-              />
-            </label>
-          </div>
         </div>
 
         <DialogFooter>
@@ -275,7 +228,7 @@ export function BinFilterDialog({
               </Button>
             </div>
             <div className="row">
-              {(searchQuery || countActiveFilters(draft) > 0) && (
+              {(searchQuery || activeCount > 0) && (
                 <Button
                   variant="ghost"
                   onClick={() => { onSaveView(); onOpenChange(false); }}
@@ -284,7 +237,7 @@ export function BinFilterDialog({
                 </Button>
               )}
               <Button onClick={apply}>
-                Apply
+                {activeCount > 0 ? `Apply (${activeCount})` : 'Apply'}
               </Button>
             </div>
           </div>

@@ -78,9 +78,8 @@ describe('countActiveFilters', () => {
     expect(countActiveFilters(EMPTY_FILTERS)).toBe(0);
   });
 
-  it('counts tags, colors, areas, hasItems, hasNotes independently', () => {
+  it('counts tags, areas, hasItems, hasNotes independently', () => {
     expect(countActiveFilters({ ...EMPTY_FILTERS, tags: ['a'] })).toBe(1);
-    expect(countActiveFilters({ ...EMPTY_FILTERS, colors: ['blue'] })).toBe(1);
     expect(countActiveFilters({ ...EMPTY_FILTERS, areas: ['area-1'] })).toBe(1);
     expect(countActiveFilters({ ...EMPTY_FILTERS, hasItems: true })).toBe(1);
     expect(countActiveFilters({ ...EMPTY_FILTERS, hasNotes: true })).toBe(1);
@@ -89,12 +88,11 @@ describe('countActiveFilters', () => {
       countActiveFilters({
         tags: ['a'],
         tagMode: 'any',
-        colors: ['blue'],
         areas: ['area-1'],
         hasItems: true,
         hasNotes: true,
       }),
-    ).toBe(5);
+    ).toBe(4);
   });
 });
 
@@ -297,25 +295,6 @@ describe('useBinList', () => {
     expect(result.current.bins[0].id).toBe('1');
   });
 
-  it('filters — colors: filters by color set', async () => {
-    const bins = [
-      makeBin({ id: '1', color: 'blue' }),
-      makeBin({ id: '2', color: 'red' }),
-      makeBin({ id: '3', color: '' }),
-    ];
-    mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
-
-    const filters: BinFilters = { ...EMPTY_FILTERS, colors: ['blue', 'red'] };
-    const { result } = renderHook(() => useBinList(undefined, 'updated', filters));
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-    expect(result.current.bins).toHaveLength(2);
-    const ids = result.current.bins.map((b) => b.id);
-    expect(ids).toContain('1');
-    expect(ids).toContain('2');
-  });
 
   it('filters — areas: filters by area_id set', async () => {
     const bins = [

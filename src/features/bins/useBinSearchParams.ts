@@ -31,12 +31,10 @@ function parseSortDirFromParams(params: URLSearchParams, sort: SortOption): Sort
 
 function parseFiltersFromParams(params: URLSearchParams): BinFilters {
   const tagsRaw = params.get('tags');
-  const colorsRaw = params.get('colors');
   const areasRaw = params.get('areas');
   return {
     tags: tagsRaw ? tagsRaw.split(',').filter(Boolean) : [],
     tagMode: params.get('tag_mode') === 'all' ? 'all' : 'any',
-    colors: colorsRaw ? colorsRaw.split(',').filter(Boolean) : [],
     areas: areasRaw ? areasRaw.split(',').filter(Boolean) : [],
     hasItems: params.get('has_items') === 'true',
     hasNotes: params.get('has_notes') === 'true',
@@ -58,7 +56,6 @@ export function buildViewSearchParams(view: SavedView): string {
   const f = view.filters;
   if (f.tags.length > 0) params.set('tags', f.tags.join(','));
   if (f.tags.length >= 2 && f.tagMode === 'all') params.set('tag_mode', 'all');
-  if (f.colors.length > 0) params.set('colors', f.colors.join(','));
   if (f.areas.length > 0) params.set('areas', f.areas.join(','));
   if (f.hasItems) params.set('has_items', 'true');
   if (f.hasNotes) params.set('has_notes', 'true');
@@ -138,7 +135,6 @@ export function useBinSearchParams() {
 
     if (filters.tags.length > 0) params.set('tags', filters.tags.join(','));
     if (filters.tags.length >= 2 && filters.tagMode === 'all') params.set('tag_mode', 'all');
-    if (filters.colors.length > 0) params.set('colors', filters.colors.join(','));
     if (filters.areas.length > 0) params.set('areas', filters.areas.join(','));
     if (filters.hasItems) params.set('has_items', 'true');
     if (filters.hasNotes) params.set('has_notes', 'true');

@@ -63,7 +63,7 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           className={cn(
             'h-7 w-7 rounded-full transition-colors',
             !value
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+              ? 'ring-2 ring-[var(--accent)] '
               : 'hover:opacity-80'
           )}
           style={{ background: 'conic-gradient(from 0deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)' }}
@@ -75,7 +75,7 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           className={cn(
             'h-7 w-7 rounded-full transition-colors',
             isBlack
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+              ? 'ring-2 ring-[var(--accent)] '
               : 'hover:opacity-80'
           )}
           style={{ backgroundColor: '#1C1C1E' }}
@@ -87,7 +87,7 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           className={cn(
             'h-7 w-7 rounded-full border border-[var(--border-subtle)] transition-colors',
             isWhite
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+              ? 'ring-2 ring-[var(--accent)] '
               : 'hover:opacity-80'
           )}
           style={{ backgroundColor: '#F2F2F7' }}
@@ -99,7 +99,7 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
           className={cn(
             'h-7 w-7 rounded-full transition-colors',
             isNeutral
-              ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]'
+              ? 'ring-2 ring-[var(--accent)] '
               : 'hover:opacity-80'
           )}
           style={{ backgroundColor: hslToHex(0, 0, 52) }}

@@ -79,7 +79,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
       {visible && (
         <div className={cn(
           animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-          'absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 min-w-[180px] space-y-2',
+          'absolute right-0 top-full mt-1 z-50 flat-card rounded-[var(--radius-lg)] p-2 min-w-[180px] space-y-2',
         )}>
           {/* None + Black/White + Gray buttons */}
           <div className="flex gap-1.5">
@@ -94,7 +94,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
                 'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all',
                 !currentColor
                   ? 'border-[var(--accent)] bg-[var(--bg-base)]'
-                  : 'border-[var(--border-glass)] bg-[var(--bg-base)] hover:border-[var(--text-tertiary)]'
+                  : 'border-[var(--border-flat)] bg-[var(--bg-base)] hover:border-[var(--text-tertiary)]'
               )}
               aria-label="No color"
               title="None"
@@ -113,7 +113,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               className={cn(
                 'h-5 w-5 rounded-full transition-colors',
                 isBlack
-                  ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-base)]'
+                  ? 'ring-2 ring-[var(--accent)] '
                   : 'hover:opacity-80'
               )}
               style={{ backgroundColor: '#1C1C1E' }}
@@ -128,7 +128,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               className={cn(
                 'h-5 w-5 rounded-full border border-[var(--border-subtle)] transition-colors',
                 isWhite
-                  ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-base)]'
+                  ? 'ring-2 ring-[var(--accent)] '
                   : 'hover:opacity-80'
               )}
               style={{ backgroundColor: '#F2F2F7' }}
@@ -143,7 +143,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
               className={cn(
                 'h-5 w-5 rounded-full transition-colors',
                 isNeutral
-                  ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-base)]'
+                  ? 'ring-2 ring-[var(--accent)] '
                   : 'hover:opacity-80'
               )}
               style={{ backgroundColor: hslToHex(0, 0, 52) }}

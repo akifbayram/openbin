@@ -17,7 +17,7 @@ interface StylePickerProps {
 }
 
 const VARIANTS: { key: CardStyleVariant; label: string }[] = [
-  { key: 'glass', label: 'Glass' },
+  { key: 'default', label: 'Flat' },
   { key: 'border', label: 'Border' },
   { key: 'gradient', label: 'Gradient' },
   { key: 'stripe', label: 'Stripe' },
@@ -44,8 +44,8 @@ const BORDER_STYLES: { key: BorderStyle; label: string }[] = [
 function VariantPreview({ variant, color, rectangular }: { variant: CardStyleVariant; color: string; rectangular?: boolean }) {
   const baseClass = cn(rectangular ? 'aspect-[16/9]' : 'aspect-square', 'w-full rounded-[var(--radius-sm)] transition-all');
 
-  if (variant === 'glass') {
-    return <div className={cn(baseClass, 'glass-card')} />;
+  if (variant === 'default') {
+    return <div className={cn(baseClass, 'flat-card')} />;
   }
   if (variant === 'border') {
     return <div className={cn(baseClass, 'border-4')} style={{ borderColor: color ? `var(--accent)` : 'var(--border)' }} />;
@@ -59,7 +59,7 @@ function VariantPreview({ variant, color, rectangular }: { variant: CardStyleVar
     );
   }
   if (variant === 'stripe') {
-    return <div className={cn(baseClass, 'glass-card')} style={{ borderLeft: '6px solid var(--accent)' }} />;
+    return <div className={cn(baseClass, 'flat-card')} style={{ borderLeft: '6px solid var(--accent)' }} />;
   }
   if (variant === 'photo') {
     return (
@@ -68,14 +68,14 @@ function VariantPreview({ variant, color, rectangular }: { variant: CardStyleVar
       </div>
     );
   }
-  return <div className={cn(baseClass, 'glass-card')} />;
+  return <div className={cn(baseClass, 'flat-card')} />;
 }
 
 export function StylePicker({ value, color, onChange, photos }: StylePickerProps) {
   const [open, setOpen] = useState(false);
   const parsed = parseCardStyle(value);
-  const currentVariant = parsed?.variant ?? 'glass';
-  const displayLabel = VARIANTS.find((v) => v.key === currentVariant)?.label ?? 'Glass';
+  const currentVariant = parsed?.variant ?? 'default';
+  const displayLabel = VARIANTS.find((v) => v.key === currentVariant)?.label ?? 'Flat';
   const hasPhotos = photos && photos.length > 0;
 
   function updateStyle(patch: Partial<CardStyle>) {
@@ -83,7 +83,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
   }
 
   function selectVariant(variant: CardStyleVariant) {
-    if (variant === 'glass') {
+    if (variant === 'default') {
       onChange('');
     } else if (variant === 'photo') {
       const existingAssetId = parsed?.coverAssetId;
@@ -195,7 +195,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
                           className={cn(
                             'relative aspect-[16/9] rounded-[var(--radius-sm)] overflow-hidden transition-all',
                             isSelected
-                              ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-elevated)]'
+                              ? 'ring-2 ring-[var(--accent)] '
                               : 'hover:opacity-80'
                           )}
                           title={bg.label}
@@ -228,7 +228,7 @@ export function StylePicker({ value, color, onChange, photos }: StylePickerProps
                           className={cn(
                             'relative aspect-[16/9] rounded-[var(--radius-sm)] overflow-hidden transition-all',
                             isSelected
-                              ? 'ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--bg-elevated)]'
+                              ? 'ring-2 ring-[var(--accent)] '
                               : 'hover:opacity-80'
                           )}
                         >
