@@ -19,6 +19,8 @@ The search bar at the top of the bin list searches across all of the following s
 - Item names (items inside bins)
 - Tags
 - Notes
+- Bin ID (short code)
+- Area name
 
 Results update as you type (debounced to avoid unnecessary requests). Clearing the search bar returns the full list.
 

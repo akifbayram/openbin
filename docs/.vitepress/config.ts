@@ -83,6 +83,7 @@ export default defineConfig({
             { text: 'Locations', link: '/api/locations' },
             { text: 'Areas', link: '/api/areas' },
             { text: 'Bins', link: '/api/bins' },
+            { text: 'Custom Fields', link: '/api/custom-fields' },
             { text: 'Photos', link: '/api/photos' },
             { text: 'Tag Colors', link: '/api/tag-colors' },
             { text: 'Print Settings', link: '/api/print-settings' },

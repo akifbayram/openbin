@@ -29,14 +29,14 @@ services:
     ports:
       - "1453:1453"
     volumes:
-      - openbin_data:/data
+      - api_data:/data
     environment:
       DATABASE_PATH: /data/openbin.db
       PHOTO_STORAGE_PATH: /data/photos
       BACKUP_PATH: /data/backups
 
 volumes:
-  openbin_data:
+  api_data:
 ```
 
 ```bash
@@ -64,7 +64,7 @@ All settings are optional. Set environment variables or create a `.env` file to 
 | `JWT_SECRET` | JWT signing secret; auto-generated and persisted if unset | — |
 | `ACCESS_TOKEN_EXPIRES_IN` | Short-lived access token lifetime | `15m` |
 | `REFRESH_TOKEN_MAX_DAYS` | Refresh token lifetime in days (1–90) | `7` |
-| `BCRYPT_ROUNDS` | Password hashing rounds | `12` |
+| `BCRYPT_ROUNDS` | Password hashing rounds (10–31) | `12` |
 | `REGISTRATION_MODE` | Registration policy: `open`, `invite` (require location invite code), or `closed` | `open` |
 | **Uploads** | | |
 | `MAX_PHOTO_SIZE_MB` | Max photo upload size in MB | `5` |
@@ -78,7 +78,7 @@ All settings are optional. Set environment variables or create a `.env` file to 
 | **Backups** | | |
 | `BACKUP_ENABLED` | Enable automatic database backups | `false` |
 | `BACKUP_INTERVAL` | Backup schedule (hourly/daily/weekly/cron) | `daily` |
-| `BACKUP_RETENTION` | Backup retention in days | `7` |
+| `BACKUP_RETENTION` | Number of backup files to keep | `7` |
 | `BACKUP_WEBHOOK_URL` | Webhook URL for backup notifications | — |
 | **Rate Limiting** | | |
 | `AI_RATE_LIMIT` | Max AI requests per hour per user | `30` |
@@ -141,8 +141,10 @@ cd server && npm install    # Install server dependencies
 ```
 
 ```bash
-cd server && npm run dev   # API server at http://localhost:1453
-npm run dev                 # Frontend dev server at http://localhost:5173
+npm run dev:all            # Both servers concurrently (recommended)
+# Or separately in two terminals:
+# cd server && npm run dev   API server at http://localhost:1453
+# npm run dev                Frontend dev server at http://localhost:5173
 ```
 
 ## AI Disclosure

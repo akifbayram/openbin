@@ -33,7 +33,7 @@ Each provider requires its own API key. Sign up and create one from their develo
 1. Go to **Settings → AI**.
 2. Select your provider.
 3. Enter your API key (see [Getting an API Key](#getting-an-api-key) above).
-4. Select or type the model name (see [Recommended Models](#recommended-models) for suggestions).
+4. Select or type the model name (see [Supported Providers](#supported-providers) for suggestions).
 5. For OpenAI-compatible endpoints, enter the endpoint URL.
 6. Click **Save**.
 

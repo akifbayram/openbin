@@ -35,7 +35,7 @@ Uncomment only the lines you need to change. The file is loaded automatically by
 | `ACCESS_TOKEN_EXPIRES_IN` | `15m` | Lifetime of the short-lived access token stored in an httpOnly cookie. |
 | `REFRESH_TOKEN_MAX_DAYS` | `7` | Refresh token lifetime in days. Accepted range: 1–90. |
 | `COOKIE_SECURE` | _(auto)_ | Forces the `Secure` flag on cookies. Defaults to `true` in production automatically. Set explicitly if needed. |
-| `BCRYPT_ROUNDS` | `12` | Password hashing cost factor. Range: 4–31. Higher values are more secure but slower. |
+| `BCRYPT_ROUNDS` | `12` | Password hashing cost factor. Range: 10–31. Higher values are more secure but slower. |
 | `REGISTRATION_MODE` | `open` | Registration policy. `open` — anyone can register. `invite` — new users must enter a location invite code during sign-up. `closed` — no new registrations; existing users can still log in. |
 
 ---

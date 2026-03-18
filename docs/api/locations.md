@@ -84,6 +84,10 @@ Updates a location's settings. Admin only.
 | `activity_retention_days` | integer (7–365) | Days to keep activity log entries |
 | `trash_retention_days` | integer (7–365) | Days to keep soft-deleted bins before purging |
 | `app_name` | string | Custom display name for this location |
+| `term_bin` | string | Custom terminology for "Bin" (max 30 characters) |
+| `term_location` | string | Custom terminology for "Location" (max 30 characters) |
+| `term_area` | string | Custom terminology for "Area" (max 30 characters) |
+| `default_join_role` | `"member"` or `"viewer"` | Default role for members joining via invite code |
 
 **Response (200)**: Updated `Location` object.
 
@@ -145,7 +149,7 @@ Changes a member's role. Admin only. Cannot demote the last admin.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `role` | `"admin"` or `"member"` | Yes | |
+| `role` | `"admin"`, `"member"`, or `"viewer"` | Yes | |
 
 **Response (200)**: `{ "message": "Role updated to admin" }`
 

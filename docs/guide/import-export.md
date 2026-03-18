@@ -86,7 +86,7 @@ After import completes, OpenBin shows a summary:
 
 ### File Size Limit
 
-The maximum import file size is **100 MB**. For larger collections, split the export into multiple files.
+The maximum import file size is **50 MB**. For larger collections, split the export into multiple files.
 
 ::: tip
 Always export a backup before importing. Imports cannot be bulk-undone — you would need to manually delete the imported bins or use bulk delete.

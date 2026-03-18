@@ -105,7 +105,7 @@ Imports bins and photos from a V1 or V2 export document. Supports `merge` (add t
 
 ### POST /api/import/legacy
 
-Imports data from the old V1 export format (freeform `contents` string instead of discrete items). Handles the `homeName` field mapping. 50MB body size limit. No location scoping — uses the authenticated user's context.
+Imports data from the old V1 export format (freeform `contents` string instead of discrete items). Maps the V1 `homeName` field to the location name context. 50MB body size limit. The target location is the authenticated user's active location.
 
 **Request body**: Same `ImportRequest` schema as above.
 

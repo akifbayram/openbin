@@ -137,7 +137,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
   for (const [field, value] of [['term_bin', term_bin], ['term_location', term_location], ['term_area', term_area]] as const) {
     if (value !== undefined) {
       if (typeof value !== 'string') throw new ValidationError(`${field} must be a string`);
-      if (value.length > 61) throw new ValidationError(`${field} must be at most 61 characters`);
+      if (value.length > 30) throw new ValidationError(`${field} must be at most 30 characters`);
     }
   }
 

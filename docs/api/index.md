@@ -106,6 +106,7 @@ Set the `DISABLE_RATE_LIMIT=true` environment variable to disable all rate limit
 | **[Locations](/api/locations)** | Location CRUD, membership management, and invite codes |
 | **[Areas](/api/areas)** | Named zones within a location for organizing bins |
 | **[Bins](/api/bins)** | Bin CRUD, soft deletes, restore, QR lookup, items, tags, pinning, and photo upload |
+| **[Custom Fields](/api/custom-fields)** | Location-scoped custom field definitions for bins |
 | **[Photos](/api/photos)** | Photo retrieval (file and thumbnail) and deletion |
 | **[Tag Colors](/api/tag-colors)** | Per-location color assignments for tags |
 | **[Print Settings](/api/print-settings)** | Per-user label format and custom print dimension settings |

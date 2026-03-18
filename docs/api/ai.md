@@ -23,7 +23,7 @@ Returns the authenticated user's configured AI provider. The API key is masked i
   "id": "uuid",
   "provider": "openai",
   "apiKey": "sk-•••••••••",
-  "model": "gpt-4o",
+  "model": "gpt-5-mini",
   "endpointUrl": null,
   "customPrompt": null,
   "commandPrompt": null,
@@ -46,7 +46,7 @@ Saves AI provider configuration. The API key is encrypted at rest when the `AI_E
 |---|---|---|---|
 | `provider` | `"openai"`, `"anthropic"`, `"gemini"`, `"openai-compatible"` | Yes | |
 | `apiKey` | string | Yes | Provider API key |
-| `model` | string | Yes | Model identifier (e.g. `gpt-4o`) |
+| `model` | string | Yes | Model identifier (e.g. `gpt-5-mini`) |
 | `endpointUrl` | string | No | Required when `provider` is `"openai-compatible"` |
 | `customPrompt` | string or null | No | Custom system prompt for image analysis. Max 10,000 characters. Use `{available_tags}` placeholder to inject existing tags. |
 | `commandPrompt` | string or null | No | Custom system prompt for natural language commands. Max 10,000 characters. |

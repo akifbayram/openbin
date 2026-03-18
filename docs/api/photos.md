@@ -33,7 +33,6 @@ Lists all photos for a bin.
       "filename": "photo.jpg",
       "mime_type": "image/jpeg",
       "size": 204800,
-      "storage_path": "...",
       "created_by": "uuid",
       "created_at": "..."
     }
@@ -50,17 +49,19 @@ Serves the full-size photo binary. Auth is required via cookie or Bearer header.
 
 **Path parameters**: `id` (photo UUID)
 
-**Query parameters**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `token` | string | No | JWT token as an alternative to the Authorization header |
-
 **Response (200)**: Binary image (`image/*`).
 
-::: tip Thumbnail
-A 600px WebP thumbnail is generated lazily on first request at `GET /api/photos/{id}/thumb` (not yet in the OpenAPI spec). Use `getPhotoThumbUrl(photoId)` in the frontend helpers.
-:::
+---
+
+### GET /api/photos/`{id}`/thumb
+
+Serves a 600px-wide WebP thumbnail of the photo. The thumbnail is generated lazily on first request and cached for subsequent loads. Returns an immutable 1-year cache header.
+
+**Path parameters**: `id` (photo UUID)
+
+**Response (200)**: Binary image (`image/webp`).
+
+If the original photo is missing from storage, returns 404.
 
 ---
 
