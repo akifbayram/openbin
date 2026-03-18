@@ -84,7 +84,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{photoMode ? 'Add from Photos' : 'Ask AI'}</DialogTitle>
+          <DialogTitle>{photoMode ? 'Create from Photos' : 'Ask AI'}</DialogTitle>
         </DialogHeader>
 
         <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />

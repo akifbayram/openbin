@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 import type { AiSuggestions } from '@/types';
 import { AiSettingsSection } from './AiSettingsSection';
 import { AiAnalyzeError, AiStreamingPreview } from './AiStreamingPreview';
-import { parsePartialAnalysis } from './parsePartialAnalysis';
+
 import { MAX_AI_PHOTOS } from './useAiAnalysis';
 import { useAiSettings } from './useAiSettings';
 import { useAiStream } from './useAiStream';
@@ -64,19 +64,15 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   const {
     isStreaming: isAnalyzing,
     error: analyzeError,
-    partialText,
     stream: streamAnalyze,
     cancel: cancelAnalyze,
   } = useAiStream<AiSuggestions>('/api/ai/analyze-image/stream', "Couldn't analyze — try again");
-  const { name: streamedName, items: streamedItems } = parsePartialAnalysis(partialText);
 
   const {
     isStreaming: isCorrecting,
-    partialText: correctionPartialText,
     stream: streamCorrection,
     cancel: cancelCorrection,
   } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
-  const { name: correctionStreamedName, items: correctionStreamedItems } = parsePartialAnalysis(correctionPartialText);
 
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -225,8 +221,8 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
       {(isAnalyzing || isCorrecting) ? (
         <AiStreamingPreview
           previewUrls={previewUrls}
-          streamedName={isCorrecting ? correctionStreamedName : streamedName}
-          streamedItems={isCorrecting ? correctionStreamedItems : streamedItems}
+          streamedName=""
+          streamedItems={[]}
           initialStatusLabel={isCorrecting ? 'Applying correction...' : `Analyzing ${Math.min(files.length, MAX_AI_PHOTOS)} photo${Math.min(files.length, MAX_AI_PHOTOS) !== 1 ? 's' : ''}...`}
         />
       ) : (
@@ -236,7 +232,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             {previewUrls.length === 1 ? (
               <img
                 src={previewUrls[0]}
-                alt="Upload 1"
+                alt="Preview 1"
                 className={cn(
                   'w-full rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
                   name ? 'max-h-20 opacity-80' : 'aspect-square',
@@ -248,7 +244,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                   // biome-ignore lint/suspicious/noArrayIndexKey: preview URLs have no stable identity
                   <img key={i}
                     src={url}
-                    alt={`Upload ${i + 1}`}
+                    alt={`Preview ${i + 1}`}
                     className={cn(
                       'shrink-0 flex-1 min-w-0 rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
                       name ? 'max-h-20 opacity-80' : 'aspect-square',
@@ -261,7 +257,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               <button
                 type="button"
                 onClick={() => setCorrectionOpen(!correctionOpen)}
-                title="Correct AI result"
+                title="Adjust AI suggestions"
                 className={cn(
                   'absolute top-2 right-2 p-1.5 rounded-full transition-colors',
                   correctionOpen
@@ -279,7 +275,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             <div className="space-y-1.5">
               {correctionCount >= MAX_CORRECTIONS ? (
                 <p className="text-[12px] text-[var(--text-tertiary)] italic">
-                  Correction limit reached — edit fields directly.
+                  You can still edit any field below.
                 </p>
               ) : (
                 <div className="row">
@@ -287,7 +283,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                     value={correctionText}
                     onChange={(e) => setCorrectionText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCorrectionSubmit(); } }}
-                    placeholder="Tell AI what's wrong..."
+                    placeholder="Describe what to change..."
                     className="flex-1 h-9 text-[13px]"
                   />
                   <button
@@ -298,11 +294,6 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                     <ArrowUp className="h-4 w-4" />
                   </button>
                 </div>
-              )}
-              {correctionCount > 0 && correctionCount < MAX_CORRECTIONS && (
-                <p className="text-[11px] text-[var(--text-tertiary)]">
-                  {MAX_CORRECTIONS - correctionCount} correction{MAX_CORRECTIONS - correctionCount !== 1 ? 's' : ''} remaining
-                </p>
               )}
             </div>
           </div>
@@ -317,7 +308,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                 onClick={() => setAiSetupExpanded(!aiSetupExpanded)}
                 className="text-[12px] text-[var(--accent)] font-medium flex items-center gap-0.5"
               >
-                Configure AI provider
+                Set up AI
                 {aiSetupExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </button>
             </div>

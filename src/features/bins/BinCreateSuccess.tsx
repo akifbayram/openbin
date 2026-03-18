@@ -59,7 +59,7 @@ export function BinCreateSuccess({ createdBins, onCreateAnother, onClose }: BinC
 
       {/* Heading + stats */}
       <div className="text-center scan-text-fade">
-        <h2 className="text-xl font-bold text-[var(--text-primary)]">Success</h2>
+        <h2 className="text-xl font-bold text-[var(--text-primary)]">All set</h2>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
           <StatsLine createdBins={createdBins} binsLabel={t.bins} />
         </p>

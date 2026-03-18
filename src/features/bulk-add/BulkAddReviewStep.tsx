@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { AiAnalyzeError, AiStreamingPreview } from '@/features/ai/AiStreamingPreview';
-import { parsePartialAnalysis } from '@/features/ai/parsePartialAnalysis';
 import { mapErrorMessage } from '@/features/ai/useAiAnalysis';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useAiStream } from '@/features/ai/useAiStream';
@@ -47,11 +46,9 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
 
   const {
     isStreaming: isCorrecting,
-    partialText: correctionPartialText,
     stream: streamCorrection,
     cancel: cancelCorrection,
   } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
-  const { name: correctionStreamedName, items: correctionStreamedItems } = parsePartialAnalysis(correctionPartialText);
 
   const photo = photos[currentIndex];
 
@@ -109,13 +106,8 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
       formData.append('photo', file);
       if (activeLocationId) formData.append('locationId', activeLocationId);
 
-      let accumulated = '';
       for await (const event of apiStream('/api/ai/analyze-image/stream', { body: formData, signal: controller.signal })) {
-        if (event.type === 'delta') {
-          accumulated += event.text;
-          const partial = parsePartialAnalysis(accumulated);
-          dispatch({ type: 'UPDATE_STREAM', id: target.id, name: partial.name, items: partial.items });
-        } else if (event.type === 'done') {
+        if (event.type === 'done') {
           const result: AiSuggestions = JSON.parse(event.text);
           const qtyMap = buildQuantityMap(result.items);
           dispatch({
@@ -229,8 +221,8 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
       {(isStreaming || isCorrecting) ? (
         <AiStreamingPreview
           previewUrls={[photo.previewUrl]}
-          streamedName={isCorrecting ? correctionStreamedName : photo.streamedName}
-          streamedItems={isCorrecting ? correctionStreamedItems : photo.streamedItems}
+          streamedName=""
+          streamedItems={[]}
           initialStatusLabel={isCorrecting ? 'Applying correction...' : 'Analyzing photo...'}
         />
       ) : (
@@ -240,7 +232,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
           <div className="relative">
             <img
               src={photo.previewUrl}
-              alt={`Upload ${currentIndex + 1}`}
+              alt={`Preview ${currentIndex + 1}`}
               className={cn(
                 'w-full rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
                 photo.status === 'reviewed' ? 'max-h-20 object-cover opacity-80' : 'aspect-square object-cover',
@@ -250,7 +242,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               <button
                 type="button"
                 onClick={() => setCorrectionOpen(!correctionOpen)}
-                title="Correct AI result"
+                title="Adjust AI suggestions"
                 className={cn(
                   'absolute top-2 right-2 p-1.5 rounded-full transition-colors',
                   correctionOpen
@@ -268,7 +260,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
             <div className="space-y-1.5">
               {photo.correctionCount >= MAX_CORRECTIONS ? (
                 <p className="text-[12px] text-[var(--text-tertiary)] italic">
-                  Correction limit reached — edit fields directly.
+                  You can still edit any field below.
                 </p>
               ) : (
                 <div className="row">
@@ -276,7 +268,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                     value={correctionText}
                     onChange={(e) => setCorrectionText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCorrectionSubmit(); } }}
-                    placeholder="Tell AI what's wrong..."
+                    placeholder="Describe what to change..."
                     className="flex-1 h-9 text-[13px]"
                   />
                   <button
@@ -287,11 +279,6 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                     <ArrowUp className="h-4 w-4" />
                   </button>
                 </div>
-              )}
-              {photo.correctionCount > 0 && photo.correctionCount < MAX_CORRECTIONS && (
-                <p className="text-[11px] text-[var(--text-tertiary)]">
-                  {MAX_CORRECTIONS - photo.correctionCount} correction{MAX_CORRECTIONS - photo.correctionCount !== 1 ? 's' : ''} remaining
-                </p>
               )}
             </div>
           )}
@@ -309,7 +296,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
                 onClick={() => setAiSetupExpanded(!aiSetupExpanded)}
                 className="text-[12px] text-[var(--accent)] font-medium flex items-center gap-0.5"
               >
-                Configure AI provider
+                Set up AI
                 {aiSetupExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </button>
             </div>
@@ -418,7 +405,7 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               <Button
                 onClick={handleNext}
                   >
-                {isLast ? 'Done' : 'Next'}
+                {isLast ? 'Review all' : 'Next'}
                 {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}
               </Button>
             </div>

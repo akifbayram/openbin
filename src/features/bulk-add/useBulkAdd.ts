@@ -244,8 +244,8 @@ export function createBulkAddPhoto(file: File, sharedAreaId: string | null): Bul
 }
 
 export const BULK_ADD_STEPS = [
-  { id: 'upload', label: 'Upload' },
-  { id: 'analyze', label: 'Analyze' },
+  { id: 'upload', label: 'Photos' },
+  { id: 'analyze', label: 'AI' },
   { id: 'review', label: 'Review' },
   { id: 'create', label: 'Create' },
 ];

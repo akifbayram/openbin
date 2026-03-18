@@ -232,7 +232,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           <div key={photo.id} className="relative aspect-square group">
             <img
               src={photo.previewUrl}
-              alt="Preview"
+              alt={`Preview ${state.photos.indexOf(photo) + 1}`}
               className="h-full w-full rounded-[var(--radius-md)] object-cover"
             />
             <button
@@ -259,19 +259,12 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       {/* Mode toggle */}
       <OptionGroup
         options={[
-          { key: 'per-photo' as const, label: `Separate ${t.bins}` },
-          { key: 'single-bin' as const, label: `Same ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Max ${MAX_AI_PHOTOS} photos for single ${t.bin}` },
+          { key: 'per-photo' as const, label: `One ${t.bin} per photo` },
+          { key: 'single-bin' as const, label: `All in one ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Up to ${MAX_AI_PHOTOS} photos in single-${t.bin} mode` },
         ]}
         value={mode}
         onChange={setMode}
       />
-
-      {/* Helper text */}
-      <p className="text-[12px] text-[var(--text-tertiary)]">
-        {mode === 'per-photo'
-          ? `Each photo will create a separate ${t.bin}`
-          : `All photos will be analyzed together as one ${t.bin}`}
-      </p>
 
       {/* Shared area picker */}
       <div className="space-y-1.5">

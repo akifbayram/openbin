@@ -22,14 +22,14 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
     <div className="space-y-3">
       {previewUrls.length === 1 ? (
         <div className={shimmerClass}>
-          <img src={previewUrls[0]} alt="Upload 1" className={imgClass} />
+          <img src={previewUrls[0]} alt="Preview 1" className={imgClass} />
         </div>
       ) : (
         <div className="flex gap-2 overflow-x-auto">
           {previewUrls.map((url, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: preview URLs have no stable identity
             <div key={i} className={cn('shrink-0 flex-1 min-w-0', shimmerClass)}>
-              <img src={url} alt={`Upload ${i + 1}`} className={imgClass} />
+              <img src={url} alt={`Preview ${i + 1}`} className={imgClass} />
             </div>
           ))}
         </div>

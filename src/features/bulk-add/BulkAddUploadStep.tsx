@@ -41,7 +41,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-[22px] font-bold text-[var(--text-primary)]">Upload Photos</h2>
+        <h2 className="text-[22px] font-bold text-[var(--text-primary)]">Your Photos</h2>
         <p className="text-[15px] text-[var(--text-secondary)] mt-1">
           Add a photo for each {t.bin} you want to create.
         </p>
@@ -73,7 +73,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
               <div key={photo.id} className="relative aspect-square group">
                 <img
                   src={photo.previewUrl}
-                  alt="Preview"
+                  alt={`Preview ${photos.indexOf(photo) + 1}`}
                   className="h-full w-full rounded-[var(--radius-md)] object-cover"
                 />
                 <button
@@ -98,7 +98,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
           </div>
 
           {photos.length >= MAX_PHOTOS && (
-            <p className="text-[13px] text-[var(--color-warning)]">Maximum of {MAX_PHOTOS} photos reached.</p>
+            <p className="text-[13px] text-[var(--color-warning)]">You've reached the {MAX_PHOTOS} photo limit</p>
           )}
 
           <div className="space-y-2">

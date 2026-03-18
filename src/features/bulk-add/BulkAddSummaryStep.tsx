@@ -48,7 +48,7 @@ export function BulkAddSummaryStep({
         </h2>
         {!isCreating && !allCreated && (
           <p className="text-[13px] text-[var(--text-secondary)] mt-0.5">
-            Review your {t.bins} before creating them.
+            Tap any {t.bin} to edit before creating.
           </p>
         )}
       </div>
@@ -98,7 +98,7 @@ export function BulkAddSummaryStep({
                       : null,
                   ]
                     .filter(Boolean)
-                    .join(' · ') || 'No items or tags added'}
+                    .join(' · ') || 'No items or tags'}
                 </p>
               </div>
               {photo.status === 'created' && (
@@ -132,7 +132,7 @@ export function BulkAddSummaryStep({
       {failed.length > 0 && (
         <div className="space-y-2">
           <p className="text-[13px] font-medium text-[var(--destructive)]">
-            {failed.length} failed to create
+            Couldn't create {failed.length} {failed.length !== 1 ? t.bins : t.bin}
           </p>
           {failed.map((photo) => (
             <div
@@ -175,10 +175,10 @@ export function BulkAddSummaryStep({
                 >
                   <img
                     src={photo.previewUrl}
-                    alt="Skipped"
+                    alt="Skipped preview"
                     className="h-9 w-9 rounded-[var(--radius-md)] object-cover shrink-0"
                   />
-                  <p className="text-[14px] text-[var(--text-secondary)] flex-1">Not included</p>
+                  <p className="text-[14px] text-[var(--text-secondary)] flex-1 truncate">{photo.name || 'Untitled'}</p>
                   <Button
                     variant="ghost"
                     size="sm"
