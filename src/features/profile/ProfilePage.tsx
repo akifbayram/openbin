@@ -139,7 +139,7 @@ export function ProfilePage() {
               type="button"
               onClick={handleRemoveAvatar}
               disabled={uploadingAvatar}
-              className="absolute -top-1 -right-1 z-10 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100 max-lg:opacity-100"
+              className="absolute -top-1 -right-1 z-10 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center hover:bg-[var(--destructive)] hover:text-white transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100 max-lg:opacity-100"
               aria-label="Remove avatar"
             >
               <X className="h-3 w-3" />

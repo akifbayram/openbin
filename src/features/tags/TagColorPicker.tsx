@@ -79,7 +79,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
       {visible && (
         <div className={cn(
           animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-          'absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 shadow-lg min-w-[180px] space-y-2',
+          'absolute right-0 top-full mt-1 z-50 glass-card rounded-[var(--radius-lg)] p-2 min-w-[180px] space-y-2',
         )}>
           {/* None + Black/White + Gray buttons */}
           <div className="flex gap-1.5">
@@ -171,7 +171,7 @@ export function TagColorPicker({ currentColor, onColorChange }: TagColorPickerPr
             >
               {currentHue !== null && (
                 <div
-                  className="absolute top-1/2 h-4 w-4 rounded-full border-2 border-white shadow-md pointer-events-none"
+                  className="absolute top-1/2 h-4 w-4 rounded-full border-2 border-white pointer-events-none"
                   style={{
                     left: `${(currentHue / 360) * 100}%`,
                     transform: 'translate(-50%, -50%)',

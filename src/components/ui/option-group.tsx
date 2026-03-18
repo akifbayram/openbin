@@ -14,6 +14,7 @@ interface OptionGroupProps<K extends string> {
   options: OptionGroupOption<K>[];
   value: K;
   onChange: (key: K) => void;
+  /** @deprecated Ignored — all option groups use unified radius */
   shape?: 'pill' | 'rounded';
   size?: 'sm' | 'md' | 'lg';
   scrollable?: boolean;
@@ -26,15 +27,15 @@ export function OptionGroup<K extends string>({
   options,
   value,
   onChange,
-  shape = 'pill',
+  shape: _shape = 'pill',
   size = 'lg',
   scrollable,
   iconOnly,
   renderContent,
   className,
 }: OptionGroupProps<K>) {
-  const containerRadius = shape === 'pill' ? 'rounded-full' : 'rounded-[var(--radius-md)]';
-  const segmentRadius = shape === 'pill' ? 'rounded-full' : 'rounded-[var(--radius-sm)]';
+  const containerRadius = 'rounded-[var(--radius-md)]';
+  const segmentRadius = 'rounded-[var(--radius-xs)]';
   const textSize = size === 'sm' ? 'text-[12px]' : 'text-[13px]';
   const padding = iconOnly ? 'p-2' : size === 'sm' ? 'px-2 py-1' : 'px-3 py-1.5';
 
@@ -84,7 +85,7 @@ export function OptionGroup<K extends string>({
     <div
       ref={containerRef}
       className={cn(
-        'relative flex bg-[var(--bg-input)] p-1 gap-0.5',
+        'relative flex bg-[var(--bg-glass)] border border-[var(--border-glass)] p-1 gap-0.5',
         containerRadius,
         scrollable && 'overflow-x-auto flex-nowrap',
         className,
@@ -93,7 +94,7 @@ export function OptionGroup<K extends string>({
       {indicator && (
         <div
           aria-hidden
-          className={cn('absolute top-1 bottom-1 bg-[var(--bg-elevated)] dark:bg-[var(--bg-active)] shadow-sm', segmentRadius)}
+          className={cn('absolute top-1 bottom-1 bg-[var(--accent)]', segmentRadius)}
           style={{
             left: indicator.left,
             width: indicator.width,
@@ -123,7 +124,7 @@ export function OptionGroup<K extends string>({
               'flex items-center justify-center',
               !iconOnly && 'gap-1.5',
               active
-                ? 'text-[var(--text-primary)]'
+                ? 'text-[var(--text-on-accent)]'
                 : disabled
                   ? 'text-[var(--text-tertiary)] opacity-40 cursor-not-allowed'
                   : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]',

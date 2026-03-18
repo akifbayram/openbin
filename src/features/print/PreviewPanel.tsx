@@ -36,7 +36,7 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
         <Button
           onClick={() => window.print()}
           disabled={!hasSelection}
-          className="flex-1 rounded-[var(--radius-md)] h-12 text-[17px] shadow-[0_2px_12px_var(--accent-glow)]"
+          className="flex-1 rounded-[var(--radius-md)] h-12 text-[17px]"
         >
           <Printer className="h-5 w-5 mr-2.5" />
           {hasSelection ? `Print ${selectedBins.length} ${printLabel}` : 'Print'}

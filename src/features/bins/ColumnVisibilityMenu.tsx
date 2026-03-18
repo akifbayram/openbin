@@ -53,7 +53,7 @@ export function ColumnVisibilityMenu({ applicableFields, visibility, onToggle }:
           variant="secondary"
           size="icon"
           onClick={toggle}
-          className="shrink-0 rounded-[var(--radius-full)]"
+          className="shrink-0 rounded-[var(--radius-sm)]"
           aria-label="Toggle field visibility"
         >
           <Columns3 className="h-4 w-4" />

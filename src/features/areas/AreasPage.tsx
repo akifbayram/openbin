@@ -138,7 +138,7 @@ export function AreasPage() {
             <Button
               onClick={() => setCreateLocationOpen(true)}
               size="icon"
-              className="h-10 w-10 rounded-full"
+              className="h-10 w-10 rounded-[var(--radius-sm)]"
               aria-label={`Create ${t.location}`}
             >
               <Plus className="h-5 w-5" />

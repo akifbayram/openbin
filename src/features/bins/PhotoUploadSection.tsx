@@ -75,7 +75,7 @@ export function PhotoUploadSection({
                 <button
                   type="button"
                   onClick={() => onRemovePhoto(i)}
-                  className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center shadow-sm hover:bg-[var(--destructive)] hover:text-white transition-colors"
+                  className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center hover:bg-[var(--destructive)] hover:text-white transition-colors"
                 >
                   <X className="h-3 w-3" />
                 </button>

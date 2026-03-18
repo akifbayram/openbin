@@ -60,7 +60,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                 placeholder="Search by Avery product number..."
                 value={formatSearch}
                 onChange={(e) => setFormatSearch(e.target.value)}
-                className="w-full h-9 rounded-full bg-[var(--bg-input)] pl-9 pr-8 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-2 focus:ring-[var(--accent)]/30 transition-shadow"
+                className="w-full h-9 rounded-[var(--radius-sm)] bg-[var(--bg-input)] pl-9 pr-8 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-2 focus:ring-[var(--accent)]/30 transition-shadow"
               />
               {formatSearch && (
                 <button

@@ -23,7 +23,7 @@ export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
       {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay dismisses drawer on click */}
       <div
         role="presentation"
-        className="fixed inset-0 bg-[var(--overlay-backdrop)] backdrop-blur-sm"
+        className="fixed inset-0 bg-[var(--overlay-backdrop)]"
         style={{
           opacity: isEntered ? 1 : 0,
           transition: `opacity ${duration} ease`,

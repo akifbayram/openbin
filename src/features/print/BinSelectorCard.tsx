@@ -90,7 +90,7 @@ export function BinSelectorCard({
                         type="button"
                         onClick={() => toggleArea(group.areaId)}
                         className={cn(
-                          'inline-flex items-center px-3 py-1.5 rounded-[var(--radius-full)] text-[12px] font-medium transition-colors',
+                          'inline-flex items-center px-3 py-1.5 rounded-[var(--radius-xs)] text-[12px] font-medium transition-colors',
                           allSelected
                             ? 'bg-[var(--accent)] text-white'
                             : 'bg-[var(--bg-input)] hover:bg-[var(--bg-active)]',

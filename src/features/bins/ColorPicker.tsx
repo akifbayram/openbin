@@ -121,7 +121,7 @@ export function HueGradientPicker({ value, onChange }: { value: string; onChange
         >
           {currentHue !== null && (
             <div
-              className="absolute top-1/2 h-5 w-5 rounded-full border-2 border-white shadow-md pointer-events-none"
+              className="absolute top-1/2 h-5 w-5 rounded-full border-2 border-white pointer-events-none"
               style={{
                 left: `${(currentHue / 360) * 100}%`,
                 transform: 'translate(-50%, -50%)',

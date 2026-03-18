@@ -74,7 +74,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
                 variant="ghost"
                 size="icon"
                 onClick={() => setPhotoToDelete(photo)}
-                className="absolute top-1 right-1 h-8 w-8 rounded-full bg-[var(--overlay-button)] text-white opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-[var(--destructive)]"
+                className="absolute top-1 right-1 h-8 w-8 rounded-[var(--radius-xs)] bg-[var(--overlay-button)] text-white opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-[var(--destructive)]"
                 aria-label="Delete photo"
               >
                 <Trash2 className="h-3.5 w-3.5" />

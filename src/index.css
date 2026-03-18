@@ -2,20 +2,20 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ─── iOS 26 Liquid Glass Design Tokens ─── */
+/* ─── Flat Material Design Tokens ─── */
 :root {
   --font-heading: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-  --bg-base: #f2f2f7;
-  --bg-sidebar: #e8e8ed;
-  --bg-elevated: rgba(255, 255, 255, 0.72);
-  --bg-glass: rgba(255, 255, 255, 0.55);
-  --bg-glass-heavy: rgba(255, 255, 255, 0.78);
+  --bg-base: #f5f5f5;
+  --bg-sidebar: #ebebeb;
+  --bg-elevated: #ffffff;
+  --bg-glass: #ffffff;
+  --bg-glass-heavy: #ffffff;
   --bg-popover: #ffffff;
-  --bg-input: rgba(120, 120, 128, 0.12);
-  --bg-hover: rgba(120, 120, 128, 0.08);
-  --bg-active: rgba(120, 120, 128, 0.16);
-  --border-glass: rgba(255, 255, 255, 0.45);
-  --border-subtle: rgba(0, 0, 0, 0.06);
+  --bg-input: #e8e8e8;
+  --bg-hover: #ebebeb;
+  --bg-active: #e0e0e0;
+  --border-glass: #e0e0e0;
+  --border-subtle: #ececec;
   --text-primary: #1c1c1e;
   --text-secondary: #3c3c43;
   --text-tertiary: #6d6d72;
@@ -24,13 +24,13 @@
   --accent-hover: #4e1fd0;
   --destructive: #ff3b30;
   --destructive-hover: #d63028;
-  --shadow-glass: 0 2px 16px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1);
-  --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
-  --radius-xs: 8px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 26px;
+  --shadow-glass: none;
+  --shadow-elevated: none;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
   --radius-full: 9999px;
   --nav-height: 52px;
   --sidebar-width: 260px;
@@ -46,7 +46,6 @@
   --ai-accent-hover: #4e1fd0;
   --accent-active: #4520b8;
   --destructive-active: #b52a22;
-  --accent-glow: rgba(94, 47, 224, 0.15);
   --color-success: #34c759;
   --color-success-soft: rgba(52, 199, 89, 0.12);
   --color-success-ring: rgba(52, 199, 89, 0.25);
@@ -62,17 +61,17 @@
 }
 
 .dark {
-  --bg-base: #0c0a12;
-  --bg-sidebar: #1c1c1e;
-  --bg-elevated: rgba(28, 28, 30, 0.72);
-  --bg-glass: rgba(44, 44, 46, 0.55);
-  --bg-glass-heavy: rgba(44, 44, 46, 0.78);
-  --bg-popover: #2c2c2e;
-  --bg-input: rgba(120, 120, 128, 0.24);
-  --bg-hover: rgba(120, 120, 128, 0.18);
-  --bg-active: rgba(120, 120, 128, 0.28);
-  --border-glass: rgba(255, 255, 255, 0.12);
-  --border-subtle: rgba(255, 255, 255, 0.06);
+  --bg-base: #121212;
+  --bg-sidebar: #1a1a1a;
+  --bg-elevated: #1e1e1e;
+  --bg-glass: #1e1e1e;
+  --bg-glass-heavy: #252525;
+  --bg-popover: #2a2a2a;
+  --bg-input: #2a2a2a;
+  --bg-hover: #2f2f2f;
+  --bg-active: #383838;
+  --border-glass: #333333;
+  --border-subtle: #2a2a2a;
   --text-primary: #f5f5f7;
   --text-secondary: #ebebf0;
   --text-tertiary: #98989d;
@@ -81,8 +80,8 @@
   --accent-hover: #9b7af7;
   --destructive: #ff453a;
   --destructive-hover: #ff6961;
-  --shadow-glass: 0 2px 16px rgba(0, 0, 0, 0.32), 0 0 1px rgba(0, 0, 0, 0.4);
-  --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 1px rgba(0, 0, 0, 0.3);
+  --shadow-glass: none;
+  --shadow-elevated: none;
   --overlay-backdrop: rgba(0, 0, 0, 0.5);
   --overlay-heavy: rgba(0, 0, 0, 0.8);
   --overlay-button: rgba(0, 0, 0, 0.5);
@@ -91,7 +90,6 @@
   --ai-accent-hover: #9b7af7;
   --accent-active: #6842d4;
   --destructive-active: #d63a32;
-  --accent-glow: rgba(123, 82, 245, 0.2);
   --color-success: #30d158;
   --color-success-soft: rgba(48, 209, 88, 0.15);
   --color-success-ring: rgba(48, 209, 88, 0.3);
@@ -131,35 +129,25 @@ body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* ─── Liquid Glass Utilities ─── */
+/* ─── Flat Surface Utilities ─── */
 .glass-card {
   background: var(--bg-glass);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 0.5px solid var(--border-glass);
-  box-shadow: var(--shadow-glass);
+  border: 1px solid var(--border-glass);
 }
 
 .glass-heavy {
   background: var(--bg-glass-heavy);
-  backdrop-filter: blur(60px) saturate(200%);
-  -webkit-backdrop-filter: blur(60px) saturate(200%);
-  border: 0.5px solid var(--border-glass);
-  box-shadow: var(--shadow-elevated);
+  border: 1px solid var(--border-glass);
 }
 
 .glass-popover {
   background: var(--bg-popover);
-  border: 0.5px solid var(--border-subtle);
-  box-shadow: var(--shadow-elevated);
+  border: 1px solid var(--border-glass);
 }
 
 .glass-nav {
-  background: var(--bg-glass-heavy);
-  backdrop-filter: blur(50px) saturate(180%);
-  -webkit-backdrop-filter: blur(50px) saturate(180%);
-  border: 0.5px solid var(--border-glass);
-  box-shadow: var(--shadow-glass);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-glass);
 }
 
 /* ─── Bin Card: no shadow ─── */
@@ -171,10 +159,7 @@ body {
    Uses outline with positive offset so it sits outside the card and
    never conflicts with card-style borders. */
 .bin-selected-ring {
-  outline: 3px solid var(--accent);
-  }
-.dark .bin-selected-ring {
-  box-shadow: 0 0 12px rgba(123, 82, 245, 0.4);
+  outline: 2px solid var(--accent);
 }
 
 /* ─── Scrollbar (Webkit) ─── */
@@ -358,8 +343,7 @@ body {
   right: 0;
   height: 2px;
   z-index: 2;
-  background: linear-gradient(90deg, transparent 0%, var(--accent) 30%, var(--ai-accent) 50%, var(--accent) 70%, transparent 100%);
-  box-shadow: 0 0 12px 2px var(--accent-glow), 0 0 24px 4px var(--accent-glow);
+  background: var(--accent);
   animation: aiScanLine 2s ease-in-out infinite;
 }
 
@@ -407,38 +391,21 @@ body {
 }
 
 .ai-progress-glow {
-  background: radial-gradient(ellipse at 30% 50%, var(--accent-glow), transparent 70%);
-  opacity: 0.6;
-  animation: ai-glow-drift 3s ease-in-out infinite alternate;
+  display: none;
 }
 
 .ai-progress-fill {
-  background: linear-gradient(
-    90deg,
-    var(--ai-accent),
-    color-mix(in srgb, var(--ai-accent) 70%, white 30%),
-    var(--ai-accent)
-  );
-  background-size: 200% 100%;
+  background: var(--ai-accent);
   animation: ai-fill-shimmer 2s ease-in-out infinite;
-  box-shadow: 0 0 8px var(--accent-glow), 0 0 2px var(--ai-accent);
 }
 
 .ai-progress-fill-complete {
-  background: linear-gradient(
-    90deg,
-    var(--color-success),
-    color-mix(in srgb, var(--color-success) 60%, white 40%),
-    var(--color-success)
-  );
-  background-size: 200% 100%;
-  box-shadow: 0 0 8px var(--color-success-ring), 0 0 2px var(--color-success);
+  background: var(--color-success);
   transition: width 500ms ease-out;
 }
 
 .ai-progress-glow-complete {
-  background: radial-gradient(ellipse at 50% 50%, var(--color-success-soft), transparent 70%);
-  opacity: 0.7;
+  display: none;
 }
 
 @keyframes ai-fill-shimmer {

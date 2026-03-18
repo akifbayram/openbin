@@ -59,7 +59,7 @@ export function AiThinkingState({
 
         {label && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="ai-thinking-pulse flex items-center gap-2 rounded-full bg-[var(--bg-primary)]/90 backdrop-blur-sm px-4 py-2 shadow-lg border border-[var(--border-subtle)]">
+            <div className="ai-thinking-pulse flex items-center gap-2 rounded-full bg-[var(--bg-primary)]/90 px-4 py-2 border border-[var(--border-subtle)]">
               <Sparkles className="h-4 w-4 text-[var(--accent)]" />
               <span className="text-[13px] font-medium text-[var(--text-secondary)]">
                 {label}
