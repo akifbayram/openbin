@@ -8,13 +8,13 @@
   --bg-base: #f5f5f5;
   --bg-sidebar: #ebebeb;
   --bg-elevated: #ffffff;
-  --bg-glass: #ffffff;
-  --bg-glass-heavy: #ffffff;
+  --bg-flat: #ffffff;
+  --bg-flat-heavy: #ffffff;
   --bg-popover: #ffffff;
   --bg-input: #e8e8e8;
   --bg-hover: #ebebeb;
   --bg-active: #e0e0e0;
-  --border-glass: #e0e0e0;
+  --border-flat: #e0e0e0;
   --border-subtle: #ececec;
   --text-primary: #1c1c1e;
   --text-secondary: #3c3c43;
@@ -24,7 +24,7 @@
   --accent-hover: #4e1fd0;
   --destructive: #ff3b30;
   --destructive-hover: #d63028;
-  --shadow-glass: none;
+  --shadow-flat: none;
   --shadow-elevated: none;
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -63,13 +63,13 @@
   --bg-base: #121212;
   --bg-sidebar: #1a1a1a;
   --bg-elevated: #1e1e1e;
-  --bg-glass: #1e1e1e;
-  --bg-glass-heavy: #252525;
+  --bg-flat: #1e1e1e;
+  --bg-flat-heavy: #252525;
   --bg-popover: #2a2a2a;
   --bg-input: #2a2a2a;
   --bg-hover: #2f2f2f;
   --bg-active: #383838;
-  --border-glass: #333333;
+  --border-flat: #333333;
   --border-subtle: #2a2a2a;
   --text-primary: #f5f5f7;
   --text-secondary: #ebebf0;
@@ -79,7 +79,7 @@
   --accent-hover: #9b7af7;
   --destructive: #ff453a;
   --destructive-hover: #ff6961;
-  --shadow-glass: none;
+  --shadow-flat: none;
   --shadow-elevated: none;
   --overlay-backdrop: rgba(0, 0, 0, 0.5);
   --overlay-heavy: rgba(0, 0, 0, 0.8);
@@ -129,24 +129,24 @@ body {
 }
 
 /* ─── Flat Surface Utilities ─── */
-.glass-card {
-  background: var(--bg-glass);
-  border: 1px solid var(--border-glass);
+.flat-card {
+  background: var(--bg-flat);
+  border: 1px solid var(--border-flat);
 }
 
-.glass-heavy {
-  background: var(--bg-glass-heavy);
-  border: 1px solid var(--border-glass);
+.flat-heavy {
+  background: var(--bg-flat-heavy);
+  border: 1px solid var(--border-flat);
 }
 
-.glass-popover {
+.flat-popover {
   background: var(--bg-popover);
-  border: 1px solid var(--border-glass);
+  border: 1px solid var(--border-flat);
 }
 
-.glass-nav {
+.flat-nav {
   background: var(--bg-elevated);
-  border-bottom: 1px solid var(--border-glass);
+  border-bottom: 1px solid var(--border-flat);
 }
 
 /* ─── Bin Card: no shadow ─── */

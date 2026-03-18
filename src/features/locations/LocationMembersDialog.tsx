@@ -176,6 +176,8 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
           <div className="space-y-1 py-2">
             {members.map((member) => {
               const isSelf = member.user_id === user?.id;
+              const displayName = member.display_name || member.user_id.slice(0, 8);
+              const showUsername = member.username && member.username !== member.display_name;
               return (
                 <div
                   key={member.id}
@@ -187,8 +189,13 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                   />
                   <div className="flex-1 min-w-0">
                     <span className="text-[14px] text-[var(--text-primary)] truncate block">
-                      {isSelf ? 'You' : member.display_name || member.user_id.slice(0, 8)}
+                      {isSelf ? 'You' : displayName}
                     </span>
+                    {showUsername && (
+                      <span className="text-[12px] text-[var(--text-tertiary)] truncate block">
+                        @{member.username}
+                      </span>
+                    )}
                   </div>
                   {isAdmin && !isSelf && (
                     <RoleSelector
@@ -277,7 +284,7 @@ function MemberActionMenu({ onResetPassword, onRemove }: { onResetPassword: () =
       ref={menuRef}
       className={cn(
         animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-        'fixed z-[100] min-w-[170px] rounded-[var(--radius-lg)] glass-popover overflow-hidden',
+        'fixed z-[100] min-w-[170px] rounded-[var(--radius-lg)] flat-popover overflow-hidden',
       )}
       style={{ top: pos.top, right: pos.right }}
     >
@@ -289,7 +296,7 @@ function MemberActionMenu({ onResetPassword, onRemove }: { onResetPassword: () =
         <KeyRound className="h-4 w-4" />
         Reset password
       </button>
-      <div className="my-1 border-t border-[var(--border-glass)]" />
+      <div className="my-1 border-t border-[var(--border-flat)]" />
       <button
         type="button"
         onClick={() => { close(); onRemove(); }}
@@ -330,7 +337,7 @@ function RoleSelector({ currentRole, onChangeRole }: { currentRole: string; onCh
           className={cn(
             'px-2 py-1 text-[12px] font-medium rounded-[var(--radius-xs)] capitalize transition-colors',
             currentRole === r
-              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-glass)]'
+              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-flat)]'
               : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
           )}
         >

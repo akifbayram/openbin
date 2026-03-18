@@ -40,7 +40,7 @@ function StepIndicator({ steps, currentStepIndex, className }: StepIndicatorProp
                     status === 'complete' &&
                       'bg-[var(--accent)] text-[var(--text-on-accent)] opacity-70',
                     status === 'upcoming' &&
-                      'bg-[var(--bg-input)] text-[var(--text-tertiary)] border border-[var(--border-glass)]',
+                      'bg-[var(--bg-input)] text-[var(--text-tertiary)] border border-[var(--border-flat)]',
                   )}
                 >
                   {status === 'complete' ? (
@@ -70,7 +70,7 @@ function StepIndicator({ steps, currentStepIndex, className }: StepIndicatorProp
                     'mt-[13px] mx-2 h-px flex-1 transition-all duration-300 ease-out',
                     status === 'complete'
                       ? 'bg-[var(--accent)] opacity-40'
-                      : 'bg-[var(--border-glass)]',
+                      : 'bg-[var(--border-flat)]',
                   )}
                 />
               )}

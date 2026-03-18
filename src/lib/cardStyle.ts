@@ -6,7 +6,7 @@ const MUTED_LIGHT = 'rgba(0,0,0,0.55)';
 const TEXT_LIGHT = '#f5f5f7';
 const TEXT_DARK = '#1c1c1e';
 
-export type CardStyleVariant = 'glass' | 'border' | 'gradient' | 'stripe' | 'photo';
+export type CardStyleVariant = 'default' | 'border' | 'gradient' | 'stripe' | 'photo';
 export type StripePosition = 'left' | 'right' | 'top' | 'bottom';
 export type BorderStyle = 'solid' | 'dashed' | 'dotted' | 'double';
 export type BorderWidth = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' ;
@@ -23,7 +23,7 @@ export interface CardStyle {
   stripeWidth?: StripeWidth;
 }
 
-/** Parse the card_style JSON string from the DB. Returns null for default glass. */
+/** Parse the card_style JSON string from the DB. Returns null for default variant. */
 export function parseCardStyle(raw: string): CardStyle | null {
   if (!raw) return null;
   try {
@@ -37,9 +37,9 @@ export function parseCardStyle(raw: string): CardStyle | null {
   return null;
 }
 
-/** Serialize a CardStyle to JSON string for the DB. Returns '' for default glass. */
+/** Serialize a CardStyle to JSON string for the DB. Returns '' for default variant. */
 export function serializeCardStyle(style: CardStyle | null): string {
-  if (!style || style.variant === 'glass') return '';
+  if (!style || style.variant === 'default') return '';
   return JSON.stringify(style);
 }
 
@@ -94,11 +94,11 @@ export function setSecondaryColor(cardStyleRaw: string, color: string): string {
   return serializeCardStyle({ ...parsed, secondaryColor: color });
 }
 
-function renderGlassProps(colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): CardRenderProps {
+function renderDefaultProps(colorPreset: ColorPreset | undefined, theme: 'light' | 'dark'): CardRenderProps {
   const colorBg = getColorBg(colorPreset);
   const { primary, muted } = getTextColors(colorPreset, theme);
   return {
-    className: 'glass-card',
+    className: 'flat-card',
     style: colorBg ? { backgroundColor: colorBg } : {},
     mutedColor: muted,
     primaryColor: primary,
@@ -115,7 +115,7 @@ function renderBorderProps(cardStyle: CardStyle, colorPreset: ColorPreset | unde
   const { primary, muted } = getTextColors(colorPreset, theme);
 
   return {
-    className: 'glass-card',
+    className: 'flat-card',
     style: {
       outline: `${width}px ${bStyle} ${borderResolved}`,
       outlineOffset: `-${width}px`,
@@ -153,7 +153,7 @@ function renderStripeProps(cardStyle: CardStyle, colorPreset: ColorPreset | unde
   const { primary, muted } = getTextColors(colorPreset, theme);
 
   return {
-    className: 'glass-card',
+    className: 'flat-card',
     style: {
       position: 'relative',
       overflow: 'hidden',
@@ -187,12 +187,12 @@ export function getCardRenderProps(
   theme: 'light' | 'dark',
 ): CardRenderProps {
   const cardStyle = parseCardStyle(cardStyleRaw);
-  const variant = cardStyle?.variant ?? 'glass';
+  const variant = cardStyle?.variant ?? 'default';
   const colorPreset = resolveColor(colorKey);
 
   switch (variant) {
-    case 'glass':
-      return renderGlassProps(colorPreset, theme);
+    case 'default':
+      return renderDefaultProps(colorPreset, theme);
     case 'border':
       if (!cardStyle) break;
       return renderBorderProps(cardStyle, colorPreset, theme);
@@ -207,5 +207,5 @@ export function getCardRenderProps(
     default:
       break;
   }
-  return { className: 'glass-card', style: {}, mutedColor: undefined, primaryColor: undefined, isPhotoVariant: false };
+  return { className: 'flat-card', style: {}, mutedColor: undefined, primaryColor: undefined, isPhotoVariant: false };
 }

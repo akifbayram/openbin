@@ -13,7 +13,7 @@ export function AreaActionMenu({ visible, animating, onRename, onDelete }: AreaA
   return (
     <div className={cn(
       animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-      'absolute right-0 top-full mt-1.5 z-50 min-w-[140px] rounded-[var(--radius-lg)] glass-popover overflow-hidden',
+      'absolute right-0 top-full mt-1.5 z-50 min-w-[140px] rounded-[var(--radius-lg)] flat-popover overflow-hidden',
     )}>
       <button
         type="button"
@@ -23,7 +23,7 @@ export function AreaActionMenu({ visible, animating, onRename, onDelete }: AreaA
         <Pencil className="h-4 w-4" />
         Rename
       </button>
-      <div className="my-1 border-t border-[var(--border-glass)]" />
+      <div className="my-1 border-t border-[var(--border-flat)]" />
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onDelete(); }}

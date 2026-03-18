@@ -71,7 +71,7 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
       {visible && (
         <div className={cn(
           animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-          'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] py-1 glass-popover',
+          'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] flat-popover overflow-hidden',
         )}>
           <button
             type="button"
@@ -97,7 +97,7 @@ export function LocationSettingsMenu({ isAdmin, onRename, onRetention, onCustomF
             <List className="h-4 w-4 text-[var(--text-tertiary)]" />
             Custom Fields
           </button>
-          <div className="my-1 border-t border-[var(--border-glass)]" />
+          <div className="my-1 border-t border-[var(--border-flat)]" />
           <button
             type="button"
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors"

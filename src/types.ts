@@ -35,6 +35,7 @@ export interface LocationMember {
   role: 'admin' | 'member' | 'viewer';
   joined_at: string;
   display_name?: string;
+  username?: string;
 }
 
 export interface ActivityLogEntry {

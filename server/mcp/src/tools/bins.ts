@@ -141,7 +141,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
       area_id: z.string().optional().describe("Area UUID to assign the bin to"),
       icon: z.string().optional().describe("Icon identifier"),
       color: z.string().optional().describe("Color value"),
-      card_style: z.string().optional().describe('Card style JSON. Variants: "glass" (default, omit or empty string), "border" ({variant,secondaryColor,borderWidth,borderStyle}), "gradient" ({variant,secondaryColor}), "stripe" ({variant,secondaryColor,stripePosition:left|right|top|bottom,stripeWidth}), "photo" ({variant,coverPhotoId})'),
+      card_style: z.string().optional().describe('Card style JSON. Variants: "default" (omit or empty string), "border" ({variant,secondaryColor,borderWidth,borderStyle}), "gradient" ({variant,secondaryColor}), "stripe" ({variant,secondaryColor,stripePosition:left|right|top|bottom,stripeWidth}), "photo" ({variant,coverPhotoId})'),
     },
     withErrorHandling(async ({ location_id, name, items, tags, notes, area_id, icon, color, card_style }) => {
       const body: Record<string, unknown> = { locationId: location_id, name };
@@ -185,7 +185,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
         .describe("Area UUID (null to unassign)"),
       icon: z.string().optional().describe("Icon identifier"),
       color: z.string().optional().describe("Color value"),
-      card_style: z.string().optional().describe('Card style JSON. Variants: "glass" (default, omit or empty string), "border" ({variant,secondaryColor,borderWidth,borderStyle}), "gradient" ({variant,secondaryColor}), "stripe" ({variant,secondaryColor,stripePosition:left|right|top|bottom,stripeWidth}), "photo" ({variant,coverPhotoId})'),
+      card_style: z.string().optional().describe('Card style JSON. Variants: "default" (omit or empty string), "border" ({variant,secondaryColor,borderWidth,borderStyle}), "gradient" ({variant,secondaryColor}), "stripe" ({variant,secondaryColor,stripePosition:left|right|top|bottom,stripeWidth}), "photo" ({variant,coverPhotoId})'),
     },
     withErrorHandling(async ({ id, name, items, tags, notes, area_id, icon, color, card_style }) => {
       const body: Record<string, unknown> = {};

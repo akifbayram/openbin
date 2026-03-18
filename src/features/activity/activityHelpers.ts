@@ -146,9 +146,9 @@ export function renderChangeDiff(entry: ActivityLogEntry): { field: string; old:
       if (field === 'card_style') {
         try {
           const parsed = typeof val === 'string' ? JSON.parse(val) : val;
-          return (parsed?.variant as string) || 'glass';
+          return (parsed?.variant as string) || 'default';
         } catch {
-          return String(val || 'glass');
+          return String(val || 'default');
         }
       }
       return String(val ?? 'none');

@@ -299,6 +299,8 @@ components:
           format: date-time
         display_name:
           type: string
+        username:
+          type: string
 
     CreateLocationRequest:
       type: object
@@ -388,7 +390,7 @@ components:
         card_style:
           type: string
           maxLength: 500
-          description: JSON-encoded card style configuration, empty string for default glass
+          description: JSON-encoded card style configuration, empty string for default
         visibility:
           $ref: '#/components/schemas/BinVisibility'
         created_by:

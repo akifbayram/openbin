@@ -291,22 +291,22 @@ describe('renderChangeDiff', () => {
     const e = entry({
       changes: {
         card_style: {
-          old: '{"variant":"glass"}',
+          old: '{"variant":"default"}',
           new: '{"variant":"border"}',
         },
       },
     });
-    expect(renderChangeDiff(e)).toEqual([{ field: 'style', old: 'glass', new: 'border' }]);
+    expect(renderChangeDiff(e)).toEqual([{ field: 'style', old: 'default', new: 'border' }]);
   });
 
-  it('handles card_style null to glass default', () => {
+  it('handles card_style null to default', () => {
     const e = entry({
       changes: {
         card_style: { old: null, new: '{"variant":"border"}' },
       },
     });
     const result = renderChangeDiff(e);
-    expect(result).toEqual([{ field: 'style', old: 'glass', new: 'border' }]);
+    expect(result).toEqual([{ field: 'style', old: 'default', new: 'border' }]);
   });
 
   it('handles area field', () => {

@@ -64,7 +64,7 @@ function NavButton({ path, label, icon: Icon, currentPath, navigate, onClick, co
       className={cn(
         'flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full overflow-hidden whitespace-nowrap text-left',
         isActive
-          ? 'glass-card text-[var(--text-primary)]'
+          ? 'flat-card text-[var(--text-primary)]'
           : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
       )}
     >
@@ -173,7 +173,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
               className={cn(
                 'flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full overflow-hidden whitespace-nowrap text-left',
                 location.pathname === '/profile'
-                  ? 'glass-card text-[var(--text-primary)]'
+                  ? 'flat-card text-[var(--text-primary)]'
                   : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
               )}
             >
@@ -254,7 +254,7 @@ export function Sidebar({ locations, activeLocationId, onLocationChange, onScanC
         onClick={toggle}
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         aria-expanded={!isCollapsed}
-        className="absolute top-[43px] right-0 translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-7 h-7 rounded-[var(--radius-lg)] glass-heavy
+        className="absolute top-[43px] right-0 translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-7 h-7 rounded-[var(--radius-lg)] flat-heavy
   text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--accent)]
   focus-visible:outline-none"
       >

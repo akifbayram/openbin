@@ -90,7 +90,7 @@ export function BinDetailToolbar({
             id="edit-name"
             value={editingName}
             onChange={(e) => onNameChange(e.target.value)}
-            className="w-full bg-transparent text-[17px] font-semibold text-[var(--text-primary)] leading-tight border-b border-b-[var(--border-glass)] outline-none placeholder:text-[var(--text-tertiary)] p-0"
+            className="w-full bg-transparent text-[17px] font-semibold text-[var(--text-primary)] leading-tight border-b border-b-[var(--border-flat)] outline-none placeholder:text-[var(--text-tertiary)] p-0"
             placeholder="Name..."
           />
         ) : (
@@ -181,7 +181,7 @@ export function BinDetailToolbar({
             {visible && (
               <div className={cn(
                 animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-                'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] py-1 glass-popover',
+                'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] flat-popover overflow-hidden',
               )}>
                 {canEdit && (
                   <button
@@ -213,7 +213,7 @@ export function BinDetailToolbar({
                 )}
                 {canDelete && (
                   <>
-                    <div className="my-1 border-t border-[var(--border-glass)]" />
+                    <div className="my-1 border-t border-[var(--border-flat)]" />
                     <button
                       type="button"
                       className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors duration-150"

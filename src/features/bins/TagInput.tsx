@@ -159,7 +159,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
       {visible && pos && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[100] rounded-[var(--radius-md)] glass-popover overflow-hidden"
+          className="fixed z-[100] rounded-[var(--radius-md)] flat-popover overflow-hidden"
           style={{ top: pos.top, left: pos.left, width: pos.width }}
         >
           <div className="max-h-48 overflow-auto p-2 flex flex-wrap gap-1.5">

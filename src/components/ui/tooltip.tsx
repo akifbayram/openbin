@@ -83,7 +83,7 @@ export function Tooltip({ content, children, side = 'top', className }: TooltipP
           role="tooltip"
           className={cn(
             'fixed z-[80] px-2.5 py-1 rounded-[var(--radius-sm)] text-[12px] font-medium whitespace-nowrap pointer-events-none',
-            'glass-heavy text-[var(--text-primary)]',
+            'flat-heavy text-[var(--text-primary)]',
             'transition-all duration-150 ease-out motion-reduce:transition-none',
             positioned ? 'opacity-100' : 'opacity-0',
           )}

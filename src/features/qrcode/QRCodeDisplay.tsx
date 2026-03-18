@@ -33,7 +33,7 @@ export function QRCodeDisplay({ binId, size = 200, shortCode, hideActions }: QRC
 
   return (
     <div className="flex flex-col items-center gap-5">
-      <div className="rounded-[var(--radius-lg)] bg-[var(--bg-print-surface)] p-3.5 border border-[var(--border-glass)] flex flex-col items-center">
+      <div className="rounded-[var(--radius-lg)] bg-[var(--bg-print-surface)] p-3.5 border border-[var(--border-flat)] flex flex-col items-center">
         <img src={dataUrl} alt="QR Code" width={size} height={size} />
         {shortCode && (
           <p

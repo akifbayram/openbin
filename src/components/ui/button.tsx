@@ -11,7 +11,7 @@ const variants = {
   'destructive-outline':
     'bg-[var(--bg-input)] border border-[var(--destructive)]/30 text-[var(--destructive)] hover:bg-[var(--destructive)]/10 active:bg-[var(--destructive)]/15',
   outline:
-    'bg-[var(--bg-input)] border border-[var(--border-glass)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
+    'bg-[var(--bg-input)] border border-[var(--border-flat)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
   secondary:
     'bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-active)]',
   ghost:

@@ -5,7 +5,7 @@ const badgeVariants = {
   default: 'bg-[var(--accent)] text-[var(--text-on-accent)]',
   secondary: 'bg-[var(--bg-input)] text-[var(--text-secondary)]',
   destructive: 'bg-[var(--destructive)] text-[var(--text-on-accent)]',
-  outline: 'border border-[var(--border-glass)] text-[var(--text-secondary)]',
+  outline: 'border border-[var(--border-flat)] text-[var(--text-secondary)]',
 };
 
 const BASE = 'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-0.5 text-[12px] font-medium transition-colors';

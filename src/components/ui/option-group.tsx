@@ -85,7 +85,7 @@ export function OptionGroup<K extends string>({
     <div
       ref={containerRef}
       className={cn(
-        'relative flex bg-[var(--bg-glass)] border border-[var(--border-glass)] p-1 gap-0.5',
+        'relative flex bg-[var(--bg-flat)] border border-[var(--border-flat)] p-1 gap-0.5',
         containerRadius,
         scrollable && 'overflow-x-auto flex-nowrap',
         className,

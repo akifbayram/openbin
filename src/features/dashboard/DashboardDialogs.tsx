@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 import { BulkActionBar } from '@/features/bins/BulkActionBar';
@@ -50,6 +50,9 @@ export function DashboardDialogs({
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [copiedStyle, setCopiedStyle] = useState<{ icon: string; color: string; card_style: string } | null>(null);
 
+  const commandMounted = useRef(false);
+  if (commandOpen) commandMounted.current = true;
+
   const handleCopyStyle = useCallback(() => {
     const [id] = selectedIds;
     const bin = bins.find((b) => b.id === id);
@@ -70,9 +73,9 @@ export function DashboardDialogs({
   return (
     <>
       <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
-      {aiEnabled && (
+      {aiEnabled && commandMounted.current && (
         <Suspense fallback={null}>
-          {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
+          <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />
         </Suspense>
       )}
 

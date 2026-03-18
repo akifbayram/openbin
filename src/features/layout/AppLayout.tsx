@@ -42,6 +42,8 @@ export function AppLayout() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
+  const scanMounted = useRef(false);
+  if (scanDialogOpen) scanMounted.current = true;
   const openScanDialog = useCallback(() => setScanDialogOpen(true), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const rawNavigate = useNavigate();
@@ -161,14 +163,14 @@ export function AppLayout() {
         onAction={(id) => shortcutActions[id]?.()}
       />
       <ShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
-      {scanDialogOpen && (
+      {scanMounted.current && (
         <Suspense fallback={null}>
           <ScanDialog open={scanDialogOpen} onOpenChange={setScanDialogOpen} />
         </Suspense>
       )}
       {/* PWA install toast — fixed bottom-left (mobile) / bottom-right (desktop) */}
       {installPrompt && !dismissed && (
-        <div className="fixed z-40 bottom-[calc(16px+var(--safe-bottom))] lg:bottom-6 left-4 right-4 lg:left-auto lg:right-6 lg:w-[360px] glass-heavy rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 fade-in-fast">
+        <div className="fixed z-40 bottom-[calc(16px+var(--safe-bottom))] lg:bottom-6 left-4 right-4 lg:left-auto lg:right-6 lg:w-[360px] flat-heavy rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 fade-in-fast">
           <Download className="h-5 w-5 text-[var(--accent)] shrink-0" />
           <p className="flex-1 text-[14px] text-[var(--text-primary)]">
             Install {settings.appName}

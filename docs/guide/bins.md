@@ -71,7 +71,7 @@ Card style controls the visual treatment of the bin card beyond just color. The 
 
 | Style | Description |
 |---|---|
-| `glass` | Default frosted-glass look. No extra configuration. |
+| `default` | Flat default look. No extra configuration. |
 | `border` | Colored border accent around the card. Configurable style (solid, dashed, dotted, double) and width (1–8 px). |
 | `gradient` | Two-color diagonal gradient. Pick a primary color and an end color. |
 | `stripe` | Colored stripe on one side of the card. Configure position (left, right, top, bottom) and width (1–10 units). |

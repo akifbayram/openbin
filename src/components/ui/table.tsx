@@ -1,8 +1,8 @@
-import { cn, glassCard } from '@/lib/utils';
+import { cn, flatCard } from '@/lib/utils';
 
 export function Table({ children, className }: { children: React.ReactNode; className?: string }) {
   // biome-ignore lint/a11y/useSemanticElements: flex-based layout table cannot use <table> element
-  return <div role="table" className={cn(glassCard, 'overflow-hidden', className)}>{children}</div>;
+  return <div role="table" className={cn(flatCard, 'overflow-hidden', className)}>{children}</div>;
 }
 
 export function TableHeader({ children, className }: { children: React.ReactNode; className?: string }) {

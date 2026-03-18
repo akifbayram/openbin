@@ -44,7 +44,7 @@ export function SortMenu({ sort, onSortChange }: SortMenuProps) {
       {visible && (
         <div className={cn(
           animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-          'absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] glass-popover overflow-hidden z-20',
+          'absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] flat-popover overflow-hidden z-20',
         )}>
           {(Object.keys(sortLabels) as SortOption[]).map((key) => (
             <button

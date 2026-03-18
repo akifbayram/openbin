@@ -1,11 +1,11 @@
 import * as React from 'react';
-import { cn, glassCard } from '@/lib/utils';
+import { cn, flatCard } from '@/lib/utils';
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(glassCard, 'transition-all duration-200', className)}
+      className={cn(flatCard, 'transition-all duration-200', className)}
       {...props}
     />
   )

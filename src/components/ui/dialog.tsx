@@ -86,7 +86,7 @@ function DialogContent({
             aria-modal="true"
             aria-labelledby={titleId}
             className={cn(
-              'relative z-[60] w-full sm:max-w-md glass-heavy',
+              'relative z-[60] w-full sm:max-w-md flat-heavy',
               'rounded-t-[var(--radius-xl)] sm:rounded-[var(--radius-xl)]',
               'mx-0 sm:mx-4 max-h-[70vh] sm:max-h-[85vh] overflow-hidden flex flex-col',
               'transition-all duration-200',

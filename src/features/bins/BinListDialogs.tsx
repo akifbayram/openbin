@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useRef } from 'react';
 import type { Area } from '@/types';
 import { BinCreateDialog } from './BinCreateDialog';
 import { BinFilterDialog } from './BinFilterDialog';
@@ -46,6 +46,9 @@ export function BinListDialogs({
   sort, setSort, search,
   bulk, selectedIds, clearSelection,
 }: BinListDialogsProps) {
+  const commandMounted = useRef(false);
+  if (commandOpen) commandMounted.current = true;
+
   return (
     <>
       <BinCreateDialog
@@ -109,9 +112,9 @@ export function BinListDialogs({
         sort={sort}
         filters={filters}
       />
-      {aiEnabled && (
+      {aiEnabled && commandMounted.current && (
         <Suspense fallback={null}>
-          {commandOpen && <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />}
+          <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />
         </Suspense>
       )}
     </>

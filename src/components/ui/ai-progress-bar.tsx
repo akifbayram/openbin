@@ -66,7 +66,7 @@ export function AiProgressBar({
       <div
         className={cn(
           'ai-progress-track relative overflow-hidden rounded-full',
-          'bg-[var(--bg-input)] border border-[var(--border-glass)]',
+          'bg-[var(--bg-input)] border border-[var(--border-flat)]',
           compact ? 'h-1.5' : 'h-3',
         )}
       >

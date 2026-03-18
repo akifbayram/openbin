@@ -78,7 +78,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
     <div
       className={cn(
         'pointer-events-auto flex items-center gap-3.5 rounded-[var(--radius-xl)] px-5 py-3.5 transition-all duration-300 min-w-[280px] max-w-[90vw]',
-        'glass-heavy text-[var(--text-primary)]',
+        'flat-heavy text-[var(--text-primary)]',
         variantStyles[toast.variant ?? 'default'],
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
       )}

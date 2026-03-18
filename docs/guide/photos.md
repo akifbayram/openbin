@@ -68,7 +68,7 @@ Tap the delete icon on any photo in the gallery to remove it.
 - **Members** can delete photos they uploaded.
 - **Admins** can delete any photo in the location.
 
-Deleting a photo that is set as the `photo` card style cover will revert the card style to `glass`.
+Deleting a photo that is set as the `photo` card style cover will revert the card style to `default`.
 
 ::: warning
 Photo deletion is permanent. There is no trash or recovery for individual photos.

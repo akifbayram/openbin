@@ -26,7 +26,7 @@ export function Switch({ checked, onCheckedChange, id, disabled, className }: Sw
       )}
     >
       <span
-        className={cn('pointer-events-none inline-block h-[24px] w-[24px] rounded-full bg-[var(--bg-popover)] border border-[var(--border-glass)] transition-transform duration-200 mt-[2px]', checked ? 'translate-x-[24px]' : 'translate-x-[2px]')}
+        className={cn('pointer-events-none inline-block h-[24px] w-[24px] rounded-full bg-[var(--bg-popover)] border border-[var(--border-flat)] transition-transform duration-200 mt-[2px]', checked ? 'translate-x-[24px]' : 'translate-x-[2px]')}
       />
     </button>
   );

@@ -73,7 +73,7 @@ export function BulkAddSummaryStep({
           return (
             <div
               key={photo.id}
-              className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3"
+              className="flat-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3"
               style={bgColor ? { backgroundColor: bgColor } : undefined}
             >
               <img
@@ -137,7 +137,7 @@ export function BulkAddSummaryStep({
           {failed.map((photo) => (
             <div
               key={photo.id}
-              className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 border border-[var(--destructive)]/20"
+              className="flat-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 border border-[var(--destructive)]/20"
             >
               <AlertCircle className="h-5 w-5 text-[var(--destructive)] shrink-0" />
               <div className="flex-1 min-w-0">
@@ -171,7 +171,7 @@ export function BulkAddSummaryStep({
               {skipped.map((photo) => (
                 <div
                   key={photo.id}
-                  className="glass-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 opacity-60"
+                  className="flat-card rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 opacity-60"
                 >
                   <img
                     src={photo.previewUrl}

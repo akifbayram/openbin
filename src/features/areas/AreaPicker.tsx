@@ -80,7 +80,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
         onClick={() => setOpen(!open)}
         className={cn(
           'row-spread w-full h-10 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 text-[15px] text-left transition-colors',
-          'hover:border-[var(--border-glass)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]',
+          'hover:border-[var(--border-flat)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]',
           !selectedArea && 'text-[var(--text-tertiary)]'
         )}
       >
@@ -91,7 +91,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
       {open && pos && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[100] rounded-[var(--radius-md)] glass-popover overflow-hidden"
+          className="fixed z-[100] rounded-[var(--radius-md)] flat-popover overflow-hidden"
           style={{ top: pos.top, left: pos.left, width: pos.width }}
         >
           <div className="max-h-48 overflow-y-auto">

@@ -331,7 +331,8 @@ router.get('/:id/members', asyncHandler(async (req, res) => {
 
   const result = await query(
     `SELECT lm.id, lm.location_id, lm.user_id, lm.role, lm.joined_at,
-            COALESCE(u.display_name, u.username) AS display_name
+            COALESCE(u.display_name, u.username) AS display_name,
+            u.username
      FROM location_members lm
      LEFT JOIN users u ON u.id = lm.user_id
      WHERE lm.location_id = $1

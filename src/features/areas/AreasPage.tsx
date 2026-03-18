@@ -1,5 +1,5 @@
 import { Check, Copy, Eye, LogIn, MapPin, MapPinned, Plus, QrCode, Shield, User, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
@@ -35,6 +35,8 @@ export function AreasPage() {
   const [createLocationOpen, setCreateLocationOpen] = useState(false);
   const [joinLocationOpen, setJoinLocationOpen] = useState(false);
   const [membersLocationId, setMembersLocationId] = useState<string | null>(null);
+  const lastMembersLocationId = useRef(membersLocationId);
+  if (membersLocationId) lastMembersLocationId.current = membersLocationId;
   const [renameLocationId, setRenameLocationId] = useState<string | null>(null);
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
   const [retentionLocationId, setRetentionLocationId] = useState<string | null>(null);
@@ -160,7 +162,7 @@ export function AreasPage() {
             {/* Area grid skeleton */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="glass-card rounded-[var(--radius-lg)] p-4 space-y-2">
+                <div key={i} className="flat-card rounded-[var(--radius-lg)] p-4 space-y-2">
                   <Skeleton className="h-5 w-2/3" />
                   <Skeleton className="h-4 w-1/3" />
                 </div>
@@ -203,7 +205,7 @@ export function AreasPage() {
             )}
 
             {/* Location info card */}
-            <div className="glass-card rounded-[var(--radius-lg)] p-4">
+            <div className="flat-card rounded-[var(--radius-lg)] p-4">
               <div className="row-spread gap-3">
                 <div className="flex items-center gap-3 min-w-0 overflow-hidden">
                   <div className="row shrink-0">
@@ -261,7 +263,7 @@ export function AreasPage() {
 
             {/* Invite QR code */}
             {inviteQrOpen && activeLocation.invite_code && isAdmin && (
-              <div className="glass-card rounded-[var(--radius-lg)] p-4 flex flex-col items-center gap-3">
+              <div className="flat-card rounded-[var(--radius-lg)] p-4 flex flex-col items-center gap-3">
                 <p className="text-[13px] font-medium text-[var(--text-secondary)]">
                   Scan to register and join this {t.location}
                 </p>
@@ -341,13 +343,11 @@ export function AreasPage() {
         open={!!deleteLocationId}
         onOpenChange={(open) => !open && setDeleteLocationId(null)}
       />
-      {membersLocationId && (
-        <LocationMembersDialog
-          locationId={membersLocationId}
-          open={!!membersLocationId}
-          onOpenChange={(open) => !open && setMembersLocationId(null)}
-        />
-      )}
+      <LocationMembersDialog
+        locationId={membersLocationId ?? lastMembersLocationId.current ?? ''}
+        open={!!membersLocationId}
+        onOpenChange={(open) => !open && setMembersLocationId(null)}
+      />
       <LocationRetentionDialog
         location={locations.find((l) => l.id === retentionLocationId)}
         open={!!retentionLocationId}
