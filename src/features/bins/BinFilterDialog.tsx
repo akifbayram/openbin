@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { OptionGroup } from '@/components/ui/option-group';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { HUE_RANGES } from '@/lib/colorPalette';
@@ -96,9 +97,7 @@ export function BinFilterDialog({
         <div className="space-y-6">
           {/* Sort */}
           <div className="space-y-2.5">
-            <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
-              Sort
-            </span>
+            <Label>Sort</Label>
             <OptionGroup
               options={(Object.keys(sortLabels) as SortOption[]).map((key) => ({ key, label: sortLabels[key] }))}
               value={sort}
@@ -110,9 +109,7 @@ export function BinFilterDialog({
           {/* Tags */}
           <div className="space-y-2.5">
             <div className="row-spread">
-              <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
-                Tags
-              </span>
+              <Label>Tags</Label>
               {draft.tags.length >= 2 && (
                 <OptionGroup
                   options={[
@@ -153,7 +150,7 @@ export function BinFilterDialog({
                             type="button"
                             onClick={() => toggleTag(tag)}
                             className={cn(
-                              'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
+                              'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
                               tagStyle
                                 ? selected
                                   ? 'ring-2 ring-[var(--accent)] ring-offset-1'
@@ -187,15 +184,13 @@ export function BinFilterDialog({
           {/* Area */}
           {areas.length > 0 && (
             <div className="space-y-2.5">
-              <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
-                Area
-              </span>
+              <Label>Area</Label>
               <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
                   onClick={() => toggleArea('__unassigned__')}
                   className={cn(
-                    'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
+                    'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
                     draft.areas.includes('__unassigned__')
                       ? 'bg-[var(--accent)] text-white'
                       : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
@@ -211,7 +206,7 @@ export function BinFilterDialog({
                       type="button"
                       onClick={() => toggleArea(area.id)}
                       className={cn(
-                        'inline-flex items-center rounded-[var(--radius-full)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
+                        'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all cursor-pointer',
                         selected
                           ? 'bg-[var(--accent)] text-white'
                           : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
@@ -227,9 +222,7 @@ export function BinFilterDialog({
 
           {/* Color */}
           <div className="space-y-2.5">
-            <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
-              Color
-            </span>
+            <Label>Color</Label>
             <div className="flex flex-wrap gap-2">
               {HUE_RANGES.map((range) => {
                 const selected = draft.colors.includes(range.name);
@@ -253,24 +246,24 @@ export function BinFilterDialog({
           </div>
 
           {/* Content */}
-          <div className="space-y-1">
-            <span className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
-              Content
-            </span>
-            <div className="row-spread py-2.5">
-              <span className="text-[15px] text-[var(--text-primary)]">Has items</span>
+          <div className="space-y-2.5">
+            <Label>Content</Label>
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: checkbox inside label */}
+            <label className="row-spread py-2 text-[15px] text-[var(--text-primary)] cursor-pointer">
+              Has items
               <Checkbox
                 checked={draft.hasItems}
                 onCheckedChange={(v) => setDraft((d) => ({ ...d, hasItems: v }))}
               />
-            </div>
-            <div className="row-spread py-2.5">
-              <span className="text-[15px] text-[var(--text-primary)]">Has notes</span>
+            </label>
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: checkbox inside label */}
+            <label className="row-spread py-2 text-[15px] text-[var(--text-primary)] cursor-pointer">
+              Has notes
               <Checkbox
                 checked={draft.hasNotes}
                 onCheckedChange={(v) => setDraft((d) => ({ ...d, hasNotes: v }))}
               />
-            </div>
+            </label>
           </div>
         </div>
 

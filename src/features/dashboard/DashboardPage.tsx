@@ -11,7 +11,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
-import { BinCompactCard } from '@/features/bins/BinCompactCard';
+import { BinCard } from '@/features/bins/BinCard';
 import { buildViewSearchParams } from '@/features/bins/useBinSearchParams';
 import { useAllTags } from '@/features/bins/useBins';
 import { useBulkActions } from '@/features/bins/useBulkActions';
@@ -242,9 +242,9 @@ export function DashboardPage() {
         {dashSettings.showPinnedBins && pinnedBins.length > 0 && (
           <div className="flex flex-col gap-2">
             <SectionHeader title="Pinned" />
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {pinnedBins.map((bin) => (
-                <BinCompactCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+                <BinCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
               ))}
             </div>
           </div>
@@ -254,9 +254,9 @@ export function DashboardPage() {
         {dashSettings.showRecentlyScanned && recentlyScanned.length > 0 && (
           <div className="flex flex-col gap-2">
             <SectionHeader title="Recently Scanned" />
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {recentlyScanned.map((bin) => (
-                <BinCompactCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+                <BinCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
               ))}
             </div>
           </div>
@@ -269,9 +269,9 @@ export function DashboardPage() {
               title="Recently Updated"
               action={{ label: `All ${t.Bins}`, onClick: () => navigate('/bins') }}
             />
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {recentlyUpdated.map((bin) => (
-                <BinCompactCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+                <BinCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
               ))}
             </div>
           </div>

@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { getPhotoThumbUrl } from '@/features/photos/usePhotos';
+import { useTagStyle } from '@/features/tags/useTagStyle';
 import { getCardRenderProps, parseCardStyle } from '@/lib/cardStyle';
 import { resolveIcon } from '@/lib/iconMap';
 import { getPremadeUrl } from '@/lib/premadeBackgrounds';
@@ -18,6 +19,7 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
   className?: string;
 }) {
   const { theme } = useTheme();
+  const getTagStyle = useTagStyle();
   const renderProps = getCardRenderProps(color, cardStyle ?? '', theme);
   const parsed = parseCardStyle(cardStyle ?? '');
   const isPhoto = renderProps.isPhotoVariant;
@@ -60,7 +62,7 @@ export function BinPreviewCard({ name, color, items, tags, icon, cardStyle, area
         {tags.length > 0 && (
           <div className="flex gap-1.5 mt-2 overflow-hidden">
             {tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-[11px]">
+              <Badge key={tag} variant="secondary" className="text-[11px]" style={getTagStyle(tag)}>
                 {tag}
               </Badge>
             ))}
