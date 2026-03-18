@@ -207,7 +207,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
         if (aNull && bNull) return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
         if (aNull) return 1;
         if (bNull) return -1;
-        const diff = mode === 'qty-desc' ? b.quantity! - a.quantity! : a.quantity! - b.quantity!;
+        const diff = mode === 'qty-desc' ? (b.quantity as number) - (a.quantity as number) : (a.quantity as number) - (b.quantity as number);
         return diff !== 0 ? diff : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
       });
     }
@@ -274,7 +274,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
             {sortOpen && (
               <div className={cn(
                 sortAnimating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-                'absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] glass-popover overflow-hidden z-20',
+                'absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] flat-popover overflow-hidden z-20',
               )}>
                 {sortOptions.map((opt) => (
                   <button
