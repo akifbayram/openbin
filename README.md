@@ -149,9 +149,7 @@ npm run dev:all            # Both servers concurrently (recommended)
 
 ## AI Disclosure
 
-Most of this codebase—features, tests, documentation—was written by AI ([Claude Code](https://docs.anthropic.com/en/docs/claude-code)). A human directs architecture, priorities, and design decisions but has not reviewed most code line-by-line. Type checking, linting, and an automated test suite are the primary quality gates.
-
-The full source is available for you to audit. If you find a bug or security issue, please [open an issue](https://github.com/akifbayram/openbin/issues).
+Most of this codebase—features, tests, documentation—was written by AI. A human directs architecture, priorities, and design decisions but has not reviewed most code line-by-line. Type checking, linting, and an automated test suite are the primary quality gates.
 
 ## License
 

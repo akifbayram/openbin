@@ -26,6 +26,8 @@ tags:
     description: Location CRUD, membership, and invite codes
   - name: Areas
     description: Named zones within a location
+  - name: CustomFields
+    description: Per-location custom field definitions for bins
   - name: Bins
     description: Bin CRUD, soft deletes, QR lookup, photo upload, tag management
   - name: Photos
@@ -219,6 +221,11 @@ components:
           type: string
           default: area
           description: Custom terminology for 'area'
+        default_join_role:
+          type: string
+          enum: [member, viewer]
+          default: member
+          description: Default role assigned to new members joining via invite code
         created_at:
           type: string
           format: date-time
@@ -277,7 +284,12 @@ components:
           description: Number of non-deleted bins in this location
         role:
           type: string
-          enum: [admin, member]
+          enum: [admin, member, viewer]
+        default_join_role:
+          type: string
+          enum: [member, viewer]
+          default: member
+          description: Default role assigned to new members joining via invite code
 
     LocationMember:
       type: object
@@ -293,7 +305,7 @@ components:
           format: uuid
         role:
           type: string
-          enum: [admin, member]
+          enum: [admin, member, viewer]
         joined_at:
           type: string
           format: date-time
@@ -351,6 +363,28 @@ components:
           type: string
           maxLength: 255
 
+    # ── Custom Field ──────────────────────────────────────
+    CustomField:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        position:
+          type: integer
+          description: Display order (0-based)
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
     # ── Bin ────────────────────────────────────────────────
     Bin:
       type: object
@@ -393,6 +427,11 @@ components:
           description: JSON-encoded card style configuration, empty string for default
         visibility:
           $ref: '#/components/schemas/BinVisibility'
+        custom_fields:
+          type: object
+          additionalProperties:
+            type: string
+          description: "Custom field values as { fieldId: value } map"
         created_by:
           type: string
           format: uuid
@@ -472,6 +511,11 @@ components:
           description: JSON-encoded card style configuration
         visibility:
           $ref: '#/components/schemas/BinVisibility'
+        customFields:
+          type: object
+          additionalProperties:
+            type: string
+          description: "Custom field values as { fieldId: value } map"
 
     UpdateBinRequest:
       type: object
@@ -506,6 +550,11 @@ components:
           description: JSON-encoded card style configuration
         visibility:
           $ref: '#/components/schemas/BinVisibility'
+        customFields:
+          type: object
+          additionalProperties:
+            type: string
+          description: "Custom field values as { fieldId: value } map"
 
     AddTagsRequest:
       type: object
@@ -533,12 +582,6 @@ components:
           type: string
         size:
           type: integer
-        storage_path:
-          type: string
-        thumb_path:
-          type: string
-          nullable: true
-          description: Path to the generated WebP thumbnail (null if not yet generated)
         created_by:
           type: string
           format: uuid
@@ -670,6 +713,11 @@ components:
           nullable: true
           maxLength: 10000
           description: "Custom system prompt for AI item extraction from text/voice. Null uses the default prompt."
+        reorganizationPrompt:
+          type: string
+          nullable: true
+          maxLength: 10000
+          description: "Custom system prompt for AI bin reorganization suggestions. Null uses the default prompt."
         temperature:
           type: number
           nullable: true
@@ -746,6 +794,24 @@ components:
           nullable: true
           maxLength: 10000
           description: "Custom system prompt for AI item extraction from text/voice. Null uses the default prompt."
+        reorganizationPrompt:
+          type: string
+          nullable: true
+          maxLength: 10000
+          description: "Custom system prompt for AI bin reorganization suggestions. Null uses the default prompt."
+        providerConfigs:
+          type: object
+          description: "Per-provider saved credentials. Keys are provider names."
+          additionalProperties:
+            type: object
+            properties:
+              apiKey:
+                type: string
+              model:
+                type: string
+              endpointUrl:
+                type: string
+                nullable: true
         temperature:
           type: number
           nullable: true
@@ -768,6 +834,17 @@ components:
           maximum: 300
           description: Request timeout in seconds
 
+    AiSuggestedItem:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        quantity:
+          type: integer
+          nullable: true
+          description: Suggested quantity (null if not applicable)
+
     AiSuggestions:
       type: object
       properties:
@@ -776,13 +853,18 @@ components:
         items:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/AiSuggestedItem'
         tags:
           type: array
           items:
             type: string
         notes:
           type: string
+        customFields:
+          type: object
+          additionalProperties:
+            type: string
+          description: Suggested custom field values (field name -> value)
 
     AiAnalyzeRequest:
       type: object
@@ -880,35 +962,6 @@ components:
                   type: string
               relevance:
                 type: string
-
-    ExecuteResult:
-      type: object
-      properties:
-        executed:
-          type: array
-          items:
-            type: object
-            properties:
-              type:
-                type: string
-              success:
-                type: boolean
-              details:
-                type: string
-              bin_id:
-                type: string
-                format: uuid
-              bin_name:
-                type: string
-              error:
-                type: string
-        interpretation:
-          type: string
-          description: Human-readable summary of what the AI understood
-        errors:
-          type: array
-          items:
-            type: string
 
     # ── Print Settings ─────────────────────────────────────
     PrintSettings:
@@ -1029,6 +1082,11 @@ components:
               shortCode:
                 type: string
                 description: Same as id (kept for export format compatibility)
+              customFields:
+                type: object
+                additionalProperties:
+                  type: string
+                description: "Custom field values as { fieldName: value } map"
               createdAt:
                 type: string
                 format: date-time
@@ -1221,7 +1279,7 @@ paths:
     post:
       tags: [Auth]
       summary: Register a new user
-      description: Creates a new user account. Rate limited to 3 per hour. Returns 403 if registration is disabled via REGISTRATION_ENABLED env var.
+      description: "Creates a new user account. Rate limited to 3 per hour. Returns 403 if registration is disabled via REGISTRATION_MODE env var (modes: open, invite, closed)."
       security: []
       requestBody:
         required: true
@@ -1742,6 +1800,10 @@ paths:
                   type: string
                   maxLength: 50
                   description: "Custom term for 'area'"
+                default_join_role:
+                  type: string
+                  enum: [member, viewer]
+                  description: Default role assigned to new members joining via invite code
       responses:
         '200':
           description: Location updated
@@ -1850,7 +1912,7 @@ paths:
     put:
       tags: [Locations]
       summary: Change a member's role
-      description: Admin only. Change a member's role to admin or member. Cannot demote the last admin.
+      description: Admin only. Change a member's role to admin, member, or viewer. Cannot demote the last admin.
       parameters:
         - name: id
           in: path
@@ -1874,7 +1936,7 @@ paths:
               properties:
                 role:
                   type: string
-                  enum: [admin, member]
+                  enum: [admin, member, viewer]
       responses:
         '200':
           description: Role updated
@@ -2095,6 +2157,193 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ════════════════════════════════════════════════════════
+  # Custom Fields
+  # ════════════════════════════════════════════════════════
+  /locations/{locationId}/custom-fields:
+    get:
+      tags: [CustomFields]
+      summary: List custom field definitions
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of custom fields ordered by position
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomField'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [CustomFields]
+      summary: Create a custom field (admin only)
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+      responses:
+        '201':
+          description: Custom field created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomField'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /locations/{locationId}/custom-fields/reorder:
+    put:
+      tags: [CustomFields]
+      summary: Reorder custom fields (admin only)
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fieldIds]
+              properties:
+                fieldIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Ordered array of field IDs
+      responses:
+        '200':
+          description: Fields reordered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /locations/{locationId}/custom-fields/{fieldId}:
+    put:
+      tags: [CustomFields]
+      summary: Rename a custom field (admin only)
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: fieldId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+      responses:
+        '200':
+          description: Custom field updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomField'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [CustomFields]
+      summary: Delete a custom field (admin only)
+      description: Deletes the field definition and all per-bin values (ON DELETE CASCADE).
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: fieldId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Custom field deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Custom field deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ════════════════════════════════════════════════════════
   # Bins
   # ════════════════════════════════════════════════════════
   /bins:
@@ -2246,7 +2495,7 @@ paths:
     get:
       tags: [Bins]
       summary: List soft-deleted bins
-      description: Returns bins with non-null deleted_at. Auto-purges after 30 days.
+      description: Returns bins with non-null deleted_at. Auto-purges after the location's configured trash_retention_days (default 30).
       parameters:
         - name: location_id
           in: query
@@ -2372,7 +2621,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
       responses:
         '200':
           description: Bin details
@@ -2395,7 +2644,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
       requestBody:
         required: true
         content:
@@ -2427,7 +2676,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
       responses:
         '200':
           description: Bin soft-deleted
@@ -2456,7 +2705,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
       responses:
         '200':
           description: Bin pinned
@@ -2482,7 +2731,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
       responses:
         '200':
           description: Bin unpinned
@@ -2506,7 +2755,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
       responses:
         '200':
           description: Bin restored
@@ -2535,7 +2784,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
       requestBody:
         required: true
         content:
@@ -2577,6 +2826,7 @@ paths:
           required: true
           schema:
             type: string
+            description: 6-character alphanumeric bin short code
       requestBody:
         content:
           application/json:
@@ -2612,7 +2862,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
       responses:
         '200':
           description: Bin permanently deleted
@@ -2642,7 +2892,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
       requestBody:
         required: true
         content:
@@ -2681,7 +2931,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
       requestBody:
         required: true
         content:
@@ -2714,7 +2964,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
       requestBody:
         required: true
         content:
@@ -2764,7 +3014,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
         - name: itemId
           in: path
           required: true
@@ -2807,7 +3057,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
         - name: itemId
           in: path
           required: true
@@ -2832,6 +3082,7 @@ paths:
           required: true
           schema:
             type: string
+            description: 6-character alphanumeric bin short code
         - name: itemId
           in: path
           required: true
@@ -2879,7 +3130,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            description: 6-character alphanumeric bin short code
       requestBody:
         required: true
         content:
@@ -3944,80 +4195,17 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
-  /ai/command:
+  # ════════════════════════════════════════════════════════
+  # AI Streaming
+  # ════════════════════════════════════════════════════════
+  /ai/query/stream:
     post:
       tags: [AI]
-      summary: Parse natural language command into structured actions
+      summary: Stream inventory query via SSE
       description: |
-        Sends a freeform natural language command to the user's configured AI provider,
-        which parses it into one or more structured inventory actions (add/remove items,
-        create/delete bins, modify tags, set areas, etc.). The client previews and
-        executes the returned actions using existing mutation endpoints.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [text, locationId]
-              properties:
-                text:
-                  type: string
-                  maxLength: 5000
-                  description: Natural language command
-                locationId:
-                  type: string
-                  description: Location ID to scope the command context
-      responses:
-        '200':
-          description: Parsed command actions
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  actions:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        type:
-                          type: string
-                          enum: [add_items, remove_items, modify_item, create_bin, delete_bin, add_tags, remove_tags, modify_tag, set_area, set_notes, set_icon, set_color]
-                      required: [type]
-                    description: Structured actions parsed from the command
-                  interpretation:
-                    type: string
-                    description: Human-readable summary of what the AI understood
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Not a member of the location
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
-          description: Validation error or AI not configured
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-
-  # ════════════════════════════════════════════════════════
-  # AI Query & Execute
-  # ════════════════════════════════════════════════════════
-  /ai/query:
-    post:
-      tags: [AI]
-      summary: Query inventory with natural language
-      description: |
-        Read-only AI endpoint that answers natural language questions about inventory.
-        Returns a natural language answer plus structured matches with bin details.
-        Ideal for smart home integrations ("where are my batteries?").
-        Rate limited: 30/hr for JWT, 1000/hr for API keys.
+        Read-only AI endpoint that streams a natural language answer about inventory
+        as Server-Sent Events. Returns structured JSON with matches and answer.
+        Requires location membership. Rate limited: 30/hr for JWT, 1000/hr for API keys.
       requestBody:
         required: true
         content:
@@ -4036,11 +4224,12 @@ paths:
                   description: Location to search within
       responses:
         '200':
-          description: Query result with answer and matching bins
+          description: SSE stream of JSON chunks (Content-Type text/event-stream)
           content:
-            application/json:
+            text/event-stream:
               schema:
-                $ref: '#/components/schemas/QueryResult'
+                type: string
+                description: "SSE events: delta (partial JSON), done (complete JSON). Final JSON matches QueryResult schema."
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -4050,16 +4239,14 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
-  /ai/execute:
+  /ai/command/stream:
     post:
       tags: [AI]
-      summary: Parse and execute a natural language command
+      summary: Stream parsed command actions via SSE
       description: |
-        Headless fire-and-forget endpoint: parses a natural language command via AI,
-        then executes all resulting actions server-side in a single transaction.
-        Unlike /ai/command (which returns actions for client-side preview), this
-        endpoint performs the mutations directly. Ideal for smart home integrations.
-        Rate limited: 30/hr for JWT, 1000/hr for API keys.
+        Streams structured inventory actions parsed from a natural language command.
+        The client previews and executes the returned actions using existing mutation endpoints.
+        Requires location membership. Rate limited.
       requestBody:
         required: true
         content:
@@ -4075,14 +4262,302 @@ paths:
                 locationId:
                   type: string
                   format: uuid
-                  description: Location to execute the command in
+                  description: Location ID to scope the command context
       responses:
         '200':
-          description: Execution results
+          description: SSE stream of JSON chunks (Content-Type text/event-stream)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: "SSE events: delta (partial JSON), done (complete JSON with actions and interpretation)."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ai/ask/stream:
+    post:
+      tags: [AI]
+      summary: Unified command + query streaming endpoint
+      description: |
+        Combined endpoint that handles both inventory queries and mutation commands
+        via a single natural language input. The AI determines intent and responds
+        accordingly. Requires location membership. Rate limited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text, locationId]
+              properties:
+                text:
+                  type: string
+                  maxLength: 5000
+                  description: Natural language command or question
+                locationId:
+                  type: string
+                  format: uuid
+                  description: Location ID to scope the request
+      responses:
+        '200':
+          description: SSE stream of JSON chunks
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ai/structure-text/stream:
+    post:
+      tags: [AI]
+      summary: Stream structured items from dictated text via SSE
+      description: |
+        Streaming version of /ai/structure-text. Sends raw text to AI and streams
+        back extracted, normalized inventory items as SSE events.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  maxLength: 5000
+                  description: Raw dictated or typed text describing items
+                context:
+                  type: object
+                  properties:
+                    binName:
+                      type: string
+                    existingItems:
+                      type: array
+                      items:
+                        type: string
+      responses:
+        '200':
+          description: SSE stream of JSON chunks
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ai/analyze-image/stream:
+    post:
+      tags: [AI]
+      summary: Stream AI analysis of uploaded image(s) via SSE
+      description: |
+        Streaming version of /ai/analyze-image. Uploads image(s) and streams back
+        AI suggestions (name, items, tags, notes) as SSE events. Max 5 images, 5MB each.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: Single photo upload
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  maxItems: 5
+                  description: Multiple photos (max 5)
+                locationId:
+                  type: string
+                  format: uuid
+                  description: Optional location ID for tag/field context
+      responses:
+        '200':
+          description: SSE stream of JSON chunks (final JSON matches AiSuggestions schema)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ai/analyze/stream:
+    post:
+      tags: [AI]
+      summary: Stream AI analysis of stored photo(s) via SSE
+      description: |
+        Streaming version of /ai/analyze. Analyzes one or more stored photos and
+        streams back AI suggestions as SSE events. Max 5 photos.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiAnalyzeRequest'
+      responses:
+        '200':
+          description: SSE stream of JSON chunks (final JSON matches AiSuggestions schema)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Photo not found or AI not configured
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExecuteResult'
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ai/correct/stream:
+    post:
+      tags: [AI]
+      summary: Stream correction of a previous AI analysis via SSE
+      description: |
+        Takes a previous analysis result and a user correction, streams back
+        the revised suggestions. Used for iterative refinement of AI analysis.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [previousResult, correction]
+              properties:
+                previousResult:
+                  type: object
+                  required: [name, items]
+                  properties:
+                    name:
+                      type: string
+                    items:
+                      type: array
+                      items:
+                        type: string
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                    notes:
+                      type: string
+                  description: The previous AI analysis result to correct
+                correction:
+                  type: string
+                  maxLength: 1000
+                  description: User's correction or refinement instructions
+                locationId:
+                  type: string
+                  format: uuid
+                  description: Optional location ID for tag/field context
+      responses:
+        '200':
+          description: SSE stream of corrected JSON chunks (final JSON matches AiSuggestions schema)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /ai/reorganize/stream:
+    post:
+      tags: [AI]
+      summary: Stream bin reorganization suggestions via SSE
+      description: |
+        AI-powered bulk reorganization of bins. Analyzes current bin contents and
+        suggests optimal groupings. Streams the response as SSE events.
+        Requires location membership. Rate limited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locationId, bins]
+              properties:
+                locationId:
+                  type: string
+                  format: uuid
+                bins:
+                  type: array
+                  items:
+                    type: object
+                  description: Array of bin objects to reorganize
+                maxBins:
+                  type: integer
+                  minimum: 1
+                  description: Maximum number of bins in the result (null for auto)
+                areaName:
+                  type: string
+                  description: Area context for the reorganization
+                userNotes:
+                  type: string
+                  description: Additional instructions for the AI
+                strictness:
+                  type: string
+                  enum: [conservative, moderate, aggressive]
+                  description: How aggressively to reorganize
+                granularity:
+                  type: string
+                  enum: [broad, medium, specific]
+                  description: How specific bin names should be
+                ambiguousPolicy:
+                  type: string
+                  description: How to handle ambiguous items
+                duplicates:
+                  type: string
+                  description: How to handle duplicate items
+                outliers:
+                  type: string
+                  description: How to handle outlier items
+                minItemsPerBin:
+                  type: integer
+                  description: Minimum items per bin target
+                maxItemsPerBin:
+                  type: integer
+                  description: Maximum items per bin target
+      responses:
+        '200':
+          description: SSE stream of reorganization JSON chunks
+          content:
+            text/event-stream:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -4360,8 +4835,8 @@ paths:
       tags: [Activity]
       summary: Get location activity log
       description: |
-        Returns paginated activity log entries. Auto-prunes entries older than 90 days.
-        Supports filtering by entity type and ID.
+        Returns paginated activity log entries. Auto-prunes entries older than the location's
+        configured activity_retention_days (default 90). Supports filtering by entity type and ID.
       parameters:
         - name: locationId
           in: path
