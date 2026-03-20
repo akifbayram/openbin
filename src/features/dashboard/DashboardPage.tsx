@@ -226,6 +226,8 @@ export function DashboardPage() {
 
         {/* Saved Views */}
         {dashSettings.showSavedViews && savedViews.length > 0 && (
+          <div className="flex flex-col gap-2">
+          <SectionHeader title="Saved Searches" />
           <SavedViewChips
             views={savedViews}
             onApply={(view) => {
@@ -236,6 +238,7 @@ export function DashboardPage() {
               deleteView(viewId).catch(() => {});
             }}
           />
+          </div>
         )}
 
         {/* Pinned Bins */}

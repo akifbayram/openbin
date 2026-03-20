@@ -11,10 +11,7 @@ export function SavedViewChips({ views, onApply, onDelete }: SavedViewChipsProps
   if (views.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <h2 className="text-[13px] font-medium text-[var(--text-secondary)] uppercase tracking-wide">
-        Saved Searches
-      </h2>
+    <div className="flex flex-col gap-2">
       <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5 pt-0.5">
         {views.map((view) => (
           // biome-ignore lint/a11y/useSemanticElements: container with nested interactive delete button cannot be a plain button
