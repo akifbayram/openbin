@@ -119,6 +119,7 @@ export function DataSection({
     setImportMode,
     pendingData,
     csvPending,
+    zipPending,
     importing,
     handleExport,
     handleImportFileClick,
@@ -134,14 +135,22 @@ export function DataSection({
           .join(' \u00b7 ')
       : undefined;
 
-  const hasImportFile = (importFormat === 'json' && pendingData != null) || (importFormat === 'csv' && csvPending != null);
+  const hasImportFile = (importFormat === 'zip' && zipPending != null) || (importFormat === 'json' && pendingData != null) || (importFormat === 'csv' && csvPending != null);
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
 
   const importPreview =
-    importFormat === 'json' && pendingData
-      ? `Found ${pendingData.bins.length} bin${pendingData.bins.length !== 1 ? 's' : ''}`
-      : importFormat === 'csv' && csvPending
-        ? `Found ${csvPending.bins} bin${csvPending.bins !== 1 ? 's' : ''} with ${csvPending.items} item${csvPending.items !== 1 ? 's' : ''}`
-        : null;
+    importFormat === 'zip' && zipPending
+      ? `${zipPending.file.name} (${formatFileSize(zipPending.file.size)})`
+      : importFormat === 'json' && pendingData
+        ? `Found ${pendingData.bins.length} bin${pendingData.bins.length !== 1 ? 's' : ''}`
+        : importFormat === 'csv' && csvPending
+          ? `Found ${csvPending.bins} bin${csvPending.bins !== 1 ? 's' : ''} with ${csvPending.items} item${csvPending.items !== 1 ? 's' : ''}`
+          : null;
 
   return (
     <>
@@ -200,7 +209,7 @@ export function DataSection({
           <input
             ref={fileInputRef}
             type="file"
-            accept={importFormat === 'csv' ? '.csv,text/csv' : '.json'}
+            accept={importFormat === 'zip' ? '.zip,application/zip' : importFormat === 'csv' ? '.csv,text/csv' : '.json'}
             className="hidden"
             onChange={(e) => handleImportFileSelected(e.target.files)}
           />
@@ -243,7 +252,7 @@ export function DataSection({
               />
               <div>
                 <span className="text-[var(--text-primary)]">Backup (JSON)</span>
-                <p className="text-[13px] text-[var(--text-tertiary)]">Data without photos</p>
+                <p className="text-[13px] text-[var(--text-tertiary)]">Data and settings, no photos</p>
               </div>
             </label>
             <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -289,60 +298,80 @@ export function DataSection({
           <div className="space-y-5">
             <div className="space-y-2.5">
               <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
-              <div className="flex flex-col gap-2">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <div className="flex flex-col gap-3">
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="import-format"
+                    checked={importFormat === 'zip'}
+                    onChange={() => setImportFormat('zip')}
+                    className="accent-[var(--accent)] mt-0.5"
+                  />
+                  <div>
+                    <span className="text-[var(--text-primary)]">Backup (ZIP)</span>
+                    <p className="text-[13px] text-[var(--text-tertiary)]">All data including photos</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
                     type="radio"
                     name="import-format"
                     checked={importFormat === 'json'}
                     onChange={() => setImportFormat('json')}
-                    className="accent-[var(--accent)]"
+                    className="accent-[var(--accent)] mt-0.5"
                   />
-                  <span className="text-[var(--text-primary)]">Backup (JSON)</span>
+                  <div>
+                    <span className="text-[var(--text-primary)]">Backup (JSON)</span>
+                    <p className="text-[13px] text-[var(--text-tertiary)]">Data and settings, no photos</p>
+                  </div>
                 </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
                     type="radio"
                     name="import-format"
                     checked={importFormat === 'csv'}
                     onChange={() => setImportFormat('csv')}
-                    className="accent-[var(--accent)]"
+                    className="accent-[var(--accent)] mt-0.5"
                   />
-                  <span className="text-[var(--text-primary)]">Spreadsheet (CSV)</span>
+                  <div>
+                    <span className="text-[var(--text-primary)]">Spreadsheet (CSV)</span>
+                    <p className="text-[13px] text-[var(--text-tertiary)]">Bins and items from a spreadsheet</p>
+                  </div>
                 </label>
               </div>
             </div>
 
             <div className="space-y-2.5">
               <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Mode</span>
-              <div className="flex flex-col gap-2">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <div className="flex flex-col gap-3">
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
                     type="radio"
                     name="import-mode"
                     checked={importMode === 'merge'}
                     onChange={() => setImportMode('merge')}
-                    className="accent-[var(--accent)]"
+                    className="accent-[var(--accent)] mt-0.5"
                   />
-                  <span className="text-[var(--text-primary)]">Merge</span>
-                  <span className="text-[var(--text-tertiary)]">— skip existing</span>
+                  <div>
+                    <span className="text-[var(--text-primary)]">Merge</span>
+                    <p className="text-[13px] text-[var(--text-tertiary)]">Add new data, skip existing</p>
+                  </div>
                 </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
                     type="radio"
                     name="import-mode"
                     checked={importMode === 'replace'}
                     onChange={() => setImportMode('replace')}
-                    className="accent-[var(--accent)]"
+                    className="accent-[var(--accent)] mt-0.5"
                   />
-                  <span className="text-[var(--text-primary)]">Replace</span>
-                  <span className="text-[var(--text-tertiary)]">— delete all first</span>
+                  <div>
+                    <span className="text-[var(--text-primary)]">Replace</span>
+                    <p className={cn('text-[13px]', importMode === 'replace' ? 'text-[var(--destructive)]' : 'text-[var(--text-tertiary)]')}>
+                      Delete all existing data first
+                    </p>
+                  </div>
                 </label>
-                {importMode === 'replace' && (
-                  <p className="text-[13px] text-[var(--destructive)]">
-                    This will delete all existing bins and photos before importing.
-                  </p>
-                )}
               </div>
             </div>
 

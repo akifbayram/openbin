@@ -3966,6 +3966,61 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /locations/{id}/import/zip:
+    post:
+      tags: [Export]
+      summary: Import from ZIP backup
+      description: |
+        Imports bins, photos, tag colors, and custom field definitions from a ZIP backup
+        produced by the ZIP export endpoint. The ZIP must contain `manifest.json` (with
+        `format: "openbin-zip"`) and `bins.json`. Photos are read from `photos/` directory.
+        Max 200MB file size. Max 2000 bins.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: ZIP file (.zip)
+                mode:
+                  type: string
+                  enum: [merge, replace]
+                  default: merge
+      responses:
+        '200':
+          description: Import summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  binsImported:
+                    type: integer
+                  binsSkipped:
+                    type: integer
+                  photosImported:
+                    type: integer
+                  photosSkipped:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /import/legacy:
     post:
       tags: [Export]

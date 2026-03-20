@@ -11,6 +11,7 @@ import {
   ImportError,
   importCSV,
   importData,
+  importZip,
   parseImportFile,
   validateCSVHeader,
 } from './exportImport';
@@ -27,7 +28,7 @@ function importErrorMessage(err: unknown): string {
 }
 
 export type ExportFormat = 'zip' | 'json' | 'csv';
-export type ImportFormat = 'json' | 'csv';
+export type ImportFormat = 'zip' | 'json' | 'csv';
 
 export function useDataSectionActions() {
   const { activeLocationId } = useAuth();
@@ -46,18 +47,21 @@ export function useDataSectionActions() {
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
   const [pendingData, setPendingData] = useState<ExportData | null>(null);
   const [csvPending, setCsvPending] = useState<{ file: File; bins: number; items: number } | null>(null);
+  const [zipPending, setZipPending] = useState<{ file: File } | null>(null);
   const [importing, setImporting] = useState(false);
 
   function setImportFormat(format: ImportFormat) {
     setImportFormatRaw(format);
     setPendingData(null);
     setCsvPending(null);
+    setZipPending(null);
   }
 
   function resetImportState() {
     setPendingData(null);
     setCsvPending(null);
-    setImportFormatRaw('json');
+    setZipPending(null);
+    setImportFormatRaw('zip');
     setImportMode('merge');
   }
 
@@ -105,7 +109,13 @@ export function useDataSectionActions() {
     if (!files?.[0] || !activeLocationId) return;
     const file = files[0];
 
-    if (importFormatRaw === 'json') {
+    if (importFormatRaw === 'zip') {
+      if (!file.name.toLowerCase().endsWith('.zip')) {
+        showToast({ message: 'Please select a .zip file' });
+      } else {
+        setZipPending({ file });
+      }
+    } else if (importFormatRaw === 'json') {
       try {
         const data = await parseImportFile(file);
         setPendingData(data);
@@ -135,7 +145,28 @@ export function useDataSectionActions() {
   async function handleConfirmImport() {
     if (!activeLocationId) return;
 
-    if (importFormatRaw === 'json' && pendingData) {
+    if (importFormatRaw === 'zip' && zipPending) {
+      setImporting(true);
+      try {
+        const result = await importZip(activeLocationId, zipPending.file, importMode);
+        if (importMode === 'replace') {
+          showToast({
+            message: `Replaced all data: ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}`,
+          });
+        } else {
+          showToast({
+            message: `Imported ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}${result.binsSkipped ? ` (${result.binsSkipped} skipped)` : ''}`,
+          });
+        }
+        setZipPending(null);
+        setImportDialogOpen(false);
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        showToast({ message: `ZIP import failed: ${detail}` });
+      } finally {
+        setImporting(false);
+      }
+    } else if (importFormatRaw === 'json' && pendingData) {
       setImporting(true);
       try {
         const result = await importData(activeLocationId, pendingData, importMode);
@@ -189,6 +220,7 @@ export function useDataSectionActions() {
     setImportMode,
     pendingData,
     csvPending,
+    zipPending,
     importing,
     handleExport,
     handleImportFileClick,

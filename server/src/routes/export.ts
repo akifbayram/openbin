@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import AdmZip from 'adm-zip';
 import archiver from 'archiver';
 import express, { Router } from 'express';
 import multer from 'multer';
@@ -560,6 +561,196 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
 
   const result = doImport();
   res.json(result);
+}));
+
+// POST /api/locations/:id/import/zip — import from ZIP backup
+const zipUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 200 * 1024 * 1024 },
+}).single('file');
+
+router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asyncHandler(async (req, res) => {
+  const locationId = req.params.id;
+  const userId = req.user!.id;
+
+  await requireMemberOrAbove(locationId, userId, 'import ZIP');
+
+  if (!req.file) {
+    throw new ValidationError('ZIP file is required');
+  }
+
+  const zip = new AdmZip(req.file.buffer);
+
+  // Read and validate manifest
+  const manifestEntry = zip.getEntry('manifest.json');
+  if (!manifestEntry) {
+    throw new ValidationError('ZIP does not contain manifest.json');
+  }
+  let manifest: {
+    format?: string;
+    tagColors?: Array<{ tag: string; color: string }>;
+    customFieldDefinitions?: Array<{ name: string; position: number }>;
+  };
+  try {
+    manifest = JSON.parse(manifestEntry.getData().toString('utf-8'));
+  } catch {
+    throw new ValidationError('manifest.json is not valid JSON');
+  }
+  if (manifest.format !== 'openbin-zip') {
+    throw new ValidationError('Invalid ZIP format: manifest.format must be "openbin-zip"');
+  }
+
+  // Read and validate bins
+  const binsEntry = zip.getEntry('bins.json');
+  if (!binsEntry) {
+    throw new ValidationError('ZIP does not contain bins.json');
+  }
+  let zipBins: Array<{
+    id?: string;
+    name: string;
+    location?: string;
+    items?: Array<string | { name: string; quantity?: number | null }>;
+    notes?: string;
+    tags?: string[];
+    icon?: string;
+    color?: string;
+    cardStyle?: string;
+    visibility?: 'location' | 'private';
+    customFields?: Record<string, string>;
+    shortCode?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    photos?: Array<{ id: string; filename: string; mimeType: string; zipPath: string }>;
+  }>;
+  try {
+    zipBins = JSON.parse(binsEntry.getData().toString('utf-8'));
+  } catch {
+    throw new ValidationError('bins.json is not valid JSON');
+  }
+  if (!Array.isArray(zipBins)) {
+    throw new ValidationError('bins.json must be an array');
+  }
+  if (zipBins.length > 2000) {
+    throw new ValidationError('Too many bins in import (max 2000)');
+  }
+
+  // Convert ZIP photo references to base64 ExportBin[] with inline photo data
+  const exportBins: ExportBin[] = zipBins.map((bin) => {
+    const photos: ExportPhoto[] = [];
+    if (bin.photos && Array.isArray(bin.photos)) {
+      for (const ref of bin.photos) {
+        const photoEntry = zip.getEntry(ref.zipPath);
+        if (!photoEntry) continue;
+        const base64 = photoEntry.getData().toString('base64');
+        photos.push({
+          id: ref.id,
+          filename: ref.filename,
+          mimeType: ref.mimeType,
+          data: base64,
+        });
+      }
+    }
+    return {
+      id: bin.id || uuidv4(),
+      name: bin.name,
+      location: bin.location || '',
+      items: bin.items || [],
+      notes: bin.notes || '',
+      tags: bin.tags || [],
+      icon: bin.icon || '',
+      color: bin.color || '',
+      cardStyle: bin.cardStyle,
+      visibility: bin.visibility,
+      customFields: bin.customFields,
+      shortCode: bin.shortCode,
+      createdAt: bin.createdAt || new Date().toISOString(),
+      updatedAt: bin.updatedAt || new Date().toISOString(),
+      photos,
+    };
+  });
+
+  const importMode = (req.body?.mode === 'replace' ? 'replace' : 'merge') as 'merge' | 'replace';
+
+  const doImport = getDb().transaction(() => {
+    if (importMode === 'replace') {
+      const existingPhotos = querySync<{ storage_path: string }>(
+        'SELECT storage_path FROM photos WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1)',
+        [locationId]
+      );
+      querySync('DELETE FROM bins WHERE location_id = $1', [locationId]);
+      for (const photo of existingPhotos.rows) {
+        try {
+          const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
+          if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        } catch { /* ignore */ }
+      }
+    }
+
+    // Import tag colors if provided
+    if (manifest.tagColors && Array.isArray(manifest.tagColors)) {
+      importTagColorsSync(locationId, manifest.tagColors);
+    }
+
+    // Resolve custom field definitions
+    let fieldNameToId: Map<string, string> | undefined;
+    if (manifest.customFieldDefinitions && Array.isArray(manifest.customFieldDefinitions)) {
+      fieldNameToId = resolveCustomFieldDefsSync(locationId, manifest.customFieldDefinitions);
+    }
+
+    let binsImported = 0;
+    let binsSkipped = 0;
+    let photosImported = 0;
+
+    for (const bin of exportBins) {
+      if (importMode === 'merge') {
+        const existing = querySync('SELECT id FROM bins WHERE id = $1', [bin.id]);
+        if (existing.rows.length > 0) {
+          binsSkipped++;
+          continue;
+        }
+      }
+
+      const areaId = resolveAreaSync(locationId, bin.location || '', userId);
+
+      let resolvedCustomFields = bin.customFields;
+      if (resolvedCustomFields && fieldNameToId && fieldNameToId.size > 0) {
+        resolvedCustomFields = mapCustomFieldsToIds(resolvedCustomFields, fieldNameToId);
+      }
+
+      const binId = insertBinWithShortCode('', locationId, {
+        name: bin.name,
+        notes: bin.notes || '',
+        tags: bin.tags || [],
+        icon: bin.icon || '',
+        color: bin.color || '',
+        cardStyle: bin.cardStyle,
+        visibility: bin.visibility,
+        customFields: resolvedCustomFields,
+        shortCode: bin.shortCode,
+        createdAt: bin.createdAt || new Date().toISOString(),
+        updatedAt: bin.updatedAt || new Date().toISOString(),
+      }, areaId, userId);
+
+      insertBinItemsSync(binId, bin.items || []);
+
+      if (bin.photos && Array.isArray(bin.photos)) {
+        photosImported += importPhotosSync(binId, bin.photos, userId);
+      }
+
+      binsImported++;
+    }
+
+    return { binsImported, binsSkipped, photosImported };
+  });
+
+  const result = doImport();
+
+  res.json({
+    binsImported: result.binsImported,
+    binsSkipped: result.binsSkipped,
+    photosImported: result.photosImported,
+    photosSkipped: 0,
+  });
 }));
 
 // POST /api/import/legacy — import legacy V1/V2 format

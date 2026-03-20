@@ -313,6 +313,20 @@ export async function importCSV(
   );
 }
 
+export async function importZip(
+  locationId: string,
+  file: File,
+  mode: 'merge' | 'replace',
+): Promise<ImportResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('mode', mode);
+  return apiFetch<ImportResult>(
+    `/api/locations/${locationId}/import/zip`,
+    { method: 'POST', body: formData },
+  );
+}
+
 export async function importLegacyData(
   locationId: string,
   data: ExportData
