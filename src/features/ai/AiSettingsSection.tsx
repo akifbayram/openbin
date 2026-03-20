@@ -195,7 +195,8 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                     <button
                       type="button"
                       onClick={() => setup.setShowKey(!setup.showKey)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                      aria-label={setup.showKey ? 'Hide API key' : 'Show API key'}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                     >
                       {setup.showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>

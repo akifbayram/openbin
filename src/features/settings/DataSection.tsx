@@ -266,13 +266,13 @@ export function DataSection({
                 setConfirmReplace(false);
                 setPendingData(null);
               }}
-              >
+            >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleReplaceImport}
-              >
+            >
               Replace All
             </Button>
           </DialogFooter>

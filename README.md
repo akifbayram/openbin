@@ -102,30 +102,23 @@ The database schema is auto-migrated on startup. Your data volume is preserved a
 
 Single Node.js process. All data lives in one SQLite file and a photos directory. No external services, no background workers, no telemetry, no phoning home. The app never makes outbound network requests unless you explicitly configure AI features (bring-your-own API key). Works fully offline on a LAN.
 
-```
-┌──────────────────────────────────────┐
-│          Node.js (Express)           │
-│                                      │
-│   GET /api/*   ←→  SQLite (WAL)     │
-│   GET /*       →   Static frontend  │
-└──────────┬───────────────────────────┘
-           │
-     /data (Docker volume)
-     ├── openbin.db        ← single database file
-     ├── .jwt_secret       ← auto-generated if JWT_SECRET unset
-     ├── photos/           ← uploaded images
-     └── backups/          ← scheduled DB snapshots (opt-in)
-```
-
 | Layer | Technology |
 |-------|------------|
 | Frontend | React 18, TypeScript, Vite 5, Tailwind CSS 4 |
 | Backend | Express 4, SQLite (better-sqlite3), JWT auth |
 | Container | Single-stage Alpine image, runs as non-root `node` user |
 
-**What writes to disk:** The SQLite database (`openbin.db` + WAL journal), uploaded photos, optional backups, and a `.jwt_secret` file if you don't provide `JWT_SECRET`. Nothing else.
+The `/data` Docker volume contains everything persistent:
 
-**Network access:** Zero outbound connections by default. If you configure an AI provider, the server calls that provider's API on demand. No other external calls, ever.
+```
+/data
+├── openbin.db        ← single database file (WAL journal)
+├── .jwt_secret       ← auto-generated if JWT_SECRET unset
+├── photos/           ← uploaded images
+└── backups/          ← scheduled DB snapshots (opt-in)
+```
+
+Zero outbound network connections by default. If you configure an AI provider, the server calls that provider's API on demand.
 
 ## API Documentation
 

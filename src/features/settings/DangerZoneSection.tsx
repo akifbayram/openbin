@@ -46,7 +46,7 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
             <Button
               variant="destructive"
               onClick={() => setDeleteOpen(true)}
-              className="justify-start rounded-[var(--radius-sm)]"
+              className="justify-start"
             >
               <Trash2 className="h-4 w-4 mr-2.5" />
               Delete Account
@@ -82,14 +82,14 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
                 type="button"
                 variant="ghost"
                 onClick={() => { setDeleteOpen(false); setDeletePassword(''); }}
-                  >
+              >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 variant="destructive"
                 disabled={!deletePassword || deleting}
-                  >
+              >
                 {deleting ? 'Deleting...' : 'Delete Account'}
               </Button>
             </DialogFooter>

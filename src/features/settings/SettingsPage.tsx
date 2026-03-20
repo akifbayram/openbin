@@ -103,7 +103,7 @@ export function SettingsPage() {
               <Button
                 variant="outline"
                 onClick={logout}
-                className="justify-start rounded-[var(--radius-sm)] h-11 text-[var(--destructive)]"
+                className="justify-start h-11 text-[var(--destructive)]"
               >
                 <LogOut className="h-4 w-4 mr-2.5" />
                 Sign Out

@@ -118,6 +118,7 @@ html {
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -237,7 +238,7 @@ body {
     padding-left: var(--page-px);
     padding-right: var(--page-px);
     padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    padding-bottom: 2rem;
     max-width: 42rem;
     margin-left: auto;
     margin-right: auto;
