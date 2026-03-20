@@ -3913,6 +3913,59 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /locations/{id}/import/csv:
+    post:
+      tags: [Export]
+      summary: Import bins from CSV
+      description: |
+        Imports bins from a CSV file. Supports two formats:
+        - Round-trip format (matches CSV export): Bin Name, Area, Item, Quantity, Tags
+        - One-bin-per-row format: Bin Name, Area, Items, Tags
+        Max 10MB file size. Max 2000 bins.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file (.csv)
+                mode:
+                  type: string
+                  enum: [merge, replace]
+                  default: merge
+      responses:
+        '200':
+          description: Import summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  binsImported:
+                    type: integer
+                  binsSkipped:
+                    type: integer
+                  itemsImported:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /import/legacy:
     post:
       tags: [Export]

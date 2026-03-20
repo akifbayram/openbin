@@ -1,12 +1,9 @@
 import {
-  AlertTriangle,
   ChevronRight,
   Clock,
   Compass,
   Database,
   Download,
-  FileArchive,
-  FileSpreadsheet,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -33,19 +30,6 @@ interface DataSectionProps {
   areaCount?: number;
   binLabel?: string;
   areaLabel?: string;
-}
-
-function SectionLabel({ children, trailing }: { children: React.ReactNode; trailing?: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between mt-5 mb-2">
-      <span className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
-        {children}
-      </span>
-      {trailing && (
-        <span className="text-[12px] text-[var(--text-tertiary)]">{trailing}</span>
-      )}
-    </div>
-  );
 }
 
 function RowGroup({ children }: { children: React.ReactNode }) {
@@ -122,20 +106,25 @@ export function DataSection({
   const navigate = useNavigate();
   const {
     fileInputRef,
-    replaceInputRef,
+    exportDialogOpen,
+    setExportDialogOpen,
+    exportFormat,
+    setExportFormat,
     exporting,
-    exportingZip,
-    exportingCsv,
-    confirmReplace,
-    setConfirmReplace,
-    setPendingData,
+    importDialogOpen,
+    setImportDialogOpen,
+    importFormat,
+    setImportFormat,
+    importMode,
+    setImportMode,
+    pendingData,
+    csvPending,
+    importing,
     handleExport,
-    handleExportZip,
-    handleExportCsv,
-    handleImportClick,
-    handleFileSelected,
-    handleReplaceFileSelected,
-    handleReplaceImport,
+    handleImportFileClick,
+    handleImportFileSelected,
+    handleConfirmImport,
+    resetImportState,
   } = actions;
 
   const statsText =
@@ -144,6 +133,15 @@ export function DataSection({
           .filter(Boolean)
           .join(' \u00b7 ')
       : undefined;
+
+  const hasImportFile = (importFormat === 'json' && pendingData != null) || (importFormat === 'csv' && csvPending != null);
+
+  const importPreview =
+    importFormat === 'json' && pendingData
+      ? `Found ${pendingData.bins.length} bin${pendingData.bins.length !== 1 ? 's' : ''}`
+      : importFormat === 'csv' && csvPending
+        ? `Found ${csvPending.bins} bin${csvPending.bins !== 1 ? 's' : ''} with ${csvPending.items} item${csvPending.items !== 1 ? 's' : ''}`
+        : null;
 
   return (
     <>
@@ -176,104 +174,205 @@ export function DataSection({
       <Card>
         <CardContent>
           <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Database className="h-3.5 w-3.5" />Data</span>} labelClassName="text-[15px] font-semibold">
-
-          {/* Export */}
-          <SectionLabel trailing={statsText}>Export{locationName ? ` \u2014 ${locationName}` : ''}</SectionLabel>
-          <RowGroup>
-            <SettingsRow
-              icon={FileArchive}
-              label="Backup (ZIP)"
-              description="All data including photos"
-              onClick={handleExportZip}
-              disabled={!activeLocationId}
-              loading={exportingZip}
-              loadingLabel="Exporting..."
-            />
-            <RowDivider />
-            <SettingsRow
-              icon={Download}
-              label="Backup (JSON)"
-              description="Data without photos"
-              onClick={handleExport}
-              disabled={!activeLocationId}
-              loading={exporting}
-              loadingLabel="Exporting..."
-            />
-            <RowDivider />
-            <SettingsRow
-              icon={FileSpreadsheet}
-              label="Spreadsheet (CSV)"
-              description="Open in Excel or Google Sheets"
-              onClick={handleExportCsv}
-              disabled={!activeLocationId}
-              loading={exportingCsv}
-              loadingLabel="Exporting..."
-            />
-          </RowGroup>
-
-          {/* Import */}
-          <SectionLabel>Import{locationName ? ` \u2014 ${locationName}` : ''}</SectionLabel>
-          <RowGroup>
-            <SettingsRow
-              icon={Upload}
-              label="Import Backup"
-              description="Merge with existing data"
-              onClick={handleImportClick}
-              disabled={!activeLocationId}
-            />
-            <RowDivider />
-            <SettingsRow
-              icon={AlertTriangle}
-              label="Replace All Data"
-              description="Deletes everything, then imports from file"
-              onClick={() => replaceInputRef.current?.click()}
-              disabled={!activeLocationId}
-              destructive
-            />
-          </RowGroup>
+          <div className="mt-1">
+            <RowGroup>
+              <SettingsRow
+                icon={Download}
+                label="Export Data"
+                description="Backup or download your data"
+                onClick={() => setExportDialogOpen(true)}
+                disabled={!activeLocationId}
+              />
+              <RowDivider />
+              <SettingsRow
+                icon={Upload}
+                label="Import Data"
+                description="Import from backup or spreadsheet"
+                onClick={() => {
+                  resetImportState();
+                  setImportDialogOpen(true);
+                }}
+                disabled={!activeLocationId}
+              />
+            </RowGroup>
+          </div>
 
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json"
+            accept={importFormat === 'csv' ? '.csv,text/csv' : '.json'}
             className="hidden"
-            onChange={(e) => handleFileSelected(e.target.files)}
-          />
-          <input
-            ref={replaceInputRef}
-            type="file"
-            accept=".json"
-            className="hidden"
-            onChange={(e) => handleReplaceFileSelected(e.target.files)}
+            onChange={(e) => handleImportFileSelected(e.target.files)}
           />
           </Disclosure>
         </CardContent>
       </Card>
 
-      {/* Replace confirmation dialog */}
-      <Dialog open={confirmReplace} onOpenChange={setConfirmReplace}>
+      {/* Export dialog */}
+      <Dialog open={exportDialogOpen} onOpenChange={(open) => {
+        if (!open && !exporting) setExportDialogOpen(false);
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Replace All Data?</DialogTitle>
+            <DialogTitle>Export Data</DialogTitle>
             <DialogDescription>
-              This will delete all existing bins and photos in the current location, then import from the backup file. This action cannot be undone.
+              {locationName || 'Current location'}{statsText ? ` \u00b7 ${statsText}` : ''}
             </DialogDescription>
           </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="export-format"
+                checked={exportFormat === 'zip'}
+                onChange={() => setExportFormat('zip')}
+                className="accent-[var(--accent)] mt-0.5"
+              />
+              <div>
+                <span className="text-[var(--text-primary)]">Backup (ZIP)</span>
+                <p className="text-[13px] text-[var(--text-tertiary)]">All data including photos</p>
+              </div>
+            </label>
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="export-format"
+                checked={exportFormat === 'json'}
+                onChange={() => setExportFormat('json')}
+                className="accent-[var(--accent)] mt-0.5"
+              />
+              <div>
+                <span className="text-[var(--text-primary)]">Backup (JSON)</span>
+                <p className="text-[13px] text-[var(--text-tertiary)]">Data without photos</p>
+              </div>
+            </label>
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="export-format"
+                checked={exportFormat === 'csv'}
+                onChange={() => setExportFormat('csv')}
+                className="accent-[var(--accent)] mt-0.5"
+              />
+              <div>
+                <span className="text-[var(--text-primary)]">Spreadsheet (CSV)</span>
+                <p className="text-[13px] text-[var(--text-tertiary)]">Open in Excel or Google Sheets</p>
+              </div>
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setExportDialogOpen(false)} disabled={exporting}>
+              Cancel
+            </Button>
+            <Button onClick={handleExport} disabled={exporting}>
+              {exporting ? 'Exporting...' : 'Export'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={(open) => {
+        if (!open && !importing) {
+          setImportDialogOpen(false);
+          resetImportState();
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Data</DialogTitle>
+            <DialogDescription>
+              Import into {locationName || 'the current location'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5">
+            <div className="space-y-2.5">
+              <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="import-format"
+                    checked={importFormat === 'json'}
+                    onChange={() => setImportFormat('json')}
+                    className="accent-[var(--accent)]"
+                  />
+                  <span className="text-[var(--text-primary)]">Backup (JSON)</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="import-format"
+                    checked={importFormat === 'csv'}
+                    onChange={() => setImportFormat('csv')}
+                    className="accent-[var(--accent)]"
+                  />
+                  <span className="text-[var(--text-primary)]">Spreadsheet (CSV)</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Mode</span>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="import-mode"
+                    checked={importMode === 'merge'}
+                    onChange={() => setImportMode('merge')}
+                    className="accent-[var(--accent)]"
+                  />
+                  <span className="text-[var(--text-primary)]">Merge</span>
+                  <span className="text-[var(--text-tertiary)]">— skip existing</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="import-mode"
+                    checked={importMode === 'replace'}
+                    onChange={() => setImportMode('replace')}
+                    className="accent-[var(--accent)]"
+                  />
+                  <span className="text-[var(--text-primary)]">Replace</span>
+                  <span className="text-[var(--text-tertiary)]">— delete all first</span>
+                </label>
+                {importMode === 'replace' && (
+                  <p className="text-[13px] text-[var(--destructive)]">
+                    This will delete all existing bins and photos before importing.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" onClick={handleImportFileClick} disabled={importing}>
+                {hasImportFile ? 'Change File' : 'Select File'}
+              </Button>
+              {importPreview && (
+                <p className="text-[13px] text-[var(--text-secondary)]">{importPreview}</p>
+              )}
+            </div>
+          </div>
+
           <DialogFooter>
             <Button
               variant="ghost"
               onClick={() => {
-                setConfirmReplace(false);
-                setPendingData(null);
+                setImportDialogOpen(false);
+                resetImportState();
               }}
+              disabled={importing}
             >
               Cancel
             </Button>
             <Button
-              variant="destructive"
-              onClick={handleReplaceImport}
+              variant={importMode === 'replace' ? 'destructive' : 'default'}
+              onClick={handleConfirmImport}
+              disabled={!hasImportFile || importing}
             >
-              Replace All
+              {importing ? 'Importing...' : importMode === 'replace' ? 'Replace & Import' : 'Import'}
             </Button>
           </DialogFooter>
         </DialogContent>

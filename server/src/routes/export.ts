@@ -2,11 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import archiver from 'archiver';
 import express, { Router } from 'express';
+import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb, query, querySync } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { verifyLocationMembership } from '../lib/binAccess.js';
+import { requireMemberOrAbove, verifyLocationMembership } from '../lib/binAccess.js';
 import { config } from '../lib/config.js';
+import { parseCSV } from '../lib/csvParser.js';
 import {
   buildFieldIdToNameMap,
   type ExportBin,
@@ -367,6 +369,197 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
     photosImported: result.photosImported,
     photosSkipped: 0,
   });
+}));
+
+// POST /api/locations/:id/import/csv — import bins from CSV file
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+}).single('file');
+
+router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asyncHandler(async (req, res) => {
+  const locationId = req.params.id;
+  const userId = req.user!.id;
+
+  await requireMemberOrAbove(locationId, userId, 'import CSV');
+
+  if (!req.file) {
+    throw new ValidationError('CSV file is required');
+  }
+
+  const text = req.file.buffer.toString('utf-8');
+  const rows = parseCSV(text);
+  if (rows.length < 2) {
+    throw new ValidationError('CSV file must have a header row and at least one data row');
+  }
+
+  const header = rows[0].map(h => h.trim().toLowerCase());
+  const isRoundTrip =
+    header.length === 5 &&
+    header[0] === 'bin name' &&
+    header[1] === 'area' &&
+    header[2] === 'item' &&
+    header[3] === 'quantity' &&
+    header[4] === 'tags';
+  const isOneBinPerRow =
+    header.length === 4 &&
+    (header[0] === 'bin name' || header[0] === 'name') &&
+    header[1] === 'area' &&
+    header[2] === 'items' &&
+    header[3] === 'tags';
+
+  if (!isRoundTrip && !isOneBinPerRow) {
+    throw new ValidationError(
+      'CSV header must be "Bin Name,Area,Item,Quantity,Tags" or "Bin Name,Area,Items,Tags"'
+    );
+  }
+
+  const importMode = (req.body?.mode === 'replace' ? 'replace' : 'merge') as 'merge' | 'replace';
+
+  // Group rows into bins
+  interface PendingBin {
+    name: string;
+    area: string;
+    items: Array<{ name: string; quantity: number | null }>;
+    tags: string[];
+  }
+
+  const pendingBins: PendingBin[] = [];
+
+  if (isRoundTrip) {
+    // Group consecutive rows with same Bin Name + Area
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (row.length < 5) continue;
+      const binName = row[0].trim();
+      const area = row[1].trim();
+      const itemName = row[2].trim();
+      const qtyRaw = row[3].trim();
+      const tagsRaw = row[4].trim();
+
+      if (!binName) continue;
+
+      const quantity = qtyRaw ? Number.parseInt(qtyRaw, 10) : null;
+      const item = itemName ? { name: itemName, quantity: Number.isNaN(quantity) ? null : quantity } : null;
+
+      // Check if this row belongs to the same bin as previous
+      const prev = pendingBins.length > 0 ? pendingBins[pendingBins.length - 1] : null;
+      if (prev && prev.name === binName && prev.area === area) {
+        if (item) prev.items.push(item);
+      } else {
+        const tags = tagsRaw
+          ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean)
+          : [];
+        pendingBins.push({
+          name: binName,
+          area,
+          items: item ? [item] : [],
+          tags,
+        });
+      }
+    }
+  } else {
+    // One-bin-per-row format
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (row.length < 4) continue;
+      const binName = row[0].trim();
+      const area = row[1].trim();
+      const itemsRaw = row[2].trim();
+      const tagsRaw = row[3].trim();
+
+      if (!binName) continue;
+
+      const items: Array<{ name: string; quantity: number | null }> = [];
+      if (itemsRaw) {
+        for (const part of itemsRaw.split(';')) {
+          const trimmed = part.trim();
+          if (!trimmed) continue;
+          // Parse "name (qty)" or "name x qty" patterns
+          const matchParen = trimmed.match(/^(.+?)\s*\((\d+)\)\s*$/);
+          const matchX = trimmed.match(/^(.+?)\s+x\s*(\d+)\s*$/i);
+          if (matchParen) {
+            items.push({ name: matchParen[1].trim(), quantity: Number.parseInt(matchParen[2], 10) });
+          } else if (matchX) {
+            items.push({ name: matchX[1].trim(), quantity: Number.parseInt(matchX[2], 10) });
+          } else {
+            items.push({ name: trimmed, quantity: null });
+          }
+        }
+      }
+
+      const tags = tagsRaw
+        ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean)
+        : [];
+      pendingBins.push({ name: binName, area, items, tags });
+    }
+  }
+
+  if (pendingBins.length > 2000) {
+    throw new ValidationError('Too many bins in CSV import (max 2000)');
+  }
+
+  const now = new Date().toISOString();
+
+  const doImport = getDb().transaction(() => {
+    if (importMode === 'replace') {
+      const existingPhotos = querySync<{ storage_path: string }>(
+        'SELECT storage_path FROM photos WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1)',
+        [locationId]
+      );
+      querySync('DELETE FROM bins WHERE location_id = $1', [locationId]);
+      for (const photo of existingPhotos.rows) {
+        try {
+          const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
+          if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        } catch { /* ignore */ }
+      }
+    }
+
+    let binsImported = 0;
+    let binsSkipped = 0;
+    let itemsImported = 0;
+
+    for (const bin of pendingBins) {
+      const areaId = resolveAreaSync(locationId, bin.area, userId);
+
+      if (importMode === 'merge') {
+        const areaClause = areaId
+          ? 'AND area_id = $3'
+          : 'AND area_id IS NULL';
+        const params = areaId
+          ? [locationId, bin.name, areaId]
+          : [locationId, bin.name];
+        const existing = querySync(
+          `SELECT id FROM bins WHERE location_id = $1 AND name = $2 ${areaClause} AND deleted_at IS NULL`,
+          params
+        );
+        if (existing.rows.length > 0) {
+          binsSkipped++;
+          continue;
+        }
+      }
+
+      const binId = insertBinWithShortCode('', locationId, {
+        name: bin.name,
+        notes: '',
+        tags: bin.tags,
+        icon: '',
+        color: '',
+        createdAt: now,
+        updatedAt: now,
+      }, areaId, userId);
+
+      insertBinItemsSync(binId, bin.items.map(i => ({ name: i.name, quantity: i.quantity })));
+      itemsImported += bin.items.length;
+      binsImported++;
+    }
+
+    return { binsImported, binsSkipped, itemsImported };
+  });
+
+  const result = doImport();
+  res.json(result);
 }));
 
 // POST /api/import/legacy — import legacy V1/V2 format

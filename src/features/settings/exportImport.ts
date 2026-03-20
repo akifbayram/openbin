@@ -191,6 +191,128 @@ export async function importData(
   });
 }
 
+export interface CSVImportResult {
+  binsImported: number;
+  binsSkipped: number;
+  itemsImported: number;
+}
+
+/** Read CSV header (first line, handling quoted fields). */
+export function parseCSVHeader(text: string): string[] {
+  let end = 0;
+  let inQuoted = false;
+  while (end < text.length) {
+    const ch = text[end];
+    if (ch === '"') inQuoted = !inQuoted;
+    else if (!inQuoted && (ch === '\n' || ch === '\r')) break;
+    end++;
+  }
+  return text.slice(0, end).split(',').map(h => h.trim());
+}
+
+/** Split a single CSV line into fields, respecting quoted values. */
+function splitCSVLine(line: string): string[] {
+  const fields: string[] = [];
+  let field = '';
+  let inQuoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuoted) {
+      if (ch === '"' && i + 1 < line.length && line[i + 1] === '"') {
+        field += '"';
+        i++;
+      } else if (ch === '"') {
+        inQuoted = false;
+      } else {
+        field += ch;
+      }
+    } else if (ch === '"' && field === '') {
+      inQuoted = true;
+    } else if (ch === ',') {
+      fields.push(field);
+      field = '';
+    } else {
+      field += ch;
+    }
+  }
+  fields.push(field);
+  return fields;
+}
+
+/** Quick preview count: number of bins and items in the CSV. */
+export function countCSVBins(text: string): { bins: number; items: number } {
+  const lines = text.split('\n');
+  if (lines.length < 2) return { bins: 0, items: 0 };
+
+  const header = parseCSVHeader(text).map(h => h.toLowerCase());
+  const isRoundTrip =
+    header.length === 5 &&
+    header[0] === 'bin name' &&
+    header[2] === 'item';
+
+  if (isRoundTrip) {
+    const seen = new Set<string>();
+    let items = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const parts = splitCSVLine(line);
+      const key = `${parts[0] ?? ''}::${parts[1] ?? ''}`;
+      seen.add(key);
+      if ((parts[2] ?? '').trim()) items++;
+    }
+    return { bins: seen.size, items };
+  }
+
+  // One-bin-per-row
+  let bins = 0;
+  let items = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    bins++;
+    const parts = splitCSVLine(line);
+    const itemsCell = (parts[2] ?? '').trim();
+    if (itemsCell) {
+      items += itemsCell.split(';').filter(s => s.trim()).length;
+    }
+  }
+  return { bins, items };
+}
+
+/** Validate that a CSV file has a recognized header format. */
+export function validateCSVHeader(text: string): boolean {
+  const header = parseCSVHeader(text).map(h => h.toLowerCase());
+  const isRoundTrip =
+    header.length === 5 &&
+    header[0] === 'bin name' &&
+    header[1] === 'area' &&
+    header[2] === 'item' &&
+    header[3] === 'quantity' &&
+    header[4] === 'tags';
+  const isOneBinPerRow =
+    header.length === 4 &&
+    (header[0] === 'bin name' || header[0] === 'name') &&
+    header[1] === 'area' &&
+    header[2] === 'items' &&
+    header[3] === 'tags';
+  return isRoundTrip || isOneBinPerRow;
+}
+
+export async function importCSV(
+  locationId: string,
+  file: File,
+  mode: 'merge' | 'replace',
+): Promise<CSVImportResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('mode', mode);
+  return apiFetch<CSVImportResult>(
+    `/api/locations/${locationId}/import/csv`,
+    { method: 'POST', body: formData },
+  );
+}
+
 export async function importLegacyData(
   locationId: string,
   data: ExportData
