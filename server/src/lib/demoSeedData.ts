@@ -1,16 +1,19 @@
-export type DemoMember = 'demo' | 'sarah' | 'alex' | 'jordan';
+export type DemoMember = 'demo' | 'sarah' | 'alex' | 'jordan' | 'pat';
+
+export type DemoItem = string | { name: string; quantity: number };
 
 export interface DemoBin {
   name: string;
   location: 'home' | 'storage';
   area: string;
-  items: string[];
+  items: DemoItem[];
   tags: string[];
   icon: string;
   color: string;
   cardStyle: string;
   notes: string;
   createdBy?: DemoMember;
+  visibility?: 'location' | 'private';
 }
 
 export const DEMO_USERS: Record<DemoMember, string> = {
@@ -18,13 +21,24 @@ export const DEMO_USERS: Record<DemoMember, string> = {
   sarah: 'Sarah DeYoung',
   alex: 'Alex DeYoung',
   jordan: 'Jordan DeYoung',
+  pat: 'Pat DeYoung',
 };
 
 export const DEMO_USERNAMES = Object.keys(DEMO_USERS) as DemoMember[];
 
 export const HOME_AREAS = ['Garage', 'Kitchen', "Kids' Room", 'Basement', 'Closet', 'Office'];
 
+export const NESTED_AREAS: Record<string, string[]> = {
+  Garage: ['Workbench'],
+  Kitchen: ['Pantry'],
+  Office: ['Server Rack'],
+};
+
+export const STORAGE_AREAS = ['Unit A', 'Unit B', 'Climate Controlled'];
+
 export const PINNED_BIN_NAMES = ['Networking Gear', 'Brewing Equipment', 'Yarn Stash'];
+
+export const PINNED_BIN_NAMES_PAT = ['Board Games'];
 
 export const SCANNED_BIN_NAMES = [
   'Dog Supplies', 'Board Games', 'Cleaning Supplies',
@@ -32,12 +46,24 @@ export const SCANNED_BIN_NAMES = [
   'SBCs & Dev Boards', 'Mineral Specimens', 'D&D Rulebooks',
 ];
 
+export const SCANNED_BIN_NAMES_SARAH = [
+  'Brewing Equipment', 'Coffee Accessories', 'Yarn Stash', 'Patterns & WIPs',
+];
+
+export const SCANNED_BIN_NAMES_ALEX = [
+  'D&D Rulebooks', 'Dice & Accessories', 'Art & Craft Supplies', 'Print Fails',
+];
+
+export const SCANNED_BIN_NAMES_PAT = [
+  'Board Games', 'Cleaning Supplies', 'Dog Supplies',
+];
+
 export const DEMO_BINS: DemoBin[] = [
   {
     name: 'Power Tools',
     location: 'home',
-    area: 'Garage',
-    items: ['Cordless drill', 'Circular saw', 'Jigsaw', 'Orbital sander', 'Drill bit set', 'Impact driver', 'Reciprocating saw', 'Clamp set (6pc)', 'Safety glasses', 'Shop vacuum'],
+    area: 'Workbench',
+    items: ['Cordless drill', 'Circular saw', 'Jigsaw', 'Orbital sander', 'Drill bit set', 'Impact driver', 'Reciprocating saw', { name: 'Clamp set', quantity: 6 }, { name: 'Safety glasses', quantity: 2 }, 'Shop vacuum'],
     tags: ['tools', 'dad'],
     icon: 'Wrench',
     color: '0:3',
@@ -49,7 +75,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Camping Gear',
     location: 'home',
     area: 'Garage',
-    items: ['Tent', 'Sleeping bags (x4)', 'Headlamps', 'Camping stove', 'Water filter', 'Tarp', 'Cooler (hard shell)', 'Fire starters', 'Camping hammock', 'Mess kit (plates & utensils)', 'Paracord (50 ft)'],
+    items: ['Tent', { name: 'Sleeping bags', quantity: 4 }, { name: 'Headlamps', quantity: 3 }, 'Camping stove', 'Water filter', 'Tarp', 'Cooler (hard shell)', { name: 'Fire starters', quantity: 12 }, 'Camping hammock', 'Mess kit (plates & utensils)', 'Paracord (50 ft)'],
     tags: ['outdoor', 'seasonal', 'family'],
     icon: 'Leaf',
     color: '140:3',
@@ -61,7 +87,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Bike Gear',
     location: 'home',
     area: 'Garage',
-    items: ['Helmets', 'Bike pump', 'Tire patch kit', 'Bike lock', 'Training wheels', 'Spoke wrench', 'Chain lube', 'Bike lights (front & rear)', 'Multi-tool (hex keys)', 'Reflective vest'],
+    items: [{ name: 'Helmets', quantity: 4 }, 'Bike pump', 'Tire patch kit', 'Bike lock', 'Training wheels', 'Spoke wrench', 'Chain lube', { name: 'Bike lights', quantity: 2 }, 'Multi-tool (hex keys)', 'Reflective vest'],
     tags: ['outdoor', 'sports'],
     icon: 'Bike',
     color: '45:2',
@@ -73,7 +99,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Sports Equipment',
     location: 'home',
     area: 'Garage',
-    items: ['Soccer ball', 'Baseball gloves', 'Basketball', 'Jump ropes', 'Frisbee', 'Badminton set', 'Tennis rackets (x2)', 'Cones (12 pack)', 'Kickball', 'Wiffle ball & bat', 'Foam football'],
+    items: ['Soccer ball', 'Baseball gloves', 'Basketball', { name: 'Jump ropes', quantity: 3 }, 'Frisbee', 'Badminton set', { name: 'Tennis rackets', quantity: 2 }, { name: 'Cones', quantity: 12 }, 'Kickball', 'Wiffle ball & bat', 'Foam football'],
     tags: ['sports', 'kids', 'outdoor'],
     icon: 'Star',
     color: '200:2',
@@ -85,7 +111,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Gardening',
     location: 'home',
     area: 'Garage',
-    items: ['Trowel', 'Pruning shears', 'Garden gloves', 'Seed packets', 'Plant food', 'Watering can', 'Knee pad', 'Hand rake', 'Garden twine', 'Spray nozzle', 'Potting soil (bag)'],
+    items: ['Trowel', 'Pruning shears', { name: 'Garden gloves', quantity: 2 }, { name: 'Seed packets', quantity: 8 }, 'Plant food', 'Watering can', 'Knee pad', 'Hand rake', 'Garden twine', 'Spray nozzle', 'Potting soil (bag)'],
     tags: ['outdoor', 'garden'],
     icon: 'Leaf',
     color: '80:2',
@@ -97,7 +123,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Car Supplies',
     location: 'home',
     area: 'Garage',
-    items: ['Jumper cables', 'Tire pressure gauge', 'Windshield washer fluid', 'Ice scraper', 'Emergency flares', 'First aid kit (car)', 'Reflective triangles', 'Tow strap', 'Funnel', 'Tire inflator (12V)', 'Flashlight (dashboard)'],
+    items: ['Jumper cables', 'Tire pressure gauge', 'Windshield washer fluid', 'Ice scraper', { name: 'Emergency flares', quantity: 3 }, 'First aid kit (car)', { name: 'Reflective triangles', quantity: 3 }, 'Tow strap', 'Funnel', 'Tire inflator (12V)', 'Flashlight (dashboard)'],
     tags: ['tools', 'emergency'],
     icon: 'Car',
     color: 'neutral:2',
@@ -109,7 +135,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Paint & Stain',
     location: 'home',
     area: 'Garage',
-    items: ['Interior paint (eggshell white)', 'Deck stain', 'Paint rollers', 'Drop cloths', 'Painter tape', 'Brushes', 'Paint tray liners (5 pack)', 'Sandpaper sheets (assorted grit)', 'Wood filler', 'Caulk gun & tube', 'Stir sticks'],
+    items: ['Interior paint (eggshell white)', 'Deck stain', 'Paint rollers', { name: 'Drop cloths', quantity: 3 }, 'Painter tape', { name: 'Brushes', quantity: 5 }, { name: 'Paint tray liners', quantity: 5 }, 'Sandpaper sheets (assorted grit)', 'Wood filler', 'Caulk gun & tube', { name: 'Stir sticks', quantity: 6 }],
     tags: ['tools', 'supplies'],
     icon: 'Paintbrush',
     color: '25:2',
@@ -119,8 +145,8 @@ export const DEMO_BINS: DemoBin[] = [
   {
     name: 'Baking Supplies',
     location: 'home',
-    area: 'Kitchen',
-    items: ['Flour', 'Sugar', 'Baking powder', 'Vanilla extract', 'Cupcake liners', 'Rolling pin', 'Cookie cutters (holiday set)', 'Measuring cups & spoons', 'Parchment paper', 'Piping bags & tips', 'Cake decorating turntable'],
+    area: 'Pantry',
+    items: ['Flour', 'Sugar', 'Baking powder', 'Vanilla extract', { name: 'Cupcake liners', quantity: 48 }, 'Rolling pin', 'Cookie cutters (holiday set)', 'Measuring cups & spoons', 'Parchment paper', 'Piping bags & tips', 'Cake decorating turntable'],
     tags: ['food', 'baking'],
     icon: 'Utensils',
     color: '25:1',
@@ -132,7 +158,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Dog Supplies',
     location: 'home',
     area: 'Kitchen',
-    items: ['Kibble', 'Treats', 'Leash', 'Poop bags', 'Chew toys', 'Flea medicine', 'Collar (spare)', 'Nail clippers', 'Brush (deshedding)', 'Dog shampoo', 'Travel water bowl'],
+    items: ['Kibble', { name: 'Treats', quantity: 3 }, 'Leash', 'Poop bags', { name: 'Chew toys', quantity: 4 }, 'Flea medicine', 'Collar (spare)', 'Nail clippers', 'Brush (deshedding)', 'Dog shampoo', 'Travel water bowl'],
     tags: ['pets', 'dog'],
     icon: 'Dog',
     color: '25:3',
@@ -143,7 +169,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Cleaning Supplies',
     location: 'home',
     area: 'Kitchen',
-    items: ['All-purpose cleaner', 'Sponges', 'Microfiber cloths', 'Glass cleaner', 'Rubber gloves', 'Scrub brush', 'Broom & dustpan', 'Mop refill pads', 'Disinfectant spray', 'Stainless steel polish'],
+    items: ['All-purpose cleaner', { name: 'Sponges', quantity: 4 }, { name: 'Microfiber cloths', quantity: 6 }, 'Glass cleaner', 'Rubber gloves', 'Scrub brush', 'Broom & dustpan', { name: 'Mop refill pads', quantity: 3 }, 'Disinfectant spray', 'Stainless steel polish'],
     tags: ['cleaning', 'supplies'],
     icon: 'Home',
     color: '140:1',
@@ -155,7 +181,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Lunch Boxes & Bottles',
     location: 'home',
     area: 'Kitchen',
-    items: ['Lunch boxes (x3)', 'Water bottles (x4)', 'Ice packs', 'Reusable snack bags', 'Thermos', 'Bento box inserts', 'Silicone straws (set of 6)', 'Snack containers (stackable)', 'Insulated lunch tote', 'Spare lids & gaskets'],
+    items: [{ name: 'Lunch boxes', quantity: 3 }, { name: 'Water bottles', quantity: 4 }, { name: 'Ice packs', quantity: 4 }, { name: 'Reusable snack bags', quantity: 6 }, 'Thermos', 'Bento box inserts', { name: 'Silicone straws', quantity: 6 }, 'Snack containers (stackable)', 'Insulated lunch tote', 'Spare lids & gaskets'],
     tags: ['kids', 'school'],
     icon: 'Box',
     color: '200:1',
@@ -166,7 +192,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Art & Craft Supplies',
     location: 'home',
     area: "Kids' Room",
-    items: ['Watercolor paints', 'Construction paper', 'Pipe cleaners', 'Googly eyes', 'Pom poms', 'Markers', 'Sticker sheets', 'Modeling clay', 'Stamp pad & stamps', 'Perler beads & pegboards', 'Glitter glue tubes', 'Washi tape (assorted)'],
+    items: ['Watercolor paints', 'Construction paper', { name: 'Pipe cleaners', quantity: 20 }, { name: 'Googly eyes', quantity: 50 }, { name: 'Pom poms', quantity: 30 }, 'Markers', { name: 'Sticker sheets', quantity: 10 }, 'Modeling clay', 'Stamp pad & stamps', 'Perler beads & pegboards', { name: 'Glitter glue tubes', quantity: 4 }, 'Washi tape (assorted)'],
     tags: ['art', 'kids', 'hobbies'],
     icon: 'Paintbrush',
     color: '280:1',
@@ -178,7 +204,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Baby & Toddler',
     location: 'home',
     area: "Kids' Room",
-    items: ['Diapers', 'Wipes', 'Bottles', 'Pacifiers', 'Burp cloths', 'Teething rings', 'Diaper cream', 'Baby nail clippers', 'Swaddle blankets (x3)', 'Bottle brush', 'Sippy cup (transition)'],
+    items: ['Diapers', 'Wipes', { name: 'Bottles', quantity: 4 }, { name: 'Pacifiers', quantity: 3 }, { name: 'Burp cloths', quantity: 5 }, 'Teething rings', 'Diaper cream', 'Baby nail clippers', { name: 'Swaddle blankets', quantity: 3 }, 'Bottle brush', 'Sippy cup (transition)'],
     tags: ['baby', 'kids'],
     icon: 'Baby',
     color: '320:1',
@@ -189,7 +215,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Costumes & Dress-Up',
     location: 'home',
     area: "Kids' Room",
-    items: ['Princess dresses', 'Superhero capes', 'Pirate hat', 'Fairy wings', 'Face paint', 'Wigs', 'Knight shield & sword (foam)', 'Animal ear headbands', 'Tutu skirts (x3)', 'Cowboy hat', 'Costume jewelry bag'],
+    items: ['Princess dresses', { name: 'Superhero capes', quantity: 3 }, 'Pirate hat', 'Fairy wings', 'Face paint', 'Wigs', 'Knight shield & sword (foam)', { name: 'Animal ear headbands', quantity: 5 }, { name: 'Tutu skirts', quantity: 3 }, 'Cowboy hat', 'Costume jewelry bag'],
     tags: ['kids', 'costumes', 'seasonal'],
     icon: 'Scissors',
     color: '280:2',
@@ -200,7 +226,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'LEGO & Building Toys',
     location: 'home',
     area: "Kids' Room",
-    items: ['LEGO Classic bucket', 'LEGO City set', 'Magna-Tiles', 'Lincoln Logs', 'Instruction booklets', 'LEGO Star Wars set', 'Duplo blocks (toddler)', 'Baseplate sheets (x4)', 'Brick separator tools', 'Sorting containers (by color)'],
+    items: ['LEGO Classic bucket', 'LEGO City set', 'Magna-Tiles', 'Lincoln Logs', 'Instruction booklets', 'LEGO Star Wars set', 'Duplo blocks (toddler)', { name: 'Baseplate sheets', quantity: 4 }, { name: 'Brick separator tools', quantity: 2 }, { name: 'Sorting containers', quantity: 6 }],
     tags: ['kids', 'games'],
     icon: 'Blocks',
     color: '45:1',
@@ -212,7 +238,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Stuffed Animals & Dolls',
     location: 'home',
     area: "Kids' Room",
-    items: ['Teddy bear', 'Bunny plush', 'Dinosaur collection', 'Baby dolls (x2)', 'Doll clothes', 'Unicorn plush', 'Paw Patrol figures', 'Puppet set (hand puppets)', 'Doll stroller', 'Weighted stuffed animal (bedtime)'],
+    items: ['Teddy bear', 'Bunny plush', 'Dinosaur collection', { name: 'Baby dolls', quantity: 2 }, 'Doll clothes', 'Unicorn plush', 'Paw Patrol figures', 'Puppet set (hand puppets)', 'Doll stroller', 'Weighted stuffed animal (bedtime)'],
     tags: ['kids', 'toys'],
     icon: 'Heart',
     color: '340:1',
@@ -223,7 +249,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Holiday Decorations',
     location: 'home',
     area: 'Basement',
-    items: ['String lights', 'Ornaments box', 'Wreath', 'Tree stand', 'Stockings', 'Advent calendar', 'Tree skirt', 'Outdoor inflatable (snowman)', 'Window clings', 'Garland (faux pine)', 'Extension cord (outdoor rated)'],
+    items: ['String lights', 'Ornaments box', 'Wreath', 'Tree stand', { name: 'Stockings', quantity: 5 }, 'Advent calendar', 'Tree skirt', 'Outdoor inflatable (snowman)', { name: 'Window clings', quantity: 8 }, 'Garland (faux pine)', 'Extension cord (outdoor rated)'],
     tags: ['seasonal', 'holiday'],
     icon: 'Gift',
     color: '140:2',
@@ -240,12 +266,13 @@ export const DEMO_BINS: DemoBin[] = [
     color: 'neutral:3',
     cardStyle: JSON.stringify({ variant: 'border', secondaryColor: 'neutral:4', borderWidth: 2, borderStyle: 'solid' }),
     notes: '',
+    visibility: 'private',
   },
   {
     name: 'Board Games',
     location: 'home',
     area: 'Basement',
-    items: ['Candy Land', 'Uno', 'Sorry!', 'Jenga', 'Playing cards', 'Puzzles', 'Ticket to Ride', 'Scrabble', 'Monopoly', 'Catan', 'Codenames'],
+    items: ['Candy Land', 'Uno', 'Sorry!', 'Jenga', 'Playing cards', { name: 'Puzzles', quantity: 4 }, 'Ticket to Ride', 'Scrabble', 'Monopoly', 'Catan', 'Codenames'],
     tags: ['games', 'family'],
     icon: 'Star',
     color: '280:3',
@@ -256,7 +283,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Winter Gear',
     location: 'home',
     area: 'Closet',
-    items: ['Snow boots', 'Thermal gloves', 'Wool scarf', 'Beanie', 'Hand warmers', 'Ski goggles', 'Thermal base layers (x2)', 'Neck gaiter', 'Insulated socks (3 pair)', 'Snow pants (kids)'],
+    items: ['Snow boots', 'Thermal gloves', 'Wool scarf', 'Beanie', { name: 'Hand warmers', quantity: 10 }, 'Ski goggles', { name: 'Thermal base layers', quantity: 2 }, 'Neck gaiter', { name: 'Insulated socks', quantity: 3 }, 'Snow pants (kids)'],
     tags: ['seasonal', 'clothing'],
     icon: 'Shirt',
     color: '245:2',
@@ -267,7 +294,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Backpacks & Bags',
     location: 'home',
     area: 'Closet',
-    items: ['School backpacks', 'Gym bag', 'Reusable grocery bags', 'Diaper bag', 'Beach tote', 'Drawstring bags', 'Laptop sleeve', 'Fanny pack', 'Dry bag (waterproof)', 'Packing cubes (set of 4)'],
+    items: [{ name: 'School backpacks', quantity: 3 }, 'Gym bag', { name: 'Reusable grocery bags', quantity: 8 }, 'Diaper bag', 'Beach tote', { name: 'Drawstring bags', quantity: 4 }, 'Laptop sleeve', 'Fanny pack', 'Dry bag (waterproof)', { name: 'Packing cubes', quantity: 4 }],
     tags: ['kids', 'supplies'],
     icon: 'Backpack',
     color: '200:3',
@@ -277,8 +304,8 @@ export const DEMO_BINS: DemoBin[] = [
   {
     name: 'Outgrown Kids Clothes',
     location: 'storage',
-    area: '',
-    items: ['0-3 month onesies', '6-12 month outfits', '2T winter jackets', '3T shoes', 'Newborn hats', '4T summer dresses', '18-month sleepers (x4)', 'Infant snowsuit', 'Baby socks bag', 'Toddler rain boots'],
+    area: 'Unit A',
+    items: [{ name: '0-3 month onesies', quantity: 8 }, '6-12 month outfits', '2T winter jackets', '3T shoes', 'Newborn hats', '4T summer dresses', { name: '18-month sleepers', quantity: 4 }, 'Infant snowsuit', 'Baby socks bag', 'Toddler rain boots'],
     tags: ['kids', 'clothing'],
     icon: 'Shirt',
     color: '320:2',
@@ -288,8 +315,8 @@ export const DEMO_BINS: DemoBin[] = [
   {
     name: 'Old Electronics',
     location: 'storage',
-    area: '',
-    items: ['iPad (2nd gen)', 'Old laptop', 'Kindle', 'Phone chargers', 'Camera', 'External hard drive', 'Bluetooth speaker (broken)', 'Old router', 'Wii console & controllers', 'USB flash drives (assorted)', 'Tangled earbuds bag'],
+    area: 'Unit A',
+    items: ['iPad (2nd gen)', 'Old laptop', 'Kindle', { name: 'Phone chargers', quantity: 5 }, 'Camera', 'External hard drive', 'Bluetooth speaker (broken)', 'Old router', 'Wii console & controllers', { name: 'USB flash drives', quantity: 6 }, 'Tangled earbuds bag'],
     tags: ['electronics'],
     icon: 'Laptop',
     color: 'neutral:2',
@@ -299,8 +326,8 @@ export const DEMO_BINS: DemoBin[] = [
   {
     name: 'Keepsakes & Memories',
     location: 'storage',
-    area: '',
-    items: ['Wedding album', 'Baby books', 'Kids artwork', 'Family photo prints', 'Childhood trophies', 'Grandparent letters & cards', 'First-day-of-school signs', 'Hospital wristbands (births)', 'Pressed flowers from garden', 'Home video DVDs (x6)'],
+    area: 'Climate Controlled',
+    items: ['Wedding album', 'Baby books', 'Kids artwork', 'Family photo prints', 'Childhood trophies', 'Grandparent letters & cards', 'First-day-of-school signs', 'Hospital wristbands (births)', 'Pressed flowers from garden', { name: 'Home video DVDs', quantity: 6 }],
     tags: ['family', 'documents'],
     icon: 'Heart',
     color: '340:1',
@@ -310,8 +337,8 @@ export const DEMO_BINS: DemoBin[] = [
   {
     name: 'Networking',
     location: 'home',
-    area: 'Office',
-    items: ['UniFi 8-port switch', 'CAT6 keystone jacks (bag)', 'RJ45 crimping tool', 'Network cable tester', 'SFP+ DAC cables', 'Velcro cable ties', 'TP-Link EAP access point', 'Console cable (USB to RJ45)'],
+    area: 'Server Rack',
+    items: ['UniFi 8-port switch', 'CAT6 keystone jacks (bag)', 'RJ45 crimping tool', 'Network cable tester', { name: 'SFP+ DAC cables', quantity: 2 }, { name: 'Velcro cable ties', quantity: 20 }, 'TP-Link EAP access point', 'Console cable (USB to RJ45)'],
     tags: ['homelab', 'networking', 'electronics'],
     icon: 'Briefcase',
     color: '200:3',
@@ -322,7 +349,7 @@ export const DEMO_BINS: DemoBin[] = [
   {
     name: 'Hardware',
     location: 'home',
-    area: 'Office',
+    area: 'Server Rack',
     items: ['Intel NUC i3', 'DDR5 SODIMM 32GBx2', 'Samsung 870 EVO 256GB SSD', 'WD Red 4TB HDD', 'SATA to USB 3.0 adapter', 'CPU thermal paste (Noctua NT-H1)', 'Anti-static wrist strap', 'Mini-ITX server motherboard (spare)', 'IPMI/BMC USB dongle'],
     tags: ['homelab', 'server', 'hardware'],
     icon: 'Laptop',
@@ -335,7 +362,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'SBCs & Dev Boards',
     location: 'home',
     area: 'Office',
-    items: ['Raspberry Pi Zero 2 W', 'Arduino Uno R3', 'ESP32-C3 dev boards (x4)', 'Coral USB Edge TPU', 'Micro SD cards 32GB (x3)', 'GPIO breakout ribbon cables', 'Breadboards (x2)', 'Jumper wire kit', 'USB-C power adapters 5V 3A (x2)'],
+    items: ['Raspberry Pi Zero 2 W', 'Arduino Uno R3', { name: 'ESP32-C3 dev boards', quantity: 4 }, 'Coral USB Edge TPU', { name: 'Micro SD cards 32GB', quantity: 3 }, 'GPIO breakout ribbon cables', { name: 'Breadboards', quantity: 2 }, 'Jumper wire kit', { name: 'USB-C power adapters 5V 3A', quantity: 2 }],
     tags: ['homelab', 'sbc', 'electronics', 'hobbies'],
     icon: 'Lightbulb',
     color: '80:3',
@@ -359,7 +386,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Coffee Accessories',
     location: 'home',
     area: 'Kitchen',
-    items: ['Bleached V60 filters', 'Kalita Wave 185 filters', 'Chemex bonded filters (square)', 'AeroPress paper filters (350ct)', 'Cafec Abaca filters (light roast)', 'Barista Hustle brush (grinder cleaning)', 'Pallo grinder brush', 'Dosing cups (58mm, set of 2)', 'Milk frother (Nanofoamer)', 'Cupping spoons (set of 4)', 'Tasting notebook (Brewista)', 'Coffee compass flavor wheel poster'],
+    items: ['Bleached V60 filters', 'Kalita Wave 185 filters', 'Chemex bonded filters (square)', { name: 'AeroPress paper filters', quantity: 350 }, 'Cafec Abaca filters (light roast)', 'Barista Hustle brush (grinder cleaning)', 'Pallo grinder brush', { name: 'Dosing cups (58mm)', quantity: 2 }, 'Milk frother (Nanofoamer)', { name: 'Cupping spoons', quantity: 4 }, 'Tasting notebook (Brewista)', 'Coffee compass flavor wheel poster'],
     tags: ['coffee', 'brewing', 'specialty'],
     icon: 'Utensils',
     color: '45:2',
@@ -371,7 +398,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Yarn Stash',
     location: 'home',
     area: 'Office',
-    items: ['Merino wool', 'Chunky alpaca blend', 'Cotton yarn — cream', 'Sock yarn — self-striping', 'Lace weight mohair', 'DK weight superwash', 'Cashmere blend fingering weight (50g)', 'Recycled silk ribbon yarn (100g)', 'Baby yarn — soft white (100g x2)', 'Tapestry wool remnants (assorted)', 'Yarn swift (for winding)'],
+    items: ['Merino wool', 'Chunky alpaca blend', 'Cotton yarn — cream', 'Sock yarn — self-striping', 'Lace weight mohair', 'DK weight superwash', 'Cashmere blend fingering weight (50g)', 'Recycled silk ribbon yarn (100g)', { name: 'Baby yarn — soft white (100g)', quantity: 2 }, { name: 'Tapestry wool remnants', quantity: 8 }, 'Yarn swift (for winding)'],
     tags: ['hobbies', 'knitting', 'yarn', 'crafts'],
     icon: 'Heart',
     color: '320:2',
@@ -383,7 +410,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Knitting Needles & Tools',
     location: 'home',
     area: 'Office',
-    items: ['Circular needles — US 2 (2.75mm), 32"', 'Circular needles — US 7 (4.5mm), 24"', 'Circular needles — US 10 (6mm), 40"', 'DPNs — US 1 set (2.25mm), 6"', 'DPNs — US 4 set (3.5mm), 8"', 'Interchangeable needle tips — US 4\u201310.5', 'Row counter (clicker style)', 'Stitch markers (locking, 20x)', 'Tapestry needles (blunt tip, 6x)', 'Cable needle (J-hook style)', 'Yarn cutter pendant', 'Needle gauge / ruler combo', 'KnitPicks interchangeable cable cords (various lengths)'],
+    items: ['Circular needles — US 2 (2.75mm), 32"', 'Circular needles — US 7 (4.5mm), 24"', 'Circular needles — US 10 (6mm), 40"', 'DPNs — US 1 set (2.25mm), 6"', 'DPNs — US 4 set (3.5mm), 8"', 'Interchangeable needle tips — US 4\u201310.5', 'Row counter (clicker style)', { name: 'Stitch markers (locking)', quantity: 20 }, { name: 'Tapestry needles (blunt tip)', quantity: 6 }, 'Cable needle (J-hook style)', 'Yarn cutter pendant', 'Needle gauge / ruler combo', { name: 'KnitPicks interchangeable cable cords', quantity: 5 }],
     tags: ['hobbies', 'knitting', 'tools', 'crafts'],
     icon: 'Scissors',
     color: '45:3',
@@ -395,7 +422,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Patterns & WIPs',
     location: 'home',
     area: 'Office',
-    items: ['WIP: Cabled sweater (navy merino, size M) — at yoke shaping', 'WIP: Lace shawl (mohair blend) — 60% done', 'WIP: Baby hat (white, gift for shower)', 'Pattern: Tin Can Knits — Seasons collection (printed)', 'Pattern: Churchmouse Yarns — Classic Shawl (printed)', 'Pattern notebook — swatches & row notes', 'Project bags (drawstring cotton, x3)', 'Blocking mats (foam, 9-piece set)', 'Blocking wires (set of 12, stainless)', 'T-pins (50 pack)', 'Stitch holders (large, x4)', 'Waste yarn scraps (for provisional cast-ons)'],
+    items: ['WIP: Cabled sweater (navy merino, size M) — at yoke shaping', 'WIP: Lace shawl (mohair blend) — 60% done', 'WIP: Baby hat (white, gift for shower)', 'Pattern: Tin Can Knits — Seasons collection (printed)', 'Pattern: Churchmouse Yarns — Classic Shawl (printed)', 'Pattern notebook — swatches & row notes', { name: 'Project bags (drawstring cotton)', quantity: 3 }, { name: 'Blocking mats (foam)', quantity: 9 }, { name: 'Blocking wires (stainless)', quantity: 12 }, { name: 'T-pins', quantity: 50 }, { name: 'Stitch holders (large)', quantity: 4 }, 'Waste yarn scraps (for provisional cast-ons)'],
     tags: ['hobbies', 'knitting', 'crafts', 'wip'],
     icon: 'Book',
     color: '200:2',
@@ -419,7 +446,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Dice & Accessories',
     location: 'home',
     area: 'Basement',
-    items: ['Chessex Gemini 7-piece polyhedral set (blue-green)', 'Metal d20 (critical hit die)', 'Precision casino-grade d6 set (6)', 'Dispel Dice handmade set (resin, galaxy)', 'Koplow opaque set (backup dice)', 'd4 caltrops set (6)', 'Dice tower (wooden)', 'Velvet dice tray (rolling surface)', 'Dice bag (leather drawstring)', 'Spin-down d20 life counter', 'Card sleeves (50 count, standard)', 'Initiative tracker cards (10)'],
+    items: ['Chessex Gemini 7-piece polyhedral set (blue-green)', 'Metal d20 (critical hit die)', { name: 'Precision casino-grade d6 set', quantity: 6 }, 'Dispel Dice handmade set (resin, galaxy)', 'Koplow opaque set (backup dice)', { name: 'd4 caltrops set', quantity: 6 }, 'Dice tower (wooden)', 'Velvet dice tray (rolling surface)', 'Dice bag (leather drawstring)', 'Spin-down d20 life counter', { name: 'Card sleeves (standard)', quantity: 50 }, { name: 'Initiative tracker cards', quantity: 10 }],
     tags: ['d&d', 'tabletop-rpg', 'dice', 'accessories'],
     icon: 'Star',
     color: '260:2',
@@ -431,7 +458,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Miniatures & Terrain',
     location: 'home',
     area: 'Basement',
-    items: ['Reaper Bones heroes set (12 unpainted)', "Nolzur's Marvelous Miniatures — adventurers pack", 'WizKids pre-painted dungeon monsters (assorted)', 'Goblin warband (10, painted green)', 'Dragon miniature (large, WizKids Pathfinder)', 'Dungeon tiles — modular stone floor set', 'OpenLock 3D-printed wall segments (20)', 'Woodland Scenics clump foliage (forest terrain)', 'Painted campfire scatter piece', 'Tavern furniture set (resin: tables, chairs, bar)', 'Basing paste (Vallejo Dark Earth)', 'Army Painter wash set (6 washes)'],
+    items: [{ name: 'Reaper Bones heroes set (unpainted)', quantity: 12 }, "Nolzur's Marvelous Miniatures — adventurers pack", { name: 'WizKids pre-painted dungeon monsters', quantity: 8 }, { name: 'Goblin warband (painted green)', quantity: 10 }, 'Dragon miniature (large, WizKids Pathfinder)', 'Dungeon tiles — modular stone floor set', { name: 'OpenLock 3D-printed wall segments', quantity: 20 }, 'Woodland Scenics clump foliage (forest terrain)', 'Painted campfire scatter piece', 'Tavern furniture set (resin: tables, chairs, bar)', 'Basing paste (Vallejo Dark Earth)', 'Army Painter wash set (6 washes)'],
     tags: ['d&d', 'tabletop-rpg', 'miniatures', 'painting'],
     icon: 'Paintbrush',
     color: '120:3',
@@ -443,7 +470,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'DM Toolkit',
     location: 'home',
     area: 'Basement',
-    items: ['DM screen (Reaper foldout, 4-panel)', 'Kobold Press: Tome of Beasts 1', "Lazy DM's Workbook (Michael Shea)", 'Campaign notebook (graph paper, hardcover)', 'Initiative tracker (magnetic dry-erase board)', 'Condition rings — silicone, color-coded (20)', 'Wet-erase battle mat (1" grid, 24"x36")', 'Wet-erase markers (4-color set)', 'Random encounter tables (laminated reference cards)', "NPC name generator cards (Rory's Story Cubes)", 'Bluetooth speaker (for ambient dungeon audio)', 'Session notes binder with plastic sleeves'],
+    items: ['DM screen (Reaper foldout, 4-panel)', 'Kobold Press: Tome of Beasts 1', "Lazy DM's Workbook (Michael Shea)", 'Campaign notebook (graph paper, hardcover)', 'Initiative tracker (magnetic dry-erase board)', { name: 'Condition rings (silicone, color-coded)', quantity: 20 }, 'Wet-erase battle mat (1" grid, 24"x36")', { name: 'Wet-erase markers', quantity: 4 }, { name: 'Random encounter tables (laminated)', quantity: 8 }, "NPC name generator cards (Rory's Story Cubes)", 'Bluetooth speaker (for ambient dungeon audio)', 'Session notes binder with plastic sleeves'],
     tags: ['d&d', 'tabletop-rpg', 'dm', 'tools'],
     icon: 'Briefcase',
     color: '0:2',
@@ -454,7 +481,7 @@ export const DEMO_BINS: DemoBin[] = [
   {
     name: 'Mineral Specimens',
     location: 'storage',
-    area: '',
+    area: 'Climate Controlled',
     items: ['Amethyst cluster (Uruguay)', 'Pyrite cube on matrix', 'Rhodochrosite stalactite slice', 'Malachite with azurite', 'Fluorite octahedron (Illinois)', 'Selenite desert rose', 'Tourmaline on albite matrix', 'Calcite dogtooth crystals', 'Apophyllite with stilbite', 'Labradorite rough slab', 'Vanadinite on barite', 'Celestite geode half'],
     tags: ['minerals', 'specimens', 'geology', 'display'],
     icon: 'Star',
@@ -466,8 +493,8 @@ export const DEMO_BINS: DemoBin[] = [
   {
     name: 'Lapidary Tools & Supplies',
     location: 'storage',
-    area: '',
-    items: ['Diamond lap discs (180 / 600 / 1200 / 3000 grit)', 'Cabochon dopping sticks', 'Dopping wax (brown)', 'Polishing felt pad', 'Cerium oxide polishing powder', 'Diamond polishing compound (14k grit)', 'Trim saw blade (4 in, diamond)', 'Safety glasses (splash-rated)', 'Flexible shaft handpiece bits', 'Aluminum dop block with holes', 'Lubricating oil (honing)', 'Caliper (digital, 6 in)'],
+    area: 'Unit B',
+    items: ['Diamond lap discs (180 / 600 / 1200 / 3000 grit)', { name: 'Cabochon dopping sticks', quantity: 10 }, 'Dopping wax (brown)', 'Polishing felt pad', 'Cerium oxide polishing powder', 'Diamond polishing compound (14k grit)', 'Trim saw blade (4 in, diamond)', 'Safety glasses (splash-rated)', 'Flexible shaft handpiece bits', 'Aluminum dop block with holes', 'Lubricating oil (honing)', 'Caliper (digital, 6 in)'],
     tags: ['lapidary', 'tools', 'geology'],
     icon: 'Wrench',
     color: '30:3',
@@ -478,8 +505,8 @@ export const DEMO_BINS: DemoBin[] = [
   {
     name: 'Field Collecting Kit',
     location: 'storage',
-    area: '',
-    items: ['Rock hammer (22 oz, Estwing)', 'Cold chisels (1/2 in and 3/4 in)', 'Hand lens (10x, Bausch & Lomb)', 'Field notebook (waterproof pages)', 'Streak plate (unglazed porcelain)', 'Hardness picks set (Mohs 2\u20139)', 'Dilute HCl dropper bottle (10%)', 'GPS unit (Garmin eTrex)', 'Newspaper for wrapping specimens', 'Cotton specimen bags (assorted)', 'Leather gloves', 'UV flashlight (shortwave, 254 nm)'],
+    area: 'Unit B',
+    items: ['Rock hammer (22 oz, Estwing)', 'Cold chisels (1/2 in and 3/4 in)', 'Hand lens (10x, Bausch & Lomb)', 'Field notebook (waterproof pages)', 'Streak plate (unglazed porcelain)', 'Hardness picks set (Mohs 2\u20139)', 'Dilute HCl dropper bottle (10%)', 'GPS unit (Garmin eTrex)', 'Newspaper for wrapping specimens', { name: 'Cotton specimen bags', quantity: 15 }, 'Leather gloves', 'UV flashlight (shortwave, 254 nm)'],
     tags: ['field-collecting', 'tools', 'geology', 'outdoor'],
     icon: 'Briefcase',
     color: '90:3',
@@ -491,7 +518,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Mystery Cables',
     location: 'home',
     area: 'Office',
-    items: ['USB Mini-B cable', 'Micro-USB cables', 'VGA cable', 'DVI-D cable', 'Proprietary laptop charger (unknown model)', 'Coax cable (3 ft)', 'Ethernet patch cables (mixed lengths)', 'FireWire 400 cable', '3.5mm aux cords (x4)', 'Barrel jack adapters (assorted)', 'Cable that came with something'],
+    items: ['USB Mini-B cable', { name: 'Micro-USB cables', quantity: 5 }, 'VGA cable', 'DVI-D cable', 'Proprietary laptop charger (unknown model)', 'Coax cable (3 ft)', { name: 'Ethernet patch cables', quantity: 8 }, 'FireWire 400 cable', { name: '3.5mm aux cords', quantity: 4 }, 'Barrel jack adapters (assorted)', 'Cable that came with something'],
     tags: ['electronics', 'cables'],
     icon: 'Box',
     color: 'neutral:2',
@@ -503,7 +530,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Pi Graveyard',
     location: 'home',
     area: 'Office',
-    items: ['Pi 3A (was going to be a magic mirror)', 'Pi Zero W (planned as a PiHole)', 'Pi 4 2GB (briefly a NAS, regretted it)', 'Pi Zero 2 W (earmarked for OctoPrint)', 'Micro SD cards with unknown images (x6)', 'Pi cases (assorted, none fit right)', 'Official Pi power supplies (x3)', 'Pi camera module V2', 'Sense HAT (used once)', 'GPIO ribbon cable (never used)'],
+    items: ['Pi 3A (was going to be a magic mirror)', 'Pi Zero W (planned as a PiHole)', 'Pi 4 2GB (briefly a NAS, regretted it)', 'Pi Zero 2 W (earmarked for OctoPrint)', { name: 'Micro SD cards with unknown images', quantity: 6 }, { name: 'Pi cases (assorted)', quantity: 5 }, { name: 'Official Pi power supplies', quantity: 3 }, 'Pi camera module V2', 'Sense HAT (used once)', 'GPIO ribbon cable (never used)'],
     tags: ['homelab', 'sbc', 'electronics'],
     icon: 'Lightbulb',
     color: '140:3',
@@ -514,8 +541,8 @@ export const DEMO_BINS: DemoBin[] = [
   {
     name: 'Upgrade Box',
     location: 'storage',
-    area: '',
-    items: ['DDR3 ECC sticks 8GB (x4)', 'Intel i5-6500', '120GB SSD (honorably discharged)', 'Stock Intel cooler (never used)', '1GbE NIC', 'Old ATX power supply (500W)', 'PCIe x1 riser', 'SATA cables (x6)', 'Case fans 120mm (x3)', 'CPU bracket (wrong socket)'],
+    area: 'Unit A',
+    items: [{ name: 'DDR3 ECC sticks 8GB', quantity: 4 }, 'Intel i5-6500', '120GB SSD (honorably discharged)', 'Stock Intel cooler (never used)', '1GbE NIC', 'Old ATX power supply (500W)', 'PCIe x1 riser', { name: 'SATA cables', quantity: 6 }, { name: 'Case fans 120mm', quantity: 3 }, 'CPU bracket (wrong socket)'],
     tags: ['homelab', 'hardware', 'electronics'],
     icon: 'Archive',
     color: 'neutral:3',
@@ -539,7 +566,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'NAS Spares',
     location: 'home',
     area: 'Office',
-    items: ['SATA cables (x8)', 'HDD mounting screws (ziplock bag)', 'Molex splitters (x2)', 'Anti-vibration grommets (x12)', 'SATA power extensions', 'IEC C13 power cord (spare)', 'Drive sleds (wrong model)', 'Thermal pads (1mm, spare sheet)', 'Case fan splitter', '80mm case fans (x2)', 'Hot swap bay (unused)'],
+    items: [{ name: 'SATA cables', quantity: 8 }, 'HDD mounting screws (ziplock bag)', { name: 'Molex splitters', quantity: 2 }, { name: 'Anti-vibration grommets', quantity: 12 }, 'SATA power extensions', 'IEC C13 power cord (spare)', 'Drive sleds (wrong model)', 'Thermal pads (1mm, spare sheet)', 'Case fan splitter', { name: '80mm case fans', quantity: 2 }, 'Hot swap bay (unused)'],
     tags: ['homelab', 'nas', 'hardware'],
     icon: 'Wrench',
     color: '170:2',
@@ -551,7 +578,7 @@ export const DEMO_BINS: DemoBin[] = [
     name: 'Print Fails',
     location: 'home',
     area: 'Office',
-    items: ['Benchy (first layer shift)', 'Calibration cubes (x11)', 'Spaghetti blob (PLA)', 'Half a Mandalorian helmet', 'Cable clips (the only good prints)', 'Lithophane (wrong orientation)', 'Phone stand (warped)', 'Vase mode test (collapsed at 80%)', 'Flexi Rex with fused joints', 'Temp tower', 'Purge blocks bag'],
+    items: ['Benchy (first layer shift)', { name: 'Calibration cubes', quantity: 11 }, 'Spaghetti blob (PLA)', 'Half a Mandalorian helmet', 'Cable clips (the only good prints)', 'Lithophane (wrong orientation)', 'Phone stand (warped)', 'Vase mode test (collapsed at 80%)', 'Flexi Rex with fused joints', 'Temp tower', 'Purge blocks bag'],
     tags: ['3d-printing', 'hobbies'],
     icon: 'Package',
     color: '280:2',
@@ -570,7 +597,89 @@ export const DEMO_BINS: DemoBin[] = [
     cardStyle: JSON.stringify({ variant: 'stripe', secondaryColor: '200:1', stripePosition: 'left', stripeWidth: 3 }),
     notes: 'Each item represents a weekend lost to networking issues and reverse proxy configs.',
     createdBy: 'demo',
+    visibility: 'private',
   },
+];
+
+export const TRASHED_BINS: DemoBin[] = [
+  {
+    name: 'Old Spice Rack',
+    location: 'home',
+    area: 'Kitchen',
+    items: ['Expired cumin', 'Unlabeled mystery powder', 'Crystallized honey', 'Empty vanilla extract bottle', 'Paprika (circa 2019)'],
+    tags: ['food', 'cleaning'],
+    icon: 'Box',
+    color: '25:1',
+    cardStyle: '',
+    notes: 'Replaced with new organizer.',
+    createdBy: 'sarah',
+  },
+  {
+    name: 'Broken Toys',
+    location: 'home',
+    area: "Kids' Room",
+    items: ['Headless action figure', 'Puzzle with missing pieces', 'Deflated beach ball', 'Remote control car (no remote)', 'Board game with lost dice'],
+    tags: ['kids', 'toys'],
+    icon: 'Box',
+    color: '280:1',
+    cardStyle: '',
+    notes: 'Awaiting donation or recycling.',
+    createdBy: 'alex',
+  },
+];
+
+export const CUSTOM_FIELD_DEFINITIONS = [
+  { name: 'Purchase Date', position: 0 },
+  { name: 'Estimated Value', position: 1 },
+  { name: 'Condition', position: 2 },
+  { name: 'Last Checked', position: 3 },
+];
+
+export const CUSTOM_FIELD_VALUES: Record<string, Record<string, string>> = {
+  'Important Documents': { Condition: 'Fireproof safe', 'Last Checked': '2026-01-15' },
+  'Power Tools': { 'Estimated Value': '$1,200', 'Last Checked': '2026-02-28' },
+  'Camping Gear': { Condition: 'Good', 'Last Checked': '2026-03-01' },
+  'Networking': { 'Estimated Value': '$850', 'Purchase Date': '2024-06' },
+  'Hardware': { 'Estimated Value': '$600', 'Purchase Date': '2025-03' },
+  'SBCs & Dev Boards': { 'Estimated Value': '$350' },
+  'Brewing Equipment': { 'Estimated Value': '$800', Condition: 'Excellent' },
+  'Holiday Decorations': { 'Last Checked': '2025-12-26', Condition: 'Good' },
+  'Board Games': { Condition: 'Well-loved', 'Last Checked': '2026-02-15' },
+  'Self-Hosted Gear': { 'Estimated Value': '$450' },
+};
+
+export interface DemoActivityEntry {
+  user: DemoMember;
+  action: string;
+  entityType: string;
+  entityName?: string;
+  binName?: string;
+  changes?: Record<string, { old: unknown; new: unknown }>;
+  daysAgo: number;
+  location: 'home' | 'storage';
+}
+
+export const DEMO_ACTIVITY_ENTRIES: DemoActivityEntry[] = [
+  { user: 'demo', action: 'create', entityType: 'location', entityName: 'Our House', daysAgo: 14, location: 'home' },
+  { user: 'demo', action: 'create', entityType: 'area', entityName: 'Garage', daysAgo: 14, location: 'home' },
+  { user: 'sarah', action: 'join', entityType: 'member', entityName: 'sarah', daysAgo: 13, location: 'home' },
+  { user: 'demo', action: 'create', entityType: 'bin', entityName: 'Power Tools', binName: 'Power Tools', daysAgo: 13, location: 'home' },
+  { user: 'sarah', action: 'create', entityType: 'bin', entityName: 'Brewing Equipment', binName: 'Brewing Equipment', daysAgo: 12, location: 'home' },
+  { user: 'alex', action: 'join', entityType: 'member', entityName: 'alex', daysAgo: 12, location: 'home' },
+  { user: 'alex', action: 'create', entityType: 'bin', entityName: 'D&D Rulebooks', binName: 'D&D Rulebooks', daysAgo: 12, location: 'home' },
+  { user: 'sarah', action: 'create', entityType: 'bin', entityName: 'Coffee Accessories', binName: 'Coffee Accessories', daysAgo: 11, location: 'home' },
+  { user: 'demo', action: 'create', entityType: 'area', entityName: 'Server Rack', daysAgo: 11, location: 'home' },
+  { user: 'jordan', action: 'create', entityType: 'bin', entityName: 'Mineral Specimens', binName: 'Mineral Specimens', daysAgo: 10, location: 'storage' },
+  { user: 'sarah', action: 'update', entityType: 'bin', entityName: 'Camping Gear', binName: 'Camping Gear', changes: { tags: { old: ['outdoor'], new: ['outdoor', 'seasonal', 'family'] } }, daysAgo: 10, location: 'home' },
+  { user: 'jordan', action: 'create', entityType: 'area', entityName: 'Climate Controlled', daysAgo: 9, location: 'storage' },
+  { user: 'demo', action: 'create', entityType: 'bin', entityName: 'Self-Hosted Gear', binName: 'Self-Hosted Gear', daysAgo: 9, location: 'home' },
+  { user: 'demo', action: 'update', entityType: 'bin', entityName: 'Networking', binName: 'Networking', changes: { items_added: { old: null, new: ['Console cable (USB to RJ45)'] } }, daysAgo: 8, location: 'home' },
+  { user: 'alex', action: 'update', entityType: 'bin', entityName: 'Miniatures & Terrain', binName: 'Miniatures & Terrain', changes: { items_added: { old: null, new: ['Army Painter wash set (6 washes)'] } }, daysAgo: 7, location: 'home' },
+  { user: 'demo', action: 'update', entityType: 'bin', entityName: 'Hardware', binName: 'Hardware', changes: { area: { old: 'Office', new: 'Server Rack' } }, daysAgo: 6, location: 'home' },
+  { user: 'pat', action: 'join', entityType: 'member', entityName: 'pat', daysAgo: 5, location: 'home' },
+  { user: 'sarah', action: 'update', entityType: 'bin', entityName: 'Yarn Stash', binName: 'Yarn Stash', changes: { items_added: { old: null, new: ['Tapestry wool remnants'] } }, daysAgo: 4, location: 'home' },
+  { user: 'sarah', action: 'delete', entityType: 'bin', entityName: 'Old Spice Rack', daysAgo: 3, location: 'home' },
+  { user: 'alex', action: 'create', entityType: 'bin', entityName: 'Print Fails', binName: 'Print Fails', daysAgo: 1, location: 'home' },
 ];
 
 export const TAG_COLORS: Record<string, string> = {
