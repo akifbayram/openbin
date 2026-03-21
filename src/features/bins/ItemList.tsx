@@ -1,5 +1,5 @@
 import { ArrowUpDown, Check, Search, X } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
@@ -185,10 +185,16 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('manual');
   const { showToast } = useToast();
-  const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
+  const pendingDeletesRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const displayItems = useMemo(
+    () => items.filter((item) => !pendingDeleteIds.has(item.id)),
+    [items, pendingDeleteIds],
+  );
 
   const { showFilter, filterQuery, setFilterQuery, filteredCount, visibleIndices, hiddenCount, expand, collapse, canCollapse } =
-    useCollapsibleList(items.length, (i) => items[i].name);
+    useCollapsibleList(displayItems.length, (i) => displayItems[i].name);
 
   const handleSort = useCallback(async (mode: SortMode) => {
     setSortMode(mode);
@@ -232,16 +238,50 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
   }
 
   function handleDelete(itemId: string) {
-    setExitingIds((prev) => new Set(prev).add(itemId));
-    setTimeout(async () => {
+    if (pendingDeleteIds.has(itemId)) return;
+
+    setPendingDeleteIds((prev) => new Set(prev).add(itemId));
+
+    const timerId = setTimeout(async () => {
+      pendingDeletesRef.current.delete(itemId);
       try {
         await removeItemFromBin(binId, itemId);
       } catch {
-        setExitingIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
+        setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
         showToast({ message: 'Failed to delete item', variant: 'error' });
       }
-    }, 200);
+    }, 5000);
+
+    pendingDeletesRef.current.set(itemId, timerId);
+
+    showToast({
+      message: 'Item removed',
+      duration: 5500,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          const pending = pendingDeletesRef.current.get(itemId);
+          if (pending != null) {
+            clearTimeout(pending);
+            pendingDeletesRef.current.delete(itemId);
+            setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
+          }
+        },
+      },
+    });
   }
+
+  // Flush all pending deletes on unmount (navigation away or edit mode transition)
+  useEffect(() => {
+    const ref = pendingDeletesRef;
+    return () => {
+      for (const [itemId, timerId] of ref.current) {
+        clearTimeout(timerId);
+        removeItemFromBin(binId, itemId).catch(() => {});
+      }
+      ref.current.clear();
+    };
+  }, [binId]);
 
   const sortOptions: { key: SortMode; label: string }[] = [
     { key: 'manual', label: 'Default' },
@@ -257,8 +297,8 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
       <div className="row-spread mb-2 min-h-8">
         <Label>
           {filterQuery
-            ? `${filteredCount} of ${items.length} ${items.length === 1 ? 'Item' : 'Items'}`
-            : `${items.length} ${items.length === 1 ? 'Item' : 'Items'}`}
+            ? `${filteredCount} of ${displayItems.length} ${displayItems.length === 1 ? 'Item' : 'Items'}`
+            : `${displayItems.length} ${displayItems.length === 1 ? 'Item' : 'Items'}`}
         </Label>
         {!readOnly && items.length >= 2 && (
           <div ref={sortRef} className="relative">
@@ -315,7 +355,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
         </div>
       )}
 
-      {items.length === 0 ? (
+      {displayItems.length === 0 ? (
         <p className="text-[15px] text-[var(--text-tertiary)] italic">No items yet</p>
       ) : (
         <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden">
@@ -331,7 +371,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
             </p>
           ) : (
             visibleIndices.map((idx, i) => {
-              const item = items[idx];
+              const item = displayItems[idx];
               return readOnly ? (
                 <div key={item.id}>
                   {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
@@ -349,21 +389,15 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
               ) : (
                 <div key={item.id}>
                   {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-                  <div
-                    className={cn(
-                      exitingIds.has(item.id) && 'animate-shrink-out',
-                    )}
-                  >
-                    <ItemRow
-                      text={item.name}
-                      quantity={item.quantity}
-                      isEditing={editingId === item.id}
-                      onStartEdit={() => setEditingId(item.id)}
-                      onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
-                      onCancel={() => setEditingId(null)}
-                      onDelete={() => handleDelete(item.id)}
-                    />
-                  </div>
+                  <ItemRow
+                    text={item.name}
+                    quantity={item.quantity}
+                    isEditing={editingId === item.id}
+                    onStartEdit={() => setEditingId(item.id)}
+                    onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
+                    onCancel={() => setEditingId(null)}
+                    onDelete={() => handleDelete(item.id)}
+                  />
                 </div>
               );
             })
