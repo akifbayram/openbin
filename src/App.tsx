@@ -71,6 +71,10 @@ const ReorganizePage = lazyWithRetry(() =>
   import('@/features/reorganize/ReorganizePage').then((m) => ({ default: m.ReorganizePage }))
 );
 
+const CapturePage = lazyWithRetry(() =>
+  import('@/features/capture/CapturePage').then((m) => ({ default: m.CapturePage }))
+);
+
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
@@ -323,6 +327,14 @@ export default function App() {
                   element={
                     <Suspense fallback={<LoadingFallback />}>
                       <ReorganizePage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/capture"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <CapturePage />
                     </Suspense>
                   }
                 />

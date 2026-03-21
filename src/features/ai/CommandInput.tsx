@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { takeCapturedPhotos } from '@/features/capture/capturedPhotos';
 import { CommandActionPreview } from './CommandActionPreview';
 import { CommandIdleInput } from './CommandIdleInput';
 import { CommandSuccess } from './CommandSuccess';
@@ -53,6 +54,27 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
     }
     if (!open) autoTriggeredRef.current = false;
   }, [open, autoTriggerPhoto]);
+
+  // Pick up photos captured via the camera capture page
+  const capturePickedUp = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      capturePickedUp.current = false;
+      return;
+    }
+    if (capturePickedUp.current) return;
+    capturePickedUp.current = true;
+    const captured = takeCapturedPhotos();
+    if (captured.length > 0) {
+      setInitialFiles(captured);
+      setPhotoMode(true);
+    }
+  }, [open, setInitialFiles, setPhotoMode]);
+
+  function handleCameraClick() {
+    handleClose(false);
+    navigate('/capture');
+  }
 
   // Augment state with executor state
   const effectiveState = isExecuting ? 'executing' : state;
@@ -153,6 +175,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
               error={error}
               onParse={handleParse}
               onPhotoClick={() => fileInputRef.current?.click()}
+              onCameraClick={handleCameraClick}
             />
           </div>
         )}

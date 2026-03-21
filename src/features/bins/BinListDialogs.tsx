@@ -1,4 +1,5 @@
-import { lazy, Suspense, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
+import { hasCapturedPhotos } from '@/features/capture/capturedPhotos';
 import type { Area } from '@/types';
 import { BinCreateDialog } from './BinCreateDialog';
 import { BinFilterDialog } from './BinFilterDialog';
@@ -48,6 +49,13 @@ export function BinListDialogs({
 }: BinListDialogsProps) {
   const commandMounted = useRef(false);
   if (commandOpen) commandMounted.current = true;
+
+  // Auto-open AI dialog when returning from camera capture with pending photos
+  useEffect(() => {
+    if (aiEnabled && hasCapturedPhotos()) {
+      setCommandOpen(true);
+    }
+  }, [aiEnabled, setCommandOpen]);
 
   return (
     <>

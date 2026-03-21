@@ -1,4 +1,4 @@
-import { ChevronDown, ImagePlus, Sparkles } from 'lucide-react';
+import { Camera, ChevronDown, ImagePlus, Sparkles } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +14,7 @@ interface CommandIdleInputProps {
   error: string | null;
   onParse: () => void;
   onPhotoClick: () => void;
+  onCameraClick?: () => void;
 }
 
 export function CommandIdleInput({
@@ -25,6 +26,7 @@ export function CommandIdleInput({
   error,
   onParse,
   onPhotoClick,
+  onCameraClick,
 }: CommandIdleInputProps) {
   const t = useTerminology();
 
@@ -36,7 +38,7 @@ export function CommandIdleInput({
           onChange={(e) => setText(e.target.value)}
           placeholder="What would you like to do?"
           rows={3}
-          className="min-h-[80px] bg-[var(--bg-elevated)] pr-12"
+          className={cn("min-h-[80px] bg-[var(--bg-elevated)]", onCameraClick ? "pr-[4.5rem]" : "pr-12")}
           disabled={isLoading}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -45,15 +47,28 @@ export function CommandIdleInput({
             }
           }}
         />
-        <button
-          type="button"
-          onClick={onPhotoClick}
-          className="absolute right-2.5 bottom-2.5 p-1.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
-          title={`Upload photos to auto-create ${t.bins} with AI`}
-          aria-label="Upload photos"
-        >
-          <ImagePlus className="h-5 w-5" />
-        </button>
+        <div className="absolute right-2.5 bottom-2.5 flex items-center gap-0.5">
+          {onCameraClick && (
+            <button
+              type="button"
+              onClick={onCameraClick}
+              className="p-1.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+              title="Take photos with camera"
+              aria-label="Take photos with camera"
+            >
+              <Camera className="h-5 w-5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onPhotoClick}
+            className="p-1.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+            title={`Upload photos to auto-create ${t.bins} with AI`}
+            aria-label="Upload photos"
+          >
+            <ImagePlus className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       {/* Collapsible examples */}

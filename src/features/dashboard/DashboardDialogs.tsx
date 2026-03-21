@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 import { BulkActionBar } from '@/features/bins/BulkActionBar';
@@ -11,6 +11,7 @@ import { BulkVisibilityDialog } from '@/features/bins/BulkVisibilityDialog';
 import { DeleteBinDialog } from '@/features/bins/DeleteBinDialog';
 import { updateBin } from '@/features/bins/useBins';
 import type { BulkDialog } from '@/features/bins/useBulkDialogs';
+import { hasCapturedPhotos } from '@/features/capture/capturedPhotos';
 import type { Terminology } from '@/lib/terminology';
 import type { Bin } from '@/types';
 
@@ -52,6 +53,13 @@ export function DashboardDialogs({
 
   const commandMounted = useRef(false);
   if (commandOpen) commandMounted.current = true;
+
+  // Auto-open AI dialog when returning from camera capture with pending photos
+  useEffect(() => {
+    if (aiEnabled && hasCapturedPhotos()) {
+      setCommandOpen(true);
+    }
+  }, [aiEnabled, setCommandOpen]);
 
   const handleCopyStyle = useCallback(() => {
     const [id] = selectedIds;
