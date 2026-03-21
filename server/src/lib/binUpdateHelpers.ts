@@ -1,7 +1,7 @@
-import { generateUuid, getDb, query } from '../db.js';
+import { generateUuid, getDb, query, querySync } from '../db.js';
 import { computeChanges } from './activityLog.js';
 import { fetchBinById } from './binQueries.js';
-import { replaceCustomFieldValues } from './customFieldHelpers.js';
+import { replaceCustomFieldValuesSync } from './customFieldHelpers.js';
 import { generateShortCode } from './shortCode.js';
 
 export function buildBinSetClauses(fields: {
@@ -172,27 +172,30 @@ export async function insertBinWithItems(fields: InsertBinFields): Promise<Recor
     const binId = attempt === 0 ? sc : generateShortCode(fields.name);
 
     try {
-      await query(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [binId, fields.locationId, fields.name.trim(), fields.areaId, fields.notes, fields.tags, fields.icon, fields.color, fields.cardStyle, fields.createdBy, fields.visibility]
-      );
-
-      // Insert items
-      for (let i = 0; i < fields.items.length; i++) {
-        const item = fields.items[i];
-        const itemName = typeof item === 'string' ? item : (item as { name: string })?.name;
-        if (!itemName) continue;
-        await query(
-          'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, NULL, $4)',
-          [generateUuid(), binId, itemName, i]
+      const db = getDb();
+      db.transaction(() => {
+        querySync(
+          `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          [binId, fields.locationId, fields.name.trim(), fields.areaId, fields.notes, fields.tags, fields.icon, fields.color, fields.cardStyle, fields.createdBy, fields.visibility]
         );
-      }
 
-      // Insert custom field values
-      if (fields.customFields && Object.keys(fields.customFields).length > 0) {
-        await replaceCustomFieldValues(binId, fields.customFields, fields.locationId);
-      }
+        // Insert items
+        for (let i = 0; i < fields.items.length; i++) {
+          const item = fields.items[i];
+          const itemName = typeof item === 'string' ? item : (item as { name: string })?.name;
+          if (!itemName) continue;
+          querySync(
+            'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, NULL, $4)',
+            [generateUuid(), binId, itemName, i]
+          );
+        }
+
+        // Insert custom field values
+        if (fields.customFields && Object.keys(fields.customFields).length > 0) {
+          replaceCustomFieldValuesSync(binId, fields.customFields, fields.locationId);
+        }
+      })();
 
       return (await fetchBinById(binId))!;
     } catch (err: unknown) {

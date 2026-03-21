@@ -191,7 +191,7 @@ describe('GET /api/bins/:id', () => {
     expect(res.status).toBe(404);
   });
 
-  it('returns 404 for non-member', async () => {
+  it('returns 403 for non-member', async () => {
     const { token: ownerToken } = await createTestUser(app);
     const location = await createTestLocation(app, ownerToken);
     const bin = await createTestBin(app, ownerToken, location.id);
@@ -202,7 +202,7 @@ describe('GET /api/bins/:id', () => {
       .get(`/api/bins/${bin.id}`)
       .set('Authorization', `Bearer ${otherToken}`);
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
   });
 });
 

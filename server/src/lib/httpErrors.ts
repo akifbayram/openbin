@@ -43,3 +43,10 @@ export class UnauthorizedError extends HttpError {
     this.name = 'UnauthorizedError';
   }
 }
+
+export class GoneError extends HttpError {
+  constructor(message: string) {
+    super(410, 'GONE', message);
+    this.name = 'GoneError';
+  }
+}

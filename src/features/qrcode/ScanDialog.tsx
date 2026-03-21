@@ -1,4 +1,4 @@
-import { AlertCircle, Plus, RotateCcw, ScanLine, Search } from 'lucide-react';
+import { AlertCircle, Lock, Plus, RotateCcw, ScanLine, Search, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -12,7 +12,7 @@ import { lookupBinByCode } from '@/features/bins/useBins';
 import { recordScan } from '@/features/dashboard/scanHistory';
 import { ScanSuccessOverlay } from '@/features/onboarding/ScanSuccessOverlay';
 import { useOnboarding } from '@/features/onboarding/useOnboarding';
-import { apiFetch } from '@/lib/api';
+import { ApiError, apiFetch } from '@/lib/api';
 import { BIN_URL_REGEX } from '@/lib/qr';
 import { useTerminology } from '@/lib/terminology';
 import { haptic } from '@/lib/utils';
@@ -35,6 +35,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
   const [manualError, setManualError] = useState('');
   const [manualLoading, setManualLoading] = useState(false);
   const [successBinId, setSuccessBinId] = useState<string | null>(null);
+  const [scanErrorType, setScanErrorType] = useState<'deleted' | 'forbidden' | null>(null);
 
   // Reset all state when dialog opens
   useEffect(() => {
@@ -46,6 +47,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
       setManualLoading(false);
       setScanning(true);
       setSuccessBinId(null);
+      setScanErrorType(null);
     }
   }, [open]);
 
@@ -85,8 +87,15 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
             onOpenChange(false);
             navigate(`/bin/${binId}`);
           }
-        } catch {
-          setUnknownId(binId);
+        } catch (err: unknown) {
+          const status = err instanceof ApiError ? err.status : undefined;
+          if (status === 410) {
+            setScanErrorType('deleted');
+          } else if (status === 403) {
+            setScanErrorType('forbidden');
+          } else {
+            setUnknownId(binId);
+          }
         }
       } else {
         setScanning(false);
@@ -99,6 +108,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
   function handleRetry() {
     setError('');
     setUnknownId(null);
+    setScanErrorType(null);
     setScanning(true);
   }
 
@@ -120,6 +130,52 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
                   <div className="space-y-1.5">
                     <p className="text-[17px] font-semibold text-[var(--text-primary)]">Not a {t.Bin} QR Code</p>
                     <p className="text-[13px] text-[var(--text-tertiary)] break-all max-w-xs mx-auto leading-relaxed">{error}</p>
+                  </div>
+                  <Button variant="outline" onClick={handleRetry} className="mt-1">
+                    <RotateCcw className="h-4 w-4 mr-1.5" />
+                    Scan Again
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : scanErrorType === 'deleted' ? (
+            <Card>
+              <CardContent className="py-8">
+                <div className="flex flex-col items-center gap-5 text-center">
+                  <div className="h-14 w-14 rounded-[var(--radius-xl)] bg-[var(--destructive)] bg-opacity-10 flex items-center justify-center">
+                    <Trash2 className="h-7 w-7 text-[var(--destructive)]" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[17px] font-semibold text-[var(--text-primary)]">This {t.bin} was deleted</p>
+                    <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed">
+                      It may be restorable from the trash.
+                    </p>
+                  </div>
+                  <div className="flex gap-2.5 mt-1">
+                    <Button variant="outline" onClick={handleRetry}>
+                      <RotateCcw className="h-4 w-4 mr-1.5" />
+                      Scan Again
+                    </Button>
+                    <Button onClick={() => { onOpenChange(false); navigate('/trash'); }}>
+                      <Trash2 className="h-4 w-4 mr-1.5" />
+                      View Trash
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : scanErrorType === 'forbidden' ? (
+            <Card>
+              <CardContent className="py-8">
+                <div className="flex flex-col items-center gap-5 text-center">
+                  <div className="h-14 w-14 rounded-[var(--radius-xl)] bg-[var(--accent)] bg-opacity-10 flex items-center justify-center">
+                    <Lock className="h-7 w-7 text-[var(--accent)]" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[17px] font-semibold text-[var(--text-primary)]">This {t.bin} belongs to another location</p>
+                    <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed">
+                      You need to join the location that owns this {t.bin} to view it.
+                    </p>
                   </div>
                   <Button variant="outline" onClick={handleRetry} className="mt-1">
                     <RotateCcw className="h-4 w-4 mr-1.5" />

@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/toast';
 import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
@@ -29,6 +30,7 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
   const t = useTerminology();
   const allTagsFetched = useAllTagsFetch(allTagsProp !== undefined);
   const allTags = allTagsProp ?? allTagsFetched;
+  const { showToast } = useToast();
 
   const [loading, setLoading] = useState(false);
   const [aiSetupOpen, setAiSetupOpen] = useState(false);
@@ -60,18 +62,6 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
         visibility: data.visibility,
         customFields: data.customFields,
       });
-      // Upload photos non-blocking (fire-and-forget)
-      if (data.photos.length > 0) {
-        Promise.all(
-          data.photos.map((p) =>
-            compressImage(p)
-              .then((compressed) => addPhoto(id, compressed instanceof File
-                ? compressed
-                : new File([compressed], p.name, { type: compressed.type || 'image/jpeg' })))
-              .catch(() => { /* photo upload is non-blocking */ })
-          )
-        ).catch(() => { /* ignore */ });
-      }
       setSuccessInfo([{
         id,
         name: data.name,
@@ -79,6 +69,26 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
         color: data.color,
         itemCount: data.items.length,
       }]);
+      // Upload photos in background — warn on failure without blocking success view
+      if (data.photos.length > 0) {
+        Promise.all(
+          data.photos.map((p) =>
+            compressImage(p)
+              .then((compressed) => addPhoto(id, compressed instanceof File
+                ? compressed
+                : new File([compressed], p.name, { type: compressed.type || 'image/jpeg' })))
+              .then(() => true)
+              .catch(() => false)
+          )
+        ).then((results) => {
+          const failCount = results.filter((ok) => !ok).length;
+          if (failCount > 0) {
+            showToast({ message: `${t.Bin} created, but ${failCount} photo(s) failed to upload`, variant: 'warning' });
+          }
+        });
+      }
+    } catch {
+      showToast({ message: `Failed to create ${t.bin}`, variant: 'error' });
     } finally {
       setLoading(false);
     }

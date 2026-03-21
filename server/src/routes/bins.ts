@@ -8,7 +8,7 @@ import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQuer
 import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinItems } from '../lib/binUpdateHelpers.js';
 import { validateBinFields } from '../lib/binValidation.js';
 import { replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
-import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { ForbiddenError, GoneError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
@@ -174,6 +174,23 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
   const access = await verifyBinAccess(id, req.user!.id);
   if (!access) {
+    // Determine why access was denied: bin deleted, user not in bin's location, or bin does not exist
+    const anyBin = await query<{ deleted_at: string | null; is_member: string | null }>(
+      `SELECT b.deleted_at, lm.user_id AS is_member
+       FROM bins b
+       LEFT JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
+       WHERE b.id = $1`,
+      [id, req.user!.id]
+    );
+    if (anyBin.rows.length > 0) {
+      const row = anyBin.rows[0];
+      if (row.deleted_at) {
+        throw new GoneError('This bin was deleted');
+      }
+      if (!row.is_member) {
+        throw new ForbiddenError('This bin belongs to a location you haven\'t joined');
+      }
+    }
     throw new NotFoundError('Bin not found');
   }
 
