@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
+import { parseItemQuantity, toItemPayload } from '@/lib/itemQuantities';
 import { addItemsToBin } from './useBins';
 
 type QuickAddState = 'input' | 'expanded' | 'processing' | 'preview';
@@ -63,14 +64,13 @@ export function useQuickAdd(options: UseQuickAddOptions) {
     if (!trimmed || !binId || saving) return;
     setSaving(true);
     try {
-      if (trimmed.includes(',')) {
-        const newItems = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
-        if (newItems.length > 0) {
-          await addItemsToBin(binId, newItems);
-          showToast({ message: `Added ${newItems.length} items` });
-        }
-      } else {
-        await addItemsToBin(binId, [trimmed]);
+      const segments = trimmed.includes(',')
+        ? trimmed.split(',').map((s) => s.trim()).filter(Boolean)
+        : [trimmed];
+      const items = segments.map((s) => toItemPayload(parseItemQuantity(s)));
+      if (items.length > 0) {
+        await addItemsToBin(binId, items);
+        showToast({ message: `Added ${items.length} item${items.length !== 1 ? 's' : ''}` });
       }
       setValue('');
     } catch {
@@ -84,12 +84,13 @@ export function useQuickAdd(options: UseQuickAddOptions) {
     const text = e.clipboardData.getData('text');
     if (!text.includes('\n') || !binId) return;
     e.preventDefault();
-    const newItems = text.split('\n').map((s) => s.trim()).filter(Boolean);
-    if (newItems.length === 0) return;
+    const lines = text.split('\n').map((s) => s.trim()).filter(Boolean);
+    if (lines.length === 0) return;
+    const items = lines.map((s) => toItemPayload(parseItemQuantity(s)));
     setSaving(true);
     try {
-      await addItemsToBin(binId, newItems);
-      showToast({ message: `Added ${newItems.length} items` });
+      await addItemsToBin(binId, items);
+      showToast({ message: `Added ${items.length} items` });
       setValue('');
     } catch {
       showToast({ message: 'Failed to add items' });

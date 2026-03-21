@@ -1,5 +1,56 @@
 import type { AiSuggestedItem } from '@/types';
 
+/** Parse human-typed quantity syntax from a single item string. */
+export function parseItemQuantity(raw: string): { name: string; quantity: number | null } {
+  const s = raw.trim();
+  if (!s) return { name: '', quantity: null };
+
+  // 1. Trailing ` x\d+` or ` x \d+`
+  const trailingX = s.match(/^(.+)\s+x\s?(\d+)$/i);
+  if (trailingX) {
+    const qty = Number.parseInt(trailingX[2], 10);
+    if (qty >= 1) return { name: trailingX[1].trim(), quantity: qty };
+  }
+
+  // 2. Trailing ` (\d+)` in parentheses
+  const trailingParen = s.match(/^(.+)\s+\((\d+)\)$/);
+  if (trailingParen) {
+    const qty = Number.parseInt(trailingParen[2], 10);
+    if (qty >= 1) return { name: trailingParen[1].trim(), quantity: qty };
+  }
+
+  // 3. Leading `\d+x ` — but NOT ambiguous product names like "2x4"
+  const leadingX = s.match(/^(\d+)x\s+(.+)$/i);
+  if (leadingX) {
+    const rest = leadingX[2];
+    // Ambiguity rule: first char after space must be non-digit
+    if (rest.length > 0 && !/^\d/.test(rest)) {
+      const qty = Number.parseInt(leadingX[1], 10);
+      if (qty >= 1) return { name: rest.trim(), quantity: qty };
+    }
+  }
+
+  // 4. Trailing `, \d+` where last comma-segment is purely numeric
+  const lastComma = s.lastIndexOf(',');
+  if (lastComma !== -1) {
+    const afterComma = s.slice(lastComma + 1).trim();
+    if (/^\d+$/.test(afterComma)) {
+      const qty = Number.parseInt(afterComma, 10);
+      if (qty >= 1) return { name: s.slice(0, lastComma).trim(), quantity: qty };
+    }
+  }
+
+  // 5. No match
+  return { name: s, quantity: null };
+}
+
+/** Map parsed item results to the API submission format. */
+export function toItemPayload(
+  parsed: { name: string; quantity: number | null },
+): string | { name: string; quantity: number } {
+  return parsed.quantity != null ? { name: parsed.name, quantity: parsed.quantity } : parsed.name;
+}
+
 /** Extract a name→quantity map from AI-suggested items, omitting items without a quantity. */
 export function buildQuantityMap(items: AiSuggestedItem[]): Record<string, number> {
   const map: Record<string, number> = {};
