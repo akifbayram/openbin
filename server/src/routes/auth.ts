@@ -68,6 +68,32 @@ router.post('/demo-login', asyncHandler(async (_req, res) => {
   });
 }));
 
+// GET /api/auth/invite-preview?code=CODE — public (no auth required)
+router.get('/invite-preview', asyncHandler(async (req, res) => {
+  const { code } = req.query;
+  if (!code || typeof code !== 'string') {
+    throw new ValidationError('Invite code is required');
+  }
+
+  const result = await query(
+    `SELECT l.name,
+            (SELECT COUNT(*) FROM location_members WHERE location_id = l.id) AS member_count
+     FROM locations l
+     WHERE l.invite_code = $1`,
+    [code.trim()]
+  );
+
+  if (result.rows.length === 0) {
+    throw new NotFoundError('Invalid invite code');
+  }
+
+  const row = result.rows[0];
+  res.json({
+    name: row.name,
+    memberCount: Number(row.member_count),
+  });
+}));
+
 // POST /api/auth/register
 router.post('/register', asyncHandler(async (req, res) => {
   if (config.registrationMode === 'closed') {

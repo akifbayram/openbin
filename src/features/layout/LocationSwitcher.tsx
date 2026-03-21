@@ -39,10 +39,10 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
         type="button"
         onClick={toggle}
         className={cn(
-          'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[14px] font-medium transition-colors text-left',
+          'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[14px] font-medium transition-colors text-left border',
           isOpen
             ? 'flat-card text-[var(--text-primary)]'
-            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+            : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
         )}
         aria-haspopup="listbox"
         aria-expanded={isOpen}

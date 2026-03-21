@@ -1,4 +1,4 @@
-import { Check, Monitor, Moon, Sun, UserPlus } from 'lucide-react';
+import { AlertTriangle, Check, Monitor, Moon, Sun, UserPlus, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BrandIcon } from '@/components/BrandIcon';
@@ -28,6 +28,8 @@ export function RegisterPage() {
   const [inviteCode, setInviteCode] = useState(searchParams.get('invite') ?? '');
   const [registrationMode, setRegistrationMode] = useState<'open' | 'invite'>('open');
   const [loading, setLoading] = useState(false);
+  const [invitePreview, setInvitePreview] = useState<{ name: string; memberCount: number } | null>(null);
+  const [inviteInvalid, setInviteInvalid] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/status')
@@ -42,6 +44,24 @@ export function RegisterPage() {
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, showToast]);
+
+  useEffect(() => {
+    if (!inviteCode) return;
+    fetch(`/api/auth/invite-preview?code=${encodeURIComponent(inviteCode)}`)
+      .then((r) => {
+        if (r.ok) return r.json();
+        if (r.status === 404) {
+          setInviteInvalid(true);
+          return null;
+        }
+        return null;
+      })
+      .then((data) => {
+        if (data) setInvitePreview(data);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const passwordChecks = useMemo(() => ({
     length: password.length >= 8,
@@ -105,6 +125,22 @@ export function RegisterPage() {
           </h1>
           <p className="text-[14px] text-[var(--text-tertiary)]">Create your account</p>
         </div>
+
+        {invitePreview && (
+          <div className="flat-card flex items-center gap-3 px-4 py-3 text-[14px]">
+            <Users className="h-5 w-5 text-[var(--accent)] shrink-0" />
+            <span>
+              You've been invited to join <strong>{invitePreview.name}</strong>
+              <span className="text-[var(--text-tertiary)]"> · {invitePreview.memberCount} {invitePreview.memberCount === 1 ? 'member' : 'members'}</span>
+            </span>
+          </div>
+        )}
+        {inviteInvalid && (
+          <div className="flat-card flex items-center gap-3 px-4 py-3 text-[14px] bg-[var(--color-warning-soft)]">
+            <AlertTriangle className="h-5 w-5 text-[var(--color-warning)] shrink-0" />
+            <span>This invite code is invalid or expired</span>
+          </div>
+        )}
 
         <Card>
           <CardContent className="py-6">
