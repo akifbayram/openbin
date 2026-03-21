@@ -61,7 +61,7 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   if (filters.q?.trim()) {
     const searchTerm = filters.q.trim();
     whereClauses.push(
-      `(word_match(b.name, $${paramIdx}) = 1 OR word_match(b.notes, $${paramIdx}) = 1 OR word_match(b.id, $${paramIdx}) = 1 OR word_match(COALESCE(a.name, ''), $${paramIdx}) = 1 OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND word_match(bi.name, $${paramIdx}) = 1) OR EXISTS (SELECT 1 FROM json_each(b.tags) WHERE word_match(value, $${paramIdx}) = 1) OR EXISTS (SELECT 1 FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id AND word_match(bcfv.value, $${paramIdx}) = 1))`
+      `(fuzzy_match(b.name, $${paramIdx}) = 1 OR fuzzy_match(b.notes, $${paramIdx}) = 1 OR fuzzy_match(b.id, $${paramIdx}) = 1 OR fuzzy_match(COALESCE(a.name, ''), $${paramIdx}) = 1 OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND fuzzy_match(bi.name, $${paramIdx}) = 1) OR EXISTS (SELECT 1 FROM json_each(b.tags) WHERE fuzzy_match(value, $${paramIdx}) = 1) OR EXISTS (SELECT 1 FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id AND fuzzy_match(bcfv.value, $${paramIdx}) = 1))`
     );
     params.push(searchTerm);
     paramIdx++;

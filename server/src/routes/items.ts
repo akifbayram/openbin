@@ -30,7 +30,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
   if (searchQuery?.trim()) {
     params.push(searchQuery.trim());
-    whereClause = `AND (word_match(bi.name, $${params.length}) = 1 OR word_match(b.name, $${params.length}) = 1)`;
+    whereClause = `AND (fuzzy_match(bi.name, $${params.length}) = 1 OR fuzzy_match(b.name, $${params.length}) = 1)`;
   }
 
   const baseQuery = `

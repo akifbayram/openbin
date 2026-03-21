@@ -89,11 +89,50 @@ try { db.exec("ALTER TABLE locations ADD COLUMN default_join_role TEXT NOT NULL 
   }
 }
 
-/** Word-boundary search: returns 1 if `term` appears at a word boundary in `text` */
-db.function('word_match', { deterministic: true }, (text: unknown, term: unknown) => {
-  if (!text || !term) return 0;
-  const escaped = String(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`\\b${escaped}`, 'i').test(String(text)) ? 1 : 0;
+/** O(min(m,n)) space — reuses module-level buffers to avoid per-call allocation */
+const _levBuf0 = new Int32Array(256);
+const _levBuf1 = new Int32Array(256);
+function levenshtein(a: string, b: string): number {
+  if (a.length > b.length) { const tmp = a; a = b; b = tmp; }
+  const m = a.length;
+  const n = b.length;
+  const prev = _levBuf0;
+  const curr = _levBuf1;
+  for (let i = 0; i <= m; i++) prev[i] = i;
+  for (let j = 1; j <= n; j++) {
+    curr[0] = j;
+    for (let i = 1; i <= m; i++) {
+      curr[i] = a[i - 1] === b[j - 1]
+        ? prev[i - 1]
+        : 1 + Math.min(prev[i - 1], prev[i], curr[i - 1]);
+    }
+    for (let i = 0; i <= m; i++) prev[i] = curr[i];
+  }
+  return prev[m];
+}
+
+const WORD_SPLIT = /[\s\-_,./]+/;
+
+db.function('fuzzy_match', { deterministic: true }, (text: unknown, term: unknown) => {
+  const t = String(text || '').toLowerCase();
+  const q = String(term || '').trim().toLowerCase();
+  if (!q) return 0;
+
+  // Substring check first — covers compound words and cross-boundary matches
+  if (q.length > 2 && t.includes(q)) return 1;
+
+  const words = t.split(WORD_SPLIT);
+  const threshold = q.length <= 4 ? 1 : 2;
+
+  for (const word of words) {
+    if (!word) continue;
+    if (word.startsWith(q)) return 1;
+    if (q.length <= 2) continue;
+    if (Math.abs(word.length - q.length) > threshold) continue;
+    if (levenshtein(q, word.slice(0, q.length + 2)) <= threshold) return 1;
+  }
+
+  return 0;
 });
 
 export function getDb(): Database.Database {
