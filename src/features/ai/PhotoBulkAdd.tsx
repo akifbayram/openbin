@@ -188,6 +188,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
         <BulkAddReviewStep
           photos={state.photos}
           currentIndex={state.currentIndex}
+          editingFromSummary={state.editingFromSummary}
           dispatch={dispatch}
         />
       </div>

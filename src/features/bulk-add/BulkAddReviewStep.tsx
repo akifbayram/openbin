@@ -1,4 +1,4 @@
-import { ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SkipForward, Sparkles } from 'lucide-react';
+import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SkipForward, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,10 +28,11 @@ import type { BulkAddAction, BulkAddPhoto } from './useBulkAdd';
 interface BulkAddReviewStepProps {
   photos: BulkAddPhoto[];
   currentIndex: number;
+  editingFromSummary: boolean;
   dispatch: React.Dispatch<BulkAddAction>;
 }
 
-export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddReviewStepProps) {
+export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, dispatch }: BulkAddReviewStepProps) {
   const t = useTerminology();
   const { activeLocationId } = useAuth();
   const { settings: aiSettings } = useAiSettings();
@@ -193,7 +194,9 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
 
   function handleBack() {
     abortRef.current.get(photo.id)?.abort();
-    if (isFirst) {
+    if (editingFromSummary) {
+      dispatch({ type: 'GO_TO_SUMMARY' });
+    } else if (isFirst) {
       dispatch({ type: 'GO_TO_UPLOAD' });
     } else {
       dispatch({ type: 'SET_CURRENT_INDEX', index: currentIndex - 1 });
@@ -391,23 +394,30 @@ export function BulkAddReviewStep({ photos, currentIndex, dispatch }: BulkAddRev
               onClick={handleBack}
               >
               <ChevronLeft className="h-4 w-4 mr-1" />
-              Back
+              {editingFromSummary ? 'Back to summary' : 'Back'}
             </Button>
             <div className="row">
-              <Button
-                variant="ghost"
-                onClick={handleSkip}
-                className="rounded-[var(--radius-lg)] text-[var(--text-tertiary)]"
-              >
-                <SkipForward className="h-4 w-4 mr-1" />
-                Skip
-              </Button>
-              <Button
-                onClick={handleNext}
-                  >
-                {isLast ? 'Review all' : 'Next'}
-                {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}
-              </Button>
+              {!editingFromSummary && (
+                <Button
+                  variant="ghost"
+                  onClick={handleSkip}
+                  className="rounded-[var(--radius-lg)] text-[var(--text-tertiary)]"
+                >
+                  <SkipForward className="h-4 w-4 mr-1" />
+                  Skip
+                </Button>
+              )}
+              {editingFromSummary ? (
+                <Button onClick={() => dispatch({ type: 'GO_TO_SUMMARY' })}>
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  Done
+                </Button>
+              ) : (
+                <Button onClick={handleNext}>
+                  {isLast ? 'Review all' : 'Next'}
+                  {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}
+                </Button>
+              )}
             </div>
           </div>
         </>

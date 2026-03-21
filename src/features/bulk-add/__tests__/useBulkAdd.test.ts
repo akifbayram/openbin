@@ -79,6 +79,12 @@ describe('bulkAddReducer', () => {
       const result = bulkAddReducer(state, { type: 'GO_TO_UPLOAD' });
       expect(result.step).toBe('upload');
     });
+
+    it('clears editingFromSummary', () => {
+      const state: BulkAddState = { ...initialState, step: 'review', editingFromSummary: true };
+      const result = bulkAddReducer(state, { type: 'GO_TO_UPLOAD' });
+      expect(result.editingFromSummary).toBe(false);
+    });
   });
 
   describe('GO_TO_SUMMARY', () => {
@@ -86,12 +92,50 @@ describe('bulkAddReducer', () => {
       const result = bulkAddReducer(initialState, { type: 'GO_TO_SUMMARY' });
       expect(result.step).toBe('summary');
     });
+
+    it('clears editingFromSummary', () => {
+      const state: BulkAddState = { ...initialState, editingFromSummary: true };
+      const result = bulkAddReducer(state, { type: 'GO_TO_SUMMARY' });
+      expect(result.editingFromSummary).toBe(false);
+    });
   });
 
   describe('SET_CURRENT_INDEX', () => {
     it('sets currentIndex', () => {
       const result = bulkAddReducer(initialState, { type: 'SET_CURRENT_INDEX', index: 5 });
       expect(result.currentIndex).toBe(5);
+    });
+  });
+
+  describe('SET_EDITING_FROM_SUMMARY', () => {
+    it('sets editingFromSummary to true', () => {
+      const result = bulkAddReducer(initialState, { type: 'SET_EDITING_FROM_SUMMARY', value: true });
+      expect(result.editingFromSummary).toBe(true);
+    });
+
+    it('sets editingFromSummary to false', () => {
+      const state: BulkAddState = { ...initialState, editingFromSummary: true };
+      const result = bulkAddReducer(state, { type: 'SET_EDITING_FROM_SUMMARY', value: false });
+      expect(result.editingFromSummary).toBe(false);
+    });
+  });
+
+  describe('editing from summary flow', () => {
+    it('preserves editingFromSummary through SET_CURRENT_INDEX + GO_TO_REVIEW', () => {
+      let state: BulkAddState = { ...initialState, step: 'summary', photos: [photo({ id: 'p1' }), photo({ id: 'p2' })] };
+      state = bulkAddReducer(state, { type: 'SET_EDITING_FROM_SUMMARY', value: true });
+      state = bulkAddReducer(state, { type: 'SET_CURRENT_INDEX', index: 1 });
+      state = bulkAddReducer(state, { type: 'GO_TO_REVIEW' });
+      expect(state.step).toBe('review');
+      expect(state.currentIndex).toBe(1);
+      expect(state.editingFromSummary).toBe(true);
+    });
+
+    it('clears editingFromSummary when returning to summary via GO_TO_SUMMARY', () => {
+      const state: BulkAddState = { ...initialState, step: 'review', editingFromSummary: true };
+      const result = bulkAddReducer(state, { type: 'GO_TO_SUMMARY' });
+      expect(result.step).toBe('summary');
+      expect(result.editingFromSummary).toBe(false);
     });
   });
 

@@ -115,6 +115,7 @@ export function BulkAddSummaryStep({
                   type="button"
                   onClick={() => {
                     const idx = photos.indexOf(photo);
+                    dispatch({ type: 'SET_EDITING_FROM_SUMMARY', value: true });
                     dispatch({ type: 'SET_CURRENT_INDEX', index: idx });
                     dispatch({ type: 'GO_TO_REVIEW' });
                   }}
@@ -185,6 +186,7 @@ export function BulkAddSummaryStep({
                     onClick={() => {
                       dispatch({ type: 'UNSKIP_PHOTO', id: photo.id });
                       const idx = photos.indexOf(photo);
+                      dispatch({ type: 'SET_EDITING_FROM_SUMMARY', value: true });
                       dispatch({ type: 'SET_CURRENT_INDEX', index: idx });
                       dispatch({ type: 'GO_TO_REVIEW' });
                     }}

@@ -28,6 +28,7 @@ export interface BulkAddState {
   currentIndex: number;
   isCreating: boolean;
   createdCount: number;
+  editingFromSummary: boolean;
 }
 
 export type BulkAddAction =
@@ -51,7 +52,8 @@ export type BulkAddAction =
   | { type: 'SET_CREATE_ERROR'; id: string; error: string }
   | { type: 'INCREMENT_CORRECTION'; id: string }
   | { type: 'RESET_CORRECTION_COUNT'; id: string }
-  | { type: 'DONE_CREATING' };
+  | { type: 'DONE_CREATING' }
+  | { type: 'SET_EDITING_FROM_SUMMARY'; value: boolean };
 
 export const initialState: BulkAddState = {
   step: 'upload',
@@ -60,6 +62,7 @@ export const initialState: BulkAddState = {
   currentIndex: 0,
   isCreating: false,
   createdCount: 0,
+  editingFromSummary: false,
 };
 
 export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): BulkAddState {
@@ -83,10 +86,10 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
       return { ...state, step: 'review', currentIndex: state.currentIndex };
 
     case 'GO_TO_UPLOAD':
-      return { ...state, step: 'upload' };
+      return { ...state, step: 'upload', editingFromSummary: false };
 
     case 'GO_TO_SUMMARY':
-      return { ...state, step: 'summary' };
+      return { ...state, step: 'summary', editingFromSummary: false };
 
     case 'SET_CURRENT_INDEX':
       return { ...state, currentIndex: action.index };
@@ -203,6 +206,9 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
           p.id === action.id ? { ...p, correctionCount: 0 } : p
         ),
       };
+
+    case 'SET_EDITING_FROM_SUMMARY':
+      return { ...state, editingFromSummary: action.value };
 
     default:
       return state;
