@@ -11,6 +11,7 @@ import { requireMemberOrAbove, verifyLocationMembership } from '../lib/binAccess
 import { config } from '../lib/config.js';
 import { parseCSV } from '../lib/csvParser.js';
 import {
+  buildAreaPathMap,
   buildFieldIdToNameMap,
   type ExportBin,
   type ExportData,
@@ -74,11 +75,12 @@ router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async 
   }
 
   const locationName = locationResult.rows[0].name;
-  const [bins, tagColors, fieldDefs, fieldIdToName] = await Promise.all([
+  const [bins, tagColors, fieldDefs, fieldIdToName, areaPathMap] = await Promise.all([
     fetchLocationBins(locationId),
     fetchLocationTagColors(locationId),
     fetchLocationFieldDefs(locationId),
     buildFieldIdToNameMap(locationId),
+    buildAreaPathMap(locationId),
   ]);
 
   const exportBins: ExportBin[] = [];
@@ -90,10 +92,13 @@ router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async 
         ? mapCustomFieldsToNames(bin.custom_fields as Record<string, string>, fieldIdToName)
         : undefined;
 
+    // Use full hierarchical path for area (e.g. "Garage / Shelf 1")
+    const areaPath = bin.area_id ? (areaPathMap.get(bin.area_id) || bin.area_name) : bin.area_name;
+
     exportBins.push({
       id: bin.id,
       name: bin.name,
-      location: bin.area_name,
+      location: areaPath,
       items: extractItemsWithQuantity(bin.items),
       notes: bin.notes,
       tags: bin.tags,
@@ -132,11 +137,12 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
   }
 
   const locationName = locationResult.rows[0].name;
-  const [dbBins, tagColors, fieldDefs, fieldIdToName] = await Promise.all([
+  const [dbBins, tagColors, fieldDefs, fieldIdToName, areaPathMap] = await Promise.all([
     fetchLocationBins(locationId),
     fetchLocationTagColors(locationId),
     fetchLocationFieldDefs(locationId),
     buildFieldIdToNameMap(locationId),
+    buildAreaPathMap(locationId),
   ]);
 
   const bins = [];
@@ -168,10 +174,13 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
         ? mapCustomFieldsToNames(bin.custom_fields as Record<string, string>, fieldIdToName)
         : undefined;
 
+    // Use full hierarchical path for area
+    const areaPath = bin.area_id ? (areaPathMap.get(bin.area_id) || bin.area_name) : bin.area_name;
+
     bins.push({
       id: bin.id,
       name: bin.name,
-      location: bin.area_name,
+      location: areaPath,
       items: extractItemsWithQuantity(bin.items),
       notes: bin.notes,
       tags: bin.tags,
@@ -232,7 +241,10 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
     throw new NotFoundError('Location not found');
   }
 
-  const bins = await fetchLocationBins(locationId);
+  const [bins, areaPathMap] = await Promise.all([
+    fetchLocationBins(locationId),
+    buildAreaPathMap(locationId),
+  ]);
 
   function csvEscape(val: string): string {
     if (val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r')) {
@@ -248,7 +260,8 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
     const items = extractItemsWithQuantity(bin.items);
     const tags = Array.isArray(bin.tags) ? bin.tags.join(',') : '';
     const binName = csvEscape(bin.name);
-    const area = csvEscape(bin.area_name);
+    const areaPath = bin.area_id ? (areaPathMap.get(bin.area_id) || bin.area_name) : bin.area_name;
+    const area = csvEscape(areaPath);
     const tagsField = csvEscape(tags);
 
     if (items.length === 0) {

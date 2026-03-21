@@ -39,12 +39,14 @@ CREATE TABLE IF NOT EXISTS areas (
   id            TEXT PRIMARY KEY,
   location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
   name          TEXT NOT NULL,
+  parent_id     TEXT REFERENCES areas(id) ON DELETE CASCADE,
   created_by    TEXT REFERENCES users(id) ON DELETE SET NULL,
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(location_id, name)
+  UNIQUE(location_id, parent_id, name)
 );
 CREATE INDEX IF NOT EXISTS idx_areas_location_id ON areas(location_id);
+CREATE INDEX IF NOT EXISTS idx_areas_parent_id ON areas(parent_id);
 
 CREATE TABLE IF NOT EXISTS bins (
   id            TEXT PRIMARY KEY,

@@ -5,6 +5,7 @@ import { OptionGroup } from '@/components/ui/option-group';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { cn } from '@/lib/utils';
 import type { Area } from '@/types';
+import { buildAreaTree, flattenAreaTree } from '../areas/useAreas';
 import type { BinFilters, SortOption } from './useBins';
 import { countActiveFilters, EMPTY_FILTERS } from './useBins';
 
@@ -183,12 +184,12 @@ export function BinFilterDialog({
           {areas.length > 0 && (
             <div className="space-y-2.5">
               <SectionHeader label="Area" count={draft.areas.length} />
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-col gap-1">
                   <button
                     type="button"
                     onClick={() => toggleArea('__unassigned__')}
                     className={cn(
-                      'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all duration-150 cursor-pointer',
+                      'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all duration-150 cursor-pointer w-fit',
                       draft.areas.includes('__unassigned__')
                         ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
                         : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
@@ -196,7 +197,7 @@ export function BinFilterDialog({
                   >
                     Unassigned
                   </button>
-                  {areas.map((area) => {
+                  {flattenAreaTree(buildAreaTree(areas)).map((area) => {
                     const selected = draft.areas.includes(area.id);
                     return (
                       <button
@@ -204,11 +205,12 @@ export function BinFilterDialog({
                         type="button"
                         onClick={() => toggleArea(area.id)}
                         className={cn(
-                          'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all duration-150 cursor-pointer',
+                          'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all duration-150 cursor-pointer w-fit',
                           selected
                             ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
                             : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
                         )}
+                        style={area.depth > 0 ? { marginLeft: area.depth * 16 } : undefined}
                       >
                         {area.name}
                       </button>

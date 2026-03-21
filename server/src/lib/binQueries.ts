@@ -47,6 +47,7 @@ export interface BinListFilterParams {
 }
 
 export interface BinListQuery {
+  ctePrefix: string;
   whereSQL: string;
   orderClause: string;
   params: unknown[];
@@ -84,6 +85,8 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   }
 
   // Multi-area filter (areas param takes precedence over single area_id)
+  // Uses recursive CTE to expand selected areas to include all descendants
+  let ctePrefix = '';
   const areaList = filters.areas ? filters.areas.split(',').map((a) => a.trim()).filter(Boolean) : [];
   if (areaList.length > 0) {
     const hasUnassigned = areaList.includes('__unassigned__');
@@ -91,7 +94,8 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
     const parts: string[] = [];
     if (realAreas.length > 0) {
       const areaPlaceholders = realAreas.map((_, i) => `$${paramIdx + i}`);
-      parts.push(`b.area_id IN (${areaPlaceholders.join(', ')})`);
+      ctePrefix = `WITH RECURSIVE area_subtree AS (SELECT id FROM areas WHERE id IN (${areaPlaceholders.join(', ')}) UNION ALL SELECT c.id FROM areas c JOIN area_subtree s ON c.parent_id = s.id) `;
+      parts.push('b.area_id IN (SELECT id FROM area_subtree)');
       params.push(...realAreas);
       paramIdx += realAreas.length;
     }
@@ -103,7 +107,9 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
     if (filters.areaId === '__unassigned__') {
       whereClauses.push('b.area_id IS NULL');
     } else {
-      whereClauses.push(`b.area_id = $${paramIdx}`);
+      const placeholder = `$${paramIdx}`;
+      ctePrefix = `WITH RECURSIVE area_subtree AS (SELECT id FROM areas WHERE id = ${placeholder} UNION ALL SELECT c.id FROM areas c JOIN area_subtree s ON c.parent_id = s.id) `;
+      whereClauses.push('b.area_id IN (SELECT id FROM area_subtree)');
       params.push(filters.areaId);
       paramIdx++;
     }
@@ -149,6 +155,7 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   }
 
   return {
+    ctePrefix,
     whereSQL: whereClauses.join(' AND '),
     orderClause,
     params,

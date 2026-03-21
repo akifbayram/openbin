@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { useDialogPortal } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { createArea, useAreaList } from './useAreas';
+import { buildAreaTree, createArea, flattenAreaTree, useAreaList } from './useAreas';
 
 interface AreaPickerProps {
   locationId: string | undefined;
@@ -57,6 +57,8 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
     }
   }, [creating]);
 
+  const flatAreas = flattenAreaTree(buildAreaTree(areas));
+
   async function handleCreate() {
     if (!newName.trim() || !locationId || saving) return;
     setSaving(true);
@@ -105,15 +107,16 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
             >
               No area
             </button>
-            {areas.map((area) => (
+            {flatAreas.map((area) => (
               <button
                 key={area.id}
                 type="button"
                 onClick={() => { onChange(area.id); setOpen(false); }}
                 className={cn(
-                  'w-full text-left px-3 py-2.5 text-[15px] transition-colors hover:bg-[var(--bg-hover)]',
+                  'w-full text-left py-2.5 text-[15px] transition-colors hover:bg-[var(--bg-hover)]',
                   value === area.id && 'text-[var(--accent)] font-medium'
                 )}
+                style={{ paddingLeft: 12 + area.depth * 16, paddingRight: 12 }}
               >
                 {area.name}
               </button>

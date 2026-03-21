@@ -14,11 +14,25 @@ router.use(authenticate);
 router.get('/:locationId/areas', requireLocationMember('locationId'), asyncHandler(async (req, res) => {
   const { locationId } = req.params;
   const result = await query(
-    `SELECT a.id, a.location_id, a.name, a.created_by, a.created_at, a.updated_at,
-            (SELECT COUNT(*) FROM bins WHERE area_id = a.id AND deleted_at IS NULL AND location_id = a.location_id) AS bin_count
-     FROM areas a
-     WHERE a.location_id = $1
-     ORDER BY a.name COLLATE NOCASE`,
+    `WITH RECURSIVE
+      area_tree AS (
+        SELECT id, id AS root_id FROM areas WHERE location_id = $1
+        UNION ALL
+        SELECT c.id, t.root_id FROM areas c JOIN area_tree t ON c.parent_id = t.id
+      ),
+      desc_counts AS (
+        SELECT t.root_id, COUNT(b.id) AS cnt
+        FROM area_tree t
+        LEFT JOIN bins b ON b.area_id = t.id AND b.deleted_at IS NULL
+        GROUP BY t.root_id
+      )
+    SELECT a.id, a.location_id, a.name, a.parent_id, a.created_by, a.created_at, a.updated_at,
+      (SELECT COUNT(*) FROM bins WHERE area_id = a.id AND deleted_at IS NULL) AS bin_count,
+      COALESCE(dc.cnt, 0) AS descendant_bin_count
+    FROM areas a
+    LEFT JOIN desc_counts dc ON dc.root_id = a.id
+    WHERE a.location_id = $1
+    ORDER BY a.name COLLATE NOCASE`,
     [locationId]
   );
   const unassignedResult = await query(
@@ -31,18 +45,41 @@ router.get('/:locationId/areas', requireLocationMember('locationId'), asyncHandl
 // POST /api/locations/:locationId/areas — create area (admin only)
 router.post('/:locationId/areas', requireLocationAdmin('locationId'), asyncHandler(async (req, res) => {
   const { locationId } = req.params;
-  const { name } = req.body;
+  const { name, parent_id } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     throw new ValidationError('Area name is required');
   }
 
+  const resolvedParentId = parent_id || null;
+
+  // Validate parent_id if provided
+  if (resolvedParentId) {
+    const parentResult = await query(
+      'SELECT id FROM areas WHERE id = $1 AND location_id = $2',
+      [resolvedParentId, locationId]
+    );
+    if (parentResult.rows.length === 0) {
+      throw new ValidationError('Parent area not found in this location');
+    }
+  }
+
+  // Check for duplicate sibling name (SQLite UNIQUE treats NULLs as distinct, so check manually for root areas)
+  const dupQuery = resolvedParentId
+    ? 'SELECT id FROM areas WHERE location_id = $1 AND name = $2 AND parent_id = $3'
+    : 'SELECT id FROM areas WHERE location_id = $1 AND name = $2 AND parent_id IS NULL';
+  const dupParams = resolvedParentId ? [locationId, name.trim(), resolvedParentId] : [locationId, name.trim()];
+  const dupResult = await query(dupQuery, dupParams);
+  if (dupResult.rows.length > 0) {
+    throw new ConflictError('An area with this name already exists');
+  }
+
   try {
     const result = await query(
-      `INSERT INTO areas (id, location_id, name, created_by)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, location_id, name, created_by, created_at, updated_at`,
-      [generateUuid(), locationId, name.trim(), req.user!.id]
+      `INSERT INTO areas (id, location_id, name, parent_id, created_by)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, location_id, name, parent_id, created_by, created_at, updated_at`,
+      [generateUuid(), locationId, name.trim(), resolvedParentId, req.user!.id]
     );
 
     const area = result.rows[0];
@@ -82,7 +119,7 @@ router.put('/:locationId/areas/:areaId', requireLocationAdmin('locationId'), asy
     const result = await query(
       `UPDATE areas SET name = $1, updated_at = datetime('now')
        WHERE id = $2 AND location_id = $3
-       RETURNING id, location_id, name, created_by, created_at, updated_at`,
+       RETURNING id, location_id, name, parent_id, created_by, created_at, updated_at`,
       [name.trim(), areaId, locationId]
     );
 
@@ -121,6 +158,19 @@ router.delete('/:locationId/areas/:areaId', requireLocationAdmin('locationId'), 
   const nameResult = await query('SELECT name FROM areas WHERE id = $1 AND location_id = $2', [areaId, locationId]);
   const areaName = nameResult.rows[0]?.name;
 
+  // Count descendant areas and bins for informational response
+  const descendantInfo = await query(
+    `WITH RECURSIVE subtree AS (
+      SELECT id FROM areas WHERE id = $1
+      UNION ALL
+      SELECT c.id FROM areas c JOIN subtree s ON c.parent_id = s.id
+    )
+    SELECT
+      (SELECT COUNT(*) - 1 FROM subtree) AS descendant_area_count,
+      (SELECT COUNT(*) FROM bins WHERE area_id IN (SELECT id FROM subtree) AND deleted_at IS NULL) AS descendant_bin_count`,
+    [areaId]
+  );
+
   const result = await query(
     'DELETE FROM areas WHERE id = $1 AND location_id = $2 RETURNING id',
     [areaId, locationId]
@@ -138,7 +188,12 @@ router.delete('/:locationId/areas/:areaId', requireLocationAdmin('locationId'), 
     entityName: areaName,
   });
 
-  res.json({ message: 'Area deleted' });
+  const info = descendantInfo.rows[0] ?? {};
+  res.json({
+    message: 'Area deleted',
+    descendant_area_count: info.descendant_area_count ?? 0,
+    descendant_bin_count: info.descendant_bin_count ?? 0,
+  });
 }));
 
 export default router;

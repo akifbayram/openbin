@@ -7,6 +7,7 @@ import { resolveColor } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
 import { categoryHeader, cn } from '@/lib/utils';
 import type { Area, Bin } from '@/types';
+import { buildAreaTree, flattenAreaTree } from '../areas/useAreas';
 
 interface BinSelectorCardProps {
   allBins: Bin[];
@@ -34,13 +35,14 @@ export function BinSelectorCard({
   const t = useTerminology();
 
   const grouped = useMemo(() => {
-    const groups: { areaId: string | null; label: string; bins: Bin[] }[] = [];
-    for (const area of areas) {
+    const groups: { areaId: string | null; label: string; depth: number; bins: Bin[] }[] = [];
+    const flatAreas = flattenAreaTree(buildAreaTree(areas));
+    for (const area of flatAreas) {
       const areaBins = allBins.filter((b) => b.area_id === area.id);
-      if (areaBins.length > 0) groups.push({ areaId: area.id, label: area.name, bins: areaBins });
+      if (areaBins.length > 0) groups.push({ areaId: area.id, label: area.name, depth: area.depth, bins: areaBins });
     }
     const unassigned = allBins.filter((b) => !b.area_id);
-    if (unassigned.length > 0) groups.push({ areaId: null, label: 'Unassigned', bins: unassigned });
+    if (unassigned.length > 0) groups.push({ areaId: null, label: 'Unassigned', depth: 0, bins: unassigned });
     return groups;
   }, [allBins, areas]);
 

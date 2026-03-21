@@ -35,6 +35,34 @@ for (const colDef of aiSettingsMigrations) {
 
 try { db.exec('ALTER TABLE bin_items ADD COLUMN quantity INTEGER DEFAULT NULL'); } catch { /* column already exists */ }
 
+// Hierarchical areas: add parent_id column
+try { db.exec('ALTER TABLE areas ADD COLUMN parent_id TEXT REFERENCES areas(id) ON DELETE CASCADE'); } catch { /* column already exists */ }
+
+// Hierarchical areas: migrate UNIQUE constraint from (location_id, name) to (location_id, parent_id, name)
+{
+  const areaTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='areas'").get() as { sql: string } | undefined;
+  if (areaTableInfo?.sql && !areaTableInfo.sql.includes('parent_id, name')) {
+    db.exec(`
+      CREATE TABLE areas_new (
+        id            TEXT PRIMARY KEY,
+        location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+        name          TEXT NOT NULL,
+        parent_id     TEXT REFERENCES areas(id) ON DELETE CASCADE,
+        created_by    TEXT REFERENCES users(id) ON DELETE SET NULL,
+        created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(location_id, parent_id, name)
+      );
+      INSERT INTO areas_new (id, location_id, name, parent_id, created_by, created_at, updated_at)
+        SELECT id, location_id, name, parent_id, created_by, created_at, updated_at FROM areas;
+      DROP TABLE areas;
+      ALTER TABLE areas_new RENAME TO areas;
+      CREATE INDEX IF NOT EXISTS idx_areas_location_id ON areas(location_id);
+      CREATE INDEX IF NOT EXISTS idx_areas_parent_id ON areas(parent_id);
+    `);
+  }
+}
+
 // Viewer role: add default_join_role to locations
 try { db.exec("ALTER TABLE locations ADD COLUMN default_join_role TEXT NOT NULL DEFAULT 'member' CHECK (default_join_role IN ('member', 'viewer'))"); } catch { /* column already exists */ }
 
@@ -136,7 +164,7 @@ function deserializeRow<T>(row: Record<string, any>): T {
 /** Detect if a statement returns rows */
 function isReturningQuery(sql: string): boolean {
   const trimmed = sql.trimStart().toUpperCase();
-  if (trimmed.startsWith('SELECT')) return true;
+  if (trimmed.startsWith('SELECT') || trimmed.startsWith('WITH')) return true;
   // RETURNING clause in INSERT/UPDATE/DELETE
   if (/\bRETURNING\b/i.test(sql)) return true;
   return false;

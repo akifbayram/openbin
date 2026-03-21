@@ -13,6 +13,9 @@ hero:
       text: View on GitHub
       link: https://github.com/akifbayram/openbin
     - theme: alt
+      text: Live Demo
+      link: https://demo.openbin.app
+    - theme: alt
       text: Discord
       link: https://discord.gg/W6JPZCqqx9
 

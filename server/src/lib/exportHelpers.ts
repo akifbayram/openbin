@@ -62,7 +62,7 @@ export interface ExportData {
  */
 export async function fetchLocationBins(locationId: string) {
   const result = await query(
-    `SELECT b.id, b.name, COALESCE(a.name, '') AS area_name,
+    `SELECT b.id, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
        COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name, 'quantity', bi.quantity))
          FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
        b.notes, b.tags, b.icon, b.color, b.card_style, b.visibility,
@@ -131,23 +131,74 @@ export async function loadBinPhotoMeta(binId: string) {
 
 /**
  * Resolve an area name string to an area ID within a location.
- * Creates the area if it does not exist. Synchronous (for use in transactions).
+ * Supports hierarchical paths delimited by " / " (e.g. "Garage / Shelf 1").
+ * Creates areas as needed. Synchronous (for use in transactions).
  */
 export function resolveAreaSync(locationId: string, areaName: string, userId: string): string | null {
   const trimmed = areaName.trim();
   if (!trimmed) return null;
 
-  const existing = querySync('SELECT id FROM areas WHERE location_id = $1 AND name = $2', [locationId, trimmed]);
-  if (existing.rows.length > 0) {
-    return existing.rows[0].id as string;
+  // Split on / for hierarchical paths
+  const parts = trimmed.split('/').map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 0) return null;
+
+  let parentId: string | null = null;
+  let lastId: string | null = null;
+
+  for (const part of parts) {
+    const existingQuery = parentId === null
+      ? 'SELECT id FROM areas WHERE location_id = $1 AND name = $2 AND parent_id IS NULL'
+      : 'SELECT id FROM areas WHERE location_id = $1 AND name = $2 AND parent_id = $3';
+    const existingParams = parentId === null
+      ? [locationId, part]
+      : [locationId, part, parentId];
+
+    const existing = querySync(existingQuery, existingParams);
+    if (existing.rows.length > 0) {
+      lastId = existing.rows[0].id as string;
+    } else {
+      lastId = generateUuid();
+      querySync(
+        'INSERT INTO areas (id, location_id, name, parent_id, created_by) VALUES ($1, $2, $3, $4, $5)',
+        [lastId, locationId, part, parentId, userId]
+      );
+    }
+    parentId = lastId;
   }
 
-  const newId = generateUuid();
-  querySync(
-    'INSERT INTO areas (id, location_id, name, created_by) VALUES ($1, $2, $3, $4)',
-    [newId, locationId, trimmed, userId]
+  return lastId;
+}
+
+/**
+ * Build a map of area ID → full path string (e.g. "Garage / Shelf 1") for a location.
+ */
+export async function buildAreaPathMap(locationId: string): Promise<Map<string, string>> {
+  const result = await query<{ id: string; name: string; parent_id: string | null }>(
+    'SELECT id, name, parent_id FROM areas WHERE location_id = $1',
+    [locationId]
   );
-  return newId;
+
+  const areaMap = new Map<string, { name: string; parent_id: string | null }>();
+  for (const row of result.rows) {
+    areaMap.set(row.id, { name: row.name, parent_id: row.parent_id });
+  }
+
+  const pathMap = new Map<string, string>();
+
+  function getPath(id: string): string {
+    if (pathMap.has(id)) return pathMap.get(id)!;
+    const area = areaMap.get(id);
+    if (!area) return '';
+    const p = area.parent_id ? `${getPath(area.parent_id)} / ${area.name}` : area.name;
+    pathMap.set(id, p);
+    return p;
+  }
+
+  for (const row of result.rows) {
+    getPath(row.id);
+  }
+
+  return pathMap;
 }
 
 /**

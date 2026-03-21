@@ -14,10 +14,13 @@ interface AreaCardProps {
   id: string;
   name: string;
   binCount: number;
+  descendantBinCount: number;
+  depth: number;
+  hasChildren: boolean;
   isAdmin: boolean;
   onNavigate: (areaId: string) => void;
   onRename: (id: string, newName: string) => Promise<void>;
-  onDelete: (id: string, name: string, binCount: number) => void;
+  onDelete: (id: string, name: string, binCount: number, descendantAreaCount?: number, descendantBinCount?: number) => void;
 }
 
 interface UnassignedCardProps {
@@ -29,7 +32,7 @@ interface CreateCardProps {
   onCreate: () => void;
 }
 
-export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, onDelete }: AreaCardProps) {
+export function AreaCard({ id, name, binCount, descendantBinCount, depth, hasChildren, isAdmin, onNavigate, onRename, onDelete }: AreaCardProps) {
   const t = useTerminology();
   const { visible, animating, isOpen, close, toggle } = usePopover();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -85,6 +88,8 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
     );
   }
 
+  const indentPx = depth * 24;
+
   return (
     // biome-ignore lint/a11y/useSemanticElements: custom card with contextual menu cannot be a plain button
     <div
@@ -97,6 +102,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
         "flat-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] text-left relative group",
         isOpen && "z-10"
       )}
+      style={indentPx > 0 ? { marginLeft: indentPx } : undefined}
     >
       <div className="flex items-start gap-3">
         <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 flex items-center justify-center shrink-0 mt-0.5">
@@ -108,6 +114,9 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
           </span>
           <span className="text-[13px] text-[var(--text-tertiary)] mt-0.5 block">
             {binCount} {binCount !== 1 ? t.bins : t.bin}
+            {hasChildren && descendantBinCount > binCount && (
+              <span className="text-[var(--text-tertiary)]"> ({descendantBinCount} total)</span>
+            )}
           </span>
         </div>
       </div>
@@ -132,7 +141,7 @@ export function AreaCard({ id, name, binCount, isAdmin, onNavigate, onRename, on
             visible={visible}
             animating={animating}
             onRename={startEdit}
-            onDelete={() => { close(); onDelete(id, name, binCount); }}
+            onDelete={() => { close(); onDelete(id, name, binCount, undefined, hasChildren ? descendantBinCount : undefined); }}
           />
         </div>
       )}

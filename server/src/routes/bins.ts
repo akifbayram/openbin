@@ -75,7 +75,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const limit = limitRaw !== undefined && !Number.isNaN(limitRaw) ? Math.max(1, Math.min(100, limitRaw)) : undefined;
   const offset = limit !== undefined ? Math.max(0, Number(req.query.offset) || 0) : 0;
 
-  const { whereSQL, orderClause, params } = buildBinListQuery({
+  const { ctePrefix, whereSQL, orderClause, params } = buildBinListQuery({
     locationId,
     userId: req.user!.id,
     q: req.query.q as string | undefined,
@@ -95,13 +95,13 @@ router.get('/', asyncHandler(async (req, res) => {
   // When limit is provided, run a count query and apply LIMIT/OFFSET
   if (limit !== undefined) {
     const countResult = await query(
-      `SELECT COUNT(*) AS total FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE ${whereSQL}`,
+      `${ctePrefix}SELECT COUNT(*) AS total FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE ${whereSQL}`,
       params
     );
     const total = (countResult.rows[0] as { total: number }).total;
 
     const result = await query(
-      `SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
+      `${ctePrefix}SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
        LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
        WHERE ${whereSQL} ORDER BY ${orderClause} LIMIT ${limit} OFFSET ${offset}`,
@@ -111,7 +111,7 @@ router.get('/', asyncHandler(async (req, res) => {
     res.json({ results: result.rows, count: total });
   } else {
     const result = await query(
-      `SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
+      `${ctePrefix}SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
        LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
        WHERE ${whereSQL} ORDER BY ${orderClause}`,

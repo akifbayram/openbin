@@ -341,9 +341,17 @@ components:
           format: uuid
         name:
           type: string
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Parent area ID for hierarchical nesting (null = root area)
         bin_count:
           type: integer
-          description: Number of non-deleted bins in this area (only present in list response)
+          description: Number of non-deleted bins directly in this area (only present in list response)
+        descendant_bin_count:
+          type: integer
+          description: Number of non-deleted bins in this area and all its descendants (only present in list response)
         created_by:
           type: string
           format: uuid
@@ -362,6 +370,11 @@ components:
         name:
           type: string
           maxLength: 255
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional parent area ID for nesting under an existing area
 
     # ── Custom Field ──────────────────────────────────────
     CustomField:

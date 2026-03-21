@@ -35,7 +35,7 @@ describe('createArea', () => {
     expect(result).toEqual(mockArea);
     expect(mockApiFetch).toHaveBeenCalledWith('/api/locations/loc-1/areas', {
       method: 'POST',
-      body: { name: 'Garage' },
+      body: { name: 'Garage', parent_id: null },
     });
   });
 });

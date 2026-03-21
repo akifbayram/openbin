@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { useTerminology } from '@/lib/terminology';
-import { createArea, deleteArea } from './useAreas';
+import { cn } from '@/lib/utils';
+import type { Area } from '@/types';
+import { buildAreaTree, createArea, deleteArea, flattenAreaTree } from './useAreas';
 
 /* ------------------------------------------------------------------ */
 /*  Create Area Dialog                                                 */
@@ -15,21 +18,34 @@ interface CreateAreaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   locationId: string | null;
+  areas: Area[];
+  defaultParentId?: string | null;
 }
 
-export function CreateAreaDialog({ open, onOpenChange, locationId }: CreateAreaDialogProps) {
+export function CreateAreaDialog({ open, onOpenChange, locationId, areas, defaultParentId }: CreateAreaDialogProps) {
   const t = useTerminology();
   const { showToast } = useToast();
   const [newAreaName, setNewAreaName] = useState('');
+  const [parentId, setParentId] = useState<string | null>(defaultParentId ?? null);
   const [creatingArea, setCreatingArea] = useState(false);
+
+  const flatAreas = useMemo(() => flattenAreaTree(buildAreaTree(areas)), [areas]);
+
+  // Reset parent when dialog opens
+  const [lastOpen, setLastOpen] = useState(false);
+  if (open && !lastOpen) {
+    setParentId(defaultParentId ?? null);
+  }
+  if (open !== lastOpen) setLastOpen(open);
 
   async function handleCreateArea(e: React.FormEvent) {
     e.preventDefault();
     if (!newAreaName.trim() || !locationId) return;
     setCreatingArea(true);
     try {
-      await createArea(locationId, newAreaName.trim());
+      await createArea(locationId, newAreaName.trim(), parentId);
       setNewAreaName('');
+      setParentId(null);
       onOpenChange(false);
     } catch (err) {
       showToast({ message: err instanceof ApiError && err.status === 409 ? `${t.Area} name already exists` : 'Something went wrong', variant: 'error' });
@@ -57,6 +73,26 @@ export function CreateAreaDialog({ open, onOpenChange, locationId }: CreateAreaD
               required
             />
           </div>
+          {flatAreas.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-[13px]">{`Parent ${t.Area}`}</Label>
+              <select
+                value={parentId ?? ''}
+                onChange={(e) => setParentId(e.target.value || null)}
+                className={cn(
+                  'w-full h-10 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 text-[15px]',
+                  'focus:outline-none focus:ring-2 focus:ring-[var(--accent)]'
+                )}
+              >
+                <option value="">No parent (root {t.area})</option>
+                {flatAreas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {'\u00A0\u00A0'.repeat(a.depth)}{a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
@@ -79,6 +115,8 @@ interface DeleteAreaTarget {
   id: string;
   name: string;
   binCount: number;
+  descendantAreaCount?: number;
+  descendantBinCount?: number;
 }
 
 interface DeleteAreaDialogProps {
@@ -105,16 +143,33 @@ export function DeleteAreaDialog({ target, onOpenChange, locationId }: DeleteAre
     }
   }
 
+  function getDescription(): string {
+    if (!target) return '';
+    const hasDescendantAreas = target.descendantAreaCount && target.descendantAreaCount > 0;
+    const totalBins = target.descendantBinCount ?? target.binCount;
+
+    if (hasDescendantAreas) {
+      const parts: string[] = [];
+      parts.push(`${target.descendantAreaCount} sub-${target.descendantAreaCount !== 1 ? t.areas : t.area}`);
+      if (totalBins > 0) {
+        parts.push(`${totalBins} ${totalBins !== 1 ? t.bins : t.bin}`);
+      }
+      return `This will also delete ${parts.join(' and ')}. ${t.Bins} will become unassigned.`;
+    }
+
+    if (target.binCount > 0) {
+      return `"${target.name}" has ${target.binCount} ${target.binCount !== 1 ? t.bins : t.bin}. They will become unassigned.`;
+    }
+
+    return `Delete "${target.name}"?`;
+  }
+
   return (
     <Dialog open={!!target} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{`Delete ${t.area}?`}</DialogTitle>
-          <DialogDescription>
-            {target && target.binCount > 0
-              ? `"${target.name}" has ${target.binCount} ${target.binCount !== 1 ? t.bins : t.bin}. They will become unassigned.`
-              : `Delete "${target?.name}"?`}
-          </DialogDescription>
+          <DialogDescription>{getDescription()}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>

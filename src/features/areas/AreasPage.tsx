@@ -21,7 +21,7 @@ import { AreaCard, CreateAreaCard, UnassignedAreaCard } from './AreaCard';
 import { CreateAreaDialog, DeleteAreaDialog } from './AreaDialogs';
 import { LocationSettingsMenu } from './LocationSettingsMenu';
 import { LocationTabs } from './LocationTabs';
-import { updateArea, useAreaList } from './useAreas';
+import { type AreaTreeNode, flattenAreaTree, updateArea, useAreaList } from './useAreas';
 
 export function AreasPage() {
   const t = useTerminology();
@@ -29,7 +29,7 @@ export function AreasPage() {
   const { user, activeLocationId, setActiveLocationId } = useAuth();
   const { locations, isLoading: locationsLoading } = useLocationList();
   const { showToast } = useToast();
-  const { areas, unassignedCount } = useAreaList(activeLocationId);
+  const { areas, areaTree, unassignedCount } = useAreaList(activeLocationId);
 
   // Location dialog state
   const [createLocationOpen, setCreateLocationOpen] = useState(false);
@@ -46,7 +46,7 @@ export function AreasPage() {
   const [createAreaOpen, setCreateAreaOpen] = useState(false);
 
   // Delete area state
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; binCount: number } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; binCount: number; descendantAreaCount?: number; descendantBinCount?: number } | null>(null);
 
   // Invite code copy state
   const [copied, setCopied] = useState(false);
@@ -101,8 +101,8 @@ export function AreasPage() {
     }
   }
 
-  function handleDeleteAreaRequest(areaId: string, name: string, binCount: number) {
-    setDeleteTarget({ id: areaId, name, binCount });
+  function handleDeleteAreaRequest(areaId: string, name: string, binCount: number, descendantAreaCount?: number, descendantBinCount?: number) {
+    setDeleteTarget({ id: areaId, name, binCount, descendantAreaCount, descendantBinCount });
   }
 
   async function handleLeave(locationId: string) {
@@ -295,13 +295,16 @@ export function AreasPage() {
             ) : (
               <div className="flex flex-col gap-3">
                 <h2 className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{t.Areas}</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {areas.map((area) => (
+                <div className="flex flex-col gap-2">
+                {flattenAreaTree(areaTree).map((node: AreaTreeNode) => (
                   <AreaCard
-                    key={area.id}
-                    id={area.id}
-                    name={area.name}
-                    binCount={area.bin_count}
+                    key={node.id}
+                    id={node.id}
+                    name={node.name}
+                    binCount={node.bin_count}
+                    descendantBinCount={node.descendant_bin_count}
+                    depth={node.depth}
+                    hasChildren={node.children.length > 0}
                     isAdmin={isAdmin}
                     onNavigate={handleAreaClick}
                     onRename={handleRenameArea}
@@ -325,7 +328,7 @@ export function AreasPage() {
       </Crossfade>
 
       {/* Area Dialogs */}
-      <CreateAreaDialog open={createAreaOpen} onOpenChange={setCreateAreaOpen} locationId={activeLocationId} />
+      <CreateAreaDialog open={createAreaOpen} onOpenChange={setCreateAreaOpen} locationId={activeLocationId} areas={areas} />
       <DeleteAreaDialog target={deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} locationId={activeLocationId} />
 
       {/* Location Dialogs */}
