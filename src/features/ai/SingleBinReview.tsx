@@ -74,18 +74,24 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     cancel: cancelCorrection,
   } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
 
+  const {
+    isStreaming: isReanalyzing,
+    stream: streamReanalyze,
+    cancel: cancelReanalyze,
+  } = useAiStream<AiSuggestions>('/api/ai/reanalyze-image/stream', "Couldn't reanalyze — try again");
+
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const steps = BULK_ADD_STEPS;
-  const currentStepIndex = (isAnalyzing || isCorrecting) ? 1 : isCreating ? 3 : 2;
+  const currentStepIndex = (isAnalyzing || isCorrecting || isReanalyzing) ? 1 : isCreating ? 3 : 2;
 
   const autoAnalyzedRef = useRef(false);
 
   // Abort streams on unmount
   useEffect(() => {
-    return () => { cancelAnalyze(); cancelCorrection(); };
-  }, [cancelAnalyze, cancelCorrection]);
+    return () => { cancelAnalyze(); cancelCorrection(); cancelReanalyze(); };
+  }, [cancelAnalyze, cancelCorrection, cancelReanalyze]);
 
   const triggerAnalyze = useCallback(async () => {
     if (!aiSettings) {
@@ -117,6 +123,46 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     }
   }, [files, aiSettings, activeLocationId, streamAnalyze]);
 
+  const triggerReanalyze = useCallback(async () => {
+    if (!aiSettings) {
+      setAiSetupExpanded(true);
+      return;
+    }
+    const compressed = await Promise.all(
+      files.slice(0, MAX_AI_PHOTOS).map(async (f) => {
+        const blob = await compressImage(f);
+        return blob instanceof File
+          ? blob
+          : new File([blob], f.name, { type: blob.type || 'image/jpeg' });
+      })
+    );
+
+    const previousResult = {
+      name,
+      items: items.map((itemName) => ({ name: itemName })),
+      tags,
+      notes,
+    };
+
+    const formData = new FormData();
+    if (compressed.length === 1) {
+      formData.append('photo', compressed[0]);
+    } else {
+      for (const file of compressed) formData.append('photos', file);
+    }
+    formData.append('previousResult', JSON.stringify(previousResult));
+    if (activeLocationId) formData.append('locationId', activeLocationId);
+
+    const result = await streamReanalyze(formData);
+    if (result) {
+      setName(result.name);
+      setItems(result.items.map((i) => i.name));
+      setItemQuantities(buildQuantityMap(result.items));
+      setTags(result.tags);
+      setNotes(result.notes);
+    }
+  }, [files, aiSettings, activeLocationId, streamReanalyze, name, items, tags, notes]);
+
   const triggerCorrection = useCallback(async (text: string) => {
     const previousResult = { name, items, tags, notes };
     const result = await streamCorrection({
@@ -141,7 +187,12 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     if (!trimmed) {
       cancelCorrection();
       setCorrectionCount(0);
-      triggerAnalyze();
+      // Use reanalysis with previous context instead of blind re-run
+      if (name || items.length > 0) {
+        triggerReanalyze();
+      } else {
+        triggerAnalyze();
+      }
       setCorrectionText('');
       setCorrectionOpen(false);
       return;
@@ -160,6 +211,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   function handleBack() {
     cancelAnalyze();
     cancelCorrection();
+    cancelReanalyze();
     onBack();
   }
 
@@ -218,12 +270,12 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     <div className="space-y-5">
       <StepIndicator steps={steps} currentStepIndex={currentStepIndex} />
 
-      {(isAnalyzing || isCorrecting) ? (
+      {(isAnalyzing || isCorrecting || isReanalyzing) ? (
         <AiStreamingPreview
           previewUrls={previewUrls}
           streamedName=""
           streamedItems={[]}
-          initialStatusLabel={isCorrecting ? 'Applying correction...' : `Analyzing ${Math.min(files.length, MAX_AI_PHOTOS)} photo${Math.min(files.length, MAX_AI_PHOTOS) !== 1 ? 's' : ''}...`}
+          initialStatusLabel={isCorrecting ? 'Applying correction...' : isReanalyzing ? 'Reanalyzing...' : `Analyzing ${Math.min(files.length, MAX_AI_PHOTOS)} photo${Math.min(files.length, MAX_AI_PHOTOS) !== 1 ? 's' : ''}...`}
         />
       ) : (
         <>
@@ -270,7 +322,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             )}
           </div>
 
-          {/* Correction bar */}
+          {/* AI action bar (correction + reanalyze) */}
           <div className={correctionOpen && name ? 'ai-correction-enter' : 'hidden'}>
             <div className="space-y-1.5">
               {correctionCount >= MAX_CORRECTIONS ? (
@@ -283,16 +335,26 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
                     value={correctionText}
                     onChange={(e) => setCorrectionText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCorrectionSubmit(); } }}
-                    placeholder="Describe what to change..."
+                    placeholder="Optionally describe what to fix..."
                     className="flex-1 h-9 text-[13px]"
                   />
-                  <button
-                    type="button"
-                    onClick={handleCorrectionSubmit}
-                    className="shrink-0 p-2 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </button>
+                  {correctionText.trim() ? (
+                    <button
+                      type="button"
+                      onClick={handleCorrectionSubmit}
+                      className="shrink-0 p-2 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { setCorrectionOpen(false); triggerReanalyze(); }}
+                      className="shrink-0 h-9 px-3 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors text-[13px] font-medium"
+                    >
+                      Reanalyze
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -382,7 +444,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             </Button>
             <Button
               onClick={handleCreate}
-              disabled={!name.trim() || isAnalyzing || isCorrecting || isCreating}
+              disabled={!name.trim() || isAnalyzing || isCorrecting || isReanalyzing || isCreating}
               >
               {isCreating ? (
                 <>

@@ -28,6 +28,7 @@ interface BinViewContentProps {
   aiEnabled: boolean;
   aiError: string | null;
   suggestions: AiSuggestions | null;
+  previousResult: AiSuggestions | null;
   hasNotes: boolean;
   hasTags: boolean;
   customFields: CustomField[];
@@ -43,6 +44,7 @@ export function BinViewContent({
   aiEnabled,
   aiError,
   suggestions,
+  previousResult,
   hasNotes,
   hasTags,
   customFields,
@@ -71,6 +73,7 @@ export function BinViewContent({
       {suggestions && (
         <AiSuggestionsPanel
           suggestions={suggestions}
+          previousResult={previousResult}
           currentName={bin.name}
           currentItems={bin.items}
           currentTags={bin.tags}

@@ -21,6 +21,7 @@ interface BinDetailToolbarProps {
   onNameChange: (name: string) => void;
   showAiButton: boolean;
   isAnalyzing: boolean;
+  isReanalysis: boolean;
   editNameValid: boolean;
   otherLocations: Location[];
   onBack: () => void;
@@ -46,6 +47,7 @@ export function BinDetailToolbar({
   onNameChange,
   showAiButton,
   isAnalyzing,
+  isReanalysis,
   editNameValid,
   otherLocations,
   onBack,
@@ -127,12 +129,12 @@ export function BinDetailToolbar({
       ) : (
         <div className="flex gap-1.5">
           {showAiButton && (
-            <Tooltip content="Analyze with AI" side="bottom">
+            <Tooltip content={isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI'} side="bottom">
               <Button
                 size="icon"
                 onClick={onAnalyze}
                 disabled={isAnalyzing}
-                aria-label="Analyze with AI"
+                aria-label={isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI'}
                 variant="ghost"
               >
                 {isAnalyzing ? (

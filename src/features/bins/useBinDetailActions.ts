@@ -10,7 +10,7 @@ import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
-import type { Bin } from '@/types';
+import type { AiSuggestions, Bin } from '@/types';
 import { addBin, deleteBin, moveBin, restoreBin, updateBin } from './useBins';
 import { useQuickAdd } from './useQuickAdd';
 
@@ -27,7 +27,8 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
 
   const { photos } = usePhotos(id);
   const { settings: aiSettings } = useAiSettings();
-  const { suggestions, isAnalyzing, error: aiError, analyzeMultiple, clearSuggestions } = useAiAnalysis();
+  const { suggestions, isAnalyzing, error: aiError, analyzeMultiple, reanalyzeMultiple, clearSuggestions } = useAiAnalysis();
+  const [lastSuggestions, setLastSuggestions] = useState<AiSuggestions | null>(null);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
@@ -80,7 +81,16 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
       return;
     }
     if (photos.length > 0) {
-      analyzeMultiple(photos.map((p) => p.id));
+      const photoIds = photos.map((p) => p.id);
+      // Use reanalysis when we have previous suggestions or existing bin data
+      const context = lastSuggestions ?? (bin && (bin.name || bin.items.length > 0 || bin.tags.length > 0)
+        ? { name: bin.name, items: bin.items.map((i) => ({ name: i.name, quantity: i.quantity })), tags: bin.tags, notes: bin.notes }
+        : null);
+      if (context) {
+        reanalyzeMultiple(photoIds, context);
+      } else {
+        analyzeMultiple(photoIds);
+      }
     }
   }
 
@@ -88,6 +98,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     if (!id || Object.keys(changes).length === 0) return;
     try {
       await updateBin(id, changes);
+      if (suggestions) setLastSuggestions(suggestions);
       clearSuggestions();
       showToast({ message: 'Applied AI suggestions' });
     } catch {
@@ -133,6 +144,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
   const canDelete = isAdmin;
   const canEditMeta = bin ? canEditBin(bin.created_by) : false;
   const showAiButton = aiEnabled && photos.length > 0 && !editing;
+  const isReanalysis = !!(lastSuggestions || (bin && (bin.name || bin.items.length > 0 || bin.tags.length > 0)));
   const hasNotes = !!bin?.notes;
   const hasTags = (bin?.tags.length ?? 0) > 0;
 
@@ -149,6 +161,8 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     isAnalyzing,
     aiError,
     clearSuggestions,
+    isReanalysis,
+    lastSuggestions,
     // Data
     photos,
     aiSettings,

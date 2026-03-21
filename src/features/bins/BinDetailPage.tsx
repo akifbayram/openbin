@@ -126,6 +126,7 @@ export function BinDetailPage() {
         onNameChange={edit.setName}
         showAiButton={actions.showAiButton}
         isAnalyzing={actions.isAnalyzing}
+        isReanalysis={actions.isReanalysis}
         editNameValid={!!edit.name.trim()}
         otherLocations={actions.otherLocations}
         onBack={() => {
@@ -183,6 +184,7 @@ export function BinDetailPage() {
           aiEnabled={actions.aiEnabled}
           aiError={actions.aiError}
           suggestions={actions.suggestions}
+          previousResult={actions.lastSuggestions}
           hasNotes={actions.hasNotes}
           hasTags={actions.hasTags}
           customFields={customFieldDefs}

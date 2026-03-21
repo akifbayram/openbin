@@ -51,6 +51,12 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
     cancel: cancelCorrection,
   } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
 
+  const {
+    isStreaming: isReanalyzing,
+    stream: streamReanalyze,
+    cancel: cancelReanalyze,
+  } = useAiStream<AiSuggestions>('/api/ai/reanalyze-image/stream', "Couldn't reanalyze — try again");
+
   const photo = photos[currentIndex];
 
   // Abort streams on unmount or navigate away
@@ -59,6 +65,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
       for (const ctrl of abortRef.current.values()) ctrl.abort();
       abortRef.current.clear();
       cancelCorrection();
+      cancelReanalyze();
     };
   }, []);
 
@@ -82,7 +89,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
   const isLast = currentIndex === photos.length - 1;
   const reviewedCount = photos.filter((p) => p.status === 'reviewed' || p.status === 'skipped').length;
 
-  const isStreaming = photo.status === 'analyzing';
+  const isStreaming = photo.status === 'analyzing' || isReanalyzing;
 
   async function triggerAnalyze(target: BulkAddPhoto) {
     if (!aiSettings) {
@@ -132,6 +139,53 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
     }
   }
 
+  async function triggerReanalyze(target: BulkAddPhoto) {
+    if (!aiSettings) {
+      setAiSetupExpanded(true);
+      return;
+    }
+
+    // Abort any existing stream for this photo
+    abortRef.current.get(target.id)?.abort();
+    dispatch({ type: 'SET_ANALYZING', id: target.id });
+
+    try {
+      const compressed = await compressImage(target.file);
+      const file = compressed instanceof File
+        ? compressed
+        : new File([compressed], target.file.name, { type: compressed.type || 'image/jpeg' });
+
+      const previousResult = {
+        name: target.name,
+        items: target.items.map((name) => ({ name })),
+        tags: target.tags,
+        notes: target.notes,
+      };
+
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('previousResult', JSON.stringify(previousResult));
+      if (activeLocationId) formData.append('locationId', activeLocationId);
+
+      const result = await streamReanalyze(formData);
+      if (result) {
+        const qtyMap = buildQuantityMap(result.items);
+        dispatch({
+          type: 'SET_ANALYZE_RESULT',
+          id: target.id,
+          name: result.name,
+          items: result.items.map((i) => i.name),
+          itemQuantities: qtyMap,
+          tags: result.tags,
+          notes: result.notes,
+        });
+      }
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return;
+      dispatch({ type: 'SET_ANALYZE_ERROR', id: target.id, error: mapErrorMessage(err) });
+    }
+  }
+
   async function triggerCorrection(target: BulkAddPhoto, text: string) {
     // Abort any pending analyze stream for this photo
     abortRef.current.get(target.id)?.abort();
@@ -172,7 +226,12 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
     if (!trimmed) {
       cancelCorrection();
       dispatch({ type: 'RESET_CORRECTION_COUNT', id: photo.id });
-      triggerAnalyze(photo);
+      // Use reanalysis with previous context instead of blind re-run
+      if (photo.name || photo.items.length > 0) {
+        triggerReanalyze(photo);
+      } else {
+        triggerAnalyze(photo);
+      }
       setCorrectionText('');
       setCorrectionOpen(false);
       return;
@@ -226,7 +285,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
           previewUrls={[photo.previewUrl]}
           streamedName=""
           streamedItems={[]}
-          initialStatusLabel={isCorrecting ? 'Applying correction...' : 'Analyzing photo...'}
+          initialStatusLabel={isCorrecting ? 'Applying correction...' : isReanalyzing ? 'Reanalyzing photo...' : 'Analyzing photo...'}
         />
       ) : (
         <>
@@ -258,7 +317,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
             )}
           </div>
 
-          {/* Correction bar */}
+          {/* AI action bar (correction + reanalyze) */}
           {correctionOpen && photo.status === 'reviewed' && (
             <div className="space-y-1.5">
               {photo.correctionCount >= MAX_CORRECTIONS ? (
@@ -271,16 +330,26 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
                     value={correctionText}
                     onChange={(e) => setCorrectionText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCorrectionSubmit(); } }}
-                    placeholder="Describe what to change..."
+                    placeholder="Optionally describe what to fix..."
                     className="flex-1 h-9 text-[13px]"
                   />
-                  <button
-                    type="button"
-                    onClick={handleCorrectionSubmit}
-                    className="shrink-0 p-2 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </button>
+                  {correctionText.trim() ? (
+                    <button
+                      type="button"
+                      onClick={handleCorrectionSubmit}
+                      className="shrink-0 p-2 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { setCorrectionOpen(false); triggerReanalyze(photo); }}
+                      className="shrink-0 h-9 px-3 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors text-[13px] font-medium"
+                    >
+                      Reanalyze
+                    </button>
+                  )}
                 </div>
               )}
             </div>

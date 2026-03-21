@@ -1,14 +1,39 @@
+import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import type { AiSuggestedItem, AiSuggestions, BinItem, CustomField } from '@/types';
 
 export type AiSuggestionChanges = Partial<{ name: string; items: AiSuggestedItem[]; tags: string[]; notes: string; customFields: Record<string, string> }>;
 
+function nameChanged(prev: AiSuggestions | null | undefined, suggestions: AiSuggestions): boolean {
+  if (!prev) return false;
+  return prev.name !== suggestions.name;
+}
+
+function itemsChanged(prev: AiSuggestions | null | undefined, suggestions: AiSuggestions): boolean {
+  if (!prev) return false;
+  const prevNames = prev.items.map((i) => `${i.name}:${i.quantity ?? ''}`).sort().join(',');
+  const newNames = suggestions.items.map((i) => `${i.name}:${i.quantity ?? ''}`).sort().join(',');
+  return prevNames !== newNames;
+}
+
+function tagsChanged(prev: AiSuggestions | null | undefined, suggestions: AiSuggestions): boolean {
+  if (!prev) return false;
+  return prev.tags.slice().sort().join(',') !== suggestions.tags.slice().sort().join(',');
+}
+
+function notesChanged(prev: AiSuggestions | null | undefined, suggestions: AiSuggestions): boolean {
+  if (!prev) return false;
+  return prev.notes !== suggestions.notes;
+}
+
 interface AiSuggestionsPanelProps {
   suggestions: AiSuggestions;
+  previousResult?: AiSuggestions | null;
   currentName: string;
   currentItems: BinItem[];
   currentTags: string[];
@@ -21,6 +46,7 @@ interface AiSuggestionsPanelProps {
 
 export function AiSuggestionsPanel({
   suggestions,
+  previousResult,
   currentName,
   currentItems,
   currentTags,
@@ -30,6 +56,11 @@ export function AiSuggestionsPanel({
   onApply,
   onDismiss,
 }: AiSuggestionsPanelProps) {
+  const isReanalysis = !!previousResult;
+  const nameDidChange = isReanalysis && nameChanged(previousResult, suggestions);
+  const itemsDidChange = isReanalysis && itemsChanged(previousResult, suggestions);
+  const tagsDidChange = isReanalysis && tagsChanged(previousResult, suggestions);
+  const notesDidChange = isReanalysis && notesChanged(previousResult, suggestions);
   const [acceptName, setAcceptName] = useState(true);
   const [acceptItems, setAcceptItems] = useState(true);
   const [acceptTags, setAcceptTags] = useState(true);
@@ -80,14 +111,24 @@ export function AiSuggestionsPanel({
       <CardContent className="space-y-4">
         <div>
           <Label>AI Suggestions</Label>
-          <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">
-            Select which suggestions to apply to this bin.
-          </p>
+          {isReanalysis ? (
+            <div className="flex items-center gap-1.5 mt-1 text-[13px] text-[var(--accent)]">
+              <RefreshCw className="h-3 w-3" />
+              <span>Reanalysis complete — compare with previous results</span>
+            </div>
+          ) : (
+            <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">
+              Select which suggestions to apply to this bin.
+            </p>
+          )}
         </div>
 
         {/* Name */}
         {hasName && (
-          <label className="flex items-start gap-3 cursor-pointer">
+          <label className={cn(
+            'flex items-start gap-3 cursor-pointer',
+            nameDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
+          )}>
             <input
               type="checkbox"
               checked={acceptName}
@@ -95,7 +136,12 @@ export function AiSuggestionsPanel({
               className="mt-1 accent-[var(--accent)]"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-[var(--text-secondary)]">Name</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-[13px] font-medium text-[var(--text-secondary)]">Name</p>
+                {nameDidChange && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Changed</Badge>
+                )}
+              </div>
               <p className="text-[15px] text-[var(--text-primary)] font-semibold">{suggestions.name}</p>
               <p className="text-[12px] text-[var(--text-tertiary)]">Current: {currentName}</p>
             </div>
@@ -104,7 +150,10 @@ export function AiSuggestionsPanel({
 
         {/* Items */}
         {hasItems && (
-          <label className="flex items-start gap-3 cursor-pointer">
+          <label className={cn(
+            'flex items-start gap-3 cursor-pointer',
+            itemsDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
+          )}>
             <input
               type="checkbox"
               checked={acceptItems}
@@ -112,7 +161,12 @@ export function AiSuggestionsPanel({
               className="mt-1 accent-[var(--accent)]"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-[var(--text-secondary)]">Items</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-[13px] font-medium text-[var(--text-secondary)]">Items</p>
+                {itemsDidChange && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Changed</Badge>
+                )}
+              </div>
               <ul className="mt-1 space-y-0.5">
                 {suggestions.items.map((item, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: items may contain duplicates
@@ -133,7 +187,10 @@ export function AiSuggestionsPanel({
 
         {/* Tags */}
         {hasTags && (
-          <label className="flex items-start gap-3 cursor-pointer">
+          <label className={cn(
+            'flex items-start gap-3 cursor-pointer',
+            tagsDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
+          )}>
             <input
               type="checkbox"
               checked={acceptTags}
@@ -141,7 +198,12 @@ export function AiSuggestionsPanel({
               className="mt-1 accent-[var(--accent)]"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-[var(--text-secondary)]">Tags</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-[13px] font-medium text-[var(--text-secondary)]">Tags</p>
+                {tagsDidChange && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Changed</Badge>
+                )}
+              </div>
               <div className="flex flex-wrap gap-1.5 mt-1">
                 {suggestions.tags.map((tag) => (
                   <Badge key={tag} variant="secondary">{tag}</Badge>
@@ -158,7 +220,10 @@ export function AiSuggestionsPanel({
 
         {/* Notes */}
         {hasNotes && (
-          <label className="flex items-start gap-3 cursor-pointer">
+          <label className={cn(
+            'flex items-start gap-3 cursor-pointer',
+            notesDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
+          )}>
             <input
               type="checkbox"
               checked={acceptNotes}
@@ -166,7 +231,12 @@ export function AiSuggestionsPanel({
               className="mt-1 accent-[var(--accent)]"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-[var(--text-secondary)]">Notes</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-[13px] font-medium text-[var(--text-secondary)]">Notes</p>
+                {notesDidChange && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Changed</Badge>
+                )}
+              </div>
               <p className="text-[14px] text-[var(--text-primary)] whitespace-pre-wrap mt-0.5">{suggestions.notes}</p>
               {currentNotes && (
                 <p className="text-[12px] text-[var(--text-tertiary)] mt-1">Will replace current notes</p>

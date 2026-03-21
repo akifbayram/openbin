@@ -73,6 +73,7 @@ cd server && npx tsc --noEmit # Server type check
 docker compose up -d          # Full stack
 ```
 
+- **Commit messages**: No parentheses in commit prefixes — use `feat: description` not `feat(area): description`.
 - Run `npx biome check .` and `npx tsc --noEmit` before committing. Run `npx vitest run path/to/test` for targeted tests over the full suite.
 - When compacting context, preserve the full list of modified files and any failing test output.
 

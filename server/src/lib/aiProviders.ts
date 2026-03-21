@@ -3,7 +3,7 @@ import type { AiProviderConfig } from './aiCaller.js';
 import { mapSdkError, validateEndpointUrl } from './aiCaller.js';
 import { AiSuggestionsSchema } from './aiSchemas.js';
 import type { CustomFieldDef } from './customFieldHelpers.js';
-import { AI_CORRECTION_PROMPT, DEFAULT_AI_PROMPT } from './defaultPrompts.js';
+import { AI_CORRECTION_PROMPT, AI_REANALYSIS_PROMPT, DEFAULT_AI_PROMPT } from './defaultPrompts.js';
 import { createSdkModel } from './sdkProviderFactory.js';
 
 
@@ -72,6 +72,23 @@ export function buildSystemPrompt(existingTags?: string[], customPrompt?: string
 export function buildCorrectionPrompt(existingTags?: string[], customFieldDefs?: CustomFieldDef[]): string {
   const prompt = injectTagBlock(AI_CORRECTION_PROMPT, buildTagBlock(existingTags));
   return appendCustomFieldsDef(prompt, customFieldDefs);
+}
+
+export function buildReanalysisPrompt(existingTags?: string[], customFieldDefs?: CustomFieldDef[]): string {
+  const prompt = injectTagBlock(AI_REANALYSIS_PROMPT, buildTagBlock(existingTags));
+  return appendCustomFieldsDef(prompt, customFieldDefs);
+}
+
+/** Build the user-facing content parts for a reanalysis request (previous result JSON + instruction + images). */
+export function buildReanalysisUserContent(
+  previousResult: object,
+  imageParts: Array<{ type: 'image'; image: Buffer; mimeType: string }>,
+): Array<{ type: 'image'; image: Buffer; mimeType: string } | { type: 'text'; text: string }> {
+  const contextText = `Previous analysis result:\n${JSON.stringify(previousResult, null, 2)}\n\nRe-examine these photos. Be more thorough than last time.`;
+  return [
+    { type: 'text' as const, text: contextText },
+    ...imageParts,
+  ];
 }
 
 function validateSuggestions(raw: unknown): AiSuggestionsResult {
@@ -169,6 +186,50 @@ export async function analyzeImages(
         : undefined,
     });
     // Post-process with existing business rule sanitizer
+    return validateSuggestions(result.object);
+  } catch (err) {
+    throw mapSdkError(err);
+  }
+}
+
+export async function reanalyzeImages(
+  config: AiProviderConfig,
+  images: ImageInput[],
+  previousResult: object,
+  existingTags?: string[],
+  customFieldDefs?: CustomFieldDef[],
+  overrides?: AiOverrides
+): Promise<AiSuggestionsResult> {
+  if (config.endpointUrl) {
+    await validateEndpointUrl(config.endpointUrl);
+  }
+
+  const model = createSdkModel(config);
+
+  const imageParts = images.map((img) => ({
+    type: 'image' as const,
+    image: Buffer.from(img.base64, 'base64'),
+    mimeType: img.mimeType,
+  }));
+
+  const userContent = buildReanalysisUserContent(previousResult, imageParts);
+
+  try {
+    const result = await generateObject({
+      model,
+      schema: AiSuggestionsSchema,
+      system: buildReanalysisPrompt(existingTags, customFieldDefs),
+      messages: [{
+        role: 'user' as const,
+        content: userContent,
+      }],
+      maxOutputTokens: overrides?.max_tokens ?? (images.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE),
+      temperature: overrides?.temperature ?? 0.3,
+      topP: overrides?.top_p ?? undefined,
+      abortSignal: overrides?.request_timeout
+        ? AbortSignal.timeout(overrides.request_timeout * 1000)
+        : undefined,
+    });
     return validateSuggestions(result.object);
   } catch (err) {
     throw mapSdkError(err);

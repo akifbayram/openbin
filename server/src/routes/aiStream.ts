@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { validateEndpointUrl } from '../lib/aiCaller.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
-import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildCorrectionPrompt, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from '../lib/aiProviders.js';
+import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildCorrectionPrompt, buildReanalysisPrompt, buildReanalysisUserContent, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { QueryResultSchema } from '../lib/aiSchemas.js';
 import type { UserAiSettings } from '../lib/aiSettings.js';
@@ -216,33 +216,17 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
 
 // POST /api/ai/correct/stream — correct a previous analysis result
 streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correction', async (req, res) => {
-  const { previousResult, correction, locationId } = req.body;
+  const { previousResult: rawPrev, correction, locationId } = req.body;
 
-  // Validate previousResult shape
-  if (
-    !previousResult ||
-    typeof previousResult !== 'object' ||
-    typeof previousResult.name !== 'string' ||
-    !Array.isArray(previousResult.items)
-  ) {
+  const validatedPrev = validatePreviousResult(rawPrev);
+  if (!validatedPrev) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'previousResult must have name (string) and items (array)' });
     return;
   }
 
   const correctionText = validateTextInput(correction, 'correction', 1000);
 
-  // Sanitize previousResult to prevent oversized prompts
-  const safePrevious = {
-    name: String(previousResult.name).slice(0, 255),
-    items: (previousResult.items as unknown[])
-      .filter((i): i is string => typeof i === 'string')
-      .slice(0, 100)
-      .map((i) => i.slice(0, 500)),
-    tags: Array.isArray(previousResult.tags)
-      ? (previousResult.tags as unknown[]).filter((t): t is string => typeof t === 'string').slice(0, 20)
-      : [],
-    notes: typeof previousResult.notes === 'string' ? previousResult.notes.slice(0, 2000) : '',
-  };
+  const safePrevious = sanitizePreviousResult(validatedPrev);
 
   // Mock mode
   if (config.aiMock) {
@@ -272,6 +256,149 @@ streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correctio
     system,
     userContent: userMessage,
     ...streamOpts(settings, { maxTokens: 2500 }),
+  });
+}));
+
+/** Validate that previousResult has the expected shape. Returns the validated object or null. */
+function validatePreviousResult(value: unknown): Record<string, unknown> | null {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    typeof (value as Record<string, unknown>).name !== 'string' ||
+    !Array.isArray((value as Record<string, unknown>).items)
+  ) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+/** Sanitize a previousResult object to prevent oversized prompts. */
+function sanitizePreviousResult(previousResult: Record<string, unknown>) {
+  return {
+    name: String(previousResult.name ?? '').slice(0, 255),
+    items: Array.isArray(previousResult.items)
+      ? (previousResult.items as unknown[]).slice(0, 100).map((i) => {
+          if (typeof i === 'string') return { name: i.slice(0, 500) };
+          if (i && typeof i === 'object') {
+            const obj = i as Record<string, unknown>;
+            return {
+              name: String(obj.name ?? '').slice(0, 500),
+              ...(typeof obj.quantity === 'number' ? { quantity: obj.quantity } : {}),
+            };
+          }
+          return { name: String(i).slice(0, 500) };
+        })
+      : [],
+    tags: Array.isArray(previousResult.tags)
+      ? (previousResult.tags as unknown[]).filter((t): t is string => typeof t === 'string').slice(0, 20)
+      : [],
+    notes: typeof previousResult.notes === 'string' ? previousResult.notes.slice(0, 2000) : '',
+    ...(previousResult.customFields && typeof previousResult.customFields === 'object'
+      ? { customFields: previousResult.customFields }
+      : {}),
+  };
+}
+
+// POST /api/ai/reanalyze/stream — reanalyze stored photos with previous result context
+streamRouter.post('/reanalyze/stream', aiLimiter, aiRouteHandler('stream reanalyze photo', async (req, res) => {
+  const { photoIds, previousResult: rawPrev } = req.body;
+
+  const previousResult = validatePreviousResult(rawPrev);
+  if (!previousResult) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'previousResult must have name (string) and items (array)' });
+    return;
+  }
+
+  let ids: string[] = [];
+  if (Array.isArray(photoIds) && photoIds.length > 0) {
+    ids = photoIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, 5);
+  }
+
+  if (ids.length === 0) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photoIds is required' });
+    return;
+  }
+
+  if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
+
+  const { settings, model } = await resolveUserModel(req.user!.id);
+
+  const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
+  if (!loaded) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Photo not found or access denied' });
+    return;
+  }
+
+  const imageParts = loaded.images.map((img) => ({
+    type: 'image' as const,
+    image: img.buffer,
+    mimeType: img.mimeType,
+  }));
+
+  const safePrevious = sanitizePreviousResult(previousResult);
+
+  await pipeAiStreamToResponse(res, model, {
+    system: buildReanalysisPrompt(loaded.existingTags, loaded.customFieldDefs),
+    userContent: buildReanalysisUserContent(safePrevious, imageParts),
+    ...streamOpts(settings, { maxTokens: loaded.images.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE }),
+  });
+}));
+
+// POST /api/ai/reanalyze-image/stream — reanalyze uploaded photos with previous result context
+streamRouter.post('/reanalyze-image/stream', aiLimiter, memoryPhotoUpload.fields([
+  { name: 'photo', maxCount: 1 },
+  { name: 'photos', maxCount: 5 },
+]), aiRouteHandler('stream reanalyze image', async (req, res) => {
+  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+  const allFiles = [
+    ...(files?.photo || []),
+    ...(files?.photos || []),
+  ].slice(0, 5);
+
+  if (allFiles.length === 0) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photo file is required (JPEG, PNG, WebP, or GIF, max 5MB)' });
+    return;
+  }
+
+  let rawPrev: unknown = null;
+  try {
+    rawPrev = typeof req.body?.previousResult === 'string'
+      ? JSON.parse(req.body.previousResult)
+      : req.body?.previousResult;
+  } catch {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'previousResult must be valid JSON' });
+    return;
+  }
+
+  const previousResult = validatePreviousResult(rawPrev);
+  if (!previousResult) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'previousResult must have name (string) and items (array)' });
+    return;
+  }
+
+  if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
+
+  const { settings, model } = await resolveUserModel(req.user!.id);
+
+  const locationId = req.body?.locationId;
+  if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
+    res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
+    return;
+  }
+  const { existingTags, customFieldDefs } = await fetchLocationAiMeta(locationId);
+
+  const imageParts = allFiles.map((f) => ({
+    type: 'image' as const,
+    image: f.buffer,
+    mimeType: f.mimetype,
+  }));
+
+  const safePrevious = sanitizePreviousResult(previousResult);
+
+  await pipeAiStreamToResponse(res, model, {
+    system: buildReanalysisPrompt(existingTags, customFieldDefs),
+    userContent: buildReanalysisUserContent(safePrevious, imageParts),
+    ...streamOpts(settings, { maxTokens: allFiles.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE }),
   });
 }));
 

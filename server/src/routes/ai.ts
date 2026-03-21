@@ -4,7 +4,7 @@ import { testProviderConnection } from '../lib/aiCaller.js';
 import { fetchExistingTags } from '../lib/aiContext.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
 import type { ImageInput } from '../lib/aiProviders.js';
-import { analyzeImages } from '../lib/aiProviders.js';
+import { analyzeImages, reanalyzeImages } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
@@ -304,6 +304,54 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
   }));
 
   const suggestions = await analyzeImages(settings.config, images, loaded.existingTags, settings.custom_prompt, settings);
+  res.json(suggestions);
+}));
+
+// POST /api/ai/reanalyze — reanalyze stored photo(s) with previous result context
+router.post('/reanalyze', aiLimiter, aiRouteHandler('reanalyze photo', async (req, res) => {
+  const { photoIds, previousResult: rawPrev } = req.body;
+
+  if (
+    !rawPrev ||
+    typeof rawPrev !== 'object' ||
+    typeof rawPrev.name !== 'string' ||
+    !Array.isArray(rawPrev.items)
+  ) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'previousResult must have name (string) and items (array)' });
+    return;
+  }
+
+  const previousResult = rawPrev;
+
+  let ids: string[] = [];
+  if (Array.isArray(photoIds) && photoIds.length > 0) {
+    ids = photoIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, 5);
+  }
+
+  if (ids.length === 0) {
+    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photoIds is required' });
+    return;
+  }
+
+  if (config.aiMock) {
+    res.json(buildMockAnalysisResult());
+    return;
+  }
+
+  const settings = await getUserAiSettings(req.user!.id);
+
+  const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
+  if (!loaded) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Photo not found or access denied' });
+    return;
+  }
+
+  const images: ImageInput[] = loaded.images.map((img) => ({
+    base64: img.buffer.toString('base64'),
+    mimeType: img.mimeType,
+  }));
+
+  const suggestions = await reanalyzeImages(settings.config, images, previousResult, loaded.existingTags, loaded.customFieldDefs, settings);
   res.json(suggestions);
 }));
 

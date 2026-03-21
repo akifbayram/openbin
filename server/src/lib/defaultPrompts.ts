@@ -99,6 +99,10 @@ Rules:
 {items_per_bin_instruction}
 {notes_instruction}`;
 
+export const AI_REANALYSIS_PROMPT = `This is a SECOND analysis of photos you have already examined. Your previous analysis is provided below. The user was not satisfied with the first result. Re-examine every photo carefully. Look for items you may have missed, correct any misidentifications, and be more specific with item names and quantities. Do not simply repeat your previous output.
+
+${DEFAULT_AI_PROMPT}`;
+
 export const ALL_DEFAULT_PROMPTS = {
   analysis: DEFAULT_AI_PROMPT,
   command: DEFAULT_COMMAND_PROMPT,
@@ -106,4 +110,5 @@ export const ALL_DEFAULT_PROMPTS = {
   structure: DEFAULT_STRUCTURE_PROMPT,
   correction: AI_CORRECTION_PROMPT,
   reorganization: DEFAULT_REORGANIZATION_PROMPT,
+  reanalysis: AI_REANALYSIS_PROMPT,
 };

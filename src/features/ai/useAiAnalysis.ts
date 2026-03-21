@@ -71,10 +71,27 @@ export function useAiAnalysis() {
     }
   }, []);
 
+  const reanalyzeMultiple = useCallback(async (photoIds: string[], previousResult: AiSuggestions) => {
+    setIsAnalyzing(true);
+    setError(null);
+    setSuggestions(null);
+    try {
+      const result = await apiFetch<AiSuggestions>('/api/ai/reanalyze', {
+        method: 'POST',
+        body: { photoIds: photoIds.slice(0, MAX_AI_PHOTOS), previousResult },
+      });
+      setSuggestions(result);
+    } catch (err) {
+      setError(mapAiError(err, 'Couldn\'t reanalyze the photo — try again'));
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, []);
+
   const clearSuggestions = useCallback(() => {
     setSuggestions(null);
     setError(null);
   }, []);
 
-  return { suggestions, isAnalyzing, error, analyze, analyzeMultiple, clearSuggestions };
+  return { suggestions, isAnalyzing, error, analyze, analyzeMultiple, reanalyzeMultiple, clearSuggestions };
 }
