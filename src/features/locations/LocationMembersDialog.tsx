@@ -10,6 +10,7 @@ import {
   DialogTitle,
   useDialogPortal,
 } from '@/components/ui/dialog';
+import { OptionGroup } from '@/components/ui/option-group';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
@@ -325,25 +326,19 @@ function MemberActionMenu({ onResetPassword, onRemove }: { onResetPassword: () =
   );
 }
 
+const roleOptions = [
+  { key: 'viewer' as const, label: 'Viewer' },
+  { key: 'member' as const, label: 'Member' },
+  { key: 'admin' as const, label: 'Admin' },
+];
+
 function RoleSelector({ currentRole, onChangeRole }: { currentRole: string; onChangeRole: (role: 'admin' | 'member' | 'viewer') => void }) {
-  const roles = ['viewer', 'member', 'admin'] as const;
   return (
-    <div className="flex gap-0.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)] p-0.5">
-      {roles.map((r) => (
-        <button
-          key={r}
-          type="button"
-          onClick={() => onChangeRole(r)}
-          className={cn(
-            'px-2 py-1 text-[12px] font-medium rounded-[var(--radius-xs)] capitalize transition-colors',
-            currentRole === r
-              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-flat)]'
-              : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
-          )}
-        >
-          {r}
-        </button>
-      ))}
-    </div>
+    <OptionGroup
+      options={roleOptions}
+      value={currentRole as 'viewer' | 'member' | 'admin'}
+      onChange={onChangeRole}
+      size="sm"
+    />
   );
 }

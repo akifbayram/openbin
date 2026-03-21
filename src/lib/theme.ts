@@ -25,6 +25,7 @@ function applyToDOM(resolved: ResolvedTheme) {
   const root = document.documentElement;
   root.classList.remove('light', 'dark');
   root.classList.add(resolved);
+  root.style.colorScheme = resolved;
 }
 
 let currentPreference: ThemePreference = getStoredPreference();

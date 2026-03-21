@@ -26,7 +26,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
             }}
             onPaste={quickAdd.handlePaste}
             placeholder="Add item..."
-            className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0 focus-visible:shadow-none"
+            className="h-7 border-0 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0 focus-visible:shadow-none"
           />
           {quickAdd.value.trim() && (
             <Tooltip content="Add item">
@@ -46,7 +46,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               <button
                 type="button"
                 onClick={quickAdd.handleAiClick}
-                className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
+                className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
                 aria-label="Add with AI"
               >
                 <Sparkles className="h-4 w-4" />

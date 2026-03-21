@@ -358,7 +358,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
               onKeyDown={handleInputKeyDown}
               onPaste={handlePaste}
               placeholder="Add item..."
-              className="h-7 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0 focus-visible:shadow-none"
+              className="h-7 border-0 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0 focus-visible:shadow-none"
             />
             {input.trim() && (
               <Tooltip content="Add item">
@@ -377,7 +377,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
                 <button
                   type="button"
                   onClick={handleSparklesClick}
-                  className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--ai-accent)] hover:bg-[var(--bg-active)] transition-colors"
+                  className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
                   aria-label="Add with AI"
                 >
                   <Sparkles className="h-4 w-4" />
