@@ -14,7 +14,6 @@ export interface UserPreferences {
   onboarding_completed: boolean;
   onboarding_step: number;
   onboarding_location_id: string | null;
-  first_scan_done: boolean;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -30,7 +29,6 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   onboarding_completed: false,
   onboarding_step: 0,
   onboarding_location_id: null,
-  first_scan_done: false,
 };
 
 const PREFERENCES_EVENT = 'user-preferences-changed';

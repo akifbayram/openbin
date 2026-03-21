@@ -14,7 +14,6 @@ export function useOnboarding(demoMode?: boolean) {
     step: preferences.onboarding_step,
     totalSteps,
     locationId: preferences.onboarding_location_id ?? undefined,
-    firstScanDone: preferences.first_scan_done,
     advanceWithLocation: useCallback((id: string) => {
       updatePreferences({
         onboarding_location_id: id,
@@ -31,9 +30,6 @@ export function useOnboarding(demoMode?: boolean) {
     }, [updatePreferences, preferences.onboarding_step, totalSteps]),
     complete: useCallback(() => {
       updatePreferences({ onboarding_completed: true });
-    }, [updatePreferences]),
-    markFirstScanDone: useCallback(() => {
-      updatePreferences({ first_scan_done: true });
     }, [updatePreferences]),
   };
 }

@@ -1,6 +1,5 @@
 import { AlertCircle, Lock, Plus, RotateCcw, ScanLine, Search, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,8 +9,6 @@ import { Label } from '@/components/ui/label';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 import { lookupBinByCode } from '@/features/bins/useBins';
 import { recordScan } from '@/features/dashboard/scanHistory';
-import { ScanSuccessOverlay } from '@/features/onboarding/ScanSuccessOverlay';
-import { useOnboarding } from '@/features/onboarding/useOnboarding';
 import { ApiError, apiFetch } from '@/lib/api';
 import { BIN_URL_REGEX } from '@/lib/qr';
 import { useTerminology } from '@/lib/terminology';
@@ -26,7 +23,6 @@ interface ScanDialogProps {
 export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
   const t = useTerminology();
   const navigate = useNavigate();
-  const { firstScanDone, markFirstScanDone } = useOnboarding();
   const [error, setError] = useState<string>('');
   const [scanning, setScanning] = useState(true);
   const [unknownId, setUnknownId] = useState<string | null>(null);
@@ -34,7 +30,6 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
   const [manualCode, setManualCode] = useState('');
   const [manualError, setManualError] = useState('');
   const [manualLoading, setManualLoading] = useState(false);
-  const [successBinId, setSuccessBinId] = useState<string | null>(null);
   const [scanErrorType, setScanErrorType] = useState<'deleted' | 'forbidden' | null>(null);
 
   // Reset all state when dialog opens
@@ -46,7 +41,6 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
       setManualError('');
       setManualLoading(false);
       setScanning(true);
-      setSuccessBinId(null);
       setScanErrorType(null);
     }
   }, [open]);
@@ -79,14 +73,8 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
         try {
           await apiFetch(`/api/bins/${binId}`);
           recordScan(binId);
-          if (!firstScanDone) {
-            markFirstScanDone();
-            onOpenChange(false);
-            setSuccessBinId(binId);
-          } else {
-            onOpenChange(false);
-            navigate(`/bin/${binId}`);
-          }
+          onOpenChange(false);
+          navigate(`/bin/${binId}`);
         } catch (err: unknown) {
           const status = err instanceof ApiError ? err.status : undefined;
           if (status === 410) {
@@ -102,7 +90,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
         setError(decodedText);
       }
     },
-    [navigate, firstScanDone, markFirstScanDone, onOpenChange],
+    [navigate, onOpenChange],
   );
 
   function handleRetry() {
@@ -275,11 +263,6 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
         }}
       />
 
-      {successBinId &&
-        createPortal(
-          <ScanSuccessOverlay onDismiss={() => navigate(`/bin/${successBinId}`)} />,
-          document.body,
-        )}
     </>
   );
 }

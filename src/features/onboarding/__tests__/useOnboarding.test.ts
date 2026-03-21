@@ -88,20 +88,6 @@ describe('useOnboarding', () => {
     expect(result.current.isOnboarding).toBe(false);
   });
 
-  it('markFirstScanDone updates firstScanDone', async () => {
-    const { result } = renderHook(() => useOnboarding(), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.firstScanDone).toBe(false);
-    });
-
-    act(() => {
-      result.current.markFirstScanDone();
-    });
-
-    expect(result.current.firstScanDone).toBe(true);
-  });
-
   it('advanceStep increments step', async () => {
     mockApiFetch.mockResolvedValue({
       onboarding_completed: false,
