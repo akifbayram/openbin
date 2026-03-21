@@ -29,6 +29,34 @@ Returns server configuration flags relevant to the auth UI. No authentication re
 
 ---
 
+### GET /api/auth/invite-preview
+
+Looks up a location by invite code without requiring authentication. You can use this to show a preview before the user registers or joins.
+
+**Query parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `code` | string | Yes | The invite code to look up |
+
+**Response (200)**
+
+```json
+{
+  "name": "My Workshop",
+  "memberCount": 5
+}
+```
+
+**Error responses**
+
+| Status | Code | Description |
+|---|---|---|
+| 404 | `NOT_FOUND` | Invalid invite code |
+| 422 | `VALIDATION_ERROR` | Missing or empty `code` parameter |
+
+---
+
 ### POST /api/auth/register
 
 Creates a new user account. Rate limited to 3 per hour. Returns 403 if registration is disabled via `REGISTRATION_MODE=closed`. When `REGISTRATION_MODE=invite`, the request must include a valid location invite code.

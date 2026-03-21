@@ -44,19 +44,4 @@ Tag colors are set **per location**, so different locations can use different co
 
 ### Setting a Tag Color
 
-1. Open the **Tags** page.
-2. Tap the color indicator next to a tag.
-3. Choose a color from the picker.
-4. The color is applied immediately and visible to all location members.
-
-To remove a custom color, clear the color assignment from the same picker. Tags without a custom color use the default appearance.
-
-## Access
-
-The Items and Tags pages are accessible from the sidebar navigation on desktop or the bottom navigation bar on mobile.
-
-## Related
-
-- [Bins](/guide/bins) — Items and tags live on individual bins
-- [Bulk Operations](/guide/bulk-operations) — Batch-edit tags across multiple bins
-- [Search & Filter](/guide/search-filter) — Filter the bin list by tags
+Tap the color indicator next to any tag on the Tags page to assign a color. Colors are visible to all location members. Clear the assignment to revert to the default appearance.

@@ -91,6 +91,7 @@ Imports bins and photos from a V1 or V2 export document. Supports `merge` (add t
 | `locationName` | string | No | |
 | `photos` | array | No | Photo objects |
 | `mode` | `"merge"` or `"replace"` | No | Default: `"merge"` |
+| `dryRun` | boolean | No | When `true`, returns a preview of what would be imported without creating anything. See [Dry-Run Preview](#dry-run-preview). |
 
 **Response (200)**
 
@@ -103,6 +104,42 @@ Imports bins and photos from a V1 or V2 export document. Supports `merge` (add t
 
 ---
 
+### POST /api/locations/`{id}`/import/csv
+
+Imports bins from a CSV file upload. Uses `multipart/form-data` with a `file` field. The CSV must have columns: `name`, `area`, `item`, `quantity`, `tags`. Multiple rows with the same bin name and area are grouped into a single bin.
+
+**Path parameters**: `id` (location UUID)
+
+**Form fields**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `file` | file | Yes | CSV file |
+| `mode` | `"merge"` or `"replace"` | No | Default: `"merge"` |
+| `dryRun` | `"true"` or `true` | No | When set, returns a preview without importing. See [Dry-Run Preview](#dry-run-preview). |
+
+**Response (200)**: `{ "imported": number }`
+
+---
+
+### POST /api/locations/`{id}`/import/zip
+
+Imports bins and photos from a ZIP backup file. The ZIP must contain a `manifest.json` with `"format": "openbin-zip"`, a `bins/` directory with per-bin JSON files, and an optional `photos/` directory. Uses `multipart/form-data` with a `file` field.
+
+**Path parameters**: `id` (location UUID)
+
+**Form fields**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `file` | file | Yes | ZIP file |
+| `mode` | `"merge"` or `"replace"` | No | Default: `"merge"` |
+| `dryRun` | `"true"` or `true` | No | When set, returns a preview without importing. See [Dry-Run Preview](#dry-run-preview). |
+
+**Response (200)**: `{ "imported": number, "photos": number }`
+
+---
+
 ### POST /api/import/legacy
 
 Imports data from the old V1 export format (freeform `contents` string instead of discrete items). Maps the V1 `homeName` field to the location name context. 50MB body size limit. The target location is the authenticated user's active location.
@@ -110,3 +147,35 @@ Imports data from the old V1 export format (freeform `contents` string instead o
 **Request body**: Same `ImportRequest` schema as above.
 
 **Response (200)**: `{ "imported": number, "photos": number }`
+
+---
+
+## Dry-Run Preview {#dry-run-preview}
+
+All three import endpoints (JSON, CSV, and ZIP) support a dry-run mode. When you set `dryRun` to `true`, the server validates the input and returns a summary of what would happen without actually creating any bins or photos.
+
+**Dry-run response (200)**
+
+```json
+{
+  "preview": true,
+  "toCreate": [
+    { "name": "Screws", "itemCount": 3, "tags": ["hardware"] }
+  ],
+  "toSkip": [
+    { "name": "Bolts", "reason": "already exists" }
+  ],
+  "totalBins": 2,
+  "totalItems": 5
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `preview` | `true` | Always `true` in a dry-run response |
+| `toCreate` | array | Bins that would be created, with name, item count, and tags |
+| `toSkip` | array | Bins that would be skipped (e.g. duplicates in merge mode), with the reason |
+| `totalBins` | number | Total number of bins in the import payload |
+| `totalItems` | number | Total number of items across all bins |
+
+In `merge` mode, bins whose IDs already exist in the database are skipped. In `replace` mode, all bins are treated as new creates.

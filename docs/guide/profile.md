@@ -21,14 +21,6 @@ Upload a profile picture to personalize your account.
 
 Your avatar appears next to your name in activity logs, member lists, and the navigation bar.
 
-## Display Name
-
-Your display name is what other location members see. Change it at any time — the update is reflected everywhere immediately.
-
-## Email
-
-Optionally add or update your email address. Email is not required for account functionality but may be used for future features like notifications or account recovery.
-
 ## Password
 
 Change your password from the profile page.
@@ -42,10 +34,6 @@ Password requirements:
 - At least one uppercase letter
 - At least one lowercase letter
 - At least one digit
-
-## Account Info
-
-The profile page shows your **username** and **account creation date**. Your username is set at registration and cannot be changed.
 
 ## Delete Account
 
@@ -64,7 +52,3 @@ What happens when you delete your account:
 - **Locations where you are the sole admin** are deleted along with all their bins, photos, and member data.
 - **Shared locations** (where other admins exist) are preserved — only your membership is removed.
 - Your profile, avatar, and personal settings are permanently erased.
-
-## Related
-
-- [Keyboard Shortcuts](/guide/shortcuts) — Navigate the app with keyboard shortcuts

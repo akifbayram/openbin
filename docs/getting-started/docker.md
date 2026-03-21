@@ -39,20 +39,7 @@ To back up manually, copy the contents of the Docker volume or enable the built-
 
 ## Changing the Port
 
-By default, OpenBin is accessible on port `1453`. To use a different port, set `HOST_PORT` in a `.env` file in the project root:
-
-```bash
-# .env
-HOST_PORT=8080
-```
-
-Then restart the container:
-
-```bash
-docker compose up -d
-```
-
-OpenBin will now be available at `http://localhost:8080`.
+Set `HOST_PORT` in your `.env` file (e.g. `HOST_PORT=8080`) and restart the container. See [Configuration](./configuration) for all options.
 
 ## Updating
 
@@ -64,32 +51,6 @@ docker compose up -d
 ```
 
 The database and all data on the volume are preserved.
-
-## Viewing Logs
-
-```bash
-docker compose logs -f openbin
-```
-
-Press `Ctrl+C` to stop following logs.
-
-## Stopping
-
-```bash
-docker compose down
-```
-
-This stops and removes the container but leaves the `api_data` volume intact. Your data is not lost.
-
-To stop and remove all data (destructive):
-
-```bash
-docker compose down -v
-```
-
-::: danger Data loss warning
-`docker compose down -v` permanently deletes the `api_data` volume and all your bins, photos, and user data. There is no recovery after this operation.
-:::
 
 ## Backup
 

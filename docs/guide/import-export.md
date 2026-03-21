@@ -68,21 +68,18 @@ The older export format used freeform `contents` strings instead of discrete ite
 
 Import a ZIP file exported from OpenBin. The importer reads the JSON inside the ZIP and re-attaches the bundled photos.
 
+### Import Preview
+
+Before any import runs, OpenBin shows a preview of what will happen. The preview lists how many bins, items, and photos will be created, and flags any bins that will be skipped (for example, duplicates that already exist in the location). You can review this summary and confirm or cancel before the actual import executes.
+
+The preview is generated for all three import formats (JSON, CSV, and ZIP).
+
 ### Import Behavior
 
 - Import **creates new bins** — it does not overwrite or merge with existing bins.
 - Bins are imported into the **currently active location**.
 - Short codes are re-generated for all imported bins.
 - If a photo fails to import (e.g. unsupported format or size limit exceeded), the bin is still imported without that photo and the failure is reported in the results summary.
-
-### Import Results
-
-After import completes, OpenBin shows a summary:
-
-- Bins imported successfully
-- Bins skipped (if any)
-- Photos imported
-- Photos skipped
 
 ### File Size Limit
 
@@ -91,9 +88,3 @@ The maximum import file size is **50 MB**. For larger collections, split the exp
 ::: tip
 Always export a backup before importing. Imports cannot be bulk-undone — you would need to manually delete the imported bins or use bulk delete.
 :::
-
-## Related
-
-- [Bins](/guide/bins) — The bins that are exported and imported
-- [Locations & Areas](/guide/locations) — Exports are scoped to the active location
-- [API: Export](/api/export) — Export REST API reference

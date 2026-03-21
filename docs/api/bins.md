@@ -44,7 +44,7 @@ Lists non-deleted bins for a location. Supports search, filtering, sorting, and 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `location_id` | UUID | Yes | Location to query |
-| `q` | string | No | Full-text search across name, items, notes, tags, ID, and area name |
+| `q` | string | No | Full-text search across name, items, notes, tags, ID, and area name. Uses fuzzy matching (Levenshtein distance), so minor typos still return relevant results. |
 | `tag` | string | No | Filter by a single exact tag |
 | `tags` | string | No | Comma-separated tag names; combined with `tag_mode` |
 | `tag_mode` | `"any"` or `"all"` | No | Whether bins must match any or all of the specified tags. Default: `"any"` |
@@ -129,6 +129,14 @@ Fetches a single bin by ID.
 **Path parameters**: `id` (bin ID / short code)
 
 **Response (200)**: `Bin` object.
+
+**Error responses**
+
+| Status | Code | Description |
+|---|---|---|
+| 403 | `FORBIDDEN` | You are not a member of the bin's location |
+| 404 | `NOT_FOUND` | Bin does not exist |
+| 410 | `GONE` | Bin has been soft-deleted (in trash) |
 
 ---
 

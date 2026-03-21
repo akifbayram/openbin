@@ -79,6 +79,7 @@ All errors use a consistent envelope with a machine-readable code and a human-re
 | `VALIDATION_ERROR` | 422 | Request body or parameters failed validation |
 | `NOT_FOUND` | 404 | The requested resource does not exist |
 | `FORBIDDEN` | 401 / 403 | Authentication required or insufficient permissions |
+| `GONE` | 410 | Resource has been deleted |
 | `CONFLICT` | 409 | Resource already exists (e.g. duplicate username) |
 | `RATE_LIMITED` | 429 | Too many requests — back off and retry |
 | `INTERNAL_ERROR` | 500 | Unexpected server error |

@@ -11,10 +11,6 @@ next:
 
 Bulk Add is a 3-step wizard for creating multiple bins at once from photos. Instead of creating bins one at a time, you can photograph several containers, let AI suggest names and contents for each, and create them all in a single batch.
 
-## Access
-
-From the bins list page, tap the **+** create button and select **Bulk Add** from the menu.
-
 ## Step 1 — Upload Photos
 
 Select up to 20 photos at once. Each photo becomes a candidate bin — one photo per bin.
@@ -52,9 +48,3 @@ Each bin is created with its suggested (or manually edited) name, items, tags, a
 
 - An AI provider must be configured for automatic photo analysis. See [AI Features](/guide/ai) for setup instructions.
 - Photos follow the same format and size limits as regular bin photos. See [Photos](/guide/photos) for details.
-
-## Related
-
-- [AI Features](/guide/ai) — Configure the AI provider that powers photo analysis
-- [Photos](/guide/photos) — Photo formats, sizes, and management
-- [Bins](/guide/bins) — The bins created by Bulk Add

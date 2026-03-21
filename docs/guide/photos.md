@@ -24,20 +24,11 @@ Bins can have up to 5 photos attached. Photos are stored on the server and serve
 
 **Limit**: Up to 5 photos per bin.
 
-## Photo Gallery
+## In-App Camera
 
-Uploaded photos appear in a collapsible gallery on the bin detail page. Tap any photo to view it full size. The gallery shows thumbnails for fast loading.
+You can take photos directly within OpenBin using the built-in camera capture page. This opens a full-screen camera view where you can take consecutive photos without switching to your device's camera app.
 
-## Thumbnails
-
-Thumbnails are generated automatically the first time a photo is viewed. They are:
-
-- 600 px wide
-- WebP format
-- 70% quality
-- Cached with immutable headers after generation
-
-Subsequent loads of the same photo use the cached thumbnail, making the gallery fast even for large images.
+If you open the camera from a bin's detail page, each photo is uploaded to that bin automatically as you capture it. This is especially useful on mobile when cataloging many bins in a row.
 
 ## Using Photos with AI
 
@@ -52,30 +43,12 @@ See [AI Features](/guide/ai#photo-analysis) for details on setting up an AI prov
 
 ## Photo as Card Background
 
-To use a photo as the bin card's visual background:
-
-1. Open the bin → **Edit**.
-2. In the **Appearance** section, set **Card Style** to `photo`.
-3. If the bin has multiple photos, select which one to use as the cover photo.
-4. Save.
-
-The photo appears as a full-bleed background on the bin card in the list and on the detail page.
+Set a bin's **Card Style** to `photo` in the Appearance section to use an attached photo as the card background.
 
 ## Deleting Photos
 
-Tap the delete icon on any photo in the gallery to remove it.
-
-- **Members** can delete photos they uploaded.
-- **Admins** can delete any photo in the location.
-
-Deleting a photo that is set as the `photo` card style cover will revert the card style to `default`.
+Members can delete their own photos; admins can delete any photo. Deleting a cover photo reverts the card style to `default`.
 
 ::: warning
 Photo deletion is permanent. There is no trash or recovery for individual photos.
 :::
-
-## Related
-
-- [Bins](/guide/bins) — Photos are attached to bins
-- [AI Features](/guide/ai) — Analyze photos with AI to auto-populate bin details
-- [API: Photos](/api/photos) — Photos REST API reference

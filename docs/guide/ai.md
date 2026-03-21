@@ -30,14 +30,7 @@ Each provider requires its own API key. Sign up and create one from their develo
 
 ## Per-User Setup
 
-1. Go to **Settings → AI**.
-2. Select your provider.
-3. Enter your API key (see [Getting an API Key](#getting-an-api-key) above).
-4. Select or type the model name (see [Supported Providers](#supported-providers) for suggestions).
-5. For OpenAI-compatible endpoints, enter the endpoint URL.
-6. Click **Save**.
-
-AI features activate immediately after saving.
+Configure your provider, API key, and model in **Settings → AI**. AI features activate immediately after saving.
 
 ## Server-Wide Setup (Admin)
 
@@ -59,11 +52,9 @@ Set `AI_ENCRYPTION_KEY` to an AES-256-GCM key to encrypt stored API keys at rest
 
 ## Photo Analysis
 
-1. Open a bin → **Photos** tab.
-2. Upload a photo of the bin's contents.
-3. Tap **Analyze with AI**.
-4. Review the AI's suggestions: bin name, items list (with quantities when applicable), tags, and notes.
-5. Apply any or all suggestions — each field can be accepted or dismissed independently.
+After uploading a photo to a bin, tap **Analyze with AI** to get suggestions for bin name, items (with quantities), tags, and notes. Each field can be accepted or dismissed independently.
+
+If the first pass missed items or suggested incorrect names, you can re-analyze to get improved results. Tap the sparkle icon on the photo preview and click **Reanalyze** (or type a specific correction). The reanalysis sends both the photos and the previous suggestions back to the AI, so it can refine its output based on what it already identified. Changed fields are highlighted so you can see exactly what was updated.
 
 ## Natural Language Commands
 
@@ -129,10 +120,3 @@ The advanced AI settings section exposes fine-tuning parameters:
 | Request timeout | Seconds to wait before aborting an AI request. |
 
 These settings apply per provider configuration.
-
-## Related
-
-- [Bulk Add](/guide/bulk-add) — Create multiple bins from photos using AI
-- [Bulk Operations](/guide/bulk-operations) — Multi-select bins for batch editing
-- [Photos](/guide/photos) — Attach and manage bin photos
-- [Configuration](/getting-started/configuration) — Server-wide AI environment variables

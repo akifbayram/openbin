@@ -23,25 +23,7 @@ There are two ways to run OpenBin:
 
 ## First Steps
 
-Once OpenBin is running at `http://localhost:1453`, follow these steps to get organized:
-
-1. **Register an account** — Click "Register" on the login page and create your user account. The first user to register can create and manage locations.
-
-2. **Create a location** — A location represents a physical place (home, workshop, storage unit). Go to the Locations screen and create your first one. Share the invite code with others who need access.
-
-3. **Add bins** — Inside your location, create bins for your physical containers. Give each bin a name, add the items it contains, and assign tags or an area to help with search later.
-
-4. **Print QR labels** — Navigate to the Print page, select the bins you want labels for, choose a label format, and print. Stick the labels on your physical bins.
-
-5. **Scan to find** — Use the built-in QR scanner or type a short code to instantly see what's in any bin.
-
-::: tip AI features
-If you have an API key for OpenAI, Anthropic, or Gemini, configure it in your profile settings. You can then snap a photo of a bin's contents and have AI fill in the name, items, tags, and notes automatically.
-:::
-
-::: warning Multi-user access
-Only admins can invite new members to a location. Share your location's invite code from the Location Settings page.
-:::
+Once OpenBin is running, register an account, create a location, add bins, and [print QR labels](/guide/print-labels). See the [User Guide](/guide/) for a full walkthrough.
 
 ## Next Steps
 

@@ -27,7 +27,9 @@ Lists all areas in a location, including an `unassigned_count` of bins with no a
       "id": "uuid",
       "location_id": "uuid",
       "name": "Garage",
+      "parent_id": null,
       "bin_count": 12,
+      "descendant_bin_count": 18,
       "created_by": "uuid",
       "created_at": "...",
       "updated_at": "..."
@@ -51,6 +53,7 @@ Creates a new area within a location.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | Yes | Max 255 characters |
+| `parent_id` | string \| null | No | UUID of an existing area in the same location to nest under. Omit or pass `null` for a top-level area. |
 
 **Response (201)**: The created `Area` object.
 
@@ -78,4 +81,14 @@ Deletes an area. Bins in the area become unassigned (`area_id = NULL`); they are
 
 **Path parameters**: `locationId` (UUID), `areaId` (UUID)
 
-**Response (200)**: `{ "message": "Area deleted" }`
+**Response (200)**
+
+```json
+{
+  "message": "Area deleted",
+  "descendant_area_count": 2,
+  "descendant_bin_count": 5
+}
+```
+
+`descendant_area_count` and `descendant_bin_count` indicate how many child areas and bins were affected by the deletion.

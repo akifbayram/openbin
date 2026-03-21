@@ -27,22 +27,22 @@ features:
     linkText: Learn more
   - icon: 🤖
     title: AI Photo Analysis
-    details: Snap a photo of a bin and AI names it, lists every item with quantities, suggests tags, and adds notes.
+    details: Capture a photo in-app or from your gallery and AI names the bin, lists every item with quantities, suggests tags, and adds notes. Re-analyze anytime with full context.
     link: /guide/ai
     linkText: Learn more
   - icon: 🖨️
     title: Print Labels
-    details: Generate and print QR label sheets with customizable formats, sizes, and styles.
+    details: Generate and print QR label sheets or name cards with customizable formats, sizes, and styles.
     link: /guide/print-labels
     linkText: Learn more
   - icon: 👥
     title: Multi-user
-    details: Share locations with invite codes. Role-based access with per-location areas.
+    details: Share locations with invite codes. Role-based access with nested, hierarchical areas.
     link: /guide/locations
     linkText: Learn more
   - icon: 🔍
     title: Search & Filter
-    details: Search by name, items, tags, areas, or colors. Save filter presets for quick access.
+    details: Search by name, items, tags, or areas. Save filter presets for quick access.
     link: /guide/search-filter
     linkText: Learn more
   - icon: 🔌

@@ -103,6 +103,48 @@ Directly uploads images for AI analysis without storing them first. Used during 
 
 ---
 
+### POST /api/ai/reanalyze
+
+Re-analyzes stored photos using a previous analysis result as context, allowing the AI to refine its suggestions. Returns the same `AiSuggestions` shape as `/ai/analyze`. Maximum 5 photos per request. Rate limited to 30 per hour.
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `photoIds` | UUID[] | Yes | Photo IDs to analyze (max 5) |
+| `previousResult` | object | Yes | Previous AI suggestions to refine (see below) |
+
+The `previousResult` object must include:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Previously suggested bin name |
+| `items` | array | Yes | Previously suggested items, each with `name` (string) and optional `quantity` (number) |
+
+**Response (200)**
+
+```json
+{
+  "name": "Power Tools",
+  "items": [
+    { "name": "Cordless drill", "quantity": null },
+    { "name": "Drill bits", "quantity": 12 },
+    { "name": "Orbital sander", "quantity": null }
+  ],
+  "tags": ["tools", "electric"],
+  "notes": "Stored in the original cases. Sander previously misidentified."
+}
+```
+
+**Errors**
+
+| Status | Error | Cause |
+|---|---|---|
+| 422 | `VALIDATION_ERROR` | `photoIds` is empty or `previousResult` is missing required fields |
+| 404 | `NOT_FOUND` | Photo not found or access denied |
+
+---
+
 ### POST /api/ai/test
 
 Validates that AI credentials work by making a test call to the provider.

@@ -10,7 +10,7 @@ OpenBin includes a standalone MCP (Model Context Protocol) server that connects 
 
 ## What is MCP?
 
-MCP (Model Context Protocol) is an open standard for connecting AI assistants to external tools and data sources. OpenBin's MCP server exposes 43 tools that let Claude read, search, create, and manage your entire inventory. You ask questions or give instructions in plain language, and Claude calls the appropriate OpenBin API endpoints behind the scenes.
+[MCP (Model Context Protocol)](https://modelcontextprotocol.io/) is an open standard for connecting AI assistants to external tools. OpenBin's MCP server exposes 43 tools for managing your inventory through natural conversation.
 
 ## Prerequisites
 
@@ -260,32 +260,6 @@ npm start
 
 The `build` script runs `tsc` to compile TypeScript to `dist/`. The `start` script runs the compiled output with Node.js.
 
-### Project structure
-
-```
-server/mcp/
-├── src/
-│   ├── index.ts           # Server entry point and tool registration
-│   ├── api-client.ts      # HTTP client for OpenBin API
-│   └── tools/
-│       ├── locations.ts   # Location and member management (9 tools)
-│       ├── areas.ts       # Area management (4 tools)
-│       ├── bins.ts        # Bin CRUD, trash, pins, tags, move (14 tools)
-│       ├── items.ts       # Item search, add, remove, rename, reorder (5 tools)
-│       ├── tags.ts        # Tag listing and color management (4 tools)
-│       ├── scan-history.ts # QR scan history (3 tools)
-│       ├── export.ts      # JSON and CSV export (2 tools)
-│       ├── activity.ts    # Activity log (1 tool)
-│       └── batch.ts       # Batch operations (1 tool)
-├── package.json
-├── tsconfig.json
-└── dist/                  # Compiled output (after build)
-```
-
-### How it works
-
-The MCP server uses the `@modelcontextprotocol/sdk` to expose tools over stdio transport. Each tool category is registered by a `register*Tools()` function that defines tool names, Zod parameter schemas, and handler functions. The `ApiClient` class makes authenticated HTTP requests to the OpenBin REST API using the configured API key (sent as a `Bearer` token). All tool handlers are wrapped with `withErrorHandling()`, which catches API errors and returns them as structured error messages to the AI client.
-
 ## Troubleshooting
 
 ### "OPENBIN_API_KEY environment variable is required"
@@ -314,9 +288,3 @@ Your API key may be revoked or invalid. Go to **Settings > API Keys** in OpenBin
 ### "No locations found" when you have data
 
 The API key is tied to the user who created it. Make sure you are querying locations that this user belongs to. If you just created a fresh API key for a new account, you may need to create or join a location first.
-
-## Related
-
-- [API Keys](/guide/api-keys) — Create the API keys needed for the MCP server
-- [AI Features](/guide/ai) — OpenBin's built-in AI features
-- [API Overview](/api/) — Full REST API documentation

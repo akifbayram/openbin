@@ -8,13 +8,13 @@ Self-hosted inventory system for organizing physical storage bins with optional 
 
 ## Highlights
 
-- **AI-powered cataloging** — Point your phone at a bin and AI fills in the name, items with quantities, and tags. Bring your own API key.
+- **AI-powered cataloging** — Capture photos in-app or from your gallery, and AI creates a catalog of the items in each bin. Bring your own API key.
 - **Natural language commands** — "Add batteries to the tools bin" or "move everything to the garage"
 - **AI reorganization** — Let AI suggest how to restructure an entire location's bins, areas, and tags, then apply changes in bulk
-- **Print & scan QR labels** — Generate customizable label sheets, stick them on bins, scan with your phone to see contents
-- **Multi-user locations** — Invite others with a code, assign roles (admin/member/viewer), split bins into areas, track changes in the activity log
-- **MCP server included** — Connect Claude and other AI assistants directly to your inventory via Model Context Protocol
-- **Export everything** — Full JSON/CSV/ZIP export with photos, import from backup anytime
+- **Print & scan QR labels** — Generate customizable QR label sheets or name cards, stick them on bins, scan with your phone to see contents
+- **Multi-user locations** — Invite others with a code, assign roles (admin/member/viewer), organize bins into nested areas, track changes in the activity log
+- **MCP server included** — Connect AI assistants directly to your inventory via Model Context Protocol
+- **Export everything** — Full JSON/CSV/ZIP export with photos, import with preview
 
 ## Quick Start
 
@@ -79,6 +79,7 @@ All settings are optional. Set environment variables or create a `.env` file to 
 | `BACKUP_ENABLED` | Enable automatic database backups | `false` |
 | `BACKUP_INTERVAL` | Backup schedule (hourly/daily/weekly/cron) | `daily` |
 | `BACKUP_RETENTION` | Number of backup files to keep | `7` |
+| `BACKUP_PATH` | Directory for backup files | `./data/backups` |
 | `BACKUP_WEBHOOK_URL` | Webhook URL for backup notifications | — |
 | **Rate Limiting** | | |
 | `AI_RATE_LIMIT` | Max AI requests per hour per user | `30` |
@@ -88,15 +89,6 @@ All settings are optional. Set environment variables or create a `.env` file to 
 | `DEMO_MODE` | Auto-login visitors with pre-populated sample data; resets on restart | `false` |
 
 </details>
-
-## Updating
-
-```bash
-docker compose pull
-docker compose up -d
-```
-
-The database schema is auto-migrated on startup. Your data volume is preserved across updates.
 
 ## Architecture
 
@@ -117,8 +109,6 @@ The `/data` Docker volume contains everything persistent:
 ├── photos/           ← uploaded images
 └── backups/          ← scheduled DB snapshots (opt-in)
 ```
-
-Zero outbound network connections by default. If you configure an AI provider, the server calls that provider's API on demand.
 
 ## API Documentation
 

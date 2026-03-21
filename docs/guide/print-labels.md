@@ -11,19 +11,9 @@ next:
 
 OpenBin can generate QR label sheets for any selection of bins, ready to print on standard paper or export as a PDF.
 
-## Navigating to Print
-
-Access the print page from **Settings → Print** or from the bin list's action menu. The URL accepts a `?ids=` query parameter to pre-select specific bins — useful for bookmarks or linking directly from another page.
-
 ## Selecting Bins
 
-The left panel shows your bins grouped by area. Use the checkboxes to select which bins to include on the sheet.
-
-- **Select All** — selects every visible bin.
-- **Select None** — clears the selection.
-- **Select by Area** — expand an area to select or deselect all bins within it.
-
-The preview panel on the right updates as you change the selection.
+The left panel shows bins grouped by area with checkboxes. Select individual bins, all bins, or all bins within an area. The preview updates live.
 
 ## Label Modes
 
@@ -44,6 +34,26 @@ In addition to label sheets, you can print a text-based item list:
 4. Click **Print** or **Download PDF**.
 
 Item list mode is useful for inventory checklists, packing lists, or auditing what's in each bin without QR codes.
+
+## Name Cards Mode
+
+Name cards print a grid of bin names without QR codes. They work well for shelf labels, drawer fronts, or anywhere you need a visible name tag rather than a scannable code.
+
+1. Switch the **Print Mode** toggle to **Names**.
+2. Select the bins to include.
+3. Configure the options described below.
+4. Click **Print** or **Download PDF**.
+
+The **Name Options** card controls what each card displays:
+
+| Option | Description |
+|---|---|
+| Bin Icon | Show or hide the bin's icon next to its name. |
+| Color Background | Fill each card with the bin's assigned color. When off, cards use a neutral background. |
+| Font Sizing | **Auto-fit** scales each bin's text independently to fill its card. **Uniform** uses the same font size across all cards. |
+| Font Size | Visible when sizing is set to Uniform. Choose from S, Default, L, or XL. |
+
+Name cards share the same label format and page layout settings as the Labels mode, so you can use any of the built-in or custom label sizes.
 
 ## Orientation
 
@@ -85,20 +95,6 @@ Once you have a format you're happy with, save it as a named preset:
 
 Saved presets appear in the format selector for quick reuse across sessions. Presets are stored in your browser's local storage.
 
-## PDF Export
-
-Click **Download PDF** to generate a PDF file containing all selected labels at the configured size and format. The PDF can be sent to a print shop or opened in any PDF viewer.
-
-## Browser Print
-
-Click **Print** to open the browser's native print dialog. The print stylesheet hides the UI controls and renders only the label sheet.
-
 ::: tip
 For best results with browser print, set margins to "None" in the print dialog and match the paper size to your selected format.
 :::
-
-## Related
-
-- [Bins](/guide/bins) — Create and manage the bins you're printing labels for
-- [QR Scanning](/guide/qr-scanning) — Scan the labels after printing
-- [API: Print Settings](/api/print-settings) — Print Settings REST API reference

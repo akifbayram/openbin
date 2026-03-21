@@ -65,17 +65,6 @@ const data = await res.json();
 
 Revoked keys stop working immediately. Revocation cannot be undone — if you need access again, create a new key.
 
-## Viewing Active Keys
-
-The API Keys settings page lists all your active keys with:
-
-- Key name
-- Key prefix (first few characters — for identification)
-- Creation date
-- Last used date (or "Never" if unused)
-
-The full key value is never shown again after creation.
-
 ## Key vs. JWT Token
 
 | | JWT Token | API Key |
@@ -93,9 +82,3 @@ The full key value is never shown again after creation.
 - Revoke compromised keys immediately.
 - API keys are long-lived by design — rotate them periodically for sensitive automations.
 :::
-
-## Related
-
-- [API Overview](/api/) — Full REST API documentation
-- [MCP Server](/guide/mcp-server) — Use API keys with the MCP server for AI assistants
-- [API: API Keys](/api/api-keys) — API Keys REST API reference

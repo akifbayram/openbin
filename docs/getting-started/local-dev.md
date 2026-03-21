@@ -121,16 +121,3 @@ npx biome check --write src/
 The `biome.json` in the project root contains all lint and format rules. Do not add ESLint or Prettier configuration files.
 :::
 
-## Project Structure
-
-```
-openbin/
-├── src/              # React frontend (TypeScript)
-│   ├── features/     # Feature modules (bins, locations, print, etc.)
-│   ├── components/   # Shared UI components
-│   └── lib/          # Utilities (api, auth, eventBus, etc.)
-├── server/
-│   └── src/          # Express API (TypeScript)
-├── docs/             # This documentation site (VitePress)
-└── docker-compose.yml
-```

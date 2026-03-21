@@ -69,11 +69,3 @@ Move all selected bins to Trash. This is a soft delete — bins can be restored 
 Bulk delete moves all selected bins to Trash at once. Double-check your selection before confirming. Bins with private visibility set by other users cannot be bulk-deleted unless you are an admin.
 :::
 
-## Leaving Multi-Select Mode
-
-Tap **Cancel** in the bulk action bar, or tap an empty area of the screen (mobile), to exit multi-select mode without performing any action.
-
-## Related
-
-- [Bins](/guide/bins) — Create and manage individual bins
-- [Items & Tags](/guide/items-tags) — Browse all items and tags across your location

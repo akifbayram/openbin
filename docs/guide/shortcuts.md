@@ -43,11 +43,3 @@ Press the keys in sequence — press and release **G**, then press the second ke
 | `?` | Show keyboard shortcuts help |
 | `[` | Toggle sidebar (desktop only) |
 
-## Viewing the Shortcut Reference
-
-Press **?** from any non-input context to open the full keyboard shortcuts help overlay. This is useful as a quick reference until you have the shortcuts memorized.
-
-## Related
-
-- [Dashboard](/guide/dashboard) — The home page you navigate to with `G` then `H`
-- [Search & Filter](/guide/search-filter) — Jump to search with `/`
