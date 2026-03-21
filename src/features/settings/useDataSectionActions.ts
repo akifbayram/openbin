@@ -10,6 +10,7 @@ import {
   exportCsv,
   exportZip,
   ImportError,
+  type ImportResult,
   importCSV,
   importData,
   importZip,
@@ -216,6 +217,16 @@ export function useDataSectionActions() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
+  function buildImportToast(result: ImportResult, isReplace: boolean): string {
+    const parts: string[] = [];
+    parts.push(`${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}`);
+    if (result.trashedBinsImported) parts.push(`${result.trashedBinsImported} trashed`);
+    if (result.photosImported) parts.push(`${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}`);
+    const main = parts.join(', ');
+    const skipped = !isReplace && result.binsSkipped ? ` (${result.binsSkipped} skipped)` : '';
+    return isReplace ? `Replaced all data: ${main}` : `Imported ${main}${skipped}`;
+  }
+
   async function handleConfirmImport() {
     if (!activeLocationId) return;
 
@@ -223,15 +234,7 @@ export function useDataSectionActions() {
       setImporting(true);
       try {
         const result = await importZip(activeLocationId, zipPending.file, importMode);
-        if (importMode === 'replace') {
-          showToast({
-            message: `Replaced all data: ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}`,
-          });
-        } else {
-          showToast({
-            message: `Imported ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}${result.binsSkipped ? ` (${result.binsSkipped} skipped)` : ''}`,
-          });
-        }
+        showToast({ message: buildImportToast(result, importMode === 'replace') });
         setZipPending(null);
         setImportDialogOpen(false);
       } catch (err) {
@@ -244,15 +247,7 @@ export function useDataSectionActions() {
       setImporting(true);
       try {
         const result = await importData(activeLocationId, pendingData, importMode);
-        if (importMode === 'replace') {
-          showToast({
-            message: `Replaced all data: ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}`,
-          });
-        } else {
-          showToast({
-            message: `Imported ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''}${result.photosImported ? `, ${result.photosImported} photo${result.photosImported !== 1 ? 's' : ''}` : ''}${result.binsSkipped ? ` (${result.binsSkipped} skipped)` : ''}`,
-          });
-        }
+        showToast({ message: buildImportToast(result, importMode === 'replace') });
         setPendingData(null);
         setImportDialogOpen(false);
       } catch (err) {

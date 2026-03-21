@@ -25,6 +25,8 @@ export interface ExportBin {
   visibility?: 'location' | 'private';
   customFields?: Record<string, string>;
   shortCode?: string;
+  createdBy?: string;
+  deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   photos: ExportPhoto[];
@@ -35,6 +37,8 @@ export interface ExportPhoto {
   filename: string;
   mimeType: string;
   data: string; // base64
+  createdBy?: string;
+  createdAt?: string;
 }
 
 export interface ExportTagColor {
@@ -47,13 +51,55 @@ export interface ExportCustomFieldDef {
   position: number;
 }
 
+export interface ExportLocationSettings {
+  activityRetentionDays: number;
+  trashRetentionDays: number;
+  appName: string;
+  termBin: string;
+  termLocation: string;
+  termArea: string;
+  defaultJoinRole: 'member' | 'viewer';
+}
+
+export interface ExportArea {
+  path: string;
+  createdBy?: string;
+}
+
+export interface ExportPinnedBin {
+  userId: string;
+  binId: string;
+  position: number;
+}
+
+export interface ExportSavedView {
+  userId: string;
+  name: string;
+  searchQuery: string;
+  sort: string;
+  filters: string;
+}
+
+export interface ExportMember {
+  userId: string;
+  username: string;
+  role: 'admin' | 'member' | 'viewer';
+  joinedAt: string;
+}
+
 export interface ExportData {
   version: 2;
   exportedAt: string;
   locationName: string;
+  locationSettings?: ExportLocationSettings;
   bins: ExportBin[];
+  trashedBins?: ExportBin[];
+  areas?: ExportArea[];
   tagColors?: ExportTagColor[];
   customFieldDefinitions?: ExportCustomFieldDef[];
+  pinnedBins?: ExportPinnedBin[];
+  savedViews?: ExportSavedView[];
+  members?: ExportMember[];
 }
 
 /**
@@ -67,7 +113,7 @@ export async function fetchLocationBins(locationId: string) {
          FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
        b.notes, b.tags, b.icon, b.color, b.card_style, b.visibility,
        COALESCE((SELECT json_group_object(bcfv.field_id, bcfv.value) FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
-       b.created_at, b.updated_at
+       b.created_by, b.created_at, b.updated_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
      WHERE b.location_id = $1 AND b.deleted_at IS NULL
      ORDER BY b.updated_at DESC`,
@@ -95,7 +141,7 @@ export function extractItemsWithQuantity(items: unknown): Array<string | { name:
 /** Load photos for a bin and convert to base64. */
 export async function loadBinPhotosBase64(binId: string): Promise<ExportPhoto[]> {
   const photosResult = await query(
-    'SELECT id, filename, mime_type, storage_path FROM photos WHERE bin_id = $1',
+    'SELECT id, filename, mime_type, storage_path, created_by, created_at FROM photos WHERE bin_id = $1',
     [binId]
   );
 
@@ -111,6 +157,8 @@ export async function loadBinPhotosBase64(binId: string): Promise<ExportPhoto[]>
           filename: photo.filename,
           mimeType: photo.mime_type,
           data: data.toString('base64'),
+          createdBy: photo.created_by || undefined,
+          createdAt: photo.created_at || undefined,
         });
       }
     } catch {
@@ -123,7 +171,7 @@ export async function loadBinPhotosBase64(binId: string): Promise<ExportPhoto[]>
 /** Load photo metadata for a bin (no file data). */
 export async function loadBinPhotoMeta(binId: string) {
   const result = await query(
-    'SELECT id, filename, mime_type, storage_path FROM photos WHERE bin_id = $1',
+    'SELECT id, filename, mime_type, storage_path, created_by, created_at FROM photos WHERE bin_id = $1',
     [binId]
   );
   return result.rows;
@@ -169,28 +217,34 @@ export function resolveAreaSync(locationId: string, areaName: string, userId: st
   return lastId;
 }
 
+export interface AreaPathInfo {
+  path: string;
+  createdBy: string | null;
+}
+
 /**
  * Build a map of area ID → full path string (e.g. "Garage / Shelf 1") for a location.
+ * Also returns creator info for each leaf area.
  */
-export async function buildAreaPathMap(locationId: string): Promise<Map<string, string>> {
-  const result = await query<{ id: string; name: string; parent_id: string | null }>(
-    'SELECT id, name, parent_id FROM areas WHERE location_id = $1',
+export async function buildAreaPathMap(locationId: string): Promise<Map<string, AreaPathInfo>> {
+  const result = await query<{ id: string; name: string; parent_id: string | null; created_by: string | null }>(
+    'SELECT id, name, parent_id, created_by FROM areas WHERE location_id = $1',
     [locationId]
   );
 
-  const areaMap = new Map<string, { name: string; parent_id: string | null }>();
+  const areaMap = new Map<string, { name: string; parent_id: string | null; created_by: string | null }>();
   for (const row of result.rows) {
-    areaMap.set(row.id, { name: row.name, parent_id: row.parent_id });
+    areaMap.set(row.id, { name: row.name, parent_id: row.parent_id, created_by: row.created_by });
   }
 
-  const pathMap = new Map<string, string>();
+  const pathMap = new Map<string, AreaPathInfo>();
 
   function getPath(id: string): string {
-    if (pathMap.has(id)) return pathMap.get(id)!;
+    if (pathMap.has(id)) return pathMap.get(id)!.path;
     const area = areaMap.get(id);
     if (!area) return '';
     const p = area.parent_id ? `${getPath(area.parent_id)} / ${area.name}` : area.name;
-    pathMap.set(id, p);
+    pathMap.set(id, { path: p, createdBy: area.created_by });
     return p;
   }
 
@@ -208,7 +262,7 @@ export async function buildAreaPathMap(locationId: string): Promise<Map<string, 
 export function insertBinWithShortCode(
   _binId: string,
   locationId: string,
-  bin: { name: string; notes: string; tags: string[]; icon: string; color: string; cardStyle?: string; visibility?: 'location' | 'private'; customFields?: Record<string, string>; shortCode?: string; createdAt: string; updatedAt: string },
+  bin: { name: string; notes: string; tags: string[]; icon: string; color: string; cardStyle?: string; visibility?: 'location' | 'private'; customFields?: Record<string, string>; shortCode?: string; deletedAt?: string | null; createdAt: string; updatedAt: string },
   areaId: string | null,
   userId: string,
 ): string {
@@ -217,9 +271,9 @@ export function insertBinWithShortCode(
     const id = attempt === 0 && validCode ? validCode : generateShortCode(bin.name);
     try {
       querySync(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, visibility, created_by, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-        [id, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle || '', bin.visibility || 'location', userId, bin.createdAt, bin.updatedAt]
+        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, visibility, created_by, created_at, updated_at, deleted_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        [id, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle || '', bin.visibility || 'location', userId, bin.createdAt, bin.updatedAt, bin.deletedAt || null]
       );
       if (bin.customFields && Object.keys(bin.customFields).length > 0) {
         replaceCustomFieldValuesSync(id, bin.customFields, locationId);
@@ -352,6 +406,193 @@ export function mapCustomFieldsToIds(
   return mapped;
 }
 
+/**
+ * Fetch all soft-deleted bins for a location.
+ * Same shape as fetchLocationBins but with deleted_at included.
+ */
+export async function fetchTrashedBins(locationId: string) {
+  const result = await query(
+    `SELECT b.id, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
+       COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name, 'quantity', bi.quantity))
+         FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
+       b.notes, b.tags, b.icon, b.color, b.card_style, b.visibility,
+       COALESCE((SELECT json_group_object(bcfv.field_id, bcfv.value) FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
+       b.created_by, b.deleted_at, b.created_at, b.updated_at
+     FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+     WHERE b.location_id = $1 AND b.deleted_at IS NOT NULL
+     ORDER BY b.deleted_at DESC`,
+    [locationId]
+  );
+  return result.rows;
+}
+
+/** Fetch location settings for export. */
+export async function fetchLocationSettings(locationId: string): Promise<ExportLocationSettings | undefined> {
+  const result = await query<{
+    activity_retention_days: number;
+    trash_retention_days: number;
+    app_name: string;
+    term_bin: string;
+    term_location: string;
+    term_area: string;
+    default_join_role: 'member' | 'viewer';
+  }>(
+    `SELECT activity_retention_days, trash_retention_days, app_name,
+            term_bin, term_location, term_area, default_join_role
+     FROM locations WHERE id = $1`,
+    [locationId]
+  );
+  if (result.rows.length === 0) return undefined;
+  const r = result.rows[0];
+  return {
+    activityRetentionDays: r.activity_retention_days,
+    trashRetentionDays: r.trash_retention_days,
+    appName: r.app_name,
+    termBin: r.term_bin,
+    termLocation: r.term_location,
+    termArea: r.term_area,
+    defaultJoinRole: r.default_join_role,
+  };
+}
+
+/** Fetch pinned bins for all users in a location. */
+export async function fetchLocationPinnedBins(locationId: string): Promise<ExportPinnedBin[]> {
+  const result = await query<{ user_id: string; bin_id: string; position: number }>(
+    `SELECT pb.user_id, pb.bin_id, pb.position
+     FROM pinned_bins pb JOIN bins b ON b.id = pb.bin_id
+     WHERE b.location_id = $1 AND b.deleted_at IS NULL
+     ORDER BY pb.user_id, pb.position`,
+    [locationId]
+  );
+  return result.rows.map(r => ({ userId: r.user_id, binId: r.bin_id, position: r.position }));
+}
+
+/** Fetch saved views for all members of a location. */
+export async function fetchLocationSavedViews(locationId: string): Promise<ExportSavedView[]> {
+  const result = await query<{ user_id: string; name: string; search_query: string; sort: string; filters: string }>(
+    `SELECT sv.user_id, sv.name, sv.search_query, sv.sort, sv.filters
+     FROM saved_views sv JOIN location_members lm ON lm.user_id = sv.user_id AND lm.location_id = $1
+     ORDER BY sv.user_id, sv.name`,
+    [locationId]
+  );
+  return result.rows.map(r => ({
+    userId: r.user_id,
+    name: r.name,
+    searchQuery: r.search_query,
+    sort: r.sort,
+    filters: typeof r.filters === 'object' ? JSON.stringify(r.filters) : r.filters,
+  }));
+}
+
+/** Fetch location members with usernames for export. */
+export async function fetchLocationMembers(locationId: string): Promise<ExportMember[]> {
+  const result = await query<{ user_id: string; username: string; role: 'admin' | 'member' | 'viewer'; joined_at: string }>(
+    `SELECT lm.user_id, u.username, lm.role, lm.joined_at
+     FROM location_members lm JOIN users u ON u.id = lm.user_id
+     WHERE lm.location_id = $1
+     ORDER BY lm.joined_at`,
+    [locationId]
+  );
+  return result.rows.map(r => ({ userId: r.user_id, username: r.username, role: r.role, joinedAt: r.joined_at }));
+}
+
+/** Apply exported location settings. Synchronous (for transactions). */
+export function importLocationSettingsSync(locationId: string, settings: ExportLocationSettings): void {
+  const retDays = Math.max(7, Math.min(365, settings.activityRetentionDays || 90));
+  const trashDays = Math.max(7, Math.min(365, settings.trashRetentionDays || 30));
+  const joinRole = settings.defaultJoinRole === 'viewer' ? 'viewer' : 'member';
+  querySync(
+    `UPDATE locations SET
+       activity_retention_days = $1, trash_retention_days = $2,
+       app_name = $3, term_bin = $4, term_location = $5, term_area = $6,
+       default_join_role = $7, updated_at = datetime('now')
+     WHERE id = $8`,
+    [retDays, trashDays, settings.appName || 'OpenBin', settings.termBin || '', settings.termLocation || '', settings.termArea || '', joinRole, locationId]
+  );
+}
+
+/** Import standalone area paths. Synchronous (for transactions). */
+export function importAreasSync(locationId: string, areas: ExportArea[], userId: string): number {
+  let count = 0;
+  for (const area of areas) {
+    if (!area.path) continue;
+    const creator = resolveCreatedBySync(area.createdBy, userId);
+    resolveAreaSync(locationId, area.path, creator);
+    count++;
+  }
+  return count;
+}
+
+/** Resolve a createdBy user ID, falling back to the importing user if not found. Synchronous. */
+export function resolveCreatedBySync(createdBy: string | undefined, fallbackUserId: string): string {
+  if (!createdBy) return fallbackUserId;
+  const result = querySync<{ id: string }>('SELECT id FROM users WHERE id = $1', [createdBy]);
+  return result.rows.length > 0 ? createdBy : fallbackUserId;
+}
+
+/** Import pinned bins. Synchronous (for transactions). */
+export function importPinnedBinsSync(pins: ExportPinnedBin[], oldToNewBinId: Map<string, string>): number {
+  let count = 0;
+  for (const pin of pins) {
+    const newBinId = oldToNewBinId.get(pin.binId);
+    if (!newBinId) continue;
+    const userExists = querySync<{ id: string }>('SELECT id FROM users WHERE id = $1', [pin.userId]);
+    if (userExists.rows.length === 0) continue;
+    try {
+      querySync(
+        'INSERT OR IGNORE INTO pinned_bins (user_id, bin_id, position, created_at) VALUES ($1, $2, $3, datetime(\'now\'))',
+        [pin.userId, newBinId, pin.position]
+      );
+      count++;
+    } catch {
+      // Skip on constraint violations
+    }
+  }
+  return count;
+}
+
+/** Import saved views for existing users. Synchronous (for transactions). */
+export function importSavedViewsSync(views: ExportSavedView[]): number {
+  let count = 0;
+  for (const view of views) {
+    if (!view.name) continue;
+    const userExists = querySync<{ id: string }>('SELECT id FROM users WHERE id = $1', [view.userId]);
+    if (userExists.rows.length === 0) continue;
+    const dup = querySync<{ id: string }>(
+      'SELECT id FROM saved_views WHERE user_id = $1 AND name = $2',
+      [view.userId, view.name]
+    );
+    if (dup.rows.length > 0) continue;
+    querySync(
+      'INSERT INTO saved_views (id, user_id, name, search_query, sort, filters) VALUES ($1, $2, $3, $4, $5, $6)',
+      [generateUuid(), view.userId, view.name, view.searchQuery || '', view.sort || 'updated', view.filters || '{}']
+    );
+    count++;
+  }
+  return count;
+}
+
+/** Import location members for existing users. Synchronous (for transactions). */
+export function importMembersSync(locationId: string, members: ExportMember[]): number {
+  let count = 0;
+  for (const m of members) {
+    if (!m.userId) continue;
+    const role = ['admin', 'member', 'viewer'].includes(m.role) ? m.role : 'member';
+    const userExists = querySync<{ id: string }>('SELECT id FROM users WHERE id = $1', [m.userId]);
+    if (userExists.rows.length === 0) continue;
+    try {
+      querySync(
+        'INSERT OR IGNORE INTO location_members (id, location_id, user_id, role, joined_at) VALUES ($1, $2, $3, $4, $5)',
+        [generateUuid(), locationId, m.userId, role, m.joinedAt || new Date().toISOString()]
+      );
+      count++;
+    } catch {
+      // Skip on constraint violations
+    }
+  }
+  return count;
+}
+
 /** Import photos from base64 data into storage. Synchronous (for use in transactions). */
 export function importPhotosSync(binId: string, photos: ExportPhoto[], userId: string): number {
   let count = 0;
@@ -376,10 +617,11 @@ export function importPhotosSync(binId: string, photos: ExportPhoto[], userId: s
     const safeOriginalName = path.basename(photo.filename || 'photo').slice(0, 255);
     const safeMimeType = ALLOWED_MIME_TYPES.includes(photo.mimeType) ? photo.mimeType : 'image/jpeg';
 
+    const resolvedPhotoCreator = resolveCreatedBySync(photo.createdBy, userId);
     querySync(
-      `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [photoId, binId, safeOriginalName, safeMimeType, buffer.length, storagePath, userId]
+      `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [photoId, binId, safeOriginalName, safeMimeType, buffer.length, storagePath, resolvedPhotoCreator, photo.createdAt || new Date().toISOString()]
     );
     count++;
   }

@@ -105,6 +105,9 @@ export function validateExportData(data: unknown): data is ExportData {
   });
   if (!binsValid) return false;
 
+  // Validate trashed bins if present (same shape as bins)
+  if (d.trashedBins !== undefined && !Array.isArray(d.trashedBins)) return false;
+
   // Validate top-level photos if present (legacy format)
   if (Array.isArray(d.photos)) {
     const photosValid = (d.photos as unknown[]).every((p: unknown) => {
@@ -146,8 +149,14 @@ export async function parseImportFile(file: File): Promise<ExportData> {
 export interface ImportResult {
   binsImported: number;
   binsSkipped: number;
+  trashedBinsImported?: number;
   photosImported: number;
   photosSkipped: number;
+  areasImported?: number;
+  pinsImported?: number;
+  viewsImported?: number;
+  membersImported?: number;
+  settingsApplied?: boolean;
 }
 
 export async function importData(
@@ -181,13 +190,21 @@ export async function importData(
     }));
   }
 
-  // Pass tag colors and custom field definitions if present (V2 format)
-  const tagColors = d.tagColors;
-  const customFieldDefinitions = d.customFieldDefinitions;
-
+  // Pass all V2 export sections to the server
   return apiFetch<ImportResult>(`/api/locations/${locationId}/import`, {
     method: 'POST',
-    body: { bins, mode, tagColors, customFieldDefinitions },
+    body: {
+      bins,
+      trashedBins: d.trashedBins,
+      mode,
+      tagColors: d.tagColors,
+      customFieldDefinitions: d.customFieldDefinitions,
+      locationSettings: d.locationSettings,
+      areas: d.areas,
+      pinnedBins: d.pinnedBins,
+      savedViews: d.savedViews,
+      members: d.members,
+    },
   });
 }
 

@@ -13,14 +13,29 @@ import { parseCSV } from '../lib/csvParser.js';
 import {
   buildAreaPathMap,
   buildFieldIdToNameMap,
+  type ExportArea,
   type ExportBin,
   type ExportData,
+  type ExportLocationSettings,
+  type ExportMember,
   type ExportPhoto,
+  type ExportPinnedBin,
+  type ExportSavedView,
   extractItemsWithQuantity,
   fetchLocationBins,
   fetchLocationFieldDefs,
+  fetchLocationMembers,
+  fetchLocationPinnedBins,
+  fetchLocationSavedViews,
+  fetchLocationSettings,
   fetchLocationTagColors,
+  fetchTrashedBins,
+  importAreasSync,
+  importLocationSettingsSync,
+  importMembersSync,
   importPhotosSync,
+  importPinnedBinsSync,
+  importSavedViewsSync,
   importTagColorsSync,
   insertBinItemsSync,
   insertBinWithShortCode,
@@ -29,6 +44,7 @@ import {
   mapCustomFieldsToIds,
   mapCustomFieldsToNames,
   resolveAreaSync,
+  resolveCreatedBySync,
   resolveCustomFieldDefsSync,
 } from '../lib/exportHelpers.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
@@ -145,52 +161,78 @@ router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async 
   }
 
   const locationName = locationResult.rows[0].name;
-  const [bins, tagColors, fieldDefs, fieldIdToName, areaPathMap] = await Promise.all([
+  const [bins, trashedBinsRaw, tagColors, fieldDefs, fieldIdToName, areaPathMap, locationSettings, pinnedBins, savedViews, members] = await Promise.all([
     fetchLocationBins(locationId),
+    fetchTrashedBins(locationId),
     fetchLocationTagColors(locationId),
     fetchLocationFieldDefs(locationId),
     buildFieldIdToNameMap(locationId),
     buildAreaPathMap(locationId),
+    fetchLocationSettings(locationId),
+    fetchLocationPinnedBins(locationId),
+    fetchLocationSavedViews(locationId),
+    fetchLocationMembers(locationId),
   ]);
+
+  function buildExportBin(bin: Record<string, unknown>, includeTrashed?: boolean): ExportBin {
+    const customFields =
+      bin.custom_fields && typeof bin.custom_fields === 'object' && Object.keys(bin.custom_fields as object).length > 0
+        ? mapCustomFieldsToNames(bin.custom_fields as Record<string, string>, fieldIdToName)
+        : undefined;
+    const areaInfo = bin.area_id ? areaPathMap.get(bin.area_id as string) : undefined;
+    const areaPath = areaInfo?.path || (bin.area_name as string);
+
+    return {
+      id: bin.id as string,
+      name: bin.name as string,
+      location: areaPath,
+      items: extractItemsWithQuantity(bin.items),
+      notes: bin.notes as string,
+      tags: bin.tags as string[],
+      icon: bin.icon as string,
+      color: bin.color as string,
+      cardStyle: (bin.card_style as string) || undefined,
+      visibility: bin.visibility !== 'location' ? (bin.visibility as 'private') : undefined,
+      customFields,
+      shortCode: bin.id as string,
+      createdBy: (bin.created_by as string) || undefined,
+      deletedAt: includeTrashed ? (bin.deleted_at as string) : undefined,
+      createdAt: bin.created_at as string,
+      updatedAt: bin.updated_at as string,
+      photos: [], // filled below
+    };
+  }
 
   const exportBins: ExportBin[] = [];
   for (const bin of bins) {
-    const photos = await loadBinPhotosBase64(bin.id);
-    // Map custom field values from fieldId-keyed to fieldName-keyed for portability
-    const customFields =
-      bin.custom_fields && typeof bin.custom_fields === 'object' && Object.keys(bin.custom_fields).length > 0
-        ? mapCustomFieldsToNames(bin.custom_fields as Record<string, string>, fieldIdToName)
-        : undefined;
-
-    // Use full hierarchical path for area (e.g. "Garage / Shelf 1")
-    const areaPath = bin.area_id ? (areaPathMap.get(bin.area_id) || bin.area_name) : bin.area_name;
-
-    exportBins.push({
-      id: bin.id,
-      name: bin.name,
-      location: areaPath,
-      items: extractItemsWithQuantity(bin.items),
-      notes: bin.notes,
-      tags: bin.tags,
-      icon: bin.icon,
-      color: bin.color,
-      cardStyle: bin.card_style || undefined,
-      visibility: bin.visibility !== 'location' ? bin.visibility : undefined,
-      customFields,
-      shortCode: bin.id,
-      createdAt: bin.created_at,
-      updatedAt: bin.updated_at,
-      photos,
-    });
+    const entry = buildExportBin(bin);
+    entry.photos = await loadBinPhotosBase64(bin.id);
+    exportBins.push(entry);
   }
+
+  const exportTrashedBins: ExportBin[] = [];
+  for (const bin of trashedBinsRaw) {
+    const entry = buildExportBin(bin, true);
+    entry.photos = await loadBinPhotosBase64(bin.id);
+    exportTrashedBins.push(entry);
+  }
+
+  // All area paths (including empty areas with no bins)
+  const allAreaPaths: ExportArea[] = Array.from(areaPathMap.values()).map(a => ({ path: a.path, createdBy: a.createdBy || undefined }));
 
   const exportData: ExportData = {
     version: 2,
     exportedAt: new Date().toISOString(),
     locationName,
+    locationSettings,
     bins: exportBins,
+    trashedBins: exportTrashedBins.length > 0 ? exportTrashedBins : undefined,
+    areas: allAreaPaths.length > 0 ? allAreaPaths : undefined,
     tagColors: tagColors.length > 0 ? tagColors : undefined,
     customFieldDefinitions: fieldDefs.length > 0 ? fieldDefs : undefined,
+    pinnedBins: pinnedBins.length > 0 ? pinnedBins : undefined,
+    savedViews: savedViews.length > 0 ? savedViews : undefined,
+    members: members.length > 0 ? members : undefined,
   };
 
   res.setHeader('Content-Disposition', `attachment; filename="openbin-export-${locationId}.json"`);
@@ -207,74 +249,98 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
   }
 
   const locationName = locationResult.rows[0].name;
-  const [dbBins, tagColors, fieldDefs, fieldIdToName, areaPathMap] = await Promise.all([
+  const [dbBins, trashedBinsRaw, tagColors, fieldDefs, fieldIdToName, areaPathMap, locationSettings, pinnedBins, savedViews, members] = await Promise.all([
     fetchLocationBins(locationId),
+    fetchTrashedBins(locationId),
     fetchLocationTagColors(locationId),
     fetchLocationFieldDefs(locationId),
     buildFieldIdToNameMap(locationId),
     buildAreaPathMap(locationId),
+    fetchLocationSettings(locationId),
+    fetchLocationPinnedBins(locationId),
+    fetchLocationSavedViews(locationId),
+    fetchLocationMembers(locationId),
   ]);
+
+  function buildZipBinEntry(bin: Record<string, unknown>, includeTrashed?: boolean) {
+    const customFields =
+      bin.custom_fields && typeof bin.custom_fields === 'object' && Object.keys(bin.custom_fields as object).length > 0
+        ? mapCustomFieldsToNames(bin.custom_fields as Record<string, string>, fieldIdToName)
+        : undefined;
+    const areaInfo = bin.area_id ? areaPathMap.get(bin.area_id as string) : undefined;
+    const areaPath = areaInfo?.path || (bin.area_name as string);
+
+    return {
+      id: bin.id as string,
+      name: bin.name as string,
+      location: areaPath,
+      items: extractItemsWithQuantity(bin.items),
+      notes: bin.notes as string,
+      tags: bin.tags as string[],
+      icon: bin.icon as string,
+      color: bin.color as string,
+      cardStyle: (bin.card_style as string) || undefined,
+      visibility: bin.visibility !== 'location' ? (bin.visibility as string) : undefined,
+      customFields,
+      shortCode: bin.id as string,
+      createdBy: (bin.created_by as string) || undefined,
+      deletedAt: includeTrashed ? (bin.deleted_at as string) : undefined,
+      createdAt: bin.created_at as string,
+      updatedAt: bin.updated_at as string,
+      photos: [] as Array<{ id: string; filename: string; mimeType: string; zipPath: string; createdBy?: string; createdAt?: string }>,
+    };
+  }
 
   const bins = [];
   const photosToInclude: Array<{ binId: string; photoId: string; filename: string; storagePath: string }> = [];
 
-  for (const bin of dbBins) {
-    const photoMeta = await loadBinPhotoMeta(bin.id);
-
-    const photoRefs = [];
+  async function collectPhotos(binId: string, entry: ReturnType<typeof buildZipBinEntry>) {
+    const photoMeta = await loadBinPhotoMeta(binId);
     for (const photo of photoMeta) {
       const ext = path.extname(photo.filename || '.jpg').toLowerCase();
       const zipFilename = `${photo.id}${ext}`;
-      photoRefs.push({
+      entry.photos.push({
         id: photo.id,
         filename: photo.filename,
         mimeType: photo.mime_type,
         zipPath: `photos/${zipFilename}`,
+        createdBy: photo.created_by || undefined,
+        createdAt: photo.created_at || undefined,
       });
-      photosToInclude.push({
-        binId: bin.id,
-        photoId: photo.id,
-        filename: zipFilename,
-        storagePath: photo.storage_path,
-      });
+      photosToInclude.push({ binId, photoId: photo.id, filename: zipFilename, storagePath: photo.storage_path });
     }
-
-    const customFields =
-      bin.custom_fields && typeof bin.custom_fields === 'object' && Object.keys(bin.custom_fields).length > 0
-        ? mapCustomFieldsToNames(bin.custom_fields as Record<string, string>, fieldIdToName)
-        : undefined;
-
-    // Use full hierarchical path for area
-    const areaPath = bin.area_id ? (areaPathMap.get(bin.area_id) || bin.area_name) : bin.area_name;
-
-    bins.push({
-      id: bin.id,
-      name: bin.name,
-      location: areaPath,
-      items: extractItemsWithQuantity(bin.items),
-      notes: bin.notes,
-      tags: bin.tags,
-      icon: bin.icon,
-      color: bin.color,
-      cardStyle: bin.card_style || undefined,
-      visibility: bin.visibility !== 'location' ? bin.visibility : undefined,
-      customFields,
-      shortCode: bin.id,
-      createdAt: bin.created_at,
-      updatedAt: bin.updated_at,
-      photos: photoRefs,
-    });
   }
+
+  for (const bin of dbBins) {
+    const entry = buildZipBinEntry(bin);
+    await collectPhotos(bin.id, entry);
+    bins.push(entry);
+  }
+
+  const trashedBinEntries = [];
+  for (const bin of trashedBinsRaw) {
+    const entry = buildZipBinEntry(bin, true);
+    await collectPhotos(bin.id, entry);
+    trashedBinEntries.push(entry);
+  }
+
+  const allAreaPaths = Array.from(areaPathMap.values()).map(a => ({ path: a.path, createdBy: a.createdBy || undefined }));
 
   const manifest = {
     version: 3,
     format: 'openbin-zip',
     exportedAt: new Date().toISOString(),
     locationName,
+    locationSettings,
     binCount: bins.length,
+    trashedBinCount: trashedBinEntries.length,
     photoCount: photosToInclude.length,
+    areas: allAreaPaths.length > 0 ? allAreaPaths : undefined,
     tagColors: tagColors.length > 0 ? tagColors : undefined,
     customFieldDefinitions: fieldDefs.length > 0 ? fieldDefs : undefined,
+    pinnedBins: pinnedBins.length > 0 ? pinnedBins : undefined,
+    savedViews: savedViews.length > 0 ? savedViews : undefined,
+    members: members.length > 0 ? members : undefined,
   };
 
   // Stream ZIP response
@@ -286,6 +352,9 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
 
   archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' });
   archive.append(JSON.stringify(bins, null, 2), { name: 'bins.json' });
+  if (trashedBinEntries.length > 0) {
+    archive.append(JSON.stringify(trashedBinEntries, null, 2), { name: 'trashed-bins.json' });
+  }
 
   for (const photo of photosToInclude) {
     const filePath = safePath(PHOTO_STORAGE_PATH, photo.storagePath);
@@ -330,7 +399,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
     const items = extractItemsWithQuantity(bin.items);
     const tags = Array.isArray(bin.tags) ? bin.tags.join(',') : '';
     const binName = csvEscape(bin.name);
-    const areaPath = bin.area_id ? (areaPathMap.get(bin.area_id) || bin.area_name) : bin.area_name;
+    const areaPath = bin.area_id ? (areaPathMap.get(bin.area_id)?.path || bin.area_name) : bin.area_name;
     const area = csvEscape(areaPath);
     const tagsField = csvEscape(tags);
 
@@ -355,18 +424,28 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
 // POST /api/locations/:id/import — import bins + photos
 router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLocationMember(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
-  const { bins, mode, tagColors, customFieldDefinitions, dryRun } = req.body as {
+  const {
+    bins, trashedBins, mode, tagColors, customFieldDefinitions,
+    locationSettings, areas, pinnedBins, savedViews, members, dryRun,
+  } = req.body as {
     bins: ExportBin[];
+    trashedBins?: ExportBin[];
     mode: 'merge' | 'replace';
     tagColors?: Array<{ tag: string; color: string }>;
     customFieldDefinitions?: Array<{ name: string; position: number }>;
+    locationSettings?: ExportLocationSettings;
+    areas?: ExportArea[];
+    pinnedBins?: ExportPinnedBin[];
+    savedViews?: ExportSavedView[];
+    members?: ExportMember[];
     dryRun?: boolean;
   };
 
   if (!bins || !Array.isArray(bins)) {
     throw new ValidationError('bins array is required');
   }
-  if (bins.length > 2000) {
+  const totalBins = bins.length + (trashedBins?.length || 0);
+  if (totalBins > 2000) {
     throw new ValidationError('Too many bins in import (max 2000)');
   }
 
@@ -378,13 +457,22 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
     return;
   }
 
+  // Check if importing user is admin (needed for settings and members)
+  const memberRow = querySync<{ role: string }>(
+    'SELECT role FROM location_members WHERE location_id = $1 AND user_id = $2',
+    [locationId, userId]
+  );
+  const isAdmin = memberRow.rows.length > 0 && memberRow.rows[0].role === 'admin';
+
   const doImport = getDb().transaction(() => {
+    // 1. Replace-mode cleanup
     if (importMode === 'replace') {
       const existingPhotos = querySync<{ storage_path: string }>(
         'SELECT storage_path FROM photos WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1)',
         [locationId]
       );
       querySync('DELETE FROM bins WHERE location_id = $1', [locationId]);
+      querySync('DELETE FROM areas WHERE location_id = $1', [locationId]);
       for (const photo of existingPhotos.rows) {
         try {
           const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
@@ -393,38 +481,52 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
       }
     }
 
-    // Import tag colors if provided
+    // 2. Location settings (replace mode only, admin only)
+    let settingsApplied = false;
+    if (locationSettings && importMode === 'replace' && isAdmin) {
+      importLocationSettingsSync(locationId, locationSettings);
+      settingsApplied = true;
+    }
+
+    // 3. Members (admin only)
+    let membersImported = 0;
+    if (members && Array.isArray(members) && isAdmin) {
+      membersImported = importMembersSync(locationId, members);
+    }
+
+    // 4. Tag colors
     if (tagColors && Array.isArray(tagColors)) {
       importTagColorsSync(locationId, tagColors);
     }
 
-    // Resolve custom field definitions (create if missing) and build name→id map
+    // 5. Custom field definitions
     let fieldNameToId: Map<string, string> | undefined;
     if (customFieldDefinitions && Array.isArray(customFieldDefinitions)) {
       fieldNameToId = resolveCustomFieldDefsSync(locationId, customFieldDefinitions);
     }
 
-    let binsImported = 0;
-    let binsSkipped = 0;
-    let photosImported = 0;
+    // 6. Areas (before bins so paths exist)
+    let areasImported = 0;
+    if (areas && Array.isArray(areas)) {
+      areasImported = importAreasSync(locationId, areas, userId);
+    }
 
-    for (const bin of bins) {
+    // Helper to import a single bin
+    const oldToNewBinId = new Map<string, string>();
+
+    function importSingleBin(bin: ExportBin, opts?: { deletedAt?: string | null }): boolean {
       if (importMode === 'merge') {
         const existing = querySync('SELECT id FROM bins WHERE id = $1', [bin.id]);
-        if (existing.rows.length > 0) {
-          binsSkipped++;
-          continue;
-        }
+        if (existing.rows.length > 0) return false;
       }
 
       const areaId = resolveAreaSync(locationId, bin.location || '', userId);
-
-      // Map name-keyed custom fields to fieldId-keyed if we have definitions
       let resolvedCustomFields = bin.customFields;
       if (resolvedCustomFields && fieldNameToId && fieldNameToId.size > 0) {
         resolvedCustomFields = mapCustomFieldsToIds(resolvedCustomFields, fieldNameToId);
       }
 
+      const resolvedCreatedBy = resolveCreatedBySync(bin.createdBy, userId);
       const binId = insertBinWithShortCode('', locationId, {
         name: bin.name,
         notes: bin.notes || '',
@@ -435,20 +537,60 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
         visibility: bin.visibility,
         customFields: resolvedCustomFields,
         shortCode: bin.shortCode,
+        deletedAt: opts?.deletedAt,
         createdAt: bin.createdAt || new Date().toISOString(),
         updatedAt: bin.updatedAt || new Date().toISOString(),
-      }, areaId, userId);
+      }, areaId, resolvedCreatedBy);
 
+      oldToNewBinId.set(bin.id, binId);
       insertBinItemsSync(binId, bin.items || []);
-
-      if (bin.photos && Array.isArray(bin.photos)) {
-        photosImported += importPhotosSync(binId, bin.photos, userId);
-      }
-
-      binsImported++;
+      return true;
     }
 
-    return { binsImported, binsSkipped, photosImported };
+    // 7. Active bins
+    let binsImported = 0;
+    let binsSkipped = 0;
+    let photosImported = 0;
+
+    for (const bin of bins) {
+      if (importSingleBin(bin)) {
+        const newBinId = oldToNewBinId.get(bin.id)!;
+        if (bin.photos && Array.isArray(bin.photos)) {
+          photosImported += importPhotosSync(newBinId, bin.photos, userId);
+        }
+        binsImported++;
+      } else {
+        binsSkipped++;
+      }
+    }
+
+    // 8. Trashed bins
+    let trashedBinsImported = 0;
+    if (trashedBins && Array.isArray(trashedBins)) {
+      for (const bin of trashedBins) {
+        if (importSingleBin(bin, { deletedAt: bin.deletedAt })) {
+          const newBinId = oldToNewBinId.get(bin.id)!;
+          if (bin.photos && Array.isArray(bin.photos)) {
+            photosImported += importPhotosSync(newBinId, bin.photos, userId);
+          }
+          trashedBinsImported++;
+        }
+      }
+    }
+
+    // 9. Pinned bins (after all bins are imported)
+    let pinsImported = 0;
+    if (pinnedBins && Array.isArray(pinnedBins)) {
+      pinsImported = importPinnedBinsSync(pinnedBins, oldToNewBinId);
+    }
+
+    // 10. Saved views
+    let viewsImported = 0;
+    if (savedViews && Array.isArray(savedViews)) {
+      viewsImported = importSavedViewsSync(savedViews);
+    }
+
+    return { binsImported, binsSkipped, trashedBinsImported, photosImported, areasImported, pinsImported, viewsImported, membersImported, settingsApplied };
   });
 
   const result = doImport();
@@ -456,8 +598,14 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
   res.json({
     binsImported: result.binsImported,
     binsSkipped: result.binsSkipped,
+    trashedBinsImported: result.trashedBinsImported,
     photosImported: result.photosImported,
     photosSkipped: 0,
+    areasImported: result.areasImported,
+    pinsImported: result.pinsImported,
+    viewsImported: result.viewsImported,
+    membersImported: result.membersImported,
+    settingsApplied: result.settingsApplied,
   });
 }));
 
@@ -714,8 +862,13 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
   }
   let manifest: {
     format?: string;
+    locationSettings?: ExportLocationSettings;
+    areas?: ExportArea[];
     tagColors?: Array<{ tag: string; color: string }>;
     customFieldDefinitions?: Array<{ name: string; position: number }>;
+    pinnedBins?: ExportPinnedBin[];
+    savedViews?: ExportSavedView[];
+    members?: ExportMember[];
   };
   try {
     manifest = JSON.parse(manifestEntry.getData().toString('utf-8'));
@@ -744,9 +897,10 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
     visibility?: 'location' | 'private';
     customFields?: Record<string, string>;
     shortCode?: string;
+    createdBy?: string;
     createdAt?: string;
     updatedAt?: string;
-    photos?: Array<{ id: string; filename: string; mimeType: string; zipPath: string }>;
+    photos?: Array<{ id: string; filename: string; mimeType: string; zipPath: string; createdBy?: string; createdAt?: string }>;
   }>;
   try {
     zipBins = JSON.parse(binsEntry.getData().toString('utf-8'));
@@ -756,7 +910,18 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
   if (!Array.isArray(zipBins)) {
     throw new ValidationError('bins.json must be an array');
   }
-  if (zipBins.length > 2000) {
+
+  // Read trashed bins if present
+  const trashedBinsEntry = zip.getEntry('trashed-bins.json');
+  let zipTrashedBins: typeof zipBins = [];
+  if (trashedBinsEntry) {
+    try {
+      const parsed = JSON.parse(trashedBinsEntry.getData().toString('utf-8'));
+      if (Array.isArray(parsed)) zipTrashedBins = parsed;
+    } catch { /* ignore malformed trashed-bins.json */ }
+  }
+
+  if (zipBins.length + zipTrashedBins.length > 2000) {
     throw new ValidationError('Too many bins in import (max 2000)');
   }
 
@@ -764,7 +929,6 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
   const dryRun = req.body?.dryRun === 'true' || req.body?.dryRun === true;
 
   if (dryRun) {
-    // Use zipBins directly — skip photo extraction entirely
     const dryRunBins: DryRunBin[] = zipBins.map(b => ({
       id: b.id,
       name: b.name,
@@ -775,48 +939,58 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
     return;
   }
 
-  // Convert ZIP photo references to base64 ExportBin[] with inline photo data
-  const exportBins: ExportBin[] = zipBins.map((bin) => {
-    const photos: ExportPhoto[] = [];
-    if (bin.photos && Array.isArray(bin.photos)) {
-      for (const ref of bin.photos) {
-        const photoEntry = zip.getEntry(ref.zipPath);
-        if (!photoEntry) continue;
-        const base64 = photoEntry.getData().toString('base64');
-        photos.push({
-          id: ref.id,
-          filename: ref.filename,
-          mimeType: ref.mimeType,
-          data: base64,
-        });
+  // Convert ZIP photo references to base64 ExportBin[]
+  function convertZipBins(source: typeof zipBins, opts?: { trashed?: boolean }): ExportBin[] {
+    return source.map((bin) => {
+      const photos: ExportPhoto[] = [];
+      if (bin.photos && Array.isArray(bin.photos)) {
+        for (const ref of bin.photos) {
+          const photoEntry = zip.getEntry(ref.zipPath);
+          if (!photoEntry) continue;
+          photos.push({ id: ref.id, filename: ref.filename, mimeType: ref.mimeType, data: photoEntry.getData().toString('base64'), createdBy: ref.createdBy, createdAt: ref.createdAt });
+        }
       }
-    }
-    return {
-      id: bin.id || uuidv4(),
-      name: bin.name,
-      location: bin.location || '',
-      items: bin.items || [],
-      notes: bin.notes || '',
-      tags: bin.tags || [],
-      icon: bin.icon || '',
-      color: bin.color || '',
-      cardStyle: bin.cardStyle,
-      visibility: bin.visibility,
-      customFields: bin.customFields,
-      shortCode: bin.shortCode,
-      createdAt: bin.createdAt || new Date().toISOString(),
-      updatedAt: bin.updatedAt || new Date().toISOString(),
-      photos,
-    };
-  });
+      return {
+        id: bin.id || uuidv4(),
+        name: bin.name,
+        location: bin.location || '',
+        items: bin.items || [],
+        notes: bin.notes || '',
+        tags: bin.tags || [],
+        icon: bin.icon || '',
+        color: bin.color || '',
+        cardStyle: bin.cardStyle,
+        visibility: bin.visibility,
+        customFields: bin.customFields,
+        shortCode: bin.shortCode,
+        createdBy: bin.createdBy,
+        deletedAt: opts?.trashed ? ((bin as Record<string, unknown>).deletedAt as string) : undefined,
+        createdAt: bin.createdAt || new Date().toISOString(),
+        updatedAt: bin.updatedAt || new Date().toISOString(),
+        photos,
+      };
+    });
+  }
+
+  const exportBins = convertZipBins(zipBins);
+  const exportTrashedBins = convertZipBins(zipTrashedBins, { trashed: true });
+
+  // Check if importing user is admin
+  const memberRow = querySync<{ role: string }>(
+    'SELECT role FROM location_members WHERE location_id = $1 AND user_id = $2',
+    [locationId, userId]
+  );
+  const isAdmin = memberRow.rows.length > 0 && memberRow.rows[0].role === 'admin';
 
   const doImport = getDb().transaction(() => {
+    // 1. Replace-mode cleanup
     if (importMode === 'replace') {
       const existingPhotos = querySync<{ storage_path: string }>(
         'SELECT storage_path FROM photos WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1)',
         [locationId]
       );
       querySync('DELETE FROM bins WHERE location_id = $1', [locationId]);
+      querySync('DELETE FROM areas WHERE location_id = $1', [locationId]);
       for (const photo of existingPhotos.rows) {
         try {
           const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
@@ -825,37 +999,50 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
       }
     }
 
-    // Import tag colors if provided
+    // 2. Location settings (replace mode only, admin only)
+    let settingsApplied = false;
+    if (manifest.locationSettings && importMode === 'replace' && isAdmin) {
+      importLocationSettingsSync(locationId, manifest.locationSettings);
+      settingsApplied = true;
+    }
+
+    // 3. Members (admin only)
+    let membersImported = 0;
+    if (manifest.members && Array.isArray(manifest.members) && isAdmin) {
+      membersImported = importMembersSync(locationId, manifest.members);
+    }
+
+    // 4. Tag colors
     if (manifest.tagColors && Array.isArray(manifest.tagColors)) {
       importTagColorsSync(locationId, manifest.tagColors);
     }
 
-    // Resolve custom field definitions
+    // 5. Custom field definitions
     let fieldNameToId: Map<string, string> | undefined;
     if (manifest.customFieldDefinitions && Array.isArray(manifest.customFieldDefinitions)) {
       fieldNameToId = resolveCustomFieldDefsSync(locationId, manifest.customFieldDefinitions);
     }
 
-    let binsImported = 0;
-    let binsSkipped = 0;
-    let photosImported = 0;
+    // 6. Areas
+    let areasImported = 0;
+    if (manifest.areas && Array.isArray(manifest.areas)) {
+      areasImported = importAreasSync(locationId, manifest.areas, userId);
+    }
 
-    for (const bin of exportBins) {
+    // Helper to import a single bin
+    const oldToNewBinId = new Map<string, string>();
+
+    function importSingleBin(bin: ExportBin, opts?: { deletedAt?: string | null }): boolean {
       if (importMode === 'merge') {
         const existing = querySync('SELECT id FROM bins WHERE id = $1', [bin.id]);
-        if (existing.rows.length > 0) {
-          binsSkipped++;
-          continue;
-        }
+        if (existing.rows.length > 0) return false;
       }
-
       const areaId = resolveAreaSync(locationId, bin.location || '', userId);
-
       let resolvedCustomFields = bin.customFields;
       if (resolvedCustomFields && fieldNameToId && fieldNameToId.size > 0) {
         resolvedCustomFields = mapCustomFieldsToIds(resolvedCustomFields, fieldNameToId);
       }
-
+      const resolvedCreatedBy = resolveCreatedBySync(bin.createdBy, userId);
       const binId = insertBinWithShortCode('', locationId, {
         name: bin.name,
         notes: bin.notes || '',
@@ -866,20 +1053,57 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
         visibility: bin.visibility,
         customFields: resolvedCustomFields,
         shortCode: bin.shortCode,
+        deletedAt: opts?.deletedAt,
         createdAt: bin.createdAt || new Date().toISOString(),
         updatedAt: bin.updatedAt || new Date().toISOString(),
-      }, areaId, userId);
-
+      }, areaId, resolvedCreatedBy);
+      oldToNewBinId.set(bin.id, binId);
       insertBinItemsSync(binId, bin.items || []);
-
-      if (bin.photos && Array.isArray(bin.photos)) {
-        photosImported += importPhotosSync(binId, bin.photos, userId);
-      }
-
-      binsImported++;
+      return true;
     }
 
-    return { binsImported, binsSkipped, photosImported };
+    // 7. Active bins
+    let binsImported = 0;
+    let binsSkipped = 0;
+    let photosImported = 0;
+
+    for (const bin of exportBins) {
+      if (importSingleBin(bin)) {
+        const newBinId = oldToNewBinId.get(bin.id)!;
+        if (bin.photos && Array.isArray(bin.photos)) {
+          photosImported += importPhotosSync(newBinId, bin.photos, userId);
+        }
+        binsImported++;
+      } else {
+        binsSkipped++;
+      }
+    }
+
+    // 8. Trashed bins
+    let trashedBinsImported = 0;
+    for (const bin of exportTrashedBins) {
+      if (importSingleBin(bin, { deletedAt: bin.deletedAt })) {
+        const newBinId = oldToNewBinId.get(bin.id)!;
+        if (bin.photos && Array.isArray(bin.photos)) {
+          photosImported += importPhotosSync(newBinId, bin.photos, userId);
+        }
+        trashedBinsImported++;
+      }
+    }
+
+    // 9. Pinned bins
+    let pinsImported = 0;
+    if (manifest.pinnedBins && Array.isArray(manifest.pinnedBins)) {
+      pinsImported = importPinnedBinsSync(manifest.pinnedBins, oldToNewBinId);
+    }
+
+    // 10. Saved views
+    let viewsImported = 0;
+    if (manifest.savedViews && Array.isArray(manifest.savedViews)) {
+      viewsImported = importSavedViewsSync(manifest.savedViews);
+    }
+
+    return { binsImported, binsSkipped, trashedBinsImported, photosImported, areasImported, pinsImported, viewsImported, membersImported, settingsApplied };
   });
 
   const result = doImport();
@@ -887,8 +1111,14 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
   res.json({
     binsImported: result.binsImported,
     binsSkipped: result.binsSkipped,
+    trashedBinsImported: result.trashedBinsImported,
     photosImported: result.photosImported,
     photosSkipped: 0,
+    areasImported: result.areasImported,
+    pinsImported: result.pinsImported,
+    viewsImported: result.viewsImported,
+    membersImported: result.membersImported,
+    settingsApplied: result.settingsApplied,
   });
 }));
 

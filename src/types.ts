@@ -155,14 +155,17 @@ export interface ExportBinV2 {
   id: string;
   name: string;
   location?: string;
-  items: string[];
+  items: Array<string | { name: string; quantity?: number | null }>;
   notes: string;
   tags: string[];
   icon?: string;
   color?: string;
   cardStyle?: string;
+  visibility?: 'location' | 'private';
   customFields?: Record<string, string>;
   shortCode?: string;
+  createdBy?: string;
+  deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   photos?: ExportBinPhoto[];
@@ -174,6 +177,8 @@ export interface ExportBinPhoto {
   filename: string;
   mimeType: string;
   data: string;
+  createdBy?: string;
+  createdAt?: string;
 }
 
 export interface ExportDataV1 {
@@ -187,7 +192,23 @@ export interface ExportDataV2 {
   version: 2;
   exportedAt: string;
   locationName?: string;
+  locationSettings?: {
+    activityRetentionDays: number;
+    trashRetentionDays: number;
+    appName: string;
+    termBin: string;
+    termLocation: string;
+    termArea: string;
+    defaultJoinRole: 'member' | 'viewer';
+  };
   bins: ExportBinV2[];
+  trashedBins?: ExportBinV2[];
+  areas?: Array<{ path: string; createdBy?: string }>;
+  tagColors?: Array<{ tag: string; color: string }>;
+  customFieldDefinitions?: Array<{ name: string; position: number }>;
+  pinnedBins?: Array<{ userId: string; binId: string; position: number }>;
+  savedViews?: Array<{ userId: string; name: string; searchQuery: string; sort: string; filters: string }>;
+  members?: Array<{ userId: string; username: string; role: string; joinedAt: string }>;
   photos?: ExportedPhoto[];
 }
 
