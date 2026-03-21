@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
+import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { ExportData } from '@/types';
 import {
@@ -30,6 +31,13 @@ function importErrorMessage(err: unknown): string {
 export type ExportFormat = 'zip' | 'json' | 'csv';
 export type ImportFormat = 'zip' | 'json' | 'csv';
 
+export interface ImportPreview {
+  toCreate: { name: string; itemCount: number; tags: string[] }[];
+  toSkip: { name: string; reason: string }[];
+  totalBins: number;
+  totalItems: number;
+}
+
 export function useDataSectionActions() {
   const { activeLocationId } = useAuth();
   const { showToast } = useToast();
@@ -44,17 +52,78 @@ export function useDataSectionActions() {
   // Import dialog
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importFormatRaw, setImportFormatRaw] = useState<ImportFormat>('json');
-  const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
+  const [importMode, setImportModeRaw] = useState<'merge' | 'replace'>('merge');
   const [pendingData, setPendingData] = useState<ExportData | null>(null);
   const [csvPending, setCsvPending] = useState<{ file: File; bins: number; items: number } | null>(null);
   const [zipPending, setZipPending] = useState<{ file: File } | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  // Cache the merge-mode result so mode toggles don't re-upload files
+  const mergePreviewRef = useRef<ImportPreview | null>(null);
+
+  async function fetchDryRun(
+    source: { json: ExportData } | { file: File; format: 'csv' | 'zip' },
+    mode: 'merge' | 'replace',
+  ) {
+    if (!activeLocationId) return;
+    try {
+      let result: ImportPreview;
+      if ('json' in source) {
+        result = await apiFetch<ImportPreview>(`/api/locations/${activeLocationId}/import`, {
+          method: 'POST',
+          body: { bins: source.json.bins, mode, dryRun: true },
+        });
+      } else {
+        const formData = new FormData();
+        formData.append('file', source.file);
+        formData.append('mode', mode);
+        formData.append('dryRun', 'true');
+        result = await apiFetch<ImportPreview>(
+          `/api/locations/${activeLocationId}/import/${source.format}`,
+          { method: 'POST', body: formData },
+        );
+      }
+      if (mode === 'merge') mergePreviewRef.current = result;
+      setImportPreview(result);
+    } catch {
+      // silently ignore — fall back to count-only summary
+    }
+  }
 
   function setImportFormat(format: ImportFormat) {
     setImportFormatRaw(format);
     setPendingData(null);
     setCsvPending(null);
     setZipPending(null);
+    setImportPreview(null);
+    mergePreviewRef.current = null;
+  }
+
+  function setImportMode(mode: 'merge' | 'replace') {
+    setImportModeRaw(mode);
+    if (!importPreview) return;
+
+    if (mode === 'replace') {
+      // In replace mode all bins are created — derive client-side, no re-upload
+      const allBins = [...importPreview.toCreate, ...importPreview.toSkip.map(b => ({
+        name: b.name, itemCount: 0, tags: [] as string[],
+      }))];
+      setImportPreview({
+        toCreate: allBins,
+        toSkip: [],
+        totalBins: importPreview.totalBins,
+        totalItems: importPreview.totalItems,
+      });
+    } else if (mergePreviewRef.current) {
+      // Switching back to merge — use cached result
+      setImportPreview(mergePreviewRef.current);
+    } else if (importFormatRaw === 'json' && pendingData) {
+      fetchDryRun({ json: pendingData }, mode);
+    } else if (importFormatRaw === 'csv' && csvPending) {
+      fetchDryRun({ file: csvPending.file, format: 'csv' }, mode);
+    } else if (importFormatRaw === 'zip' && zipPending) {
+      fetchDryRun({ file: zipPending.file, format: 'zip' }, mode);
+    }
   }
 
   function resetImportState() {
@@ -62,7 +131,9 @@ export function useDataSectionActions() {
     setCsvPending(null);
     setZipPending(null);
     setImportFormatRaw('zip');
-    setImportMode('merge');
+    setImportModeRaw('merge');
+    setImportPreview(null);
+    mergePreviewRef.current = null;
   }
 
   // --- Export ---
@@ -114,11 +185,13 @@ export function useDataSectionActions() {
         showToast({ message: 'Please select a .zip file' });
       } else {
         setZipPending({ file });
+        fetchDryRun({ file, format: 'zip' }, importMode);
       }
     } else if (importFormatRaw === 'json') {
       try {
         const data = await parseImportFile(file);
         setPendingData(data);
+        fetchDryRun({ json: data }, importMode);
       } catch (err) {
         showToast({ message: importErrorMessage(err) });
       }
@@ -135,6 +208,7 @@ export function useDataSectionActions() {
         }
         const counts = countCSVBins(text);
         setCsvPending({ file, bins: counts.bins, items: counts.items });
+        fetchDryRun({ file, format: 'csv' }, importMode);
       } catch {
         showToast({ message: 'Failed to read CSV file' });
       }
@@ -222,6 +296,7 @@ export function useDataSectionActions() {
     csvPending,
     zipPending,
     importing,
+    importPreview,
     handleExport,
     handleImportFileClick,
     handleImportFileSelected,

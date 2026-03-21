@@ -121,6 +121,7 @@ export function DataSection({
     csvPending,
     zipPending,
     importing,
+    importPreview: dryRunPreview,
     handleExport,
     handleImportFileClick,
     handleImportFileSelected,
@@ -143,14 +144,16 @@ export function DataSection({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  const importPreview =
-    importFormat === 'zip' && zipPending
-      ? `${zipPending.file.name} (${formatFileSize(zipPending.file.size)})`
-      : importFormat === 'json' && pendingData
-        ? `Found ${pendingData.bins.length} bin${pendingData.bins.length !== 1 ? 's' : ''}`
-        : importFormat === 'csv' && csvPending
-          ? `Found ${csvPending.bins} bin${csvPending.bins !== 1 ? 's' : ''} with ${csvPending.items} item${csvPending.items !== 1 ? 's' : ''}`
-          : null;
+  const importSummary =
+    dryRunPreview
+      ? null
+      : importFormat === 'zip' && zipPending
+        ? `${zipPending.file.name} (${formatFileSize(zipPending.file.size)})`
+        : importFormat === 'json' && pendingData
+          ? `Found ${pendingData.bins.length} bin${pendingData.bins.length !== 1 ? 's' : ''}`
+          : importFormat === 'csv' && csvPending
+            ? `Found ${csvPending.bins} bin${csvPending.bins !== 1 ? 's' : ''} with ${csvPending.items} item${csvPending.items !== 1 ? 's' : ''}`
+            : null;
 
   return (
     <>
@@ -379,8 +382,26 @@ export function DataSection({
               <Button variant="outline" onClick={handleImportFileClick} disabled={importing}>
                 {hasImportFile ? 'Change File' : 'Select File'}
               </Button>
-              {importPreview && (
-                <p className="text-[13px] text-[var(--text-secondary)]">{importPreview}</p>
+              {dryRunPreview && (
+                <div className="max-h-48 overflow-y-auto space-y-1 text-[13px]">
+                  {dryRunPreview.toCreate.map((b) => (
+                    <div key={b.name} className="flex items-center gap-2 px-2 py-1 rounded-[var(--radius-xs)]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-success)] shrink-0" />
+                      <span className="truncate flex-1">{b.name}</span>
+                      <span className="text-[var(--text-tertiary)]">{b.itemCount} items</span>
+                    </div>
+                  ))}
+                  {dryRunPreview.toSkip.map((b) => (
+                    <div key={`skip-${b.name}`} className="flex items-center gap-2 px-2 py-1 rounded-[var(--radius-xs)] opacity-50">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-tertiary)] shrink-0" />
+                      <span className="truncate flex-1">{b.name}</span>
+                      <span className="text-[var(--text-tertiary)]">skip</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {importSummary && (
+                <p className="text-[13px] text-[var(--text-secondary)]">{importSummary}</p>
               )}
             </div>
           </div>

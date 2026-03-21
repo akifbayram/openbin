@@ -39,6 +39,76 @@ import { requireLocationMember } from '../middleware/locationAccess.js';
 const router = Router();
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
+interface DryRunBin {
+  id?: string;
+  name: string;
+  items?: unknown[];
+  tags?: string[];
+}
+
+function buildDryRunPreview(
+  bins: DryRunBin[],
+  importMode: 'merge' | 'replace',
+) {
+  const toCreate: { name: string; itemCount: number; tags: string[] }[] = [];
+  const toSkip: { name: string; reason: string }[] = [];
+  let totalItems = 0;
+
+  // Batch-fetch existing IDs in one query when merge mode
+  let existingIds: Set<string> | undefined;
+  if (importMode === 'merge') {
+    const ids = bins.map(b => b.id).filter((id): id is string => !!id);
+    if (ids.length > 0) {
+      const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
+      const rows = querySync<{ id: string }>(
+        `SELECT id FROM bins WHERE id IN (${placeholders})`,
+        ids,
+      );
+      existingIds = new Set(rows.rows.map(r => r.id));
+    } else {
+      existingIds = new Set();
+    }
+  }
+
+  for (const bin of bins) {
+    const items = bin.items || [];
+    totalItems += items.length;
+
+    if (existingIds && bin.id && existingIds.has(bin.id)) {
+      toSkip.push({ name: bin.name, reason: 'already exists' });
+      continue;
+    }
+
+    toCreate.push({ name: bin.name, itemCount: items.length, tags: bin.tags || [] });
+  }
+
+  return { preview: true as const, toCreate, toSkip, totalBins: bins.length, totalItems };
+}
+
+function lookupAreaSync(locationId: string, areaPath: string): string | null {
+  const parts = areaPath.trim().split('/').map(p => p.trim()).filter(Boolean);
+  if (parts.length === 0) return null;
+
+  let parentId: string | null = null;
+  let lastId: string | null = null;
+
+  for (const part of parts) {
+    const q = parentId === null
+      ? 'SELECT id FROM areas WHERE location_id = $1 AND name = $2 AND parent_id IS NULL'
+      : 'SELECT id FROM areas WHERE location_id = $1 AND name = $2 AND parent_id = $3';
+    const params = parentId === null ? [locationId, part] : [locationId, part, parentId];
+    const found = querySync(q, params);
+    if (found.rows.length > 0) {
+      lastId = found.rows[0].id as string;
+      parentId = lastId;
+    } else {
+      return null;
+    }
+  }
+
+  return lastId;
+}
+
 router.use(authenticate);
 
 // Legacy V1 format types
@@ -285,11 +355,12 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
 // POST /api/locations/:id/import — import bins + photos
 router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLocationMember(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
-  const { bins, mode, tagColors, customFieldDefinitions } = req.body as {
+  const { bins, mode, tagColors, customFieldDefinitions, dryRun } = req.body as {
     bins: ExportBin[];
     mode: 'merge' | 'replace';
     tagColors?: Array<{ tag: string; color: string }>;
     customFieldDefinitions?: Array<{ name: string; position: number }>;
+    dryRun?: boolean;
   };
 
   if (!bins || !Array.isArray(bins)) {
@@ -301,6 +372,11 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
 
   const importMode = mode || 'merge';
   const userId = req.user!.id;
+
+  if (dryRun) {
+    res.json(buildDryRunPreview(bins, importMode));
+    return;
+  }
 
   const doImport = getDb().transaction(() => {
     if (importMode === 'replace') {
@@ -513,6 +589,43 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
     throw new ValidationError('Too many bins in CSV import (max 2000)');
   }
 
+  const dryRun = req.body?.dryRun === 'true' || req.body?.dryRun === true;
+
+  if (dryRun) {
+    const toCreate: { name: string; itemCount: number; tags: string[] }[] = [];
+    const toSkip: { name: string; reason: string }[] = [];
+    let totalItems = 0;
+    const areaCache = new Map<string, string | null>();
+
+    for (const bin of pendingBins) {
+      totalItems += bin.items.length;
+
+      if (importMode === 'merge') {
+        let areaId = areaCache.get(bin.area);
+        if (areaId === undefined) {
+          areaId = lookupAreaSync(locationId, bin.area);
+          areaCache.set(bin.area, areaId);
+        }
+
+        const areaClause = areaId ? 'AND area_id = $3' : 'AND area_id IS NULL';
+        const params = areaId ? [locationId, bin.name, areaId] : [locationId, bin.name];
+        const existing = querySync(
+          `SELECT id FROM bins WHERE location_id = $1 AND name = $2 ${areaClause} AND deleted_at IS NULL`,
+          params,
+        );
+        if (existing.rows.length > 0) {
+          toSkip.push({ name: bin.name, reason: 'already exists' });
+          continue;
+        }
+      }
+
+      toCreate.push({ name: bin.name, itemCount: bin.items.length, tags: bin.tags });
+    }
+
+    res.json({ preview: true, toCreate, toSkip, totalBins: pendingBins.length, totalItems });
+    return;
+  }
+
   const now = new Date().toISOString();
 
   const doImport = getDb().transaction(() => {
@@ -647,6 +760,21 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
     throw new ValidationError('Too many bins in import (max 2000)');
   }
 
+  const importMode = (req.body?.mode === 'replace' ? 'replace' : 'merge') as 'merge' | 'replace';
+  const dryRun = req.body?.dryRun === 'true' || req.body?.dryRun === true;
+
+  if (dryRun) {
+    // Use zipBins directly — skip photo extraction entirely
+    const dryRunBins: DryRunBin[] = zipBins.map(b => ({
+      id: b.id,
+      name: b.name,
+      items: b.items,
+      tags: b.tags,
+    }));
+    res.json(buildDryRunPreview(dryRunBins, importMode));
+    return;
+  }
+
   // Convert ZIP photo references to base64 ExportBin[] with inline photo data
   const exportBins: ExportBin[] = zipBins.map((bin) => {
     const photos: ExportPhoto[] = [];
@@ -681,8 +809,6 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
       photos,
     };
   });
-
-  const importMode = (req.body?.mode === 'replace' ? 'replace' : 'merge') as 'merge' | 'replace';
 
   const doImport = getDb().transaction(() => {
     if (importMode === 'replace') {
