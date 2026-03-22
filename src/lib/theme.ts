@@ -25,11 +25,9 @@ function applyToDOM(resolved: ResolvedTheme) {
   const root = document.documentElement;
   root.classList.remove('light', 'dark');
   root.classList.add(resolved);
-  root.style.colorScheme = resolved;
 }
 
 let currentPreference: ThemePreference = getStoredPreference();
-let currentTheme: ResolvedTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -39,8 +37,7 @@ function notify() {
 // Track system theme changes for auto mode
 mq.addEventListener('change', () => {
   if (currentPreference !== 'auto') return;
-  currentTheme = resolveFromSystem();
-  applyToDOM(currentTheme);
+  applyToDOM(resolveFromSystem());
   notify();
 });
 
@@ -49,8 +46,8 @@ function subscribe(listener: () => void) {
   return () => { listeners.delete(listener); };
 }
 
-function getThemeSnapshot() {
-  return currentTheme;
+function getThemeSnapshot(): ResolvedTheme {
+  return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 }
 
 function getPrefSnapshot() {
@@ -60,8 +57,7 @@ function getPrefSnapshot() {
 function setThemePreference(pref: ThemePreference) {
   if (pref === currentPreference) return;
   currentPreference = pref;
-  currentTheme = resolve(pref);
-  applyToDOM(currentTheme);
+  applyToDOM(resolve(pref));
   localStorage.setItem(STORAGE_KEY, pref);
   notify();
 }

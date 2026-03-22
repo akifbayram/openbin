@@ -72,6 +72,67 @@ export async function replaceCustomFieldValues(
 }
 
 /**
+ * Remap a bin's custom field values from source location fields to target location fields.
+ * Auto-creates missing field definitions in the target location.
+ * Must be called inside a transaction (uses getDb() directly).
+ */
+export function remapCustomFieldsForMove(
+  binId: string,
+  sourceLocationId: string,
+  targetLocationId: string,
+  skipFieldCreation = false,
+): void {
+  const db = getDb();
+
+  const binValues = db.prepare(`
+    SELECT v.id, v.field_id, v.value, f.name as field_name
+    FROM bin_custom_field_values v
+    JOIN location_custom_fields f ON f.id = v.field_id
+    WHERE v.bin_id = ? AND f.location_id = ?
+  `).all(binId, sourceLocationId) as Array<{
+    id: string;
+    field_id: string;
+    value: string;
+    field_name: string;
+  }>;
+
+  const nonEmptyValues = binValues.filter(v => v.value);
+  if (nonEmptyValues.length === 0) return;
+
+  const targetFields = db.prepare(
+    'SELECT id, name, position FROM location_custom_fields WHERE location_id = ? ORDER BY position'
+  ).all(targetLocationId) as Array<{ id: string; name: string; position: number }>;
+  const targetFieldMap = new Map(targetFields.map(f => [f.name, f.id]));
+  let nextPos = targetFields.length > 0 ? targetFields[targetFields.length - 1].position + 1 : 0;
+
+  const updateStmt = db.prepare(
+    "UPDATE bin_custom_field_values SET field_id = ?, updated_at = datetime('now') WHERE id = ?"
+  );
+  const insertFieldStmt = db.prepare(
+    'INSERT INTO location_custom_fields (id, location_id, name, position) VALUES (?, ?, ?, ?)'
+  );
+
+  const deleteValueStmt = db.prepare('DELETE FROM bin_custom_field_values WHERE id = ?');
+
+  for (const val of nonEmptyValues) {
+    let targetFieldId = targetFieldMap.get(val.field_name);
+    if (!targetFieldId) {
+      if (skipFieldCreation) {
+        deleteValueStmt.run(val.id);
+        continue;
+      }
+      targetFieldId = generateUuid();
+      insertFieldStmt.run(targetFieldId, targetLocationId, val.field_name, nextPos);
+      nextPos++;
+      targetFieldMap.set(val.field_name, targetFieldId);
+    }
+    if (targetFieldId !== val.field_id) {
+      updateStmt.run(targetFieldId, val.id);
+    }
+  }
+}
+
+/**
  * Fetch custom field values for a bin as Record<fieldId, value>.
  */
 export async function fetchCustomFieldValues(binId: string): Promise<Record<string, string>> {

@@ -364,20 +364,6 @@ function seedActivityLog(
   }
 }
 
-function updateStorageSettings(storageLocationId: string): void {
-  querySync(
-    `UPDATE locations SET
-      term_bin = $1,
-      term_area = $2,
-      app_name = $3,
-      default_join_role = $4,
-      activity_retention_days = $5,
-      trash_retention_days = $6
-     WHERE id = $7`,
-    ['Container', 'Section', 'Storage Tracker', 'viewer', 60, 14, storageLocationId],
-  );
-}
-
 export function seedDemoData(): void {
   if (!config.demoMode) return;
 
@@ -405,7 +391,6 @@ export function seedDemoData(): void {
     seedOnboardingPrefs(userIdMap);
     seedCustomFields(homeLocationId, binIdMap);
     seedActivityLog(homeLocationId, storageLocationId, userIdMap, binIdMap);
-    updateStorageSettings(storageLocationId);
   });
 
   try {

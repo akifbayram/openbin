@@ -1,13 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
-import { query } from '../db.js';
+import { getDb, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isBinCreator, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
 import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinItems } from '../lib/binUpdateHelpers.js';
 import { validateBinFields } from '../lib/binValidation.js';
-import { replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
+import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
 import { ForbiddenError, GoneError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
@@ -451,11 +451,17 @@ router.post('/:id/move', asyncHandler(async (req, res) => {
   const sourceName = sourceLocResult.rows[0]?.name ?? '';
   const targetName = targetLocResult.rows[0]?.name ?? '';
 
-  // Move bin: update location, clear area (areas are location-scoped)
-  await query(
-    `UPDATE bins SET location_id = $1, area_id = NULL, updated_at = datetime('now') WHERE id = $2`,
-    [targetLocationId, id]
-  );
+  // Check if user is admin on target — non-admins must not auto-create custom field definitions
+  const targetRole = await getMemberRole(targetLocationId, req.user!.id);
+  const skipFieldCreation = targetRole !== 'admin';
+
+  // Move bin: update location, clear area, remap custom fields (all in one transaction)
+  const db = getDb();
+  db.transaction(() => {
+    db.prepare(`UPDATE bins SET location_id = ?, area_id = NULL, updated_at = datetime('now') WHERE id = ?`)
+      .run(targetLocationId, id);
+    remapCustomFieldsForMove(id, access.locationId, targetLocationId, skipFieldCreation);
+  })();
 
   // Re-fetch updated bin
   const bin = (await fetchBinById(id))!;

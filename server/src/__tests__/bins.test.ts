@@ -702,6 +702,267 @@ describe('POST /api/bins/:id/duplicate', () => {
   });
 });
 
+describe('POST /api/bins/:id/move — custom fields', () => {
+  async function setupCustomField(locationId: string, name: string, position: number) {
+    const { generateUuid, query: dbQuery } = await import('../db.js');
+    const id = generateUuid();
+    await dbQuery(
+      'INSERT INTO location_custom_fields (id, location_id, name, position) VALUES ($1, $2, $3, $4)',
+      [id, locationId, name, position],
+    );
+    return id;
+  }
+
+  async function setFieldValue(binId: string, fieldId: string, value: string) {
+    const { generateUuid, query: dbQuery } = await import('../db.js');
+    await dbQuery(
+      'INSERT INTO bin_custom_field_values (id, bin_id, field_id, value) VALUES ($1, $2, $3, $4)',
+      [generateUuid(), binId, fieldId, value],
+    );
+  }
+
+  async function getFieldValues(binId: string) {
+    const { query: dbQuery } = await import('../db.js');
+    const result = await dbQuery<{ field_id: string; value: string }>(
+      'SELECT field_id, value FROM bin_custom_field_values WHERE bin_id = $1',
+      [binId],
+    );
+    return result.rows;
+  }
+
+  async function getLocationFields(locationId: string) {
+    const { query: dbQuery } = await import('../db.js');
+    const result = await dbQuery<{ id: string; name: string; position: number }>(
+      'SELECT id, name, position FROM location_custom_fields WHERE location_id = $1 ORDER BY position',
+      [locationId],
+    );
+    return result.rows;
+  }
+
+  it('remaps custom field values to matching target fields', async () => {
+    const { token } = await createTestUser(app);
+    const loc1 = await createTestLocation(app, token, 'Source');
+    const loc2 = await createTestLocation(app, token, 'Target');
+    const bin = await createTestBin(app, token, loc1.id);
+
+    const srcFieldA = await setupCustomField(loc1.id, 'Color', 0);
+    const srcFieldB = await setupCustomField(loc1.id, 'Size', 1);
+    const tgtFieldA = await setupCustomField(loc2.id, 'Color', 0);
+    const tgtFieldB = await setupCustomField(loc2.id, 'Size', 1);
+
+    await setFieldValue(bin.id, srcFieldA, 'Red');
+    await setFieldValue(bin.id, srcFieldB, 'Large');
+
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/move`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ locationId: loc2.id });
+
+    expect(res.status).toBe(200);
+
+    const values = await getFieldValues(bin.id);
+    expect(values).toHaveLength(2);
+    const valueMap = new Map(values.map(v => [v.field_id, v.value]));
+    expect(valueMap.get(tgtFieldA)).toBe('Red');
+    expect(valueMap.get(tgtFieldB)).toBe('Large');
+  });
+
+  it('auto-creates missing fields in target location', async () => {
+    const { token } = await createTestUser(app);
+    const loc1 = await createTestLocation(app, token, 'Source');
+    const loc2 = await createTestLocation(app, token, 'Target');
+    const bin = await createTestBin(app, token, loc1.id);
+
+    const srcFieldA = await setupCustomField(loc1.id, 'Color', 0);
+    const srcFieldB = await setupCustomField(loc1.id, 'Weight', 1);
+    // Target only has 'Color', not 'Weight'
+    const tgtFieldA = await setupCustomField(loc2.id, 'Color', 0);
+
+    await setFieldValue(bin.id, srcFieldA, 'Blue');
+    await setFieldValue(bin.id, srcFieldB, '5kg');
+
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/move`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ locationId: loc2.id });
+
+    expect(res.status).toBe(200);
+
+    // 'Weight' should have been auto-created in target
+    const targetFields = await getLocationFields(loc2.id);
+    expect(targetFields).toHaveLength(2);
+    const weightField = targetFields.find(f => f.name === 'Weight');
+    expect(weightField).toBeDefined();
+    expect(weightField!.position).toBe(1); // appended after position 0
+
+    const values = await getFieldValues(bin.id);
+    expect(values).toHaveLength(2);
+    const valueMap = new Map(values.map(v => [v.field_id, v.value]));
+    expect(valueMap.get(tgtFieldA)).toBe('Blue');
+    expect(valueMap.get(weightField!.id)).toBe('5kg');
+
+    // Response body custom_fields should use target field IDs
+    expect(res.body.custom_fields[tgtFieldA]).toBe('Blue');
+    expect(res.body.custom_fields[weightField!.id]).toBe('5kg');
+  });
+
+  it('auto-creates all fields when target has none (demo seed scenario)', async () => {
+    const { token } = await createTestUser(app);
+    const loc1 = await createTestLocation(app, token, 'Home');
+    const loc2 = await createTestLocation(app, token, 'Storage');
+    const bin = await createTestBin(app, token, loc1.id, { name: 'Board Games' });
+
+    // Source has 4 fields (like demo seed), target has none
+    const f1 = await setupCustomField(loc1.id, 'Purchase Date', 0);
+    const f2 = await setupCustomField(loc1.id, 'Estimated Value', 1);
+    const f3 = await setupCustomField(loc1.id, 'Condition', 2);
+    const f4 = await setupCustomField(loc1.id, 'Last Checked', 3);
+
+    // Bin only has 2 of the 4 fields populated (like demo seed Board Games)
+    await setFieldValue(bin.id, f3, 'Well-loved');
+    await setFieldValue(bin.id, f4, '2026-02-15');
+
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/move`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ locationId: loc2.id });
+
+    expect(res.status).toBe(200);
+
+    // Target should have exactly 2 auto-created fields (only populated ones)
+    const targetFields = await getLocationFields(loc2.id);
+    expect(targetFields).toHaveLength(2);
+    expect(targetFields.map(f => f.name).sort()).toEqual(['Condition', 'Last Checked']);
+
+    // Bin response should have custom_fields with target field IDs
+    const condField = targetFields.find(f => f.name === 'Condition')!;
+    const lcField = targetFields.find(f => f.name === 'Last Checked')!;
+    expect(res.body.custom_fields[condField.id]).toBe('Well-loved');
+    expect(res.body.custom_fields[lcField.id]).toBe('2026-02-15');
+
+    // Verify via GET too
+    const getRes = await request(app)
+      .get(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.custom_fields[condField.id]).toBe('Well-loved');
+    expect(getRes.body.custom_fields[lcField.id]).toBe('2026-02-15');
+  });
+
+  it('moves bin without custom fields unchanged', async () => {
+    const { token } = await createTestUser(app);
+    const loc1 = await createTestLocation(app, token, 'Source');
+    const loc2 = await createTestLocation(app, token, 'Target');
+    const bin = await createTestBin(app, token, loc1.id, { name: 'Plain' });
+
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/move`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ locationId: loc2.id });
+
+    expect(res.status).toBe(200);
+    expect(res.body.location_id).toBe(loc2.id);
+
+    const values = await getFieldValues(bin.id);
+    expect(values).toHaveLength(0);
+  });
+
+  it('preserves custom fields for bulk-moved bins', async () => {
+    const { token } = await createTestUser(app);
+    const loc1 = await createTestLocation(app, token, 'Source');
+    const loc2 = await createTestLocation(app, token, 'Target');
+    const bin1 = await createTestBin(app, token, loc1.id, { name: 'Bin1' });
+    const bin2 = await createTestBin(app, token, loc1.id, { name: 'Bin2' });
+
+    const srcField = await setupCustomField(loc1.id, 'Material', 0);
+    await setFieldValue(bin1.id, srcField, 'Wood');
+    await setFieldValue(bin2.id, srcField, 'Metal');
+
+    // Move both bins individually (no bulk route exists)
+    const res1 = await request(app)
+      .post(`/api/bins/${bin1.id}/move`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ locationId: loc2.id });
+    const res2 = await request(app)
+      .post(`/api/bins/${bin2.id}/move`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ locationId: loc2.id });
+
+    expect(res1.status).toBe(200);
+    expect(res2.status).toBe(200);
+
+    // 'Material' should exist once in target
+    const targetFields = await getLocationFields(loc2.id);
+    const materialFields = targetFields.filter(f => f.name === 'Material');
+    expect(materialFields).toHaveLength(1);
+
+    // Both bins should reference the same target field
+    const vals1 = await getFieldValues(bin1.id);
+    const vals2 = await getFieldValues(bin2.id);
+    expect(vals1).toHaveLength(1);
+    expect(vals2).toHaveLength(1);
+    expect(vals1[0].field_id).toBe(vals2[0].field_id);
+    expect(vals1[0].value).toBe('Wood');
+    expect(vals2[0].value).toBe('Metal');
+  });
+
+  it('non-admin member move does not create custom fields in target', async () => {
+    // Admin creates source location with custom fields and a bin
+    const { token: adminToken } = await createTestUser(app);
+    const loc1 = await createTestLocation(app, adminToken, 'Source');
+    const bin = await createTestBin(app, adminToken, loc1.id, { name: 'FieldBin' });
+
+    const srcColor = await setupCustomField(loc1.id, 'Color', 0);
+    const srcWeight = await setupCustomField(loc1.id, 'Weight', 1);
+    await setFieldValue(bin.id, srcColor, 'Red');
+    await setFieldValue(bin.id, srcWeight, '5kg');
+
+    // Second user creates target location (is admin there) and sets up one matching field
+    const { token: memberToken, user: memberUser } = await createTestUser(app);
+    const loc2 = await createTestLocation(app, memberToken, 'Target');
+    const tgtColor = await setupCustomField(loc2.id, 'Color', 0);
+
+    // Make the second user a member (not admin) of source location so they can be added as admin there,
+    // but actually: the move endpoint requires admin on SOURCE. So make them admin on source, member on target.
+    // Re-read the route: requireAdmin(access.locationId) = admin on SOURCE.
+    // We need admin on source, non-admin on target.
+    // Invite memberUser to source as admin
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ inviteCode: loc1.invite_code });
+    const { query: dbQuery } = await import('../db.js');
+    await dbQuery(
+      "UPDATE location_members SET role = 'admin' WHERE location_id = $1 AND user_id = $2",
+      [loc1.id, memberUser.id],
+    );
+    // Demote memberUser to 'member' on target (they created it so they're admin)
+    await dbQuery(
+      "UPDATE location_members SET role = 'member' WHERE location_id = $1 AND user_id = $2",
+      [loc2.id, memberUser.id],
+    );
+
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/move`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ locationId: loc2.id });
+
+    expect(res.status).toBe(200);
+    expect(res.body.location_id).toBe(loc2.id);
+
+    // Target should still have only the original 'Color' field — 'Weight' must NOT be auto-created
+    const targetFields = await getLocationFields(loc2.id);
+    expect(targetFields).toHaveLength(1);
+    expect(targetFields[0].name).toBe('Color');
+
+    // Only the matching 'Color' value should be preserved, 'Weight' value should be dropped
+    const values = await getFieldValues(bin.id);
+    expect(values).toHaveLength(1);
+    expect(values[0].field_id).toBe(tgtColor);
+    expect(values[0].value).toBe('Red');
+  });
+});
+
 describe('POST /api/bins/:id/photos — viewer restriction', () => {
   it('returns 403 for viewer uploading a photo', async () => {
     const { token: adminToken } = await createTestUser(app);

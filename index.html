@@ -16,20 +16,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="apple-touch-icon" sizes="180x180" href="/pwa-192x192.png" />
     <title>OpenBin</title>
-    <!-- Critical design tokens inlined so they resolve before the external stylesheet loads.
-         Values duplicated from src/index.css — keep in sync. -->
-    <style>
-      :root{--bg-base:#f5f5f5;--bg-flat:#fff;--border-flat:#e0e0e0;--text-primary:#1c1c1e;--text-secondary:#3c3c43;--text-tertiary:#6d6d72;color-scheme:light}
-      .dark{--bg-base:#121212;--bg-flat:#1e1e1e;--border-flat:#333;--text-primary:#f5f5f7;--text-secondary:#ebebf0;--text-tertiary:#98989d;color-scheme:dark}
-      body{background:var(--bg-base);color:var(--text-primary)}
-    </style>
     <script>
       // Apply stored theme before first paint to prevent flash
       (function() {
         var t = localStorage.getItem('openbin-theme');
         if (t !== 'light' && t !== 'dark') t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         document.documentElement.className = t;
-        document.documentElement.style.colorScheme = t;
       })();
     </script>
   </head>
