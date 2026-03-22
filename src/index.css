@@ -330,28 +330,47 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.30);
   z-index: 1;
   border-radius: inherit;
 }
 
-/* Horizontal scan line that sweeps top → bottom */
+/* Grid overlay — analytical accent-colored lines */
 .ai-photo-shimmer::after {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
+  inset: 0;
   z-index: 2;
-  background: var(--accent);
-  animation: aiScanLine 2s ease-in-out infinite;
+  border-radius: inherit;
+  background:
+    repeating-linear-gradient(
+      to right,
+      color-mix(in srgb, var(--accent) 40%, transparent) 0px,
+      color-mix(in srgb, var(--accent) 40%, transparent) 1px,
+      transparent 1px, transparent 40px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--accent) 40%, transparent) 0px,
+      color-mix(in srgb, var(--accent) 40%, transparent) 1px,
+      transparent 1px, transparent 40px
+    );
+  animation: aiGridFade 4s ease-in-out infinite;
 }
 
-@keyframes aiScanLine {
-  0% { top: 0%; opacity: 0; }
-  5% { opacity: 1; }
-  95% { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
+/* Blur animation on img — never fully resolves while looping */
+.ai-photo-shimmer img {
+  animation: aiDenoise 3s ease-in-out infinite;
+}
+
+@keyframes aiDenoise {
+  0%, 100% { filter: blur(12px) brightness(1.1); }
+  50%      { filter: blur(2px) brightness(1.02); }
+}
+
+@keyframes aiGridFade {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.7; }
 }
 
 .ai-item-reveal {
@@ -378,11 +397,10 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .ai-photo-shimmer::before { background: rgba(0, 0, 0, 0.25); }
-  .ai-photo-shimmer::after, .ai-item-reveal {
-    animation: none !important;
-  }
-  .ai-item-reveal { opacity: 1 !important; grid-template-rows: 1fr !important; }
+  .ai-photo-shimmer::after { animation: none !important; opacity: 0 !important; }
+  .ai-photo-shimmer img { animation: none !important; filter: none !important; }
   .ai-photo-shrink { transition: none !important; }
+  .ai-item-reveal { animation: none !important; opacity: 1 !important; grid-template-rows: 1fr !important; }
 }
 
 /* --- AI Progress Bar --- */
