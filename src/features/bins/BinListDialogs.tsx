@@ -1,4 +1,5 @@
 import { lazy, Suspense, useRef } from 'react';
+import type { SortDirection } from '@/components/ui/sort-header';
 import { useAutoOpenOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import type { Area } from '@/types';
 import { BinCreateDialog } from './BinCreateDialog';
@@ -31,6 +32,8 @@ interface BinListDialogsProps {
   setFilters: (value: BinFilters | ((prev: BinFilters) => BinFilters)) => void;
   sort: SortOption;
   setSort: (s: SortOption) => void;
+  sortDir: SortDirection;
+  setSortDir: (dir: SortDirection) => void;
   search: string;
   bulk: { isOpen: (d: BulkDialog) => boolean; open: (d: BulkDialog) => void; close: () => void };
   selectedIds: Set<string>;
@@ -44,7 +47,7 @@ export function BinListDialogs({
   commandOpen, setCommandOpen,
   aiEnabled, allTags, areas,
   filters, setFilters,
-  sort, setSort, search,
+  sort, setSort, sortDir, setSortDir, search,
   bulk, selectedIds, clearSelection,
 }: BinListDialogsProps) {
   const commandMounted = useRef(false);
@@ -68,6 +71,8 @@ export function BinListDialogs({
         areas={areas}
         sort={sort}
         onSortChange={setSort}
+        sortDir={sortDir}
+        onSortDirChange={setSortDir}
         searchQuery={search}
         onSaveView={() => setSaveViewOpen(true)}
       />

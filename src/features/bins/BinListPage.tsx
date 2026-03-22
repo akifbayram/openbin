@@ -329,6 +329,7 @@ export function BinListPage() {
         areas={areas}
         filters={filters} setFilters={setFilters}
         sort={sort} setSort={setSort}
+        sortDir={sortDir} setSortDir={setSortDir}
         search={search}
         bulk={bulk}
         selectedIds={selectedIds}

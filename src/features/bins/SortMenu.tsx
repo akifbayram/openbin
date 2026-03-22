@@ -1,6 +1,7 @@
-import { ArrowUpDown, Check } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import type { SortDirection } from '@/components/ui/sort-header';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
@@ -17,9 +18,11 @@ const sortLabels: Record<SortOption, string> = {
 interface SortMenuProps {
   sort: SortOption;
   onSortChange: (sort: SortOption) => void;
+  sortDir: SortDirection;
+  onSortDirChange: (dir: SortDirection) => void;
 }
 
-export function SortMenu({ sort, onSortChange }: SortMenuProps) {
+export function SortMenu({ sort, onSortChange, sortDir, onSortDirChange }: SortMenuProps) {
   const { visible, animating, close, toggle } = usePopover();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -46,17 +49,28 @@ export function SortMenu({ sort, onSortChange }: SortMenuProps) {
           animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
           'absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] flat-popover overflow-hidden z-20',
         )}>
-          {(Object.keys(sortLabels) as SortOption[]).map((key) => (
-            <button
-              type="button"
-              key={key}
-              onClick={() => { onSortChange(key); close(); }}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-            >
-              <Check className={cn('h-4 w-4', sort === key ? 'text-[var(--accent)]' : 'invisible')} />
-              {sortLabels[key]}
-            </button>
-          ))}
+          {(Object.keys(sortLabels) as SortOption[]).map((key) => {
+            const active = sort === key;
+            const DirIcon = active ? (sortDir === 'asc' ? ArrowUp : ArrowDown) : ArrowUp;
+            return (
+              <button
+                type="button"
+                key={key}
+                onClick={() => {
+                  if (active) {
+                    onSortDirChange(sortDir === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    onSortChange(key);
+                  }
+                  close();
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+              >
+                <DirIcon className={cn('h-4 w-4', active ? 'text-[var(--accent)]' : 'invisible')} />
+                {sortLabels[key]}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

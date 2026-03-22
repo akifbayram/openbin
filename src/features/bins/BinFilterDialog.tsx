@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { OptionGroup } from '@/components/ui/option-group';
+import type { SortDirection } from '@/components/ui/sort-header';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { cn } from '@/lib/utils';
 import type { Area } from '@/types';
@@ -31,6 +33,34 @@ function SectionHeader({ label, count }: { label: string; count?: number }) {
   );
 }
 
+function AreaPill({
+  name,
+  prefix,
+  selected,
+  onToggle,
+}: {
+  name: string;
+  prefix?: string | null;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={cn(
+        'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all duration-150 cursor-pointer',
+        selected
+          ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
+          : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]',
+      )}
+    >
+      {prefix && <span className="opacity-50">{prefix} → </span>}
+      {name}
+    </button>
+  );
+}
+
 interface BinFilterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -40,6 +70,8 @@ interface BinFilterDialogProps {
   areas: Area[];
   sort: SortOption;
   onSortChange: (sort: SortOption) => void;
+  sortDir: SortDirection;
+  onSortDirChange: (dir: SortDirection) => void;
   searchQuery: string;
   onSaveView: () => void;
 }
@@ -53,12 +85,31 @@ export function BinFilterDialog({
   areas,
   sort,
   onSortChange,
+  sortDir,
+  onSortDirChange,
   searchQuery,
   onSaveView,
 }: BinFilterDialogProps) {
   const [draft, setDraft] = useState<BinFilters>(filters);
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const getTagStyle = useTagStyle();
+  const [orderedAreas, areaPrefixes] = useMemo(() => {
+    const ordered = flattenAreaTree(buildAreaTree(areas));
+    const map = new Map<string, Area>();
+    for (const a of areas) map.set(a.id, a);
+    const prefixes = new Map<string, string>();
+    for (const area of areas) {
+      if (!area.parent_id) continue;
+      const parts: string[] = [];
+      let cur = map.get(area.parent_id);
+      while (cur) {
+        parts.unshift(cur.name);
+        cur = cur.parent_id ? map.get(cur.parent_id) : undefined;
+      }
+      prefixes.set(area.id, parts.join(' → '));
+    }
+    return [ordered, prefixes] as const;
+  }, [areas]);
 
   // Sync draft when dialog opens
   useEffect(() => {
@@ -103,7 +154,20 @@ export function BinFilterDialog({
         <div className="space-y-5">
           {/* Sort */}
           <div className="space-y-2.5">
-            <SectionHeader label="Sort" />
+            <div className="row-spread">
+              <SectionHeader label="Sort" />
+              <button
+                type="button"
+                onClick={() => onSortDirChange(sortDir === 'asc' ? 'desc' : 'asc')}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-[var(--radius-xs)] px-2 py-1 text-[12px] font-medium',
+                  'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)] transition-colors cursor-pointer',
+                )}
+              >
+                {sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                {sortDir === 'asc' ? 'Asc' : 'Desc'}
+              </button>
+            </div>
             <OptionGroup
               options={(Object.keys(sortLabels) as SortOption[]).map((key) => ({ key, label: sortLabels[key] }))}
               value={sort}
@@ -184,39 +248,22 @@ export function BinFilterDialog({
           {areas.length > 0 && (
             <div className="space-y-2.5">
               <SectionHeader label="Area" count={draft.areas.length} />
-              <div className="flex flex-col gap-1">
-                  <button
-                    type="button"
-                    onClick={() => toggleArea('__unassigned__')}
-                    className={cn(
-                      'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all duration-150 cursor-pointer w-fit',
-                      draft.areas.includes('__unassigned__')
-                        ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
-                        : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
-                    )}
-                  >
-                    Unassigned
-                  </button>
-                  {flattenAreaTree(buildAreaTree(areas)).map((area) => {
-                    const selected = draft.areas.includes(area.id);
-                    return (
-                      <button
-                        key={area.id}
-                        type="button"
-                        onClick={() => toggleArea(area.id)}
-                        className={cn(
-                          'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[12px] font-medium transition-all duration-150 cursor-pointer w-fit',
-                          selected
-                            ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
-                            : 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]'
-                        )}
-                        style={area.depth > 0 ? { marginLeft: area.depth * 16 } : undefined}
-                      >
-                        {area.name}
-                      </button>
-                    );
-                  })}
-                </div>
+              <div className="flex flex-wrap gap-1">
+                <AreaPill
+                  name="Unassigned"
+                  selected={draft.areas.includes('__unassigned__')}
+                  onToggle={() => toggleArea('__unassigned__')}
+                />
+                {orderedAreas.map((area) => (
+                  <AreaPill
+                    key={area.id}
+                    name={area.name}
+                    prefix={areaPrefixes.get(area.id)}
+                    selected={draft.areas.includes(area.id)}
+                    onToggle={() => toggleArea(area.id)}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
