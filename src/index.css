@@ -345,14 +345,14 @@ body {
   background:
     repeating-linear-gradient(
       to right,
-      color-mix(in srgb, var(--accent) 40%, transparent) 0px,
-      color-mix(in srgb, var(--accent) 40%, transparent) 1px,
+      rgba(255, 255, 255, 0.15) 0px,
+      rgba(255, 255, 255, 0.15) 1px,
       transparent 1px, transparent 40px
     ),
     repeating-linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--accent) 40%, transparent) 0px,
-      color-mix(in srgb, var(--accent) 40%, transparent) 1px,
+      rgba(255, 255, 255, 0.15) 0px,
+      rgba(255, 255, 255, 0.15) 1px,
       transparent 1px, transparent 40px
     );
   animation: aiGridFade 4s ease-in-out infinite;
@@ -364,8 +364,11 @@ body {
 }
 
 @keyframes aiDenoise {
-  0%, 100% { filter: blur(12px) brightness(1.1); }
-  50%      { filter: blur(2px) brightness(1.02); }
+  0%   { filter: none; }
+  15%  { filter: blur(12px) brightness(1.1); }
+  50%  { filter: blur(2px) brightness(1.02); }
+  85%  { filter: blur(12px) brightness(1.1); }
+  100% { filter: blur(2px) brightness(1.02); }
 }
 
 @keyframes aiGridFade {

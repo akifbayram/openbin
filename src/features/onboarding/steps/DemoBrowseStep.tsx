@@ -1,7 +1,16 @@
 import { Button } from '@/components/ui/button';
 import { BinPreviewCard } from '@/features/bins/BinPreviewCard';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
+import { needsLightText, resolveColor } from '@/lib/colorPalette';
 import { DEMO_BIN } from '../onboardingConstants';
+
+const demoBinPreset = resolveColor(DEMO_BIN.color);
+const demoBinBgCss = demoBinPreset?.bgCss;
+const demoBinBgHex = demoBinPreset?.bg ?? '#ffffff';
+const demoBinTextColor = needsLightText(demoBinBgHex) ? '#ffffff' : '#000000';
+const demoBinColors = { dark: demoBinTextColor, light: demoBinBgHex } as const;
+const demoBinContainerStyle = demoBinBgCss ? { background: demoBinBgCss } : undefined;
+const demoBinShortCodeStyle = { color: demoBinTextColor } as const;
 
 export function DemoBrowseStep({ onNext }: { onNext: () => void }) {
   return (
@@ -22,7 +31,15 @@ export function DemoBrowseStep({ onNext }: { onNext: () => void }) {
         className="mb-4"
       />
       <div className="rounded-[var(--radius-lg)] p-3 flex flex-col items-center mb-5">
-        <QRCodeDisplay binId={DEMO_BIN.shortCode} size={120} shortCode={DEMO_BIN.shortCode} hideActions />
+        <QRCodeDisplay
+          binId={DEMO_BIN.shortCode}
+          size={120}
+          shortCode={DEMO_BIN.shortCode}
+          hideActions
+          colors={demoBinColors}
+          containerStyle={demoBinContainerStyle}
+          shortCodeStyle={demoBinShortCodeStyle}
+        />
       </div>
       <Button
         type="button"

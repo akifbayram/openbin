@@ -17,7 +17,7 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
     !hasStreamedData && 'ai-photo-shimmer',
     hasStreamedData ? 'max-h-20 opacity-80' : 'max-h-64',
   );
-  const imgClass = 'w-full h-full object-cover rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5 transition-[filter] duration-500 ease-out';
+  const imgClass = 'w-full h-full object-cover rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5 transition-[filter] duration-700 ease-out';
 
   return (
     <div className="space-y-3">
