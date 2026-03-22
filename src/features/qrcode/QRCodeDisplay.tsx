@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { getBinUrl } from '@/lib/constants';
-import { type QRColorOptions, generateQRDataURL } from '@/lib/qr';
+import { generateQRDataURL, type QRColorOptions } from '@/lib/qr';
 
 interface QRCodeDisplayProps {
   binId: string;

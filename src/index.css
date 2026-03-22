@@ -347,34 +347,41 @@ body {
       to right,
       rgba(255, 255, 255, 0.15) 0px,
       rgba(255, 255, 255, 0.15) 1px,
-      transparent 1px, transparent 40px
+      transparent 1px, transparent 20px
     ),
     repeating-linear-gradient(
       to bottom,
       rgba(255, 255, 255, 0.15) 0px,
       rgba(255, 255, 255, 0.15) 1px,
-      transparent 1px, transparent 40px
+      transparent 1px, transparent 20px
     );
-  animation: aiGridFade 4s ease-in-out infinite;
+  animation: aiGridFade 8s ease-out forwards;
 }
 
-/* Blur animation on img — never fully resolves while looping */
+/* Progressive denoise — blur decreases over 8s, never fully resolves */
 .ai-photo-shimmer img {
-  animation: aiDenoise 3s ease-in-out infinite;
+  animation: aiDenoise 8s ease-out forwards;
 }
 
 @keyframes aiDenoise {
-  0%   { filter: none; }
-  15%  { filter: blur(12px) brightness(1.1); }
-  50%  { filter: blur(2px) brightness(1.02); }
-  85%  { filter: blur(12px) brightness(1.1); }
-  100% { filter: blur(2px) brightness(1.02); }
+  0%   { filter: blur(16px) brightness(1.12); }
+  15%  { filter: blur(10px) brightness(1.08); }
+  35%  { filter: blur(6px) brightness(1.05); }
+  55%  { filter: blur(4px) brightness(1.03); }
+  75%  { filter: blur(3px) brightness(1.02); }
+  100% { filter: blur(2px) brightness(1.01); }
 }
 
+/* Grid brightens as denoise progresses */
 @keyframes aiGridFade {
-  0%, 100% { opacity: 0.3; }
-  50%      { opacity: 0.7; }
+  0%   { opacity: 0.15; }
+  50%  { opacity: 0.5; }
+  100% { opacity: 0.7; }
 }
+
+/* Fast variant for fixed-duration demos (~3s) */
+.ai-photo-shimmer-fast::after { animation-duration: 2.5s; }
+.ai-photo-shimmer-fast img { animation-duration: 2.5s; }
 
 .ai-item-reveal {
   display: grid;

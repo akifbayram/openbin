@@ -274,11 +274,13 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
 
   return (
     <div className="space-y-5">
-      {/* Photo counter */}
-      <div className="row-spread text-[13px] text-[var(--text-secondary)]">
-        <span>Photo {currentIndex + 1} of {photos.length}</span>
-        <span>{reviewedCount}/{photos.length} reviewed</span>
-      </div>
+      {/* Photo counter (hidden for single photo) */}
+      {photos.length > 1 && (
+        <div className="row-spread text-[13px] text-[var(--text-secondary)]">
+          <span>Photo {currentIndex + 1} of {photos.length}</span>
+          <span>{reviewedCount}/{photos.length} reviewed</span>
+        </div>
+      )}
 
       {(isStreaming || isCorrecting) ? (
         <AiStreamingPreview

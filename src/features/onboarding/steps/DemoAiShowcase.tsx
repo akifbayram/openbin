@@ -54,7 +54,7 @@ export function DemoAiShowcase({ onNext }: { onNext: () => void }) {
       <div className={cn(
         'w-full rounded-[var(--radius-md)] overflow-hidden transition-all ease-in-out',
         photoState === 'scanning'
-          ? 'ai-photo-shimmer max-h-40 opacity-100 mb-4 duration-1000'
+          ? 'ai-photo-shimmer ai-photo-shimmer-fast max-h-40 opacity-100 mb-4 duration-1000'
           : 'max-h-0 opacity-0 mb-0 duration-500'
       )}>
         <img src={demoBinPhoto} alt="Bin contents" className="w-full h-40 object-cover" />

@@ -63,19 +63,27 @@ export function PhotoUploadSection({
           )}>
             {photoPreviews.map((preview, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: preview blobs have no stable identity
-              <div key={i} className="relative shrink-0">
+              <div key={i} className={cn(
+                'relative shrink-0',
+                analyzing && 'ai-photo-shimmer',
+                isFull ? 'rounded-[var(--radius-md)]' : 'rounded-[var(--radius-sm)]'
+              )}>
                 <img
                   src={preview}
                   alt={`Preview ${i + 1}`}
                   className={cn(
-                    'h-14 w-14 object-cover',
+                    'h-14 w-14 object-cover transition-[filter] duration-700 ease-out',
                     isFull ? 'rounded-[var(--radius-md)]' : 'rounded-[var(--radius-sm)]'
                   )}
                 />
                 <button
                   type="button"
                   onClick={() => onRemovePhoto(i)}
-                  className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center hover:bg-[var(--destructive)] hover:text-white transition-colors"
+                  disabled={analyzing}
+                  className={cn(
+                    'absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center hover:bg-[var(--destructive)] hover:text-white transition-colors',
+                    analyzing && 'hidden'
+                  )}
                 >
                   <X className="h-3 w-3" />
                 </button>
