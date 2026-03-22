@@ -43,6 +43,10 @@ export function useDataSectionActions() {
   const { activeLocationId } = useAuth();
   const { showToast } = useToast();
 
+  function resolveLocationId(locationId?: string | null): string | null {
+    return locationId ?? activeLocationId ?? null;
+  }
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Export dialog
@@ -65,12 +69,14 @@ export function useDataSectionActions() {
   async function fetchDryRun(
     source: { json: ExportData } | { file: File; format: 'csv' | 'zip' },
     mode: 'merge' | 'replace',
+    locationId?: string | null,
   ) {
-    if (!activeLocationId) return;
+    const targetLocationId = resolveLocationId(locationId);
+    if (!targetLocationId) return;
     try {
       let result: ImportPreview;
       if ('json' in source) {
-        result = await apiFetch<ImportPreview>(`/api/locations/${activeLocationId}/import`, {
+        result = await apiFetch<ImportPreview>(`/api/locations/${targetLocationId}/import`, {
           method: 'POST',
           body: { bins: source.json.bins, mode, dryRun: true },
         });
@@ -80,7 +86,7 @@ export function useDataSectionActions() {
         formData.append('mode', mode);
         formData.append('dryRun', 'true');
         result = await apiFetch<ImportPreview>(
-          `/api/locations/${activeLocationId}/import/${source.format}`,
+          `/api/locations/${targetLocationId}/import/${source.format}`,
           { method: 'POST', body: formData },
         );
       }
@@ -139,8 +145,9 @@ export function useDataSectionActions() {
 
   // --- Export ---
 
-  async function handleExport() {
-    if (!activeLocationId) {
+  async function handleExport(locationId?: string | null) {
+    const targetLocationId = resolveLocationId(locationId);
+    if (!targetLocationId) {
       showToast({ message: 'Select a location first' });
       return;
     }
@@ -148,17 +155,17 @@ export function useDataSectionActions() {
     try {
       switch (exportFormat) {
         case 'zip':
-          await exportZip(activeLocationId);
+          await exportZip(targetLocationId);
           showToast({ message: 'ZIP backup exported successfully' });
           break;
         case 'json': {
-          const data = await exportAllData(activeLocationId);
+          const data = await exportAllData(targetLocationId);
           downloadExport(data);
           showToast({ message: 'Backup exported successfully' });
           break;
         }
         case 'csv':
-          await exportCsv(activeLocationId);
+          await exportCsv(targetLocationId);
           showToast({ message: 'CSV exported successfully' });
           break;
       }
@@ -177,8 +184,9 @@ export function useDataSectionActions() {
     fileInputRef.current?.click();
   }
 
-  async function handleImportFileSelected(files: FileList | null) {
-    if (!files?.[0] || !activeLocationId) return;
+  async function handleImportFileSelected(files: FileList | null, locationId?: string | null) {
+    const targetLocationId = resolveLocationId(locationId);
+    if (!files?.[0] || !targetLocationId) return;
     const file = files[0];
 
     if (importFormatRaw === 'zip') {
@@ -186,13 +194,13 @@ export function useDataSectionActions() {
         showToast({ message: 'Please select a .zip file' });
       } else {
         setZipPending({ file });
-        fetchDryRun({ file, format: 'zip' }, importMode);
+        fetchDryRun({ file, format: 'zip' }, importMode, locationId);
       }
     } else if (importFormatRaw === 'json') {
       try {
         const data = await parseImportFile(file);
         setPendingData(data);
-        fetchDryRun({ json: data }, importMode);
+        fetchDryRun({ json: data }, importMode, locationId);
       } catch (err) {
         showToast({ message: importErrorMessage(err) });
       }
@@ -209,7 +217,7 @@ export function useDataSectionActions() {
         }
         const counts = countCSVBins(text);
         setCsvPending({ file, bins: counts.bins, items: counts.items });
-        fetchDryRun({ file, format: 'csv' }, importMode);
+        fetchDryRun({ file, format: 'csv' }, importMode, locationId);
       } catch {
         showToast({ message: 'Failed to read CSV file' });
       }
@@ -227,13 +235,14 @@ export function useDataSectionActions() {
     return isReplace ? `Replaced all data: ${main}` : `Imported ${main}${skipped}`;
   }
 
-  async function handleConfirmImport() {
-    if (!activeLocationId) return;
+  async function handleConfirmImport(locationId?: string | null) {
+    const targetLocationId = resolveLocationId(locationId);
+    if (!targetLocationId) return;
 
     if (importFormatRaw === 'zip' && zipPending) {
       setImporting(true);
       try {
-        const result = await importZip(activeLocationId, zipPending.file, importMode);
+        const result = await importZip(targetLocationId, zipPending.file, importMode);
         showToast({ message: buildImportToast(result, importMode === 'replace') });
         setZipPending(null);
         setImportDialogOpen(false);
@@ -246,7 +255,7 @@ export function useDataSectionActions() {
     } else if (importFormatRaw === 'json' && pendingData) {
       setImporting(true);
       try {
-        const result = await importData(activeLocationId, pendingData, importMode);
+        const result = await importData(targetLocationId, pendingData, importMode);
         showToast({ message: buildImportToast(result, importMode === 'replace') });
         setPendingData(null);
         setImportDialogOpen(false);
@@ -259,7 +268,7 @@ export function useDataSectionActions() {
     } else if (importFormatRaw === 'csv' && csvPending) {
       setImporting(true);
       try {
-        const result = await importCSV(activeLocationId, csvPending.file, importMode);
+        const result = await importCSV(targetLocationId, csvPending.file, importMode);
         showToast({
           message: `Imported ${result.binsImported} bin${result.binsImported !== 1 ? 's' : ''} with ${result.itemsImported} item${result.itemsImported !== 1 ? 's' : ''}${result.binsSkipped ? ` (${result.binsSkipped} skipped)` : ''}`,
         });

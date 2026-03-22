@@ -7,29 +7,28 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Disclosure } from '@/components/ui/disclosure';
+import { LocationSelectList } from '@/features/locations/LocationSelectList';
+import { useLocationList } from '@/features/locations/useLocations';
 import { cn } from '@/lib/utils';
+import type { Location } from '@/types';
 import type { useDataSectionActions } from './useDataSectionActions';
 
 interface DataSectionProps {
   activeLocationId: string | null | undefined;
   actions: ReturnType<typeof useDataSectionActions>;
   locationName?: string;
-  binCount?: number;
-  areaCount?: number;
-  binLabel?: string;
-  areaLabel?: string;
 }
 
 function RowGroup({ children }: { children: React.ReactNode }) {
@@ -42,6 +41,26 @@ function RowGroup({ children }: { children: React.ReactNode }) {
 
 function RowDivider() {
   return <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />;
+}
+
+function LocationPickerSection({
+  locations,
+  value,
+  onChange,
+}: {
+  locations: Location[];
+  value: string | null;
+  onChange: (id: string) => void;
+}) {
+  if (locations.length <= 1) return null;
+  return (
+    <div className="space-y-2.5">
+      <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Location</span>
+      <div className="max-h-40 overflow-y-auto">
+        <LocationSelectList locations={locations} value={value} onChange={onChange} />
+      </div>
+    </div>
+  );
 }
 
 function SettingsRow({
@@ -98,10 +117,6 @@ export function DataSection({
   activeLocationId,
   actions,
   locationName,
-  binCount,
-  areaCount,
-  binLabel = 'bins',
-  areaLabel = 'areas',
 }: DataSectionProps) {
   const navigate = useNavigate();
   const {
@@ -129,12 +144,11 @@ export function DataSection({
     resetImportState,
   } = actions;
 
-  const statsText =
-    binCount != null || areaCount != null
-      ? [binCount != null ? `${binCount} ${binLabel}` : null, areaCount != null ? `${areaCount} ${areaLabel}` : null]
-          .filter(Boolean)
-          .join(' \u00b7 ')
-      : undefined;
+  const { locations } = useLocationList();
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(activeLocationId ?? null);
+
+  const selectedLocation = locations.find(l => l.id === selectedLocationId);
+  const selectedLocationName = selectedLocation?.name ?? locationName ?? 'Current location';
 
   const hasImportFile = (importFormat === 'zip' && zipPending != null) || (importFormat === 'json' && pendingData != null) || (importFormat === 'csv' && csvPending != null);
 
@@ -192,7 +206,7 @@ export function DataSection({
                 icon={Download}
                 label="Export Data"
                 description="Backup or download your data"
-                onClick={() => setExportDialogOpen(true)}
+                onClick={() => { setSelectedLocationId(activeLocationId ?? null); setExportDialogOpen(true); }}
                 disabled={!activeLocationId}
               />
               <RowDivider />
@@ -202,6 +216,7 @@ export function DataSection({
                 description="Import from backup or spreadsheet"
                 onClick={() => {
                   resetImportState();
+                  setSelectedLocationId(activeLocationId ?? null);
                   setImportDialogOpen(true);
                 }}
                 disabled={!activeLocationId}
@@ -214,76 +229,77 @@ export function DataSection({
             type="file"
             accept={importFormat === 'zip' ? '.zip,application/zip' : importFormat === 'csv' ? '.csv,text/csv' : '.json'}
             className="hidden"
-            onChange={(e) => handleImportFileSelected(e.target.files)}
+            onChange={(e) => handleImportFileSelected(e.target.files, selectedLocationId)}
           />
           </Disclosure>
         </CardContent>
       </Card>
 
-      {/* Export dialog */}
       <Dialog open={exportDialogOpen} onOpenChange={(open) => {
         if (!open && !exporting) setExportDialogOpen(false);
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Export Data</DialogTitle>
-            <DialogDescription>
-              {locationName || 'Current location'}{statsText ? ` \u00b7 ${statsText}` : ''}
-            </DialogDescription>
+            <DialogTitle>Export</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <label className="flex items-start gap-2 text-sm cursor-pointer">
-              <input
-                type="radio"
-                name="export-format"
-                checked={exportFormat === 'zip'}
-                onChange={() => setExportFormat('zip')}
-                className="accent-[var(--accent)] mt-0.5"
-              />
-              <div>
-                <span className="text-[var(--text-primary)]">Backup (ZIP)</span>
-                <p className="text-[13px] text-[var(--text-tertiary)]">All data including photos</p>
+          <div className="space-y-5">
+            <LocationPickerSection locations={locations} value={selectedLocationId} onChange={setSelectedLocationId} />
+            <div className="space-y-2.5">
+              <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
+              <div className="flex flex-col gap-3">
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="export-format"
+                    checked={exportFormat === 'zip'}
+                    onChange={() => setExportFormat('zip')}
+                    className="accent-[var(--accent)] mt-0.5"
+                  />
+                  <div>
+                    <span className="text-[var(--text-primary)]">Backup (ZIP)</span>
+                    <p className="text-[13px] text-[var(--text-tertiary)]">All data including photos</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="export-format"
+                    checked={exportFormat === 'json'}
+                    onChange={() => setExportFormat('json')}
+                    className="accent-[var(--accent)] mt-0.5"
+                  />
+                  <div>
+                    <span className="text-[var(--text-primary)]">Backup (JSON)</span>
+                    <p className="text-[13px] text-[var(--text-tertiary)]">Data and settings, no photos</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="export-format"
+                    checked={exportFormat === 'csv'}
+                    onChange={() => setExportFormat('csv')}
+                    className="accent-[var(--accent)] mt-0.5"
+                  />
+                  <div>
+                    <span className="text-[var(--text-primary)]">Spreadsheet (CSV)</span>
+                    <p className="text-[13px] text-[var(--text-tertiary)]">Open in Excel or Google Sheets</p>
+                  </div>
+                </label>
               </div>
-            </label>
-            <label className="flex items-start gap-2 text-sm cursor-pointer">
-              <input
-                type="radio"
-                name="export-format"
-                checked={exportFormat === 'json'}
-                onChange={() => setExportFormat('json')}
-                className="accent-[var(--accent)] mt-0.5"
-              />
-              <div>
-                <span className="text-[var(--text-primary)]">Backup (JSON)</span>
-                <p className="text-[13px] text-[var(--text-tertiary)]">Data and settings, no photos</p>
-              </div>
-            </label>
-            <label className="flex items-start gap-2 text-sm cursor-pointer">
-              <input
-                type="radio"
-                name="export-format"
-                checked={exportFormat === 'csv'}
-                onChange={() => setExportFormat('csv')}
-                className="accent-[var(--accent)] mt-0.5"
-              />
-              <div>
-                <span className="text-[var(--text-primary)]">Spreadsheet (CSV)</span>
-                <p className="text-[13px] text-[var(--text-tertiary)]">Open in Excel or Google Sheets</p>
-              </div>
-            </label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setExportDialogOpen(false)} disabled={exporting}>
               Cancel
             </Button>
-            <Button onClick={handleExport} disabled={exporting}>
-              {exporting ? 'Exporting...' : 'Export'}
+            <Button onClick={() => handleExport(selectedLocationId)} disabled={exporting}>
+              {exporting ? 'Exporting...' : `Export ${selectedLocationName}`}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Import dialog */}
       <Dialog open={importDialogOpen} onOpenChange={(open) => {
         if (!open && !importing) {
           setImportDialogOpen(false);
@@ -292,13 +308,11 @@ export function DataSection({
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Import Data</DialogTitle>
-            <DialogDescription>
-              Import into {locationName || 'the current location'}
-            </DialogDescription>
+            <DialogTitle>Import</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-5">
+            <LocationPickerSection locations={locations} value={selectedLocationId} onChange={setSelectedLocationId} />
             <div className="space-y-2.5">
               <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
               <div className="flex flex-col gap-3">
@@ -419,10 +433,10 @@ export function DataSection({
             </Button>
             <Button
               variant={importMode === 'replace' ? 'destructive' : 'default'}
-              onClick={handleConfirmImport}
+              onClick={() => handleConfirmImport(selectedLocationId)}
               disabled={!hasImportFile || importing}
             >
-              {importing ? 'Importing...' : importMode === 'replace' ? 'Replace & Import' : 'Import'}
+              {importing ? 'Importing...' : importMode === 'replace' ? 'Replace & Import' : `Import ${selectedLocationName}`}
             </Button>
           </DialogFooter>
         </DialogContent>
