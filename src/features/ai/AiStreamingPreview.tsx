@@ -13,10 +13,11 @@ interface AiStreamingPreviewProps {
 export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, initialStatusLabel }: AiStreamingPreviewProps) {
   const hasStreamedData = streamedItems.length > 0 || streamedName.length > 0;
   const shimmerClass = cn(
-    'rounded-[var(--radius-lg)] ai-photo-shimmer ai-photo-shrink transition-all duration-500 ease-in-out',
+    'rounded-[var(--radius-lg)] ai-photo-shrink transition-all duration-500 ease-in-out',
+    !hasStreamedData && 'ai-photo-shimmer',
     hasStreamedData ? 'max-h-20 opacity-80' : 'max-h-64',
   );
-  const imgClass = 'w-full h-full object-cover rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5';
+  const imgClass = 'w-full h-full object-cover rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5 transition-[filter] duration-500 ease-out';
 
   return (
     <div className="space-y-3">
