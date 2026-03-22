@@ -5,7 +5,7 @@ import {
   ScanLine,
   Sparkles,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -62,6 +62,13 @@ export function BinListPage() {
   }, [location.state]);
 
   const { activeLocationId } = useAuth();
+  const prevLocationRef = useRef(activeLocationId);
+  useEffect(() => {
+    if (prevLocationRef.current && activeLocationId && prevLocationRef.current !== activeLocationId) {
+      clearAll();
+    }
+    prevLocationRef.current = activeLocationId;
+  }, [activeLocationId, clearAll]);
   const { isAdmin, canWrite, canCreateBin } = usePermissions();
   const resetPage = useCallback(() => setPage(1), [setPage]);
   const { pageSize, setPageSize, pageSizeOptions } = usePageSize(resetPage);
