@@ -62,10 +62,10 @@ function NavButton({ path, label, icon: Icon, currentPath, navigate, onClick, co
       aria-label={label}
       aria-current={isActive ? 'page' : undefined}
       className={cn(
-        'flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full overflow-hidden whitespace-nowrap text-left',
+        'flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full overflow-hidden whitespace-nowrap text-left border',
         isActive
           ? 'flat-card text-[var(--text-primary)]'
-          : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
+          : 'border-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
       )}
     >
       <Icon className={cn('h-5 w-5 shrink-0', isActive && 'text-[var(--accent)]')} />
@@ -171,10 +171,10 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
               aria-label={user.displayName || user.username}
               aria-current={location.pathname === '/profile' ? 'page' : undefined}
               className={cn(
-                'flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full overflow-hidden whitespace-nowrap text-left',
+                'flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full overflow-hidden whitespace-nowrap text-left border',
                 location.pathname === '/profile'
                   ? 'flat-card text-[var(--text-primary)]'
-                  : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
+                  : 'border-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
               )}
             >
               <UserAvatar
