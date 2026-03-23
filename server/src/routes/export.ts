@@ -12,6 +12,7 @@ import { config } from '../lib/config.js';
 import { parseCSV } from '../lib/csvParser.js';
 import {
   buildAreaPathMap,
+  buildExportBinEntry,
   buildFieldIdToNameMap,
   type ExportArea,
   type ExportBin,
@@ -30,100 +31,27 @@ import {
   fetchLocationSettings,
   fetchLocationTagColors,
   fetchTrashedBins,
-  importAreasSync,
-  importLocationSettingsSync,
-  importMembersSync,
   importPhotosSync,
-  importPinnedBinsSync,
-  importSavedViewsSync,
-  importTagColorsSync,
   insertBinItemsSync,
   insertBinWithShortCode,
+  isLocationAdminSync,
   loadBinPhotoMeta,
   loadBinPhotosBase64,
-  mapCustomFieldsToIds,
-  mapCustomFieldsToNames,
   resolveAreaSync,
-  resolveCreatedBySync,
-  resolveCustomFieldDefsSync,
 } from '../lib/exportHelpers.js';
 import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import {
+  buildDryRunPreview,
+  type DryRunBin,
+  executeFullImportTransaction,
+  lookupAreaSync,
+} from '../lib/importTransaction.js';
 import { safePath } from '../lib/pathSafety.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 
 const router = Router();
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
-
-interface DryRunBin {
-  id?: string;
-  name: string;
-  items?: unknown[];
-  tags?: string[];
-}
-
-function buildDryRunPreview(
-  bins: DryRunBin[],
-  importMode: 'merge' | 'replace',
-) {
-  const toCreate: { name: string; itemCount: number; tags: string[] }[] = [];
-  const toSkip: { name: string; reason: string }[] = [];
-  let totalItems = 0;
-
-  // Batch-fetch existing IDs in one query when merge mode
-  let existingIds: Set<string> | undefined;
-  if (importMode === 'merge') {
-    const ids = bins.map(b => b.id).filter((id): id is string => !!id);
-    if (ids.length > 0) {
-      const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
-      const rows = querySync<{ id: string }>(
-        `SELECT id FROM bins WHERE id IN (${placeholders})`,
-        ids,
-      );
-      existingIds = new Set(rows.rows.map(r => r.id));
-    } else {
-      existingIds = new Set();
-    }
-  }
-
-  for (const bin of bins) {
-    const items = bin.items || [];
-    totalItems += items.length;
-
-    if (existingIds && bin.id && existingIds.has(bin.id)) {
-      toSkip.push({ name: bin.name, reason: 'already exists' });
-      continue;
-    }
-
-    toCreate.push({ name: bin.name, itemCount: items.length, tags: bin.tags || [] });
-  }
-
-  return { preview: true as const, toCreate, toSkip, totalBins: bins.length, totalItems };
-}
-
-function lookupAreaSync(locationId: string, areaPath: string): string | null {
-  const parts = areaPath.trim().split('/').map(p => p.trim()).filter(Boolean);
-  if (parts.length === 0) return null;
-
-  let parentId: string | null = null;
-  let lastId: string | null = null;
-
-  for (const part of parts) {
-    const q = parentId === null
-      ? 'SELECT id FROM areas WHERE location_id = $1 AND name = $2 AND parent_id IS NULL'
-      : 'SELECT id FROM areas WHERE location_id = $1 AND name = $2 AND parent_id = $3';
-    const params = parentId === null ? [locationId, part] : [locationId, part, parentId];
-    const found = querySync(q, params);
-    if (found.rows.length > 0) {
-      lastId = found.rows[0].id as string;
-      parentId = lastId;
-    } else {
-      return null;
-    }
-  }
-
-  return lastId;
-}
 
 router.use(authenticate);
 
@@ -174,45 +102,16 @@ router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async 
     fetchLocationMembers(locationId),
   ]);
 
-  function buildExportBin(bin: Record<string, unknown>, includeTrashed?: boolean): ExportBin {
-    const customFields =
-      bin.custom_fields && typeof bin.custom_fields === 'object' && Object.keys(bin.custom_fields as object).length > 0
-        ? mapCustomFieldsToNames(bin.custom_fields as Record<string, string>, fieldIdToName)
-        : undefined;
-    const areaInfo = bin.area_id ? areaPathMap.get(bin.area_id as string) : undefined;
-    const areaPath = areaInfo?.path || (bin.area_name as string);
-
-    return {
-      id: bin.id as string,
-      name: bin.name as string,
-      location: areaPath,
-      items: extractItemsWithQuantity(bin.items),
-      notes: bin.notes as string,
-      tags: bin.tags as string[],
-      icon: bin.icon as string,
-      color: bin.color as string,
-      cardStyle: (bin.card_style as string) || undefined,
-      visibility: bin.visibility !== 'location' ? (bin.visibility as 'private') : undefined,
-      customFields,
-      shortCode: bin.id as string,
-      createdBy: (bin.created_by as string) || undefined,
-      deletedAt: includeTrashed ? (bin.deleted_at as string) : undefined,
-      createdAt: bin.created_at as string,
-      updatedAt: bin.updated_at as string,
-      photos: [], // filled below
-    };
-  }
-
   const exportBins: ExportBin[] = [];
   for (const bin of bins) {
-    const entry = buildExportBin(bin);
+    const entry = buildExportBinEntry(bin, fieldIdToName, areaPathMap);
     entry.photos = await loadBinPhotosBase64(bin.id);
     exportBins.push(entry);
   }
 
   const exportTrashedBins: ExportBin[] = [];
   for (const bin of trashedBinsRaw) {
-    const entry = buildExportBin(bin, true);
+    const entry = buildExportBinEntry(bin, fieldIdToName, areaPathMap, { includeTrashed: true });
     entry.photos = await loadBinPhotosBase64(bin.id);
     exportTrashedBins.push(entry);
   }
@@ -262,39 +161,13 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
     fetchLocationMembers(locationId),
   ]);
 
-  function buildZipBinEntry(bin: Record<string, unknown>, includeTrashed?: boolean) {
-    const customFields =
-      bin.custom_fields && typeof bin.custom_fields === 'object' && Object.keys(bin.custom_fields as object).length > 0
-        ? mapCustomFieldsToNames(bin.custom_fields as Record<string, string>, fieldIdToName)
-        : undefined;
-    const areaInfo = bin.area_id ? areaPathMap.get(bin.area_id as string) : undefined;
-    const areaPath = areaInfo?.path || (bin.area_name as string);
+  interface ZipPhotoRef { id: string; filename: string; mimeType: string; zipPath: string; createdBy?: string; createdAt?: string }
+  type ZipBinEntry = Omit<ExportBin, 'photos'> & { photos: ZipPhotoRef[] };
 
-    return {
-      id: bin.id as string,
-      name: bin.name as string,
-      location: areaPath,
-      items: extractItemsWithQuantity(bin.items),
-      notes: bin.notes as string,
-      tags: bin.tags as string[],
-      icon: bin.icon as string,
-      color: bin.color as string,
-      cardStyle: (bin.card_style as string) || undefined,
-      visibility: bin.visibility !== 'location' ? (bin.visibility as string) : undefined,
-      customFields,
-      shortCode: bin.id as string,
-      createdBy: (bin.created_by as string) || undefined,
-      deletedAt: includeTrashed ? (bin.deleted_at as string) : undefined,
-      createdAt: bin.created_at as string,
-      updatedAt: bin.updated_at as string,
-      photos: [] as Array<{ id: string; filename: string; mimeType: string; zipPath: string; createdBy?: string; createdAt?: string }>,
-    };
-  }
-
-  const bins = [];
+  const bins: ZipBinEntry[] = [];
   const photosToInclude: Array<{ binId: string; photoId: string; filename: string; storagePath: string }> = [];
 
-  async function collectPhotos(binId: string, entry: ReturnType<typeof buildZipBinEntry>) {
+  async function collectPhotos(binId: string, entry: ZipBinEntry) {
     const photoMeta = await loadBinPhotoMeta(binId);
     for (const photo of photoMeta) {
       const ext = path.extname(photo.filename || '.jpg').toLowerCase();
@@ -312,14 +185,14 @@ router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(as
   }
 
   for (const bin of dbBins) {
-    const entry = buildZipBinEntry(bin);
+    const entry: ZipBinEntry = { ...buildExportBinEntry(bin, fieldIdToName, areaPathMap), photos: [] };
     await collectPhotos(bin.id, entry);
     bins.push(entry);
   }
 
-  const trashedBinEntries = [];
+  const trashedBinEntries: ZipBinEntry[] = [];
   for (const bin of trashedBinsRaw) {
-    const entry = buildZipBinEntry(bin, true);
+    const entry: ZipBinEntry = { ...buildExportBinEntry(bin, fieldIdToName, areaPathMap, { includeTrashed: true }), photos: [] };
     await collectPhotos(bin.id, entry);
     trashedBinEntries.push(entry);
   }
@@ -457,156 +330,23 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
     return;
   }
 
-  // Check if importing user is admin (needed for settings and members)
-  const memberRow = querySync<{ role: string }>(
-    'SELECT role FROM location_members WHERE location_id = $1 AND user_id = $2',
-    [locationId, userId]
-  );
-  const isAdmin = memberRow.rows.length > 0 && memberRow.rows[0].role === 'admin';
-
-  const doImport = getDb().transaction(() => {
-    // 1. Replace-mode cleanup
-    if (importMode === 'replace') {
-      const existingPhotos = querySync<{ storage_path: string }>(
-        'SELECT storage_path FROM photos WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1)',
-        [locationId]
-      );
-      querySync('DELETE FROM bins WHERE location_id = $1', [locationId]);
-      querySync('DELETE FROM areas WHERE location_id = $1', [locationId]);
-      for (const photo of existingPhotos.rows) {
-        try {
-          const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
-          if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        } catch { /* ignore */ }
-      }
-    }
-
-    // 2. Location settings (replace mode only, admin only)
-    let settingsApplied = false;
-    if (locationSettings && importMode === 'replace' && isAdmin) {
-      importLocationSettingsSync(locationId, locationSettings);
-      settingsApplied = true;
-    }
-
-    // 3. Members (admin only)
-    let membersImported = 0;
-    if (members && Array.isArray(members) && isAdmin) {
-      membersImported = importMembersSync(locationId, members);
-    }
-
-    // 4. Tag colors
-    if (tagColors && Array.isArray(tagColors)) {
-      importTagColorsSync(locationId, tagColors);
-    }
-
-    // 5. Custom field definitions
-    let fieldNameToId: Map<string, string> | undefined;
-    if (customFieldDefinitions && Array.isArray(customFieldDefinitions)) {
-      fieldNameToId = resolveCustomFieldDefsSync(locationId, customFieldDefinitions);
-    }
-
-    // 6. Areas (before bins so paths exist)
-    let areasImported = 0;
-    if (areas && Array.isArray(areas)) {
-      areasImported = importAreasSync(locationId, areas, userId);
-    }
-
-    // Helper to import a single bin
-    const oldToNewBinId = new Map<string, string>();
-
-    function importSingleBin(bin: ExportBin, opts?: { deletedAt?: string | null }): boolean {
-      if (importMode === 'merge') {
-        const existing = querySync('SELECT id FROM bins WHERE id = $1', [bin.id]);
-        if (existing.rows.length > 0) return false;
-      }
-
-      const areaId = resolveAreaSync(locationId, bin.location || '', userId);
-      let resolvedCustomFields = bin.customFields;
-      if (resolvedCustomFields && fieldNameToId && fieldNameToId.size > 0) {
-        resolvedCustomFields = mapCustomFieldsToIds(resolvedCustomFields, fieldNameToId);
-      }
-
-      const resolvedCreatedBy = resolveCreatedBySync(bin.createdBy, userId);
-      const binId = insertBinWithShortCode('', locationId, {
-        name: bin.name,
-        notes: bin.notes || '',
-        tags: bin.tags || [],
-        icon: bin.icon || '',
-        color: bin.color || '',
-        cardStyle: bin.cardStyle,
-        visibility: bin.visibility,
-        customFields: resolvedCustomFields,
-        shortCode: bin.shortCode,
-        deletedAt: opts?.deletedAt,
-        createdAt: bin.createdAt || new Date().toISOString(),
-        updatedAt: bin.updatedAt || new Date().toISOString(),
-      }, areaId, resolvedCreatedBy);
-
-      oldToNewBinId.set(bin.id, binId);
-      insertBinItemsSync(binId, bin.items || []);
-      return true;
-    }
-
-    // 7. Active bins
-    let binsImported = 0;
-    let binsSkipped = 0;
-    let photosImported = 0;
-
-    for (const bin of bins) {
-      if (importSingleBin(bin)) {
-        const newBinId = oldToNewBinId.get(bin.id)!;
-        if (bin.photos && Array.isArray(bin.photos)) {
-          photosImported += importPhotosSync(newBinId, bin.photos, userId);
-        }
-        binsImported++;
-      } else {
-        binsSkipped++;
-      }
-    }
-
-    // 8. Trashed bins
-    let trashedBinsImported = 0;
-    if (trashedBins && Array.isArray(trashedBins)) {
-      for (const bin of trashedBins) {
-        if (importSingleBin(bin, { deletedAt: bin.deletedAt })) {
-          const newBinId = oldToNewBinId.get(bin.id)!;
-          if (bin.photos && Array.isArray(bin.photos)) {
-            photosImported += importPhotosSync(newBinId, bin.photos, userId);
-          }
-          trashedBinsImported++;
-        }
-      }
-    }
-
-    // 9. Pinned bins (after all bins are imported)
-    let pinsImported = 0;
-    if (pinnedBins && Array.isArray(pinnedBins)) {
-      pinsImported = importPinnedBinsSync(pinnedBins, oldToNewBinId);
-    }
-
-    // 10. Saved views
-    let viewsImported = 0;
-    if (savedViews && Array.isArray(savedViews)) {
-      viewsImported = importSavedViewsSync(savedViews);
-    }
-
-    return { binsImported, binsSkipped, trashedBinsImported, photosImported, areasImported, pinsImported, viewsImported, membersImported, settingsApplied };
+  const result = executeFullImportTransaction({
+    locationId,
+    userId,
+    isAdmin: isLocationAdminSync(locationId, userId),
+    importMode,
+    bins,
+    trashedBins,
+    tagColors,
+    customFieldDefinitions,
+    locationSettings,
+    areas,
+    pinnedBins,
+    savedViews,
+    members,
   });
 
-  const result = doImport();
-
-  res.json({
-    binsImported: result.binsImported,
-    binsSkipped: result.binsSkipped,
-    trashedBinsImported: result.trashedBinsImported,
-    photosImported: result.photosImported,
-    photosSkipped: 0,
-    areasImported: result.areasImported,
-    pinsImported: result.pinsImported,
-    viewsImported: result.viewsImported,
-    membersImported: result.membersImported,
-    settingsApplied: result.settingsApplied,
-  });
+  res.json({ ...result, photosSkipped: 0 });
 }));
 
 // POST /api/locations/:id/import/csv — import bins from CSV file
@@ -975,151 +715,23 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
   const exportBins = convertZipBins(zipBins);
   const exportTrashedBins = convertZipBins(zipTrashedBins, { trashed: true });
 
-  // Check if importing user is admin
-  const memberRow = querySync<{ role: string }>(
-    'SELECT role FROM location_members WHERE location_id = $1 AND user_id = $2',
-    [locationId, userId]
-  );
-  const isAdmin = memberRow.rows.length > 0 && memberRow.rows[0].role === 'admin';
-
-  const doImport = getDb().transaction(() => {
-    // 1. Replace-mode cleanup
-    if (importMode === 'replace') {
-      const existingPhotos = querySync<{ storage_path: string }>(
-        'SELECT storage_path FROM photos WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1)',
-        [locationId]
-      );
-      querySync('DELETE FROM bins WHERE location_id = $1', [locationId]);
-      querySync('DELETE FROM areas WHERE location_id = $1', [locationId]);
-      for (const photo of existingPhotos.rows) {
-        try {
-          const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
-          if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        } catch { /* ignore */ }
-      }
-    }
-
-    // 2. Location settings (replace mode only, admin only)
-    let settingsApplied = false;
-    if (manifest.locationSettings && importMode === 'replace' && isAdmin) {
-      importLocationSettingsSync(locationId, manifest.locationSettings);
-      settingsApplied = true;
-    }
-
-    // 3. Members (admin only)
-    let membersImported = 0;
-    if (manifest.members && Array.isArray(manifest.members) && isAdmin) {
-      membersImported = importMembersSync(locationId, manifest.members);
-    }
-
-    // 4. Tag colors
-    if (manifest.tagColors && Array.isArray(manifest.tagColors)) {
-      importTagColorsSync(locationId, manifest.tagColors);
-    }
-
-    // 5. Custom field definitions
-    let fieldNameToId: Map<string, string> | undefined;
-    if (manifest.customFieldDefinitions && Array.isArray(manifest.customFieldDefinitions)) {
-      fieldNameToId = resolveCustomFieldDefsSync(locationId, manifest.customFieldDefinitions);
-    }
-
-    // 6. Areas
-    let areasImported = 0;
-    if (manifest.areas && Array.isArray(manifest.areas)) {
-      areasImported = importAreasSync(locationId, manifest.areas, userId);
-    }
-
-    // Helper to import a single bin
-    const oldToNewBinId = new Map<string, string>();
-
-    function importSingleBin(bin: ExportBin, opts?: { deletedAt?: string | null }): boolean {
-      if (importMode === 'merge') {
-        const existing = querySync('SELECT id FROM bins WHERE id = $1', [bin.id]);
-        if (existing.rows.length > 0) return false;
-      }
-      const areaId = resolveAreaSync(locationId, bin.location || '', userId);
-      let resolvedCustomFields = bin.customFields;
-      if (resolvedCustomFields && fieldNameToId && fieldNameToId.size > 0) {
-        resolvedCustomFields = mapCustomFieldsToIds(resolvedCustomFields, fieldNameToId);
-      }
-      const resolvedCreatedBy = resolveCreatedBySync(bin.createdBy, userId);
-      const binId = insertBinWithShortCode('', locationId, {
-        name: bin.name,
-        notes: bin.notes || '',
-        tags: bin.tags || [],
-        icon: bin.icon || '',
-        color: bin.color || '',
-        cardStyle: bin.cardStyle,
-        visibility: bin.visibility,
-        customFields: resolvedCustomFields,
-        shortCode: bin.shortCode,
-        deletedAt: opts?.deletedAt,
-        createdAt: bin.createdAt || new Date().toISOString(),
-        updatedAt: bin.updatedAt || new Date().toISOString(),
-      }, areaId, resolvedCreatedBy);
-      oldToNewBinId.set(bin.id, binId);
-      insertBinItemsSync(binId, bin.items || []);
-      return true;
-    }
-
-    // 7. Active bins
-    let binsImported = 0;
-    let binsSkipped = 0;
-    let photosImported = 0;
-
-    for (const bin of exportBins) {
-      if (importSingleBin(bin)) {
-        const newBinId = oldToNewBinId.get(bin.id)!;
-        if (bin.photos && Array.isArray(bin.photos)) {
-          photosImported += importPhotosSync(newBinId, bin.photos, userId);
-        }
-        binsImported++;
-      } else {
-        binsSkipped++;
-      }
-    }
-
-    // 8. Trashed bins
-    let trashedBinsImported = 0;
-    for (const bin of exportTrashedBins) {
-      if (importSingleBin(bin, { deletedAt: bin.deletedAt })) {
-        const newBinId = oldToNewBinId.get(bin.id)!;
-        if (bin.photos && Array.isArray(bin.photos)) {
-          photosImported += importPhotosSync(newBinId, bin.photos, userId);
-        }
-        trashedBinsImported++;
-      }
-    }
-
-    // 9. Pinned bins
-    let pinsImported = 0;
-    if (manifest.pinnedBins && Array.isArray(manifest.pinnedBins)) {
-      pinsImported = importPinnedBinsSync(manifest.pinnedBins, oldToNewBinId);
-    }
-
-    // 10. Saved views
-    let viewsImported = 0;
-    if (manifest.savedViews && Array.isArray(manifest.savedViews)) {
-      viewsImported = importSavedViewsSync(manifest.savedViews);
-    }
-
-    return { binsImported, binsSkipped, trashedBinsImported, photosImported, areasImported, pinsImported, viewsImported, membersImported, settingsApplied };
+  const result = executeFullImportTransaction({
+    locationId,
+    userId,
+    isAdmin: isLocationAdminSync(locationId, userId),
+    importMode,
+    bins: exportBins,
+    trashedBins: exportTrashedBins,
+    tagColors: manifest.tagColors,
+    customFieldDefinitions: manifest.customFieldDefinitions,
+    locationSettings: manifest.locationSettings,
+    areas: manifest.areas,
+    pinnedBins: manifest.pinnedBins,
+    savedViews: manifest.savedViews,
+    members: manifest.members,
   });
 
-  const result = doImport();
-
-  res.json({
-    binsImported: result.binsImported,
-    binsSkipped: result.binsSkipped,
-    trashedBinsImported: result.trashedBinsImported,
-    photosImported: result.photosImported,
-    photosSkipped: 0,
-    areasImported: result.areasImported,
-    pinsImported: result.pinsImported,
-    viewsImported: result.viewsImported,
-    membersImported: result.membersImported,
-    settingsApplied: result.settingsApplied,
-  });
+  res.json({ ...result, photosSkipped: 0 });
 }));
 
 // POST /api/import/legacy — import legacy V1/V2 format

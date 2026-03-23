@@ -593,6 +593,37 @@ export function importMembersSync(locationId: string, members: ExportMember[]): 
   return count;
 }
 
+/**
+ * Delete all bins (cascading to items, photos rows, custom field values)
+ * and areas for a location. Also removes photo files from storage.
+ * Synchronous (for use in replace-mode import transactions).
+ */
+export function replaceCleanupSync(locationId: string): void {
+  const existingPhotos = querySync<{ storage_path: string }>(
+    'SELECT storage_path FROM photos WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1)',
+    [locationId]
+  );
+  querySync('DELETE FROM bins WHERE location_id = $1', [locationId]);
+  querySync('DELETE FROM areas WHERE location_id = $1', [locationId]);
+  for (const photo of existingPhotos.rows) {
+    try {
+      const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
+      if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    } catch { /* ignore */ }
+  }
+}
+
+/**
+ * Check if a user is an admin of a location. Synchronous.
+ */
+export function isLocationAdminSync(locationId: string, userId: string): boolean {
+  const row = querySync<{ role: string }>(
+    'SELECT role FROM location_members WHERE location_id = $1 AND user_id = $2',
+    [locationId, userId]
+  );
+  return row.rows.length > 0 && row.rows[0].role === 'admin';
+}
+
 /** Check magic bytes to verify buffer is an allowed image type (JPEG, PNG, WebP). */
 function isAllowedImageBuffer(buf: Buffer): boolean {
   if (buf.length < 12) return false;
@@ -640,4 +671,42 @@ export function importPhotosSync(binId: string, photos: ExportPhoto[], userId: s
     count++;
   }
   return count;
+}
+
+/**
+ * Build a standardized export bin entry from a raw DB row.
+ * Returns photos as empty array — callers populate photos in their own format.
+ */
+export function buildExportBinEntry(
+  bin: Record<string, unknown>,
+  fieldIdToName: Map<string, string>,
+  areaPathMap: Map<string, AreaPathInfo>,
+  opts?: { includeTrashed?: boolean },
+): ExportBin {
+  const customFields =
+    bin.custom_fields && typeof bin.custom_fields === 'object' && Object.keys(bin.custom_fields as object).length > 0
+      ? mapCustomFieldsToNames(bin.custom_fields as Record<string, string>, fieldIdToName)
+      : undefined;
+  const areaInfo = bin.area_id ? areaPathMap.get(bin.area_id as string) : undefined;
+  const areaPath = areaInfo?.path || (bin.area_name as string);
+
+  return {
+    id: bin.id as string,
+    name: bin.name as string,
+    location: areaPath,
+    items: extractItemsWithQuantity(bin.items),
+    notes: bin.notes as string,
+    tags: bin.tags as string[],
+    icon: bin.icon as string,
+    color: bin.color as string,
+    cardStyle: (bin.card_style as string) || undefined,
+    visibility: bin.visibility !== 'location' ? (bin.visibility as 'private') : undefined,
+    customFields,
+    shortCode: bin.id as string,
+    createdBy: (bin.created_by as string) || undefined,
+    deletedAt: opts?.includeTrashed ? (bin.deleted_at as string) : undefined,
+    createdAt: bin.created_at as string,
+    updatedAt: bin.updated_at as string,
+    photos: [],
+  };
 }
