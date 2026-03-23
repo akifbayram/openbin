@@ -50,12 +50,16 @@ function isPrivateIp(ip: string): boolean {
 }
 
 /** Validate an AI endpoint URL to prevent SSRF attacks. */
-export async function validateEndpointUrl(url: string): Promise<void> {
+export async function validateEndpointUrl(url: string, isDemoUser = false): Promise<void> {
   let parsed: URL;
   try {
     parsed = new URL(url);
   } catch {
     throw new AiAnalysisError('NETWORK_ERROR', 'Invalid endpoint URL');
+  }
+
+  if (isDemoUser && !ALLOWED_AI_HOSTS.has(parsed.hostname)) {
+    throw new AiAnalysisError('NETWORK_ERROR', 'Demo accounts cannot use custom AI endpoints');
   }
 
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
@@ -130,10 +134,10 @@ export function mapSdkError(err: unknown): AiAnalysisError {
   return new AiAnalysisError('PROVIDER_ERROR', msg.slice(0, 200));
 }
 
-export async function testProviderConnection(config: AiProviderConfig): Promise<void> {
+export async function testProviderConnection(config: AiProviderConfig, isDemoUser = false): Promise<void> {
   // SSRF protection: validate user-supplied endpoint URLs before making requests
   if (config.endpointUrl) {
-    await validateEndpointUrl(config.endpointUrl);
+    await validateEndpointUrl(config.endpointUrl, isDemoUser);
   }
 
   const model = createSdkModel(config);

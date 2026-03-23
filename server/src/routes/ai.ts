@@ -366,7 +366,7 @@ router.post('/reanalyze', aiLimiter, aiRouteHandler('reanalyze photo', async (re
     mimeType: img.mimeType,
   }));
 
-  const suggestions = await reanalyzeImages(settings.config, images, previousResult, loaded.existingTags, loaded.customFieldDefs, settings);
+  const suggestions = await reanalyzeImages(settings.config, images, previousResult, loaded.existingTags, loaded.customFieldDefs, settings, isDemoUser(req));
   res.json(suggestions);
 }));
 
@@ -421,7 +421,7 @@ router.post('/test', aiLimiter, aiRouteHandler('test connection', async (req, re
     apiKey: finalApiKey,
     model,
     endpointUrl: endpointUrl || null,
-  });
+  }, isDemoUser(req));
   res.json({ success: true });
 }));
 

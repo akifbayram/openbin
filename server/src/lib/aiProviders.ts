@@ -157,7 +157,7 @@ export async function analyzeImages(
 ): Promise<AiSuggestionsResult> {
   // SSRF protection: validate user-supplied endpoint URLs before making requests
   if (config.endpointUrl) {
-    await validateEndpointUrl(config.endpointUrl);
+    await validateEndpointUrl(config.endpointUrl, isDemoUser);
   }
 
   const model = createSdkModel(config);
@@ -199,10 +199,11 @@ export async function reanalyzeImages(
   previousResult: object,
   existingTags?: string[],
   customFieldDefs?: CustomFieldDef[],
-  overrides?: AiOverrides
+  overrides?: AiOverrides,
+  isDemoUser?: boolean
 ): Promise<AiSuggestionsResult> {
   if (config.endpointUrl) {
-    await validateEndpointUrl(config.endpointUrl);
+    await validateEndpointUrl(config.endpointUrl, isDemoUser);
   }
 
   const model = createSdkModel(config);
