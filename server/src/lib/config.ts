@@ -55,6 +55,12 @@ export const config = Object.freeze({
   trustProxy: parseBool(process.env.TRUST_PROXY, false),
   demoMode: parseBool(process.env.DEMO_MODE, false),
   aiMock: parseBool(process.env.AI_MOCK, false),
+  demoUsernames: new Set(
+    (process.env.DEMO_USERNAMES || '')
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
+  ),
 
   // Encryption
   aiEncryptionKey: process.env.AI_ENCRYPTION_KEY || null,
@@ -62,6 +68,9 @@ export const config = Object.freeze({
   // Upload limits
   maxPhotoSizeMb: clamp(parseInt(process.env.MAX_PHOTO_SIZE_MB || '5', 10), 1, 50, 5),
   maxAvatarSizeMb: clamp(parseInt(process.env.MAX_AVATAR_SIZE_MB || '2', 10), 1, 10, 2),
+  maxPhotosPerBin: clamp(parseInt(process.env.MAX_PHOTOS_PER_BIN || '1', 10), 1, 100, 1),
+  uploadQuotaDemoMb: clamp(parseInt(process.env.UPLOAD_QUOTA_DEMO_MB || '5', 10), 1, 10000, 5),
+  uploadQuotaGlobalDemoMb: clamp(parseInt(process.env.UPLOAD_QUOTA_GLOBAL_DEMO_MB || '50', 10), 1, 100000, 50),
 
   // AI provider env var fallback
   aiProvider: (process.env.AI_PROVIDER as AiProviderType) || null,
@@ -96,4 +105,10 @@ export function getEnvAiConfig(): AiProviderConfig | null {
     model: config.aiModel!,
     endpointUrl: config.aiEndpointUrl,
   };
+}
+
+/** Returns true if the request user is in the DEMO_USERNAMES list. */
+export function isDemoUser(req: { user?: { username: string } }): boolean {
+  if (!req.user) return false;
+  return config.demoUsernames.has(req.user.username.toLowerCase());
 }

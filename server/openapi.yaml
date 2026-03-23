@@ -1192,6 +1192,28 @@ components:
           example:
             error: RATE_LIMITED
             message: Too many attempts, please try again later
+    QuotaExceeded:
+      description: Upload quota exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            binLimit:
+              summary: Per-bin photo limit
+              value:
+                error: BIN_PHOTO_LIMIT
+                message: Maximum 1 photos per bin
+            userQuota:
+              summary: Per-user demo quota
+              value:
+                error: USER_QUOTA_EXCEEDED
+                message: "Upload quota exceeded: 4.8 MB used of 5 MB allowed"
+            globalQuota:
+              summary: Global demo storage cap
+              value:
+                error: GLOBAL_QUOTA_EXCEEDED
+                message: "Demo storage limit reached (50 MB). Please contact the administrator."
 
 paths:
   # ════════════════════════════════════════════════════════
@@ -2930,6 +2952,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/QuotaExceeded'
         '422':
           $ref: '#/components/responses/ValidationError'
 

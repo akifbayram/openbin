@@ -50,3 +50,10 @@ export class GoneError extends HttpError {
     this.name = 'GoneError';
   }
 }
+
+export class QuotaExceededError extends HttpError {
+  constructor(code: string, message: string) {
+    super(413, code, message);
+    this.name = 'QuotaExceededError';
+  }
+}

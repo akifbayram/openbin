@@ -95,4 +95,17 @@ export const memoryPhotoUpload = multer({
   },
 });
 
+/** Multer config for demo account in-memory photo uploads (3 MB per file). */
+export const demoMemoryPhotoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 3 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (PHOTO_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPEG, PNG, WebP, and GIF images are allowed'));
+    }
+  },
+});
+
 export { PHOTO_STORAGE_PATH, AVATAR_STORAGE_PATH };

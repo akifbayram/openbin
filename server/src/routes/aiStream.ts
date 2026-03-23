@@ -17,8 +17,9 @@ import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQuer
 import { aiLimiter } from '../lib/rateLimiters.js';
 import { createSdkModel } from '../lib/sdkProviderFactory.js';
 import { buildPrompt as buildStructurePrompt, STRUCTURE_TEXT_TOKENS } from '../lib/structureText.js';
-import { memoryPhotoUpload } from '../lib/uploadConfig.js';
+import { demoMemoryPhotoUpload, memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
+import { demoConnectionLimiter, isDemoUser } from '../middleware/demoConnectionLimiter.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 
 const streamRouter = Router();
@@ -133,11 +134,31 @@ streamRouter.post('/structure-text/stream', aiLimiter, aiRouteHandler('stream st
   });
 }));
 
-// POST /api/ai/analyze-image/stream
-streamRouter.post('/analyze-image/stream', aiLimiter, memoryPhotoUpload.fields([
+// Dynamic multer selector: demo users get 3 MB/file limit, others get the standard limit.
+const analyzeImageFields = [
   { name: 'photo', maxCount: 1 },
   { name: 'photos', maxCount: 5 },
-]), aiRouteHandler('stream analyze image', async (req, res) => {
+];
+const DEMO_REQUEST_MAX_BYTES = 15 * 1024 * 1024;
+
+function demoAwareAnalyzeUpload(req: import('express').Request, res: import('express').Response, next: import('express').NextFunction): void {
+  const upload = isDemoUser(req) ? demoMemoryPhotoUpload : memoryPhotoUpload;
+  upload.fields(analyzeImageFields)(req, res, (err) => {
+    if (err) { next(err); return; }
+    if (isDemoUser(req)) {
+      const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+      const total = [...(files?.photo || []), ...(files?.photos || [])].reduce((sum, f) => sum + f.size, 0);
+      if (total > DEMO_REQUEST_MAX_BYTES) {
+        res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Total upload size exceeds 15 MB' });
+        return;
+      }
+    }
+    next();
+  });
+}
+
+// POST /api/ai/analyze-image/stream
+streamRouter.post('/analyze-image/stream', aiLimiter, demoConnectionLimiter, demoAwareAnalyzeUpload, aiRouteHandler('stream analyze image', async (req, res) => {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
   const allFiles = [
     ...(files?.photo || []),

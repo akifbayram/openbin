@@ -8,8 +8,9 @@ import { getMemberRole, isBinCreator, requireAdmin, requireMemberOrAbove, verify
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
 import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinItems } from '../lib/binUpdateHelpers.js';
 import { validateBinFields } from '../lib/binValidation.js';
+import { config } from '../lib/config.js';
 import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
-import { ForbiddenError, GoneError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { ForbiddenError, GoneError, NotFoundError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
@@ -376,6 +377,31 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
     throw new NotFoundError('Bin not found');
   }
   await requireMemberOrAbove(access.locationId, req.user!.id, 'upload photos');
+
+  // Per-bin photo count limit (always enforced)
+  const countResult = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM photos WHERE bin_id = $1', [binId]);
+  if (countResult.rows[0].cnt >= config.maxPhotosPerBin) {
+    throw new QuotaExceededError('BIN_PHOTO_LIMIT', `Maximum ${config.maxPhotosPerBin} photos per bin`);
+  }
+
+  // Per-user and global quotas (demo mode only)
+  if (config.demoMode) {
+    const usageResult = await query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [req.user!.id]);
+    const usedBytes = usageResult.rows[0].total;
+    const limitBytes = config.uploadQuotaDemoMb * 1024 * 1024;
+    if (usedBytes >= limitBytes) {
+      const usedMb = (usedBytes / (1024 * 1024)).toFixed(1);
+      throw new QuotaExceededError('USER_QUOTA_EXCEEDED', `Upload quota exceeded: ${usedMb} MB used of ${config.uploadQuotaDemoMb} MB allowed`);
+    }
+
+    const globalResult = await query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos');
+    const globalBytes = globalResult.rows[0].total;
+    const globalLimitBytes = config.uploadQuotaGlobalDemoMb * 1024 * 1024;
+    if (globalBytes >= globalLimitBytes) {
+      throw new QuotaExceededError('GLOBAL_QUOTA_EXCEEDED', `Demo storage limit reached (${config.uploadQuotaGlobalDemoMb} MB). Please contact the administrator.`);
+    }
+  }
+
   next();
 }), binPhotoUpload.single('photo'), asyncHandler(async (req, res) => {
   const binId = req.params.id;

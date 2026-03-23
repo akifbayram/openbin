@@ -8,10 +8,10 @@ import { analyzeImages, reanalyzeImages } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
-import { config, getEnvAiConfig } from '../lib/config.js';
+import { config, getEnvAiConfig, isDemoUser } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
 import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
-import { ValidationError } from '../lib/httpErrors.js';
+import { HttpError, ValidationError } from '../lib/httpErrors.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
 import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
@@ -47,6 +47,7 @@ router.use(authenticate);
 
 // GET /api/ai/settings — get user's AI config
 router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
+  const demo = isDemoUser(req);
   const result = await query(
     'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, is_active FROM user_ai_settings WHERE user_id = $1',
     [req.user!.id]
@@ -59,7 +60,7 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
       res.json({
         id: null,
         provider: envConfig.provider,
-        apiKey: maskApiKey(envConfig.apiKey),
+        apiKey: demo ? 'sk-****' : maskApiKey(envConfig.apiKey),
         model: envConfig.model,
         endpointUrl: envConfig.endpointUrl,
         customPrompt: null,
@@ -77,7 +78,7 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
     }
     // In mock mode, return fake settings so the client enables AI features
     if (config.aiMock) {
-      res.json(MOCK_AI_SETTINGS);
+      res.json(demo ? { ...MOCK_AI_SETTINGS, apiKey: 'sk-****' } : MOCK_AI_SETTINGS);
       return;
     }
     res.json(null);
@@ -90,7 +91,7 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
   const providerConfigs: Record<string, { apiKey: string; model: string; endpointUrl: string | null }> = {};
   for (const r of result.rows) {
     providerConfigs[r.provider] = {
-      apiKey: maskApiKey(decryptApiKey(r.api_key)),
+      apiKey: demo ? 'sk-****' : maskApiKey(decryptApiKey(r.api_key)),
       model: r.model,
       endpointUrl: r.endpoint_url || null,
     };
@@ -99,7 +100,7 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
   res.json({
     id: activeRow.id,
     provider: activeRow.provider,
-    apiKey: maskApiKey(decryptApiKey(activeRow.api_key)),
+    apiKey: demo ? 'sk-****' : maskApiKey(decryptApiKey(activeRow.api_key)),
     model: activeRow.model,
     endpointUrl: activeRow.endpoint_url,
     customPrompt: activeRow.custom_prompt || null,
@@ -118,6 +119,15 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
 
 // PUT /api/ai/settings — upsert AI config
 router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
+  if (isDemoUser(req)) {
+    const hasApiKey = !!req.body.apiKey;
+    const hasProviderApiKey = req.body.providerConfigs
+      && Object.values(req.body.providerConfigs).some((c: any) => c?.apiKey);
+    if (hasApiKey || hasProviderApiKey) {
+      throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot configure API keys. Use server-configured keys or mock mode.');
+    }
+  }
+
   const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt, reorganizationPrompt } = req.body;
   const { temperature: rawTemp, maxTokens: rawMaxTokens, topP: rawTopP, requestTimeout: rawTimeout } = req.body;
 
@@ -383,6 +393,10 @@ router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async
 
 // POST /api/ai/test — test connection with provided credentials
 router.post('/test', aiLimiter, aiRouteHandler('test connection', async (req, res) => {
+  if (isDemoUser(req)) {
+    throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot configure API keys. Use server-configured keys or mock mode.');
+  }
+
   const { provider, apiKey, model, endpointUrl } = req.body;
 
   if (!provider || !apiKey || !model) {
