@@ -65,6 +65,9 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
         if (!op.name || typeof op.name !== 'string') {
           throw new ValidationError(`operations[${i}]: create_bin requires "name"`);
         }
+        if (typeof op.area_name === 'string' && op.area_name.length > 255) {
+          throw new ValidationError(`operations[${i}]: area_name exceeds 255 characters`);
+        }
         actions.push({
           type: 'create_bin',
           name: op.name.trim(),
@@ -82,6 +85,9 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
       case 'update_bin':
         if (!op.bin_id || typeof op.bin_id !== 'string') {
           throw new ValidationError(`operations[${i}]: update_bin requires "bin_id"`);
+        }
+        if (typeof op.area_name === 'string' && op.area_name.length > 255) {
+          throw new ValidationError(`operations[${i}]: area_name exceeds 255 characters`);
         }
         actions.push({
           type: 'update_bin',
@@ -203,6 +209,9 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
         if (typeof op.area_name !== 'string') {
           throw new ValidationError(`operations[${i}]: set_area requires "area_name"`);
         }
+        if (op.area_name.length > 255) {
+          throw new ValidationError(`operations[${i}]: area_name exceeds 255 characters`);
+        }
         actions.push({
           type: 'set_area',
           bin_id: op.bin_id,
@@ -276,6 +285,9 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
         }
         if (!op.new_name || typeof op.new_name !== 'string') {
           throw new ValidationError(`operations[${i}]: rename_area requires "new_name"`);
+        }
+        if (op.new_name.length > 255) {
+          throw new ValidationError(`operations[${i}]: new_name exceeds 255 characters`);
         }
         actions.push({
           type: 'rename_area',

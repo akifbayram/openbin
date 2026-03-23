@@ -59,7 +59,7 @@ async function notifyWebhook(url: string, error: Error): Promise<void> {
 
 export async function runBackup(config?: Partial<BackupConfig>): Promise<string> {
   const cfg = { ...getConfig(), ...config };
-  fs.mkdirSync(cfg.backupPath, { recursive: true });
+  fs.mkdirSync(cfg.backupPath, { recursive: true, mode: 0o700 });
 
   const timestamp = formatTimestamp(new Date());
   const filename = `backup-${timestamp}.zip`;
@@ -88,6 +88,9 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
 
       archive.finalize();
     });
+
+    // Restrict backup file permissions (contains DB with password hashes)
+    fs.chmodSync(zipPath, 0o600);
 
     // Clean up temp DB
     if (fs.existsSync(tempDbPath)) fs.unlinkSync(tempDbPath);

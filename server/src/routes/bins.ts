@@ -100,12 +100,15 @@ router.get('/', asyncHandler(async (req, res) => {
     );
     const total = (countResult.rows[0] as { total: number }).total;
 
+    const paginatedParams = [...params, limit, offset];
+    const limitIdx = params.length + 1;
+    const offsetIdx = params.length + 2;
     const result = await query(
       `${ctePrefix}SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
        LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
-       WHERE ${whereSQL} ORDER BY ${orderClause} LIMIT ${limit} OFFSET ${offset}`,
-      params
+       WHERE ${whereSQL} ORDER BY ${orderClause} LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      paginatedParams
     );
 
     res.json({ results: result.rows, count: total });

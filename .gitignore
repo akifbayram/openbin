@@ -13,3 +13,4 @@ server/uploads/
 reports/
 docs/plans/
 .impeccable.md
+**/.jwt_secret

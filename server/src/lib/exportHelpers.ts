@@ -593,12 +593,26 @@ export function importMembersSync(locationId: string, members: ExportMember[]): 
   return count;
 }
 
+/** Check magic bytes to verify buffer is an allowed image type (JPEG, PNG, WebP). */
+function isAllowedImageBuffer(buf: Buffer): boolean {
+  if (buf.length < 12) return false;
+  // JPEG: FF D8 FF
+  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return true;
+  // PNG: 89 50 4E 47
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return true;
+  // WebP: RIFF....WEBP
+  if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46
+    && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) return true;
+  return false;
+}
+
 /** Import photos from base64 data into storage. Synchronous (for use in transactions). */
 export function importPhotosSync(binId: string, photos: ExportPhoto[], userId: string): number {
   let count = 0;
   for (const photo of photos) {
     const buffer = Buffer.from(photo.data, 'base64');
     if (buffer.length > 10 * 1024 * 1024) continue; // Skip oversized photos
+    if (!isAllowedImageBuffer(buffer)) continue; // Skip files with invalid magic bytes
 
     const photoId = uuidv4();
     const photoExt = path.extname(photo.filename || '').toLowerCase();

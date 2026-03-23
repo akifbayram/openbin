@@ -374,7 +374,7 @@ export function seedDemoData(): void {
     cleanupExistingDemoUsers();
 
     const randomPassword = crypto.randomBytes(32).toString('hex');
-    const passwordHash = bcrypt.hashSync(randomPassword, 4);
+    const passwordHash = bcrypt.hashSync(randomPassword, 10);
     const userIdMap = createDemoUsers(passwordHash);
     const userId = userIdMap.get('demo')!;
 

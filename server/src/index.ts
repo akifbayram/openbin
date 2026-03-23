@@ -67,7 +67,7 @@ export function createApp(): express.Express {
 
   app.use(cors({
     origin: config.corsOrigin,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   }));
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());

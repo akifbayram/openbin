@@ -94,11 +94,12 @@ export const SAFE_AI_MESSAGES: Partial<Record<AiErrorCode, string>> = {
   RATE_LIMITED: 'Rate limited by provider — try again later',
   MODEL_NOT_FOUND: 'Model not found — check your AI provider settings',
   INVALID_RESPONSE: 'Provider returned an invalid response',
+  NETWORK_ERROR: 'Cannot connect to AI endpoint — check your endpoint URL',
 };
 
 /** Convert an AiAnalysisError to a safe, client-facing message string. */
 export function toSafeAiMessage(err: { code: AiErrorCode; message: string }): string {
-  return (err.code === 'NETWORK_ERROR' ? err.message : SAFE_AI_MESSAGES[err.code]) ?? err.message;
+  return SAFE_AI_MESSAGES[err.code] ?? err.message;
 }
 
 export class AiAnalysisError extends Error {

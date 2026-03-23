@@ -6,7 +6,7 @@ import { UnauthorizedError } from './httpErrors.js';
 import { hashToken, revokeAllUserTokens } from './refreshTokens.js';
 import { validatePassword } from './validation.js';
 
-const TOKEN_EXPIRY_HOURS = 24;
+const TOKEN_EXPIRY_HOURS = 4;
 
 export interface ResetTokenResult {
   rawToken: string;

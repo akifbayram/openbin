@@ -183,6 +183,8 @@ router.post('/login', asyncHandler(async (req, res) => {
   );
 
   if (result.rows.length === 0) {
+    // Constant-time rejection — prevent timing-based username enumeration
+    await bcrypt.compare(password, '$2b$12$000000000000000000000uVjKPCGJcotDu8bMahKn7VoPxpL0Wi');
     throw new UnauthorizedError('Invalid username or password');
   }
 

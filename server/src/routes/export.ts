@@ -7,7 +7,7 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb, query, querySync } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { requireMemberOrAbove, verifyLocationMembership } from '../lib/binAccess.js';
+import { requireMemberOrAbove } from '../lib/binAccess.js';
 import { config } from '../lib/config.js';
 import { parseCSV } from '../lib/csvParser.js';
 import {
@@ -47,7 +47,7 @@ import {
   resolveCreatedBySync,
   resolveCustomFieldDefsSync,
 } from '../lib/exportHelpers.js';
-import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { safePath } from '../lib/pathSafety.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
@@ -1134,10 +1134,8 @@ router.post('/import/legacy', asyncHandler(async (req, res) => {
     throw new ValidationError('data is required');
   }
 
-  // Verify membership
-  if (!await verifyLocationMembership(locationId, req.user!.id)) {
-    throw new ForbiddenError('Not a member of this location');
-  }
+  // Verify membership (member or above — viewers are read-only)
+  await requireMemberOrAbove(locationId, req.user!.id, 'import data');
 
   // Normalize legacy data to V2 format
   const legacyBins: LegacyBinV1[] = data.bins || [];
