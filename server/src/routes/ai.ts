@@ -120,11 +120,16 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
 // PUT /api/ai/settings — upsert AI config
 router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
   if (isDemoUser(req)) {
-    const hasApiKey = !!req.body.apiKey;
+    const isMaskedKey = (k: unknown) => k === '****' || k === 'sk-****';
+    const hasApiKey = !!req.body.apiKey && !isMaskedKey(req.body.apiKey);
     const hasProviderApiKey = req.body.providerConfigs
-      && Object.values(req.body.providerConfigs).some((c: any) => c?.apiKey);
+      && Object.values(req.body.providerConfigs).some((c: any) => c?.apiKey && !isMaskedKey(c.apiKey));
     if (hasApiKey || hasProviderApiKey) {
       throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot configure API keys. Use server-configured keys or mock mode.');
+    }
+    const PROMPT_FIELDS = ['customPrompt', 'commandPrompt', 'queryPrompt', 'structurePrompt', 'reorganizationPrompt'] as const;
+    if (PROMPT_FIELDS.some(f => req.body[f] != null)) {
+      throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot customize AI prompts');
     }
   }
 
@@ -240,10 +245,10 @@ router.delete('/settings', aiRouteHandler('delete AI settings', async (req, res)
 }));
 
 // POST /api/ai/analyze-image — analyze raw uploaded image(s) (no stored photo required)
-router.post('/analyze-image', aiLimiter, memoryPhotoUpload.fields([
+router.post('/analyze-image', memoryPhotoUpload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'photos', maxCount: 5 },
-]), aiRouteHandler('analyze image', async (req, res) => {
+]), aiLimiter, aiRouteHandler('analyze image', async (req, res) => {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
   const allFiles = [
     ...(files?.photo || []),
@@ -275,7 +280,7 @@ router.post('/analyze-image', aiLimiter, memoryPhotoUpload.fields([
   }
   const existingTags = locationId ? await fetchExistingTags(locationId) : undefined;
 
-  const suggestions = await analyzeImages(settings.config, images, existingTags, settings.custom_prompt, settings);
+  const suggestions = await analyzeImages(settings.config, images, existingTags, settings.custom_prompt, settings, isDemoUser(req));
   res.json(suggestions);
 }));
 
@@ -313,7 +318,7 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
     mimeType: img.mimeType,
   }));
 
-  const suggestions = await analyzeImages(settings.config, images, loaded.existingTags, settings.custom_prompt, settings);
+  const suggestions = await analyzeImages(settings.config, images, loaded.existingTags, settings.custom_prompt, settings, isDemoUser(req));
   res.json(suggestions);
 }));
 
@@ -387,7 +392,7 @@ router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async
     } : undefined,
   };
 
-  const result = await structureText(settings.config, request, settings.structure_prompt || undefined, settings);
+  const result = await structureText(settings.config, request, settings.structure_prompt || undefined, settings, isDemoUser(req));
   res.json(result);
 }));
 

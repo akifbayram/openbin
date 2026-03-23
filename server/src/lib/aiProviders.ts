@@ -1,11 +1,11 @@
 import { generateObject } from 'ai';
 import type { AiProviderConfig } from './aiCaller.js';
 import { mapSdkError, validateEndpointUrl } from './aiCaller.js';
+import { HARDENING_INSTRUCTION, resolvePrompt, validateAiOutput } from './aiSanitize.js';
 import { AiSuggestionsSchema } from './aiSchemas.js';
 import type { CustomFieldDef } from './customFieldHelpers.js';
 import { AI_CORRECTION_PROMPT, AI_REANALYSIS_PROMPT, DEFAULT_AI_PROMPT } from './defaultPrompts.js';
 import { createSdkModel } from './sdkProviderFactory.js';
-
 
 export interface AiSuggestedItem {
   name: string;
@@ -63,15 +63,15 @@ function injectTagBlock(basePrompt: string, tagBlock: string): string {
   return `${basePrompt}\n\n${tagBlock}`;
 }
 
-export function buildSystemPrompt(existingTags?: string[], customPrompt?: string | null, customFieldDefs?: CustomFieldDef[]): string {
-  const basePrompt = customPrompt || DEFAULT_AI_PROMPT;
+export function buildSystemPrompt(existingTags?: string[], customPrompt?: string | null, customFieldDefs?: CustomFieldDef[], isDemoUser?: boolean): string {
+  const basePrompt = resolvePrompt(DEFAULT_AI_PROMPT, customPrompt, isDemoUser);
   const prompt = injectTagBlock(basePrompt, buildTagBlock(existingTags));
-  return appendCustomFieldsDef(prompt, customFieldDefs);
+  return appendCustomFieldsDef(prompt, customFieldDefs) + HARDENING_INSTRUCTION;
 }
 
 export function buildCorrectionPrompt(existingTags?: string[], customFieldDefs?: CustomFieldDef[]): string {
   const prompt = injectTagBlock(AI_CORRECTION_PROMPT, buildTagBlock(existingTags));
-  return appendCustomFieldsDef(prompt, customFieldDefs);
+  return appendCustomFieldsDef(prompt, customFieldDefs) + HARDENING_INSTRUCTION;
 }
 
 export function buildReanalysisPrompt(existingTags?: string[], customFieldDefs?: CustomFieldDef[]): string {
@@ -125,7 +125,7 @@ function validateSuggestions(raw: unknown): AiSuggestionsResult {
     if (Object.keys(customFields).length === 0) customFields = undefined;
   }
 
-  return { name, items, tags, notes, customFields };
+  return validateAiOutput({ name, items, tags, notes, customFields });
 }
 
 /** Default maxOutputTokens for image analysis (single image). */
@@ -152,7 +152,8 @@ export async function analyzeImages(
   images: ImageInput[],
   existingTags?: string[],
   customPrompt?: string | null,
-  overrides?: AiOverrides
+  overrides?: AiOverrides,
+  isDemoUser?: boolean
 ): Promise<AiSuggestionsResult> {
   // SSRF protection: validate user-supplied endpoint URLs before making requests
   if (config.endpointUrl) {
@@ -173,7 +174,7 @@ export async function analyzeImages(
     const result = await generateObject({
       model,
       schema: AiSuggestionsSchema,
-      system: buildSystemPrompt(existingTags, customPrompt),
+      system: buildSystemPrompt(existingTags, customPrompt, undefined, isDemoUser),
       messages: [{
         role: 'user' as const,
         content: [...imageParts, { type: 'text' as const, text: userText }],
@@ -242,8 +243,9 @@ export async function analyzeImage(
   mimeType: string,
   existingTags?: string[],
   customPrompt?: string | null,
-  overrides?: AiOverrides
+  overrides?: AiOverrides,
+  isDemoUser?: boolean
 ): Promise<AiSuggestionsResult> {
-  return analyzeImages(config, [{ base64: imageBase64, mimeType }], existingTags, customPrompt, overrides);
+  return analyzeImages(config, [{ base64: imageBase64, mimeType }], existingTags, customPrompt, overrides, isDemoUser);
 }
 

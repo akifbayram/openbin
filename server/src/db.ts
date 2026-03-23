@@ -66,6 +66,19 @@ try { db.exec('ALTER TABLE areas ADD COLUMN parent_id TEXT REFERENCES areas(id) 
 // Viewer role: add default_join_role to locations
 try { db.exec("ALTER TABLE locations ADD COLUMN default_join_role TEXT NOT NULL DEFAULT 'member' CHECK (default_join_role IN ('member', 'viewer'))"); } catch { /* column already exists */ }
 
+// AI usage tracking (daily budget for demo users)
+db.exec([
+  'CREATE TABLE IF NOT EXISTS ai_usage (',
+  '  id         INTEGER PRIMARY KEY AUTOINCREMENT,',
+  '  user_id    TEXT NOT NULL,',
+  '  call_count INTEGER NOT NULL DEFAULT 1,',
+  "  date       TEXT NOT NULL DEFAULT (date('now')),",
+  "  created_at TEXT NOT NULL DEFAULT (datetime('now')),",
+  '  UNIQUE(user_id, date)',
+  ');',
+  'CREATE INDEX IF NOT EXISTS idx_ai_usage_user_date ON ai_usage(user_id, date);',
+].join('\n'));
+
 // Viewer role: widen location_members.role CHECK constraint to include 'viewer'
 // SQLite can't ALTER CHECK constraints, so recreate the table if the old constraint exists
 {

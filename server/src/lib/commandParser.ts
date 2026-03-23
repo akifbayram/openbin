@@ -1,3 +1,4 @@
+import { HARDENING_INSTRUCTION, resolvePrompt, sanitizeForPrompt } from './aiSanitize.js';
 import { DEFAULT_COMMAND_PROMPT } from './defaultPrompts.js';
 
 export interface BinSummary {
@@ -59,8 +60,8 @@ export interface CommandResult {
   interpretation: string;
 }
 
-export function buildSystemPrompt(request: CommandRequest, customPrompt?: string): string {
-  const basePrompt = customPrompt || DEFAULT_COMMAND_PROMPT;
+export function buildSystemPrompt(request: CommandRequest, customPrompt?: string, isDemoUser?: boolean): string {
+  const basePrompt = resolvePrompt(DEFAULT_COMMAND_PROMPT, customPrompt, isDemoUser);
 
   // Extract unique tags from bins already in context
   const existingTags = [...new Set(request.context.bins.flatMap((b) => b.tags))].sort();
@@ -103,27 +104,28 @@ IMPORTANT RULES:
 
 Example responses:
 {"actions":[{"type":"remove_items","bin_id":"abc","bin_name":"Tools","items":["Hammer"]},{"type":"add_items","bin_id":"def","bin_name":"Garage","items":["Hammer"]}],"interpretation":"Move hammer from Tools to Garage"}
-{"actions":[{"type":"create_bin","name":"Holiday Lights","area_name":"Garage","items":["LED string lights","Extension cord","Light clips"],"tags":["seasonal","holiday"]}],"interpretation":"Create a Holiday Lights bin in the Garage with 3 items."}${tagBlock}`;
+{"actions":[{"type":"create_bin","name":"Holiday Lights","area_name":"Garage","items":["LED string lights","Extension cord","Light clips"],"tags":["seasonal","holiday"]}],"interpretation":"Create a Holiday Lights bin in the Garage with 3 items."}${tagBlock}${HARDENING_INSTRUCTION}`;
 }
 
 export function buildUserMessage(request: CommandRequest): string {
   const { bins, areas, trash_bins } = request.context;
-  return `Command: ${request.text}
+  return `Command: ${sanitizeForPrompt(request.text)}
 
-Current inventory:
-${JSON.stringify({ bins, areas, trash_bins })}`;
+<user_data type="inventory" trust="none">
+${JSON.stringify({ bins, areas, trash_bins })}
+</user_data>`;
 }
 
 /**
  * Build a unified system prompt that handles both commands AND queries.
  * The AI returns `{ actions, interpretation }` for commands or `{ answer, matches }` for queries.
  */
-export function buildUnifiedSystemPrompt(request: CommandRequest, customCommandPrompt?: string, customQueryPrompt?: string): string {
+export function buildUnifiedSystemPrompt(request: CommandRequest, customCommandPrompt?: string, customQueryPrompt?: string, isDemoUser?: boolean): string {
   // Build the command half (action types, rules, examples)
-  const commandPrompt = buildSystemPrompt(request, customCommandPrompt);
+  const commandPrompt = buildSystemPrompt(request, customCommandPrompt, isDemoUser);
 
-  // Import query rules inline
-  const queryBase = customQueryPrompt || `You are also an inventory search assistant. When the user asks a question (rather than giving a command), search through the inventory context and answer their question.`;
+  const defaultQueryBase = 'You are also an inventory search assistant. When the user asks a question (rather than giving a command), search through the inventory context and answer their question.';
+  const queryBase = resolvePrompt(defaultQueryBase, customQueryPrompt, isDemoUser);
 
   return `${commandPrompt}
 

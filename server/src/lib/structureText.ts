@@ -3,6 +3,7 @@ import type { AiProviderConfig } from './aiCaller.js';
 import { mapSdkError, validateEndpointUrl } from './aiCaller.js';
 import type { AiSuggestedItem } from './aiProviders.js';
 import { normalizeAiItems } from './aiProviders.js';
+import { resolvePrompt } from './aiSanitize.js';
 import { StructureTextSchema } from './aiSchemas.js';
 import { DEFAULT_STRUCTURE_PROMPT } from './defaultPrompts.js';
 import { createSdkModel } from './sdkProviderFactory.js';
@@ -20,8 +21,8 @@ export interface StructureTextResult {
   items: AiSuggestedItem[];
 }
 
-export function buildPrompt(request: StructureTextRequest, customPrompt?: string): string {
-  let prompt = customPrompt || DEFAULT_STRUCTURE_PROMPT;
+export function buildPrompt(request: StructureTextRequest, customPrompt?: string, isDemoUser?: boolean): string {
+  let prompt = resolvePrompt(DEFAULT_STRUCTURE_PROMPT, customPrompt, isDemoUser);
 
   if (request.context?.binName) {
     prompt += `\n\nBin name: "${request.context.binName}" — use this for context about what type of items to expect.`;
@@ -57,7 +58,8 @@ export async function structureText(
   config: AiProviderConfig,
   request: StructureTextRequest,
   customPrompt?: string,
-  overrides?: StructureTextOverrides
+  overrides?: StructureTextOverrides,
+  isDemoUser?: boolean
 ): Promise<StructureTextResult> {
   // SSRF protection: validate user-supplied endpoint URLs before making requests
   if (config.endpointUrl) {
@@ -70,7 +72,7 @@ export async function structureText(
     const result = await generateObject({
       model,
       schema: StructureTextSchema,
-      system: buildPrompt(request, customPrompt),
+      system: buildPrompt(request, customPrompt, isDemoUser),
       messages: [{ role: 'user' as const, content: request.text }],
       maxOutputTokens: overrides?.max_tokens ?? STRUCTURE_TEXT_TOKENS,
       temperature: overrides?.temperature ?? 0.2,

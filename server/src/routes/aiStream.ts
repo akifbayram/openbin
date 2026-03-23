@@ -4,6 +4,7 @@ import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '.
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
 import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildCorrectionPrompt, buildReanalysisPrompt, buildReanalysisUserContent, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
+import { resolvePrompt, sanitizeForPrompt } from '../lib/aiSanitize.js';
 import { QueryResultSchema } from '../lib/aiSchemas.js';
 import type { UserAiSettings } from '../lib/aiSettings.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
@@ -11,7 +12,7 @@ import { initSseResponse, pipeAiStreamToResponse } from '../lib/aiStream.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg, buildUnifiedSystemPrompt } from '../lib/commandParser.js';
-import { config } from '../lib/config.js';
+import { config, isDemoUser } from '../lib/config.js';
 import { fetchCustomFieldDefs } from '../lib/customFieldHelpers.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
@@ -19,7 +20,7 @@ import { createSdkModel } from '../lib/sdkProviderFactory.js';
 import { buildPrompt as buildStructurePrompt, STRUCTURE_TEXT_TOKENS } from '../lib/structureText.js';
 import { demoMemoryPhotoUpload, memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
-import { demoConnectionLimiter, isDemoUser } from '../middleware/demoConnectionLimiter.js';
+import { demoConnectionLimiter, isDemoUser as isDemoConn } from '../middleware/demoConnectionLimiter.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 
 const streamRouter = Router();
@@ -78,7 +79,7 @@ streamRouter.post('/query/stream', aiLimiter, requireLocationMember(), aiRouteHa
 
   await pipeAiStreamToResponse(res, model, {
     schema: QueryResultSchema,
-    system: buildQuerySysPrompt(settings.query_prompt ?? undefined),
+    system: buildQuerySysPrompt(settings.query_prompt ?? undefined, isDemoUser(req)),
     userContent: buildQueryUserMsg(question, context),
     ...streamOpts(settings, { maxTokens: 4096 }),
   });
@@ -98,7 +99,7 @@ streamRouter.post('/command/stream', aiLimiter, requireLocationMember(), aiRoute
   // reliable JSON, and structured-output mode causes providers like Gemini
   // to aggressively omit optional fields (items, area_name in create_bin).
   await pipeAiStreamToResponse(res, model, {
-    system: buildCommandSysPrompt(request, settings.command_prompt ?? undefined),
+    system: buildCommandSysPrompt(request, settings.command_prompt ?? undefined, isDemoUser(req)),
     userContent: buildCommandUserMsg(request),
     ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
   });
@@ -115,7 +116,7 @@ streamRouter.post('/ask/stream', aiLimiter, requireLocationMember(), aiRouteHand
   const request: CommandRequest = { text, context };
 
   await pipeAiStreamToResponse(res, model, {
-    system: buildUnifiedSystemPrompt(request, settings.command_prompt ?? undefined, settings.query_prompt ?? undefined),
+    system: buildUnifiedSystemPrompt(request, settings.command_prompt ?? undefined, settings.query_prompt ?? undefined, isDemoUser(req)),
     userContent: buildCommandUserMsg(request),
     ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
   });
@@ -128,7 +129,7 @@ streamRouter.post('/structure-text/stream', aiLimiter, aiRouteHandler('stream st
   const { settings, model } = await resolveUserModel(req.user!.id);
 
   await pipeAiStreamToResponse(res, model, {
-    system: buildStructurePrompt({ text, mode: 'items', context }, settings.structure_prompt ?? undefined),
+    system: buildStructurePrompt({ text, mode: 'items', context }, settings.structure_prompt ?? undefined, isDemoUser(req)),
     userContent: text,
     ...streamOpts(settings, { maxTokens: STRUCTURE_TEXT_TOKENS, temperature: 0.2 }),
   });
@@ -142,10 +143,10 @@ const analyzeImageFields = [
 const DEMO_REQUEST_MAX_BYTES = 15 * 1024 * 1024;
 
 function demoAwareAnalyzeUpload(req: import('express').Request, res: import('express').Response, next: import('express').NextFunction): void {
-  const upload = isDemoUser(req) ? demoMemoryPhotoUpload : memoryPhotoUpload;
+  const upload = isDemoConn(req) ? demoMemoryPhotoUpload : memoryPhotoUpload;
   upload.fields(analyzeImageFields)(req, res, (err) => {
     if (err) { next(err); return; }
-    if (isDemoUser(req)) {
+    if (isDemoConn(req)) {
       const files = req.files as Record<string, Express.Multer.File[]> | undefined;
       const total = [...(files?.photo || []), ...(files?.photos || [])].reduce((sum, f) => sum + f.size, 0);
       if (total > DEMO_REQUEST_MAX_BYTES) {
@@ -158,7 +159,7 @@ function demoAwareAnalyzeUpload(req: import('express').Request, res: import('exp
 }
 
 // POST /api/ai/analyze-image/stream
-streamRouter.post('/analyze-image/stream', aiLimiter, demoConnectionLimiter, demoAwareAnalyzeUpload, aiRouteHandler('stream analyze image', async (req, res) => {
+streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnalyzeUpload, aiLimiter, aiRouteHandler('stream analyze image', async (req, res) => {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
   const allFiles = [
     ...(files?.photo || []),
@@ -189,7 +190,7 @@ streamRouter.post('/analyze-image/stream', aiLimiter, demoConnectionLimiter, dem
   }));
 
   await pipeAiStreamToResponse(res, model, {
-    system: buildAnalysisPrompt(existingTags, settings.custom_prompt, customFieldDefs),
+    system: buildAnalysisPrompt(existingTags, settings.custom_prompt, customFieldDefs, isDemoUser(req)),
     userContent: [...imageParts, { type: 'text' as const, text: buildAnalysisUserText(allFiles.length) }],
     ...streamOpts(settings, { maxTokens: allFiles.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE }),
   });
@@ -229,7 +230,7 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
   }));
 
   await pipeAiStreamToResponse(res, model, {
-    system: buildAnalysisPrompt(loaded.existingTags, settings.custom_prompt, loaded.customFieldDefs),
+    system: buildAnalysisPrompt(loaded.existingTags, settings.custom_prompt, loaded.customFieldDefs, isDemoUser(req)),
     userContent: [...imageParts, { type: 'text' as const, text: buildAnalysisUserText(loaded.images.length) }],
     ...streamOpts(settings, { maxTokens: loaded.images.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE }),
   });
@@ -271,7 +272,8 @@ streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correctio
 
   const system = buildCorrectionPrompt(existingTags, customFieldDefs);
 
-  const userMessage = `Previous analysis result:\n${JSON.stringify(safePrevious, null, 2)}\n\nUser correction: ${correctionText}`;
+  const sanitizedCorrection = sanitizeForPrompt(correctionText);
+  const userMessage = `<user_data type="previous_result" trust="none">\n${JSON.stringify(safePrevious, null, 2)}\n</user_data>\n\n<user_data type="correction" trust="none">\n${sanitizedCorrection}\n</user_data>`;
 
   await pipeAiStreamToResponse(res, model, {
     system,
@@ -366,10 +368,10 @@ streamRouter.post('/reanalyze/stream', aiLimiter, aiRouteHandler('stream reanaly
 }));
 
 // POST /api/ai/reanalyze-image/stream — reanalyze uploaded photos with previous result context
-streamRouter.post('/reanalyze-image/stream', aiLimiter, memoryPhotoUpload.fields([
+streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'photos', maxCount: 5 },
-]), aiRouteHandler('stream reanalyze image', async (req, res) => {
+]), aiLimiter, aiRouteHandler('stream reanalyze image', async (req, res) => {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
   const allFiles = [
     ...(files?.photo || []),
@@ -440,7 +442,7 @@ streamRouter.post('/reorganize/stream', aiLimiter, requireLocationMember(), aiRo
 
   // Build system prompt
   const { DEFAULT_REORGANIZATION_PROMPT } = await import('../lib/defaultPrompts.js');
-  const basePrompt = settings.reorganization_prompt || DEFAULT_REORGANIZATION_PROMPT;
+  const basePrompt = resolvePrompt(DEFAULT_REORGANIZATION_PROMPT, settings.reorganization_prompt, isDemoUser(req));
   const maxBinsInstruction = maxBins ? `Create at most ${maxBins} bins.` : 'Choose the optimal number of bins.';
   const areaInstruction = areaName ? `These bins are in the "${areaName}" area.` : '';
 
@@ -508,9 +510,9 @@ streamRouter.post('/reorganize/stream', aiLimiter, requireLocationMember(), aiRo
     .replace('{notes_instruction}', notesInstruction)
     .replace('{available_tags}', tagBlock);
 
-  // Build user message: list of bins with items
+  // Build user message: list of bins with items (sanitized)
   const binDescriptions = inputBins.map((b: { name: string; items: string[] }) =>
-    `- ${b.name}: ${b.items.length > 0 ? b.items.join(', ') : '(empty)'}`
+    `- ${sanitizeForPrompt(b.name)}: ${b.items.length > 0 ? b.items.map((i: string) => sanitizeForPrompt(i)).join(', ') : '(empty)'}`
   ).join('\n');
   const userContent = `Here are the bins to reorganize:\n\n${binDescriptions}`;
 

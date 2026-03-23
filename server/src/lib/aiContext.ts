@@ -1,4 +1,5 @@
 import { query } from '../db.js';
+import { sanitizeBinForContext } from './aiSanitize.js';
 import type { CommandRequest } from './commandParser.js';
 import type { InventoryContext } from './inventoryQuery.js';
 
@@ -66,7 +67,7 @@ export async function buildCommandContext(locationId: string, userId: string): P
   const bins = binsResult.rows.map((r) => {
     const binId = r.id as string;
     const cf = customFieldsByBin.get(binId);
-    return {
+    return sanitizeBinForContext({
       id: binId,
       name: r.name as string,
       items: r.items as Array<{ id: string; name: string; quantity: number | null }>,
@@ -80,7 +81,7 @@ export async function buildCommandContext(locationId: string, userId: string): P
       is_pinned: !!(r.is_pinned as number),
       photo_count: (r.photo_count as number) || 0,
       ...(cf ? { custom_fields: cf } : {}),
-    };
+    });
   });
 
   const areas = areasResult.rows.map((r) => ({
@@ -104,10 +105,10 @@ export async function buildInventoryContext(locationId: string, userId: string):
     bins: binsResult.rows.map((r) => {
       const binId = r.id as string;
       const cf = customFieldsByBin.get(binId);
-      return {
+      const sanitized = sanitizeBinForContext({
         id: binId,
         name: r.name as string,
-        items: (r.items as Array<{ id: string; name: string; quantity: number | null }>).map((i) => i.quantity ? `${i.name} (×${i.quantity})` : i.name),
+        items: r.items as Array<{ id: string; name: string; quantity: number | null }>,
         tags: r.tags as string[],
         area_name: r.area_name as string,
         notes: truncateNotes(r.notes),
@@ -115,6 +116,10 @@ export async function buildInventoryContext(locationId: string, userId: string):
         is_pinned: !!(r.is_pinned as number),
         photo_count: (r.photo_count as number) || 0,
         ...(cf ? { custom_fields: cf } : {}),
+      });
+      return {
+        ...sanitized,
+        items: sanitized.items.map((i) => i.quantity ? `${i.name} (×${i.quantity})` : i.name),
       };
     }),
     areas: areasResult.rows.map((r) => ({

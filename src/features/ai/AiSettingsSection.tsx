@@ -8,6 +8,7 @@ import { OptionGroup } from '@/components/ui/option-group';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
+import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { AI_PROVIDERS, KEY_PLACEHOLDERS, MODEL_HINTS } from './aiConstants';
 import { useAiProviderSetup } from './useAiProviderSetup';
@@ -30,6 +31,7 @@ interface AiSettingsSectionProps {
 }
 
 export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProps) {
+  const { demoMode } = useAuth();
   const { settings, isLoading, setSettings } = useAiSettings();
   const { prompts: defaultPrompts } = useDefaultPrompts();
   const { showToast } = useToast();
@@ -274,16 +276,20 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                             </span>
                           )}
                         />
+                        {demoMode && (
+                          <p className="text-[12px] text-[var(--text-tertiary)] italic">Custom prompts are disabled for demo accounts.</p>
+                        )}
                         <Textarea
                           value={active.value}
                           onChange={(e) => active.set(e.target.value)}
                           placeholder={defaultPrompts?.[activePromptTab] ?? ''}
                           className="font-mono text-[13px] min-h-[200px] resize-y"
                           maxLength={10000}
+                          disabled={demoMode}
                         />
                         <div className="row-spread">
                           <p className="text-[12px] text-[var(--text-tertiary)]">{helpText[activePromptTab]}</p>
-                          {active.value.trim() ? (
+                          {!demoMode && (active.value.trim() ? (
                             <button
                               type="button"
                               onClick={() => active.set('')}
@@ -300,7 +306,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                             >
                               Load default to customize
                             </button>
-                          )}
+                          ))}
                         </div>
                       </div>
                     </Disclosure>

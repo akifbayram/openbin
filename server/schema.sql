@@ -252,3 +252,13 @@ CREATE INDEX IF NOT EXISTS idx_bins_visibility ON bins(location_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_photos_bin_id ON photos(bin_id);
 CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id);
+
+CREATE TABLE IF NOT EXISTS ai_usage (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    TEXT NOT NULL,
+  call_count INTEGER NOT NULL DEFAULT 1,
+  date       TEXT NOT NULL DEFAULT (date('now')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(user_id, date)
+);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_user_date ON ai_usage(user_id, date);

@@ -45,10 +45,4 @@ export const apiLimiter: RequestHandler = isTest ? noop : rateLimit({
   message: { error: 'RATE_LIMITED', message: 'Too many requests, please try again later' },
 });
 
-export const aiLimiter: RequestHandler = isTest ? noop : rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: (req: import('express').Request) => req.authMethod === 'api_key' ? config.aiRateLimitApiKey : config.aiRateLimit,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'RATE_LIMITED', message: 'Too many AI requests, please try again later' },
-});
+export { aiLimiter } from './aiRateLimiter.js';

@@ -84,6 +84,71 @@ describe('demo user AI key guards', () => {
 
       expect(res.status).not.toBe(403);
     });
+
+    it('blocks demo user setting customPrompt with 403 DEMO_RESTRICTION', async () => {
+      const { token, user } = await createTestUser(app, { username: 'demo' });
+
+      const { query: dbQuery } = await import('../db.js');
+      dbQuery(
+        'INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, is_active) VALUES ($1, $2, $3, $4, $5, 1)',
+        ['demo-prompt-id', user.id, 'openai', 'sk-real-key', 'gpt-4'],
+      );
+
+      const res = await request(app)
+        .put('/api/ai/settings')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ provider: 'openai', apiKey: 'sk-****', model: 'gpt-4', customPrompt: 'injected prompt' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe('DEMO_RESTRICTION');
+      expect(res.body.message).toBe('Demo accounts cannot customize AI prompts');
+    });
+
+    it('blocks demo user setting commandPrompt with 403 DEMO_RESTRICTION', async () => {
+      const { token, user } = await createTestUser(app, { username: 'demo' });
+
+      const { query: dbQuery } = await import('../db.js');
+      dbQuery(
+        'INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, is_active) VALUES ($1, $2, $3, $4, $5, 1)',
+        ['demo-cmd-id', user.id, 'openai', 'sk-real-key', 'gpt-4'],
+      );
+
+      const res = await request(app)
+        .put('/api/ai/settings')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ provider: 'openai', apiKey: 'sk-****', model: 'gpt-4', commandPrompt: 'injected command' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe('DEMO_RESTRICTION');
+    });
+
+    it('allows demo user to change temperature without prompt fields', async () => {
+      const { token, user } = await createTestUser(app, { username: 'demo' });
+
+      const { query: dbQuery } = await import('../db.js');
+      dbQuery(
+        'INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, is_active) VALUES ($1, $2, $3, $4, $5, 1)',
+        ['demo-temp-id', user.id, 'openai', 'sk-real-key', 'gpt-4'],
+      );
+
+      const res = await request(app)
+        .put('/api/ai/settings')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ provider: 'openai', apiKey: 'sk-****', model: 'gpt-4', temperature: 0.5 });
+
+      expect(res.status).not.toBe(403);
+    });
+
+    it('allows non-demo user to set customPrompt', async () => {
+      const { token } = await createTestUser(app);
+
+      const res = await request(app)
+        .put('/api/ai/settings')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ provider: 'openai', apiKey: 'sk-test', model: 'gpt-4', customPrompt: 'my custom prompt' });
+
+      expect(res.status).not.toBe(403);
+    });
   });
 
   describe('POST /api/ai/test', () => {

@@ -21,6 +21,7 @@ import { SingleBinReview } from './SingleBinReview';
 import { MAX_AI_PHOTOS } from './useAiAnalysis';
 
 const MAX_PHOTOS = 20;
+const DEMO_MAX_PHOTOS = 3;
 
 interface PhotoBulkAddProps {
   initialFiles: File[];
@@ -37,15 +38,15 @@ function initState(files: File[]): BulkAddState {
 
 export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProps) {
   const t = useTerminology();
-  const { activeLocationId } = useAuth();
+  const { activeLocationId, demoMode: isDemo } = useAuth();
   const [state, dispatch] = useReducer(bulkAddReducer, initialFiles, initState);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hadPhotos = useRef(initialFiles.length > 0);
-  const [mode, setMode] = useState<'per-photo' | 'single-bin'>('per-photo');
+  const [mode, setMode] = useState<'per-photo' | 'single-bin'>(isDemo ? 'single-bin' : 'per-photo');
   const [singleBinReview, setSingleBinReview] = useState(false);
   const [successBins, setSuccessBins] = useState<CreatedBinInfo[] | null>(null);
 
-  const effectiveMax = mode === 'single-bin' ? MAX_AI_PHOTOS : MAX_PHOTOS;
+  const effectiveMax = isDemo ? DEMO_MAX_PHOTOS : (mode === 'single-bin' ? MAX_AI_PHOTOS : MAX_PHOTOS);
 
   // Cleanup ObjectURLs on unmount
   useEffect(() => {
@@ -258,14 +259,16 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       </div>
 
       {/* Mode toggle */}
-      <OptionGroup
-        options={[
-          { key: 'per-photo' as const, label: `One ${t.bin} per photo` },
-          { key: 'single-bin' as const, label: `All in one ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Up to ${MAX_AI_PHOTOS} photos in single-${t.bin} mode` },
-        ]}
-        value={mode}
-        onChange={setMode}
-      />
+      {!isDemo && (
+        <OptionGroup
+          options={[
+            { key: 'per-photo' as const, label: `One ${t.bin} per photo` },
+            { key: 'single-bin' as const, label: `All in one ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Up to ${MAX_AI_PHOTOS} photos in single-${t.bin} mode` },
+          ]}
+          value={mode}
+          onChange={setMode}
+        />
+      )}
 
       {/* Shared area picker */}
       <div className="space-y-1.5">
