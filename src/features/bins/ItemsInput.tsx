@@ -29,6 +29,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
   const [checkedItems, setCheckedItems] = useState<Map<number, boolean>>(new Map());
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
+  const addInputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { structuredItems, isStructuring, error, structure, clearStructured } = useTextStructuring();
@@ -81,6 +82,11 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
       onChange([...items, trimmed]);
     }
     setInput('');
+  }
+
+  function addItemAndRefocus() {
+    addItem();
+    addInputRef.current?.focus();
   }
 
   function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
@@ -353,6 +359,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
         {state === 'input' && (
           <div className="row-tight">
             <Input
+              ref={addInputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleInputKeyDown}
@@ -364,7 +371,9 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
               <Tooltip content="Add item">
                 <button
                   type="button"
-                  onClick={addItem}
+                  tabIndex={-1}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={addItemAndRefocus}
                   className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
                   aria-label="Add item"
                 >

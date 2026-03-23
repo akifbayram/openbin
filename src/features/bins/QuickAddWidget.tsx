@@ -1,4 +1,5 @@
 import { Check, ChevronLeft, Loader2, Plus, Sparkles } from 'lucide-react';
+import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -11,11 +12,13 @@ interface QuickAddWidgetProps {
 }
 
 export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)] ">
       {quickAdd.state === 'input' && (
         <div className="row-tight">
           <Input
+            ref={inputRef}
             value={quickAdd.value}
             onChange={(e) => quickAdd.setValue(e.target.value)}
             onKeyDown={(e) => {
@@ -32,7 +35,9 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
             <Tooltip content="Add item">
               <button
                 type="button"
-                onClick={quickAdd.handleAdd}
+                tabIndex={-1}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { quickAdd.handleAdd(); inputRef.current?.focus(); }}
                 disabled={quickAdd.saving}
                 className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors disabled:opacity-50"
                 aria-label="Add item"
