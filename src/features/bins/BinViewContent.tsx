@@ -147,7 +147,7 @@ export function BinViewContent({
       {photosSection}
 
       {/* QR Code & Info */}
-      <Card>
+      <Card data-tour="qr-section">
         <CardContent className="!py-0">
           <button
             type="button"

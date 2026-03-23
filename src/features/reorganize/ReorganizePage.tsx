@@ -332,6 +332,7 @@ export function ReorganizePage() {
         {/* Right column — preview (sticky on desktop) */}
         <div ref={reorgRef} className="lg:sticky lg:top-6 flex flex-col gap-4">
           <Button
+            data-tour="reorganize-submit"
             onClick={handleReorganize}
             disabled={selection.selectedIds.size < 2 || isStreaming}
             className="h-12 text-[17px] rounded-[var(--radius-md)]"

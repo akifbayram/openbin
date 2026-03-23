@@ -18,6 +18,7 @@ import { useBulkActions } from '@/features/bins/useBulkActions';
 import { useBulkDialogs } from '@/features/bins/useBulkDialogs';
 import { useBulkSelection } from '@/features/bins/useBulkSelection';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
+import { useRegisterCommandInput } from '@/features/tour/useRegisterCommandInput';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
@@ -47,6 +48,7 @@ export function DashboardPage() {
   const { views: savedViews } = useSavedViews();
   const [createOpen, setCreateOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  useRegisterCommandInput(setCommandOpen);
 
   // Bulk selection
   const allDashboardBins = useMemo(() => {

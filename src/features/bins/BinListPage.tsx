@@ -19,6 +19,8 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { useTagStyle } from '@/features/tags/useTagStyle';
+import { useTourContext } from '@/features/tour/TourProvider';
+import { useRegisterCommandInput } from '@/features/tour/useRegisterCommandInput';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
@@ -52,13 +54,16 @@ export function BinListPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // Handle create navigation state (ephemeral UI, not shareable)
+  // Handle navigation state (ephemeral UI, not shareable)
   useEffect(() => {
-    const state = location.state as { create?: boolean } | null;
+    const state = location.state as { create?: boolean; startTour?: boolean } | null;
     if (state?.create) {
       setCreateOpen(true);
-      window.history.replaceState({}, '');
     }
+    if (state?.startTour) {
+      tourCtx?.tour.start();
+    }
+    if (state) window.history.replaceState({}, '');
   }, [location.state]);
 
   const { activeLocationId } = useAuth();
@@ -81,6 +86,8 @@ export function BinListPage() {
   const { openScanDialog } = useScanDialog();
   const { aiEnabled } = useAiEnabled();
   const [commandOpen, setCommandOpen] = useState(false);
+  useRegisterCommandInput(setCommandOpen);
+  const tourCtx = useTourContext();
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const getTagStyle = useTagStyle();
   const { viewMode, setViewMode } = useViewMode();

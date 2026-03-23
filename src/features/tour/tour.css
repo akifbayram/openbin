@@ -1,0 +1,32 @@
+.tour-spotlight-enter {
+  animation: tour-spotlight-in 200ms ease-out;
+}
+
+.tour-spotlight-enter > * {
+  transition: top 250ms ease-out, left 250ms ease-out, width 250ms ease-out, height 250ms ease-out;
+}
+
+.tour-tooltip-enter {
+  animation: tour-tooltip-in 200ms ease-out;
+}
+
+@keyframes tour-spotlight-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tour-tooltip-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-spotlight-enter,
+  .tour-tooltip-enter {
+    animation: none !important;
+  }
+
+  .tour-spotlight-enter > * {
+    transition: none !important;
+  }
+}

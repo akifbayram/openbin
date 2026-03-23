@@ -5,16 +5,26 @@ import { PageTransition } from '@/components/page-transition';
 import { Button } from '@/components/ui/button';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
+import { useAiSettings } from '@/features/ai/useAiSettings';
+import { useBinList } from '@/features/bins/useBins';
 import { useLocationList } from '@/features/locations/useLocations';
 import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay';
 import { useOnboarding } from '@/features/onboarding/useOnboarding';
 import { ScanDialogContext } from '@/features/qrcode/ScanDialogContext';
 import { TagColorsProvider } from '@/features/tags/TagColorsContext';
+import { TourBanner } from '@/features/tour/TourBanner';
+import { TourOverlay } from '@/features/tour/TourOverlay';
+import { getCommandInputRef, TourProvider } from '@/features/tour/TourProvider';
+import { TOUR_VERSION, type TourContext } from '@/features/tour/tourSteps';
+import { useTour } from '@/features/tour/useTour';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { useNavigationGuard } from '@/lib/navigationGuard';
+import { useTerminology } from '@/lib/terminology';
 import { useTheme } from '@/lib/theme';
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
+import { usePermissions } from '@/lib/usePermissions';
+import { useUserPreferences } from '@/lib/userPreferences';
 import { toggleSidebarCollapsed, useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
 import { cn } from '@/lib/utils';
 import { DrawerProvider } from './DrawerContext';
@@ -46,6 +56,24 @@ export function AppLayout() {
   if (scanDialogOpen) scanMounted.current = true;
   const openScanDialog = useCallback(() => setScanDialogOpen(true), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { preferences, updatePreferences } = useUserPreferences();
+  const { canWrite } = usePermissions();
+  const { settings: aiSettings } = useAiSettings();
+  const terminology = useTerminology();
+  const { bins } = useBinList();
+  const firstBinId = bins.length > 0 ? bins[0].id : null;
+  const [isMobile] = useState(() => !window.matchMedia('(min-width: 1024px)').matches);
+
+  const tourContext = useMemo<TourContext>(() => ({
+    canWrite,
+    aiEnabled: aiSettings !== null,
+    firstBinId,
+    terminology,
+    isMobile,
+    openCommandInput: () => getCommandInputRef().current?.open(),
+    closeCommandInput: () => getCommandInputRef().current?.close(),
+  }), [canWrite, aiSettings, firstBinId, terminology, isMobile]);
+
   const rawNavigate = useNavigate();
   const location = useLocation();
   const { guardedNavigate } = useNavigationGuard();
@@ -53,6 +81,8 @@ export function AppLayout() {
     (path: string, opts?: { state?: unknown }) => guardedNavigate(() => rawNavigate(path, opts)),
     [rawNavigate, guardedNavigate],
   );
+
+  const tour = useTour({ context: tourContext, navigate, updatePreferences });
 
   // Close drawer on route change
   useEffect(() => {
@@ -113,6 +143,17 @@ export function AppLayout() {
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
   }, []);
 
+  const showTourBanner =
+    preferences.onboarding_completed &&
+    !onboarding.isOnboarding &&
+    (!preferences.tour_completed || preferences.tour_version < TOUR_VERSION) &&
+    !tour.isActive &&
+    !locationsLoading;
+
+  const dismissTour = useCallback(() => {
+    updatePreferences({ tour_completed: true, tour_version: TOUR_VERSION });
+  }, [updatePreferences]);
+
   async function handleInstall() {
     if (!installPrompt) return;
     await installPrompt.prompt();
@@ -124,6 +165,7 @@ export function AppLayout() {
 
   return (
     <TagColorsProvider>
+    <TourProvider tour={tour}>
     <div className="min-h-dvh bg-[var(--bg-base)] text-[var(--text-primary)] transition-colors duration-300">
       <a
         href="#main-content"
@@ -204,7 +246,12 @@ export function AppLayout() {
           activeLocationId={activeLocationId ?? undefined}
         />
       )}
+      <TourOverlay tour={tour} context={tourContext} />
+      {showTourBanner && (
+        <TourBanner appName={settings.appName} onStart={tour.start} onDismiss={dismissTour} />
+      )}
     </div>
+    </TourProvider>
     </TagColorsProvider>
   );
 }

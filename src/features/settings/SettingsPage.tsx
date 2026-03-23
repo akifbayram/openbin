@@ -1,4 +1,4 @@
-import { ChevronRight, ExternalLink, Info, LogOut, Monitor, Moon, Sun, UserCircle } from 'lucide-react';
+import { ChevronRight, ExternalLink, Info, LogOut, Monitor, Moon, Sparkles, Sun, UserCircle } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { useDashboardSettings } from '@/lib/dashboardSettings';
 import { useTerminology } from '@/lib/terminology';
 import { useTheme } from '@/lib/theme';
 import { usePermissions } from '@/lib/usePermissions';
+import { useUserPreferences } from '@/lib/userPreferences';
 import { ApiKeysSection } from './ApiKeysSection';
 import { DangerZoneSection } from './DangerZoneSection';
 import { DashboardSection } from './DashboardSection';
@@ -32,6 +33,7 @@ export function SettingsPage() {
   const t = useTerminology();
   const { user, activeLocationId, logout, deleteAccount } = useAuth();
   const { isAdmin, isLoading: permissionsLoading } = usePermissions();
+  const { updatePreferences } = useUserPreferences();
   const dataActions = useDataSectionActions();
 
   const { locations } = useLocationList();
@@ -161,15 +163,28 @@ export function SettingsPage() {
                 )}
               </div>
             )}
-            <a
-              href="https://github.com/akifbayram/openbin"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
-            >
-              GitHub
-              <ExternalLink className="h-3 w-3" />
-            </a>
+            <div className="flex items-center gap-4">
+              <a
+                href="https://github.com/akifbayram/openbin"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+              >
+                GitHub
+                <ExternalLink className="h-3 w-3" />
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  updatePreferences({ tour_completed: false, tour_version: 0 });
+                  navigate('/bins', { state: { startTour: true } });
+                }}
+                className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+              >
+                <Sparkles className="h-3 w-3" />
+                Replay Tour
+              </button>
+            </div>
           </div>
           </Disclosure>
         </CardContent>

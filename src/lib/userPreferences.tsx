@@ -14,6 +14,8 @@ export interface UserPreferences {
   onboarding_completed: boolean;
   onboarding_step: number;
   onboarding_location_id: string | null;
+  tour_completed: boolean;
+  tour_version: number;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -29,6 +31,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   onboarding_completed: false,
   onboarding_step: 0,
   onboarding_location_id: null,
+  tour_completed: false,
+  tour_version: 0,
 };
 
 const PREFERENCES_EVENT = 'user-preferences-changed';

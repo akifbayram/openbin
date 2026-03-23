@@ -1,6 +1,7 @@
-import { Check, ChevronsUpDown, MapPin } from 'lucide-react';
+import { ArrowRightLeft, Check, ChevronsUpDown, MapPin } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,26 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
   const active = locations.find((l) => l.id === activeLocationId);
 
   if (locations.length <= 1) return null;
+
+  if (locations.length === 2) {
+    const other = locations.find((l) => l.id !== activeLocationId)!;
+    return (
+      <Tooltip content={`Switch to ${other.name}`} className="w-full">
+        <button
+          type="button"
+          onClick={() => onLocationChange(other.id)}
+          className={cn(
+            'flex items-center gap-3 w-full px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium transition-colors text-left border',
+            'border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+          )}
+        >
+          <MapPin className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+          <span className="flex-1 truncate">{active?.name ?? 'Select location'}</span>
+          <ArrowRightLeft className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
+        </button>
+      </Tooltip>
+    );
+  }
 
   return (
     <div className="relative" ref={ref}>

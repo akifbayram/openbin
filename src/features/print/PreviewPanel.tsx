@@ -57,7 +57,7 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
 
   return (
     <>
-      <div className="flex gap-2">
+      <div className="flex gap-2" data-tour="print-preview">
         <Button
           onClick={() => window.print()}
           disabled={!hasSelection}

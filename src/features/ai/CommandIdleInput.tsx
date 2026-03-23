@@ -47,7 +47,7 @@ export function CommandIdleInput({
             }
           }}
         />
-        <div className="absolute right-2.5 bottom-2.5 flex items-center gap-0.5">
+        <div data-tour="photo-buttons" className="absolute right-2.5 bottom-2.5 flex items-center gap-0.5">
           {onCameraClick && (
             <button
               type="button"
