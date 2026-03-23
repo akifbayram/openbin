@@ -45,34 +45,42 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
 
   async function handleDelete() {
     if (!id || !bin) return;
-    const snapshot: Bin = { ...bin };
-    await deleteBin(id);
-    navigate('/bins');
-    showToast({
-      message: `Deleted "${snapshot.name}"`,
-      action: {
-        label: 'Undo',
-        onClick: () => restoreBin(snapshot),
-      },
-    });
+    try {
+      const snapshot: Bin = { ...bin };
+      await deleteBin(id);
+      navigate('/bins');
+      showToast({
+        message: `Deleted "${snapshot.name}"`,
+        action: {
+          label: 'Undo',
+          onClick: () => restoreBin(snapshot),
+        },
+      });
+    } catch {
+      showToast({ message: 'Failed to delete' });
+    }
   }
 
   async function handleMove(targetId: string) {
     if (!id || !bin) return;
-    const originalLocationId = bin.location_id;
-    const targetLoc = locations.find((l) => l.id === targetId);
-    await moveBin(id, targetId);
-    setMoveOpen(false);
-    navigate('/bins');
-    showToast({
-      message: `Moved to ${targetLoc?.name ?? t.location}`,
-      action: {
-        label: 'Undo',
-        onClick: async () => {
-          await moveBin(id, originalLocationId);
+    try {
+      const originalLocationId = bin.location_id;
+      const targetLoc = locations.find((l) => l.id === targetId);
+      await moveBin(id, targetId);
+      setMoveOpen(false);
+      navigate('/bins');
+      showToast({
+        message: `Moved to ${targetLoc?.name ?? t.location}`,
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            await moveBin(id, originalLocationId);
+          },
         },
-      },
-    });
+      });
+    } catch {
+      showToast({ message: 'Failed to move' });
+    }
   }
 
   function handleAnalyzeClick() {
@@ -131,12 +139,16 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
 
   async function handleTogglePin() {
     if (!bin) return;
-    if (bin.is_pinned) {
-      await unpinBin(bin.id);
-      showToast({ message: 'Unpinned' });
-    } else {
-      await pinBin(bin.id);
-      showToast({ message: 'Pinned' });
+    try {
+      if (bin.is_pinned) {
+        await unpinBin(bin.id);
+        showToast({ message: 'Unpinned' });
+      } else {
+        await pinBin(bin.id);
+        showToast({ message: 'Pinned' });
+      }
+    } catch {
+      showToast({ message: 'Failed to update pin' });
     }
   }
 

@@ -1,8 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { AiAnalysisError, toSafeAiMessage } from './aiCaller.js';
 import { aiErrorToStatus, NoAiSettingsError } from './aiSettings.js';
-import { ValidationError } from './crypto.js';
-import { HttpError } from './httpErrors.js';
+import { HttpError, ValidationError } from './httpErrors.js';
 
 /** Wrap an async AI route handler with standard error handling. */
 export function aiRouteHandler(

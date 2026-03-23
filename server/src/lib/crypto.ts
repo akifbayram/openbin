@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { query } from '../db.js';
 import { config } from './config.js';
+import { ValidationError } from './httpErrors.js';
 
 const AI_ENCRYPTION_KEY = config.aiEncryptionKey;
 const KDF_SALT = Buffer.from('openbin-ai-key-encryption-v1');
@@ -127,9 +128,3 @@ export async function resolveMaskedApiKey(apiKey: string, userId: string, provid
   return decryptApiKey(existing.rows[0].api_key);
 }
 
-export class ValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ValidationError';
-  }
-}

@@ -4,6 +4,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
+import multer from 'multer';
 import { getDb } from './db.js';
 import { config } from './lib/config.js';
 import { HttpError } from './lib/httpErrors.js';
@@ -126,6 +127,11 @@ export function createApp(): express.Express {
   app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (err instanceof HttpError) {
       res.status(err.statusCode).json({ error: err.code, message: err.message });
+      return;
+    }
+    if (err instanceof multer.MulterError) {
+      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File is too large' : err.message;
+      res.status(422).json({ error: 'VALIDATION_ERROR', message });
       return;
     }
     pushLog({ level: 'error', message: `${err.name}: ${err.message}` });

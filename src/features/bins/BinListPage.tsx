@@ -53,6 +53,7 @@ export function BinListPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const tourCtx = useTourContext();
 
   // Handle navigation state (ephemeral UI, not shareable)
   useEffect(() => {
@@ -64,7 +65,7 @@ export function BinListPage() {
       tourCtx?.tour.start();
     }
     if (state) window.history.replaceState({}, '');
-  }, [location.state]);
+  }, [location.state, tourCtx]);
 
   const { activeLocationId } = useAuth();
   const prevLocationRef = useRef(activeLocationId);
@@ -87,7 +88,6 @@ export function BinListPage() {
   const { aiEnabled } = useAiEnabled();
   const [commandOpen, setCommandOpen] = useState(false);
   useRegisterCommandInput(setCommandOpen);
-  const tourCtx = useTourContext();
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const getTagStyle = useTagStyle();
   const { viewMode, setViewMode } = useViewMode();

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { isLocationAdmin, verifyBinAccess } from '../lib/binAccess.js';
+import { isLocationAdmin, requireMemberOrAbove, verifyBinAccess } from '../lib/binAccess.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { authenticate } from '../middleware/auth.js';
@@ -12,6 +12,7 @@ const router = Router();
 async function verifyBinEditAccess(binId: string, userId: string) {
   const access = await verifyBinAccess(binId, userId);
   if (!access) throw new NotFoundError('Bin not found');
+  await requireMemberOrAbove(access.locationId, userId, 'modify items');
   if (access.createdBy !== userId && !(await isLocationAdmin(access.locationId, userId))) {
     throw new ForbiddenError('Only the bin creator or a location admin can modify items');
   }
