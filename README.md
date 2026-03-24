@@ -1,24 +1,31 @@
+<div align="center">
 <h1>
-  <img src="public/logo.svg" alt="" width="28" />&nbsp;<span style="font-size:32px;line-height:32px;">OpenBin</span>
-</h1>
+  <img src="public/logo.svg" alt="" width="60" />&nbsp;<span style="font-size:60px;line-height:60px;">OpenBin</span>
+</h1>  
+<p>Self-hosted inventory system for organizing physical storage bins with an AI inventory assistant.</p>
 
-Self-hosted inventory system for organizing physical storage bins with optional AI-powered cataloging. Snap photos and AI names the bins, lists every item, and tags them for search. Tell it to "add batteries to the tools bin" or "move everything to the garage" and review changes before applying. Reorganize entire locations with AI suggestions. Print QR labels and scan to find contents.
+  <p>
+    <a href="https://demo.openbin.app"><img alt="Demo" src="https://img.shields.io/badge/Demo-Live-f97316?style=for-the-badge&logo=googlechrome&logoColor=white" /></a>&nbsp;
+    <a href="https://akifbayram.github.io/openbin/"><img alt="Docs" src="https://img.shields.io/badge/Docs-Site-green?style=for-the-badge&logo=readthedocs&logoColor=white" /></a>&nbsp;
+    <a href="https://github.com/akifbayram/openbin/actions/workflows/ci.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/akifbayram/openbin/ci.yml?style=for-the-badge&logo=githubactions&logoColor=white&label=Build" /></a>&nbsp;
+    <a href="https://github.com/akifbayram/openbin/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/v/release/akifbayram/openbin?style=for-the-badge&logo=github&color=blue" /></a>&nbsp;
+    <a href="https://discord.gg/W6JPZCqqx9"><img alt="Discord" src="https://img.shields.io/discord/1476024745886744739?style=for-the-badge&logo=discord&logoColor=white&label=Discord&color=5865F2" /></a>&nbsp;
+  </p>
 
-<a href="https://demo.openbin.app"><strong>Demo</strong></a> · <a href="https://akifbayram.github.io/openbin/"><strong>Docs</strong></a> · <a href="https://discord.gg/W6JPZCqqx9"><strong>Discord</strong></a>
+  <img src="docs/assets/bins.png" alt="OpenBin dashboard showing bins organized by area" width="700" />
 
-## Highlights
+</div>
 
-- **AI-powered cataloging** — Capture photos in-app or from your gallery, and AI creates a catalog of the items in each bin. Bring your own API key.
-- **Natural language commands** — "Add batteries to the tools bin" or "move everything to the garage"
-- **AI reorganization** — Let AI suggest how to restructure an entire location's bins, areas, and tags, then apply changes in bulk
-- **Print & scan QR labels** — Generate customizable QR label sheets or name cards, stick them on bins, scan with your phone to see contents
-- **Multi-user locations** — Invite others with a code, assign roles (admin/member/viewer), organize bins into nested areas, track changes in the activity log
+## Features
+
+- **AI assisted autofill** — Capture photos, and the assistant autofills the items in each bin. Bring your own AI.
+- **Natural language commands** — "Add batteries to the tools bin" or "Create a bin with widgets x, y, and z".
+- **AI reorganization** — Let the assistant suggest how to restructure an entire location's bins, areas, and tags in bulk.
+- **Print & scan QR labels** — Generate customizable QR label sheets or name cards, stick them on bins, scan to see contents.
 - **MCP server included** — Connect AI assistants directly to your inventory via Model Context Protocol
-- **Export everything** — Full JSON/CSV/ZIP export with photos, import with preview
+- **Data portability** — Full JSON/CSV/ZIP export with photos.
 
 ## Quick Start
-
-**Prerequisites:** Docker
 
 Create a `docker-compose.yml`:
 
@@ -60,25 +67,30 @@ All settings are optional. Set environment variables or create a `.env` file to 
 | `DATABASE_PATH` | SQLite database file path | `./data/openbin.db` |
 | `PHOTO_STORAGE_PATH` | Photo upload directory | `./data/photos` |
 | `TRUST_PROXY` | Set `true` when behind a reverse proxy | `false` |
+| `CORS_ORIGIN` | CORS origin (only needed for non-Docker dev setups) | `http://localhost:5173` |
 | **Authentication** | | |
 | `JWT_SECRET` | JWT signing secret; auto-generated and persisted if unset | — |
 | `ACCESS_TOKEN_EXPIRES_IN` | Short-lived access token lifetime | `15m` |
 | `REFRESH_TOKEN_MAX_DAYS` | Refresh token lifetime in days (1–90) | `7` |
+| `COOKIE_SECURE` | Force Secure flag on cookies (auto in production) | — |
 | `BCRYPT_ROUNDS` | Password hashing rounds (10–31) | `12` |
 | `REGISTRATION_MODE` | Registration policy: `open`, `invite` (require location invite code), or `closed` | `open` |
 | **Uploads** | | |
-| `MAX_PHOTO_SIZE_MB` | Max photo upload size in MB | `5` |
-| `MAX_AVATAR_SIZE_MB` | Max avatar upload size in MB | `2` |
+| `MAX_PHOTO_SIZE_MB` | Max photo upload size in MB (1–50) | `5` |
+| `MAX_AVATAR_SIZE_MB` | Max avatar upload size in MB (1–10) | `2` |
+| `MAX_PHOTOS_PER_BIN` | Max photos per bin (1–100) | `1` |
+| `UPLOAD_QUOTA_DEMO_MB` | Per-user upload quota in demo mode | `5` |
+| `UPLOAD_QUOTA_GLOBAL_DEMO_MB` | Global upload quota in demo mode | `50` |
 | **AI (server-wide fallback)** | | |
 | `AI_PROVIDER` | `openai`, `anthropic`, `gemini`, or `openai-compatible` | — |
 | `AI_API_KEY` | API key for the configured provider | — |
-| `AI_MODEL` | Model name (e.g. `gpt-4o-mini`, `claude-sonnet-4-6`) | — |
+| `AI_MODEL` | Model name (e.g. `gpt-5-mini`, `claude-sonnet-4-6`) | — |
 | `AI_ENDPOINT_URL` | Custom endpoint for `openai-compatible` provider | — |
 | `AI_ENCRYPTION_KEY` | Encrypts user AI API keys at rest (AES-256-GCM) | — |
 | **Backups** | | |
 | `BACKUP_ENABLED` | Enable automatic database backups | `false` |
 | `BACKUP_INTERVAL` | Backup schedule (hourly/daily/weekly/cron) | `daily` |
-| `BACKUP_RETENTION` | Number of backup files to keep | `7` |
+| `BACKUP_RETENTION` | Number of backup files to keep (1–365) | `7` |
 | `BACKUP_PATH` | Directory for backup files | `./data/backups` |
 | `BACKUP_WEBHOOK_URL` | Webhook URL for backup notifications | — |
 | **Rate Limiting** | | |
@@ -87,12 +99,17 @@ All settings are optional. Set environment variables or create a `.env` file to 
 | `DISABLE_RATE_LIMIT` | Set `true` to disable all rate limiters (dev only) | `false` |
 | **Demo** | | |
 | `DEMO_MODE` | Auto-login visitors with pre-populated sample data; resets on restart | `false` |
+| `DEMO_USERNAMES` | Comma-separated usernames blocked from AI API key access | — |
+| `AI_MOCK` | Return fake AI responses without an API key (testing only) | `false` |
+| `DEMO_AI_RATE_LIMIT` | Max AI tokens per hour for demo users | `10` |
+| `DEMO_AI_MAX_PHOTOS_PER_REQUEST` | Max photos per AI request for demo users | `3` |
+| `DEMO_AI_DAILY_BUDGET` | Max AI tokens per day for demo users | `100` |
 
 </details>
 
 ## Architecture
 
-Single Node.js process. All data lives in one SQLite file and a photos directory. No external services, no background workers, no telemetry, no phoning home. The app never makes outbound network requests unless you explicitly configure AI features (bring-your-own API key). Works fully offline on a LAN.
+Single Node.js process. All data lives in one SQLite file and a photos directory. No external services, no background workers, no telemetry, no phoning home. The app never makes outbound network requests unless you explicitly configure AI features.
 
 | Layer | Technology |
 |-------|------------|
