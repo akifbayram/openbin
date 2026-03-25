@@ -9,11 +9,9 @@ next:
 
 # Items & Tags
 
-OpenBin provides dedicated pages for browsing all items and tags across the active location. These give you a global view of your inventory without having to open individual bins.
+## Items page
 
-## Items Page
-
-The Items page lists every item across all bins in the active location.
+Lists every item across all bins in the active location.
 
 - **Search** by item name to find which bin holds a specific thing.
 - **Sort** by item name (alphabetical) or by bin name to group items by their container.
@@ -26,9 +24,9 @@ Clicking an item navigates directly to its parent bin's detail page.
 The Items page is the fastest way to answer "which bin has the Phillips screwdriver?" — just search for it and tap the result.
 :::
 
-## Tags Page
+## Tags page
 
-The Tags page lists every tag used in the active location.
+Lists every tag used in the active location.
 
 - **Search** by tag name to find a specific tag.
 - **Sort** by tag name (alphabetical) or by usage count to see which tags are most common.

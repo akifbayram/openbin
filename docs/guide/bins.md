@@ -9,11 +9,23 @@ next:
 
 # Bins
 
-Bins are the core objects in OpenBin. Each bin represents a physical storage container (a box, drawer, shelf, or bin) and holds a structured list of items along with tags, notes, and visual appearance settings.
+Each bin represents a physical container — a box, drawer, or shelf — with items, tags, notes, and visual settings.
 
-## Creating a Bin
+## View modes
 
-Tap **+ New Bin** and enter a name. All other fields (items, tags, notes, icon, color, area) are optional. The short code is auto-generated from the bin name.
+The bin list has three view modes, toggled from the toolbar:
+
+<div class="image-row">
+  <img alt="Grid view" src="../assets/view-grid.png" />
+  <img alt="Compact view" src="../assets/view-compact.png" />
+  <img alt="Table view" src="../assets/view-table.png" />
+</div>
+
+## Creating a bin
+
+Tap **+ New Bin** and enter a name. Everything else is optional. The short code is auto-generated from the bin name.
+
+![Bin detail](../assets/bin-detail.png)
 
 ## Items
 

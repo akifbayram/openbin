@@ -9,15 +9,13 @@ next:
 
 # Bulk Add
 
-Bulk Add is a 3-step wizard for creating multiple bins at once from photos. Instead of creating bins one at a time, you can photograph several containers, let AI suggest names and contents for each, and create them all in a single batch.
+Create multiple bins at once from photos. Upload photos, let AI suggest names and contents, then create them in a batch.
 
-## Step 1 — Upload Photos
+## Step 1 — Upload photos
 
-Select up to 20 photos at once. Each photo becomes a candidate bin — one photo per bin.
+Select up to 20 photos. Each photo becomes a candidate bin.
 
-Pick photos of the containers, shelves, or drawers you want to catalog. Clear, well-lit photos produce the best AI suggestions in the next step.
-
-## Step 2 — Review Suggestions
+## Step 2 — Review suggestions
 
 AI analyzes each uploaded photo and suggests:
 

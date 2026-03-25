@@ -1,10 +1,8 @@
 # Docker Quick Start
 
-Docker is the recommended way to run OpenBin. A single `docker compose up -d` command starts the server, serves the frontend, and handles data persistence — no additional setup required.
-
 ## Prerequisites
 
-- [Docker](https://docs.docker.com/get-docker/) installed (Docker Desktop on Mac/Windows, or Docker Engine on Linux)
+- Docker installed
 
 ## Quick Start
 
@@ -16,9 +14,7 @@ docker compose up -d
 
 Then open `http://localhost:1453` in your browser. Register an account and start adding bins.
 
-::: tip First run
-On first startup, OpenBin creates the SQLite database and generates a JWT secret automatically. No environment variables need to be set before running.
-:::
+The database and JWT secret are created automatically on first startup.
 
 ## Data Persistence
 

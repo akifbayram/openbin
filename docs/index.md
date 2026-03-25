@@ -27,7 +27,7 @@ features:
     linkText: Learn more
   - icon: 🤖
     title: AI Photo Analysis
-    details: Capture a photo in-app or from your gallery and AI names the bin, lists every item with quantities, suggests tags, and adds notes. Re-analyze anytime with full context.
+    details: Capture a photo in-app or from your gallery and AI names the bin, lists every item with quantities, suggests tags, and adds notes.
     link: /guide/ai
     linkText: Learn more
   - icon: 🖨️
@@ -40,11 +40,6 @@ features:
     details: Share locations with invite codes. Role-based access with nested, hierarchical areas.
     link: /guide/locations
     linkText: Learn more
-  - icon: 🔍
-    title: Search & Filter
-    details: Search by name, items, tags, or areas. Save filter presets for quick access.
-    link: /guide/search-filter
-    linkText: Learn more
   - icon: 🔌
     title: REST API
     details: Long-lived API keys for headless access and automation. Full OpenAPI spec included.
@@ -56,3 +51,102 @@ features:
     link: /guide/mcp-server
     linkText: Learn more
 ---
+
+## Features
+
+<div class="home-features">
+
+### Organize
+
+- Create bins with names, items (with quantities), notes, and tags
+- Group bins into hierarchical areas and sub-areas within locations
+- Color-code bins with icons and card styles (gradient, stripe, border, photo cover)
+- Pin frequently used bins to your dashboard
+- Save search views and reuse them with one click
+- Bulk operations: tag, move, change appearance, or delete multiple bins at once
+- Soft-delete with trash and restore
+
+### AI & Automation
+
+- Photo analysis: snap a photo and AI names the bin, lists items with quantities, suggests tags and notes
+- Natural language commands: "Add batteries to the tools bin" or "Create a bin with screws, bolts, and washers"
+- AI reorganization: suggest how to restructure an entire location's bins, areas, and tags
+- Bring your own AI: supports OpenAI, Anthropic, Gemini, and any OpenAI-compatible endpoint
+- Per-user AI settings with encrypted API key storage
+
+### QR Labels & Scanning
+
+- Generate customizable QR label sheets with multiple formats and sizes
+- Style QR codes with custom dot/corner patterns and colors
+- Print name-card labels or item-list sheets
+- Scan any label with your phone camera to see what's inside
+- Works with both the built-in scanner and any standard QR reader
+
+### Multi-user & Access Control
+
+- Share locations via invite codes
+- Three roles: admin, member (read-write), viewer (read-only)
+- Configurable default join role per location
+- Private bins visible only to their creator
+- Full activity log of every change
+
+### Data & Integration
+
+- Full JSON/CSV/ZIP export with photos
+- Import from backup to restore or migrate
+- REST API with long-lived API keys for automation
+- MCP server: connect Claude and other AI assistants directly to your inventory
+- Single SQLite file — no external database, easy to back up
+- Scheduled automatic backups with webhook notifications
+
+</div>
+
+**[Screenshots →](/screenshots)**
+
+## Get Started
+
+Run with Docker in 30 seconds.
+
+```yaml
+services:
+  openbin:
+    image: ghcr.io/akifbayram/openbin:latest
+    ports:
+      - "1453:1453"
+    volumes:
+      - api_data:/data
+    environment:
+      DATABASE_PATH: /data/openbin.db
+      PHOTO_STORAGE_PATH: /data/photos
+      BACKUP_PATH: /data/backups
+
+volumes:
+  api_data:
+```
+
+Open `http://localhost:1453`, register an account, and start adding bins. See [Configuration](/getting-started/configuration) for all available options.
+
+## Architecture
+
+**One container. One SQLite file. Zero telemetry.**
+
+No external services, no background workers, no phoning home. All data lives in one `/data` volume. The app never makes outbound network requests unless you explicitly configure AI features.
+
+<div class="tech-stack">
+  <span class="badge">React 18</span>
+  <span class="badge">TypeScript</span>
+  <span class="badge">Express 4</span>
+  <span class="badge">SQLite</span>
+  <span class="badge">Alpine Docker</span>
+</div>
+
+## Community
+
+<div class="community-links">
+  <a href="https://discord.gg/W6JPZCqqx9">Discord</a>
+  <a href="https://github.com/akifbayram/openbin/discussions">Discussions</a>
+  <a href="https://github.com/akifbayram/openbin/issues">Issues</a>
+  <a href="https://github.com/akifbayram/openbin">Contribute</a>
+</div>
+
+Released under the [AGPL-3.0](https://github.com/akifbayram/openbin/blob/main/LICENSE) license.

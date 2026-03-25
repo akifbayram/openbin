@@ -9,11 +9,9 @@ next:
 
 # Search & Filter
 
-OpenBin's search and filter tools let you find bins quickly across large collections. Searches run live as you type, and filters can be combined and saved for reuse.
+## Search bar
 
-## Search Bar
-
-The search bar at the top of the bin list searches across all of the following simultaneously:
+The search bar at the top of the bin list searches across:
 
 - Bin names
 - Item names (items inside bins)

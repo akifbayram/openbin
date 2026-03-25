@@ -11,6 +11,8 @@ next:
 
 The Dashboard is the home screen after login. It shows your location's stats, pinned bins, recent scans, and saved views.
 
+![Dashboard](../assets/dashboard.png)
+
 ## Stats Bar
 
 The top of the dashboard shows three summary counts for the active location:
@@ -37,9 +39,7 @@ The number of entries shown is configurable in dashboard settings. Clear your sc
 
 ## Recently Updated
 
-Shows bins in the location that were most recently edited, sorted by `updated_at` descending. This is location-wide — it includes changes made by any member.
-
-Useful for staying informed about what's changed in a shared location.
+Shows bins in the location that were most recently edited, sorted by `updated_at` descending. Location-wide — includes changes by any member.
 
 ## Needs Organizing
 
@@ -63,4 +63,4 @@ You can multi-select bins directly from the dashboard to perform bulk operations
 
 Saved filter/sort presets (created from the bin list — see [Search & Filter](/guide/search-filter#saved-views)) appear on the dashboard as quick-access buttons. Clicking one opens the bin list with those filters pre-applied.
 
-This is useful for frequently-used queries like "Show all bins in the Garage with the Electronics tag".
+Useful for queries like "all bins in the Garage with the Electronics tag".

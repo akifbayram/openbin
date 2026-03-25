@@ -9,7 +9,7 @@ next:
 
 # Locations & Areas
 
-Locations are the top-level shared workspaces in OpenBin. Everything — bins, areas, members, and settings — lives inside a location. Areas are optional sub-zones within a location that give bins a physical context.
+Everything — bins, areas, members, settings — lives inside a location. Areas are optional sub-zones for grouping bins.
 
 ## Creating a Location
 

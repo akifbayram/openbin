@@ -9,7 +9,7 @@ next:
 
 # API Keys
 
-API keys let you access OpenBin's API without a browser login session. They are useful for scripts, automation, home integrations, and any headless access to your inventory data.
+Long-lived tokens for scripts, automation, and headless API access.
 
 ## Creating a Key
 

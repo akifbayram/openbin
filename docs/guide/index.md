@@ -1,10 +1,10 @@
 # User Guide
 
-This guide covers every feature in OpenBin. If you haven't set up OpenBin yet, start with the [Getting Started](/getting-started/) guide.
+![Bins overview](../assets/bins.png)
 
-## How OpenBin Works
+## How OpenBin works
 
-OpenBin organizes physical storage using a simple hierarchy:
+OpenBin organizes physical storage using a hierarchy:
 
 **Location** → **Area** → **Bin** → **Items**
 

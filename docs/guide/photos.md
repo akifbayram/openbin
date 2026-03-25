@@ -9,26 +9,15 @@ next:
 
 # Photos
 
-Bins can have up to 5 photos attached. Photos are stored on the server and served through the API with authentication — they are never publicly accessible without a valid session.
+Bins can have up to 5 photos. Photos are served through the API with authentication — not publicly accessible without a session.
 
-## Attaching Photos
+## Attaching photos
 
-1. Open a bin's detail page.
-2. Expand the **Photos** section.
-3. Tap **Upload** and select one or more image files.
-4. The photos appear in the gallery immediately after upload.
+Open a bin → expand **Photos** → **Upload**. Accepts JPEG, PNG, WebP. Max size configurable via `MAX_PHOTO_SIZE_MB` (default 5 MB).
 
-**Supported formats**: JPEG, PNG, WebP, and other common image formats.
+## In-app camera
 
-**Maximum file size**: Configurable via the `MAX_PHOTO_SIZE_MB` environment variable (default: 5 MB per photo).
-
-**Limit**: Up to 5 photos per bin.
-
-## In-App Camera
-
-You can take photos directly within OpenBin using the built-in camera capture page. This opens a full-screen camera view where you can take consecutive photos without switching to your device's camera app.
-
-If you open the camera from a bin's detail page, each photo is uploaded to that bin automatically as you capture it. This is especially useful on mobile when cataloging many bins in a row.
+The built-in camera page lets you take consecutive photos without leaving the app. Opening it from a bin's detail page uploads each capture to that bin automatically.
 
 ## Using Photos with AI
 

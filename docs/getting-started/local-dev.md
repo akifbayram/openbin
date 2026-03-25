@@ -1,6 +1,6 @@
 # Local Development
 
-Running OpenBin locally without Docker lets you work on the frontend and server simultaneously with hot-module replacement and fast feedback cycles. The frontend dev server proxies API requests to the Express server, so both need to be running.
+The frontend dev server proxies API requests to the Express server, so both need to be running.
 
 ## Prerequisites
 

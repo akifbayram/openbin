@@ -9,11 +9,7 @@ next:
 
 # QR Scanning
 
-Each bin in OpenBin has a unique QR code that encodes its short code. Scanning a label takes you directly to the bin's detail page — no searching required.
-
-## How QR Codes Work
-
-Each bin's QR label encodes a URL containing its 6-character short code (`/bin/CODE`). Scanning navigates directly to the bin's detail page.
+Each bin's QR label encodes a URL containing its 6-character short code (`/bin/CODE`). Scanning navigates to the bin's detail page.
 
 ## Camera Scanner
 

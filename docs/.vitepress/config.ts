@@ -12,6 +12,7 @@ export default defineConfig({
     nav: [
       { text: 'Get Started', link: '/getting-started/' },
       { text: 'Guide', link: '/guide/' },
+      { text: 'Screenshots', link: '/screenshots' },
       { text: 'API', link: '/api/' },
       { text: 'GitHub', link: 'https://github.com/akifbayram/openbin' }
     ],

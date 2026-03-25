@@ -9,8 +9,6 @@ next:
 
 # Import & Export
 
-OpenBin can export your location's data for backup or migration, and import data from a previous export or a supported external format.
-
 ## Export
 
 Go to **Settings → Data** to access export options. Exports always include all bins in the currently active location.

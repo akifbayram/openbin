@@ -9,7 +9,7 @@ next:
 
 # Bulk Operations
 
-Bulk operations let you perform the same action on many bins at once — saving time when reorganizing, retagging, or cleaning up a large collection. Multi-select is available from both the bin list and the [dashboard](/guide/dashboard).
+Multi-select bins from the bin list or [dashboard](/guide/dashboard) to perform batch actions.
 
 ## Entering Multi-Select Mode
 

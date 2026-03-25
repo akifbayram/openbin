@@ -9,31 +9,16 @@ next:
 
 # Account & Profile
 
-Your profile settings control how you appear to other location members and how you access your account. Open profile settings from the user menu in the top navigation bar.
+Open profile settings from the user menu in the navigation bar.
 
 ## Avatar
 
-Upload a profile picture to personalize your account.
-
-- **Supported formats**: JPEG, PNG, or WebP
-- **Maximum size**: 2 MB
-- **Remove**: delete your avatar to revert to the default placeholder
-
-Your avatar appears next to your name in activity logs, member lists, and the navigation bar.
+- Formats: JPEG, PNG, or WebP
+- Max size: 2 MB
 
 ## Password
 
-Change your password from the profile page.
-
-1. Enter your **current password** for verification.
-2. Enter and confirm a **new password**.
-
-Password requirements:
-
-- At least 8 characters
-- At least one uppercase letter
-- At least one lowercase letter
-- At least one digit
+Change your password from the profile page. Requirements are enforced in the UI.
 
 ## Delete Account
 

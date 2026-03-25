@@ -9,7 +9,7 @@ next:
 
 # Print Labels
 
-OpenBin can generate QR label sheets for any selection of bins, ready to print on standard paper or export as a PDF.
+![Print labels](../assets/print-labels.png)
 
 ## Selecting Bins
 

@@ -9,7 +9,7 @@ next:
 
 # AI Features
 
-OpenBin's AI features are fully optional. They require connecting your own API key or having an admin configure a server-wide key. Without an AI key, all other features work normally.
+AI is optional. Connect your own API key or have an admin set a server-wide key. Everything else works without it.
 
 ## Supported Providers
 
@@ -20,13 +20,13 @@ OpenBin's AI features are fully optional. They require connecting your own API k
 | **[Google Gemini](https://aistudio.google.com/)** | `gemini-3-flash-preview` |
 | **OpenAI-compatible** | — |
 
-### Getting an API Key
+### Getting an API key
 
-Each provider requires its own API key. Sign up and create one from their developer platform:
+Create an API key from your provider's developer platform:
 
-- **OpenAI** — Create an account at [platform.openai.com](https://platform.openai.com/), then go to **API Keys** to generate a key. Requires adding billing credits. [Models & pricing →](https://platform.openai.com/docs/pricing)
-- **Anthropic** — Create an account at [console.anthropic.com](https://console.anthropic.com/), set up billing under **Settings → Billing**, then go to **API Keys → Create Key**. [Models & pricing →](https://docs.anthropic.com/en/docs/about-claude/pricing)
-- **Google Gemini** — Sign in at [aistudio.google.com](https://aistudio.google.com/) with a Google account, then click **Get API key → Create API key**. Includes a free tier with no billing required. [Models & pricing →](https://ai.google.dev/gemini-api/docs/pricing)
+- **OpenAI** — [platform.openai.com](https://platform.openai.com/) → API Keys. [Pricing →](https://platform.openai.com/docs/pricing)
+- **Anthropic** — [console.anthropic.com](https://console.anthropic.com/) → API Keys. [Pricing →](https://docs.anthropic.com/en/docs/about-claude/pricing)
+- **Google Gemini** — [aistudio.google.com](https://aistudio.google.com/) → Get API key. Free tier available. [Pricing →](https://ai.google.dev/gemini-api/docs/pricing)
 
 ## Per-User Setup
 
@@ -52,6 +52,8 @@ Set `AI_ENCRYPTION_KEY` to an AES-256-GCM key to encrypt stored API keys at rest
 
 ## Photo Analysis
 
+![AI photo analysis](../assets/ai-photos.png)
+
 After uploading a photo to a bin, tap **Analyze with AI** to get suggestions for bin name, items (with quantities), tags, and notes. Each field can be accepted or dismissed independently.
 
 If the first pass missed items or suggested incorrect names, you can re-analyze to get improved results. Tap the sparkle icon on the photo preview and click **Reanalyze** (or type a specific correction). The reanalysis sends both the photos and the previous suggestions back to the AI, so it can refine its output based on what it already identified. Changed fields are highlighted so you can see exactly what was updated.
@@ -67,7 +69,7 @@ Create a bin called Holiday Decorations with items: lights, ornaments, wrapping 
 Remove the extension cord from the electrical bin
 ```
 
-OpenBin interprets the command, shows a preview of the action it will take, and asks for confirmation before making any changes.
+OpenBin shows a preview of the action and asks for confirmation before making changes.
 
 ## Inventory Search
 
@@ -80,7 +82,7 @@ What's in the attic?
 Do I have any sandpaper?
 ```
 
-OpenBin searches your bins and returns matching results with an explanation of why each bin matched.
+Returns matching bins with an explanation of why each matched.
 
 ## AI Reorganization
 
