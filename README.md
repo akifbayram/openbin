@@ -1,6 +1,11 @@
 <div align="center">
-<img src="public/logo.svg" alt="" width="80" />
-<h1>OpenBin</h1>  
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/logo-horizontal-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="public/logo-horizontal.svg" />
+  <img src="public/logo-horizontal.svg" alt="OpenBin" height="64" />
+</picture>
+
 <p>Self-hosted inventory system for organizing physical storage bins with an AI inventory assistant.</p>
 
   <p>
