@@ -39,10 +39,10 @@ export function countActiveFilters(f: BinFilters): number {
   return n;
 }
 
-export function useBinList(searchQuery?: string, sort: SortOption = 'updated', filters?: BinFilters) {
+export function useBinList(searchQuery?: string, sort: SortOption = 'updated', filters?: BinFilters, skip?: boolean) {
   const { activeLocationId, token } = useAuth();
   const { data: rawBins, isLoading, refresh } = useListData<Bin>(
-    token && activeLocationId
+    !skip && token && activeLocationId
       ? `/api/bins?location_id=${encodeURIComponent(activeLocationId)}`
       : null,
     [Events.BINS],

@@ -280,6 +280,8 @@ export function BinListPage() {
                     selected={selectedIds.has(bin.id)}
                     onSelect={toggleSelect}
                     searchQuery={debouncedSearch}
+                    sort={sort}
+                    filters={filters}
                     isVisible={isVisible}
                   />
                 ))}
@@ -297,6 +299,7 @@ export function BinListPage() {
                 selectedIds={selectedIds}
                 onSelect={toggleSelect}
                 searchQuery={debouncedSearch}
+                filters={filters}
                 onTagClick={handleTagClick}
                 isVisible={isVisible}
               />
@@ -315,6 +318,8 @@ export function BinListPage() {
                     selected={selectedIds.has(bin.id)}
                     onSelect={toggleSelect}
                     searchQuery={debouncedSearch}
+                    sort={sort}
+                    filters={filters}
                     isVisible={isVisible}
                   />
                 ))}

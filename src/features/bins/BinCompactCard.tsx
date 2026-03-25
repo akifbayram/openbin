@@ -8,6 +8,7 @@ import type { Bin } from '@/types';
 import { computeBinCardStyles } from './binCardStyles';
 import { areCommonBinCardPropsEqual } from './binMemoUtils';
 import { useBinCardInteraction } from './useBinCardInteraction';
+import type { BinFilters, SortOption } from './useBins';
 import type { FieldKey } from './useColumnVisibility';
 
 interface BinCompactCardProps {
@@ -18,6 +19,8 @@ interface BinCompactCardProps {
   selected?: boolean;
   onSelect?: (id: string, index: number, shiftKey: boolean) => void;
   searchQuery?: string;
+  sort?: SortOption;
+  filters?: BinFilters;
   isVisible?: (field: FieldKey) => boolean;
 }
 
@@ -28,6 +31,8 @@ export const BinCompactCard = React.memo(function BinCompactCard({
   selected,
   onSelect,
   searchQuery = '',
+  sort,
+  filters,
   isVisible,
 }: BinCompactCardProps) {
   const { theme } = useTheme();
@@ -36,7 +41,7 @@ export const BinCompactCard = React.memo(function BinCompactCard({
   const { renderProps, isPhoto, coverImageSrc, secondaryStyle, secondaryBorderStyle, iconStyle, nameStyle } =
     computeBinCardStyles(bin.color, bin.card_style, theme);
 
-  const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect });
+  const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect, searchQuery, sort, filters });
 
   const checkbox = (
     <div
@@ -153,5 +158,9 @@ export const BinCompactCard = React.memo(function BinCompactCard({
     </div>
   );
 }, (prev, next) => {
-  return areCommonBinCardPropsEqual(prev, next);
+  return (
+    areCommonBinCardPropsEqual(prev, next) &&
+    prev.sort === next.sort &&
+    prev.filters === next.filters
+  );
 });

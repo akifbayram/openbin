@@ -20,15 +20,15 @@ hero:
       link: https://discord.gg/W6JPZCqqx9
 
 features:
-  - icon: 📦
-    title: QR Scanning
-    details: Scan any bin's QR label with your phone camera to instantly see its contents.
-    link: /guide/qr-scanning
-    linkText: Learn more
   - icon: 🤖
     title: AI Photo Analysis
     details: Capture a photo in-app or from your gallery and AI names the bin, lists every item with quantities, suggests tags, and adds notes.
     link: /guide/ai
+    linkText: Learn more
+  - icon: 📦
+    title: QR Scanning
+    details: Scan any bin's QR label with your phone camera to instantly see its contents.
+    link: /guide/qr-scanning
     linkText: Learn more
   - icon: 🖨️
     title: Print Labels
@@ -100,53 +100,3 @@ features:
 - Scheduled automatic backups with webhook notifications
 
 </div>
-
-**[Screenshots →](/screenshots)**
-
-## Get Started
-
-Run with Docker in 30 seconds.
-
-```yaml
-services:
-  openbin:
-    image: ghcr.io/akifbayram/openbin:latest
-    ports:
-      - "1453:1453"
-    volumes:
-      - api_data:/data
-    environment:
-      DATABASE_PATH: /data/openbin.db
-      PHOTO_STORAGE_PATH: /data/photos
-      BACKUP_PATH: /data/backups
-
-volumes:
-  api_data:
-```
-
-Open `http://localhost:1453`, register an account, and start adding bins. See [Configuration](/getting-started/configuration) for all available options.
-
-## Architecture
-
-**One container. One SQLite file. Zero telemetry.**
-
-No external services, no background workers, no phoning home. All data lives in one `/data` volume. The app never makes outbound network requests unless you explicitly configure AI features.
-
-<div class="tech-stack">
-  <span class="badge">React 18</span>
-  <span class="badge">TypeScript</span>
-  <span class="badge">Express 4</span>
-  <span class="badge">SQLite</span>
-  <span class="badge">Alpine Docker</span>
-</div>
-
-## Community
-
-<div class="community-links">
-  <a href="https://discord.gg/W6JPZCqqx9">Discord</a>
-  <a href="https://github.com/akifbayram/openbin/discussions">Discussions</a>
-  <a href="https://github.com/akifbayram/openbin/issues">Issues</a>
-  <a href="https://github.com/akifbayram/openbin">Contribute</a>
-</div>
-
-Released under the [AGPL-3.0](https://github.com/akifbayram/openbin/blob/main/LICENSE) license.

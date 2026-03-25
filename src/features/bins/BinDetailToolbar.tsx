@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { ArrowRightLeft, Check, ChevronLeft, Copy, Loader2, Lock, MoreHorizontal, Pencil, Pin, Printer, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowRightLeft, Check, ChevronLeft, ChevronRight, Copy, Loader2, Lock, MoreHorizontal, Pencil, Pin, Printer, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { MenuButton } from '@/components/ui/menu-button';
@@ -24,7 +24,10 @@ interface BinDetailToolbarProps {
   isReanalysis: boolean;
   editNameValid: boolean;
   otherLocations: Location[];
-  onBack: () => void;
+  onClose: () => void;
+  onPrev: (() => void) | null;
+  onNext: (() => void) | null;
+  hasBinListContext: boolean;
   onCancelEdit: () => void;
   onSave: () => void;
   onStartEdit: () => void;
@@ -50,7 +53,10 @@ export function BinDetailToolbar({
   isReanalysis,
   editNameValid,
   otherLocations,
-  onBack,
+  onClose,
+  onPrev,
+  onNext,
+  hasBinListContext,
   onCancelEdit,
   onSave,
   onStartEdit,
@@ -72,21 +78,60 @@ export function BinDetailToolbar({
   }
 
   return (
-    <div className="row">
+    <div className="flex items-center gap-0.5 lg:gap-2">
       <MenuButton />
       {!editing && (
         <Button
           variant="ghost"
-          size="icon-sm"
-          onClick={onBack}
-          aria-label="Go back"
-          className="hidden lg:flex shrink-0 text-[var(--accent)]"
+          size="icon"
+          onClick={onClose}
+          aria-label="Close"
+          className="lg:hidden shrink-0"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <X className="h-[18px] w-[18px]" />
         </Button>
       )}
-      {!editing && <BinIcon className="hidden lg:block h-5 w-5 text-[var(--text-secondary)] shrink-0" />}
-      <div className="min-w-0 flex-1">
+      {!editing && (
+        <div className="hidden lg:flex gap-1.5 shrink-0">
+          <Tooltip content="Close" side="bottom">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <X className="h-[18px] w-[18px]" />
+            </Button>
+          </Tooltip>
+          {hasBinListContext && (
+            <>
+              <Tooltip content="Previous" side="bottom">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onPrev ?? undefined}
+                  disabled={!onPrev}
+                  aria-label="Previous bin"
+                >
+                  <ChevronLeft className="h-[18px] w-[18px]" />
+                </Button>
+              </Tooltip>
+              <Tooltip content="Next" side="bottom">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onNext ?? undefined}
+                  disabled={!onNext}
+                  aria-label="Next bin"
+                >
+                  <ChevronRight className="h-[18px] w-[18px]" />
+                </Button>
+              </Tooltip>
+            </>
+          )}
+        </div>
+      )}
+      <div className="min-w-0 flex-1 flex justify-center">
         {editing ? (
           <input
             id="edit-name"
@@ -97,6 +142,7 @@ export function BinDetailToolbar({
           />
         ) : (
           <div className="row-tight min-w-0">
+            <BinIcon className="hidden lg:block h-5 w-5 text-[var(--text-secondary)] shrink-0" />
             <span className="text-[17px] font-semibold text-[var(--text-primary)] leading-tight truncate">{bin.name}</span>
             {bin.visibility === 'private' && (
               <Lock className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
@@ -105,7 +151,7 @@ export function BinDetailToolbar({
         )}
       </div>
       {editing ? (
-        <div className="flex gap-1.5">
+        <div className="flex gap-0.5 lg:gap-1.5">
           <Button
             variant="ghost"
             size="icon"
@@ -127,7 +173,7 @@ export function BinDetailToolbar({
           </Button>
         </div>
       ) : (
-        <div className="flex gap-1.5">
+        <div className="flex gap-0.5 lg:gap-1.5">
           {showAiButton && (
             <Tooltip content={isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI'} side="bottom">
               <Button

@@ -3,20 +3,25 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTerminology } from '@/lib/terminology';
 import { useLongPress } from '@/lib/useLongPress';
 import { haptic } from '@/lib/utils';
+import type { BinFilters, SortOption } from './useBins';
 
 interface UseBinCardInteractionOptions {
   binId: string;
   index: number;
   selectable?: boolean;
   onSelect?: (id: string, index: number, shiftKey: boolean) => void;
+  searchQuery?: string;
+  sort?: SortOption;
+  filters?: BinFilters;
 }
 
-export function useBinCardInteraction({ binId, index, selectable, onSelect }: UseBinCardInteractionOptions) {
+export function useBinCardInteraction({ binId, index, selectable, onSelect, searchQuery, sort, filters }: UseBinCardInteractionOptions) {
   const navigate = useNavigate();
   const loc = useLocation();
   const t = useTerminology();
   const backPath = loc.pathname + loc.search;
   const backLabel = loc.pathname === '/' ? 'Home' : t.Bins;
+  const navState = { backLabel, backPath, searchQuery, sort, filters };
 
   const handleLongPress = useCallback(() => {
     if (!selectable) {
@@ -32,7 +37,7 @@ export function useBinCardInteraction({ binId, index, selectable, onSelect }: Us
     if (selectable) {
       onSelect?.(binId, index, e.shiftKey);
     } else {
-      navigate(`/bin/${binId}`, { state: { backLabel, backPath } });
+      navigate(`/bin/${binId}`, { state: navState });
     }
   }
 
@@ -41,7 +46,7 @@ export function useBinCardInteraction({ binId, index, selectable, onSelect }: Us
       if (selectable) {
         onSelect?.(binId, index, false);
       } else {
-        navigate(`/bin/${binId}`, { state: { backLabel, backPath } });
+        navigate(`/bin/${binId}`, { state: navState });
       }
     }
   }

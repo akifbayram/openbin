@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { areCommonBinCardPropsEqual } from './binMemoUtils';
 import { useBinCardInteraction } from './useBinCardInteraction';
-import type { SortOption } from './useBins';
+import type { BinFilters, SortOption } from './useBins';
 import type { FieldKey } from './useColumnVisibility';
 
 interface BinTableViewProps {
@@ -24,6 +24,7 @@ interface BinTableViewProps {
   selectedIds: Set<string>;
   onSelect: (id: string, index: number, shiftKey: boolean) => void;
   searchQuery: string;
+  filters?: BinFilters;
   onTagClick: (tag: string) => void;
   onSelectAll?: () => void;
   isVisible?: (field: FieldKey) => boolean;
@@ -38,6 +39,7 @@ export function BinTableView({
   selectedIds,
   onSelect,
   searchQuery,
+  filters,
   onTagClick,
   onSelectAll,
   isVisible,
@@ -100,6 +102,8 @@ export function BinTableView({
           selected={selectedIds.has(bin.id)}
           onSelect={onSelect}
           searchQuery={searchQuery}
+          sort={sortColumn}
+          filters={filters}
           onTagClick={onTagClick}
           isVisible={isVisible}
         />
@@ -115,6 +119,8 @@ interface BinTableRowProps {
   selected: boolean;
   onSelect: (id: string, index: number, shiftKey: boolean) => void;
   searchQuery: string;
+  sort?: SortOption;
+  filters?: BinFilters;
   onTagClick: (tag: string) => void;
   isVisible?: (field: FieldKey) => boolean;
 }
@@ -126,6 +132,8 @@ const BinTableRow = React.memo(function BinTableRow({
   selected,
   onSelect,
   searchQuery,
+  sort,
+  filters,
   onTagClick,
   isVisible,
 }: BinTableRowProps) {
@@ -133,7 +141,7 @@ const BinTableRow = React.memo(function BinTableRow({
   const BinIcon = resolveIcon(bin.icon);
   const colorPreset = resolveColor(bin.color);
 
-  const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect });
+  const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect, searchQuery, sort, filters });
 
   const displayedTags = bin.tags.slice(0, 2);
   const hiddenTagCount = bin.tags.length - displayedTags.length;
@@ -289,5 +297,9 @@ const BinTableRow = React.memo(function BinTableRow({
     </BaseTableRow>
   );
 }, (prev, next) => {
-  return areCommonBinCardPropsEqual(prev, next);
+  return (
+    areCommonBinCardPropsEqual(prev, next) &&
+    prev.sort === next.sort &&
+    prev.filters === next.filters
+  );
 });

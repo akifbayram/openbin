@@ -11,6 +11,7 @@ import type { Bin } from '@/types';
 import { computeBinCardStyles, TAG_PHOTO_STYLE } from './binCardStyles';
 import { areCommonBinCardPropsEqual } from './binMemoUtils';
 import { useBinCardInteraction } from './useBinCardInteraction';
+import type { BinFilters, SortOption } from './useBins';
 import type { FieldKey } from './useColumnVisibility';
 
 interface BinCardProps {
@@ -21,10 +22,12 @@ interface BinCardProps {
   selected?: boolean;
   onSelect?: (id: string, index: number, shiftKey: boolean) => void;
   searchQuery?: string;
+  sort?: SortOption;
+  filters?: BinFilters;
   isVisible?: (field: FieldKey) => boolean;
 }
 
-export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick, selectable, selected, onSelect, searchQuery = '', isVisible }: BinCardProps) {
+export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick, selectable, selected, onSelect, searchQuery = '', sort, filters, isVisible }: BinCardProps) {
   const { theme } = useTheme();
   const getTagStyle = useTagStyle();
   const BinIcon = resolveIcon(bin.icon);
@@ -32,7 +35,7 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
   const { renderProps, isPhoto, coverImageSrc, secondaryStyle, secondaryBorderStyle, iconStyle, nameStyle, tagDefaultStyle } =
     computeBinCardStyles(bin.color, bin.card_style, theme);
 
-  const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect });
+  const { handleClick, handleKeyDown, longPress } = useBinCardInteraction({ binId: bin.id, index, selectable, onSelect, searchQuery, sort, filters });
 
   // BinCard has extra shift+Enter logic for selection — override handleKeyDown
   function handleKeyDownWithShift(e: React.KeyboardEvent) {
@@ -292,6 +295,8 @@ export const BinCard = React.memo(function BinCard({ bin, index = 0, onTagClick,
 }, (prev, next) => {
   return (
     areCommonBinCardPropsEqual(prev, next) &&
-    prev.onTagClick === next.onTagClick
+    prev.onTagClick === next.onTagClick &&
+    prev.sort === next.sort &&
+    prev.filters === next.filters
   );
 });

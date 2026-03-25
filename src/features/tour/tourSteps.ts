@@ -67,7 +67,7 @@ export const TOUR_STEPS: TourStep[] = [
     placement: 'bottom',
     title: (ctx) => `Photo to ${ctx.terminology.bin}`,
     body: (ctx) =>
-      `Take a photo of a shelf or drawer. AI figures out what's there and creates a ${ctx.terminology.bin} for you.`,
+      `Take a photo of a ${ctx.terminology.bin}, shelf, or drawer. The AI assistant figures out what's there and creates a ${ctx.terminology.bin} for you.`,
     route: '/bins',
     condition: (ctx) => ctx.canWrite && ctx.aiEnabled,
     beforeShow: async (ctx) => {
@@ -122,7 +122,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'Quick add items',
     body: (ctx) =>
       ctx.aiEnabled
-        ? `Type "3 screwdrivers, a tape measure, some nails" and tap the sparkle. AI parses it into items with quantities.`
+        ? `Type "3 screwdrivers, a tape measure, some nails" and tap the sparkle button. The AI assistant parses it into items with quantities.`
         : `Type an item name and press Enter, or paste a list. With AI connected, you can describe items naturally.`,
     route: (ctx) => (ctx.firstBinId ? `/bin/${ctx.firstBinId}` : '/bins'),
     condition: (ctx) => ctx.canWrite && ctx.firstBinId !== null,
@@ -136,7 +136,7 @@ export const TOUR_STEPS: TourStep[] = [
     placement: 'left',
     title: 'Reorganize with AI',
     body: (ctx) =>
-      `Pick a few ${ctx.terminology.bins} and AI will suggest how to regroup them. Good for splitting overstuffed ${ctx.terminology.bins} or merging near-duplicates.`,
+      `Pick a few ${ctx.terminology.bins} and the AI assistant will suggest how to regroup them. Good for splitting overstuffed ${ctx.terminology.bins} or combining similar ${ctx.terminology.bins}.`,
     route: '/reorganize',
     condition: (ctx) => ctx.canWrite && ctx.aiEnabled,
     mobilePlacement: 'top',

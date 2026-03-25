@@ -18,9 +18,18 @@ import { DeleteBinDialog } from './DeleteBinDialog';
 import { MoveBinDialog } from './MoveBinDialog';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 import { useBinDetailActions } from './useBinDetailActions';
-import { useAllTags, useBin } from './useBins';
+import type { BinFilters, SortOption } from './useBins';
+import { useAllTags, useBin, useBinList } from './useBins';
 import { useCustomFields } from './useCustomFields';
 import { useEditBinForm } from './useEditBinForm';
+
+interface BinDetailLocationState {
+  backPath?: string;
+  backLabel?: string;
+  searchQuery?: string;
+  sort?: SortOption;
+  filters?: BinFilters;
+}
 
 export function BinDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,15 +38,29 @@ export function BinDetailPage() {
   const { bin, isLoading } = useBin(id);
   const allTags = useAllTags();
   const t = useTerminology();
-  const backState = location.state as { backPath?: string } | null;
+  const backState = location.state as BinDetailLocationState | null;
   const edit = useEditBinForm(id);
   const actions = useBinDetailActions(bin, id, edit.editing);
   const { fields: customFieldDefs } = useCustomFields(bin?.location_id);
 
+  // Fetch the bin list matching the sort/search/filters the user had active
+  const hasBinListContext = !!backState?.backPath;
+  const { bins: binList, isLoading: binListLoading } = useBinList(
+    backState?.searchQuery,
+    backState?.sort,
+    backState?.filters,
+    !hasBinListContext,
+  );
+
+  // Derive prev/next bin IDs
+  const currentIndex = hasBinListContext && !binListLoading ? binList.findIndex((b) => b.id === id) : -1;
+  const prevBinId = currentIndex > 0 ? binList[currentIndex - 1].id : null;
+  const nextBinId = currentIndex >= 0 && currentIndex < binList.length - 1 ? binList[currentIndex + 1].id : null;
+
   const [unsavedOpen, setUnsavedOpen] = useState(false);
   const [photosExpanded, setPhotosExpanded] = useState(false);
   const pendingNav = useRef<(() => void) | null>(null);
-  const { setGuard } = useNavigationGuard();
+  const { setGuard, guardedNavigate } = useNavigationGuard();
 
   // Register navigation guard so sidebar/bottom nav are intercepted
   useEffect(() => {
@@ -129,23 +152,11 @@ export function BinDetailPage() {
         isReanalysis={actions.isReanalysis}
         editNameValid={!!edit.name.trim()}
         otherLocations={actions.otherLocations}
-        onBack={() => {
-          const doNav = () => backState?.backPath ? navigate(backState.backPath) : window.history.length > 1 ? navigate(-1) : navigate('/bins');
-          if (edit.editing && edit.isDirty) {
-            pendingNav.current = doNav;
-            setUnsavedOpen(true);
-          } else {
-            doNav();
-          }
-        }}
-        onCancelEdit={() => {
-          if (edit.isDirty) {
-            pendingNav.current = () => edit.cancelEdit();
-            setUnsavedOpen(true);
-          } else {
-            edit.cancelEdit();
-          }
-        }}
+        onClose={() => guardedNavigate(() => backState?.backPath ? navigate(backState.backPath) : window.history.length > 1 ? navigate(-1) : navigate('/bins'))}
+        onPrev={prevBinId ? () => guardedNavigate(() => navigate(`/bin/${prevBinId}`, { state: { ...backState } })) : null}
+        onNext={nextBinId ? () => guardedNavigate(() => navigate(`/bin/${nextBinId}`, { state: { ...backState } })) : null}
+        hasBinListContext={hasBinListContext}
+        onCancelEdit={() => guardedNavigate(() => edit.cancelEdit())}
         onSave={edit.saveEdit}
         onStartEdit={() => edit.startEdit(bin)}
         onAnalyze={actions.handleAnalyzeClick}
