@@ -9,6 +9,8 @@ next:
 
 # Search & Filter
 
+![Search and filter](../assets/search-filter.png)
+
 ## Search bar
 
 The search bar at the top of the bin list searches across:

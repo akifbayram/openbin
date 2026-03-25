@@ -9,6 +9,8 @@ next:
 
 # Locations & Areas
 
+![Locations and areas](../assets/areas-tree.png)
+
 Everything — bins, areas, members, settings — lives inside a location. Areas are optional sub-zones for grouping bins.
 
 ## Creating a Location
@@ -72,6 +74,8 @@ Navigate to **Location Settings → Terminology** to override:
 The new terms appear throughout the UI for all members of that location.
 
 ## Activity Log
+
+![Activity log](../assets/activity-log.png)
 
 Every location keeps a per-location activity log. It records who did what and when — bin creations, edits, deletes, photo uploads, member joins, and more.
 

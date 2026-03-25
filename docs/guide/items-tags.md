@@ -9,6 +9,8 @@ next:
 
 # Items & Tags
 
+![Items list](../assets/items-list.png)
+
 ## Items page
 
 Lists every item across all bins in the active location.
@@ -25,6 +27,8 @@ The Items page is the fastest way to answer "which bin has the Phillips screwdri
 :::
 
 ## Tags page
+
+![Tags list](../assets/tags-list.png)
 
 Lists every tag used in the active location.
 

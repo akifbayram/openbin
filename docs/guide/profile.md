@@ -9,6 +9,8 @@ next:
 
 # Account & Profile
 
+![Profile settings](../assets/profile-settings.png)
+
 Open profile settings from the user menu in the navigation bar.
 
 ## Avatar

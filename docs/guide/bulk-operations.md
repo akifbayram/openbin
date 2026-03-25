@@ -9,6 +9,8 @@ next:
 
 # Bulk Operations
 
+![Bulk operations](../assets/bulk-operations.png)
+
 Multi-select bins from the bin list or [dashboard](/guide/dashboard) to perform batch actions.
 
 ## Entering Multi-Select Mode
