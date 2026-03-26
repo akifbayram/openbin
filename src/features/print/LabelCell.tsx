@@ -3,7 +3,6 @@ import { resolveIcon } from '@/lib/iconMap';
 import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import type { LabelFormat } from './labelFormats';
-import { computeCodeFontSize } from './labelFormats';
 import { computeLabelLayout } from './labelLayout';
 import type { LabelDirection } from './usePrintSettings';
 
@@ -25,7 +24,6 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
   const Icon = resolveIcon(bin.icon);
   const colorPreset = showColorSwatch && bin.color ? resolveColor(bin.color) : null;
   const resolvedIconSize = iconSize ?? '11pt';
-  const codeFontSize = `${computeCodeFontSize(format, labelDirection).toFixed(1).replace(/\.0$/, '')}pt`;
 
   const layout = computeLabelLayout({
     format,
@@ -41,6 +39,7 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
     showColorSwatch: !!showColorSwatch,
   });
 
+  const codeFontSize = `${layout.codeFontSizePt.toFixed(1).replace(/\.0$/, '')}pt`;
   const qrCodeFontSize = `${layout.qrCodeFontSizePt.toFixed(1).replace(/\.0$/, '')}pt`;
   const cardPadding = `${layout.cardPaddingPt.toFixed(1).replace(/\.0$/, '')}pt`;
   const borderRadius = `${layout.cardRadiusPt.toFixed(1)}pt`;
@@ -51,8 +50,9 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
   let qrSection: React.ReactNode = null;
 
   if (hasQr) {
+    const qrSizeCSS = `${layout.qrSizePt.toFixed(1)}pt`;
     const qrImage = (
-      <div className="relative" style={{ width: format.qrSize, height: format.qrSize }}>
+      <div className="relative" style={{ width: qrSizeCSS, height: qrSizeCSS }}>
         <img src={qrDataUrl} alt="" style={{ width: '100%', height: '100%' }} />
         {showIcon && (
           <div
@@ -120,7 +120,7 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
         {showBinName && (
           <div
             className={cn('label-name font-semibold', layout.isPortrait && textAlign === 'center' && 'text-center')}
-            style={{ fontSize: format.nameFontSize }}
+            style={{ fontSize: `${layout.nameFontSizePt.toFixed(1).replace(/\.0$/, '')}pt` }}
           >
             <span className={cn('min-w-0', layout.useColoredCard ? 'line-clamp-2' : 'line-clamp-1')}>{bin.name}</span>
           </div>

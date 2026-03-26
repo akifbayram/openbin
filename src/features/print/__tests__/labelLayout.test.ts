@@ -113,18 +113,16 @@ describe('computeLabelLayout', () => {
   describe('card padding', () => {
     it('computes card padding from QR size with minimum', () => {
       const result = computeLabelLayout(makeInput());
-      const qrSizePt = parseFloat(avery5160.qrSize) * 72;
-      const expected = Math.max(CARD_PAD_MIN_PT, qrSizePt * CARD_PAD_RATIO);
+      const expected = Math.max(CARD_PAD_MIN_PT, result.qrSizePt * CARD_PAD_RATIO);
       // Card padding should be clamped to fit within content area
       expect(result.cardPaddingPt).toBeLessThanOrEqual(expected);
       expect(result.cardPaddingPt).toBeGreaterThan(0);
     });
 
-    it('uses minimum pad when QR size is very small', () => {
-      const tinyQrFormat = { ...avery5160, qrSize: '0.01in' };
-      const result = computeLabelLayout(makeInput({ format: tinyQrFormat }));
-      // With a tiny QR, ideal pad would be below CARD_PAD_MIN_PT,
-      // but the minimum enforces at least CARD_PAD_MIN_PT (before clamping to content area)
+    it('uses minimum pad when cell is small', () => {
+      const smallFormat = { ...avery5160, qrSize: '0.01in', cellHeight: '0.5in' };
+      const result = computeLabelLayout(makeInput({ format: smallFormat }));
+      // With a small cell, QR stays small and minimum padding applies
       expect(result.cardPaddingPt).toBeLessThanOrEqual(CARD_PAD_MIN_PT);
     });
   });
@@ -142,8 +140,7 @@ describe('computeLabelLayout', () => {
   describe('qrCodeFontSizePt', () => {
     it('computes from QR size divided by MONO_CODE_WIDTH_EMS', () => {
       const result = computeLabelLayout(makeInput());
-      const qrSizePt = parseFloat(avery5160.qrSize) * 72;
-      expect(result.qrCodeFontSizePt).toBeCloseTo(qrSizePt / MONO_CODE_WIDTH_EMS, 4);
+      expect(result.qrCodeFontSizePt).toBeCloseTo(result.qrSizePt / MONO_CODE_WIDTH_EMS, 4);
     });
   });
 
@@ -181,6 +178,37 @@ describe('computeLabelLayout', () => {
     it('is false when bin has no color', () => {
       const result = computeLabelLayout(makeInput({ hasColor: false, showColorSwatch: false }));
       expect(result.showSwatchBar).toBe(false);
+    });
+  });
+
+  describe('dynamic QR sizing', () => {
+    it('grows QR beyond static size for large portrait cells', () => {
+      const result = computeLabelLayout(makeInput({ format: avery5168 }));
+      const staticQr = parseFloat(avery5168.qrSize) * 72;
+      expect(result.qrSizePt).toBeGreaterThan(staticQr);
+    });
+
+    it('preserves static QR when optimal is smaller', () => {
+      // biome-ignore lint/style/noNonNullAssertion: test assertion
+      const avery5163 = LABEL_FORMATS.find((f) => f.key === 'avery-5163')!;
+      const result = computeLabelLayout(makeInput({ format: avery5163 }));
+      const staticQr = parseFloat(avery5163.qrSize) * 72;
+      expect(result.qrSizePt).toBe(staticQr);
+    });
+
+    it('uses at least the static qrSize as minimum', () => {
+      for (const fmt of LABEL_FORMATS) {
+        const result = computeLabelLayout(makeInput({ format: fmt }));
+        const staticQr = parseFloat(fmt.qrSize) * 72;
+        expect(result.qrSizePt).toBeGreaterThanOrEqual(staticQr);
+      }
+    });
+
+    it('QR does not exceed content width in portrait', () => {
+      const result = computeLabelLayout(makeInput({ format: avery5168 }));
+      const pad = { left: 10, right: 10 }; // avery5168 padding: 8pt 10pt
+      const contentW = parseFloat(avery5168.cellWidth) * 72 - pad.left - pad.right;
+      expect(result.qrSizePt).toBeLessThanOrEqual(contentW);
     });
   });
 

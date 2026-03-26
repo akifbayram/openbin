@@ -262,7 +262,7 @@ body {
     margin-right: auto;
   }
   @media (min-width: 1024px) {
-    .page-content { padding-top: 1.5rem; }
+    .page-content { padding-top: 0.75rem; }
   }
 }
 

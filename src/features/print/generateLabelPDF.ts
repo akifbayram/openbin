@@ -114,7 +114,6 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
   const marginLeft = parseFloat(format.pageMarginLeft);
   const cellW = parseFloat(format.cellWidth);
   const cellH = parseFloat(format.cellHeight);
-  const qrSize = parseFloat(format.qrSize);
   const pad = parsePaddingPt(format.padding);
   const padIn = { top: pad.top / 72, right: pad.right / 72, bottom: pad.bottom / 72, left: pad.left / 72 };
   const gapIn = 4 / 72;
@@ -155,7 +154,7 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
 
       const p: DrawLabelParams = {
         bin, contentX, contentY, contentW, contentH,
-        qrSize, qrDataUrl: (labelOptions.showQrCode && qrDataUrl) ? qrDataUrl : null,
+        qrSize: layout.qrSizePt / 72, qrDataUrl: (labelOptions.showQrCode && qrDataUrl) ? qrDataUrl : null,
         hasIcon: labelOptions.showIcon, iconMap, iconSizeIn,
         colorPreset, labelOptions, gapIn,
         cardRadiusIn: layout.cardRadiusPt / 72,

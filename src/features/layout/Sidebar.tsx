@@ -98,9 +98,9 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
 
   return (
     <>
-      <div className="flex-1 flex flex-col pt-6 pb-4 px-3">
+      <div className="flex-1 flex flex-col pt-3 pb-4 px-3">
         {/* Brand */}
-        <div className="flex items-center gap-2.5 px-2 pt-2 pb-4 overflow-hidden">
+        <div className="flex items-center gap-2.5 px-2 pb-4 overflow-hidden">
           {brandIcon}
           {/* biome-ignore lint/a11y/useHeadingContent: heading has dynamic text content and aria-label */}
           <h1 className={cn(
@@ -254,7 +254,7 @@ export function Sidebar({ locations, activeLocationId, onLocationChange, onScanC
         onClick={toggle}
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         aria-expanded={!isCollapsed}
-        className="absolute top-[43px] right-0 translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-7 h-7 rounded-[var(--radius-lg)] flat-heavy
+        className="absolute top-[31px] right-0 translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-7 h-7 rounded-[var(--radius-lg)] flat-heavy
   text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--accent)]
   focus-visible:outline-none"
       >

@@ -80,55 +80,31 @@ export function BinDetailToolbar({
   return (
     <div className="flex items-center gap-0.5 lg:gap-2">
       <MenuButton />
-      {!editing && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          aria-label="Close"
-          className="lg:hidden shrink-0"
-        >
-          <X className="h-[18px] w-[18px]" />
-        </Button>
-      )}
-      {!editing && (
+      {/* Desktop: nav arrows on the left */}
+      {!editing && hasBinListContext && (
         <div className="hidden lg:flex gap-1.5 shrink-0">
-          <Tooltip content="Close" side="bottom">
+          <Tooltip content="Previous" side="bottom">
             <Button
               variant="ghost"
               size="icon"
-              onClick={onClose}
-              aria-label="Close"
+              onClick={onPrev ?? undefined}
+              disabled={!onPrev}
+              aria-label="Previous bin"
             >
-              <X className="h-[18px] w-[18px]" />
+              <ChevronLeft className="h-[18px] w-[18px]" />
             </Button>
           </Tooltip>
-          {hasBinListContext && (
-            <>
-              <Tooltip content="Previous" side="bottom">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onPrev ?? undefined}
-                  disabled={!onPrev}
-                  aria-label="Previous bin"
-                >
-                  <ChevronLeft className="h-[18px] w-[18px]" />
-                </Button>
-              </Tooltip>
-              <Tooltip content="Next" side="bottom">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onNext ?? undefined}
-                  disabled={!onNext}
-                  aria-label="Next bin"
-                >
-                  <ChevronRight className="h-[18px] w-[18px]" />
-                </Button>
-              </Tooltip>
-            </>
-          )}
+          <Tooltip content="Next" side="bottom">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onNext ?? undefined}
+              disabled={!onNext}
+              aria-label="Next bin"
+            >
+              <ChevronRight className="h-[18px] w-[18px]" />
+            </Button>
+          </Tooltip>
         </div>
       )}
       <div className="min-w-0 flex-1 flex justify-center">
@@ -173,48 +149,51 @@ export function BinDetailToolbar({
           </Button>
         </div>
       ) : (
-        <div className="flex gap-0.5 lg:gap-1.5">
-          {showAiButton && (
-            <Tooltip content={isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI'} side="bottom">
-              <Button
-                size="icon"
-                onClick={onAnalyze}
-                disabled={isAnalyzing}
-                aria-label={isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI'}
-                variant="ghost"
-              >
-                {isAnalyzing ? (
-                  <Loader2 className="h-[18px] w-[18px] animate-spin" />
-                ) : (
-                  <Sparkles className="h-[18px] w-[18px]" />
-                )}
-              </Button>
-            </Tooltip>
-          )}
-          {canPin && (
-            <Tooltip content={bin.is_pinned ? 'Unpin' : 'Pin'} side="bottom">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onTogglePin}
-                aria-label={bin.is_pinned ? `Unpin ${t.bin}` : `Pin ${t.bin}`}
-              >
-                <Pin className="h-[18px] w-[18px]" fill={bin.is_pinned ? 'currentColor' : 'none'} />
-              </Button>
-            </Tooltip>
-          )}
-          {canEdit && (
-            <Tooltip content="Edit" side="bottom">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onStartEdit}
-                aria-label={`Edit ${t.bin}`}
-              >
-                <Pencil className="h-[18px] w-[18px]" />
-              </Button>
-            </Tooltip>
-          )}
+        <div className="flex gap-0.5 lg:gap-1.5 shrink-0">
+          {/* Desktop-only action buttons */}
+          <div className="hidden lg:flex gap-1.5">
+            {showAiButton && (
+              <Tooltip content={isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI'} side="bottom">
+                <Button
+                  size="icon"
+                  onClick={onAnalyze}
+                  disabled={isAnalyzing}
+                  aria-label={isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI'}
+                  variant="ghost"
+                >
+                  {isAnalyzing ? (
+                    <Loader2 className="h-[18px] w-[18px] animate-spin" />
+                  ) : (
+                    <Sparkles className="h-[18px] w-[18px]" />
+                  )}
+                </Button>
+              </Tooltip>
+            )}
+            {canPin && (
+              <Tooltip content={bin.is_pinned ? 'Unpin' : 'Pin'} side="bottom">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onTogglePin}
+                  aria-label={bin.is_pinned ? `Unpin ${t.bin}` : `Pin ${t.bin}`}
+                >
+                  <Pin className="h-[18px] w-[18px]" fill={bin.is_pinned ? 'currentColor' : 'none'} />
+                </Button>
+              </Tooltip>
+            )}
+            {canEdit && (
+              <Tooltip content="Edit" side="bottom">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onStartEdit}
+                  aria-label={`Edit ${t.bin}`}
+                >
+                  <Pencil className="h-[18px] w-[18px]" />
+                </Button>
+              </Tooltip>
+            )}
+          </div>
           <div className="relative" ref={menuRef}>
             <Tooltip content="More" side="bottom">
               <Button
@@ -231,6 +210,45 @@ export function BinDetailToolbar({
                 animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
                 'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] flat-popover overflow-hidden',
               )}>
+                {/* Mobile-only: AI, Pin, Edit (hidden on desktop where they're inline) */}
+                {showAiButton && (
+                  <button
+                    type="button"
+                    className="lg:hidden w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150 disabled:opacity-40"
+                    onClick={() => handleItem(onAnalyze)}
+                    disabled={isAnalyzing}
+                  >
+                    {isAnalyzing ? (
+                      <Loader2 className="h-4 w-4 text-[var(--text-tertiary)] animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 text-[var(--text-tertiary)]" />
+                    )}
+                    {isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI'}
+                  </button>
+                )}
+                {canPin && (
+                  <button
+                    type="button"
+                    className="lg:hidden w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
+                    onClick={() => handleItem(onTogglePin)}
+                  >
+                    <Pin className="h-4 w-4 text-[var(--text-tertiary)]" fill={bin.is_pinned ? 'currentColor' : 'none'} />
+                    {bin.is_pinned ? 'Unpin' : 'Pin'}
+                  </button>
+                )}
+                {canEdit && (
+                  <button
+                    type="button"
+                    className="lg:hidden w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
+                    onClick={() => handleItem(onStartEdit)}
+                  >
+                    <Pencil className="h-4 w-4 text-[var(--text-tertiary)]" />
+                    Edit
+                  </button>
+                )}
+                {(showAiButton || canPin || canEdit) && (
+                  <div className="lg:hidden my-1 border-t border-[var(--border-flat)]" />
+                )}
                 {canEdit && (
                   <button
                     type="button"
@@ -275,6 +293,17 @@ export function BinDetailToolbar({
               </div>
             )}
           </div>
+          {/* Close — far right, matching dialog convention */}
+          <Tooltip content="Close" side="bottom">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <X className="h-[18px] w-[18px]" />
+            </Button>
+          </Tooltip>
         </div>
       )}
     </div>
