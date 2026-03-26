@@ -68,11 +68,12 @@ export function AppLayout() {
     canWrite,
     aiEnabled: aiSettings !== null,
     firstBinId,
+    binIds: bins.map(b => b.id),
     terminology,
     isMobile,
     openCommandInput: () => getCommandInputRef().current?.open(),
     closeCommandInput: () => getCommandInputRef().current?.close(),
-  }), [canWrite, aiSettings, firstBinId, terminology, isMobile]);
+  }), [canWrite, aiSettings, firstBinId, bins, terminology, isMobile]);
 
   const rawNavigate = useNavigate();
   const location = useLocation();
@@ -108,7 +109,7 @@ export function AppLayout() {
     'toggle-sidebar': () => toggleSidebarCollapsed(),
   }), [navigate, openScanDialog]);
 
-  useKeyboardShortcuts({ actions: shortcutActions, enabled: !onboarding.isOnboarding });
+  useKeyboardShortcuts({ actions: shortcutActions, enabled: !onboarding.isOnboarding && preferences.keyboard_shortcuts_enabled });
 
   // If the user already has locations before onboarding even started (e.g. completed on
   // another device), mark it done locally so the overlay never shows. Only check once —

@@ -75,15 +75,17 @@ export function PrintPage() {
         <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
         {/* Left column — settings */}
         <div className="flex flex-col gap-4">
-          <OptionGroup
-            options={[
-              { key: 'labels', label: 'Labels', icon: Tag },
-              { key: 'names', label: 'Names', icon: Type },
-              { key: 'items', label: 'Item List', icon: List },
-            ]}
-            value={printMode}
-            onChange={handlePrintModeChange}
-          />
+          <div data-tour="print-mode">
+            <OptionGroup
+              options={[
+                { key: 'labels', label: 'Labels', icon: Tag },
+                { key: 'names', label: 'Names', icon: Type },
+                { key: 'items', label: 'Item List', icon: List },
+              ]}
+              value={printMode}
+              onChange={handlePrintModeChange}
+            />
+          </div>
 
           <BinSelectorCard
             allBins={allBins}

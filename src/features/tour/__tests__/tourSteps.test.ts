@@ -15,6 +15,7 @@ function makeContext(overrides: Partial<TourContext> = {}): TourContext {
     canWrite: true,
     aiEnabled: true,
     firstBinId: 'abc123',
+    binIds: ['abc123', 'def456', 'ghi789'],
     terminology: DEFAULT_TERMINOLOGY,
     isMobile: false,
     openCommandInput: () => {},
@@ -24,25 +25,25 @@ function makeContext(overrides: Partial<TourContext> = {}): TourContext {
 }
 
 describe('filterSteps', () => {
-  it('returns all 8 steps for writer + AI configured', () => {
+  it('returns all 10 steps for writer + AI configured', () => {
     const ctx = makeContext();
     const filtered = filterSteps(TOUR_STEPS, ctx);
-    expect(filtered).toHaveLength(8);
+    expect(filtered).toHaveLength(10);
   });
 
-  it('returns 6 steps for writer without AI (skips snap-to-create and reorganize)', () => {
+  it('returns 8 steps for writer without AI (skips snap-to-create and reorganize)', () => {
     const ctx = makeContext({ aiEnabled: false });
     const filtered = filterSteps(TOUR_STEPS, ctx);
-    expect(filtered).toHaveLength(6);
+    expect(filtered).toHaveLength(8);
     const ids = filtered.map((s) => s.id);
     expect(ids).not.toContain('snap-to-create');
     expect(ids).not.toContain('reorganize');
   });
 
-  it('returns 5 steps for viewer (skips quick-add, snap-to-create, reorganize)', () => {
+  it('returns 7 steps for viewer (skips quick-add, snap-to-create, reorganize)', () => {
     const ctx = makeContext({ canWrite: false });
     const filtered = filterSteps(TOUR_STEPS, ctx);
-    expect(filtered).toHaveLength(5);
+    expect(filtered).toHaveLength(7);
     const ids = filtered.map((s) => s.id);
     expect(ids).not.toContain('quick-add');
     expect(ids).not.toContain('snap-to-create');
@@ -57,14 +58,16 @@ describe('filterSteps', () => {
     expect(ids).not.toContain('quick-add');
   });
 
-  it('viewer with no bins sees 4 steps', () => {
+  it('viewer with no bins sees 6 steps', () => {
     const ctx = makeContext({ canWrite: false, firstBinId: null });
     const filtered = filterSteps(TOUR_STEPS, ctx);
-    expect(filtered).toHaveLength(4);
+    expect(filtered).toHaveLength(6);
     const ids = filtered.map((s) => s.id);
     expect(ids).toContain('ask-ai');
     expect(ids).toContain('scan-qr');
     expect(ids).toContain('print-labels');
+    expect(ids).toContain('print-names');
+    expect(ids).toContain('print-items');
     expect(ids).toContain('cta');
   });
 

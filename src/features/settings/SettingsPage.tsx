@@ -1,4 +1,4 @@
-import { ChevronRight, ExternalLink, Info, LogOut, Monitor, Moon, Sparkles, Sun, UserCircle } from 'lucide-react';
+import { ChevronRight, ExternalLink, Info, Keyboard, LogOut, Monitor, Moon, Sparkles, Sun, UserCircle } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { OptionGroup } from '@/components/ui/option-group';
 import { PageHeader } from '@/components/ui/page-header';
+import { Switch } from '@/components/ui/switch';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { useLocationList } from '@/features/locations/useLocations';
@@ -33,7 +34,7 @@ export function SettingsPage() {
   const t = useTerminology();
   const { user, activeLocationId, logout, deleteAccount } = useAuth();
   const { isAdmin, isLoading: permissionsLoading } = usePermissions();
-  const { updatePreferences } = useUserPreferences();
+  const { preferences, updatePreferences } = useUserPreferences();
   const dataActions = useDataSectionActions();
 
   const { locations } = useLocationList();
@@ -118,6 +119,28 @@ export function SettingsPage() {
 
       {/* Dashboard */}
       <DashboardSection settings={dashSettings} updateSettings={updateDashSettings} />
+
+      {/* Keyboard Shortcuts */}
+      <Card>
+        <CardContent>
+          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Keyboard className="h-3.5 w-3.5" />Keyboard Shortcuts</span>} labelClassName="text-[15px] font-semibold">
+          <div className="mt-1">
+            <div className="row-spread py-1">
+              <div>
+                <span className="text-[14px] text-[var(--text-primary)]">Enable keyboard shortcuts</span>
+                <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">
+                  Press <kbd className="inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-[var(--radius-sm)] bg-[var(--bg-input)] font-mono text-[11px] text-[var(--text-secondary)] leading-none">?</kbd> to view all shortcuts
+                </p>
+              </div>
+              <Switch
+                checked={preferences.keyboard_shortcuts_enabled}
+                onCheckedChange={(checked) => updatePreferences({ keyboard_shortcuts_enabled: checked })}
+              />
+            </div>
+          </div>
+          </Disclosure>
+        </CardContent>
+      </Card>
 
       {/* AI Settings (admin only) */}
       {(isAdmin || permissionsLoading) && <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />}

@@ -16,6 +16,7 @@ export interface UserPreferences {
   onboarding_location_id: string | null;
   tour_completed: boolean;
   tour_version: number;
+  keyboard_shortcuts_enabled: boolean;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -33,6 +34,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   onboarding_location_id: null,
   tour_completed: false,
   tour_version: 0,
+  keyboard_shortcuts_enabled: true,
 };
 
 const PREFERENCES_EVENT = 'user-preferences-changed';

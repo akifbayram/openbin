@@ -9,6 +9,7 @@ export interface TourContext {
   canWrite: boolean;
   aiEnabled: boolean;
   firstBinId: string | null;
+  binIds: string[];
   terminology: Terminology;
   isMobile: boolean;
   openCommandInput: () => void;
@@ -150,11 +151,79 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'Print labels',
     body: (ctx) =>
       `Select ${ctx.terminology.bins}, pick a label style, and download a PDF. Print and stick them on the real thing.`,
-    route: '/print',
+    route: (ctx) => {
+      const ids = ctx.binIds.slice(0, 6);
+      return ids.length > 0 ? `/print?ids=${ids.join(',')}` : '/print';
+    },
+    beforeShow: async () => {
+      const { savePrintSettings, DEFAULT_PRINT_SETTINGS, DEFAULT_LABEL_OPTIONS } =
+        await import('@/features/print/usePrintSettings');
+      await savePrintSettings({
+        ...DEFAULT_PRINT_SETTINGS,
+        formatKey: 'avery-5163',
+        labelOptions: { ...DEFAULT_LABEL_OPTIONS, showBinName: false },
+      });
+      window.dispatchEvent(new Event('print-settings-changed'));
+      await delay(300);
+    },
     mobilePlacement: 'top',
   },
 
-  // 8. CTA — call to action
+  // 8. Print name cards
+  {
+    id: 'print-names',
+    selector: '[data-tour="print-mode"]',
+    placement: 'bottom',
+    title: 'Print name cards',
+    body: (ctx) =>
+      `Just the name, icon, and color — quick visual tags for your ${ctx.terminology.bins}.`,
+    route: (ctx) => {
+      const ids = ctx.binIds.slice(0, 6);
+      return ids.length > 0 ? `/print?ids=${ids.join(',')}` : '/print';
+    },
+    beforeShow: async () => {
+      const { savePrintSettings, DEFAULT_PRINT_SETTINGS, DEFAULT_LABEL_OPTIONS } =
+        await import('@/features/print/usePrintSettings');
+      await savePrintSettings({
+        ...DEFAULT_PRINT_SETTINGS,
+        formatKey: 'avery-5163',
+        labelOptions: { ...DEFAULT_LABEL_OPTIONS, showBinName: false },
+        printMode: 'names',
+      });
+      window.dispatchEvent(new Event('print-settings-changed'));
+      await delay(300);
+    },
+    mobilePlacement: 'bottom',
+  },
+
+  // 9. Print item list
+  {
+    id: 'print-items',
+    selector: '[data-tour="print-mode"]',
+    placement: 'bottom',
+    title: 'Print item list',
+    body: (ctx) =>
+      `A checklist of everything inside your ${ctx.terminology.bins} — useful for inventory counts.`,
+    route: (ctx) => {
+      const ids = ctx.binIds.slice(0, 6);
+      return ids.length > 0 ? `/print?ids=${ids.join(',')}` : '/print';
+    },
+    beforeShow: async () => {
+      const { savePrintSettings, DEFAULT_PRINT_SETTINGS, DEFAULT_LABEL_OPTIONS } =
+        await import('@/features/print/usePrintSettings');
+      await savePrintSettings({
+        ...DEFAULT_PRINT_SETTINGS,
+        formatKey: 'avery-5163',
+        labelOptions: { ...DEFAULT_LABEL_OPTIONS, showBinName: false },
+        printMode: 'items',
+      });
+      window.dispatchEvent(new Event('print-settings-changed'));
+      await delay(300);
+    },
+    mobilePlacement: 'bottom',
+  },
+
+  // 10. CTA — call to action
   {
     id: 'cta',
     selector: (ctx) => {
