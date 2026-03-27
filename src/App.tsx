@@ -11,6 +11,7 @@ import { AuthProvider } from '@/lib/auth';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { NavigationGuardProvider } from '@/lib/navigationGuard';
 import { initQrConfig } from '@/lib/qrConfig';
+import { PlanProvider } from '@/lib/usePlan';
 import { UserPreferencesProvider } from '@/lib/userPreferences';
 
 // Fire-and-forget: fetch QR config early. getQrConfig() returns safe default (app mode) until this resolves.
@@ -230,9 +231,11 @@ export default function App() {
                 element={
                   <AuthGuard>
                     <LocationProvider>
-                      <UserPreferencesProvider>
-                        <AppLayout />
-                      </UserPreferencesProvider>
+                      <PlanProvider>
+                        <UserPreferencesProvider>
+                          <AppLayout />
+                        </UserPreferencesProvider>
+                      </PlanProvider>
                     </LocationProvider>
                   </AuthGuard>
                 }

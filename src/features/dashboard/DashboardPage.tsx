@@ -26,6 +26,7 @@ import { deleteView, useSavedViews } from '@/lib/savedViews';
 import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePermissions } from '@/lib/usePermissions';
+import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { DashboardDialogs } from './DashboardDialogs';
@@ -39,6 +40,8 @@ export function DashboardPage() {
   const { activeLocationId } = useAuth();
   const { openScanDialog } = useScanDialog();
   const { aiEnabled } = useAiEnabled();
+  const { isGated, isSelfHosted } = usePlan();
+  const aiAvailable = aiEnabled && (isSelfHosted || !isGated('ai'));
   const { showToast } = useToast();
   const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, recentlyUpdated, pinnedBins, isLoading } =
     useDashboard();
@@ -141,7 +144,7 @@ export function DashboardPage() {
                   <ScanLine className="h-5 w-5" />
                 </Button>
               </Tooltip>
-              {aiEnabled && (
+              {aiAvailable && (
                 <Tooltip content="Ask AI" side="bottom">
                   <Button
                     onClick={() => setCommandOpen(true)}
@@ -320,7 +323,7 @@ export function DashboardPage() {
       <DashboardDialogs
         createOpen={createOpen} setCreateOpen={setCreateOpen}
         commandOpen={commandOpen} setCommandOpen={setCommandOpen}
-        aiEnabled={aiEnabled}
+        aiEnabled={aiAvailable}
         bulk={bulk} selectedIds={selectedIds} clearSelection={clearSelection}
         allTags={allTags} selectable={selectable} isAdmin={isAdmin} canWrite={canWrite}
         bulkDelete={bulkDelete} bulkPinToggle={bulkPinToggle} bulkDuplicate={bulkDuplicate}

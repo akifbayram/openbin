@@ -7,6 +7,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { OptionGroup } from '@/components/ui/option-group';
 import { PageHeader } from '@/components/ui/page-header';
 import { Switch } from '@/components/ui/switch';
+import { UpgradePrompt } from '@/components/ui/upgrade-prompt';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { useLocationList } from '@/features/locations/useLocations';
@@ -18,12 +19,14 @@ import { useDashboardSettings } from '@/lib/dashboardSettings';
 import { useTerminology } from '@/lib/terminology';
 import { useTheme } from '@/lib/theme';
 import { usePermissions } from '@/lib/usePermissions';
+import { usePlan } from '@/lib/usePlan';
 import { useUserPreferences } from '@/lib/userPreferences';
 import { ApiKeysSection } from './ApiKeysSection';
 import { DangerZoneSection } from './DangerZoneSection';
 import { DashboardSection } from './DashboardSection';
 import { DataSection } from './DataSection';
 import { PersonalizationSection } from './PersonalizationSection';
+import { SubscriptionSection } from './SubscriptionSection';
 import { useDataSectionActions } from './useDataSectionActions';
 
 export function SettingsPage() {
@@ -35,6 +38,9 @@ export function SettingsPage() {
   const { user, activeLocationId, logout, deleteAccount } = useAuth();
   const { isAdmin, isLoading: permissionsLoading } = usePermissions();
   const { preferences, updatePreferences } = useUserPreferences();
+  const { isGated, isSelfHosted, planInfo } = usePlan();
+  const aiGated = !isSelfHosted && isGated('ai');
+  const apiKeysGated = !isSelfHosted && isGated('apiKeys');
   const dataActions = useDataSectionActions();
 
   const { locations } = useLocationList();
@@ -117,6 +123,9 @@ export function SettingsPage() {
         </Card>
       )}
 
+      {/* Subscription (cloud-hosted only) */}
+      <SubscriptionSection />
+
       {/* Dashboard */}
       <DashboardSection settings={dashSettings} updateSettings={updateDashSettings} />
 
@@ -143,10 +152,18 @@ export function SettingsPage() {
       </Card>
 
       {/* AI Settings (admin only) */}
-      {(isAdmin || permissionsLoading) && <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />}
+      {(isAdmin || permissionsLoading) && (
+        aiGated
+          ? <UpgradePrompt feature="AI Features" description="Enable AI-powered suggestions and commands." upgradeUrl={planInfo.upgradeUrl} />
+          : <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />
+      )}
 
       {/* API Keys (admin only) */}
-      {(isAdmin || permissionsLoading) && aiEnabled && <ApiKeysSection />}
+      {(isAdmin || permissionsLoading) && aiEnabled && (
+        apiKeysGated
+          ? <UpgradePrompt feature="API Keys" description="Create API keys to integrate with external tools." upgradeUrl={planInfo.upgradeUrl} />
+          : <ApiKeysSection />
+      )}
 
       {/* Data (admin only) */}
       {(isAdmin || permissionsLoading) && (
