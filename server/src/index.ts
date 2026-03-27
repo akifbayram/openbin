@@ -7,7 +7,7 @@ import express from 'express';
 import multer from 'multer';
 import { getDb } from './db.js';
 import { config } from './lib/config.js';
-import { HttpError } from './lib/httpErrors.js';
+import { HttpError, PlanRestrictedError } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
 import { apiLimiter, authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -125,6 +125,14 @@ export function createApp(): express.Express {
 
   // Global error handler
   app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (err instanceof PlanRestrictedError) {
+      res.status(err.statusCode).json({
+        error: err.code,
+        message: err.message,
+        upgrade_url: err.upgradeUrl,
+      });
+      return;
+    }
     if (err instanceof HttpError) {
       res.status(err.statusCode).json({ error: err.code, message: err.message });
       return;

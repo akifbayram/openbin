@@ -57,3 +57,12 @@ export class QuotaExceededError extends HttpError {
     this.name = 'QuotaExceededError';
   }
 }
+
+export class PlanRestrictedError extends HttpError {
+  public readonly upgradeUrl: string | null;
+  constructor(message: string, upgradeUrl: string | null = null) {
+    super(403, 'PLAN_RESTRICTED', message);
+    this.name = 'PlanRestrictedError';
+    this.upgradeUrl = upgradeUrl;
+  }
+}
