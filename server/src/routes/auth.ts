@@ -8,6 +8,7 @@ import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '.
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
 import { consumeResetToken } from '../lib/passwordReset.js';
 import { safePath } from '../lib/pathSafety.js';
+import { isSelfHosted, Plan, SubStatus } from '../lib/planGate.js';
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, signToken } from '../middleware/auth.js';
@@ -21,6 +22,7 @@ router.get('/status', (_req, res) => {
     registrationMode: config.registrationMode,
     demoMode: config.demoMode,
     qrPayloadMode: config.qrPayloadMode,
+    selfHosted: config.selfHosted,
   };
   if (config.qrPayloadMode === 'url' && config.baseUrl) {
     body.baseUrl = config.baseUrl;
@@ -134,8 +136,20 @@ router.post('/register', asyncHandler(async (req, res) => {
   let result: import('../db.js').QueryResult<Record<string, unknown>>;
   try {
     result = await query(
-      'INSERT INTO users (id, username, password_hash, display_name) VALUES ($1, $2, $3, $4) RETURNING id, username, display_name, created_at',
-      [userId, username.toLowerCase(), passwordHash, displayName || username]
+      `INSERT INTO users (id, username, password_hash, display_name, plan, sub_status, active_until)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, username, display_name, created_at`,
+      [
+        userId,
+        username.toLowerCase(),
+        passwordHash,
+        displayName || username,
+        Plan.PRO,
+        isSelfHosted() ? SubStatus.ACTIVE : SubStatus.TRIAL,
+        isSelfHosted()
+          ? new Date(Date.now() + 1000 * 365 * 24 * 60 * 60 * 1000).toISOString()  // +1000 years
+          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),           // +7 days
+      ]
     );
   } catch (err: unknown) {
     const sqliteErr = err as { code?: string };
@@ -298,7 +312,7 @@ router.post('/logout-all', authenticate, asyncHandler(async (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
-    'SELECT id, username, display_name, email, avatar_path, active_location_id, created_at, updated_at FROM users WHERE id = $1',
+    'SELECT id, username, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until FROM users WHERE id = $1',
     [req.user!.id]
   );
 
@@ -331,6 +345,9 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
     demoMode: config.demoMode,
     createdAt: user.created_at,
     updatedAt: user.updated_at,
+    plan: user.plan === 1 ? 'pro' : 'lite',
+    subscriptionStatus: user.sub_status === 2 ? 'trial' : user.sub_status === 1 ? 'active' : 'inactive',
+    activeUntil: user.active_until || null,
   });
 }));
 

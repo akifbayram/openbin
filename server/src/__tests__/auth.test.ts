@@ -508,3 +508,63 @@ describe('PUT /api/auth/active-location', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('POST /api/auth/register — plan initialization', () => {
+  it('sets plan=PRO and sub_status=ACTIVE for self-hosted mode', async () => {
+    // Default test environment is self-hosted (SELF_HOSTED=true by default in config)
+    const regRes = await request(app)
+      .post('/api/auth/register')
+      .send({ username: `plantest_sh_${Date.now()}`, password: 'StrongPass1!' });
+    expect(regRes.status).toBe(201);
+
+    const token = getAccessCookie(regRes);
+    expect(token).toBeDefined();
+
+    const meRes = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(meRes.status).toBe(200);
+    expect(meRes.body.plan).toBe('pro');
+    expect(meRes.body.subscriptionStatus).toBe('active');
+    expect(meRes.body.activeUntil).toBeDefined();
+
+    // active_until should be far in the future (>100 years from now)
+    const activeUntil = new Date(meRes.body.activeUntil);
+    const hundredYearsFromNow = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000);
+    expect(activeUntil.getTime()).toBeGreaterThan(hundredYearsFromNow.getTime());
+  });
+});
+
+describe('GET /api/auth/me — plan info', () => {
+  it('returns plan, subscriptionStatus, and activeUntil fields', async () => {
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.plan).toBeDefined();
+    expect(['pro', 'lite']).toContain(res.body.plan);
+    expect(res.body.subscriptionStatus).toBeDefined();
+    expect(['active', 'trial', 'inactive']).toContain(res.body.subscriptionStatus);
+    expect('activeUntil' in res.body).toBe(true);
+  });
+});
+
+describe('GET /api/auth/status — selfHosted flag', () => {
+  it('returns selfHosted field', async () => {
+    const res = await request(app).get('/api/auth/status');
+    expect(res.status).toBe(200);
+    expect('selfHosted' in res.body).toBe(true);
+    expect(typeof res.body.selfHosted).toBe('boolean');
+  });
+
+  it('selfHosted is true in default test environment', async () => {
+    const res = await request(app).get('/api/auth/status');
+    expect(res.status).toBe(200);
+    // Default config has SELF_HOSTED=true
+    expect(res.body.selfHosted).toBe(true);
+  });
+});
