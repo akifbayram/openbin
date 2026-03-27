@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS users (
   email              TEXT,
   avatar_path        TEXT,
   active_location_id TEXT REFERENCES locations(id) ON DELETE SET NULL,
+  plan               INTEGER NOT NULL DEFAULT 1,
+  sub_status         INTEGER NOT NULL DEFAULT 1,
+  active_until       TEXT,
   created_at         TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -252,6 +255,7 @@ CREATE INDEX IF NOT EXISTS idx_bins_visibility ON bins(location_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_photos_bin_id ON photos(bin_id);
 CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id);
+CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status);
 
 CREATE TABLE IF NOT EXISTS ai_usage (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,

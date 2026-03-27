@@ -53,6 +53,12 @@ export const config = Object.freeze({
     return 'open' as const;
   })(),
   trustProxy: parseBool(process.env.TRUST_PROXY, false),
+
+  // Cloud tier
+  selfHosted: parseBool(process.env.SELF_HOSTED, true),
+  managerUrl: process.env.MANAGER_URL || null,
+  subscriptionJwtSecret: process.env.SUBSCRIPTION_JWT_SECRET || null,
+  subscriptionWebhookSecret: process.env.SUBSCRIPTION_WEBHOOK_SECRET || null,
   demoMode: parseBool(process.env.DEMO_MODE, false),
   aiMock: parseBool(process.env.AI_MOCK, false),
   demoUsernames: new Set(
