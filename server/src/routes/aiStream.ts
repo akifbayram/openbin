@@ -22,6 +22,7 @@ import { demoMemoryPhotoUpload, memoryPhotoUpload } from '../lib/uploadConfig.js
 import { authenticate } from '../middleware/auth.js';
 import { demoConnectionLimiter, isDemoUser as isDemoConn } from '../middleware/demoConnectionLimiter.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
+import { requirePro } from '../middleware/requirePlan.js';
 
 const streamRouter = Router();
 streamRouter.use(authenticate);
@@ -70,7 +71,7 @@ function streamOpts(settings: UserAiSettings, overrides?: { maxTokens?: number; 
 }
 
 // POST /api/ai/query/stream
-streamRouter.post('/query/stream', aiLimiter, requireLocationMember(), aiRouteHandler('stream query', async (req, res) => {
+streamRouter.post('/query/stream', aiLimiter, requirePro(), requireLocationMember(), aiRouteHandler('stream query', async (req, res) => {
   const question = validateTextInput(req.body.question, 'question');
   const { locationId } = req.body;
   const [{ settings, model }, context] = await Promise.all([
@@ -87,7 +88,7 @@ streamRouter.post('/query/stream', aiLimiter, requireLocationMember(), aiRouteHa
 }));
 
 // POST /api/ai/command/stream
-streamRouter.post('/command/stream', aiLimiter, requireLocationMember(), aiRouteHandler('stream command', async (req, res) => {
+streamRouter.post('/command/stream', aiLimiter, requirePro(), requireLocationMember(), aiRouteHandler('stream command', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { locationId } = req.body;
   const [{ settings, model }, context] = await Promise.all([
@@ -107,7 +108,7 @@ streamRouter.post('/command/stream', aiLimiter, requireLocationMember(), aiRoute
 }));
 
 // POST /api/ai/ask/stream — unified command+query endpoint
-streamRouter.post('/ask/stream', aiLimiter, requireLocationMember(), aiRouteHandler('stream ask', async (req, res) => {
+streamRouter.post('/ask/stream', aiLimiter, requirePro(), requireLocationMember(), aiRouteHandler('stream ask', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { locationId } = req.body;
   const [{ settings, model }, context] = await Promise.all([
@@ -124,7 +125,7 @@ streamRouter.post('/ask/stream', aiLimiter, requireLocationMember(), aiRouteHand
 }));
 
 // POST /api/ai/structure-text/stream
-streamRouter.post('/structure-text/stream', aiLimiter, aiRouteHandler('stream structure-text', async (req, res) => {
+streamRouter.post('/structure-text/stream', aiLimiter, requirePro(), aiRouteHandler('stream structure-text', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { context } = req.body;
   const { settings, model } = await resolveUserModel(req.user!.id, 'structure', isDemoUser(req));
@@ -160,7 +161,7 @@ function demoAwareAnalyzeUpload(req: import('express').Request, res: import('exp
 }
 
 // POST /api/ai/analyze-image/stream
-streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnalyzeUpload, aiLimiter, aiRouteHandler('stream analyze image', async (req, res) => {
+streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnalyzeUpload, aiLimiter, requirePro(), aiRouteHandler('stream analyze image', async (req, res) => {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
   const allFiles = [
     ...(files?.photo || []),
@@ -198,7 +199,7 @@ streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnaly
 }));
 
 // POST /api/ai/analyze/stream — stream analysis of stored photos
-streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze photo', async (req, res) => {
+streamRouter.post('/analyze/stream', aiLimiter, requirePro(), aiRouteHandler('stream analyze photo', async (req, res) => {
   const { photoId, photoIds } = req.body;
 
   let ids: string[] = [];
@@ -238,7 +239,7 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
 }));
 
 // POST /api/ai/correct/stream — correct a previous analysis result
-streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correction', async (req, res) => {
+streamRouter.post('/correct/stream', aiLimiter, requirePro(), aiRouteHandler('stream correction', async (req, res) => {
   const { previousResult: rawPrev, correction, locationId } = req.body;
 
   const validatedPrev = validatePreviousResult(rawPrev);
@@ -324,7 +325,7 @@ function sanitizePreviousResult(previousResult: Record<string, unknown>) {
 }
 
 // POST /api/ai/reanalyze/stream — reanalyze stored photos with previous result context
-streamRouter.post('/reanalyze/stream', aiLimiter, aiRouteHandler('stream reanalyze photo', async (req, res) => {
+streamRouter.post('/reanalyze/stream', aiLimiter, requirePro(), aiRouteHandler('stream reanalyze photo', async (req, res) => {
   const { photoIds, previousResult: rawPrev } = req.body;
 
   const previousResult = validatePreviousResult(rawPrev);
@@ -372,7 +373,7 @@ streamRouter.post('/reanalyze/stream', aiLimiter, aiRouteHandler('stream reanaly
 streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'photos', maxCount: 5 },
-]), aiLimiter, aiRouteHandler('stream reanalyze image', async (req, res) => {
+]), aiLimiter, requirePro(), aiRouteHandler('stream reanalyze image', async (req, res) => {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
   const allFiles = [
     ...(files?.photo || []),
@@ -427,7 +428,7 @@ streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
 }));
 
 // POST /api/ai/reorganize/stream
-streamRouter.post('/reorganize/stream', aiLimiter, requireLocationMember(), aiRouteHandler('stream reorganization', async (req, res) => {
+streamRouter.post('/reorganize/stream', aiLimiter, requirePro(), requireLocationMember(), aiRouteHandler('stream reorganization', async (req, res) => {
   const { locationId: _locationId, bins: inputBins, maxBins, areaName,
     userNotes, strictness, granularity, ambiguousPolicy, duplicates, outliers,
     minItemsPerBin, maxItemsPerBin } = req.body;

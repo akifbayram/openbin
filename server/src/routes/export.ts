@@ -49,6 +49,7 @@ import {
 import { safePath } from '../lib/pathSafety.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
+import { requirePro } from '../middleware/requirePlan.js';
 
 const router = Router();
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
@@ -80,7 +81,7 @@ interface LegacyPhotoV1 {
 }
 
 // GET /api/locations/:id/export — export all bins + photos for a location
-router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async (req, res) => {
+router.get('/locations/:id/export', requireLocationMember(), requirePro(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
 
   const locationResult = await query('SELECT name FROM locations WHERE id = $1', [locationId]);
@@ -139,7 +140,7 @@ router.get('/locations/:id/export', requireLocationMember(), asyncHandler(async 
 }));
 
 // GET /api/locations/:id/export/zip — export as ZIP with structured directories
-router.get('/locations/:id/export/zip', requireLocationMember(), asyncHandler(async (req, res) => {
+router.get('/locations/:id/export/zip', requireLocationMember(), requirePro(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
 
   const locationResult = await query('SELECT name FROM locations WHERE id = $1', [locationId]);

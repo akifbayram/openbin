@@ -17,6 +17,7 @@ import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
 import { memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
+import { requirePro } from '../middleware/requirePlan.js';
 
 const MOCK_AI_SETTINGS = {
   id: null,
@@ -46,7 +47,7 @@ router.get('/default-prompts', (_req, res) => {
 router.use(authenticate);
 
 // GET /api/ai/settings — get user's AI config
-router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
+router.get('/settings', requirePro(), aiRouteHandler('get AI settings', async (req, res) => {
   const demo = isDemoUser(req);
   const result = await query(
     'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, is_active, task_model_overrides FROM user_ai_settings WHERE user_id = $1',
@@ -119,7 +120,7 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
 }));
 
 // PUT /api/ai/settings — upsert AI config
-router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
+router.put('/settings', requirePro(), aiRouteHandler('save AI settings', async (req, res) => {
   if (isDemoUser(req)) {
     const isMaskedKey = (k: unknown) => k === '****' || k === 'sk-****';
     const hasApiKey = !!req.body.apiKey && !isMaskedKey(req.body.apiKey);
@@ -259,7 +260,7 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
 }));
 
 // DELETE /api/ai/settings — remove AI config
-router.delete('/settings', aiRouteHandler('delete AI settings', async (req, res) => {
+router.delete('/settings', requirePro(), aiRouteHandler('delete AI settings', async (req, res) => {
   await query('DELETE FROM user_ai_settings WHERE user_id = $1', [req.user!.id]);
   res.json({ deleted: true });
 }));
@@ -268,7 +269,7 @@ router.delete('/settings', aiRouteHandler('delete AI settings', async (req, res)
 router.post('/analyze-image', memoryPhotoUpload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'photos', maxCount: 5 },
-]), aiLimiter, aiRouteHandler('analyze image', async (req, res) => {
+]), aiLimiter, requirePro(), aiRouteHandler('analyze image', async (req, res) => {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
   const allFiles = [
     ...(files?.photo || []),
@@ -306,7 +307,7 @@ router.post('/analyze-image', memoryPhotoUpload.fields([
 }));
 
 // POST /api/ai/analyze — analyze stored photo(s)
-router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, res) => {
+router.post('/analyze', aiLimiter, requirePro(), aiRouteHandler('analyze photo', async (req, res) => {
   const { photoId, photoIds } = req.body;
   let ids: string[] = [];
   if (Array.isArray(photoIds) && photoIds.length > 0) {
@@ -345,7 +346,7 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
 }));
 
 // POST /api/ai/reanalyze — reanalyze stored photo(s) with previous result context
-router.post('/reanalyze', aiLimiter, aiRouteHandler('reanalyze photo', async (req, res) => {
+router.post('/reanalyze', aiLimiter, requirePro(), aiRouteHandler('reanalyze photo', async (req, res) => {
   const { photoIds, previousResult: rawPrev } = req.body;
 
   if (
@@ -394,7 +395,7 @@ router.post('/reanalyze', aiLimiter, aiRouteHandler('reanalyze photo', async (re
 }));
 
 // POST /api/ai/structure-text — structure dictated/typed text into items
-router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async (req, res) => {
+router.post('/structure-text', aiLimiter, requirePro(), aiRouteHandler('structure text', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { context } = req.body;
 
@@ -421,7 +422,7 @@ router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async
 }));
 
 // POST /api/ai/test — test connection with provided credentials
-router.post('/test', aiLimiter, aiRouteHandler('test connection', async (req, res) => {
+router.post('/test', aiLimiter, requirePro(), aiRouteHandler('test connection', async (req, res) => {
   if (isDemoUser(req)) {
     throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot configure API keys. Use server-configured keys or mock mode.');
   }

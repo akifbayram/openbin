@@ -5,6 +5,7 @@ import { requireAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { validateRequiredString } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
+import { requirePro } from '../middleware/requirePlan.js';
 
 const router = Router();
 router.use(authenticate);
@@ -26,7 +27,7 @@ router.get('/:locationId/custom-fields', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/locations/:locationId/custom-fields
-router.post('/:locationId/custom-fields', asyncHandler(async (req, res) => {
+router.post('/:locationId/custom-fields', requirePro(), asyncHandler(async (req, res) => {
   const { locationId } = req.params;
   const { name } = req.body;
 
@@ -59,7 +60,7 @@ router.post('/:locationId/custom-fields', asyncHandler(async (req, res) => {
 }));
 
 // PUT /api/locations/:locationId/custom-fields/reorder (before :fieldId to avoid param capture)
-router.put('/:locationId/custom-fields/reorder', asyncHandler(async (req, res) => {
+router.put('/:locationId/custom-fields/reorder', requirePro(), asyncHandler(async (req, res) => {
   const { locationId } = req.params;
   const { field_ids } = req.body;
 
@@ -83,7 +84,7 @@ router.put('/:locationId/custom-fields/reorder', asyncHandler(async (req, res) =
 }));
 
 // PUT /api/locations/:locationId/custom-fields/:fieldId
-router.put('/:locationId/custom-fields/:fieldId', asyncHandler(async (req, res) => {
+router.put('/:locationId/custom-fields/:fieldId', requirePro(), asyncHandler(async (req, res) => {
   const { locationId, fieldId } = req.params;
   const { name, position } = req.body;
 
@@ -132,7 +133,7 @@ router.put('/:locationId/custom-fields/:fieldId', asyncHandler(async (req, res) 
 }));
 
 // DELETE /api/locations/:locationId/custom-fields/:fieldId
-router.delete('/:locationId/custom-fields/:fieldId', asyncHandler(async (req, res) => {
+router.delete('/:locationId/custom-fields/:fieldId', requirePro(), asyncHandler(async (req, res) => {
   const { locationId, fieldId } = req.params;
 
   await requireAdmin(locationId, req.user!.id, 'manage custom fields');

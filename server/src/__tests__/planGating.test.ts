@@ -1,0 +1,336 @@
+import type { Express } from 'express';
+import request from 'supertest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// ---- Module-level mocks (hoisted before imports) ----
+
+vi.mock('../lib/planGate.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/planGate.js')>();
+  return {
+    ...actual,
+    isSelfHosted: vi.fn(),
+    getUserPlanInfo: vi.fn(),
+    isProUser: vi.fn(),
+    isSubscriptionActive: vi.fn(),
+    generateUpgradeUrl: vi.fn(),
+  };
+});
+
+// ---- Imports (after mocks) ----
+
+import { createApp } from '../index.js';
+import {
+  generateUpgradeUrl,
+  getUserPlanInfo,
+  isProUser,
+  isSelfHosted,
+  isSubscriptionActive,
+  Plan,
+  SubStatus,
+} from '../lib/planGate.js';
+import { createTestLocation, createTestUser } from './helpers.js';
+
+let app: Express;
+
+/** Configure mocks so all plan checks pass for a Pro cloud user. */
+function mockProUser() {
+  vi.mocked(isSelfHosted).mockReturnValue(false);
+  vi.mocked(getUserPlanInfo).mockResolvedValue({
+    plan: Plan.PRO,
+    subStatus: SubStatus.ACTIVE,
+    activeUntil: null,
+    email: 'pro@example.com',
+  });
+  vi.mocked(isSubscriptionActive).mockReturnValue(true);
+  vi.mocked(isProUser).mockReturnValue(true);
+  vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+}
+
+/** Configure mocks so all plan checks fail for a Lite cloud user. */
+function mockLiteUser() {
+  vi.mocked(isSelfHosted).mockReturnValue(false);
+  vi.mocked(getUserPlanInfo).mockResolvedValue({
+    plan: Plan.LITE,
+    subStatus: SubStatus.ACTIVE,
+    activeUntil: null,
+    email: 'lite@example.com',
+  });
+  vi.mocked(isSubscriptionActive).mockReturnValue(true);
+  vi.mocked(isProUser).mockReturnValue(false);
+  vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+}
+
+/** Configure mocks so the self-hosted fast-path is taken. */
+function mockSelfHosted() {
+  vi.mocked(isSelfHosted).mockReturnValue(true);
+  vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+}
+
+beforeEach(() => {
+  app = createApp();
+  vi.mocked(isSelfHosted).mockReset();
+  vi.mocked(getUserPlanInfo).mockReset();
+  vi.mocked(isProUser).mockReset();
+  vi.mocked(isSubscriptionActive).mockReset();
+  vi.mocked(generateUpgradeUrl).mockReset();
+});
+
+// ---------------------------------------------------------------------------
+// AI routes
+// ---------------------------------------------------------------------------
+
+describe('AI route plan gating', () => {
+  it('GET /api/ai/settings returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
+    mockLiteUser();
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .get('/api/ai/settings')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('PLAN_RESTRICTED');
+  });
+
+  it('GET /api/ai/settings works for self-hosted (no DB plan query)', async () => {
+    mockSelfHosted();
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .get('/api/ai/settings')
+      .set('Authorization', `Bearer ${token}`);
+
+    // Self-hosted bypasses plan gate — returns 200 (null AI config) not 403
+    expect(res.status).toBe(200);
+    expect(getUserPlanInfo).not.toHaveBeenCalled();
+  });
+
+  it('POST /api/ai/analyze returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
+    mockLiteUser();
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .post('/api/ai/analyze')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ photoId: 'some-photo-id' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('PLAN_RESTRICTED');
+  });
+
+  it('POST /api/ai/structure-text returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
+    mockLiteUser();
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .post('/api/ai/structure-text')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ text: 'hello world' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('PLAN_RESTRICTED');
+  });
+
+});
+
+// ---------------------------------------------------------------------------
+// Export routes
+// ---------------------------------------------------------------------------
+
+describe('Export route plan gating', () => {
+  it('GET /api/locations/:id/export returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
+    mockLiteUser();
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .get(`/api/locations/${location.id}/export`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('PLAN_RESTRICTED');
+  });
+
+  it('GET /api/locations/:id/export works for cloud PRO user', async () => {
+    mockProUser();
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .get(`/api/locations/${location.id}/export`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.version).toBe(2);
+  });
+
+  it('GET /api/locations/:id/export/zip returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
+    mockLiteUser();
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .get(`/api/locations/${location.id}/export/zip`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('PLAN_RESTRICTED');
+  });
+
+  it('GET /api/locations/:id/export/csv works for cloud LITE user (not gated)', async () => {
+    mockLiteUser();
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .get(`/api/locations/${location.id}/export/csv`)
+      .set('Authorization', `Bearer ${token}`);
+
+    // CSV is not gated — should succeed (200) not 403
+    expect(res.status).toBe(200);
+  });
+
+  it('GET /api/locations/:id/export works for self-hosted without plan query', async () => {
+    mockSelfHosted();
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .get(`/api/locations/${location.id}/export`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(getUserPlanInfo).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// API key routes
+// ---------------------------------------------------------------------------
+
+describe('API key route plan gating', () => {
+  it('POST /api/api-keys returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
+    mockLiteUser();
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .post('/api/api-keys')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'My Key' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('PLAN_RESTRICTED');
+  });
+
+  it('GET /api/api-keys works for cloud LITE user (list is not gated)', async () => {
+    mockLiteUser();
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .get('/api/api-keys')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.results).toEqual([]);
+  });
+
+  it('POST /api/api-keys works for cloud PRO user', async () => {
+    mockProUser();
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .post('/api/api-keys')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Pro Key' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.key).toBeDefined();
+  });
+
+  it('POST /api/api-keys works for self-hosted without plan query', async () => {
+    mockSelfHosted();
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .post('/api/api-keys')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Self-Hosted Key' });
+
+    expect(res.status).toBe(201);
+    expect(getUserPlanInfo).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Custom field routes
+// ---------------------------------------------------------------------------
+
+describe('Custom field route plan gating', () => {
+  it('POST /api/locations/:id/custom-fields returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
+    mockLiteUser();
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .post(`/api/locations/${location.id}/custom-fields`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Size' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('PLAN_RESTRICTED');
+  });
+
+  it('GET /api/locations/:id/custom-fields works for cloud LITE user (read is not gated)', async () => {
+    mockLiteUser();
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .get(`/api/locations/${location.id}/custom-fields`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.results).toEqual([]);
+  });
+
+  it('DELETE /api/locations/:id/custom-fields/:fieldId returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
+    mockLiteUser();
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .delete(`/api/locations/${location.id}/custom-fields/non-existent-field-id`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('PLAN_RESTRICTED');
+  });
+
+  it('POST /api/locations/:id/custom-fields works for cloud PRO user', async () => {
+    mockProUser();
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .post(`/api/locations/${location.id}/custom-fields`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Color' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Color');
+  });
+
+  it('POST /api/locations/:id/custom-fields works for self-hosted without plan query', async () => {
+    mockSelfHosted();
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .post(`/api/locations/${location.id}/custom-fields`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Weight' });
+
+    expect(res.status).toBe(201);
+    expect(getUserPlanInfo).not.toHaveBeenCalled();
+  });
+});
