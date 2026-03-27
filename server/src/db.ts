@@ -107,6 +107,7 @@ db.exec([
 try { db.exec('ALTER TABLE users ADD COLUMN plan INTEGER NOT NULL DEFAULT 1'); } catch { /* column already exists */ }
 try { db.exec('ALTER TABLE users ADD COLUMN sub_status INTEGER NOT NULL DEFAULT 1'); } catch { /* column already exists */ }
 try { db.exec('ALTER TABLE users ADD COLUMN active_until TEXT'); } catch { /* column already exists */ }
+db.exec('CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status)');
 
 /** O(min(m,n)) space — reuses module-level buffers to avoid per-call allocation */
 const _levBuf0 = new Int32Array(256);
