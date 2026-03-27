@@ -78,32 +78,32 @@ describe('BIN_URL_REGEX', () => {
   it('matches openbin:// URI', () => {
     const match = 'openbin://bin/ABCDEF'.match(BIN_URL_REGEX);
     expect(match).not.toBeNull();
-    expect(match![1]).toBe('ABCDEF');
+    expect(match?.[1]).toBe('ABCDEF');
   });
 
   it('is case-insensitive for openbin://', () => {
     const match = 'OPENBIN://BIN/abcdef'.match(BIN_URL_REGEX);
     expect(match).not.toBeNull();
-    expect(match![1]).toBe('abcdef');
+    expect(match?.[1]).toBe('abcdef');
   });
 
   // URL format (accepted for backwards compat after mode switch)
   it('matches https URL format', () => {
     const match = 'https://example.com/bin/ABCDEF'.match(BIN_URL_REGEX);
     expect(match).not.toBeNull();
-    expect(match![1]).toBe('ABCDEF');
+    expect(match?.[1]).toBe('ABCDEF');
   });
 
   it('matches http URL format', () => {
     const match = 'http://localhost:1453/bin/ABCDEF'.match(BIN_URL_REGEX);
     expect(match).not.toBeNull();
-    expect(match![1]).toBe('ABCDEF');
+    expect(match?.[1]).toBe('ABCDEF');
   });
 
   it('matches URL with path prefix', () => {
     const match = 'https://example.com/openbin/bin/ABCDEF'.match(BIN_URL_REGEX);
     expect(match).not.toBeNull();
-    expect(match![1]).toBe('ABCDEF');
+    expect(match?.[1]).toBe('ABCDEF');
   });
 
   // Boundary checks
@@ -122,12 +122,12 @@ describe('BIN_URL_REGEX', () => {
   it('still extracts ID when trailing path segments follow', () => {
     const match = 'https://example.com/bin/ABCDEF/edit'.match(BIN_URL_REGEX);
     expect(match).not.toBeNull();
-    expect(match![1]).toBe('ABCDEF');
+    expect(match?.[1]).toBe('ABCDEF');
   });
 
   it('accepts ID followed by query string', () => {
     const match = 'https://example.com/bin/ABCDEF?ref=qr'.match(BIN_URL_REGEX);
     expect(match).not.toBeNull();
-    expect(match![1]).toBe('ABCDEF');
+    expect(match?.[1]).toBe('ABCDEF');
   });
 });

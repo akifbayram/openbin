@@ -813,8 +813,8 @@ describe('POST /api/bins/:id/move — custom fields', () => {
     const bin = await createTestBin(app, token, loc1.id, { name: 'Board Games' });
 
     // Source has 4 fields (like demo seed), target has none
-    const f1 = await setupCustomField(loc1.id, 'Purchase Date', 0);
-    const f2 = await setupCustomField(loc1.id, 'Estimated Value', 1);
+    const _f1 = await setupCustomField(loc1.id, 'Purchase Date', 0);
+    const _f2 = await setupCustomField(loc1.id, 'Estimated Value', 1);
     const f3 = await setupCustomField(loc1.id, 'Condition', 2);
     const f4 = await setupCustomField(loc1.id, 'Last Checked', 3);
 

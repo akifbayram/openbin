@@ -44,6 +44,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
   const [structurePrompt, setStructurePrompt] = useState('');
   const [reorganizationPrompt, setReorganizationPrompt] = useState('');
   const [activePromptTab, setActivePromptTab] = useState<PromptTab>('analysis');
+  const [taskModelOverrides, setTaskModelOverrides] = useState<Record<string, string>>({});
   const [temperature, setTemperature] = useState<string>('');
   const [maxTokens, setMaxTokens] = useState<string>('');
   const [topP, setTopP] = useState<string>('');
@@ -63,6 +64,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setQueryPrompt(settings.queryPrompt || '');
       setStructurePrompt(settings.structurePrompt || '');
       setReorganizationPrompt(settings.reorganizationPrompt || '');
+      setTaskModelOverrides(settings.taskModelOverrides ? Object.fromEntries(Object.entries(settings.taskModelOverrides).filter(([, v]) => v)) as Record<string, string> : {});
       setTemperature(settings.temperature != null ? String(settings.temperature) : '');
       setMaxTokens(settings.maxTokens != null ? String(settings.maxTokens) : '');
       setTopP(settings.topP != null ? String(settings.topP) : '');
@@ -105,6 +107,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
         maxTokens: maxTokens ? Number(maxTokens) : null,
         topP: topP ? Number(topP) : null,
         requestTimeout: requestTimeout ? Number(requestTimeout) : null,
+        taskModelOverrides: Object.keys(taskModelOverrides).length > 0 ? taskModelOverrides : null,
       });
       setSettings(saved);
       showToast({ message: 'AI settings saved', variant: 'success' });
@@ -126,6 +129,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setQueryPrompt('');
       setStructurePrompt('');
       setReorganizationPrompt('');
+      setTaskModelOverrides({});
       setTemperature('');
       setMaxTokens('');
       setTopP('');
@@ -307,6 +311,38 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                               Load default to customize
                             </button>
                           ))}
+                        </div>
+                        <div className="space-y-1.5 pt-1">
+                          <label htmlFor={`model-override-${activePromptTab}`} className="text-[13px] text-[var(--text-secondary)]">Model override</label>
+                          <div className="relative">
+                            <Input
+                              id={`model-override-${activePromptTab}`}
+                              value={taskModelOverrides[activePromptTab] ?? ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setTaskModelOverrides((prev) => {
+                                  if (!val) {
+                                    const { [activePromptTab]: _, ...rest } = prev;
+                                    return rest;
+                                  }
+                                  return { ...prev, [activePromptTab]: val };
+                                });
+                              }}
+                              placeholder={setup.model || 'Default model'}
+                              disabled={demoMode}
+                              className={taskModelOverrides[activePromptTab] ? 'pr-8' : undefined}
+                            />
+                            {taskModelOverrides[activePromptTab] && !demoMode && (
+                              <button
+                                type="button"
+                                onClick={() => setTaskModelOverrides(({ [activePromptTab]: _, ...rest }) => rest)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-[var(--text-tertiary)]">Leave empty to use default model{setup.model ? ` (${setup.model})` : ''}</p>
                         </div>
                       </div>
                     </Disclosure>

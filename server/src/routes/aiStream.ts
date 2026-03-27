@@ -6,8 +6,8 @@ import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildC
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { resolvePrompt, sanitizeForPrompt } from '../lib/aiSanitize.js';
 import { QueryResultSchema } from '../lib/aiSchemas.js';
-import type { UserAiSettings } from '../lib/aiSettings.js';
-import { getUserAiSettings } from '../lib/aiSettings.js';
+import type { TaskType, UserAiSettings } from '../lib/aiSettings.js';
+import { getConfigForTask, getUserAiSettings } from '../lib/aiSettings.js';
 import { initSseResponse, pipeAiStreamToResponse } from '../lib/aiStream.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import type { CommandRequest } from '../lib/commandParser.js';
@@ -49,10 +49,11 @@ async function sendMockJsonStream(res: import('express').Response, data: object)
 }
 
 /** Resolve a user's AI model (settings + SSRF check + SDK model). */
-async function resolveUserModel(userId: string, isDemoUser = false) {
+async function resolveUserModel(userId: string, task: TaskType, isDemoUser = false) {
   const settings = await getUserAiSettings(userId);
-  if (settings.config.endpointUrl) await validateEndpointUrl(settings.config.endpointUrl, isDemoUser);
-  const model = createSdkModel(settings.config);
+  const taskConfig = getConfigForTask(settings, task);
+  if (taskConfig.endpointUrl) await validateEndpointUrl(taskConfig.endpointUrl, isDemoUser);
+  const model = createSdkModel(taskConfig);
   return { settings, model };
 }
 
@@ -73,7 +74,7 @@ streamRouter.post('/query/stream', aiLimiter, requireLocationMember(), aiRouteHa
   const question = validateTextInput(req.body.question, 'question');
   const { locationId } = req.body;
   const [{ settings, model }, context] = await Promise.all([
-    resolveUserModel(req.user!.id, isDemoUser(req)),
+    resolveUserModel(req.user!.id, 'query', isDemoUser(req)),
     buildInventoryContext(locationId, req.user!.id),
   ]);
 
@@ -90,7 +91,7 @@ streamRouter.post('/command/stream', aiLimiter, requireLocationMember(), aiRoute
   const text = validateTextInput(req.body.text, 'text');
   const { locationId } = req.body;
   const [{ settings, model }, context] = await Promise.all([
-    resolveUserModel(req.user!.id, isDemoUser(req)),
+    resolveUserModel(req.user!.id, 'command', isDemoUser(req)),
     buildCommandContext(locationId, req.user!.id),
   ]);
   const request: CommandRequest = { text, context };
@@ -110,7 +111,7 @@ streamRouter.post('/ask/stream', aiLimiter, requireLocationMember(), aiRouteHand
   const text = validateTextInput(req.body.text, 'text');
   const { locationId } = req.body;
   const [{ settings, model }, context] = await Promise.all([
-    resolveUserModel(req.user!.id, isDemoUser(req)),
+    resolveUserModel(req.user!.id, 'command', isDemoUser(req)),
     buildCommandContext(locationId, req.user!.id),
   ]);
   const request: CommandRequest = { text, context };
@@ -126,7 +127,7 @@ streamRouter.post('/ask/stream', aiLimiter, requireLocationMember(), aiRouteHand
 streamRouter.post('/structure-text/stream', aiLimiter, aiRouteHandler('stream structure-text', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { context } = req.body;
-  const { settings, model } = await resolveUserModel(req.user!.id, isDemoUser(req));
+  const { settings, model } = await resolveUserModel(req.user!.id, 'structure', isDemoUser(req));
 
   await pipeAiStreamToResponse(res, model, {
     system: buildStructurePrompt({ text, mode: 'items', context }, settings.structure_prompt ?? undefined, isDemoUser(req)),
@@ -174,7 +175,7 @@ streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnaly
   // Mock mode: return fake AI response without calling any provider
   if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
 
-  const { settings, model } = await resolveUserModel(req.user!.id, isDemoUser(req));
+  const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
 
   const locationId = req.body?.locationId;
   if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
@@ -215,7 +216,7 @@ streamRouter.post('/analyze/stream', aiLimiter, aiRouteHandler('stream analyze p
   // Mock mode: return fake AI response without calling any provider
   if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
 
-  const { settings, model } = await resolveUserModel(req.user!.id, isDemoUser(req));
+  const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
 
   const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
   if (!loaded) {
@@ -261,7 +262,7 @@ streamRouter.post('/correct/stream', aiLimiter, aiRouteHandler('stream correctio
     return;
   }
 
-  const { settings, model } = await resolveUserModel(req.user!.id, isDemoUser(req));
+  const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
 
   // Optional location membership check + tag fetch
   if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
@@ -344,7 +345,7 @@ streamRouter.post('/reanalyze/stream', aiLimiter, aiRouteHandler('stream reanaly
 
   if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
 
-  const { settings, model } = await resolveUserModel(req.user!.id, isDemoUser(req));
+  const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
 
   const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
   if (!loaded) {
@@ -401,7 +402,7 @@ streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
 
   if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
 
-  const { settings, model } = await resolveUserModel(req.user!.id, isDemoUser(req));
+  const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
 
   const locationId = req.body?.locationId;
   if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
@@ -438,7 +439,7 @@ streamRouter.post('/reorganize/stream', aiLimiter, requireLocationMember(), aiRo
     throw new (await import('../lib/httpErrors.js')).ValidationError('maxBins must be a positive number');
   }
 
-  const { settings, model } = await resolveUserModel(req.user!.id, isDemoUser(req));
+  const { settings, model } = await resolveUserModel(req.user!.id, 'reorganization', isDemoUser(req));
 
   // Build system prompt
   const { DEFAULT_REORGANIZATION_PROMPT } = await import('../lib/defaultPrompts.js');

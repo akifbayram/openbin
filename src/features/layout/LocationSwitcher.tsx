@@ -35,7 +35,8 @@ export function LocationSwitcher({ locations, activeLocationId, onLocationChange
   if (locations.length <= 1) return null;
 
   if (locations.length === 2) {
-    const other = locations.find((l) => l.id !== activeLocationId)!;
+    const other = locations.find((l) => l.id !== activeLocationId);
+    if (!other) return null;
     return (
       <Tooltip content={`Switch to ${other.name}`} className="w-full">
         <button

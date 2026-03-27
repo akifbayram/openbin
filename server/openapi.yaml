@@ -755,6 +755,21 @@ components:
           minimum: 5
           maximum: 300
           description: Request timeout in seconds
+        taskModelOverrides:
+          type: object
+          nullable: true
+          description: "Per-task model overrides. Keys are task types, values are model names. Null or absent means all tasks use the default model."
+          properties:
+            analysis:
+              type: string
+            command:
+              type: string
+            query:
+              type: string
+            structure:
+              type: string
+            reorganization:
+              type: string
         providerConfigs:
           type: object
           description: "Per-provider saved credentials (apiKey is masked). Keys are provider names."
@@ -812,6 +827,21 @@ components:
           nullable: true
           maxLength: 10000
           description: "Custom system prompt for AI bin reorganization suggestions. Null uses the default prompt."
+        taskModelOverrides:
+          type: object
+          nullable: true
+          description: "Per-task model overrides. Keys are task types, values are model names. Null clears all overrides."
+          properties:
+            analysis:
+              type: string
+            command:
+              type: string
+            query:
+              type: string
+            structure:
+              type: string
+            reorganization:
+              type: string
         providerConfigs:
           type: object
           description: "Per-provider saved credentials. Keys are provider names."

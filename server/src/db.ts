@@ -34,6 +34,7 @@ for (const colDef of aiSettingsMigrations) {
 }
 
 try { db.exec('ALTER TABLE bin_items ADD COLUMN quantity INTEGER DEFAULT NULL'); } catch { /* column already exists */ }
+try { db.exec('ALTER TABLE user_ai_settings ADD COLUMN task_model_overrides TEXT'); } catch { /* column already exists */ }
 
 // Hierarchical areas: add parent_id column
 try { db.exec('ALTER TABLE areas ADD COLUMN parent_id TEXT REFERENCES areas(id) ON DELETE CASCADE'); } catch { /* column already exists */ }

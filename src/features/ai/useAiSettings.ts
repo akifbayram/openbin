@@ -62,6 +62,7 @@ export async function saveAiSettings(opts: {
   maxTokens?: number | null;
   topP?: number | null;
   requestTimeout?: number | null;
+  taskModelOverrides?: Partial<Record<string, string>> | null;
 }): Promise<AiSettings> {
   const result = await apiFetch<AiSettings>('/api/ai/settings', {
     method: 'PUT',

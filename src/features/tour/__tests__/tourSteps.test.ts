@@ -10,6 +10,12 @@ import {
   type TourContext,
 } from '../tourSteps';
 
+function findStep(id: string) {
+  const step = TOUR_STEPS.find((s) => s.id === id);
+  if (!step) throw new Error(`Step "${id}" not found`);
+  return step;
+}
+
 function makeContext(overrides: Partial<TourContext> = {}): TourContext {
   return {
     canWrite: true,
@@ -107,83 +113,71 @@ describe('filterSteps', () => {
 describe('resolveSelector', () => {
   it('returns Ask AI selector when AI is enabled', () => {
     const ctx = makeContext({ aiEnabled: true });
-    const step = TOUR_STEPS.find((s) => s.id === 'ask-ai')!;
-    expect(resolveSelector(step, ctx)).toBe('button[aria-label="Ask AI"]');
+    expect(resolveSelector(findStep('ask-ai'), ctx)).toBe('button[aria-label="Ask AI"]');
   });
 
   it('falls back to Scan button when AI is not enabled', () => {
     const ctx = makeContext({ aiEnabled: false });
-    const step = TOUR_STEPS.find((s) => s.id === 'ask-ai')!;
-    expect(resolveSelector(step, ctx)).toBe('button[aria-label="Scan QR code"]');
+    expect(resolveSelector(findStep('ask-ai'), ctx)).toBe('button[aria-label="Scan QR code"]');
   });
 
   it('uses data-tour selector for snap-to-create', () => {
     const ctx = makeContext();
-    const step = TOUR_STEPS.find((s) => s.id === 'snap-to-create')!;
-    expect(resolveSelector(step, ctx)).toBe('[data-tour="photo-buttons"]');
+    expect(resolveSelector(findStep('snap-to-create'), ctx)).toBe('[data-tour="photo-buttons"]');
   });
 });
 
 describe('resolveRoute', () => {
   it('returns bin detail route with firstBinId', () => {
     const ctx = makeContext({ firstBinId: 'xyz789' });
-    const step = TOUR_STEPS.find((s) => s.id === 'qr-section')!;
-    expect(resolveRoute(step, ctx)).toBe('/bin/xyz789');
+    expect(resolveRoute(findStep('qr-section'), ctx)).toBe('/bin/xyz789');
   });
 
   it('returns /bins for static routes', () => {
     const ctx = makeContext();
-    const step = TOUR_STEPS.find((s) => s.id === 'ask-ai')!;
-    expect(resolveRoute(step, ctx)).toBe('/bins');
+    expect(resolveRoute(findStep('ask-ai'), ctx)).toBe('/bins');
   });
 
   it('returns /reorganize for reorganize step', () => {
     const ctx = makeContext();
-    const step = TOUR_STEPS.find((s) => s.id === 'reorganize')!;
-    expect(resolveRoute(step, ctx)).toBe('/reorganize');
+    expect(resolveRoute(findStep('reorganize'), ctx)).toBe('/reorganize');
   });
 });
 
 describe('resolveTitle', () => {
   it('returns dynamic title with terminology', () => {
     const ctx = makeContext();
-    const step = TOUR_STEPS.find((s) => s.id === 'qr-section')!;
-    expect(resolveTitle(step, ctx)).toBe('Bin QR code');
+    expect(resolveTitle(findStep('qr-section'), ctx)).toBe('Bin QR code');
   });
 
   it('returns static title as-is', () => {
     const ctx = makeContext();
-    const step = TOUR_STEPS.find((s) => s.id === 'ask-ai')!;
-    expect(resolveTitle(step, ctx)).toBe('Ask AI anything');
+    expect(resolveTitle(findStep('ask-ai'), ctx)).toBe('Ask AI anything');
   });
 });
 
 describe('resolveBody', () => {
   it('adapts body for AI-enabled user', () => {
     const ctx = makeContext({ aiEnabled: true, canWrite: true });
-    const step = TOUR_STEPS.find((s) => s.id === 'ask-ai')!;
-    const body = resolveBody(step, ctx);
+    const body = resolveBody(findStep('ask-ai'), ctx);
     expect(body).toContain('add batteries');
   });
 
   it('adapts body for non-AI user', () => {
     const ctx = makeContext({ aiEnabled: false });
-    const step = TOUR_STEPS.find((s) => s.id === 'ask-ai')!;
-    const body = resolveBody(step, ctx);
+    const body = resolveBody(findStep('ask-ai'), ctx);
     expect(body).toContain('AI provider connected');
   });
 
   it('CTA body adapts for writer + AI', () => {
     const ctx = makeContext({ canWrite: true, aiEnabled: true });
-    const step = TOUR_STEPS.find((s) => s.id === 'cta')!;
-    const body = resolveBody(step, ctx);
+    const body = resolveBody(findStep('cta'), ctx);
     expect(body).toContain('create a bin for kitchen utensils');
   });
 
   it('CTA body adapts for viewer', () => {
     const ctx = makeContext({ canWrite: false, aiEnabled: true });
-    const step = TOUR_STEPS.find((s) => s.id === 'cta')!;
-    const body = resolveBody(step, ctx);
+    const body = resolveBody(findStep('cta'), ctx);
     expect(body).toContain('replay this tour');
   });
 
@@ -191,8 +185,7 @@ describe('resolveBody', () => {
     const ctx = makeContext({
       terminology: { ...DEFAULT_TERMINOLOGY, bin: 'container', bins: 'containers' },
     });
-    const step = TOUR_STEPS.find((s) => s.id === 'ask-ai')!;
-    const body = resolveBody(step, ctx);
+    const body = resolveBody(findStep('ask-ai'), ctx);
     expect(body).toContain('containers');
   });
 });

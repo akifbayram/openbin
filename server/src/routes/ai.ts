@@ -6,7 +6,7 @@ import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLo
 import type { ImageInput } from '../lib/aiProviders.js';
 import { analyzeImages, reanalyzeImages } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
-import { getUserAiSettings } from '../lib/aiSettings.js';
+import { getConfigForTask, getUserAiSettings, parseTaskModelOverrides, TASK_TYPES } from '../lib/aiSettings.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import { config, getEnvAiConfig, isDemoUser } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
@@ -49,7 +49,7 @@ router.use(authenticate);
 router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
   const demo = isDemoUser(req);
   const result = await query(
-    'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, is_active FROM user_ai_settings WHERE user_id = $1',
+    'SELECT id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, is_active, task_model_overrides FROM user_ai_settings WHERE user_id = $1',
     [req.user!.id]
   );
 
@@ -112,6 +112,7 @@ router.get('/settings', aiRouteHandler('get AI settings', async (req, res) => {
     maxTokens: activeRow.max_tokens ?? null,
     topP: activeRow.top_p ?? null,
     requestTimeout: activeRow.request_timeout ?? null,
+    taskModelOverrides: parseTaskModelOverrides(activeRow.task_model_overrides),
     providerConfigs,
     source: 'user' as const,
   });
@@ -131,9 +132,12 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
     if (PROMPT_FIELDS.some(f => req.body[f] != null)) {
       throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot customize AI prompts');
     }
+    if (req.body.taskModelOverrides && Object.values(req.body.taskModelOverrides).some((v: unknown) => v)) {
+      throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot set model overrides');
+    }
   }
 
-  const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt, reorganizationPrompt } = req.body;
+  const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt, reorganizationPrompt, taskModelOverrides: rawOverrides } = req.body;
   const { temperature: rawTemp, maxTokens: rawMaxTokens, topP: rawTopP, requestTimeout: rawTimeout } = req.body;
 
   if (!provider || !apiKey || !model) {
@@ -178,6 +182,21 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
     return;
   }
 
+  // Validate and serialize task model overrides
+  let finalOverrides: string | null = null;
+  if (rawOverrides && typeof rawOverrides === 'object' && !Array.isArray(rawOverrides)) {
+    const cleaned: Record<string, string> = {};
+    for (const [key, value] of Object.entries(rawOverrides)) {
+      if (!(TASK_TYPES as readonly string[]).includes(key)) continue;
+      if (value === null || value === undefined || value === '') continue;
+      if (typeof value !== 'string') {
+        throw new ValidationError(`taskModelOverrides.${key} must be a string`);
+      }
+      cleaned[key] = value;
+    }
+    finalOverrides = Object.keys(cleaned).length > 0 ? JSON.stringify(cleaned) : null;
+  }
+
   const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id, provider);
   const encryptedKey = encryptApiKey(finalApiKey);
   const finalCustomPrompt = (customPrompt && typeof customPrompt === 'string' && customPrompt.trim()) ? customPrompt.trim() : null;
@@ -195,12 +214,12 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
   // Upsert the row for this (user, provider) and set it active
   const newId = generateUuid();
   const result = await query(
-    `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, is_active)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 1)
+    `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides, is_active)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 1)
      ON CONFLICT (user_id, provider) DO UPDATE SET
-       api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, reorganization_prompt = $11, temperature = $12, max_tokens = $13, top_p = $14, request_timeout = $15, is_active = 1, updated_at = datetime('now')
-     RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout`,
-    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt, finalReorganizationPrompt, finalTemperature, finalMaxTokens, finalTopP, finalTimeout]
+       api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, reorganization_prompt = $11, temperature = $12, max_tokens = $13, top_p = $14, request_timeout = $15, task_model_overrides = $16, is_active = 1, updated_at = datetime('now')
+     RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides`,
+    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt, finalReorganizationPrompt, finalTemperature, finalMaxTokens, finalTopP, finalTimeout, finalOverrides]
   );
 
   // Fetch all rows to build providerConfigs
@@ -233,6 +252,7 @@ router.put('/settings', aiRouteHandler('save AI settings', async (req, res) => {
     maxTokens: row.max_tokens ?? null,
     topP: row.top_p ?? null,
     requestTimeout: row.request_timeout ?? null,
+    taskModelOverrides: parseTaskModelOverrides(row.task_model_overrides),
     providerConfigs,
     source: 'user' as const,
   });
@@ -267,6 +287,7 @@ router.post('/analyze-image', memoryPhotoUpload.fields([
   }
 
   const settings = await getUserAiSettings(req.user!.id);
+  const taskConfig = getConfigForTask(settings, 'analysis');
 
   const images: ImageInput[] = allFiles.map((f) => ({
     base64: f.buffer.toString('base64'),
@@ -280,7 +301,7 @@ router.post('/analyze-image', memoryPhotoUpload.fields([
   }
   const existingTags = locationId ? await fetchExistingTags(locationId) : undefined;
 
-  const suggestions = await analyzeImages(settings.config, images, existingTags, settings.custom_prompt, settings, isDemoUser(req));
+  const suggestions = await analyzeImages(taskConfig, images, existingTags, settings.custom_prompt, settings, isDemoUser(req));
   res.json(suggestions);
 }));
 
@@ -306,6 +327,7 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
   }
 
   const settings = await getUserAiSettings(req.user!.id);
+  const taskConfig = getConfigForTask(settings, 'analysis');
 
   const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
   if (!loaded) {
@@ -318,7 +340,7 @@ router.post('/analyze', aiLimiter, aiRouteHandler('analyze photo', async (req, r
     mimeType: img.mimeType,
   }));
 
-  const suggestions = await analyzeImages(settings.config, images, loaded.existingTags, settings.custom_prompt, settings, isDemoUser(req));
+  const suggestions = await analyzeImages(taskConfig, images, loaded.existingTags, settings.custom_prompt, settings, isDemoUser(req));
   res.json(suggestions);
 }));
 
@@ -354,6 +376,7 @@ router.post('/reanalyze', aiLimiter, aiRouteHandler('reanalyze photo', async (re
   }
 
   const settings = await getUserAiSettings(req.user!.id);
+  const taskConfig = getConfigForTask(settings, 'analysis');
 
   const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
   if (!loaded) {
@@ -366,7 +389,7 @@ router.post('/reanalyze', aiLimiter, aiRouteHandler('reanalyze photo', async (re
     mimeType: img.mimeType,
   }));
 
-  const suggestions = await reanalyzeImages(settings.config, images, previousResult, loaded.existingTags, loaded.customFieldDefs, settings, isDemoUser(req));
+  const suggestions = await reanalyzeImages(taskConfig, images, previousResult, loaded.existingTags, loaded.customFieldDefs, settings, isDemoUser(req));
   res.json(suggestions);
 }));
 
@@ -382,6 +405,7 @@ router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async
   }
 
   const settings = await getUserAiSettings(req.user!.id);
+  const taskConfig = getConfigForTask(settings, 'structure');
 
   const request: StructureTextRequest = {
     text,
@@ -392,7 +416,7 @@ router.post('/structure-text', aiLimiter, aiRouteHandler('structure text', async
     } : undefined,
   };
 
-  const result = await structureText(settings.config, request, settings.structure_prompt || undefined, settings, isDemoUser(req));
+  const result = await structureText(taskConfig, request, settings.structure_prompt || undefined, settings, isDemoUser(req));
   res.json(result);
 }));
 

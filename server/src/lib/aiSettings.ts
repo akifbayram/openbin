@@ -10,6 +10,20 @@ export class NoAiSettingsError extends Error {
   }
 }
 
+export const TASK_TYPES = ['analysis', 'command', 'query', 'structure', 'reorganization'] as const;
+
+export type TaskType = (typeof TASK_TYPES)[number];
+
+export type TaskModelOverrides = Partial<Record<TaskType, string>>;
+
+/** Parse a raw task_model_overrides value (string or object) into a typed map. */
+export function parseTaskModelOverrides(raw: unknown): TaskModelOverrides | null {
+  if (!raw) return null;
+  try {
+    return typeof raw === 'string' ? JSON.parse(raw) : (raw as TaskModelOverrides);
+  } catch { return null; }
+}
+
 export interface UserAiSettings {
   config: AiProviderConfig;
   custom_prompt: string | null;
@@ -21,12 +35,22 @@ export interface UserAiSettings {
   max_tokens: number | null;
   top_p: number | null;
   request_timeout: number | null;
+  task_model_overrides: TaskModelOverrides | null;
+}
+
+/** Return a config with the overridden model for a task, or the default config. */
+export function getConfigForTask(settings: UserAiSettings, task: TaskType): AiProviderConfig {
+  const override = settings.task_model_overrides?.[task];
+  if (override) {
+    return { ...settings.config, model: override };
+  }
+  return settings.config;
 }
 
 /** Load and decrypt a user's AI settings. Falls back to env config. Throws NoAiSettingsError if neither exist. */
 export async function getUserAiSettings(userId: string): Promise<UserAiSettings> {
   const result = await query(
-    'SELECT provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout FROM user_ai_settings WHERE user_id = $1 AND is_active = 1',
+    'SELECT provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides FROM user_ai_settings WHERE user_id = $1 AND is_active = 1',
     [userId]
   );
   if (result.rows.length === 0) {
@@ -43,6 +67,7 @@ export async function getUserAiSettings(userId: string): Promise<UserAiSettings>
         max_tokens: null,
         top_p: null,
         request_timeout: null,
+        task_model_overrides: null,
       };
     }
     throw new NoAiSettingsError();
@@ -64,6 +89,7 @@ export async function getUserAiSettings(userId: string): Promise<UserAiSettings>
     max_tokens: row.max_tokens ?? null,
     top_p: row.top_p ?? null,
     request_timeout: row.request_timeout ?? null,
+    task_model_overrides: parseTaskModelOverrides(row.task_model_overrides),
   };
 }
 

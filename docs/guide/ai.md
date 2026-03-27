@@ -96,12 +96,62 @@ The Reorganize page lets AI suggest how to restructure an entire location's bins
 
 A custom reorganization prompt can be set in **Settings → AI → Advanced** to guide the AI's restructuring logic (e.g. "group by room" or "consolidate similar items").
 
+## Task-Specific Models
+
+Not every AI task needs the same model. Photo analysis benefits from a strong multimodal model, while text extraction and simple commands can run on a smaller, faster model at a fraction of the cost.
+
+OpenBin lets you assign a different model to each task type, all using the same provider and API key:
+
+| Task | What It Does | Suggested Approach |
+|---|---|---|
+| **Photo Analysis** | Identifies items, names, and tags from photos | Use your most capable multimodal model |
+| **Commands** | Executes natural language instructions ("Add batteries to tools bin") | A fast, inexpensive model works well |
+| **Queries** | Answers questions about your inventory ("Where are the holiday lights?") | A fast, inexpensive model works well |
+| **Extraction** | Structures pasted text or voice input into discrete items | A fast, inexpensive model works well |
+| **Reorganization** | Suggests how to restructure bins, areas, and tags across a location | Use a capable reasoning model |
+
+### Example configurations
+
+**OpenAI**
+| Task | Model |
+|---|---|
+| Photo Analysis | `gpt-5-mini` |
+| Commands / Queries / Extraction | `gpt-4.1-mini` |
+| Reorganization | `gpt-5-mini` |
+
+**Anthropic**
+| Task | Model |
+|---|---|
+| Photo Analysis | `claude-sonnet-4-6` |
+| Commands / Queries / Extraction | `claude-haiku-4-5` |
+| Reorganization | `claude-sonnet-4-6` |
+
+**Google Gemini**
+| Task | Model |
+|---|---|
+| Photo Analysis | `gemini-3-flash-preview` |
+| Commands / Queries / Extraction | `gemini-2.5-flash` |
+| Reorganization | `gemini-3-flash-preview` |
+
+### How to configure
+
+1. Go to **Settings → AI → Custom Prompts**.
+2. Select a task tab (Photos, Commands, Queries, Extraction, or Reorganize).
+3. Enter a model name in the **Model override** field below the prompt editor.
+4. Save.
+
+Leave the override field empty to use your default model for that task. You can start with a single model for everything and add overrides later as you optimize for cost or quality.
+
+::: tip
+Start with one model for all tasks. Once you're comfortable with the results, try a smaller model for commands, queries, and extraction to reduce cost without sacrificing quality where it matters most (photo analysis and reorganization).
+:::
+
 ## Custom Prompts
 
 Advanced users can override the default AI prompts for each operation:
 
-1. Go to **Settings → AI → Advanced**.
-2. Enter a custom prompt for photo analysis, commands, search queries, text structuring, or reorganization.
+1. Go to **Settings → AI → Custom Prompts**.
+2. Select a task tab and enter a custom prompt for photo analysis, commands, search queries, text structuring, or reorganization.
 3. Save.
 
 Custom prompts are useful for domain-specific terminology, non-English languages, or specialized inventory contexts.
