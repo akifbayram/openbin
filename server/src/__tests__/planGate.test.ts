@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---- Module-level mocks (hoisted before imports) ----
 
@@ -17,19 +17,19 @@ vi.mock('../db.js', () => ({
 
 // ---- Imports (after mocks) ----
 
+import { query } from '../db.js';
+import { config } from '../lib/config.js';
 import {
-  Plan,
-  SubStatus,
   generateUpgradeUrl,
   getFeatureMap,
   getUserPlanInfo,
   isPlanRestricted,
   isProUser,
-  isSubscriptionActive,
   isSelfHosted,
+  isSubscriptionActive,
+  Plan,
+  SubStatus,
 } from '../lib/planGate.js';
-import { config } from '../lib/config.js';
-import { query } from '../db.js';
 
 // Helper to set config values for tests
 function setConfig(overrides: Partial<typeof config>) {
