@@ -7,12 +7,13 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isBinCreator, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
 import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinItems } from '../lib/binUpdateHelpers.js';
-import { validateBinFields } from '../lib/binValidation.js';
+import { validateBinFields, validateCodeFormat } from '../lib/binValidation.js';
 import { config } from '../lib/config.js';
 import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
 import { ForbiddenError, GoneError, NotFoundError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
+import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { purgeExpiredTrash } from '../lib/trashPurge.js';
 import { binPhotoUpload, validateFileType } from '../lib/uploadConfig.js';
@@ -171,6 +172,132 @@ router.get('/lookup/:shortCode', asyncHandler(async (req, res) => {
   }
 
   res.json(result.rows[0]);
+}));
+
+// POST /api/bins/:id/change-code — change a bin's shortcode (admin only)
+router.post('/:id/change-code', sensitiveAuthLimiter, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { code } = req.body;
+
+  if (!code || typeof code !== 'string') {
+    throw new ValidationError('Code is required');
+  }
+
+  const newCode = code.toUpperCase();
+  validateCodeFormat(newCode);
+
+  if (newCode === id.toUpperCase()) {
+    throw new ValidationError('New code is the same as current code');
+  }
+
+  // Verify access to target bin
+  const access = await verifyBinAccess(id, req.user!.id);
+  if (!access) {
+    throw new NotFoundError('Bin not found');
+  }
+
+  await requireAdmin(access.locationId, req.user!.id, 'change bin code');
+
+  // Check if newCode belongs to an existing bin (including trashed)
+  const existingResult = await query<{ id: string; name: string; location_id: string }>(
+    'SELECT id, name, location_id FROM bins WHERE UPPER(id) = $1',
+    [newCode]
+  );
+  const existingBin = existingResult.rows[0] ?? null;
+
+  // Cross-location permission check
+  if (existingBin && existingBin.location_id !== access.locationId) {
+    await requireAdmin(existingBin.location_id, req.user!.id, 'change bin code');
+  }
+
+  // Fetch photo paths before transaction (CASCADE will delete these rows)
+  let existingPhotos: { storage_path: string; thumb_path: string | null }[] = [];
+  if (existingBin) {
+    const photosResult = await query<{ storage_path: string; thumb_path: string | null }>(
+      'SELECT storage_path, thumb_path FROM photos WHERE bin_id = $1',
+      [existingBin.id]
+    );
+    existingPhotos = photosResult.rows;
+  }
+
+  // Run the transaction (better-sqlite3 is synchronous)
+  const db = getDb();
+  const stmts = {
+    deleteBin: db.prepare('DELETE FROM bins WHERE id = ?'),
+    updateItems: db.prepare('UPDATE bin_items SET bin_id = ? WHERE bin_id = ?'),
+    updatePhotos: db.prepare('UPDATE photos SET bin_id = ? WHERE bin_id = ?'),
+    updateCustomFields: db.prepare('UPDATE bin_custom_field_values SET bin_id = ? WHERE bin_id = ?'),
+    updatePins: db.prepare('UPDATE pinned_bins SET bin_id = ? WHERE bin_id = ?'),
+    updateScans: db.prepare('UPDATE scan_history SET bin_id = ? WHERE bin_id = ?'),
+    updatePhotoPaths: db.prepare(`UPDATE photos SET
+      storage_path = replace(storage_path, ? || '/', ? || '/'),
+      thumb_path = CASE WHEN thumb_path IS NOT NULL
+        THEN replace(thumb_path, ? || '/', ? || '/')
+        ELSE NULL END
+      WHERE bin_id = ?`),
+    updateActivityLog: db.prepare("UPDATE activity_log SET entity_id = ? WHERE entity_id = ? AND entity_type = 'bin'"),
+    renameBin: db.prepare("UPDATE bins SET id = ?, updated_at = datetime('now') WHERE id = ?"),
+  };
+
+  db.transaction(() => {
+    // defer_foreign_keys is required because steps below update child rows
+    // to reference newCode before the parent row with that ID exists.
+    db.pragma('defer_foreign_keys = ON');
+
+    stmts.deleteBin.run(newCode);
+    stmts.updateItems.run(newCode, id);
+    stmts.updatePhotos.run(newCode, id);
+    stmts.updateCustomFields.run(newCode, id);
+    stmts.updatePins.run(newCode, id);
+    stmts.updateScans.run(newCode, id);
+    stmts.updatePhotoPaths.run(id, newCode, id, newCode, newCode);
+    stmts.updateActivityLog.run(newCode, id);
+    stmts.renameBin.run(newCode, id);
+  })();
+
+  // Post-transaction: clean up deleted bin's photos from disk
+  if (existingPhotos.length > 0) {
+    cleanupBinPhotos(newCode, existingPhotos);
+  }
+
+  // Rename target bin's photo directory
+  const oldDir = path.join(config.photoStoragePath, id);
+  const newDir = path.join(config.photoStoragePath, newCode);
+  try {
+    fs.renameSync(oldDir, newDir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+      console.error(`Failed to rename photo directory ${oldDir} → ${newDir}:`, err);
+    }
+  }
+
+  // Activity logging (fire-and-forget, post-transaction)
+  if (existingBin) {
+    logRouteActivity(req, {
+      entityType: 'bin',
+      locationId: existingBin.location_id,
+      action: 'permanent_delete',
+      entityId: newCode,
+      entityName: existingBin.name,
+    });
+  }
+
+  // Return updated bin
+  const updatedBin = await fetchBinById(newCode, { userId: req.user!.id });
+  if (!updatedBin) {
+    throw new NotFoundError('Bin not found after code change');
+  }
+
+  logRouteActivity(req, {
+    entityType: 'bin',
+    locationId: access.locationId,
+    action: 'code_changed',
+    entityId: newCode,
+    entityName: updatedBin.name,
+    changes: { code: { old: id, new: newCode } },
+  });
+
+  res.json(updatedBin);
 }));
 
 // GET /api/bins/:id — get single bin

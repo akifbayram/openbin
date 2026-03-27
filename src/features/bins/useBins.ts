@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { ApiError, apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Events, notify, useRefreshOn } from '@/lib/eventBus';
 import { useListData } from '@/lib/useListData';
@@ -329,6 +329,32 @@ export async function moveBin(id: string, locationId: string): Promise<void> {
 
 export async function lookupBinByCode(shortCode: string): Promise<Bin> {
   return apiFetch<Bin>(`/api/bins/${encodeURIComponent(shortCode.toUpperCase())}`);
+}
+
+/** Look up a bin by code. Returns the bin if found, null if not found / deleted / forbidden. */
+export async function lookupBinByCodeSafe(code: string): Promise<{ bin: Bin | null; status: 'found' | 'not_found' | 'deleted' | 'forbidden' }> {
+  try {
+    const bin = await apiFetch<Bin>(`/api/bins/${encodeURIComponent(code.toUpperCase())}`);
+    return { bin, status: 'found' };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      if (err.status === 404) return { bin: null, status: 'not_found' };
+      if (err.status === 410) return { bin: null, status: 'deleted' };
+      if (err.status === 403) return { bin: null, status: 'forbidden' };
+    }
+    throw err;
+  }
+}
+
+export async function changeCode(binId: string, newCode: string): Promise<Bin> {
+  const result = await apiFetch<Bin>(`/api/bins/${encodeURIComponent(binId)}/change-code`, {
+    method: 'POST',
+    body: { code: newCode.toUpperCase() },
+  });
+  notifyBinsChanged();
+  notify(Events.PINS);
+  notify(Events.SCAN_HISTORY);
+  return result;
 }
 
 export function useTrashBins() {
