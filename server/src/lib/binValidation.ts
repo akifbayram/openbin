@@ -1,5 +1,13 @@
 import { ValidationError } from './httpErrors.js';
 
+const CODE_REGEX = /^[A-Z0-9]{4,8}$/;
+
+export function validateCodeFormat(code: string): void {
+  if (!CODE_REGEX.test(code)) {
+    throw new ValidationError('Code must be 4-8 alphanumeric characters');
+  }
+}
+
 export function validateBinFields(fields: {
   items?: unknown;
   tags?: unknown;
