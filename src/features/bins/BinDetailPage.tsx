@@ -14,6 +14,7 @@ import { BinDetailSkeleton } from './BinDetailSkeleton';
 import { BinDetailToolbar } from './BinDetailToolbar';
 import { BinEditContent } from './BinEditContent';
 import { BinViewContent } from './BinViewContent';
+import { ChangeCodeDialog } from './ChangeCodeDialog';
 import { DeleteBinDialog } from './DeleteBinDialog';
 import { MoveBinDialog } from './MoveBinDialog';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
@@ -171,6 +172,9 @@ export function BinDetailPage() {
           }
         }}
         onDelete={() => actions.setDeleteOpen(true)}
+        isAdmin={actions.isAdmin}
+        onChangeCode={() => actions.setChangeCodeMode('adopt')}
+        onReassignCode={() => actions.setChangeCodeMode('reassign')}
       />
 
       {edit.editing ? (
@@ -220,6 +224,15 @@ export function BinDetailPage() {
       />
 
       <AiSetupDialog open={actions.aiSetupOpen} onOpenChange={actions.setAiSetupOpen} />
+
+      {actions.changeCodeMode && (
+        <ChangeCodeDialog
+          open={!!actions.changeCodeMode}
+          onOpenChange={(open) => { if (!open) actions.setChangeCodeMode(null); }}
+          mode={actions.changeCodeMode}
+          currentBin={{ id: bin.id, name: bin.name }}
+        />
+      )}
 
       <UnsavedChangesDialog
         open={unsavedOpen}
