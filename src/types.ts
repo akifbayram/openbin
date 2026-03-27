@@ -1,3 +1,7 @@
+// Plan/subscription types
+export type PlanTier = 'lite' | 'pro';
+export type SubscriptionStatus = 'inactive' | 'active' | 'trial';
+
 export interface User {
   id: string;
   username: string;
@@ -6,6 +10,9 @@ export interface User {
   avatarUrl: string | null;
   createdAt: string;
   updatedAt: string;
+  plan?: PlanTier;
+  subscriptionStatus?: SubscriptionStatus;
+  activeUntil?: string | null;
 }
 
 export interface Location {
@@ -260,4 +267,24 @@ export interface AiSuggestions {
   tags: string[];
   notes: string;
   customFields?: Record<string, string>;
+}
+
+export interface PlanFeatures {
+  ai: boolean;
+  apiKeys: boolean;
+  customFields: boolean;
+  fullExport: boolean;
+  maxLocations: number | null;
+  maxBinsPerLocation: number | null;
+  maxPhotoStorageMb: number | null;
+  maxMembersPerLocation: number | null;
+}
+
+export interface PlanInfo {
+  plan: PlanTier;
+  status: SubscriptionStatus;
+  activeUntil: string | null;
+  selfHosted: boolean;
+  features: PlanFeatures;
+  upgradeUrl: string | null;
 }
