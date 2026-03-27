@@ -15,8 +15,8 @@ vi.mock('@/lib/auth', () => ({
 
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { PlanInfo } from '@/types';
 import { PlanProvider, usePlan } from '@/lib/usePlan';
+import type { PlanInfo } from '@/types';
 
 const mockApiFetch = vi.mocked(apiFetch);
 const mockUseAuth = vi.mocked(useAuth);

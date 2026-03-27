@@ -8,7 +8,7 @@ import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '.
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
 import { consumeResetToken } from '../lib/passwordReset.js';
 import { safePath } from '../lib/pathSafety.js';
-import { isSelfHosted, Plan, SubStatus } from '../lib/planGate.js';
+import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, signToken } from '../middleware/auth.js';
@@ -345,8 +345,8 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
     demoMode: config.demoMode,
     createdAt: user.created_at,
     updatedAt: user.updated_at,
-    plan: user.plan === 1 ? 'pro' : 'lite',
-    subscriptionStatus: user.sub_status === 2 ? 'trial' : user.sub_status === 1 ? 'active' : 'inactive',
+    plan: planLabel(user.plan),
+    subscriptionStatus: subStatusLabel(user.sub_status),
     activeUntil: user.active_until || null,
   });
 }));

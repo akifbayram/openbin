@@ -4,12 +4,14 @@ import { query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
+import { Plan, SubStatus } from '../lib/planGate.js';
 
 const router = Router();
 
-// POST /api/subscriptions/callback
+const validPlans = new Set(Object.values(Plan));
+const validStatuses = new Set(Object.values(SubStatus));
+
 router.post('/callback', asyncHandler(async (req, res) => {
-  // Verify JWT from Authorization header
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     throw new UnauthorizedError('Missing authorization token');
@@ -28,19 +30,17 @@ router.post('/callback', asyncHandler(async (req, res) => {
     throw new UnauthorizedError('Invalid subscription token');
   }
 
-  // Validate payload
   const { userId, plan, status, activeUntil } = payload;
   if (!userId || typeof plan !== 'number' || typeof status !== 'number') {
     throw new ValidationError('Invalid callback payload');
   }
-  if (plan !== 0 && plan !== 1) {
+  if (!validPlans.has(plan as (typeof Plan)[keyof typeof Plan])) {
     throw new ValidationError('Invalid plan value');
   }
-  if (status !== 0 && status !== 1 && status !== 2) {
+  if (!validStatuses.has(status as (typeof SubStatus)[keyof typeof SubStatus])) {
     throw new ValidationError('Invalid status value');
   }
 
-  // Update user record
   const result = await query(
     'UPDATE users SET plan = $1, sub_status = $2, active_until = $3, updated_at = datetime(\'now\') WHERE id = $4',
     [plan, status, activeUntil || null, userId],
