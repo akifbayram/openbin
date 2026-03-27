@@ -58,6 +58,10 @@ tags:
     description: Execute multiple bin operations in a single transaction
   - name: Health
     description: Health check for monitoring and orchestration
+  - name: Plan
+    description: Current user plan information and feature entitlements
+  - name: Subscriptions
+    description: Subscription lifecycle callbacks from the billing service
 
 
 components:
@@ -113,6 +117,19 @@ components:
         updatedAt:
           type: string
           format: date-time
+        plan:
+          type: string
+          enum: [lite, pro]
+          description: Current plan tier
+        subscriptionStatus:
+          type: string
+          enum: [inactive, active, trial]
+          description: Current subscription status
+        activeUntil:
+          type: string
+          format: date-time
+          nullable: true
+          description: Date until which the current plan is active (null for self-hosted)
 
     LoginRequest:
       type: object
@@ -1176,6 +1193,99 @@ components:
           enum: [merge, replace]
           description: Import mode — merge adds to existing, replace clears first
 
+    # ── Plan ───────────────────────────────────────────────
+    PlanFeatures:
+      type: object
+      properties:
+        ai:
+          type: boolean
+          description: Access to AI features
+        apiKeys:
+          type: boolean
+          description: Ability to create API keys
+        customFields:
+          type: boolean
+          description: Ability to create custom field definitions
+        fullExport:
+          type: boolean
+          description: Access to JSON and ZIP export formats
+        maxLocations:
+          type: integer
+          nullable: true
+          description: Maximum number of locations (null = unlimited)
+        maxBinsPerLocation:
+          type: integer
+          nullable: true
+          description: Maximum bins per location (null = unlimited)
+        maxPhotoStorageMb:
+          type: integer
+          nullable: true
+          description: Maximum photo storage in MB (null = unlimited)
+        maxMembersPerLocation:
+          type: integer
+          nullable: true
+          description: Maximum members per location (null = unlimited)
+
+    PlanInfo:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [lite, pro]
+          description: Current plan tier
+        status:
+          type: string
+          enum: [inactive, active, trial]
+          description: Current subscription status
+        activeUntil:
+          type: string
+          format: date-time
+          nullable: true
+          description: Date until which the current plan is active (null for self-hosted or no expiry)
+        selfHosted:
+          type: boolean
+          description: Whether the server is running in self-hosted mode (all features unlocked)
+        features:
+          $ref: '#/components/schemas/PlanFeatures'
+        upgradeUrl:
+          type: string
+          nullable: true
+          description: URL to upgrade the plan (null when not applicable)
+
+    PlanRestrictedError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: PLAN_RESTRICTED
+        message:
+          type: string
+        upgrade_url:
+          type: string
+          nullable: true
+          description: URL to upgrade the plan (null when not applicable)
+
+    SubscriptionCallbackRequest:
+      type: object
+      required: [userId, plan, status, activeUntil]
+      properties:
+        userId:
+          type: string
+          description: ID of the user whose subscription is being updated
+        plan:
+          type: integer
+          enum: [0, 1]
+          description: "Plan tier: 0=lite, 1=pro"
+        status:
+          type: integer
+          enum: [0, 1, 2]
+          description: "Subscription status: 0=inactive, 1=active, 2=trial"
+        activeUntil:
+          type: string
+          format: date-time
+          nullable: true
+          description: Date until which the plan is active (null for inactive)
+
   responses:
     Unauthorized:
       description: Missing or invalid authentication
@@ -1244,6 +1354,16 @@ components:
               value:
                 error: GLOBAL_QUOTA_EXCEEDED
                 message: "Demo storage limit reached (50 MB). Please contact the administrator."
+    PlanRestricted:
+      description: Feature requires Pro plan
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PlanRestrictedError'
+          example:
+            error: PLAN_RESTRICTED
+            message: This feature requires a Pro plan
+            upgrade_url: https://example.com/upgrade
 
 paths:
   # ════════════════════════════════════════════════════════
@@ -1281,6 +1401,76 @@ paths:
                     example: Database unreachable
 
   # ════════════════════════════════════════════════════════
+  # Plan
+  # ════════════════════════════════════════════════════════
+  /plan:
+    get:
+      tags: [Plan]
+      summary: Get current user's plan info
+      description: |
+        Returns the current user's plan tier, subscription status, feature entitlements,
+        and whether the server is running in self-hosted mode. In self-hosted mode all
+        features are always available regardless of plan.
+      responses:
+        '200':
+          description: Plan info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanInfo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ════════════════════════════════════════════════════════
+  # Subscriptions
+  # ════════════════════════════════════════════════════════
+  /subscriptions/callback:
+    post:
+      tags: [Subscriptions]
+      summary: Subscription lifecycle callback
+      description: |
+        Called by the billing service to update a user's plan and subscription status.
+        Authentication requires a Bearer JWT signed with `SUBSCRIPTION_JWT_SECRET`.
+        This endpoint is not intended for direct client use.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCallbackRequest'
+      responses:
+        '200':
+          description: Subscription updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '401':
+          description: Invalid or missing subscription JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: UNAUTHORIZED
+                message: Invalid or missing subscription token
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: NOT_FOUND
+                message: User not found
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # ════════════════════════════════════════════════════════
   # Auth
   # ════════════════════════════════════════════════════════
   /auth/status:
@@ -1314,6 +1504,9 @@ paths:
                   baseUrl:
                     type: string
                     description: Base URL for QR codes (present only when qrPayloadMode is url)
+                  selfHosted:
+                    type: boolean
+                    description: Whether the server is running in self-hosted mode (all plan features unlocked)
 
   /auth/demo-login:
     post:
@@ -2267,6 +2460,7 @@ paths:
     post:
       tags: [CustomFields]
       summary: Create a custom field (admin only)
+      description: Requires admin role and Pro plan.
       parameters:
         - name: locationId
           in: path
@@ -2295,7 +2489,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
         '422':
           $ref: '#/components/responses/ValidationError'
 
@@ -2303,6 +2499,7 @@ paths:
     put:
       tags: [CustomFields]
       summary: Reorder custom fields (admin only)
+      description: Requires admin role and Pro plan.
       parameters:
         - name: locationId
           in: path
@@ -2337,7 +2534,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
         '422':
           $ref: '#/components/responses/ValidationError'
 
@@ -2345,6 +2544,7 @@ paths:
     put:
       tags: [CustomFields]
       summary: Rename a custom field (admin only)
+      description: Requires admin role and Pro plan.
       parameters:
         - name: locationId
           in: path
@@ -2379,7 +2579,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -2387,7 +2589,7 @@ paths:
     delete:
       tags: [CustomFields]
       summary: Delete a custom field (admin only)
-      description: Deletes the field definition and all per-bin values (ON DELETE CASCADE).
+      description: Deletes the field definition and all per-bin values (ON DELETE CASCADE). Requires admin role and Pro plan.
       parameters:
         - name: locationId
           in: path
@@ -2415,7 +2617,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -3920,7 +4124,7 @@ paths:
     get:
       tags: [Export]
       summary: Export location as JSON
-      description: Returns V2 format JSON with base64-encoded photos embedded in each bin.
+      description: Returns V2 format JSON with base64-encoded photos embedded in each bin. Requires Pro plan.
       parameters:
         - name: id
           in: path
@@ -3938,13 +4142,15 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
 
   /locations/{id}/export/zip:
     get:
       tags: [Export]
       summary: Export location as ZIP
-      description: Returns a ZIP file containing a JSON manifest and a photos directory.
+      description: Returns a ZIP file containing a JSON manifest and a photos directory. Requires Pro plan.
       parameters:
         - name: id
           in: path
@@ -3963,7 +4169,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
 
   /locations/{id}/export/csv:
     get:
@@ -4215,12 +4423,14 @@ paths:
                 $ref: '#/components/schemas/AiSettings'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/PlanRestricted'
     put:
       tags: [AI]
       summary: Save AI provider settings
       description: |
         Stores AI provider configuration. API key is encrypted at rest when AI_ENCRYPTION_KEY is set.
-        Rate limited to 30 per hour.
+        Rate limited to 30 per hour. Requires Pro plan.
       requestBody:
         required: true
         content:
@@ -4236,6 +4446,8 @@ paths:
                 $ref: '#/components/schemas/AiSettings'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/PlanRestricted'
         '422':
           $ref: '#/components/responses/ValidationError'
     delete:
@@ -4254,6 +4466,8 @@ paths:
                     example: AI settings deleted
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/PlanRestricted'
 
   /ai/analyze:
     post:
@@ -4262,7 +4476,7 @@ paths:
       description: |
         Sends one or more stored photos to the configured AI provider for analysis.
         Returns suggested bin name, items, tags, and notes. Max 5 photos.
-        Rate limited to 30 per hour.
+        Rate limited to 30 per hour. Requires Pro plan.
       requestBody:
         required: true
         content:
@@ -4278,6 +4492,8 @@ paths:
                 $ref: '#/components/schemas/AiSuggestions'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/PlanRestricted'
         '404':
           description: Photo not found or AI not configured
           content:
@@ -4294,7 +4510,7 @@ paths:
       description: |
         Directly uploads image(s) for AI analysis without storing them first.
         Used during onboarding. Accepts up to 5 images, 5MB each.
-        Rate limited to 30 per hour.
+        Rate limited to 30 per hour. Requires Pro plan.
       requestBody:
         required: true
         content:
@@ -4317,6 +4533,8 @@ paths:
                 $ref: '#/components/schemas/AiSuggestions'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/PlanRestricted'
         '404':
           description: AI not configured
           content:
@@ -4332,7 +4550,7 @@ paths:
     post:
       tags: [AI]
       summary: Test AI provider connection
-      description: Validates that the provided AI credentials work by making a test API call.
+      description: Validates that the provided AI credentials work by making a test API call. Requires Pro plan.
       requestBody:
         required: true
         content:
@@ -4353,6 +4571,8 @@ paths:
                     type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/PlanRestricted'
         '422':
           description: Connection failed
           content:
@@ -4368,6 +4588,7 @@ paths:
         Sends raw dictated or typed text to the user's configured AI provider,
         which extracts and normalizes it into a clean list of inventory items.
         Handles filler words, quantity normalization, and deduplication.
+        Requires Pro plan.
       requestBody:
         required: true
         content:
@@ -4414,6 +4635,8 @@ paths:
                     description: Extracted and normalized item list
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/PlanRestricted'
         '422':
           description: Validation error or AI not configured
           content:
@@ -4433,7 +4656,7 @@ paths:
       description: |
         Read-only AI endpoint that streams a natural language answer about inventory
         as Server-Sent Events. Returns structured JSON with matches and answer.
-        Requires location membership. Rate limited: 30/hr for JWT, 1000/hr for API keys.
+        Requires location membership and Pro plan. Rate limited: 30/hr for JWT, 1000/hr for API keys.
       requestBody:
         required: true
         content:
@@ -4461,7 +4684,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
         '422':
           $ref: '#/components/responses/ValidationError'
         '429':
@@ -4474,7 +4699,7 @@ paths:
       description: |
         Streams structured inventory actions parsed from a natural language command.
         The client previews and executes the returned actions using existing mutation endpoints.
-        Requires location membership. Rate limited.
+        Requires location membership and Pro plan. Rate limited.
       requestBody:
         required: true
         content:
@@ -4502,7 +4727,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
         '422':
           $ref: '#/components/responses/ValidationError'
         '429':
@@ -4515,7 +4742,7 @@ paths:
       description: |
         Combined endpoint that handles both inventory queries and mutation commands
         via a single natural language input. The AI determines intent and responds
-        accordingly. Requires location membership. Rate limited.
+        accordingly. Requires location membership and Pro plan. Rate limited.
       requestBody:
         required: true
         content:
@@ -4542,7 +4769,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
         '422':
           $ref: '#/components/responses/ValidationError'
         '429':
@@ -4554,7 +4783,7 @@ paths:
       summary: Stream structured items from dictated text via SSE
       description: |
         Streaming version of /ai/structure-text. Sends raw text to AI and streams
-        back extracted, normalized inventory items as SSE events.
+        back extracted, normalized inventory items as SSE events. Requires Pro plan.
       requestBody:
         required: true
         content:
@@ -4585,6 +4814,8 @@ paths:
                 type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/PlanRestricted'
         '422':
           $ref: '#/components/responses/ValidationError'
         '429':
@@ -4597,6 +4828,7 @@ paths:
       description: |
         Streaming version of /ai/analyze-image. Uploads image(s) and streams back
         AI suggestions (name, items, tags, notes) as SSE events. Max 5 images, 5MB each.
+        Requires Pro plan.
       requestBody:
         required: true
         content:
@@ -4629,7 +4861,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
         '422':
           $ref: '#/components/responses/ValidationError'
         '429':
@@ -4641,7 +4875,7 @@ paths:
       summary: Stream AI analysis of stored photo(s) via SSE
       description: |
         Streaming version of /ai/analyze. Analyzes one or more stored photos and
-        streams back AI suggestions as SSE events. Max 5 photos.
+        streams back AI suggestions as SSE events. Max 5 photos. Requires Pro plan.
       requestBody:
         required: true
         content:
@@ -4657,6 +4891,8 @@ paths:
                 type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/PlanRestricted'
         '404':
           description: Photo not found or AI not configured
           content:
@@ -4673,6 +4909,7 @@ paths:
       description: |
         Takes a previous analysis result and a user correction, streams back
         the revised suggestions. Used for iterative refinement of AI analysis.
+        Requires Pro plan.
       requestBody:
         required: true
         content:
@@ -4716,7 +4953,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
         '422':
           $ref: '#/components/responses/ValidationError'
         '429':
@@ -4789,7 +5028,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          oneOf:
+            - $ref: '#/components/responses/Forbidden'
+            - $ref: '#/components/responses/PlanRestricted'
         '422':
           $ref: '#/components/responses/ValidationError'
         '429':
@@ -5006,6 +5247,7 @@ paths:
       description: |
         Creates a new API key. The full key is returned only in this response — it cannot be retrieved later.
         Maximum 10 active keys per user. Keys use the format `sk_openbin_<64 hex chars>`.
+        Requires Pro plan.
       requestBody:
         content:
           application/json:
@@ -5025,6 +5267,8 @@ paths:
                 $ref: '#/components/schemas/ApiKeyCreateResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/PlanRestricted'
         '422':
           $ref: '#/components/responses/ValidationError'
 
