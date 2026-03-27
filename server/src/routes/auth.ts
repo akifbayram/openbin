@@ -16,11 +16,16 @@ const router = Router();
 
 // GET /api/auth/status — public (no auth required)
 router.get('/status', (_req, res) => {
-  res.json({
+  const body: Record<string, unknown> = {
     registrationEnabled: config.registrationMode !== 'closed',
     registrationMode: config.registrationMode,
     demoMode: config.demoMode,
-  });
+    qrPayloadMode: config.qrPayloadMode,
+  };
+  if (config.qrPayloadMode === 'url' && config.baseUrl) {
+    body.baseUrl = config.baseUrl;
+  }
+  res.json(body);
 });
 
 // POST /api/auth/demo-login — log in as demo user (only when DEMO_MODE is enabled)

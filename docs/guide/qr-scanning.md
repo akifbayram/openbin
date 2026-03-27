@@ -9,7 +9,12 @@ next:
 
 # QR Scanning
 
-Each bin's QR label encodes a URL containing its 6-character short code (`/bin/CODE`). Scanning navigates to the bin's detail page.
+Each bin's QR label encodes its 6-character short code. The format depends on the server's `QR_PAYLOAD_MODE` setting:
+
+- **`app` mode** (default): Encodes `openbin://bin/CODE`. Domain-independent — works even if you change your server URL. Generic phone cameras will display the URI as text rather than a clickable link.
+- **`url` mode**: Encodes `{BASE_URL}/bin/CODE`. Works with any phone camera as a standard web link. Requires a stable domain configured via the `BASE_URL` environment variable.
+
+The in-app scanner recognizes both formats, so labels printed in one mode continue to work after switching.
 
 ## Camera Scanner
 

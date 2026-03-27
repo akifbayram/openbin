@@ -85,6 +85,27 @@ export const config = Object.freeze({
   backupPath: process.env.BACKUP_PATH || './data/backups',
   backupWebhookUrl: process.env.BACKUP_WEBHOOK_URL || '',
 
+  // QR payload
+  qrPayloadMode: (() => {
+    const mode = process.env.QR_PAYLOAD_MODE;
+    if (mode === 'url') return 'url' as const;
+    return 'app' as const;
+  })(),
+  baseUrl: (() => {
+    const raw = process.env.BASE_URL;
+    if (!raw) return null;
+    const trimmed = raw.replace(/\/+$/, '');
+    if (!/^https?:\/\//.test(trimmed)) {
+      console.warn('BASE_URL must start with http:// or https://, ignoring:', raw);
+      return null;
+    }
+    if (/[?#]/.test(trimmed)) {
+      console.warn('BASE_URL must not contain query strings or fragments, ignoring:', raw);
+      return null;
+    }
+    return trimmed;
+  })(),
+
   // Rate limiting
   disableRateLimit: process.env.NODE_ENV === 'test' || parseBool(process.env.DISABLE_RATE_LIMIT, false),
   aiRateLimit: clamp(parseInt(process.env.AI_RATE_LIMIT || '30', 10), 1, 10000, 30),

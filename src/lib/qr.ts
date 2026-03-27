@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
-import { getBinUrl } from './constants';
+import { getBinQrPayload } from './constants';
 
-export const BIN_URL_REGEX = /(?:#\/bin\/|\/bin\/)([A-Z0-9]{4,8})/i;
+export const BIN_URL_REGEX = /(?:openbin:\/\/bin\/|https?:\/\/[^/]+(?:\/[^/]+)*\/bin\/)([A-Z0-9]{4,8})(?:[/?#]|$)/i;
 
 export interface QRColorOptions {
   dark: string;
@@ -42,8 +42,8 @@ export async function generateQRDataURL(
   const cached = cacheGet(key);
   if (cached) return cached;
 
-  const url = getBinUrl(binId);
-  const dataUrl = await QRCode.toDataURL(url, {
+  const payload = getBinQrPayload(binId);
+  const dataUrl = await QRCode.toDataURL(payload, {
     width: size,
     margin: 1,
     color: { dark, light },

@@ -10,7 +10,11 @@ import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { AuthProvider } from '@/lib/auth';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { NavigationGuardProvider } from '@/lib/navigationGuard';
+import { initQrConfig } from '@/lib/qrConfig';
 import { UserPreferencesProvider } from '@/lib/userPreferences';
+
+// Fire-and-forget: fetch QR config early. getQrConfig() returns safe default (app mode) until this resolves.
+initQrConfig();
 
 const BinListPage = lazyWithRetry(() =>
   import('@/features/bins/BinListPage').then((m) => ({ default: m.BinListPage }))

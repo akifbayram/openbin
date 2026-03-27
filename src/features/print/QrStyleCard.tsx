@@ -67,7 +67,7 @@ function MiniPreview({ style }: { style: QrStyleOptions }) {
     async function render() {
       try {
         const { generateStyledQRDataURL } = await import('@/lib/styledQr');
-        const url = await generateStyledQRDataURL('DEMO01', 280, style);
+        const url = await generateStyledQRDataURL('DEMOBN', 280, style);
         if (cancelled) return;
 
         if (dataUrl) {

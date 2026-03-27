@@ -97,6 +97,9 @@ All settings are optional. Set environment variables or create a `.env` file to 
 | `BACKUP_RETENTION` | Number of backup files to keep (1–365) | `7` |
 | `BACKUP_PATH` | Directory for backup files | `./data/backups` |
 | `BACKUP_WEBHOOK_URL` | Webhook URL for backup notifications | — |
+| **QR Code Payload** | | |
+| `QR_PAYLOAD_MODE` | QR encoding mode: `app` (openbin:// URI) or `url` (web URL) | `app` |
+| `BASE_URL` | Full URL for `url` mode (e.g. `https://inventory.example.com`) | — |
 | **Rate Limiting** | | |
 | `AI_RATE_LIMIT` | Max AI requests per hour per user | `30` |
 | `AI_RATE_LIMIT_API_KEY` | Max AI requests per hour per API key | `1000` |

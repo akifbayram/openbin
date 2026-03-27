@@ -21,11 +21,31 @@ Returns server configuration flags relevant to the auth UI. No authentication re
 ```json
 {
   "registrationEnabled": true,
-  "registrationMode": "open"
+  "registrationMode": "open",
+  "demoMode": false,
+  "qrPayloadMode": "app"
 }
 ```
 
-`registrationMode` is one of `"open"`, `"invite"`, or `"closed"`. `registrationEnabled` is `true` unless mode is `"closed"` (kept for backward compatibility).
+When `QR_PAYLOAD_MODE=url`:
+
+```json
+{
+  "registrationEnabled": true,
+  "registrationMode": "open",
+  "demoMode": false,
+  "qrPayloadMode": "url",
+  "baseUrl": "https://inventory.example.com"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `registrationEnabled` | boolean | `true` unless mode is `"closed"` (kept for backward compatibility) |
+| `registrationMode` | string | One of `"open"`, `"invite"`, or `"closed"` |
+| `demoMode` | boolean | Whether demo mode is enabled |
+| `qrPayloadMode` | string | QR code encoding mode: `"app"` (openbin:// URI) or `"url"` (full web URL) |
+| `baseUrl` | string? | Present only when `qrPayloadMode` is `"url"`. The base URL used in QR payloads. |
 
 ---
 

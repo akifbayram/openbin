@@ -1,5 +1,5 @@
 import type { QrStyleOptions } from '@/features/print/usePrintSettings';
-import { getBinUrl } from './constants';
+import { getBinQrPayload } from './constants';
 import type { QRColorOptions } from './qr';
 
 // Module-level import cache — import once, reuse forever
@@ -49,7 +49,7 @@ export async function generateStyledQRDataURL(
   if (cached) return cached;
 
   const Ctor = await getQRCodeStyling();
-  const url = getBinUrl(binId);
+  const payload = getBinQrPayload(binId);
 
   const bgColor = colorOverride?.light ?? '#ffffff';
   const errorCorrectionLevel = style.errorCorrection;
@@ -58,7 +58,7 @@ export async function generateStyledQRDataURL(
     width: size,
     height: size,
     type: 'canvas',
-    data: url,
+    data: payload,
     margin: 4,
     qrOptions: {
       errorCorrectionLevel,

@@ -1270,9 +1270,20 @@ paths:
                   registrationEnabled:
                     type: boolean
                     description: Whether new user registration is allowed
+                  registrationMode:
+                    type: string
+                    enum: [open, invite, closed]
+                    description: Registration policy
                   demoMode:
                     type: boolean
                     description: Whether demo mode is enabled (shows demo login button)
+                  qrPayloadMode:
+                    type: string
+                    enum: [app, url]
+                    description: "QR code encoding mode: app (openbin:// URI) or url (web URL using baseUrl)"
+                  baseUrl:
+                    type: string
+                    description: Base URL for QR codes (present only when qrPayloadMode is url)
 
   /auth/demo-login:
     post:

@@ -113,6 +113,21 @@ Backup files are written to `/data/backups/` inside the container (`BACKUP_PATH`
 
 ---
 
+### QR Code Payload
+
+Controls what data is encoded in printed QR labels.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `QR_PAYLOAD_MODE` | `app` | QR encoding mode. `app` — encodes `openbin://bin/CODE` (domain-independent, requires in-app scanner). `url` — encodes `{BASE_URL}/bin/CODE` (works with any phone camera, requires a stable domain). |
+| `BASE_URL` | _(unset)_ | The full URL of your OpenBin instance (e.g. `https://inventory.example.com`). Required when `QR_PAYLOAD_MODE=url`. Trailing slashes are stripped automatically. Must start with `http://` or `https://`. |
+
+::: tip Choosing a mode
+Use `app` (default) if you don't have a stable domain or want QR labels to survive domain changes. Use `url` if you want anyone to scan labels with their phone camera without installing anything. The in-app scanner recognizes both formats, so labels printed in one mode continue to work after switching.
+:::
+
+---
+
 ### Advanced
 
 | Variable | Default | Description |
