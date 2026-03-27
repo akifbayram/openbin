@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { ArrowRightLeft, Check, ChevronLeft, ChevronRight, Copy, Loader2, Lock, MoreHorizontal, Pencil, Pin, Printer, QrCode, Replace, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowRightLeft, Check, ChevronLeft, ChevronRight, Copy, Loader2, Lock, MoreHorizontal, Pencil, Pin, Printer, QrCode, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { MenuButton } from '@/components/ui/menu-button';
@@ -39,7 +39,6 @@ interface BinDetailToolbarProps {
   onDelete: () => void;
   isAdmin: boolean;
   onChangeCode: () => void;
-  onReassignCode: () => void;
 }
 
 export function BinDetailToolbar({
@@ -71,7 +70,6 @@ export function BinDetailToolbar({
   onDelete,
   isAdmin,
   onChangeCode,
-  onReassignCode,
 }: BinDetailToolbarProps) {
   const t = useTerminology();
   const { visible, animating, close, toggle } = usePopover();
@@ -291,16 +289,6 @@ export function BinDetailToolbar({
                   >
                     <QrCode className="h-4 w-4 text-[var(--text-tertiary)]" />
                     Change Code
-                  </button>
-                )}
-                {isAdmin && (
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
-                    onClick={() => handleItem(onReassignCode)}
-                  >
-                    <Replace className="h-4 w-4 text-[var(--text-tertiary)]" />
-                    Reassign Code
                   </button>
                 )}
                 {canDelete && (

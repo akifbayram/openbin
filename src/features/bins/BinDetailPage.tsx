@@ -173,8 +173,7 @@ export function BinDetailPage() {
         }}
         onDelete={() => actions.setDeleteOpen(true)}
         isAdmin={actions.isAdmin}
-        onChangeCode={() => actions.setChangeCodeMode('adopt')}
-        onReassignCode={() => actions.setChangeCodeMode('reassign')}
+        onChangeCode={() => actions.setChangeCodeOpen(true)}
       />
 
       {edit.editing ? (
@@ -225,14 +224,11 @@ export function BinDetailPage() {
 
       <AiSetupDialog open={actions.aiSetupOpen} onOpenChange={actions.setAiSetupOpen} />
 
-      {actions.changeCodeMode && (
-        <ChangeCodeDialog
-          open={!!actions.changeCodeMode}
-          onOpenChange={(open) => { if (!open) actions.setChangeCodeMode(null); }}
-          mode={actions.changeCodeMode}
-          currentBin={{ id: bin.id, name: bin.name }}
-        />
-      )}
+      <ChangeCodeDialog
+        open={actions.changeCodeOpen}
+        onOpenChange={actions.setChangeCodeOpen}
+        currentBin={{ id: bin.id, name: bin.name }}
+      />
 
       <UnsavedChangesDialog
         open={unsavedOpen}

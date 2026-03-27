@@ -220,6 +220,24 @@ Moves a bin to a different location. The user must be a member of both locations
 
 ---
 
+### POST /api/bins/`{id}`/change-code
+
+Changes a bin's shortcode (primary key). If the new code belongs to another bin, that bin is permanently deleted. Requires admin role in the bin's location (and the target bin's location, if cross-location).
+
+**Path parameters**: `id` (bin ID of the survivor)
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `code` | string | Yes | New code to adopt. Must be 4-8 uppercase alphanumeric characters (`^[A-Z0-9]{4,8}$`). |
+
+**Response (200)**: Updated `Bin` object with the new code as its `id`.
+
+**Errors**: `403` if not admin, `404` if bin not found, `409` if concurrent modification, `422` if invalid code format or same as current code.
+
+---
+
 ### DELETE /api/bins/`{id}`/permanent
 
 Permanently deletes a bin and removes its photos from storage. Only works on bins that are already soft-deleted (in trash).

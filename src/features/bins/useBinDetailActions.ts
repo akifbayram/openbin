@@ -33,7 +33,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [aiSetupOpen, setAiSetupOpen] = useState(false);
-  const [changeCodeMode, setChangeCodeMode] = useState<'adopt' | 'reassign' | null>(null);
+  const [changeCodeOpen, setChangeCodeOpen] = useState(false);
 
   const quickAdd = useQuickAdd({
     binId: id,
@@ -197,7 +197,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     deleteOpen, setDeleteOpen,
     moveOpen, setMoveOpen,
     aiSetupOpen, setAiSetupOpen,
-    changeCodeMode, setChangeCodeMode,
+    changeCodeOpen, setChangeCodeOpen,
     isAdmin,
   };
 }

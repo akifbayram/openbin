@@ -1,23 +1,23 @@
-import { Keyboard, Loader2, QrCode } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { OptionGroup } from '@/components/ui/option-group';
 import { useToast } from '@/components/ui/toast';
 import { Html5QrcodePlugin } from '@/features/qrcode/Html5QrcodePlugin';
 import { BIN_CODE_REGEX, BIN_URL_REGEX } from '@/lib/qr';
-import { cn } from '@/lib/utils';
 import { changeCode, lookupBinByCodeSafe } from './useBins';
 
 interface ChangeCodeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: 'adopt' | 'reassign';
   currentBin: { id: string; name: string };
 }
 
+type Mode = 'adopt' | 'reassign';
 type Step = 'input' | 'confirm' | 'submitting';
-type InputMode = 'manual' | 'scan';
 
 interface LookupResult {
   code: string;
@@ -25,12 +25,17 @@ interface LookupResult {
   binName?: string;
 }
 
-export function ChangeCodeDialog({ open, onOpenChange, mode, currentBin }: ChangeCodeDialogProps) {
+const MODE_OPTIONS = [
+  { key: 'adopt' as const, label: 'Use a new code' },
+  { key: 'reassign' as const, label: 'Give code away' },
+];
+
+export function ChangeCodeDialog({ open, onOpenChange, currentBin }: ChangeCodeDialogProps) {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
+  const [mode, setMode] = useState<Mode>('adopt');
   const [step, setStep] = useState<Step>('input');
-  const [inputMode, setInputMode] = useState<InputMode>('manual');
   const [code, setCode] = useState('');
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
@@ -39,14 +44,22 @@ export function ChangeCodeDialog({ open, onOpenChange, mode, currentBin }: Chang
   // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
+      setMode('adopt');
       setStep('input');
-      setInputMode('manual');
       setCode('');
       setLookupResult(null);
       setLookingUp(false);
       setError('');
     }
   }, [open]);
+
+  function handleModeChange(newMode: Mode) {
+    setMode(newMode);
+    setCode('');
+    setLookupResult(null);
+    setError('');
+    setStep('input');
+  }
 
   const isValidCode = BIN_CODE_REGEX.test(code) && code !== currentBin.id;
 
@@ -60,6 +73,12 @@ export function ChangeCodeDialog({ open, onOpenChange, mode, currentBin }: Chang
 
       if (result.status === 'forbidden') {
         setError('You do not have admin access to the location that owns this code.');
+        setLookingUp(false);
+        return;
+      }
+
+      if (mode === 'reassign' && result.status !== 'found') {
+        setError('No bin found with that code.');
         setLookingUp(false);
         return;
       }
@@ -82,8 +101,6 @@ export function ChangeCodeDialog({ open, onOpenChange, mode, currentBin }: Chang
     setStep('submitting');
 
     try {
-      // In adopt mode: current bin adopts the entered code
-      // In reassign mode: the entered code's bin adopts current bin's code
       const targetBinId = mode === 'adopt' ? currentBin.id : lookupResult.code;
       const newCode = mode === 'adopt' ? lookupResult.code : currentBin.id;
 
@@ -91,8 +108,6 @@ export function ChangeCodeDialog({ open, onOpenChange, mode, currentBin }: Chang
 
       onOpenChange(false);
       showToast({ message: `Code changed to ${result.id}` });
-
-      // Navigate to the bin with its new code
       navigate(`/bin/${result.id}`, { replace: true });
     } catch {
       setError('Failed to change code. Please try again.');
@@ -100,17 +115,13 @@ export function ChangeCodeDialog({ open, onOpenChange, mode, currentBin }: Chang
     }
   }
 
-  // Scanner callback
   const handleScan = useCallback((decodedText: string) => {
     const match = decodedText.match(BIN_URL_REGEX);
     if (match) {
-      const scannedCode = match[1].toUpperCase();
-      setCode(scannedCode);
-      setInputMode('manual');
+      setCode(match[1].toUpperCase());
     }
   }, []);
 
-  const title = mode === 'adopt' ? 'Change Code' : 'Reassign Code';
   const description = mode === 'adopt'
     ? 'Scan or enter the code from the label you want this bin to use.'
     : `Enter the code of the bin that should receive code ${currentBin.id}.`;
@@ -122,71 +133,59 @@ export function ChangeCodeDialog({ open, onOpenChange, mode, currentBin }: Chang
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>Change Code</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         {step === 'input' && (
           <div className="space-y-4 py-2">
-            {/* Input mode toggle */}
-            <div className="flex gap-1 p-1 rounded-lg bg-[var(--bg-flat)]">
-              <button
-                type="button"
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[13px] font-medium transition-colors',
-                  inputMode === 'manual'
-                    ? 'bg-[var(--bg-card)] text-[var(--text-primary)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                )}
-                onClick={() => setInputMode('manual')}
-              >
-                <Keyboard className="h-3.5 w-3.5" />
-                Enter Code
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[13px] font-medium transition-colors',
-                  inputMode === 'scan'
-                    ? 'bg-[var(--bg-card)] text-[var(--text-primary)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                )}
-                onClick={() => setInputMode('scan')}
-              >
-                <QrCode className="h-3.5 w-3.5" />
-                Scan QR
-              </button>
-            </div>
+            <OptionGroup options={MODE_OPTIONS} value={mode} onChange={handleModeChange} size="sm" />
 
-            {inputMode === 'manual' ? (
-              <div className="space-y-3">
-                <input
-                  type="text"
+            {open && <Html5QrcodePlugin onScanSuccess={handleScan} />}
+
+            <div>
+              <div className="flex gap-2">
+                <Input
                   value={code}
                   onChange={(e) => {
                     setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8));
                     setError('');
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && isValidCode && !lookingUp) {
+                      e.preventDefault();
+                      handleLookup();
+                    }
+                  }}
                   placeholder="Enter code..."
                   maxLength={8}
-                  className="w-full rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] px-3.5 py-2.5 text-base font-mono tracking-wider text-center uppercase text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                  autoComplete="off"
-                  autoFocus
-                  onKeyDown={(e) => { if (e.key === 'Enter' && isValidCode && !lookingUp) handleLookup(); }}
+                  disabled={lookingUp}
+                  className="flex-1 font-mono uppercase tracking-widest"
                 />
-                {code && code === currentBin.id && (
-                  <p className="text-[13px] text-[var(--destructive)]">This is already this bin&apos;s code.</p>
-                )}
+                <Button
+                  onClick={handleLookup}
+                  disabled={!isValidCode || lookingUp}
+                  className="rounded-[var(--radius-md)] shrink-0"
+                >
+                  {lookingUp ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4 mr-1.5" />
+                      Look Up
+                    </>
+                  )}
+                </Button>
               </div>
-            ) : (
-              <Html5QrcodePlugin onScanSuccess={handleScan} />
-            )}
-
-            {error && (
-              <p className="text-[13px] text-[var(--destructive)]">{error}</p>
-            )}
+              {code && code === currentBin.id && (
+                <p className="mt-2 text-[13px] text-[var(--destructive)]">This is already this bin&apos;s code.</p>
+              )}
+              {error && (
+                <p className="mt-2 text-[13px] text-[var(--destructive)]">{error}</p>
+              )}
+            </div>
           </div>
         )}
 
@@ -218,16 +217,7 @@ export function ChangeCodeDialog({ open, onOpenChange, mode, currentBin }: Chang
         {step !== 'submitting' && (
           <DialogFooter>
             {step === 'input' && (
-              <>
-                <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancel</Button>
-                <Button
-                  onClick={handleLookup}
-                  disabled={!isValidCode || lookingUp}
-                  aria-label="Look up"
-                >
-                  {lookingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Look Up'}
-                </Button>
-              </>
+              <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancel</Button>
             )}
             {step === 'confirm' && (
               <>

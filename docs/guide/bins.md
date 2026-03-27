@@ -104,6 +104,7 @@ Every bin has a 6-character alphanumeric short code auto-generated from its name
 - Appears printed on QR labels alongside the QR code itself.
 - Can be typed manually into the scanner or search bar to look up a bin without a camera.
 - Is stable — it does not change if you rename the bin.
+- Can be changed by admins via the overflow menu on the bin detail page (Change Code). If the target code belongs to another bin, that bin is permanently deleted.
 
 ## Soft Delete and Trash
 

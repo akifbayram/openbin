@@ -31,13 +31,12 @@ vi.mock('react-router-dom', async () => {
 describe('ChangeCodeDialog', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('renders adopt mode title', () => {
+  it('renders with Change Code title', () => {
     render(
       <MemoryRouter>
         <ChangeCodeDialog
           open={true}
           onOpenChange={() => {}}
-          mode="adopt"
           currentBin={{ id: 'ABCDEF', name: 'My Bin' }}
         />
       </MemoryRouter>
@@ -45,18 +44,18 @@ describe('ChangeCodeDialog', () => {
     expect(screen.getByText('Change Code')).toBeTruthy();
   });
 
-  it('renders reassign mode title', () => {
+  it('shows mode selector with both options', () => {
     render(
       <MemoryRouter>
         <ChangeCodeDialog
           open={true}
           onOpenChange={() => {}}
-          mode="reassign"
           currentBin={{ id: 'ABCDEF', name: 'My Bin' }}
         />
       </MemoryRouter>
     );
-    expect(screen.getByText('Reassign Code')).toBeTruthy();
+    expect(screen.getByText('Use a new code')).toBeTruthy();
+    expect(screen.getByText('Give code away')).toBeTruthy();
   });
 
   it('auto-uppercases manual input', () => {
@@ -65,7 +64,6 @@ describe('ChangeCodeDialog', () => {
         <ChangeCodeDialog
           open={true}
           onOpenChange={() => {}}
-          mode="adopt"
           currentBin={{ id: 'ABCDEF', name: 'My Bin' }}
         />
       </MemoryRouter>
@@ -81,7 +79,6 @@ describe('ChangeCodeDialog', () => {
         <ChangeCodeDialog
           open={true}
           onOpenChange={() => {}}
-          mode="adopt"
           currentBin={{ id: 'ABCDEF', name: 'My Bin' }}
         />
       </MemoryRouter>
