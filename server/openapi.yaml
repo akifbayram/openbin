@@ -2897,6 +2897,48 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /bins/{id}/change-code:
+    post:
+      summary: Change bin shortcode
+      description: |
+        Change a bin's shortcode (primary key). If the new code belongs to another bin,
+        that bin is permanently deleted. Requires admin role.
+      tags: [Bins]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the bin whose code will change (the survivor)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  pattern: '^[A-Z0-9]{4,8}$'
+                  description: New code to adopt
+      responses:
+        '200':
+          description: Bin with updated code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bin'
+        '403':
+          description: Not admin in one or both locations
+        '404':
+          description: Target bin not found
+        '409':
+          description: Conflict (concurrent modification)
+        '422':
+          description: Invalid code format or same as current code
+
   /bins/{id}/permanent:
     delete:
       tags: [Bins]
