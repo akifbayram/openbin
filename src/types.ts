@@ -278,6 +278,7 @@ export interface PlanFeatures {
   maxBinsPerLocation: number | null;
   maxPhotoStorageMb: number | null;
   maxMembersPerLocation: number | null;
+  activityRetentionDays: number | null;
 }
 
 export interface PlanInfo {

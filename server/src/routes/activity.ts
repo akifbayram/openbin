@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { getUserFeatures } from '../lib/planGate.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 
@@ -19,6 +20,13 @@ router.get('/:locationId/activity', requireLocationMember('locationId'), asyncHa
   let whereClause = 'WHERE al.location_id = $1';
   const params: unknown[] = [locationId];
   let paramIdx = 2;
+
+  // Plan quota: activity log retention window
+  const features = await getUserFeatures(req.user!.id);
+  if (features.activityRetentionDays !== null) {
+    whereClause += ` AND al.created_at >= datetime('now', $${paramIdx++})`;
+    params.push(`-${features.activityRetentionDays} days`);
+  }
 
   if (entityType) {
     whereClause += ` AND al.entity_type = $${paramIdx++}`;

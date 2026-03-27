@@ -35,6 +35,7 @@ const SELF_HOSTED_PLAN: PlanInfo = {
     maxBinsPerLocation: null,
     maxPhotoStorageMb: null,
     maxMembersPerLocation: null,
+    activityRetentionDays: null,
   },
   upgradeUrl: null,
 };
@@ -50,9 +51,10 @@ const LITE_PLAN: PlanInfo = {
     customFields: false,
     fullExport: false,
     maxLocations: 1,
-    maxBinsPerLocation: 50,
+    maxBinsPerLocation: 100,
     maxPhotoStorageMb: 100,
-    maxMembersPerLocation: 5,
+    maxMembersPerLocation: 1,
+    activityRetentionDays: 30,
   },
   upgradeUrl: 'https://example.com/upgrade',
 };
@@ -69,8 +71,9 @@ const PRO_PLAN: PlanInfo = {
     fullExport: true,
     maxLocations: null,
     maxBinsPerLocation: null,
-    maxPhotoStorageMb: null,
+    maxPhotoStorageMb: 2048,
     maxMembersPerLocation: null,
+    activityRetentionDays: 90,
   },
   upgradeUrl: null,
 };

@@ -30,8 +30,9 @@ const PRO_FEATURES = {
   fullExport: true,
   maxLocations: null,
   maxBinsPerLocation: null,
-  maxPhotoStorageMb: null,
+  maxPhotoStorageMb: 2048,
   maxMembersPerLocation: null,
+  activityRetentionDays: 90,
 };
 
 const LITE_FEATURES = {
@@ -39,10 +40,11 @@ const LITE_FEATURES = {
   apiKeys: false,
   customFields: false,
   fullExport: false,
-  maxLocations: 3,
+  maxLocations: 1,
   maxBinsPerLocation: 100,
-  maxPhotoStorageMb: 500,
-  maxMembersPerLocation: 5,
+  maxPhotoStorageMb: 100,
+  maxMembersPerLocation: 1,
+  activityRetentionDays: 30,
 };
 
 beforeEach(() => {
@@ -151,7 +153,7 @@ describe('GET /api/plan', () => {
     expect(res.body.selfHosted).toBe(false);
     expect(res.body.upgradeUrl).toBe('https://manager.example.com/auth/openbin?token=abc');
     expect(res.body.features.ai).toBe(false);
-    expect(res.body.features.maxLocations).toBe(3);
+    expect(res.body.features.maxLocations).toBe(1);
     expect(res.body.features.maxBinsPerLocation).toBe(100);
   });
 

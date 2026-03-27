@@ -24,6 +24,7 @@ export interface PlanFeatures {
   maxBinsPerLocation: number | null;
   maxPhotoStorageMb: number | null;
   maxMembersPerLocation: number | null;
+  activityRetentionDays: number | null;
 }
 
 export function isSelfHosted(): boolean {
@@ -73,7 +74,7 @@ export function subStatusLabel(status: SubStatusType): 'active' | 'trial' | 'ina
 }
 
 export function getFeatureMap(plan: PlanTier): PlanFeatures {
-  if (config.selfHosted || plan === Plan.PRO) {
+  if (config.selfHosted) {
     return {
       ai: true,
       apiKeys: true,
@@ -83,6 +84,20 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
       maxBinsPerLocation: null,
       maxPhotoStorageMb: null,
       maxMembersPerLocation: null,
+      activityRetentionDays: null,
+    };
+  }
+  if (plan === Plan.PRO) {
+    return {
+      ai: true,
+      apiKeys: true,
+      customFields: true,
+      fullExport: true,
+      maxLocations: null,
+      maxBinsPerLocation: null,
+      maxPhotoStorageMb: 2048,
+      maxMembersPerLocation: null,
+      activityRetentionDays: 90,
     };
   }
   return {
@@ -90,11 +105,31 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
     apiKeys: false,
     customFields: false,
     fullExport: false,
-    maxLocations: 3,
+    maxLocations: 1,
     maxBinsPerLocation: 100,
-    maxPhotoStorageMb: 500,
-    maxMembersPerLocation: 5,
+    maxPhotoStorageMb: 100,
+    maxMembersPerLocation: 1,
+    activityRetentionDays: 30,
   };
+}
+
+/** Get feature map for a user based on their plan. Self-hosted always returns Pro features. */
+export async function getUserFeatures(userId: string): Promise<PlanFeatures> {
+  if (config.selfHosted) return getFeatureMap(Plan.PRO);
+  const planInfo = await getUserPlanInfo(userId);
+  if (!planInfo) return getFeatureMap(Plan.PRO);
+  return getFeatureMap(planInfo.plan);
+}
+
+/** Get feature map based on the location owner's plan. Used for location-level quotas. */
+export async function getLocationOwnerFeatures(locationId: string): Promise<PlanFeatures> {
+  if (config.selfHosted) return getFeatureMap(Plan.PRO);
+  const result = await query<{ plan: number }>(
+    'SELECT u.plan FROM locations l JOIN users u ON u.id = l.created_by WHERE l.id = $1',
+    [locationId],
+  );
+  if (result.rows.length === 0) return getFeatureMap(Plan.PRO);
+  return getFeatureMap(result.rows[0].plan as PlanTier);
 }
 
 /**

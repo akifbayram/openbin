@@ -18,6 +18,7 @@ const SELF_HOSTED_PLAN: PlanInfo = {
     maxBinsPerLocation: null,
     maxPhotoStorageMb: null,
     maxMembersPerLocation: null,
+    activityRetentionDays: null,
   },
   upgradeUrl: null,
 };

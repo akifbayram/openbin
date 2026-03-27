@@ -4,8 +4,9 @@ import { generateUuid, query } from '../db.js';
 import { computeChanges } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { ConflictError, ForbiddenError, NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
+import { generateUpgradeUrl, getLocationOwnerFeatures, getUserFeatures, getUserPlanInfo } from '../lib/planGate.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { validateRetentionDays } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
@@ -59,6 +60,23 @@ router.post('/', asyncHandler(async (req, res) => {
   const { name } = req.body;
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     throw new ValidationError('Location name is required');
+  }
+
+  // Plan quota: max locations per user
+  const features = await getUserFeatures(req.user!.id);
+  if (features.maxLocations !== null) {
+    const countResult = await query<{ cnt: number }>(
+      'SELECT COUNT(*) as cnt FROM locations WHERE created_by = $1',
+      [req.user!.id],
+    );
+    if (countResult.rows[0].cnt >= features.maxLocations) {
+      const planInfo = await getUserPlanInfo(req.user!.id);
+      const upgradeUrl = planInfo ? generateUpgradeUrl(req.user!.id, planInfo.email) : null;
+      throw new PlanRestrictedError(
+        `Your plan allows a maximum of ${features.maxLocations} location${features.maxLocations === 1 ? '' : 's'}`,
+        upgradeUrl,
+      );
+    }
   }
 
   const inviteCode = generateInviteCode();
@@ -277,6 +295,18 @@ router.post('/join', asyncHandler(async (req, res) => {
   // Check if already a member
   if (await verifyLocationMembership(location.id, req.user!.id)) {
     throw new ConflictError('Already a member of this location');
+  }
+
+  // Plan quota: max members per location (based on location owner's plan)
+  const features = await getLocationOwnerFeatures(location.id);
+  if (features.maxMembersPerLocation !== null) {
+    const memberCount = await query<{ cnt: number }>(
+      'SELECT COUNT(*) as cnt FROM location_members WHERE location_id = $1',
+      [location.id],
+    );
+    if (memberCount.rows[0].cnt >= features.maxMembersPerLocation) {
+      throw new PlanRestrictedError('This location has reached its member limit');
+    }
   }
 
   await query(

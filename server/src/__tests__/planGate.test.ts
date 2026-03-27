@@ -150,8 +150,9 @@ describe('getFeatureMap()', () => {
     expect(features.fullExport).toBe(true);
     expect(features.maxLocations).toBe(null);
     expect(features.maxBinsPerLocation).toBe(null);
-    expect(features.maxPhotoStorageMb).toBe(null);
+    expect(features.maxPhotoStorageMb).toBe(2048);
     expect(features.maxMembersPerLocation).toBe(null);
+    expect(features.activityRetentionDays).toBe(90);
   });
 
   it('returns LITE features for LITE plan (cloud)', () => {
@@ -161,10 +162,11 @@ describe('getFeatureMap()', () => {
     expect(features.apiKeys).toBe(false);
     expect(features.customFields).toBe(false);
     expect(features.fullExport).toBe(false);
-    expect(features.maxLocations).toBe(3);
+    expect(features.maxLocations).toBe(1);
     expect(features.maxBinsPerLocation).toBe(100);
-    expect(features.maxPhotoStorageMb).toBe(500);
-    expect(features.maxMembersPerLocation).toBe(5);
+    expect(features.maxPhotoStorageMb).toBe(100);
+    expect(features.maxMembersPerLocation).toBe(1);
+    expect(features.activityRetentionDays).toBe(30);
   });
 
   it('returns PRO features when self-hosted regardless of plan argument', () => {
@@ -178,6 +180,7 @@ describe('getFeatureMap()', () => {
     expect(features.maxBinsPerLocation).toBe(null);
     expect(features.maxPhotoStorageMb).toBe(null);
     expect(features.maxMembersPerLocation).toBe(null);
+    expect(features.activityRetentionDays).toBe(null);
   });
 });
 
