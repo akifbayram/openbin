@@ -18,6 +18,7 @@
     "@ai-sdk/google": "^3.0.36",
     "@ai-sdk/openai": "^3.0.39",
     "@ai-sdk/openai-compatible": "^2.0.33",
+    "@aws-sdk/client-s3": "^3.1018.0",
     "@types/compression": "^1.8.1",
     "adm-zip": "^0.5.16",
     "ai": "^6.0.108",

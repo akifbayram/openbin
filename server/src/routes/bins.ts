@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
+import sharp from 'sharp';
 import { getDb, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isBinCreator, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
@@ -15,8 +16,9 @@ import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
+import { storage } from '../lib/storage.js';
 import { purgeExpiredTrash } from '../lib/trashPurge.js';
-import { binPhotoUpload, validateFileType } from '../lib/uploadConfig.js';
+import { binPhotoUpload, MIME_TO_EXT, validateFileBuffer, validateFileType } from '../lib/uploadConfig.js';
 import { validateBinName } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -255,9 +257,9 @@ router.post('/:id/change-code', sensitiveAuthLimiter, asyncHandler(async (req, r
     stmts.renameBin.run(newCode, id);
   })();
 
-  // Post-transaction: clean up deleted bin's photos from disk
+  // Post-transaction: clean up deleted bin's photos from storage
   if (existingPhotos.length > 0) {
-    cleanupBinPhotos(newCode, existingPhotos);
+    await cleanupBinPhotos(newCode, existingPhotos);
   }
 
   // Rename target bin's photo directory
@@ -488,7 +490,7 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
   // Hard delete (cascades to photos in DB)
   await query('DELETE FROM bins WHERE id = $1', [id]);
 
-  cleanupBinPhotos(id, photosResult.rows);
+  await cleanupBinPhotos(id, photosResult.rows);
 
   logRouteActivity(req, { entityType: 'bin', locationId, action: 'permanent_delete', entityId: id, entityName: binName });
 
@@ -538,24 +540,49 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
     throw new ValidationError('No photo uploaded');
   }
 
-  await validateFileType(file.path);
+  const isS3 = config.storageBackend === 's3';
+
+  if (isS3) {
+    await validateFileBuffer(file.buffer);
+  } else {
+    await validateFileType(file.path);
+  }
 
   const access = await verifyBinAccess(binId, req.user!.id);
   if (!access) {
-    fs.unlinkSync(file.path);
+    if (!isS3) fs.unlinkSync(file.path);
     throw new NotFoundError('Bin not found');
   }
 
-  const storagePath = path.join(binId, file.filename);
+  // For S3 (memoryStorage), multer doesn't generate a filename
+  const photoFilename = isS3
+    ? `${crypto.randomUUID()}${MIME_TO_EXT[file.mimetype] || '.jpg'}`
+    : file.filename;
+  const storagePath = path.join(binId, photoFilename);
   const photoId = crypto.randomUUID();
+
+  // Upload to S3 storage
+  if (isS3) {
+    await storage.upload(storagePath, file.buffer, file.mimetype);
+  }
 
   // Generate thumbnail
   let thumbPath: string | null = null;
   try {
-    const thumbFilename = `${path.basename(file.filename, path.extname(file.filename))}_thumb.webp`;
-    const thumbFullPath = path.join(path.dirname(file.path), thumbFilename);
-    await generateThumbnail(file.path, thumbFullPath);
-    thumbPath = path.join(binId, thumbFilename);
+    const thumbFilename = `${path.basename(photoFilename, path.extname(photoFilename))}_thumb.webp`;
+    if (isS3) {
+      const thumbBuffer = await sharp(file.buffer)
+        .resize(600, undefined, { withoutEnlargement: true })
+        .webp({ quality: 70 })
+        .toBuffer();
+      const thumbStoragePath = path.join(binId, thumbFilename);
+      await storage.upload(thumbStoragePath, thumbBuffer, 'image/webp');
+      thumbPath = thumbStoragePath;
+    } else {
+      const thumbFullPath = path.join(path.dirname(file.path), thumbFilename);
+      await generateThumbnail(file.path, thumbFullPath);
+      thumbPath = path.join(binId, thumbFilename);
+    }
   } catch {
     // Thumbnail generation is non-critical
   }

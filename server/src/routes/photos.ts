@@ -1,13 +1,12 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
+import sharp from 'sharp';
 import { query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { config } from '../lib/config.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
-import { safePath } from '../lib/pathSafety.js';
-import { generateThumbnail } from '../lib/photoHelpers.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
-import { PHOTO_STORAGE_PATH } from '../lib/uploadConfig.js';
+import { storage } from '../lib/storage.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -67,13 +66,8 @@ router.get('/:id/file', asyncHandler(async (req, res) => {
     throw new NotFoundError('Photo not found');
   }
 
-  const filePath = safePath(PHOTO_STORAGE_PATH, access.storagePath);
-  if (!filePath) {
-    throw new ValidationError('Invalid file path');
-  }
-
-  if (!fs.existsSync(filePath)) {
-    throw new NotFoundError('Photo file not found on disk');
+  if (!(await storage.exists(access.storagePath))) {
+    throw new NotFoundError('Photo file not found');
   }
 
   const photoResult = await query('SELECT mime_type FROM photos WHERE id = $1', [id]);
@@ -81,7 +75,7 @@ router.get('/:id/file', asyncHandler(async (req, res) => {
 
   res.setHeader('Content-Type', mimeType);
   res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
-  fs.createReadStream(filePath).pipe(res);
+  storage.readStream(access.storagePath).pipe(res);
 }));
 
 // GET /api/photos/:id/thumb — serve photo thumbnail
@@ -101,42 +95,60 @@ router.get('/:id/thumb', asyncHandler(async (req, res) => {
   }
 
   // Try to serve existing thumbnail
-  if (photo.thumb_path) {
-    const thumbFile = safePath(PHOTO_STORAGE_PATH, photo.thumb_path);
-    if (thumbFile && fs.existsSync(thumbFile)) {
-      res.setHeader('Content-Type', 'image/webp');
-      res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
-      fs.createReadStream(thumbFile).pipe(res);
-      return;
-    }
+  if (photo.thumb_path && (await storage.exists(photo.thumb_path))) {
+    res.setHeader('Content-Type', 'image/webp');
+    res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
+    storage.readStream(photo.thumb_path).pipe(res);
+    return;
   }
 
   // Generate thumbnail lazily if it doesn't exist yet
-  const originalFile = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
-  if (!originalFile || !fs.existsSync(originalFile)) {
-    throw new NotFoundError('Photo file not found on disk');
+  if (!(await storage.exists(photo.storage_path))) {
+    throw new NotFoundError('Photo file not found');
   }
 
   try {
     const thumbFilename = `${path.basename(photo.storage_path, path.extname(photo.storage_path))}_thumb.webp`;
     const thumbStoragePath = path.join(path.dirname(photo.storage_path), thumbFilename);
-    const thumbFullPath = path.join(PHOTO_STORAGE_PATH, thumbStoragePath);
 
-    await generateThumbnail(originalFile, thumbFullPath);
+    if (config.storageBackend === 's3') {
+      // S3: generate thumbnail in memory
+      const originalBuffer = await storage.read(photo.storage_path);
+      const thumbBuffer = await sharp(originalBuffer)
+        .resize(600, undefined, { withoutEnlargement: true })
+        .webp({ quality: 70 })
+        .toBuffer();
+      await storage.upload(thumbStoragePath, thumbBuffer, 'image/webp');
 
-    // Update DB with thumb path
-    await query('UPDATE photos SET thumb_path = $1 WHERE id = $2', [thumbStoragePath, id]);
+      await query('UPDATE photos SET thumb_path = $1 WHERE id = $2', [thumbStoragePath, id]);
 
-    res.setHeader('Content-Type', 'image/webp');
-    res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
-    fs.createReadStream(thumbFullPath).pipe(res);
+      res.setHeader('Content-Type', 'image/webp');
+      res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
+      res.end(thumbBuffer);
+    } else {
+      // Local: generate thumbnail on disk
+      const { generateThumbnail } = await import('../lib/photoHelpers.js');
+      const { safePath } = await import('../lib/pathSafety.js');
+      const { PHOTO_STORAGE_PATH } = await import('../lib/uploadConfig.js');
+
+      const thumbFullPath = path.join(PHOTO_STORAGE_PATH, thumbStoragePath);
+      const originalFile = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
+      if (!originalFile) throw new NotFoundError('Photo file not found');
+
+      await generateThumbnail(originalFile, thumbFullPath);
+      await query('UPDATE photos SET thumb_path = $1 WHERE id = $2', [thumbStoragePath, id]);
+
+      res.setHeader('Content-Type', 'image/webp');
+      res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
+      storage.readStream(thumbStoragePath).pipe(res);
+    }
   } catch {
     // Fallback to original
     const photoResult = await query('SELECT mime_type FROM photos WHERE id = $1', [id]);
     const mimeType = photoResult.rows[0]?.mime_type || 'application/octet-stream';
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
-    fs.createReadStream(originalFile).pipe(res);
+    storage.readStream(photo.storage_path).pipe(res);
   }
 }));
 
@@ -155,29 +167,10 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 
   await query('DELETE FROM photos WHERE id = $1', [id]);
 
-  const filePath = safePath(PHOTO_STORAGE_PATH, access.storagePath);
-  if (filePath) {
-    try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    } catch {
-      // Ignore file cleanup errors
-    }
-  }
+  await storage.delete(access.storagePath).catch(() => {});
 
-  // Clean up thumbnail
   if (thumbPath) {
-    const thumbFile = safePath(PHOTO_STORAGE_PATH, thumbPath);
-    if (thumbFile) {
-      try {
-        if (fs.existsSync(thumbFile)) {
-          fs.unlinkSync(thumbFile);
-        }
-      } catch {
-        // Ignore cleanup errors
-      }
-    }
+    await storage.delete(thumbPath).catch(() => {});
   }
 
   await query(`UPDATE bins SET updated_at = datetime('now') WHERE id = $1`, [access.binId]);

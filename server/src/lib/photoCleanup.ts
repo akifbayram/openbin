@@ -1,42 +1,42 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { querySync } from '../db.js';
+import { config } from './config.js';
 import { safePath } from './pathSafety.js';
+import { storage } from './storage.js';
 import { PHOTO_STORAGE_PATH } from './uploadConfig.js';
 
-export function cleanupBinPhotos(
+export async function cleanupBinPhotos(
   binId: string,
   photos: { storage_path: string; thumb_path: string | null }[],
-): void {
+): Promise<void> {
   for (const photo of photos) {
     try {
-      const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
-      if (filePath && fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+      await storage.delete(photo.storage_path);
       if (photo.thumb_path) {
-        const thumbFilePath = safePath(PHOTO_STORAGE_PATH, photo.thumb_path);
-        if (thumbFilePath && fs.existsSync(thumbFilePath)) {
-          fs.unlinkSync(thumbFilePath);
-        }
+        await storage.delete(photo.thumb_path);
       }
     } catch {
       // Ignore file cleanup errors
     }
   }
 
-  try {
-    const binDir = safePath(PHOTO_STORAGE_PATH, binId);
-    if (binDir && fs.existsSync(binDir)) {
-      fs.rmdirSync(binDir);
+  // Remove empty bin directory (local storage only)
+  if (config.storageBackend !== 's3') {
+    try {
+      const binDir = safePath(PHOTO_STORAGE_PATH, binId);
+      if (binDir && fs.existsSync(binDir)) {
+        fs.rmdirSync(binDir);
+      }
+    } catch {
+      // Ignore directory cleanup errors
     }
-  } catch {
-    // Ignore directory cleanup errors
   }
 }
 
-/** Scan PHOTO_STORAGE_PATH and delete files with no matching photos row. */
+/** Scan PHOTO_STORAGE_PATH and delete files with no matching photos row. Local storage only. */
 export function cleanupOrphanPhotos(): void {
+  if (config.storageBackend === 's3') return;
   if (!fs.existsSync(PHOTO_STORAGE_PATH)) return;
 
   // Collect all known paths from DB

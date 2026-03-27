@@ -121,7 +121,31 @@ export const config = Object.freeze({
   demoAiRateLimit: clamp(parseInt(process.env.DEMO_AI_RATE_LIMIT ?? '', 10), 1, 1000, 10),
   demoAiMaxPhotosPerRequest: clamp(parseInt(process.env.DEMO_AI_MAX_PHOTOS_PER_REQUEST ?? '', 10), 1, 10, 3),
   demoAiDailyBudget: clamp(parseInt(process.env.DEMO_AI_DAILY_BUDGET ?? '', 10), 1, 10000, 100),
+
+  // Storage backend
+  storageBackend: (() => {
+    const val = process.env.STORAGE_BACKEND;
+    if (val === 's3') return 's3' as const;
+    return 'local' as const;
+  })(),
+  s3Bucket: process.env.S3_BUCKET || null,
+  s3Region: process.env.S3_REGION || 'us-east-1',
+  s3Endpoint: process.env.S3_ENDPOINT || null,
+  s3AccessKeyId: process.env.S3_ACCESS_KEY_ID || null,
+  s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY || null,
+  s3ForcePathStyle: parseBool(process.env.S3_FORCE_PATH_STYLE, false),
 });
+
+// Validate S3 config at startup
+if (config.storageBackend === 's3') {
+  const missing: string[] = [];
+  if (!config.s3Bucket) missing.push('S3_BUCKET');
+  if (!config.s3AccessKeyId) missing.push('S3_ACCESS_KEY_ID');
+  if (!config.s3SecretAccessKey) missing.push('S3_SECRET_ACCESS_KEY');
+  if (missing.length > 0) {
+    throw new Error(`STORAGE_BACKEND=s3 requires: ${missing.join(', ')}`);
+  }
+}
 
 /** Returns true if all required env vars for AI are set. */
 export function hasEnvAiConfig(): boolean {

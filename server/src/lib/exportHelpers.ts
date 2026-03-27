@@ -6,6 +6,7 @@ import { config } from './config.js';
 import { replaceCustomFieldValuesSync } from './customFieldHelpers.js';
 import { isPathSafe, safePath } from './pathSafety.js';
 import { generateShortCode } from './shortCode.js';
+import { storage } from './storage.js';
 
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
@@ -147,11 +148,9 @@ export async function loadBinPhotosBase64(binId: string): Promise<ExportPhoto[]>
 
   const exportPhotos: ExportPhoto[] = [];
   for (const photo of photosResult.rows) {
-    const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
-    if (!filePath) continue;
     try {
-      if (fs.existsSync(filePath)) {
-        const data = fs.readFileSync(filePath);
+      if (await storage.exists(photo.storage_path)) {
+        const data = await storage.read(photo.storage_path);
         exportPhotos.push({
           id: photo.id,
           filename: photo.filename,
@@ -606,10 +605,8 @@ export function replaceCleanupSync(locationId: string): void {
   querySync('DELETE FROM bins WHERE location_id = $1', [locationId]);
   querySync('DELETE FROM areas WHERE location_id = $1', [locationId]);
   for (const photo of existingPhotos.rows) {
-    try {
-      const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
-      if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    } catch { /* ignore */ }
+    // storage.delete is async; fire-and-forget within sync transaction context
+    storage.delete(photo.storage_path).catch(() => {});
   }
 }
 
@@ -651,16 +648,24 @@ export function importPhotosSync(binId: string, photos: ExportPhoto[], userId: s
     const safeFilename = `${photoId}${safeExt}`;
     const storagePath = path.join(binId, safeFilename);
 
-    const fullPath = path.join(PHOTO_STORAGE_PATH, storagePath);
-    if (!isPathSafe(fullPath, PHOTO_STORAGE_PATH)) continue;
-
-    const dir = safePath(PHOTO_STORAGE_PATH, binId);
-    if (!dir) continue;
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(fullPath, buffer);
-
     const safeOriginalName = path.basename(photo.filename || 'photo').slice(0, 255);
     const safeMimeType = ALLOWED_MIME_TYPES.includes(photo.mimeType) ? photo.mimeType : 'image/jpeg';
+
+    if (config.storageBackend === 's3') {
+      // S3: async upload, fire-and-forget within sync transaction context
+      storage.upload(storagePath, buffer, safeMimeType).catch((err) => {
+        console.error(`[photo-import] Failed to upload ${storagePath} to S3:`, err);
+      });
+    } else {
+      // Local: synchronous file write
+      const fullPath = path.join(PHOTO_STORAGE_PATH, storagePath);
+      if (!isPathSafe(fullPath, PHOTO_STORAGE_PATH)) continue;
+
+      const dir = safePath(PHOTO_STORAGE_PATH, binId);
+      if (!dir) continue;
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(fullPath, buffer);
+    }
 
     const resolvedPhotoCreator = resolveCreatedBySync(photo.createdBy, userId);
     querySync(

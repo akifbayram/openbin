@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileTypeFromFile } from 'file-type';
+import { fileTypeFromBuffer, fileTypeFromFile } from 'file-type';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from './config.js';
@@ -19,23 +19,26 @@ const MIME_TO_EXT: Record<string, string> = {
 
 const AVATAR_STORAGE_PATH = path.join(PHOTO_STORAGE_PATH, 'avatars');
 
-/** Multer storage for bin photos (stored in per-bin subdirectories). */
-export const binPhotoStorage = multer.diskStorage({
-  destination: (req, _file, cb) => {
-    const binId = req.params.id;
-    const dir = path.join(PHOTO_STORAGE_PATH, binId);
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (_req, file, cb) => {
-    const ext = MIME_TO_EXT[file.mimetype] || '.jpg';
-    cb(null, `${uuidv4()}${ext}`);
-  },
-});
+/** Multer storage for bin photos — disk for local, memory for S3. */
+const binPhotoStorageEngine =
+  config.storageBackend === 's3'
+    ? multer.memoryStorage()
+    : multer.diskStorage({
+        destination: (req, _file, cb) => {
+          const binId = req.params.id;
+          const dir = path.join(PHOTO_STORAGE_PATH, binId);
+          fs.mkdirSync(dir, { recursive: true });
+          cb(null, dir);
+        },
+        filename: (_req, file, cb) => {
+          const ext = MIME_TO_EXT[file.mimetype] || '.jpg';
+          cb(null, `${uuidv4()}${ext}`);
+        },
+      });
 
 /** Multer config for bin photo uploads (max 5 MB, JPEG/PNG/WebP/GIF). */
 export const binPhotoUpload = multer({
-  storage: binPhotoStorage,
+  storage: binPhotoStorageEngine,
   limits: { fileSize: config.maxPhotoSizeMb * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (PHOTO_MIME_TYPES.includes(file.mimetype)) {
@@ -82,6 +85,14 @@ export async function validateFileType(filePath: string): Promise<void> {
   }
 }
 
+/** Verify in-memory file buffer matches an allowed image type using magic bytes. */
+export async function validateFileBuffer(buffer: Buffer): Promise<void> {
+  const detected = await fileTypeFromBuffer(buffer);
+  if (!detected || !ALLOWED_MIME_TYPES.has(detected.mime)) {
+    throw new ValidationError('File content does not match an allowed image type');
+  }
+}
+
 /** Multer config for in-memory photo uploads (AI analysis endpoints). */
 export const memoryPhotoUpload = multer({
   storage: multer.memoryStorage(),
@@ -108,4 +119,4 @@ export const demoMemoryPhotoUpload = multer({
   },
 });
 
-export { PHOTO_STORAGE_PATH, AVATAR_STORAGE_PATH };
+export { PHOTO_STORAGE_PATH, AVATAR_STORAGE_PATH, MIME_TO_EXT };

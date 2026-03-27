@@ -12,5 +12,6 @@ server/uploads/
 .claude/
 reports/
 docs/plans/
+superpowers/
 .impeccable.md
 **/.jwt_secret
