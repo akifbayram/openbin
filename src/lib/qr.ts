@@ -3,6 +3,8 @@ import { getBinQrPayload } from './constants';
 
 export const BIN_URL_REGEX = /(?:openbin:\/\/bin\/|https?:\/\/[^/]+(?:\/[^/]+)*\/bin\/)([A-Z0-9]{4,8})(?:[/?#]|$)/i;
 
+export const BIN_CODE_REGEX = /^[A-Z0-9]{4,8}$/;
+
 export interface QRColorOptions {
   dark: string;
   light: string;

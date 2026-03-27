@@ -8,12 +8,12 @@ import { getMemberRole, isBinCreator, requireAdmin, requireMemberOrAbove, verify
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
 import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinItems } from '../lib/binUpdateHelpers.js';
 import { validateBinFields, validateCodeFormat } from '../lib/binValidation.js';
-import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { config } from '../lib/config.js';
 import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
 import { ForbiddenError, GoneError, NotFoundError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
+import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { purgeExpiredTrash } from '../lib/trashPurge.js';
 import { binPhotoUpload, validateFileType } from '../lib/uploadConfig.js';
@@ -222,36 +222,37 @@ router.post('/:id/change-code', sensitiveAuthLimiter, asyncHandler(async (req, r
 
   // Run the transaction (better-sqlite3 is synchronous)
   const db = getDb();
+  const stmts = {
+    deleteBin: db.prepare('DELETE FROM bins WHERE id = ?'),
+    updateItems: db.prepare('UPDATE bin_items SET bin_id = ? WHERE bin_id = ?'),
+    updatePhotos: db.prepare('UPDATE photos SET bin_id = ? WHERE bin_id = ?'),
+    updateCustomFields: db.prepare('UPDATE bin_custom_field_values SET bin_id = ? WHERE bin_id = ?'),
+    updatePins: db.prepare('UPDATE pinned_bins SET bin_id = ? WHERE bin_id = ?'),
+    updateScans: db.prepare('UPDATE scan_history SET bin_id = ? WHERE bin_id = ?'),
+    updatePhotoPaths: db.prepare(`UPDATE photos SET
+      storage_path = replace(storage_path, ? || '/', ? || '/'),
+      thumb_path = CASE WHEN thumb_path IS NOT NULL
+        THEN replace(thumb_path, ? || '/', ? || '/')
+        ELSE NULL END
+      WHERE bin_id = ?`),
+    updateActivityLog: db.prepare("UPDATE activity_log SET entity_id = ? WHERE entity_id = ? AND entity_type = 'bin'"),
+    renameBin: db.prepare("UPDATE bins SET id = ?, updated_at = datetime('now') WHERE id = ?"),
+  };
+
   db.transaction(() => {
     // defer_foreign_keys is required because steps below update child rows
     // to reference newCode before the parent row with that ID exists.
     db.pragma('defer_foreign_keys = ON');
 
-    // 1. Hard-delete existing bin at newCode (CASCADE removes children)
-    db.prepare('DELETE FROM bins WHERE id = ?').run(newCode);
-
-    // 2. Update all FK references
-    db.prepare('UPDATE bin_items SET bin_id = ? WHERE bin_id = ?').run(newCode, id);
-    db.prepare('UPDATE photos SET bin_id = ? WHERE bin_id = ?').run(newCode, id);
-    db.prepare('UPDATE bin_custom_field_values SET bin_id = ? WHERE bin_id = ?').run(newCode, id);
-    db.prepare('UPDATE pinned_bins SET bin_id = ? WHERE bin_id = ?').run(newCode, id);
-    db.prepare('UPDATE scan_history SET bin_id = ? WHERE bin_id = ?').run(newCode, id);
-
-    // 3. Update photo storage paths
-    db.prepare(`UPDATE photos SET
-      storage_path = replace(storage_path, ? || '/', ? || '/'),
-      thumb_path = CASE WHEN thumb_path IS NOT NULL
-        THEN replace(thumb_path, ? || '/', ? || '/')
-        ELSE NULL END
-      WHERE bin_id = ?`).run(id, newCode, id, newCode, newCode);
-
-    // 4. Update activity log references (not a FK)
-    db.prepare("UPDATE activity_log SET entity_id = ? WHERE entity_id = ? AND entity_type = 'bin'")
-      .run(newCode, id);
-
-    // 5. Change the bin's primary key
-    db.prepare("UPDATE bins SET id = ?, updated_at = datetime('now') WHERE id = ?")
-      .run(newCode, id);
+    stmts.deleteBin.run(newCode);
+    stmts.updateItems.run(newCode, id);
+    stmts.updatePhotos.run(newCode, id);
+    stmts.updateCustomFields.run(newCode, id);
+    stmts.updatePins.run(newCode, id);
+    stmts.updateScans.run(newCode, id);
+    stmts.updatePhotoPaths.run(id, newCode, id, newCode, newCode);
+    stmts.updateActivityLog.run(newCode, id);
+    stmts.renameBin.run(newCode, id);
   })();
 
   // Post-transaction: clean up deleted bin's photos from disk
@@ -263,11 +264,11 @@ router.post('/:id/change-code', sensitiveAuthLimiter, asyncHandler(async (req, r
   const oldDir = path.join(config.photoStoragePath, id);
   const newDir = path.join(config.photoStoragePath, newCode);
   try {
-    if (fs.existsSync(oldDir)) {
-      fs.renameSync(oldDir, newDir);
-    }
+    fs.renameSync(oldDir, newDir);
   } catch (err) {
-    console.error(`Failed to rename photo directory ${oldDir} → ${newDir}:`, err);
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+      console.error(`Failed to rename photo directory ${oldDir} → ${newDir}:`, err);
+    }
   }
 
   // Activity logging (fire-and-forget, post-transaction)

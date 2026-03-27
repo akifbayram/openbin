@@ -1,9 +1,9 @@
 import type { Express } from 'express';
 import request from 'supertest';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import './setup.js';
-import { validateCodeFormat } from '../lib/binValidation.js';
 import { createApp } from '../index.js';
+import { validateCodeFormat } from '../lib/binValidation.js';
 import { createTestBin, createTestLocation, createTestUser } from './helpers.js';
 
 describe('validateCodeFormat', () => {

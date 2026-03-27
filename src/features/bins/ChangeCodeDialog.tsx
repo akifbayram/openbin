@@ -1,10 +1,11 @@
 import { Keyboard, Loader2, QrCode } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
-import { BIN_URL_REGEX } from '@/lib/qr';
+import { Html5QrcodePlugin } from '@/features/qrcode/Html5QrcodePlugin';
+import { BIN_CODE_REGEX, BIN_URL_REGEX } from '@/lib/qr';
 import { cn } from '@/lib/utils';
 import { changeCode, lookupBinByCodeSafe } from './useBins';
 
@@ -23,8 +24,6 @@ interface LookupResult {
   claimed: boolean;
   binName?: string;
 }
-
-const CODE_REGEX = /^[A-Z0-9]{4,8}$/;
 
 export function ChangeCodeDialog({ open, onOpenChange, mode, currentBin }: ChangeCodeDialogProps) {
   const navigate = useNavigate();
@@ -49,7 +48,7 @@ export function ChangeCodeDialog({ open, onOpenChange, mode, currentBin }: Chang
     }
   }, [open]);
 
-  const isValidCode = CODE_REGEX.test(code) && code !== currentBin.id;
+  const isValidCode = BIN_CODE_REGEX.test(code) && code !== currentBin.id;
 
   async function handleLookup() {
     if (!isValidCode) return;
@@ -182,7 +181,7 @@ export function ChangeCodeDialog({ open, onOpenChange, mode, currentBin }: Chang
                 )}
               </div>
             ) : (
-              <ScannerPanel onScan={handleScan} />
+              <Html5QrcodePlugin onScanSuccess={handleScan} />
             )}
 
             {error && (
@@ -245,59 +244,5 @@ export function ChangeCodeDialog({ open, onOpenChange, mode, currentBin }: Chang
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** Lazy-loaded QR scanner panel. Only mounts the camera when this tab is active. */
-function ScannerPanel({ onScan }: { onScan: (text: string) => void }) {
-  const scannerRef = useRef<HTMLDivElement>(null);
-  const html5QrRef = useRef<unknown>(null);
-  const [scanError, setScanError] = useState('');
-
-  useEffect(() => {
-    let stopped = false;
-
-    async function startScanner() {
-      const { Html5Qrcode } = await import('html5-qrcode');
-      if (stopped || !scannerRef.current) return;
-
-      const scanner = new Html5Qrcode(scannerRef.current.id);
-      html5QrRef.current = scanner;
-
-      try {
-        await scanner.start(
-          { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          (decodedText) => {
-            onScan(decodedText);
-            scanner.stop().catch(() => {});
-          },
-          () => {},
-        );
-      } catch {
-        setScanError('Camera access denied or not available.');
-      }
-    }
-
-    startScanner();
-
-    return () => {
-      stopped = true;
-      const scanner = html5QrRef.current as { stop?: () => Promise<void> } | null;
-      scanner?.stop?.().catch(() => {});
-    };
-  }, [onScan]);
-
-  return (
-    <div className="space-y-2">
-      <div
-        id="change-code-scanner"
-        ref={scannerRef}
-        className="w-full aspect-square max-h-[300px] rounded-lg overflow-hidden bg-black"
-      />
-      {scanError && (
-        <p className="text-[13px] text-[var(--destructive)]">{scanError}</p>
-      )}
-    </div>
   );
 }
