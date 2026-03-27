@@ -21,7 +21,6 @@ router.get('/:locationId/activity', requireLocationMember('locationId'), asyncHa
   const params: unknown[] = [locationId];
   let paramIdx = 2;
 
-  // Plan quota: activity log retention window
   const features = await getUserFeatures(req.user!.id);
   if (features.activityRetentionDays !== null) {
     whereClause += ` AND al.created_at >= datetime('now', $${paramIdx++})`;

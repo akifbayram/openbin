@@ -19,17 +19,41 @@ declare global {
   }
 }
 
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+function extractToken(req: Request): string | undefined {
   const header = req.headers.authorization;
-  const cookieToken = req.cookies?.['openbin-access'] as string | undefined;
+  const cookie = req.cookies?.['openbin-access'] as string | undefined;
+  if (header?.startsWith('Bearer ')) return header.slice(7);
+  return cookie;
+}
 
-  let token: string | undefined;
-  if (header?.startsWith('Bearer ')) {
-    token = header.slice(7);
-  } else if (cookieToken) {
-    token = cookieToken;
+function verifyJwt(token: string): AuthUser | null {
+  try {
+    const payload = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] }) as AuthUser;
+    return { id: payload.id, username: payload.username };
+  } catch {
+    return null;
   }
+}
 
+/** Best-effort JWT auth — sets req.user if a valid JWT is present, never rejects. */
+export function tryAuthenticate(req: Request, _res: Response, next: NextFunction): void {
+  if (!req.user) {
+    const token = extractToken(req);
+    if (token && !token.startsWith('sk_openbin_')) {
+      const user = verifyJwt(token);
+      if (user) {
+        req.user = user;
+        req.authMethod = 'jwt';
+      }
+    }
+  }
+  next();
+}
+
+export function authenticate(req: Request, res: Response, next: NextFunction): void {
+  if (req.user) { next(); return; }
+
+  const token = extractToken(req);
   if (!token) {
     res.status(401).json({ error: 'UNAUTHORIZED', message: 'No token provided' });
     return;
@@ -63,12 +87,12 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   }
 
   // JWT path
-  try {
-    const payload = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] }) as AuthUser;
-    req.user = { id: payload.id, username: payload.username };
+  const user = verifyJwt(token);
+  if (user) {
+    req.user = user;
     req.authMethod = 'jwt';
     next();
-  } catch {
+  } else {
     res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid token' });
   }
 }

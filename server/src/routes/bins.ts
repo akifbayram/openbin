@@ -11,10 +11,10 @@ import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinI
 import { validateBinFields, validateCodeFormat } from '../lib/binValidation.js';
 import { config } from '../lib/config.js';
 import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
-import { ForbiddenError, GoneError, NotFoundError, PlanRestrictedError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
+import { ForbiddenError, GoneError, NotFoundError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
-import { generateUpgradeUrl, getLocationOwnerFeatures, getUserFeatures, getUserPlanInfo } from '../lib/planGate.js';
+import { enforceBinQuota, getUserFeatures, throwPlanRestricted } from '../lib/planGate.js';
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { storage } from '../lib/storage.js';
@@ -42,22 +42,7 @@ router.post('/', asyncHandler(async (req, res) => {
 
   if (areaId) await verifyAreaInLocation(areaId, locationId);
 
-  // Plan quota: max bins per location (based on location owner's plan)
-  const features = await getLocationOwnerFeatures(locationId);
-  if (features.maxBinsPerLocation !== null) {
-    const countResult = await query<{ cnt: number }>(
-      'SELECT COUNT(*) as cnt FROM bins WHERE location_id = $1 AND deleted_at IS NULL',
-      [locationId],
-    );
-    if (countResult.rows[0].cnt >= features.maxBinsPerLocation) {
-      const planInfo = await getUserPlanInfo(req.user!.id);
-      const upgradeUrl = planInfo ? generateUpgradeUrl(req.user!.id, planInfo.email) : null;
-      throw new PlanRestrictedError(
-        `This location has reached its limit of ${features.maxBinsPerLocation} bins`,
-        upgradeUrl,
-      );
-    }
-  }
+  await enforceBinQuota(locationId, req.user!.id);
 
   const bin = await insertBinWithItems({
     locationId,
@@ -531,37 +516,28 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
     throw new QuotaExceededError('BIN_PHOTO_LIMIT', `Maximum ${config.maxPhotosPerBin} photos per bin`);
   }
 
-  // Plan quota: per-user photo storage limit
+  // Per-user storage quotas (plan limit + demo limit share one query)
   const photoFeatures = await getUserFeatures(req.user!.id);
-  if (photoFeatures.maxPhotoStorageMb !== null) {
+  const needsUserUsage = photoFeatures.maxPhotoStorageMb !== null || config.demoMode;
+  if (needsUserUsage) {
     const usageResult = await query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [req.user!.id]);
     const usedBytes = usageResult.rows[0].total;
-    const limitBytes = photoFeatures.maxPhotoStorageMb * 1024 * 1024;
-    if (usedBytes >= limitBytes) {
-      const planInfo = await getUserPlanInfo(req.user!.id);
-      const upgradeUrl = planInfo ? generateUpgradeUrl(req.user!.id, planInfo.email) : null;
-      throw new PlanRestrictedError(
-        `Photo storage limit reached (${photoFeatures.maxPhotoStorageMb} MB)`,
-        upgradeUrl,
-      );
-    }
-  }
 
-  // Per-user and global quotas (demo mode only)
-  if (config.demoMode) {
-    const usageResult = await query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [req.user!.id]);
-    const usedBytes = usageResult.rows[0].total;
-    const limitBytes = config.uploadQuotaDemoMb * 1024 * 1024;
-    if (usedBytes >= limitBytes) {
-      const usedMb = (usedBytes / (1024 * 1024)).toFixed(1);
-      throw new QuotaExceededError('USER_QUOTA_EXCEEDED', `Upload quota exceeded: ${usedMb} MB used of ${config.uploadQuotaDemoMb} MB allowed`);
+    if (photoFeatures.maxPhotoStorageMb !== null && usedBytes >= photoFeatures.maxPhotoStorageMb * 1024 * 1024) {
+      await throwPlanRestricted(req.user!.id, `Photo storage limit reached (${photoFeatures.maxPhotoStorageMb} MB)`);
     }
 
-    const globalResult = await query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos');
-    const globalBytes = globalResult.rows[0].total;
-    const globalLimitBytes = config.uploadQuotaGlobalDemoMb * 1024 * 1024;
-    if (globalBytes >= globalLimitBytes) {
-      throw new QuotaExceededError('GLOBAL_QUOTA_EXCEEDED', `Demo storage limit reached (${config.uploadQuotaGlobalDemoMb} MB). Please contact the administrator.`);
+    if (config.demoMode) {
+      if (usedBytes >= config.uploadQuotaDemoMb * 1024 * 1024) {
+        const usedMb = (usedBytes / (1024 * 1024)).toFixed(1);
+        throw new QuotaExceededError('USER_QUOTA_EXCEEDED', `Upload quota exceeded: ${usedMb} MB used of ${config.uploadQuotaDemoMb} MB allowed`);
+      }
+
+      const globalResult = await query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos');
+      const globalBytes = globalResult.rows[0].total;
+      if (globalBytes >= config.uploadQuotaGlobalDemoMb * 1024 * 1024) {
+        throw new QuotaExceededError('GLOBAL_QUOTA_EXCEEDED', `Demo storage limit reached (${config.uploadQuotaGlobalDemoMb} MB). Please contact the administrator.`);
+      }
     }
   }
 
@@ -715,22 +691,7 @@ router.post('/:id/duplicate', asyncHandler(async (req, res) => {
   const newName = req.body.name ? String(req.body.name).trim() : `Copy of ${src.name}`;
   if (req.body.name) validateBinName(req.body.name);
 
-  // Plan quota: max bins per location (based on location owner's plan)
-  const dupFeatures = await getLocationOwnerFeatures(src.location_id);
-  if (dupFeatures.maxBinsPerLocation !== null) {
-    const countResult = await query<{ cnt: number }>(
-      'SELECT COUNT(*) as cnt FROM bins WHERE location_id = $1 AND deleted_at IS NULL',
-      [src.location_id],
-    );
-    if (countResult.rows[0].cnt >= dupFeatures.maxBinsPerLocation) {
-      const planInfo = await getUserPlanInfo(req.user!.id);
-      const upgradeUrl = planInfo ? generateUpgradeUrl(req.user!.id, planInfo.email) : null;
-      throw new PlanRestrictedError(
-        `This location has reached its limit of ${dupFeatures.maxBinsPerLocation} bins`,
-        upgradeUrl,
-      );
-    }
-  }
+  await enforceBinQuota(src.location_id, req.user!.id);
 
   // Copy items from source
   const itemsResult = await query<{ name: string; position: number }>(

@@ -6,7 +6,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 import { ConflictError, ForbiddenError, NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
-import { generateUpgradeUrl, getLocationOwnerFeatures, getUserFeatures, getUserPlanInfo } from '../lib/planGate.js';
+import { getLocationOwnerFeatures, getUserFeatures, throwPlanRestricted } from '../lib/planGate.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { validateRetentionDays } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
@@ -62,7 +62,6 @@ router.post('/', asyncHandler(async (req, res) => {
     throw new ValidationError('Location name is required');
   }
 
-  // Plan quota: max locations per user
   const features = await getUserFeatures(req.user!.id);
   if (features.maxLocations !== null) {
     const countResult = await query<{ cnt: number }>(
@@ -70,11 +69,9 @@ router.post('/', asyncHandler(async (req, res) => {
       [req.user!.id],
     );
     if (countResult.rows[0].cnt >= features.maxLocations) {
-      const planInfo = await getUserPlanInfo(req.user!.id);
-      const upgradeUrl = planInfo ? generateUpgradeUrl(req.user!.id, planInfo.email) : null;
-      throw new PlanRestrictedError(
+      await throwPlanRestricted(
+        req.user!.id,
         `Your plan allows a maximum of ${features.maxLocations} location${features.maxLocations === 1 ? '' : 's'}`,
-        upgradeUrl,
       );
     }
   }
@@ -297,14 +294,14 @@ router.post('/join', asyncHandler(async (req, res) => {
     throw new ConflictError('Already a member of this location');
   }
 
-  // Plan quota: max members per location (based on location owner's plan)
-  const features = await getLocationOwnerFeatures(location.id);
-  if (features.maxMembersPerLocation !== null) {
+  // No upgradeUrl here — the joining user can't upgrade the owner's plan
+  const locationFeatures = await getLocationOwnerFeatures(location.id);
+  if (locationFeatures.maxMembersPerLocation !== null) {
     const memberCount = await query<{ cnt: number }>(
       'SELECT COUNT(*) as cnt FROM location_members WHERE location_id = $1',
       [location.id],
     );
-    if (memberCount.rows[0].cnt >= features.maxMembersPerLocation) {
+    if (memberCount.rows[0].cnt >= locationFeatures.maxMembersPerLocation) {
       throw new PlanRestrictedError('This location has reached its member limit');
     }
   }

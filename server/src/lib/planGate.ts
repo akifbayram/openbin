@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { query } from '../db.js';
 import { config } from './config.js';
+import { PlanRestrictedError } from './httpErrors.js';
 
 export const Plan = { LITE: 0, PRO: 1 } as const;
 export type PlanTier = (typeof Plan)[keyof typeof Plan];
@@ -73,32 +74,22 @@ export function subStatusLabel(status: SubStatusType): 'active' | 'trial' | 'ina
   return 'inactive';
 }
 
+const UNRESTRICTED: PlanFeatures = {
+  ai: true,
+  apiKeys: true,
+  customFields: true,
+  fullExport: true,
+  maxLocations: null,
+  maxBinsPerLocation: null,
+  maxPhotoStorageMb: null,
+  maxMembersPerLocation: null,
+  activityRetentionDays: null,
+};
+
 export function getFeatureMap(plan: PlanTier): PlanFeatures {
-  if (config.selfHosted) {
-    return {
-      ai: true,
-      apiKeys: true,
-      customFields: true,
-      fullExport: true,
-      maxLocations: null,
-      maxBinsPerLocation: null,
-      maxPhotoStorageMb: null,
-      maxMembersPerLocation: null,
-      activityRetentionDays: null,
-    };
-  }
+  if (config.selfHosted) return UNRESTRICTED;
   if (plan === Plan.PRO) {
-    return {
-      ai: true,
-      apiKeys: true,
-      customFields: true,
-      fullExport: true,
-      maxLocations: null,
-      maxBinsPerLocation: null,
-      maxPhotoStorageMb: 2048,
-      maxMembersPerLocation: null,
-      activityRetentionDays: 90,
-    };
+    return { ...UNRESTRICTED, maxPhotoStorageMb: 2048, activityRetentionDays: 90 };
   }
   return {
     ai: false,
@@ -113,7 +104,6 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
   };
 }
 
-/** Get feature map for a user based on their plan. Self-hosted always returns Pro features. */
 export async function getUserFeatures(userId: string): Promise<PlanFeatures> {
   if (config.selfHosted) return getFeatureMap(Plan.PRO);
   const planInfo = await getUserPlanInfo(userId);
@@ -121,7 +111,6 @@ export async function getUserFeatures(userId: string): Promise<PlanFeatures> {
   return getFeatureMap(planInfo.plan);
 }
 
-/** Get feature map based on the location owner's plan. Used for location-level quotas. */
 export async function getLocationOwnerFeatures(locationId: string): Promise<PlanFeatures> {
   if (config.selfHosted) return getFeatureMap(Plan.PRO);
   const result = await query<{ plan: number }>(
@@ -132,10 +121,26 @@ export async function getLocationOwnerFeatures(locationId: string): Promise<Plan
   return getFeatureMap(result.rows[0].plan as PlanTier);
 }
 
-/**
- * Generates a manager upgrade URL with a short-lived JWT.
- * Returns null if managerUrl is not configured.
- */
+/** Throws PlanRestrictedError with the user's upgrade URL. */
+export async function throwPlanRestricted(userId: string, message: string): Promise<never> {
+  const planInfo = await getUserPlanInfo(userId);
+  const upgradeUrl = planInfo ? generateUpgradeUrl(userId, planInfo.email) : null;
+  throw new PlanRestrictedError(message, upgradeUrl);
+}
+
+/** Checks bin count against location owner's plan limit. */
+export async function enforceBinQuota(locationId: string, userId: string): Promise<void> {
+  const features = await getLocationOwnerFeatures(locationId);
+  if (features.maxBinsPerLocation === null) return;
+  const { rows } = await query<{ cnt: number }>(
+    'SELECT COUNT(*) as cnt FROM bins WHERE location_id = $1 AND deleted_at IS NULL',
+    [locationId],
+  );
+  if (rows[0].cnt >= features.maxBinsPerLocation) {
+    await throwPlanRestricted(userId, `This location has reached its limit of ${features.maxBinsPerLocation} bins`);
+  }
+}
+
 export function generateUpgradeUrl(userId: string, email: string | null): string | null {
   if (!config.managerUrl) return null;
   const secret = config.subscriptionJwtSecret ?? config.jwtSecret;
