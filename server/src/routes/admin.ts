@@ -4,9 +4,10 @@ import { generateUuid, getDb, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { deleteUserData, notifyManagerUserUpdate } from '../lib/managerWebhook.js';
 import { getCloudMetrics } from '../lib/metrics.js';
 import { isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel } from '../lib/planGate.js';
-import { metricsLimiter } from '../lib/rateLimiters.js';
+import { invalidatePlanRateLimit, metricsLimiter } from '../lib/rateLimiters.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
@@ -169,9 +170,9 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
 // PUT /api/admin/users/:id — update admin role or subscription status
 router.put('/users/:id', asyncHandler(async (req, res) => {
   const targetId = req.params.id;
-  const { isAdmin, subStatus } = req.body;
+  const { isAdmin, subStatus, plan, email, displayName, password, activeUntil } = req.body;
 
-  if (isAdmin === undefined && subStatus === undefined) {
+  if (isAdmin === undefined && subStatus === undefined && plan === undefined && email === undefined && displayName === undefined && password === undefined && activeUntil === undefined) {
     throw new ValidationError('Nothing to update');
   }
 
@@ -197,6 +198,16 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
     }
   }
 
+  if (plan !== undefined && !isSelfHosted()) {
+    if (plan !== Plan.LITE && plan !== Plan.PRO) {
+      throw new ValidationError('Plan must be 0 (lite) or 1 (pro)');
+    }
+  }
+
+  if (email !== undefined && email !== '') validateEmail(email);
+  if (displayName !== undefined) validateDisplayName(displayName);
+  if (password !== undefined) validatePassword(password);
+
   const updates: string[] = [];
   const updateParams: unknown[] = [];
 
@@ -208,9 +219,62 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
     updates.push('sub_status = ?');
     updateParams.push(subStatus);
   }
+  if (plan !== undefined && !isSelfHosted()) {
+    updates.push('plan = ?');
+    updateParams.push(plan);
+  }
+  if (email !== undefined) {
+    updates.push('email = ?');
+    updateParams.push(email === '' ? null : email);
+  }
+  if (displayName !== undefined) {
+    updates.push('display_name = ?');
+    updateParams.push(String(displayName).trim());
+  }
+  if (password !== undefined) {
+    const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
+    updates.push('password_hash = ?');
+    updateParams.push(passwordHash);
+  }
+  if (activeUntil !== undefined) {
+    if (activeUntil !== null && activeUntil !== '') {
+      if (typeof activeUntil !== 'string' || Number.isNaN(new Date(activeUntil).getTime())) {
+        throw new ValidationError('Invalid date for activeUntil');
+      }
+      updates.push('active_until = ?');
+      updateParams.push(new Date(activeUntil).toISOString());
+    } else {
+      updates.push('active_until = ?');
+      updateParams.push(null);
+    }
+  }
+
+  if (updates.length === 0) {
+    res.json({ message: 'User updated' });
+    return;
+  }
 
   updateParams.push(targetId);
-  db.prepare(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...updateParams);
+  try {
+    db.prepare(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...updateParams);
+  } catch (err: unknown) {
+    const sqliteErr = err as { code?: string };
+    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      throw new ConflictError('Email already in use');
+    }
+    throw err;
+  }
+
+  if (plan !== undefined || typeof subStatus === 'number' || activeUntil !== undefined) {
+    invalidatePlanRateLimit(targetId);
+    notifyManagerUserUpdate({
+      userId: targetId,
+      action: 'update_subscription',
+      ...(plan !== undefined ? { plan } : {}),
+      ...(typeof subStatus === 'number' ? { status: subStatus } : {}),
+      ...(activeUntil !== undefined ? { activeUntil: activeUntil || null } : {}),
+    });
+  }
 
   console.log(`[admin] User ${req.user!.username} updated user ${target.username}: ${JSON.stringify(req.body)}`);
 
@@ -236,7 +300,10 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Cannot delete the only admin');
   }
 
+  deleteUserData(targetId);
   db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
+
+  notifyManagerUserUpdate({ userId: targetId, action: 'delete_user' });
 
   console.log(`[admin] User ${req.user!.username} deleted user ${target.username}`);
 

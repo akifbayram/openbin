@@ -1,4 +1,4 @@
-import { Globe, Lock, Mail, Search, Shield, ShieldOff, Trash2, UserPlus, Users } from 'lucide-react';
+import { Globe, Lock, Mail, Search, Trash2, UserPlus, Users } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -25,13 +25,11 @@ const PAGE_SIZE = 25;
 function UserRow({
   u,
   currentUserId,
-  onToggleStatus,
   onDelete,
   onClickUser,
 }: {
   u: AdminUser;
   currentUserId: string;
-  onToggleStatus: (id: string, subStatus: number) => void;
   onDelete: (u: AdminUser) => void;
   onClickUser: (id: string) => void;
 }) {
@@ -61,17 +59,6 @@ function UserRow({
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
-        {u.status !== 'trial' && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onToggleStatus(u.id, u.status === 'active' ? 0 : 1)}
-            aria-label={u.status === 'active' ? 'Deactivate user' : 'Activate user'}
-          >
-            {u.status === 'active' ? <ShieldOff className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
-          </Button>
-        )}
-
         <Button
           variant="ghost"
           size="icon"
@@ -99,17 +86,8 @@ export function AdminUsersPage() {
   const [createForm, setCreateForm] = useState({ username: '', password: '', displayName: '', email: '', isAdmin: false });
   const [createLoading, setCreateLoading] = useState(false);
 
-  const { users, count, isLoading, registration, updateUser, deleteUser, updateRegistrationMode, createUser } = useAdminUsers(search, page);
+  const { users, count, isLoading, registration, deleteUser, updateRegistrationMode, createUser } = useAdminUsers(search, page);
   const totalPages = Math.ceil(count / PAGE_SIZE);
-
-  const handleToggleStatus = useCallback(async (id: string, subStatus: number) => {
-    try {
-      await updateUser(id, { subStatus });
-      showToast({ message: `User ${subStatus === 1 ? 'activated' : 'deactivated'}`, variant: 'success' });
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to update user', variant: 'error' });
-    }
-  }, [updateUser, showToast]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -233,8 +211,7 @@ export function AdminUsersPage() {
                 <UserRow
                   key={u.id}
                   u={u}
-                  currentUserId={user!.id}
-                  onToggleStatus={handleToggleStatus}
+                  currentUserId={user?.id ?? ''}
                   onDelete={setDeleteTarget}
                   onClickUser={(id) => navigate(`/admin/users/${id}`)}
                 />

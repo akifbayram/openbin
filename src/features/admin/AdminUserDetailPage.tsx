@@ -1,6 +1,5 @@
 import {
-  Shield,
-  ShieldOff,
+  Pencil,
   Trash2,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -16,11 +15,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { OptionGroup } from '@/components/ui/option-group';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
+import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
 import { capitalize, deleteUser, statusVariant, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
 
@@ -40,12 +43,34 @@ export function AdminUserDetailPage() {
   const { showToast } = useToast();
   const { adminCount, refresh: refreshAdminCount } = useAdminCount();
   const { detail, isLoading, notFound, refresh } = useAdminUserDetail(id ?? '');
+  const { planInfo } = usePlan();
 
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<'lite' | 'pro' | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<'inactive' | 'trial' | 'active' | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ email: '', displayName: '', password: '' });
+  const [activeUntilInput, setActiveUntilInput] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (notFound) navigate('/admin/users');
   }, [notFound, navigate]);
+
+  useEffect(() => {
+    if (detail) setActiveUntilInput(detail.activeUntil ? detail.activeUntil.slice(0, 16) : '');
+  }, [detail]);
+
+  const handleSaveActiveUntil = useCallback(async () => {
+    if (!detail) return;
+    try {
+      await updateUser(detail.id, { activeUntil: activeUntilInput ? new Date(activeUntilInput).toISOString() : null });
+      showToast({ message: 'Active until updated', variant: 'success' });
+      refresh();
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : 'Failed to update active until', variant: 'error' });
+    }
+  }, [detail, activeUntilInput, showToast, refresh]);
 
   const handleToggleAdmin = useCallback(async (isAdmin: boolean) => {
     if (!detail) return;
@@ -59,18 +84,6 @@ export function AdminUserDetailPage() {
     }
   }, [detail, showToast, refresh, refreshAdminCount]);
 
-  const handleToggleStatus = useCallback(async () => {
-    if (!detail) return;
-    const newStatus = detail.status === 'active' ? 0 : 1;
-    try {
-      await updateUser(detail.id, { subStatus: newStatus });
-      showToast({ message: `User ${newStatus === 1 ? 'activated' : 'deactivated'}`, variant: 'success' });
-      refresh();
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to update user', variant: 'error' });
-    }
-  }, [detail, showToast, refresh]);
-
   const handleDelete = useCallback(async () => {
     if (!detail) return;
     try {
@@ -81,6 +94,70 @@ export function AdminUserDetailPage() {
       showToast({ message: err instanceof Error ? err.message : 'Failed to delete user', variant: 'error' });
     }
   }, [detail, showToast, navigate]);
+
+  const handlePlanChange = useCallback((newPlan: 'lite' | 'pro') => {
+    if (!detail || newPlan === detail.plan) return;
+    setPendingPlan(newPlan);
+  }, [detail]);
+
+  const confirmPlanChange = useCallback(async () => {
+    if (!detail || !pendingPlan) return;
+    try {
+      await updateUser(detail.id, { plan: pendingPlan === 'pro' ? 1 : 0 });
+      showToast({ message: `Plan changed to ${pendingPlan}`, variant: 'success' });
+      refresh();
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : 'Failed to update plan', variant: 'error' });
+    } finally {
+      setPendingPlan(null);
+    }
+  }, [detail, pendingPlan, showToast, refresh]);
+
+  const handleStatusChange = useCallback((newStatus: 'inactive' | 'trial' | 'active') => {
+    if (!detail || newStatus === detail.status) return;
+    setPendingStatus(newStatus);
+  }, [detail]);
+
+  const confirmStatusChange = useCallback(async () => {
+    if (!detail || !pendingStatus) return;
+    const statusMap = { inactive: 0, active: 1, trial: 2 } as const;
+    try {
+      await updateUser(detail.id, { subStatus: statusMap[pendingStatus] });
+      showToast({ message: `Status changed to ${pendingStatus}`, variant: 'success' });
+      refresh();
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : 'Failed to update status', variant: 'error' });
+    } finally {
+      setPendingStatus(null);
+    }
+  }, [detail, pendingStatus, showToast, refresh]);
+
+  const openEdit = useCallback(() => {
+    if (!detail) return;
+    setEditForm({ email: detail.email || '', displayName: detail.displayName || '', password: '' });
+    setEditOpen(true);
+  }, [detail]);
+
+  const handleEdit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!detail) return;
+    const body: Record<string, string> = {};
+    if (editForm.email !== (detail.email || '')) body.email = editForm.email;
+    if (editForm.displayName !== (detail.displayName || '')) body.displayName = editForm.displayName;
+    if (editForm.password) body.password = editForm.password;
+    if (Object.keys(body).length === 0) { setEditOpen(false); return; }
+    setSaving(true);
+    try {
+      await updateUser(detail.id, body);
+      showToast({ message: 'User updated', variant: 'success' });
+      refresh();
+      setEditOpen(false);
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : 'Failed to update user', variant: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  }, [detail, editForm, showToast, refresh]);
 
   if (isLoading) {
     return (
@@ -123,7 +200,7 @@ export function AdminUserDetailPage() {
   const isSelf = detail.id === currentUser?.id;
   const isLastAdmin = detail.isAdmin && adminCount <= 1;
   const adminDisabled = isSelf || isLastAdmin;
-  const statusDisabled = isLastAdmin;
+  const savedActiveUntil = detail.activeUntil ? detail.activeUntil.slice(0, 16) : '';
 
   return (
     <div className="page-content">
@@ -157,6 +234,12 @@ export function AdminUserDetailPage() {
                 <Badge variant={statusVariant(detail.status)}>{capitalize(detail.status)}</Badge>
               </div>
             </div>
+            {!planInfo.selfHosted && (
+              <div>
+                <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Active Until</span>
+                <p className="text-[15px] text-[var(--text-primary)]">{detail.activeUntil ? new Date(detail.activeUntil).toLocaleString() : '—'}</p>
+              </div>
+            )}
             <div>
               <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Created</span>
               <p className="text-[15px] text-[var(--text-primary)]">{new Date(detail.createdAt).toLocaleString()}</p>
@@ -200,20 +283,59 @@ export function AdminUserDetailPage() {
               </span>
             </div>
 
-            {detail.status !== 'trial' && (
+            <div className="flex items-center justify-between py-3">
+              <span className="text-[14px] text-[var(--text-secondary)]">Edit details</span>
+              <Button variant="outline" size="sm" onClick={openEdit}>
+                <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                Edit
+              </Button>
+            </div>
+
+            {!planInfo.selfHosted && (
               <div className="flex items-center justify-between py-3">
-                <span className="text-[14px] text-[var(--text-secondary)]">
-                  {detail.status === 'active' ? 'Deactivate user' : 'Activate user'}
-                </span>
-                <Button
-                  variant="outline"
+                <span className="text-[14px] text-[var(--text-secondary)]">Plan tier</span>
+                <OptionGroup
+                  options={[
+                    { key: 'lite' as const, label: 'Lite' },
+                    { key: 'pro' as const, label: 'Pro' },
+                  ]}
+                  value={detail.plan}
+                  onChange={handlePlanChange}
                   size="sm"
-                  onClick={handleToggleStatus}
-                  disabled={statusDisabled}
-                >
-                  {detail.status === 'active' ? <ShieldOff className="h-3.5 w-3.5 mr-1.5" /> : <Shield className="h-3.5 w-3.5 mr-1.5" />}
-                  {detail.status === 'active' ? 'Deactivate' : 'Activate'}
-                </Button>
+                />
+              </div>
+            )}
+
+            {!planInfo.selfHosted && (
+              <div className="flex items-center justify-between py-3">
+                <span className="text-[14px] text-[var(--text-secondary)]">Subscription</span>
+                <OptionGroup
+                  options={[
+                    { key: 'inactive' as const, label: 'Inactive' },
+                    { key: 'trial' as const, label: 'Trial' },
+                    { key: 'active' as const, label: 'Active' },
+                  ]}
+                  value={detail.status}
+                  onChange={handleStatusChange}
+                  size="sm"
+                />
+              </div>
+            )}
+
+            {!planInfo.selfHosted && (
+              <div className="flex items-center justify-between py-3">
+                <span className="text-[14px] text-[var(--text-secondary)]">Active until</span>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="datetime-local"
+                    value={activeUntilInput}
+                    onChange={(e) => setActiveUntilInput(e.target.value)}
+                    className="w-auto text-[14px] h-8"
+                  />
+                  {activeUntilInput !== savedActiveUntil && (
+                    <Button size="sm" onClick={handleSaveActiveUntil}>Save</Button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -247,6 +369,80 @@ export function AdminUserDetailPage() {
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>Delete</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Plan change confirmation dialog */}
+      <Dialog open={pendingPlan !== null} onOpenChange={(open) => { if (!open) setPendingPlan(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Plan</DialogTitle>
+            <DialogDescription>
+              Change <strong>{detail.username}</strong>&apos;s plan from {capitalize(detail.plan)} to {pendingPlan ? capitalize(pendingPlan) : ''}?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingPlan(null)}>Cancel</Button>
+            <Button onClick={confirmPlanChange}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Status change confirmation dialog */}
+      <Dialog open={pendingStatus !== null} onOpenChange={(open) => { if (!open) setPendingStatus(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Subscription Status</DialogTitle>
+            <DialogDescription>
+              Change <strong>{detail.username}</strong>&apos;s status from {capitalize(detail.status)} to {pendingStatus ? capitalize(pendingStatus) : ''}?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingStatus(null)}>Cancel</Button>
+            <Button onClick={confirmStatusChange}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit user dialog */}
+      <Dialog open={editOpen} onOpenChange={(open) => !open && setEditOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-displayName">Display Name</Label>
+              <Input
+                id="edit-displayName"
+                value={editForm.displayName}
+                onChange={(e) => setEditForm((f) => ({ ...f, displayName: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-password">New Password</Label>
+              <Input
+                id="edit-password"
+                type="password"
+                value={editForm.password}
+                onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
+                placeholder="Leave blank to keep current"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

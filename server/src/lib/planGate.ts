@@ -135,6 +135,25 @@ export async function throwPlanRestricted(userId: string, message: string): Prom
 }
 
 
+export async function getUserQuotaUsage(userId: string): Promise<{ locationCount: number; photoStorageMb: number }> {
+  const [locResult, photoResult] = await Promise.all([
+    query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM locations WHERE created_by = $1', [userId]),
+    query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [userId]),
+  ]);
+  return {
+    locationCount: locResult.rows[0].cnt,
+    photoStorageMb: photoResult.rows[0].total / (1024 * 1024),
+  };
+}
+
+export async function getMemberCount(locationId: string): Promise<number> {
+  const result = await query<{ cnt: number }>(
+    'SELECT COUNT(*) as cnt FROM location_members WHERE location_id = $1',
+    [locationId],
+  );
+  return result.rows[0].cnt;
+}
+
 export function generateUpgradeUrl(userId: string, email: string | null): string | null {
   if (!config.managerUrl) return null;
   const secret = config.subscriptionJwtSecret ?? config.jwtSecret;

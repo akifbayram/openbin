@@ -6,7 +6,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '../lib/cookies.js';
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
-import { notifyManagerNewUser } from '../lib/managerWebhook.js';
+import { deleteUserData, notifyManagerNewUser, notifyManagerUserUpdate } from '../lib/managerWebhook.js';
 import { consumeResetToken } from '../lib/passwordReset.js';
 import { safePath } from '../lib/pathSafety.js';
 import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
@@ -174,14 +174,6 @@ router.post('/register', asyncHandler(async (req, res) => {
     await query('UPDATE users SET active_location_id = $1 WHERE id = $2', [locationToJoin.id, user.id]);
   }
 
-  // Auto-promote to admin if no other admins exist (fresh install)
-  let isAdmin = false;
-  const adminCount = await query('SELECT COUNT(*) AS cnt FROM users WHERE is_admin = 1 AND id != $1', [user.id]);
-  if (Number(adminCount.rows[0].cnt) === 0) {
-    await query('UPDATE users SET is_admin = 1 WHERE id = $1', [user.id]);
-    isAdmin = true;
-  }
-
   const token = signToken({ id: user.id, username: user.username });
   const refresh = await createRefreshToken(user.id);
 
@@ -196,7 +188,6 @@ router.post('/register', asyncHandler(async (req, res) => {
       email: null,
       avatarUrl: null,
       createdAt: user.created_at,
-      ...(isAdmin ? { isAdmin: true } : {}),
     },
   });
 
@@ -494,7 +485,7 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
   const userId = req.user!.id;
 
   // Verify password
-  const userResult = await query('SELECT password_hash, avatar_path FROM users WHERE id = $1', [userId]);
+  const userResult = await query('SELECT password_hash, avatar_path, is_admin FROM users WHERE id = $1', [userId]);
   if (userResult.rows.length === 0) {
     throw new NotFoundError('User not found');
   }
@@ -505,6 +496,13 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
   }
 
   const avatarPath = userResult.rows[0].avatar_path;
+
+  if (userResult.rows[0].is_admin === 1) {
+    const adminCountResult = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM users WHERE is_admin = 1', []);
+    if (adminCountResult.rows[0].cnt <= 1) {
+      throw new ForbiddenError('Cannot delete the only admin account');
+    }
+  }
 
   // Find locations where user is a member
   const locationsResult = await query(
@@ -549,9 +547,15 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
     try { fs.unlinkSync(avatarPath); } catch { /* ignore */ }
   }
 
-  // Delete user — cascades location_members, refresh_tokens, sets NULL on bins/photos/locations created_by
+  deleteUserData(userId);
+
   await query('DELETE FROM users WHERE id = $1', [userId]);
+
+  notifyManagerUserUpdate({ userId, action: 'delete_user' });
+
   clearAuthCookies(res);
+
+  console.log(`[auth] User ${req.user!.username} deleted their account`);
 
   res.json({ message: 'Account deleted' });
 }));

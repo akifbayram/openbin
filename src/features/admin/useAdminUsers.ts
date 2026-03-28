@@ -105,7 +105,7 @@ export async function fetchUser(id: string): Promise<AdminUserDetail> {
   return apiFetch<AdminUserDetail>(`/api/admin/users/${id}`);
 }
 
-export async function updateUser(id: string, updates: { isAdmin?: boolean; subStatus?: number }) {
+export async function updateUser(id: string, updates: { isAdmin?: boolean; subStatus?: number; plan?: number; email?: string; displayName?: string; password?: string; activeUntil?: string | null }) {
   await apiFetch(`/api/admin/users/${id}`, { method: 'PUT', body: updates });
 }
 

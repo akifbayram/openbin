@@ -1,5 +1,21 @@
 import jwt from 'jsonwebtoken';
+import { getDb } from '../db.js';
 import { config } from './config.js';
+
+function sendManagerRequest(endpoint: string, payload: Record<string, unknown>, errorTag: string): void {
+  if (!config.managerUrl || config.selfHosted) return;
+
+  const secret = config.subscriptionJwtSecret ?? config.jwtSecret;
+  const token = jwt.sign(payload, secret, { algorithm: 'HS256', expiresIn: '5m' });
+
+  fetch(`${config.managerUrl}${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  }).catch((err) => {
+    console.error(`[managerWebhook] ${errorTag}:`, err);
+  });
+}
 
 interface NewUserPayload {
   userId: string;
@@ -10,27 +26,33 @@ interface NewUserPayload {
 }
 
 export function notifyManagerNewUser(user: NewUserPayload): void {
-  if (!config.managerUrl || config.selfHosted) return;
+  sendManagerRequest('/api/v1/users', {
+    userId: user.userId,
+    email: user.email,
+    username: user.username,
+    activeUntil: user.activeUntil,
+    status: user.status,
+    action: 'create_user',
+  }, 'Failed to notify Manager of new user');
+}
 
-  const secret = config.subscriptionJwtSecret ?? config.jwtSecret;
-  const token = jwt.sign(
-    {
-      userId: user.userId,
-      email: user.email,
-      username: user.username,
-      activeUntil: user.activeUntil,
-      status: user.status,
-      action: 'create_user',
-    },
-    secret,
-    { algorithm: 'HS256', expiresIn: '5m' },
-  );
+interface UserUpdatePayload {
+  userId: string;
+  action: 'update_subscription' | 'delete_user';
+  plan?: number;
+  status?: number;
+  activeUntil?: string | null;
+}
 
-  fetch(`${config.managerUrl}/api/v1/users`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token }),
-  }).catch((err) => {
-    console.error('[managerWebhook] Failed to notify Manager of new user:', err);
-  });
+export function notifyManagerUserUpdate(payload: UserUpdatePayload): void {
+  sendManagerRequest('/api/v1/users/update', { ...payload }, `Failed to notify Manager (${payload.action})`);
+}
+
+export function deleteUserData(userId: string): void {
+  const db = getDb();
+  db.prepare('DELETE FROM api_keys WHERE user_id = ?').run(userId);
+  db.prepare('DELETE FROM email_log WHERE user_id = ?').run(userId);
+  db.prepare('DELETE FROM ai_usage WHERE user_id = ?').run(userId);
+  db.prepare('DELETE FROM api_key_daily_usage WHERE user_id = ?').run(userId);
+  db.prepare('DELETE FROM bin_shares WHERE created_by = ?').run(userId);
 }
