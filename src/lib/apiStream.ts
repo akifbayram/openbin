@@ -55,7 +55,12 @@ export async function* apiStream(
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: res.statusText }));
-    throw new ApiError(res.status, data.message || data.error || res.statusText);
+    const code = data.error as string | undefined;
+    const upgradeUrl = data.upgrade_url as string | null | undefined;
+    if (code === 'PLAN_RESTRICTED' || code === 'SUBSCRIPTION_EXPIRED') {
+      window.dispatchEvent(new CustomEvent('openbin-plan-restricted', { detail: { code, message: data.message, upgradeUrl } }));
+    }
+    throw new ApiError(res.status, data.message || data.error || res.statusText, code, upgradeUrl);
   }
 
   const reader = res.body?.getReader();

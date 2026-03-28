@@ -26,18 +26,24 @@ const SELF_HOSTED_PLAN: PlanInfo = {
   status: 'active',
   activeUntil: null,
   selfHosted: true,
+  locked: false,
   features: {
     ai: true,
     apiKeys: true,
     customFields: true,
     fullExport: true,
+    reorganize: true,
+    binSharing: true,
+    webhooks: true,
     maxLocations: null,
-    maxBinsPerLocation: null,
     maxPhotoStorageMb: null,
     maxMembersPerLocation: null,
     activityRetentionDays: null,
   },
   upgradeUrl: null,
+  upgradeLiteUrl: null,
+  upgradeProUrl: null,
+  portalUrl: null,
 };
 
 const LITE_PLAN: PlanInfo = {
@@ -45,18 +51,24 @@ const LITE_PLAN: PlanInfo = {
   status: 'inactive',
   activeUntil: null,
   selfHosted: false,
+  locked: true,
   features: {
     ai: false,
     apiKeys: false,
     customFields: false,
     fullExport: false,
+    reorganize: false,
+    binSharing: false,
+    webhooks: false,
     maxLocations: 1,
-    maxBinsPerLocation: 100,
     maxPhotoStorageMb: 100,
     maxMembersPerLocation: 1,
-    activityRetentionDays: 30,
+    activityRetentionDays: 90,
   },
   upgradeUrl: 'https://example.com/upgrade',
+  upgradeLiteUrl: 'https://example.com/auth/openbin?token=abc&plan=lite',
+  upgradeProUrl: 'https://example.com/auth/openbin?token=abc&plan=pro',
+  portalUrl: null,
 };
 
 const PRO_PLAN: PlanInfo = {
@@ -64,18 +76,24 @@ const PRO_PLAN: PlanInfo = {
   status: 'active',
   activeUntil: '2027-01-01T00:00:00.000Z',
   selfHosted: false,
+  locked: false,
   features: {
     ai: true,
     apiKeys: true,
     customFields: true,
     fullExport: true,
+    reorganize: true,
+    binSharing: true,
+    webhooks: true,
     maxLocations: null,
-    maxBinsPerLocation: null,
-    maxPhotoStorageMb: 2048,
+    maxPhotoStorageMb: 5000,
     maxMembersPerLocation: null,
     activityRetentionDays: 90,
   },
   upgradeUrl: null,
+  upgradeLiteUrl: null,
+  upgradeProUrl: null,
+  portalUrl: 'https://example.com/portal?token=abc',
 };
 
 function makeWrapper() {
@@ -156,7 +174,6 @@ describe('usePlan', () => {
 
     // Numeric limits are not boolean-gated via isGated
     expect(result.current.isGated('maxLocations')).toBe(false);
-    expect(result.current.isGated('maxBinsPerLocation')).toBe(false);
   });
 
   it('isGated returns false for all features on pro plan', async () => {

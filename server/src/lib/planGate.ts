@@ -21,8 +21,10 @@ export interface PlanFeatures {
   apiKeys: boolean;
   customFields: boolean;
   fullExport: boolean;
+  reorganize: boolean;
+  binSharing: boolean;
+  webhooks: boolean;
   maxLocations: number | null;
-  maxBinsPerLocation: number | null;
   maxPhotoStorageMb: number | null;
   maxMembersPerLocation: number | null;
   activityRetentionDays: number | null;
@@ -79,8 +81,10 @@ const UNRESTRICTED: PlanFeatures = {
   apiKeys: true,
   customFields: true,
   fullExport: true,
+  reorganize: true,
+  binSharing: true,
+  webhooks: true,
   maxLocations: null,
-  maxBinsPerLocation: null,
   maxPhotoStorageMb: null,
   maxMembersPerLocation: null,
   activityRetentionDays: null,
@@ -89,18 +93,20 @@ const UNRESTRICTED: PlanFeatures = {
 export function getFeatureMap(plan: PlanTier): PlanFeatures {
   if (config.selfHosted) return UNRESTRICTED;
   if (plan === Plan.PRO) {
-    return { ...UNRESTRICTED, maxPhotoStorageMb: 2048, activityRetentionDays: 90 };
+    return { ...UNRESTRICTED, maxPhotoStorageMb: 5000, activityRetentionDays: 90 };
   }
   return {
     ai: false,
     apiKeys: false,
     customFields: false,
     fullExport: false,
+    reorganize: false,
+    binSharing: false,
+    webhooks: false,
     maxLocations: 1,
-    maxBinsPerLocation: 100,
     maxPhotoStorageMb: 100,
     maxMembersPerLocation: 1,
-    activityRetentionDays: 30,
+    activityRetentionDays: 90,
   };
 }
 
@@ -128,22 +134,24 @@ export async function throwPlanRestricted(userId: string, message: string): Prom
   throw new PlanRestrictedError(message, upgradeUrl);
 }
 
-/** Checks bin count against location owner's plan limit. */
-export async function enforceBinQuota(locationId: string, userId: string): Promise<void> {
-  const features = await getLocationOwnerFeatures(locationId);
-  if (features.maxBinsPerLocation === null) return;
-  const { rows } = await query<{ cnt: number }>(
-    'SELECT COUNT(*) as cnt FROM bins WHERE location_id = $1 AND deleted_at IS NULL',
-    [locationId],
-  );
-  if (rows[0].cnt >= features.maxBinsPerLocation) {
-    await throwPlanRestricted(userId, `This location has reached its limit of ${features.maxBinsPerLocation} bins`);
-  }
-}
 
 export function generateUpgradeUrl(userId: string, email: string | null): string | null {
   if (!config.managerUrl) return null;
   const secret = config.subscriptionJwtSecret ?? config.jwtSecret;
   const token = jwt.sign({ userId, email }, secret, { expiresIn: '30m' });
   return `${config.managerUrl}/auth/openbin?token=${token}`;
+}
+
+export function generateUpgradePlanUrl(userId: string, email: string | null, plan: 'lite' | 'pro'): string | null {
+  if (!config.managerUrl) return null;
+  const secret = config.subscriptionJwtSecret ?? config.jwtSecret;
+  const token = jwt.sign({ userId, email }, secret, { expiresIn: '30m' });
+  return `${config.managerUrl}/auth/openbin?token=${token}&plan=${plan}`;
+}
+
+export function generatePortalUrl(userId: string, email: string | null): string | null {
+  if (!config.managerUrl) return null;
+  const secret = config.subscriptionJwtSecret ?? config.jwtSecret;
+  const token = jwt.sign({ userId, email }, secret, { expiresIn: '30m' });
+  return `${config.managerUrl}/portal?token=${token}`;
 }

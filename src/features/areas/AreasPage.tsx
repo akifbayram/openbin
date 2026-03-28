@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
+import { UpgradePrompt } from '@/components/ui/upgrade-prompt';
 import { CustomFieldsDialog } from '@/features/bins/CustomFieldsDialog';
 import { LocationCreateDialog, LocationDeleteDialog, LocationJoinDialog, LocationRenameDialog } from '@/features/locations/LocationDialogs';
 import { LocationMembersDialog } from '@/features/locations/LocationMembersDialog';
@@ -16,6 +18,7 @@ import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
+import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
 import { AreaCard, CreateAreaCard, UnassignedAreaCard } from './AreaCard';
 import { CreateAreaDialog, DeleteAreaDialog } from './AreaDialogs';
@@ -30,6 +33,8 @@ export function AreasPage() {
   const { locations, isLoading: locationsLoading } = useLocationList();
   const { showToast } = useToast();
   const { areas, areaTree, unassignedCount } = useAreaList(activeLocationId);
+  const { isGated, isSelfHosted, planInfo } = usePlan();
+  const customFieldsGated = !isSelfHosted && isGated('customFields');
 
   // Location dialog state
   const [createLocationOpen, setCreateLocationOpen] = useState(false);
@@ -356,11 +361,19 @@ export function AreasPage() {
         open={!!retentionLocationId}
         onOpenChange={(open) => !open && setRetentionLocationId(null)}
       />
-      <CustomFieldsDialog
-        locationId={customFieldsLocationId}
-        open={!!customFieldsLocationId}
-        onOpenChange={(open) => !open && setCustomFieldsLocationId(null)}
-      />
+      {customFieldsGated ? (
+        <Dialog open={!!customFieldsLocationId} onOpenChange={(open) => !open && setCustomFieldsLocationId(null)}>
+          <DialogContent>
+            <UpgradePrompt feature="Custom Fields" description="Define custom fields for your bins." upgradeUrl={planInfo.upgradeUrl} />
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <CustomFieldsDialog
+          locationId={customFieldsLocationId}
+          open={!!customFieldsLocationId}
+          onOpenChange={(open) => !open && setCustomFieldsLocationId(null)}
+        />
+      )}
     </div>
   );
 }

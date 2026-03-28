@@ -257,6 +257,34 @@ CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id
 CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id);
 CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status);
 
+CREATE TABLE IF NOT EXISTS bin_shares (
+  id          TEXT PRIMARY KEY,
+  bin_id      TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE,
+  token       TEXT NOT NULL UNIQUE,
+  visibility  TEXT NOT NULL DEFAULT 'unlisted' CHECK (visibility IN ('public', 'unlisted')),
+  created_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
+  view_count  INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  revoked_at  TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bin_shares_active ON bin_shares(bin_id) WHERE revoked_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_bin_shares_token ON bin_shares(token) WHERE revoked_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS email_log (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL,
+  email_type TEXT NOT NULL,
+  sent_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_email_log_dedup ON email_log(user_id, email_type, sent_at);
+
+CREATE TABLE IF NOT EXISTS api_key_daily_usage (
+  api_key_id    TEXT NOT NULL,
+  date          TEXT NOT NULL DEFAULT (date('now')),
+  request_count INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (api_key_id, date)
+);
+
 CREATE TABLE IF NOT EXISTS ai_usage (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id    TEXT NOT NULL,

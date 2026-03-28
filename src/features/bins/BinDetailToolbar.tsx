@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { ArrowRightLeft, Check, ChevronLeft, ChevronRight, Copy, Loader2, Lock, MoreHorizontal, Pencil, Pin, Printer, QrCode, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowRightLeft, Check, ChevronLeft, ChevronRight, Copy, Loader2, Lock, MoreHorizontal, Pencil, Pin, Printer, QrCode, Save, Share2, Sparkles, Trash2, X } from 'lucide-react';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { MenuButton } from '@/components/ui/menu-button';
@@ -39,6 +39,8 @@ interface BinDetailToolbarProps {
   onDelete: () => void;
   isAdmin: boolean;
   onChangeCode: () => void;
+  onShare?: () => void;
+  showShareButton: boolean;
 }
 
 export function BinDetailToolbar({
@@ -70,6 +72,8 @@ export function BinDetailToolbar({
   onDelete,
   isAdmin,
   onChangeCode,
+  onShare,
+  showShareButton,
 }: BinDetailToolbarProps) {
   const t = useTerminology();
   const { visible, animating, close, toggle } = usePopover();
@@ -289,6 +293,16 @@ export function BinDetailToolbar({
                   >
                     <QrCode className="h-4 w-4 text-[var(--text-tertiary)]" />
                     Change Code
+                  </button>
+                )}
+                {showShareButton && onShare && (
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
+                    onClick={() => handleItem(onShare)}
+                  >
+                    <Share2 className="h-4 w-4 text-[var(--text-tertiary)]" />
+                    Share
                   </button>
                 )}
                 {canDelete && (

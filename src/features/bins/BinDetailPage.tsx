@@ -9,6 +9,7 @@ import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { resolveIcon } from '@/lib/iconMap';
 import { useNavigationGuard } from '@/lib/navigationGuard';
 import { useTerminology } from '@/lib/terminology';
+import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
 import { BinDetailSkeleton } from './BinDetailSkeleton';
 import { BinDetailToolbar } from './BinDetailToolbar';
@@ -17,6 +18,7 @@ import { BinViewContent } from './BinViewContent';
 import { ChangeCodeDialog } from './ChangeCodeDialog';
 import { DeleteBinDialog } from './DeleteBinDialog';
 import { MoveBinDialog } from './MoveBinDialog';
+import { ShareBinDialog } from './ShareBinDialog';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 import { useBinDetailActions } from './useBinDetailActions';
 import type { BinFilters, SortOption } from './useBins';
@@ -43,6 +45,9 @@ export function BinDetailPage() {
   const edit = useEditBinForm(id);
   const actions = useBinDetailActions(bin, id, edit.editing);
   const { fields: customFieldDefs } = useCustomFields(bin?.location_id);
+  const { isLocked } = usePlan();
+  const [shareOpen, setShareOpen] = useState(false);
+  const showShareButton = actions.isAdmin && !isLocked;
 
   // Fetch the bin list matching the sort/search/filters the user had active
   const hasBinListContext = !!backState?.backPath;
@@ -174,6 +179,8 @@ export function BinDetailPage() {
         onDelete={() => actions.setDeleteOpen(true)}
         isAdmin={actions.isAdmin}
         onChangeCode={() => actions.setChangeCodeOpen(true)}
+        onShare={() => setShareOpen(true)}
+        showShareButton={showShareButton}
       />
 
       {edit.editing ? (
@@ -229,6 +236,14 @@ export function BinDetailPage() {
         onOpenChange={actions.setChangeCodeOpen}
         currentBin={{ id: bin.id, name: bin.name }}
       />
+
+      {showShareButton && (
+        <ShareBinDialog
+          binId={bin.id}
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+        />
+      )}
 
       <UnsavedChangesDialog
         open={unsavedOpen}

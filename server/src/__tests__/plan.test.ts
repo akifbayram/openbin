@@ -28,9 +28,11 @@ const PRO_FEATURES = {
   apiKeys: true,
   customFields: true,
   fullExport: true,
+  reorganize: true,
+  binSharing: true,
+  webhooks: true,
   maxLocations: null,
-  maxBinsPerLocation: null,
-  maxPhotoStorageMb: 2048,
+  maxPhotoStorageMb: 5000,
   maxMembersPerLocation: null,
   activityRetentionDays: 90,
 };
@@ -40,11 +42,13 @@ const LITE_FEATURES = {
   apiKeys: false,
   customFields: false,
   fullExport: false,
+  reorganize: false,
+  binSharing: false,
+  webhooks: false,
   maxLocations: 1,
-  maxBinsPerLocation: 100,
   maxPhotoStorageMb: 100,
   maxMembersPerLocation: 1,
-  activityRetentionDays: 30,
+  activityRetentionDays: 90,
 };
 
 beforeEach(() => {
@@ -108,7 +112,7 @@ describe('GET /api/plan', () => {
     expect(res.body.features.maxLocations).toBeNull();
   });
 
-  it('returns trial status for cloud pro user on trial', async () => {
+  it('returns trial status + upgradeUrl for cloud pro user on trial', async () => {
     vi.mocked(isSelfHosted).mockReturnValue(false);
     vi.mocked(getUserPlanInfo).mockResolvedValue({
       plan: Plan.PRO,
@@ -117,7 +121,7 @@ describe('GET /api/plan', () => {
       email: 'trial@example.com',
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+    vi.mocked(generateUpgradeUrl).mockReturnValue('https://manager.example.com/auth/openbin?token=trial');
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -128,7 +132,7 @@ describe('GET /api/plan', () => {
     expect(res.body.plan).toBe('pro');
     expect(res.body.status).toBe('trial');
     expect(res.body.activeUntil).toBe('2027-01-01T00:00:00.000Z');
-    expect(res.body.upgradeUrl).toBeNull();
+    expect(res.body.upgradeUrl).toBe('https://manager.example.com/auth/openbin?token=trial');
   });
 
   it('returns restricted features + upgradeUrl for cloud lite user', async () => {
@@ -154,7 +158,6 @@ describe('GET /api/plan', () => {
     expect(res.body.upgradeUrl).toBe('https://manager.example.com/auth/openbin?token=abc');
     expect(res.body.features.ai).toBe(false);
     expect(res.body.features.maxLocations).toBe(1);
-    expect(res.body.features.maxBinsPerLocation).toBe(100);
   });
 
   it('returns inactive status for cloud user with no subscription', async () => {

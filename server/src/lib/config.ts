@@ -59,6 +59,11 @@ export const config = Object.freeze({
   managerUrl: process.env.MANAGER_URL || null,
   subscriptionJwtSecret: process.env.SUBSCRIPTION_JWT_SECRET || null,
   subscriptionWebhookSecret: process.env.SUBSCRIPTION_WEBHOOK_SECRET || null,
+  // Email (Resend)
+  emailEnabled: parseBool(process.env.EMAIL_ENABLED, false),
+  emailFrom: process.env.EMAIL_FROM || 'OpenBin <noreply@openbin.app>',
+  resendApiKey: process.env.RESEND_API_KEY || null,
+
   demoMode: parseBool(process.env.DEMO_MODE, false),
   aiMock: parseBool(process.env.AI_MOCK, false),
   demoUsernames: new Set(

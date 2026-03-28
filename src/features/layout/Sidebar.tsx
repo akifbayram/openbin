@@ -10,6 +10,7 @@ import type { TermKey } from '@/lib/navItems';
 import { useNavigationGuard } from '@/lib/navigationGuard';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
+import { usePlan } from '@/lib/usePlan';
 import { useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
 import { cn } from '@/lib/utils';
 import type { Location as LocationType } from '@/types';
@@ -25,13 +26,13 @@ const topItems: { path: string; label: string; icon: React.ComponentType<{ class
   { path: '/bins', label: 'Bins', icon: Package, termKey: 'Bins' },
 ];
 
-const manageItems: { path: string; label: string; icon: React.ComponentType<{ className?: string }>; termKey?: TermKey; requireWrite?: boolean }[] = [
+const manageItems: { path: string; label: string; icon: React.ComponentType<{ className?: string }>; termKey?: TermKey; requireWrite?: boolean; proOnly?: boolean }[] = [
   { path: '/locations', label: 'Locations', icon: MapPin, termKey: 'Locations' },
   { path: '/items', label: 'Items', icon: ClipboardList },
   { path: '/tags', label: 'Tags', icon: Tags },
   { path: '/print', label: 'Print', icon: Printer },
   { path: '/scan', label: 'Scan', icon: ScanLine },
-  { path: '/reorganize', label: 'Reorganize', icon: Boxes, requireWrite: true },
+  { path: '/reorganize', label: 'Reorganize', icon: Boxes, requireWrite: true, proOnly: true },
 ];
 
 const brandIcon = <BrandIcon className="h-5.5 w-5.5 text-[var(--accent)] shrink-0" />;
@@ -42,7 +43,7 @@ const discordIcon = (
   </svg>
 );
 
-function NavButton({ path, label, icon: Icon, currentPath, navigate, onClick, collapsed }: {
+function NavButton({ path, label, icon: Icon, currentPath, navigate, onClick, collapsed, proBadge }: {
   path: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -50,6 +51,7 @@ function NavButton({ path, label, icon: Icon, currentPath, navigate, onClick, co
   navigate: (path: string) => void;
   onClick?: () => void;
   collapsed?: boolean;
+  proBadge?: boolean;
 }) {
   const isActive = path === '/bins'
     ? currentPath === '/bins' || currentPath.startsWith('/bin/')
@@ -72,6 +74,9 @@ function NavButton({ path, label, icon: Icon, currentPath, navigate, onClick, co
       <span className={cn('truncate', collapsed && 'w-0 opacity-0')} aria-hidden={collapsed || undefined}>
         {label}
       </span>
+      {proBadge && !collapsed && (
+        <span className="ml-auto text-[10px] font-semibold text-[var(--text-tertiary)] shrink-0">Pro</span>
+      )}
     </button>
   );
 }
@@ -94,6 +99,8 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
   const t = useTerminology();
   const { user, logout } = useAuth();
   const { canWrite } = usePermissions();
+  const { isSelfHosted, isLite } = usePlan();
+  const showProBadges = !isSelfHosted && isLite;
   const footerLinkCls = 'p-2 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors';
 
   return (
@@ -155,7 +162,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
               />
             ) : (
               <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate}
-                onClick={onItemClick} collapsed={collapsed} />
+                onClick={onItemClick} collapsed={collapsed} proBadge={showProBadges && item.proOnly} />
             )
           )}
         </div>

@@ -274,8 +274,10 @@ export interface PlanFeatures {
   apiKeys: boolean;
   customFields: boolean;
   fullExport: boolean;
+  reorganize: boolean;
+  binSharing: boolean;
+  webhooks: boolean;
   maxLocations: number | null;
-  maxBinsPerLocation: number | null;
   maxPhotoStorageMb: number | null;
   maxMembersPerLocation: number | null;
   activityRetentionDays: number | null;
@@ -286,6 +288,10 @@ export interface PlanInfo {
   status: SubscriptionStatus;
   activeUntil: string | null;
   selfHosted: boolean;
+  locked: boolean;
   features: PlanFeatures;
   upgradeUrl: string | null;
+  upgradeLiteUrl: string | null;
+  upgradeProUrl: string | null;
+  portalUrl: string | null;
 }

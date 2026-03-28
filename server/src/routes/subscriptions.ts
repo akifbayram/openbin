@@ -12,16 +12,22 @@ const validPlans = new Set(Object.values(Plan));
 const validStatuses = new Set(Object.values(SubStatus));
 
 router.post('/callback', asyncHandler(async (req, res) => {
+  if (config.selfHosted) {
+    throw new NotFoundError('Not available in self-hosted mode');
+  }
+
+  const secret = config.subscriptionWebhookSecret;
+  if (!secret) {
+    res.status(503).json({ error: 'SERVICE_NOT_CONFIGURED', message: 'Subscription webhook secret not configured' });
+    return;
+  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     throw new UnauthorizedError('Missing authorization token');
   }
 
   const token = authHeader.slice(7);
-  const secret = config.subscriptionJwtSecret;
-  if (!secret) {
-    throw new UnauthorizedError('Subscription JWT secret not configured');
-  }
 
   let payload: { userId: string; plan: number; status: number; activeUntil: string };
   try {
@@ -51,6 +57,17 @@ router.post('/callback', asyncHandler(async (req, res) => {
   }
 
   res.json({ ok: true });
+
+  // Fire-and-forget subscription lifecycle emails
+  const userRow = (await query('SELECT email, display_name FROM users WHERE id = $1', [userId])).rows[0];
+  if (userRow?.email) {
+    const { fireSubscriptionConfirmedEmail, fireSubscriptionExpiredEmail } = await import('../lib/emailSender.js');
+    if (status === SubStatus.ACTIVE) {
+      fireSubscriptionConfirmedEmail(userId, userRow.email, userRow.display_name, plan as import('../lib/planGate.js').PlanTier, activeUntil);
+    } else if (status === SubStatus.INACTIVE) {
+      fireSubscriptionExpiredEmail(userId, userRow.email, userRow.display_name);
+    }
+  }
 }));
 
 export { router as subscriptionsRoutes };

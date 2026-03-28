@@ -109,6 +109,43 @@ try { db.exec('ALTER TABLE users ADD COLUMN sub_status INTEGER NOT NULL DEFAULT 
 try { db.exec('ALTER TABLE users ADD COLUMN active_until TEXT'); } catch { /* column already exists */ }
 db.exec('CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status)');
 
+// Bin sharing table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bin_shares (
+    id          TEXT PRIMARY KEY,
+    bin_id      TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE,
+    token       TEXT NOT NULL UNIQUE,
+    visibility  TEXT NOT NULL DEFAULT 'unlisted' CHECK (visibility IN ('public', 'unlisted')),
+    created_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    view_count  INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    revoked_at  TEXT
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_bin_shares_active ON bin_shares(bin_id) WHERE revoked_at IS NULL;
+  CREATE INDEX IF NOT EXISTS idx_bin_shares_token ON bin_shares(token) WHERE revoked_at IS NULL;
+`);
+
+// API key daily usage tracking
+db.exec(`
+  CREATE TABLE IF NOT EXISTS api_key_daily_usage (
+    api_key_id    TEXT NOT NULL,
+    date          TEXT NOT NULL DEFAULT (date('now')),
+    request_count INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (api_key_id, date)
+  );
+`);
+
+// Email deduplication log
+db.exec(`
+  CREATE TABLE IF NOT EXISTS email_log (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL,
+    email_type TEXT NOT NULL,
+    sent_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_email_log_dedup ON email_log(user_id, email_type, sent_at);
+`);
+
 /** O(min(m,n)) space — reuses module-level buffers to avoid per-call allocation */
 const _levBuf0 = new Int32Array(256);
 const _levBuf1 = new Int32Array(256);

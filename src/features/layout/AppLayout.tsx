@@ -1,4 +1,4 @@
-import { Download, X } from 'lucide-react';
+import { ArrowUpRight, Download, X } from 'lucide-react';
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { PageTransition } from '@/components/page-transition';
@@ -24,6 +24,7 @@ import { useTerminology } from '@/lib/terminology';
 import { useTheme } from '@/lib/theme';
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
 import { usePermissions } from '@/lib/usePermissions';
+import { usePlan } from '@/lib/usePlan';
 import { useUserPreferences } from '@/lib/userPreferences';
 import { toggleSidebarCollapsed, useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
 import { cn } from '@/lib/utils';
@@ -58,6 +59,8 @@ export function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { preferences, updatePreferences } = useUserPreferences();
   const { canWrite } = usePermissions();
+  const { isLocked, isSelfHosted, planInfo } = usePlan();
+  const showLockedBanner = isLocked && !isSelfHosted;
   const { settings: aiSettings } = useAiSettings();
   const terminology = useTerminology();
   const { bins } = useBinList();
@@ -192,6 +195,26 @@ export function AppLayout() {
         'pt-[var(--safe-top)] lg:pt-[var(--safe-top)] pb-[calc(16px+var(--safe-bottom))] lg:pb-8 transition-[margin-left] duration-200 ease-in-out',
         sidebarCollapsed ? 'lg:ml-[var(--sidebar-collapsed-width)]' : 'lg:ml-[var(--sidebar-width)]',
       )}>
+        {showLockedBanner && (
+          <div className="mx-auto w-full max-w-7xl px-4 lg:px-6 pt-4">
+            <div className="flat-card flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border-red-500/20 bg-red-500/10 px-4 py-3">
+              <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                Your trial has ended. Subscribe to continue using OpenBin.
+              </p>
+              {planInfo.upgradeUrl && (
+                <a
+                  href={planInfo.upgradeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity shrink-0"
+                >
+                  Subscribe
+                  <ArrowUpRight className="h-3 w-3" />
+                </a>
+              )}
+            </div>
+          </div>
+        )}
         <div className="mx-auto w-full max-w-7xl">
           <PageTransition>
             <Outlet />

@@ -77,8 +77,9 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       req.user = { id: row.id, username: row.username };
       req.authMethod = 'api_key';
       req.apiKeyId = row.key_id;
-      // Fire-and-forget: update last_used_at
+      // Fire-and-forget: update last_used_at + daily usage counter
       query("UPDATE api_keys SET last_used_at = datetime('now') WHERE id = $1", [row.key_id]).catch(() => {});
+      query("INSERT INTO api_key_daily_usage (api_key_id, date) VALUES ($1, date('now')) ON CONFLICT(api_key_id, date) DO UPDATE SET request_count = request_count + 1", [row.key_id]).catch(() => {});
       next();
     }).catch(() => {
       res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication failed' });

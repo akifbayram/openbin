@@ -9,9 +9,10 @@ import { getDb } from './db.js';
 import { config } from './lib/config.js';
 import { HttpError, PlanRestrictedError } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
-import { apiLimiter, authLimiter, joinLimiter, planApiLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
+import { apiLimiter, authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { tryAuthenticate } from './middleware/auth.js';
 import { requestLogger } from './middleware/requestLogger.js';
+import { requireActiveSubscription } from './middleware/requirePlan.js';
 import activityRoutes from './routes/activity.js';
 import aiRoutes from './routes/ai.js';
 import { streamRouter as aiStreamRoutes } from './routes/aiStream.js';
@@ -22,6 +23,7 @@ import avatarRoutes from './routes/avatar.js';
 import { batchRoutes } from './routes/batch.js';
 import binItemsRoutes from './routes/binItems.js';
 import binPinsRoutes from './routes/binPins.js';
+import { binSharesRoutes } from './routes/binShares.js';
 import binsRoutes from './routes/bins.js';
 import customFieldsRoutes from './routes/customFields.js';
 import exportRoutes from './routes/export.js';
@@ -32,6 +34,7 @@ import { planRoutes } from './routes/plan.js';
 import printSettingsRoutes from './routes/printSettings.js';
 import savedViewsRoutes from './routes/savedViews.js';
 import scanHistoryRoutes from './routes/scanHistory.js';
+import { sharedRoutes } from './routes/shared.js';
 import { subscriptionsRoutes } from './routes/subscriptions.js';
 import tagColorsRoutes from './routes/tagColors.js';
 import tagsRoutes from './routes/tags.js';
@@ -94,7 +97,7 @@ export function createApp(): express.Express {
 
   // Routes
   app.use('/api', apiLimiter);
-  app.use('/api', tryAuthenticate, planApiLimiter);
+  app.use('/api', tryAuthenticate, requireActiveSubscription());
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/demo-login', authLimiter);
   app.use('/api/auth/register', registerLimiter);
@@ -111,6 +114,7 @@ export function createApp(): express.Express {
   app.use('/api/locations', activityRoutes);
   app.use('/api/locations', customFieldsRoutes);
   app.use('/api/bins', binPinsRoutes);
+  app.use('/api/bins', binSharesRoutes);
   app.use('/api/bins', binsRoutes);
   app.use('/api/bins', binItemsRoutes);
   app.use('/api/photos', photosRoutes);
@@ -120,6 +124,7 @@ export function createApp(): express.Express {
   app.use('/api/saved-views', savedViewsRoutes);
   app.use('/api/scan-history', scanHistoryRoutes);
   app.use('/api/plan', planRoutes);
+  app.use('/api/shared', sharedRoutes);
   app.use('/api/subscriptions', subscriptionsRoutes);
   app.use('/api', exportRoutes);
   app.use('/api/ai', aiRoutes);

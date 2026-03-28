@@ -23,7 +23,7 @@ vi.mock('../lib/config.js', () => ({
     selfHosted: false,
     managerUrl: null,
     subscriptionJwtSecret: 'test-subscription-secret',
-    subscriptionWebhookSecret: null,
+    subscriptionWebhookSecret: 'test-webhook-secret',
     demoMode: false,
     aiMock: false,
     demoUsernames: new Set<string>(),
@@ -62,7 +62,7 @@ import { query } from '../db.js';
 import { createApp } from '../index.js';
 import { createTestUser } from './helpers.js';
 
-const SUB_SECRET = 'test-subscription-secret';
+const SUB_SECRET = 'test-webhook-secret';
 
 let app: Express;
 
@@ -121,18 +121,37 @@ describe('POST /api/subscriptions/callback', () => {
     expect(res.body.error).toBe('UNAUTHORIZED');
   });
 
-  it('returns 401 when subscriptionJwtSecret is not configured', async () => {
-    // Test that the route rejects when no secret is configured.
-    // We create a token with the real secret, but temporarily override app behavior
-    // by checking the error message when config lacks a subscription secret.
-    // (We trust the route code path — this is tested via route unit inspection.)
-    // Instead, verify the route guards the secret-not-configured path by
-    // directly testing the behavior described by the route code.
-    // Since we've mocked config to always have the secret, we verify the path
-    // works by checking that a token signed with the right secret succeeds in a separate test.
-    // This test intentionally skipped: can't easily override mock per-test without vi.mock factories.
-    // The code path IS covered by the route implementation and TS type checking.
-    expect(true).toBe(true); // placeholder for coverage note
+  it('returns 404 in self-hosted mode', async () => {
+    const { config: mockConfig } = await import('../lib/config.js');
+    const original = mockConfig.selfHosted;
+    Object.defineProperty(mockConfig, 'selfHosted', { value: true, writable: true, configurable: true });
+    try {
+      const token = makeSubToken({ userId: 'u1', plan: 1, status: 1, activeUntil: null });
+      const res = await request(app)
+        .post('/api/subscriptions/callback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+      expect(res.status).toBe(404);
+    } finally {
+      Object.defineProperty(mockConfig, 'selfHosted', { value: original, writable: true, configurable: true });
+    }
+  });
+
+  it('returns 503 when subscriptionWebhookSecret is not configured', async () => {
+    const { config: mockConfig } = await import('../lib/config.js');
+    const original = mockConfig.subscriptionWebhookSecret;
+    Object.defineProperty(mockConfig, 'subscriptionWebhookSecret', { value: null, writable: true, configurable: true });
+    try {
+      const token = makeSubToken({ userId: 'u1', plan: 1, status: 1, activeUntil: null });
+      const res = await request(app)
+        .post('/api/subscriptions/callback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({});
+      expect(res.status).toBe(503);
+      expect(res.body.error).toBe('SERVICE_NOT_CONFIGURED');
+    } finally {
+      Object.defineProperty(mockConfig, 'subscriptionWebhookSecret', { value: original, writable: true, configurable: true });
+    }
   });
 
   it('returns 422 when plan value is invalid', async () => {

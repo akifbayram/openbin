@@ -67,6 +67,8 @@ tags:
     description: Current user plan information and feature entitlements
   - name: Subscriptions
     description: Subscription lifecycle callbacks from the billing service
+  - name: Sharing
+    description: Bin sharing — generate public/unlisted links for unauthenticated access
 
 
 components:
@@ -78,6 +80,26 @@ components:
       description: API key (sk_openbin_...) via Authorization header. Cookies are the primary auth method for browsers.
 
   schemas:
+    # ── Sharing ──────────────────────────────────────────────
+    BinShare:
+      type: object
+      properties:
+        id:
+          type: string
+        token:
+          type: string
+        visibility:
+          type: string
+          enum: [public, unlisted]
+        url:
+          type: string
+          nullable: true
+        viewCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
     # ── Error ──────────────────────────────────────────────
     ErrorResponse:
       type: object
@@ -1214,14 +1236,19 @@ components:
         fullExport:
           type: boolean
           description: Access to JSON and ZIP export formats
+        reorganize:
+          type: boolean
+          description: Access to AI-powered bin reorganization
+        binSharing:
+          type: boolean
+          description: Ability to create public/unlisted share links for bins
+        webhooks:
+          type: boolean
+          description: Ability to configure event webhooks
         maxLocations:
           type: integer
           nullable: true
           description: Maximum number of locations (null = unlimited)
-        maxBinsPerLocation:
-          type: integer
-          nullable: true
-          description: Maximum bins per location (null = unlimited)
         maxPhotoStorageMb:
           type: integer
           nullable: true
@@ -5361,4 +5388,125 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  # ── Sharing ──────────────────────────────────────────────
+  /bins/{id}/share:
+    get:
+      tags: [Sharing]
+      summary: Get share info for a bin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Active share link
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BinShare'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Sharing]
+      summary: Create a share link for a bin (Pro)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visibility:
+                  type: string
+                  enum: [public, unlisted]
+                  default: unlisted
+      responses:
+        '201':
+          description: Share link created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BinShare'
+        '200':
+          description: Existing share returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BinShare'
+    delete:
+      tags: [Sharing]
+      summary: Revoke share link for a bin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Share link revoked
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /shared/{token}:
+    get:
+      tags: [Sharing]
+      summary: View a shared bin (no auth)
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shared bin data with photos list
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /shared/{token}/photos/{photoId}/file:
+    get:
+      tags: [Sharing]
+      summary: Serve photo from shared bin (no auth)
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+        - name: photoId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Photo file
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /shared/{token}/photos/{photoId}/thumb:
+    get:
+      tags: [Sharing]
+      summary: Serve thumbnail from shared bin (no auth)
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+        - name: photoId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Thumbnail (WebP)
+        '404':
+          $ref: '#/components/responses/NotFound'
 

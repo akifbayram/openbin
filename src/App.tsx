@@ -32,6 +32,10 @@ const RegisterPage = lazyWithRetry(() =>
   import('@/features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage }))
 );
 
+const SharedBinPage = lazyWithRetry(() =>
+  import('@/features/bins/SharedBinPage').then((m) => ({ default: m.SharedBinPage }))
+);
+
 const ResetPasswordPage = lazyWithRetry(() =>
   import('@/features/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage }))
 );
@@ -171,6 +175,29 @@ function SWUpdateNotifier() {
   return null;
 }
 
+function PlanErrorNotifier() {
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { code, upgradeUrl } = (e as CustomEvent).detail ?? {};
+      const message = code === 'SUBSCRIPTION_EXPIRED'
+        ? 'Your subscription has expired'
+        : 'This feature requires a Pro plan';
+      showToast({
+        message,
+        variant: 'warning',
+        duration: 6000,
+        ...(upgradeUrl ? { action: { label: 'Upgrade', onClick: () => window.open(upgradeUrl, '_blank') } } : {}),
+      });
+    };
+    window.addEventListener('openbin-plan-restricted', handler);
+    return () => window.removeEventListener('openbin-plan-restricted', handler);
+  }, [showToast]);
+
+  return null;
+}
+
 function ScanRedirect() {
   const { openScanDialog } = useScanDialog();
   useEffect(() => { openScanDialog(); }, [openScanDialog]);
@@ -199,6 +226,7 @@ export default function App() {
         <ToastProvider>
           <AuthProvider>
             <SWUpdateNotifier />
+            <PlanErrorNotifier />
             <Routes>
               {/* Public routes */}
               <Route
@@ -222,6 +250,14 @@ export default function App() {
                 element={
                   <Suspense fallback={<LoadingFallback />}>
                     <ResetPasswordPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/s/:token"
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <SharedBinPage />
                   </Suspense>
                 }
               />

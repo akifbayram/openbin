@@ -14,7 +14,7 @@ import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/custo
 import { ForbiddenError, GoneError, NotFoundError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
-import { enforceBinQuota, getUserFeatures, throwPlanRestricted } from '../lib/planGate.js';
+import { getUserFeatures, throwPlanRestricted } from '../lib/planGate.js';
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { storage } from '../lib/storage.js';
@@ -41,8 +41,6 @@ router.post('/', asyncHandler(async (req, res) => {
   await requireMemberOrAbove(locationId, req.user!.id, 'create bins');
 
   if (areaId) await verifyAreaInLocation(areaId, locationId);
-
-  await enforceBinQuota(locationId, req.user!.id);
 
   const bin = await insertBinWithItems({
     locationId,
@@ -690,8 +688,6 @@ router.post('/:id/duplicate', asyncHandler(async (req, res) => {
 
   const newName = req.body.name ? String(req.body.name).trim() : `Copy of ${src.name}`;
   if (req.body.name) validateBinName(req.body.name);
-
-  await enforceBinQuota(src.location_id, req.user!.id);
 
   // Copy items from source
   const itemsResult = await query<{ name: string; position: number }>(

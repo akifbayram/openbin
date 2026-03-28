@@ -10,6 +10,7 @@ import { OptionGroup } from '@/components/ui/option-group';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { UpgradePrompt } from '@/components/ui/upgrade-prompt';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useBinList } from '@/features/bins/useBins';
 import { BinSelectorCard } from '@/features/print/BinSelectorCard';
@@ -17,6 +18,7 @@ import { useBinSelection } from '@/features/print/useBinSelection';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
+import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
 import { ReorganizePreview } from './ReorganizePreview';
 import type { ReorgOptions } from './useReorganize';
@@ -27,6 +29,8 @@ export function ReorganizePage() {
   const t = useTerminology();
   const { activeLocationId } = useAuth();
   const { canWrite, isLoading: permissionsLoading } = usePermissions();
+  const { isGated, isSelfHosted, planInfo } = usePlan();
+  const reorganizeGated = !isSelfHosted && isGated('reorganize');
   const { bins: allBins, isLoading } = useBinList(undefined, 'name');
   const { areas } = useAreaList(activeLocationId);
   const selection = useBinSelection(allBins);
@@ -119,6 +123,19 @@ export function ReorganizePage() {
 
   if (!permissionsLoading && !canWrite) {
     return null;
+  }
+
+  if (reorganizeGated) {
+    return (
+      <div className="page-content max-w-6xl">
+        <PageHeader title="Reorganize" back />
+        <UpgradePrompt
+          feature="Reorganize"
+          description="AI-powered bin reorganization is available on the Pro plan."
+          upgradeUrl={planInfo.upgradeUrl}
+        />
+      </div>
+    );
   }
 
   if (isLoading) {

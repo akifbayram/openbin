@@ -363,6 +363,10 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
     validateEmail(email);
   }
 
+  // Check if user currently has no email (for welcome email trigger)
+  const existingUser = email ? (await query('SELECT email FROM users WHERE id = $1', [req.user!.id])).rows[0] : null;
+  const isFirstEmail = existingUser && !existingUser.email && email && email !== '';
+
   const updates: string[] = [];
   const values: unknown[] = [];
   let idx = 1;
@@ -398,6 +402,12 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
     createdAt: user.created_at,
     updatedAt: user.updated_at,
   });
+
+  // Fire welcome email when user sets email for the first time (cloud mode)
+  if (isFirstEmail && !isSelfHosted()) {
+    const { fireWelcomeEmail } = await import('../lib/emailSender.js');
+    fireWelcomeEmail(user.id, user.email, user.display_name);
+  }
 }));
 
 // PUT /api/auth/active-location — persist active location selection

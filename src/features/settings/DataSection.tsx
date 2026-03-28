@@ -21,6 +21,7 @@ import {
 import { Disclosure } from '@/components/ui/disclosure';
 import { LocationSelectList } from '@/features/locations/LocationSelectList';
 import { useLocationList } from '@/features/locations/useLocations';
+import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
 import type { Location } from '@/types';
 import type { useDataSectionActions } from './useDataSectionActions';
@@ -119,6 +120,8 @@ export function DataSection({
   locationName,
 }: DataSectionProps) {
   const navigate = useNavigate();
+  const { isGated, isSelfHosted } = usePlan();
+  const exportGated = !isSelfHosted && isGated('fullExport');
   const {
     fileInputRef,
     exportDialogOpen,
@@ -206,7 +209,7 @@ export function DataSection({
                 icon={Download}
                 label="Export Data"
                 description="Backup or download your data"
-                onClick={() => { setSelectedLocationId(activeLocationId ?? null); setExportDialogOpen(true); }}
+                onClick={() => { setSelectedLocationId(activeLocationId ?? null); if (exportGated) setExportFormat('csv'); setExportDialogOpen(true); }}
                 disabled={!activeLocationId}
               />
               <RowDivider />
@@ -247,29 +250,31 @@ export function DataSection({
             <div className="space-y-2.5">
               <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
               <div className="flex flex-col gap-3">
-                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                <label className={cn('flex items-start gap-2 text-sm', exportGated ? 'opacity-40 pointer-events-none' : 'cursor-pointer')}>
                   <input
                     type="radio"
                     name="export-format"
                     checked={exportFormat === 'zip'}
                     onChange={() => setExportFormat('zip')}
+                    disabled={exportGated}
                     className="accent-[var(--accent)] mt-0.5"
                   />
                   <div>
-                    <span className="text-[var(--text-primary)]">Backup (ZIP)</span>
+                    <span className="text-[var(--text-primary)]">Backup (ZIP){exportGated && <span className="ml-1.5 text-[10px] font-semibold text-[var(--text-tertiary)]">Pro</span>}</span>
                     <p className="text-[13px] text-[var(--text-tertiary)]">All data including photos</p>
                   </div>
                 </label>
-                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                <label className={cn('flex items-start gap-2 text-sm', exportGated ? 'opacity-40 pointer-events-none' : 'cursor-pointer')}>
                   <input
                     type="radio"
                     name="export-format"
                     checked={exportFormat === 'json'}
                     onChange={() => setExportFormat('json')}
+                    disabled={exportGated}
                     className="accent-[var(--accent)] mt-0.5"
                   />
                   <div>
-                    <span className="text-[var(--text-primary)]">Backup (JSON)</span>
+                    <span className="text-[var(--text-primary)]">Backup (JSON){exportGated && <span className="ml-1.5 text-[10px] font-semibold text-[var(--text-tertiary)]">Pro</span>}</span>
                     <p className="text-[13px] text-[var(--text-tertiary)]">Data and settings, no photos</p>
                   </div>
                 </label>
@@ -277,7 +282,7 @@ export function DataSection({
                   <input
                     type="radio"
                     name="export-format"
-                    checked={exportFormat === 'csv'}
+                    checked={exportFormat === 'csv' || exportGated}
                     onChange={() => setExportFormat('csv')}
                     className="accent-[var(--accent)] mt-0.5"
                   />
