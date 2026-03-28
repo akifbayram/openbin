@@ -6,6 +6,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '../lib/cookies.js';
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
+import { notifyManagerNewUser } from '../lib/managerWebhook.js';
 import { consumeResetToken } from '../lib/passwordReset.js';
 import { safePath } from '../lib/pathSafety.js';
 import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
@@ -141,7 +142,7 @@ router.post('/register', asyncHandler(async (req, res) => {
     result = await query(
       `INSERT INTO users (id, username, password_hash, display_name, plan, sub_status, active_until)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, username, display_name, created_at`,
+       RETURNING id, username, display_name, created_at, active_until`,
       [
         userId,
         username.toLowerCase(),
@@ -162,7 +163,7 @@ router.post('/register', asyncHandler(async (req, res) => {
     throw err;
   }
 
-  const user = result.rows[0] as { id: string; username: string; display_name: string; created_at: string };
+  const user = result.rows[0] as { id: string; username: string; display_name: string; created_at: string; active_until: string };
 
   // Auto-join location if invite code was valid
   if (locationToJoin) {
@@ -171,6 +172,14 @@ router.post('/register', asyncHandler(async (req, res) => {
       [generateUuid(), locationToJoin.id, user.id, locationToJoin.default_join_role]
     );
     await query('UPDATE users SET active_location_id = $1 WHERE id = $2', [locationToJoin.id, user.id]);
+  }
+
+  // Auto-promote to admin if no other admins exist (fresh install)
+  let isAdmin = false;
+  const adminCount = await query('SELECT COUNT(*) AS cnt FROM users WHERE is_admin = 1 AND id != $1', [user.id]);
+  if (Number(adminCount.rows[0].cnt) === 0) {
+    await query('UPDATE users SET is_admin = 1 WHERE id = $1', [user.id]);
+    isAdmin = true;
   }
 
   const token = signToken({ id: user.id, username: user.username });
@@ -187,7 +196,17 @@ router.post('/register', asyncHandler(async (req, res) => {
       email: null,
       avatarUrl: null,
       createdAt: user.created_at,
+      ...(isAdmin ? { isAdmin: true } : {}),
     },
+  });
+
+  // Notify Manager service of new cloud registration (fire-and-forget)
+  notifyManagerNewUser({
+    userId: user.id,
+    email: null,
+    username: user.username,
+    activeUntil: user.active_until,
+    status: 'trial',
   });
 }));
 

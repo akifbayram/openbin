@@ -9,7 +9,7 @@ import { getDb } from './db.js';
 import { config } from './lib/config.js';
 import { HttpError, PlanRestrictedError } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
-import { apiLimiter, authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
+import { apiLimiter, authLimiter, joinLimiter, planApiLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { tryAuthenticate } from './middleware/auth.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { requireActiveSubscription } from './middleware/requirePlan.js';
@@ -99,6 +99,7 @@ export function createApp(): express.Express {
   // Routes
   app.use('/api', apiLimiter);
   app.use('/api', tryAuthenticate, requireActiveSubscription());
+  app.use('/api', planApiLimiter);
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/demo-login', authLimiter);
   app.use('/api/auth/register', registerLimiter);

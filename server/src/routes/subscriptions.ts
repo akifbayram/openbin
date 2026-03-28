@@ -5,6 +5,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
 import { Plan, SubStatus } from '../lib/planGate.js';
+import { invalidatePlanRateLimit } from '../lib/rateLimiters.js';
 
 const router = Router();
 
@@ -55,6 +56,8 @@ router.post('/callback', asyncHandler(async (req, res) => {
   if (result.rowCount === 0) {
     throw new NotFoundError('User not found');
   }
+
+  invalidatePlanRateLimit(userId);
 
   res.json({ ok: true });
 
