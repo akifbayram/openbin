@@ -12,14 +12,16 @@ import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, signToken } from '../middleware/auth.js';
+import { getRegistrationMode } from './admin.js';
 
 const router = Router();
 
 // GET /api/auth/status — public (no auth required)
 router.get('/status', (_req, res) => {
+  const regMode = getRegistrationMode();
   const body: Record<string, unknown> = {
-    registrationEnabled: config.registrationMode !== 'closed',
-    registrationMode: config.registrationMode,
+    registrationEnabled: regMode !== 'closed',
+    registrationMode: regMode,
     demoMode: config.demoMode,
     qrPayloadMode: config.qrPayloadMode,
     selfHosted: config.selfHosted,
@@ -103,14 +105,15 @@ router.get('/invite-preview', asyncHandler(async (req, res) => {
 
 // POST /api/auth/register
 router.post('/register', asyncHandler(async (req, res) => {
-  if (config.registrationMode === 'closed') {
+  const regMode = getRegistrationMode();
+  if (regMode === 'closed') {
     throw new ForbiddenError('Registration is currently disabled');
   }
 
   const { username, password, displayName, inviteCode } = req.body;
 
   // In invite mode, invite code is required
-  if (config.registrationMode === 'invite' && !inviteCode) {
+  if (regMode === 'invite' && !inviteCode) {
     throw new ValidationError('An invite code is required to register');
   }
 
@@ -312,7 +315,7 @@ router.post('/logout-all', authenticate, asyncHandler(async (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
-    'SELECT id, username, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until FROM users WHERE id = $1',
+    'SELECT id, username, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until, is_admin FROM users WHERE id = $1',
     [req.user!.id]
   );
 
@@ -348,6 +351,7 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
     plan: planLabel(user.plan),
     subscriptionStatus: subStatusLabel(user.sub_status),
     activeUntil: user.active_until || null,
+    isAdmin: user.is_admin === 1,
   });
 }));
 

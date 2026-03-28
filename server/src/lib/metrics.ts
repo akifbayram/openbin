@@ -1,6 +1,6 @@
 import { query } from '../db.js';
 import { config } from './config.js';
-import { Plan, SubStatus, getFeatureMap } from './planGate.js';
+import { getFeatureMap, Plan, SubStatus } from './planGate.js';
 
 export interface CloudMetrics {
   generatedAt: string;

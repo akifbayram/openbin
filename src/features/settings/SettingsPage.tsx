@@ -1,4 +1,4 @@
-import { ChevronRight, ExternalLink, Info, Keyboard, LogOut, Monitor, Moon, Sparkles, Sun, UserCircle } from 'lucide-react';
+import { ChevronRight, ExternalLink, Info, Keyboard, LogOut, Monitor, Moon, Shield, Sparkles, Sun, UserCircle } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -84,6 +84,26 @@ export function SettingsPage() {
           />
         }
       />
+
+      {/* Admin (global admin only) */}
+      {user?.isAdmin && (
+        <Card>
+          <CardContent>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/users')}
+              className="flex items-center gap-3 w-full text-left py-1"
+            >
+              <Shield className="h-4 w-4 text-[var(--accent)]" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-semibold text-[var(--text-primary)]">Admin</p>
+                <p className="text-[13px] text-[var(--text-tertiary)]">Manage users, registration, and metrics</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+            </button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Account */}
       {user && (

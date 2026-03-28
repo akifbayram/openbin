@@ -45,4 +45,12 @@ export const apiLimiter: RequestHandler = isTest ? noop : rateLimit({
   message: { error: 'RATE_LIMITED', message: 'Too many requests, please try again later' },
 });
 
+export const metricsLimiter: RequestHandler = isTest ? noop : rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'RATE_LIMITED', message: 'Too many requests, please try again later' },
+});
+
 export { aiLimiter } from './aiRateLimiter.js';

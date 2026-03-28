@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   plan               INTEGER NOT NULL DEFAULT 1,
   sub_status         INTEGER NOT NULL DEFAULT 1,
   active_until       TEXT,
+  is_admin           INTEGER NOT NULL DEFAULT 0,
   created_at         TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -294,3 +295,8 @@ CREATE TABLE IF NOT EXISTS ai_usage (
   UNIQUE(user_id, date)
 );
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user_date ON ai_usage(user_id, date);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);

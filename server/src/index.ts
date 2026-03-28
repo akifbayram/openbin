@@ -14,6 +14,7 @@ import { tryAuthenticate } from './middleware/auth.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { requireActiveSubscription } from './middleware/requirePlan.js';
 import activityRoutes from './routes/activity.js';
+import { adminRoutes } from './routes/admin.js';
 import aiRoutes from './routes/ai.js';
 import { streamRouter as aiStreamRoutes } from './routes/aiStream.js';
 import apiKeysRoutes from './routes/apiKeys.js';
@@ -133,6 +134,7 @@ export function createApp(): express.Express {
   app.use('/api/tags', tagsRoutes);
   app.use('/api/items', itemsRoutes);
   app.use('/api', batchRoutes);
+  app.use('/api/admin', adminRoutes);
 
   // Global error handler
   app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

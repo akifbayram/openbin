@@ -109,6 +109,33 @@ try { db.exec('ALTER TABLE users ADD COLUMN sub_status INTEGER NOT NULL DEFAULT 
 try { db.exec('ALTER TABLE users ADD COLUMN active_until TEXT'); } catch { /* column already exists */ }
 db.exec('CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status)');
 
+// Global admin role
+try { db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0'); } catch { /* column already exists */ }
+
+// Seed default admin account (admin/admin) — idempotent
+// Pre-computed bcrypt hash for "admin" at cost 12 avoids blocking the event loop at startup
+{
+  const adminExists = db.prepare("SELECT 1 FROM users WHERE username = 'admin'").get();
+  if (!adminExists) {
+    db.prepare(
+      `INSERT INTO users (id, username, password_hash, display_name, is_admin, plan, sub_status, active_until)
+       VALUES (?, 'admin', ?, 'Admin', 1, 1, 1, ?)`
+    ).run(
+      crypto.randomUUID(),
+      '$2b$12$3s7vHxqe3VFONH86Xb5dm.Sqq6ZRWIkFNWPmfAkmx.PH.a0VCwJ1G',
+      new Date(Date.now() + 1000 * 365 * 24 * 60 * 60 * 1000).toISOString(),
+    );
+  }
+}
+
+// Global settings key-value store (e.g. runtime registration mode override)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+`);
+
 // Bin sharing table
 db.exec(`
   CREATE TABLE IF NOT EXISTS bin_shares (

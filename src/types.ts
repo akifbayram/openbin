@@ -13,6 +13,7 @@ export interface User {
   plan?: PlanTier;
   subscriptionStatus?: SubscriptionStatus;
   activeUntil?: string | null;
+  isAdmin?: boolean;
 }
 
 export interface Location {

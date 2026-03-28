@@ -84,6 +84,10 @@ const CapturePage = lazyWithRetry(() =>
   import('@/features/capture/CapturePage').then((m) => ({ default: m.CapturePage }))
 );
 
+const AdminUsersPage = lazyWithRetry(() =>
+  import('@/features/admin/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage }))
+);
+
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
@@ -378,6 +382,14 @@ export default function App() {
                   element={
                     <Suspense fallback={<LoadingFallback />}>
                       <CapturePage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/admin/users"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <AdminUsersPage />
                     </Suspense>
                   }
                 />
