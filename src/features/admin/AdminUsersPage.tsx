@@ -1,9 +1,13 @@
 import { Globe, Lock, Mail, Search, Shield, ShieldOff, Trash2, UserPlus, Users } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FormField } from '@/components/ui/form-field';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { OptionGroup } from '@/components/ui/option-group';
 import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
@@ -13,45 +17,29 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
-import { cn } from '@/lib/utils';
 import { AdminMetricsSection } from './AdminMetricsSection';
-import { type AdminUser, useAdminUsers } from './useAdminUsers';
+import { type AdminUser, capitalize, statusVariant, useAdminUsers } from './useAdminUsers';
 
 const PAGE_SIZE = 25;
-
-function statusVariant(status: string): 'default' | 'secondary' | 'outline' {
-  if (status === 'active') return 'default';
-  if (status === 'trial') return 'outline';
-  return 'secondary';
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 function UserRow({
   u,
   currentUserId,
-  adminCount,
-  onToggleAdmin,
   onToggleStatus,
   onDelete,
+  onClickUser,
 }: {
   u: AdminUser;
   currentUserId: string;
-  adminCount: number;
-  onToggleAdmin: (id: string, isAdmin: boolean) => void;
   onToggleStatus: (id: string, subStatus: number) => void;
   onDelete: (u: AdminUser) => void;
+  onClickUser: (id: string) => void;
 }) {
   const isSelf = u.id === currentUserId;
-  const isLastAdmin = u.isAdmin && adminCount <= 1;
-  const adminDisabled = isSelf || isLastAdmin;
-  const statusDisabled = isLastAdmin;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] transition-colors">
-      <div className="flex-1 min-w-0">
+      <button type="button" className="flex-1 min-w-0 text-left cursor-pointer appearance-none bg-transparent border-none p-0 font-[inherit]" onClick={() => onClickUser(u.id)}>
         <div className="flex items-center gap-2">
           <span className="text-[15px] font-medium text-[var(--text-primary)] truncate">{u.displayName || u.username}</span>
           {u.isAdmin && <Badge variant="default" className="text-[11px] px-1.5 py-0">Admin</Badge>}
@@ -64,7 +52,7 @@ function UserRow({
             </span>
           )}
         </div>
-      </div>
+      </button>
 
       <div className="flex items-center gap-2 flex-wrap">
         <Badge variant={statusVariant(u.status)} className="text-[11px]">{capitalize(u.status)}</Badge>
@@ -73,21 +61,11 @@ function UserRow({
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
-        <span className={cn('flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] mr-1', adminDisabled && 'opacity-50')}>
-          <Switch
-            checked={u.isAdmin}
-            onCheckedChange={(checked) => onToggleAdmin(u.id, checked)}
-            disabled={adminDisabled}
-          />
-          Admin
-        </span>
-
         {u.status !== 'trial' && (
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onToggleStatus(u.id, u.status === 'active' ? 0 : 1)}
-            disabled={statusDisabled}
             aria-label={u.status === 'active' ? 'Deactivate user' : 'Activate user'}
           >
             {u.status === 'active' ? <ShieldOff className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
@@ -113,21 +91,16 @@ export function AdminUsersPage() {
   const { user } = useAuth();
   const { isSelfHosted } = usePlan();
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({ username: '', password: '', displayName: '', email: '', isAdmin: false });
+  const [createLoading, setCreateLoading] = useState(false);
 
-  const { users, count, adminCount, isLoading, registration, updateUser, deleteUser, updateRegistrationMode } = useAdminUsers(search, page);
+  const { users, count, isLoading, registration, updateUser, deleteUser, updateRegistrationMode, createUser } = useAdminUsers(search, page);
   const totalPages = Math.ceil(count / PAGE_SIZE);
-
-  const handleToggleAdmin = useCallback(async (id: string, isAdmin: boolean) => {
-    try {
-      await updateUser(id, { isAdmin });
-      showToast({ message: `User ${isAdmin ? 'promoted to' : 'removed from'} admin`, variant: 'success' });
-    } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to update user', variant: 'error' });
-    }
-  }, [updateUser, showToast]);
 
   const handleToggleStatus = useCallback(async (id: string, subStatus: number) => {
     try {
@@ -157,6 +130,26 @@ export function AdminUsersPage() {
       showToast({ message: err instanceof Error ? err.message : 'Failed to update registration mode', variant: 'error' });
     }
   }, [updateRegistrationMode, showToast]);
+
+  const handleCreate = useCallback(async () => {
+    setCreateLoading(true);
+    try {
+      await createUser({
+        username: createForm.username,
+        password: createForm.password,
+        displayName: createForm.displayName || undefined,
+        email: createForm.email || undefined,
+        isAdmin: createForm.isAdmin,
+      });
+      showToast({ message: `User ${createForm.username} created`, variant: 'success' });
+      setCreateOpen(false);
+      setCreateForm({ username: '', password: '', displayName: '', email: '', isAdmin: false });
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : 'Failed to create user', variant: 'error' });
+    } finally {
+      setCreateLoading(false);
+    }
+  }, [createForm, createUser, showToast]);
 
   return (
     <div className="page-content">
@@ -198,6 +191,11 @@ export function AdminUsersPage() {
             <Users className="h-4 w-4 text-[var(--text-secondary)]" />
             <span className="text-[15px] font-semibold text-[var(--text-primary)]">Users</span>
             <Badge variant="secondary" className="text-[11px]">{count}</Badge>
+            <div className="flex-1" />
+            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+              <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+              Create User
+            </Button>
           </div>
 
           <SearchInput
@@ -236,10 +234,9 @@ export function AdminUsersPage() {
                   key={u.id}
                   u={u}
                   currentUserId={user!.id}
-                  adminCount={adminCount}
-                  onToggleAdmin={handleToggleAdmin}
                   onToggleStatus={handleToggleStatus}
                   onDelete={setDeleteTarget}
+                  onClickUser={(id) => navigate(`/admin/users/${id}`)}
                 />
               ))
             )}
@@ -269,6 +266,72 @@ export function AdminUsersPage() {
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>Delete</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create user dialog */}
+      <Dialog open={createOpen} onOpenChange={(open) => {
+        if (!open) {
+          setCreateOpen(false);
+          setCreateForm({ username: '', password: '', displayName: '', email: '', isAdmin: false });
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create User</DialogTitle>
+            <DialogDescription>Create a new user account.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }} className="space-y-5">
+            <FormField label="Username" htmlFor="create-username">
+              <Input
+                id="create-username"
+                value={createForm.username}
+                onChange={(e) => setCreateForm((f) => ({ ...f, username: e.target.value }))}
+                placeholder="Username"
+                autoComplete="off"
+              />
+            </FormField>
+            <FormField label="Password" htmlFor="create-password" hint="8+ characters, mixed case, one digit">
+              <Input
+                id="create-password"
+                type="password"
+                value={createForm.password}
+                onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
+                placeholder="Password"
+                autoComplete="new-password"
+              />
+            </FormField>
+            <FormField label="Display Name" htmlFor="create-displayName">
+              <Input
+                id="create-displayName"
+                value={createForm.displayName}
+                onChange={(e) => setCreateForm((f) => ({ ...f, displayName: e.target.value }))}
+                placeholder="Optional"
+              />
+            </FormField>
+            <FormField label="Email" htmlFor="create-email">
+              <Input
+                id="create-email"
+                type="email"
+                value={createForm.email}
+                onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="Optional"
+              />
+            </FormField>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={createForm.isAdmin}
+                onCheckedChange={(checked) => setCreateForm((f) => ({ ...f, isAdmin: checked }))}
+              />
+              <Label>Admin</Label>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={!createForm.username || !createForm.password || createLoading}>
+                {createLoading ? 'Creating...' : 'Create'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

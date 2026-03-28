@@ -1,11 +1,13 @@
+import bcrypt from 'bcrypt';
 import { Router } from 'express';
-import { getDb, query } from '../db.js';
+import { generateUuid, getDb, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
-import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { getCloudMetrics } from '../lib/metrics.js';
-import { planLabel, subStatusLabel } from '../lib/planGate.js';
+import { isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel } from '../lib/planGate.js';
 import { metricsLimiter } from '../lib/rateLimiters.js';
+import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 
@@ -59,6 +61,109 @@ router.get('/users', asyncHandler(async (req, res) => {
   }));
 
   res.json({ results, count: countResult.rows[0].cnt, adminCount: getAdminCount() });
+}));
+
+// POST /api/admin/users — create a new user (admin only)
+router.post('/users', asyncHandler(async (req, res) => {
+  const { username, password, displayName, email, isAdmin } = req.body;
+
+  validateUsername(username);
+  validatePassword(password);
+  if (displayName !== undefined) validateDisplayName(displayName);
+  if (email !== undefined && email !== '') validateEmail(email);
+
+  const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
+  const userId = generateUuid();
+
+  let result: import('../db.js').QueryResult<Record<string, unknown>>;
+  try {
+    result = await query(
+      `INSERT INTO users (id, username, password_hash, display_name, email, is_admin, plan, sub_status, active_until)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id, username, display_name, email, is_admin, plan, sub_status, created_at`,
+      [
+        userId,
+        username.toLowerCase(),
+        passwordHash,
+        displayName || username,
+        email || null,
+        isAdmin ? 1 : 0,
+        Plan.PRO,
+        isSelfHosted() ? SubStatus.ACTIVE : SubStatus.TRIAL,
+        isSelfHosted()
+          ? new Date(Date.now() + 1000 * 365 * 24 * 60 * 60 * 1000).toISOString()
+          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      ]
+    );
+  } catch (err: unknown) {
+    const sqliteErr = err as { code?: string };
+    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      throw new ConflictError('Username already taken');
+    }
+    throw err;
+  }
+
+  const user = result.rows[0] as {
+    id: string; username: string; display_name: string; email: string | null;
+    is_admin: number; plan: PlanTier; sub_status: SubStatusType; created_at: string;
+  };
+
+  console.log(`[admin] User ${req.user!.username} created user ${username}`);
+
+  res.status(201).json({
+    id: user.id,
+    username: user.username,
+    displayName: user.display_name,
+    email: user.email,
+    isAdmin: user.is_admin === 1,
+    plan: planLabel(user.plan),
+    status: subStatusLabel(user.sub_status),
+    createdAt: user.created_at,
+  });
+}));
+
+// GET /api/admin/users/:id — user detail with stats
+router.get('/users/:id', asyncHandler(async (req, res) => {
+  const db = getDb();
+  const userId = req.params.id;
+
+  const row = db.prepare(
+    'SELECT id, username, display_name, email, is_admin, plan, sub_status, active_until, created_at, updated_at FROM users WHERE id = ?'
+  ).get(userId) as {
+    id: string; username: string; display_name: string; email: string | null;
+    is_admin: number; plan: PlanTier; sub_status: SubStatusType;
+    active_until: string | null; created_at: string; updated_at: string;
+  } | undefined;
+
+  if (!row) throw new NotFoundError('User not found');
+
+  const locationCount = (db.prepare('SELECT COUNT(*) as cnt FROM locations WHERE created_by = ?').get(userId) as { cnt: number }).cnt;
+  const binCount = (db.prepare('SELECT COUNT(*) as cnt FROM bins WHERE created_by = ? AND deleted_at IS NULL').get(userId) as { cnt: number }).cnt;
+  const photoCount = (db.prepare('SELECT COUNT(*) as cnt FROM photos WHERE created_by = ?').get(userId) as { cnt: number }).cnt;
+  const photoStorageBytes = (db.prepare('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = ?').get(userId) as { total: number }).total;
+  const apiKeyCount = (db.prepare('SELECT COUNT(*) as cnt FROM api_keys WHERE user_id = ? AND revoked_at IS NULL').get(userId) as { cnt: number }).cnt;
+  const shareCount = (db.prepare('SELECT COUNT(*) as cnt FROM bin_shares WHERE created_by = ? AND revoked_at IS NULL').get(userId) as { cnt: number }).cnt;
+
+  res.json({
+    id: row.id,
+    username: row.username,
+    displayName: row.display_name,
+    email: row.email,
+    isAdmin: row.is_admin === 1,
+    plan: planLabel(row.plan),
+    status: subStatusLabel(row.sub_status),
+    activeUntil: row.active_until || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    stats: {
+      locationCount,
+      binCount,
+      photoCount,
+      photoStorageMb: Math.round((photoStorageBytes / (1024 * 1024)) * 100) / 100,
+      apiKeyCount,
+      shareCount,
+    },
+  });
 }));
 
 // PUT /api/admin/users/:id — update admin role or subscription status

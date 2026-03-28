@@ -54,13 +54,13 @@ export function useAdminUsers(query = '', page = 1) {
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
   useEffect(() => { fetchRegistration(); }, [fetchRegistration]);
 
-  const updateUser = useCallback(async (id: string, updates: { isAdmin?: boolean; subStatus?: number }) => {
-    await apiFetch(`/api/admin/users/${id}`, { method: 'PUT', body: updates });
+  const handleUpdateUser = useCallback(async (id: string, updates: { isAdmin?: boolean; subStatus?: number }) => {
+    await updateUser(id, updates);
     await fetchUsers();
   }, [fetchUsers]);
 
-  const deleteUser = useCallback(async (id: string) => {
-    await apiFetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+  const handleDeleteUser = useCallback(async (id: string) => {
+    await deleteUser(id);
     await fetchUsers();
   }, [fetchUsers]);
 
@@ -69,5 +69,102 @@ export function useAdminUsers(query = '', page = 1) {
     setRegistration((prev) => ({ ...prev, mode }));
   }, []);
 
-  return { users, count, adminCount, isLoading, registration, updateUser, deleteUser, updateRegistrationMode, refresh: fetchUsers };
+  const createUser = useCallback(async (data: {
+    username: string; password: string; displayName?: string; email?: string; isAdmin?: boolean;
+  }) => {
+    const result = await apiFetch<AdminUser>('/api/admin/users', { method: 'POST', body: data });
+    await fetchUsers();
+    return result;
+  }, [fetchUsers]);
+
+  return { users, count, adminCount, isLoading, registration, updateUser: handleUpdateUser, deleteUser: handleDeleteUser, updateRegistrationMode, createUser, refresh: fetchUsers };
+}
+
+export interface AdminUserDetail {
+  id: string;
+  username: string;
+  displayName: string;
+  email: string | null;
+  isAdmin: boolean;
+  plan: 'lite' | 'pro';
+  status: 'active' | 'inactive' | 'trial';
+  activeUntil: string | null;
+  createdAt: string;
+  updatedAt: string;
+  stats: {
+    locationCount: number;
+    binCount: number;
+    photoCount: number;
+    photoStorageMb: number;
+    apiKeyCount: number;
+    shareCount: number;
+  };
+}
+
+export async function fetchUser(id: string): Promise<AdminUserDetail> {
+  return apiFetch<AdminUserDetail>(`/api/admin/users/${id}`);
+}
+
+export async function updateUser(id: string, updates: { isAdmin?: boolean; subStatus?: number }) {
+  await apiFetch(`/api/admin/users/${id}`, { method: 'PUT', body: updates });
+}
+
+export async function deleteUser(id: string) {
+  await apiFetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+}
+
+export async function fetchAdminCount(): Promise<number> {
+  const data = await apiFetch<{ results: AdminUser[]; count: number; adminCount: number }>('/api/admin/users?page=1');
+  return data.adminCount;
+}
+
+export function statusVariant(status: string): 'default' | 'secondary' | 'outline' {
+  if (status === 'active') return 'default';
+  if (status === 'trial') return 'outline';
+  return 'secondary';
+}
+
+export function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+export function useAdminCount() {
+  const [adminCount, setAdminCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refresh = useCallback(() => {
+    fetchAdminCount().then(setAdminCount).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchAdminCount()
+      .then(setAdminCount)
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  return { adminCount, isLoading, refresh };
+}
+
+export function useAdminUserDetail(id: string) {
+  const [detail, setDetail] = useState<AdminUserDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    setIsLoading(true);
+    setNotFound(false);
+    fetchUser(id)
+      .then(setDetail)
+      .catch(() => setNotFound(true))
+      .finally(() => setIsLoading(false));
+  }, [id]);
+
+  const refresh = useCallback(() => {
+    if (!id) return;
+    fetchUser(id).then(setDetail).catch(() => {});
+  }, [id]);
+
+  return { detail, isLoading, notFound, refresh };
 }

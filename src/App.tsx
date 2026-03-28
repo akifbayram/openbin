@@ -88,6 +88,10 @@ const AdminUsersPage = lazyWithRetry(() =>
   import('@/features/admin/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage }))
 );
 
+const AdminUserDetailPage = lazyWithRetry(() =>
+  import('@/features/admin/AdminUserDetailPage').then((m) => ({ default: m.AdminUserDetailPage }))
+);
+
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
@@ -390,6 +394,14 @@ export default function App() {
                   element={
                     <Suspense fallback={<LoadingFallback />}>
                       <AdminUsersPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/admin/users/:id"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <AdminUserDetailPage />
                     </Suspense>
                   }
                 />
