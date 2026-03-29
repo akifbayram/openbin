@@ -24,7 +24,6 @@ export interface PlanFeatures {
   fullExport: boolean;
   reorganize: boolean;
   binSharing: boolean;
-  webhooks: boolean;
   maxLocations: number | null;
   maxPhotoStorageMb: number | null;
   maxMembersPerLocation: number | null;
@@ -85,7 +84,6 @@ const UNRESTRICTED: PlanFeatures = {
   fullExport: true,
   reorganize: true,
   binSharing: true,
-  webhooks: true,
   maxLocations: null,
   maxPhotoStorageMb: null,
   maxMembersPerLocation: null,
@@ -104,7 +102,6 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
     fullExport: false,
     reorganize: false,
     binSharing: false,
-    webhooks: false,
     maxLocations: 1,
     maxPhotoStorageMb: 100,
     maxMembersPerLocation: 1,

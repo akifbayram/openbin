@@ -28,7 +28,6 @@ const SELF_HOSTED_PLAN: PlanInfo = {
     fullExport: true,
     reorganize: true,
     binSharing: true,
-    webhooks: true,
     maxLocations: null,
     maxPhotoStorageMb: null,
     maxMembersPerLocation: null,

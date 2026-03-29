@@ -155,7 +155,6 @@ describe('getFeatureMap()', () => {
     expect(features.fullExport).toBe(true);
     expect(features.reorganize).toBe(true);
     expect(features.binSharing).toBe(true);
-    expect(features.webhooks).toBe(true);
     expect(features.maxLocations).toBe(null);
     expect(features.maxPhotoStorageMb).toBe(5000);
     expect(features.maxMembersPerLocation).toBe(null);
@@ -171,7 +170,6 @@ describe('getFeatureMap()', () => {
     expect(features.fullExport).toBe(false);
     expect(features.reorganize).toBe(false);
     expect(features.binSharing).toBe(false);
-    expect(features.webhooks).toBe(false);
     expect(features.maxLocations).toBe(1);
     expect(features.maxPhotoStorageMb).toBe(100);
     expect(features.maxMembersPerLocation).toBe(1);
@@ -187,7 +185,6 @@ describe('getFeatureMap()', () => {
     expect(features.fullExport).toBe(true);
     expect(features.reorganize).toBe(true);
     expect(features.binSharing).toBe(true);
-    expect(features.webhooks).toBe(true);
     expect(features.maxLocations).toBe(null);
     expect(features.maxPhotoStorageMb).toBe(null);
     expect(features.maxMembersPerLocation).toBe(null);

@@ -277,7 +277,6 @@ export interface PlanFeatures {
   fullExport: boolean;
   reorganize: boolean;
   binSharing: boolean;
-  webhooks: boolean;
   maxLocations: number | null;
   maxPhotoStorageMb: number | null;
   maxMembersPerLocation: number | null;
