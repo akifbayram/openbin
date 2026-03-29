@@ -5,7 +5,12 @@ import { config } from './config.js';
 function sendManagerRequest(endpoint: string, payload: Record<string, unknown>, errorTag: string): void {
   if (!config.managerUrl || config.selfHosted) return;
 
-  const secret = config.subscriptionJwtSecret ?? config.jwtSecret;
+  if (!config.subscriptionJwtSecret) {
+    console.warn(`[managerWebhook] ${errorTag}: SUBSCRIPTION_JWT_SECRET not set, skipping`);
+    return;
+  }
+
+  const secret = config.subscriptionJwtSecret;
   const token = jwt.sign(payload, secret, { algorithm: 'HS256', expiresIn: '5m' });
 
   fetch(`${config.managerUrl}${endpoint}`, {

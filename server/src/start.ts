@@ -16,6 +16,12 @@ if (!config.aiEncryptionKey) {
 if (config.disableRateLimit && process.env.NODE_ENV !== 'test') {
   console.warn('WARNING: Rate limiting is disabled (DISABLE_RATE_LIMIT=true)');
 }
+if (!config.selfHosted && !config.subscriptionJwtSecret) {
+  console.warn('WARNING: SUBSCRIPTION_JWT_SECRET is not set \u2014 Manager webhooks and upgrade URLs are disabled');
+}
+if (!config.selfHosted && !config.managerUrl) {
+  console.warn('WARNING: Cloud mode is active but MANAGER_URL is not set');
+}
 
 if (config.demoMode) {
   seedDemoData();

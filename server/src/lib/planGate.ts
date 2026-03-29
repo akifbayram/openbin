@@ -186,21 +186,24 @@ export async function getMemberCount(locationId: string): Promise<number> {
 
 export function generateUpgradeUrl(userId: string, email: string | null): string | null {
   if (!config.managerUrl) return null;
-  const secret = config.subscriptionJwtSecret ?? config.jwtSecret;
+  if (!config.subscriptionJwtSecret) return null;
+  const secret = config.subscriptionJwtSecret;
   const token = jwt.sign({ userId, email }, secret, { expiresIn: '30m' });
   return `${config.managerUrl}/auth/openbin?token=${token}`;
 }
 
 export function generateUpgradePlanUrl(userId: string, email: string | null, plan: 'lite' | 'pro'): string | null {
   if (!config.managerUrl) return null;
-  const secret = config.subscriptionJwtSecret ?? config.jwtSecret;
+  if (!config.subscriptionJwtSecret) return null;
+  const secret = config.subscriptionJwtSecret;
   const token = jwt.sign({ userId, email }, secret, { expiresIn: '30m' });
   return `${config.managerUrl}/auth/openbin?token=${token}&plan=${plan}`;
 }
 
 export function generatePortalUrl(userId: string, email: string | null): string | null {
   if (!config.managerUrl) return null;
-  const secret = config.subscriptionJwtSecret ?? config.jwtSecret;
+  if (!config.subscriptionJwtSecret) return null;
+  const secret = config.subscriptionJwtSecret;
   const token = jwt.sign({ userId, email }, secret, { expiresIn: '30m' });
   return `${config.managerUrl}/portal?token=${token}`;
 }
