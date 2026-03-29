@@ -261,6 +261,15 @@ export async function getUserOverLimits(userId: string): Promise<OverLimits> {
   return data;
 }
 
+/**
+ * Validates that a plan + status combination is semantically valid.
+ * TRIAL is only valid for PRO (trial is always a Pro trial).
+ */
+export function validatePlanTransition(plan: PlanTier, status: SubStatusType): boolean {
+  if (status === SubStatus.TRIAL && plan !== Plan.PRO) return false;
+  return true;
+}
+
 export async function checkLocationWritable(locationId: string): Promise<{ writable: boolean; reason?: string; ownerId?: string }> {
   if (config.selfHosted) return { writable: true };
 

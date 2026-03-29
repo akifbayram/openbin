@@ -9,7 +9,7 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '.
 import { notifyManagerUserUpdate } from '../lib/managerWebhook.js';
 import { getCloudMetrics } from '../lib/metrics.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
-import { isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel } from '../lib/planGate.js';
+import { isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
 import { invalidatePlanRateLimit, metricsLimiter } from '../lib/rateLimiters.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, invalidateDeletedCache } from '../middleware/auth.js';
@@ -205,8 +205,8 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   }
 
   const db = getDb();
-  const target = db.prepare('SELECT id, username, is_admin, sub_status FROM users WHERE id = ?').get(targetId) as
-    { id: string; username: string; is_admin: number; sub_status: number } | undefined;
+  const target = db.prepare('SELECT id, username, is_admin, sub_status, plan FROM users WHERE id = ?').get(targetId) as
+    { id: string; username: string; is_admin: number; sub_status: number; plan: number } | undefined;
 
   if (!target) throw new NotFoundError('User not found');
 
@@ -229,6 +229,15 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   if (plan !== undefined && !isSelfHosted()) {
     if (plan !== Plan.LITE && plan !== Plan.PRO) {
       throw new ValidationError('Plan must be 0 (lite) or 1 (pro)');
+    }
+  }
+
+  // Cross-validate plan + status combination
+  if (!isSelfHosted()) {
+    const effectivePlan = plan !== undefined ? plan : target.plan;
+    const effectiveStatus = typeof subStatus === 'number' ? subStatus : target.sub_status;
+    if (!validatePlanTransition(effectivePlan as PlanTier, effectiveStatus as SubStatusType)) {
+      throw new ValidationError('Invalid plan/status combination: TRIAL is only valid for PRO');
     }
   }
 

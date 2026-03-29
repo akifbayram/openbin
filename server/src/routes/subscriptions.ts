@@ -4,7 +4,7 @@ import { query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
-import { invalidateOverLimitCache, Plan, SubStatus } from '../lib/planGate.js';
+import { invalidateOverLimitCache, Plan, type PlanTier, SubStatus, type SubStatusType, validatePlanTransition } from '../lib/planGate.js';
 import { invalidatePlanRateLimit } from '../lib/rateLimiters.js';
 
 const router = Router();
@@ -46,6 +46,9 @@ router.post('/callback', asyncHandler(async (req, res) => {
   }
   if (!validStatuses.has(status as (typeof SubStatus)[keyof typeof SubStatus])) {
     throw new ValidationError('Invalid status value');
+  }
+  if (!validatePlanTransition(plan as PlanTier, status as SubStatusType)) {
+    throw new ValidationError('Invalid plan/status combination: TRIAL is only valid for PRO');
   }
 
   const prevRow = await query<{ plan: number; sub_status: number }>('SELECT plan, sub_status FROM users WHERE id = $1', [userId]);
