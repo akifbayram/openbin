@@ -7,6 +7,7 @@ import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { isPathSafe } from '../lib/pathSafety.js';
 import { AVATAR_STORAGE_PATH, avatarUpload, validateFileType } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
+import { requireCleanFile } from '../middleware/malwareScan.js';
 
 const router = Router();
 
@@ -18,7 +19,7 @@ function resolveAvatarPath(relativePath: string): string {
 }
 
 // POST /api/auth/avatar — upload avatar
-router.post('/avatar', avatarUpload.single('avatar'), asyncHandler(async (req, res) => {
+router.post('/avatar', avatarUpload.single('avatar'), requireCleanFile, asyncHandler(async (req, res) => {
   if (!req.file) {
     throw new ValidationError('No file uploaded');
   }

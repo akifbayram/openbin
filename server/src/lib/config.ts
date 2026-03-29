@@ -77,6 +77,11 @@ export const config = Object.freeze({
   // Encryption
   aiEncryptionKey: process.env.AI_ENCRYPTION_KEY || null,
 
+  // ClamAV malware scanning (opt-in for cloud deployments)
+  clamavHost: process.env.CLAMAV_HOST || null,
+  clamavPort: parseInt(process.env.CLAMAV_PORT || '3310', 10),
+  clamavTimeout: parseInt(process.env.CLAMAV_TIMEOUT || '30000', 10),
+
   // Upload limits
   maxPhotoSizeMb: clamp(parseInt(process.env.MAX_PHOTO_SIZE_MB || '5', 10), 1, 50, 5),
   maxAvatarSizeMb: clamp(parseInt(process.env.MAX_AVATAR_SIZE_MB || '2', 10), 1, 10, 2),
