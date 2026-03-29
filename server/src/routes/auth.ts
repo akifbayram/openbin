@@ -417,12 +417,21 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
   updates.push(`updated_at = datetime('now')`);
   values.push(req.user!.id);
 
-  const result = await query(
-    `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, username, display_name, email, avatar_path, created_at, updated_at`,
-    values
-  );
+  let result: import('../db.js').QueryResult<Record<string, unknown>>;
+  try {
+    result = await query(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, username, display_name, email, avatar_path, created_at, updated_at`,
+      values
+    );
+  } catch (err: unknown) {
+    const sqliteErr = err as { code?: string; message?: string };
+    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && sqliteErr.message?.includes('idx_users_email_unique')) {
+      throw new ConflictError('An account with this email already exists');
+    }
+    throw err;
+  }
 
-  const user = result.rows[0];
+  const user = result.rows[0] as { id: string; username: string; display_name: string; email: string | null; avatar_path: string | null; created_at: string; updated_at: string };
   res.json({
     id: user.id,
     username: user.username,
@@ -434,7 +443,7 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
   });
 
   // Fire welcome email when user sets email for the first time (cloud mode)
-  if (isFirstEmail && !isSelfHosted()) {
+  if (isFirstEmail && user.email && !isSelfHosted()) {
     const { fireWelcomeEmail } = await import('../lib/emailSender.js');
     fireWelcomeEmail(user.id, user.email, user.display_name);
   }

@@ -270,17 +270,15 @@ describe('generateUpgradeUrl()', () => {
     expect(decoded.email).toBe('user@example.com');
   });
 
-  it('uses jwtSecret as fallback when subscriptionJwtSecret is not set', () => {
+  it('returns null when subscriptionJwtSecret is not set', () => {
     setConfig({
       selfHosted: false,
       managerUrl: 'https://manager.example.com',
       subscriptionJwtSecret: null,
       jwtSecret: 'test-jwt-secret',
     });
-    // Should not throw — falls back to jwtSecret
     const url = generateUpgradeUrl('user-id', null);
-    expect(url).not.toBeNull();
-    expect(url).toMatch(/^https:\/\/manager\.example\.com\/auth\/openbin\?token=/);
+    expect(url).toBeNull();
   });
 
   it('handles null email in token', async () => {
