@@ -192,15 +192,24 @@ function PlanErrorNotifier() {
 
   useEffect(() => {
     const handler = (e: Event) => {
-      const { code, upgradeUrl } = (e as CustomEvent).detail ?? {};
-      const message = code === 'SUBSCRIPTION_EXPIRED'
-        ? 'Your subscription has expired'
-        : 'This feature requires a Pro plan';
+      const { code, message: serverMessage, upgradeUrl } = (e as CustomEvent).detail ?? {};
+      let message: string;
+      let actionLabel: string;
+      if (code === 'SUBSCRIPTION_EXPIRED') {
+        message = 'Your subscription has expired';
+        actionLabel = 'Resubscribe';
+      } else if (code === 'OVER_LIMIT') {
+        message = serverMessage || 'You\'ve exceeded a plan limit';
+        actionLabel = 'Upgrade';
+      } else {
+        message = 'This feature requires a Pro plan';
+        actionLabel = 'Upgrade';
+      }
       showToast({
         message,
         variant: 'warning',
         duration: 6000,
-        ...(upgradeUrl ? { action: { label: 'Upgrade', onClick: () => window.open(upgradeUrl, '_blank') } } : {}),
+        ...(upgradeUrl ? { action: { label: actionLabel, onClick: () => window.open(upgradeUrl, '_blank') } } : {}),
       });
     };
     window.addEventListener('openbin-plan-restricted', handler);
