@@ -2,6 +2,10 @@ import { generateUuid, query } from '../db.js';
 import { config } from './config.js';
 import { sendEmail } from './email.js';
 import {
+  exploreFeaturesEmail,
+  passwordResetEmail,
+  postTrialEarlyEmail,
+  postTrialLateEmail,
   subscriptionConfirmedEmail,
   subscriptionExpiredEmail,
   trialExpiredEmail,
@@ -10,7 +14,7 @@ import {
 } from './emailTemplates.js';
 import { generateUpgradeUrl, type PlanTier, planLabel } from './planGate.js';
 
-type EmailType = 'welcome' | 'trial_expiring' | 'trial_expired' | 'subscription_confirmed' | 'subscription_expired';
+type EmailType = 'welcome' | 'trial_expiring' | 'trial_expired' | 'subscription_confirmed' | 'subscription_expired' | 'explore_features' | 'post_trial_early' | 'post_trial_late' | 'password_reset';
 
 async function wasSentRecently(userId: string, emailType: EmailType): Promise<boolean> {
   const result = await query(
@@ -67,4 +71,23 @@ export function fireTrialExpiringEmail(userId: string, email: string, displayNam
 export function fireTrialExpiredEmail(userId: string, email: string, displayName: string): void {
   const upgradeUrl = generateUpgradeUrl(userId, email) || '';
   safeSend(userId, 'trial_expired', email, trialExpiredEmail({ displayName, upgradeUrl }));
+}
+
+export function fireExploreFeaturesEmail(userId: string, email: string, displayName: string): void {
+  const dashboardUrl = config.baseUrl ? `${config.baseUrl}/dashboard` : '';
+  safeSend(userId, 'explore_features', email, exploreFeaturesEmail({ displayName, dashboardUrl }));
+}
+
+export function firePostTrialEarlyEmail(userId: string, email: string, displayName: string): void {
+  const upgradeUrl = generateUpgradeUrl(userId, email) || '';
+  safeSend(userId, 'post_trial_early', email, postTrialEarlyEmail({ displayName, upgradeUrl }));
+}
+
+export function firePostTrialLateEmail(userId: string, email: string, displayName: string): void {
+  const upgradeUrl = generateUpgradeUrl(userId, email) || '';
+  safeSend(userId, 'post_trial_late', email, postTrialLateEmail({ displayName, upgradeUrl }));
+}
+
+export function firePasswordResetEmail(userId: string, email: string, displayName: string, resetUrl: string): void {
+  safeSend(userId, 'password_reset', email, passwordResetEmail({ displayName, resetUrl }));
 }

@@ -106,6 +106,98 @@ export function subscriptionConfirmedEmail(params: { displayName: string; plan: 
   };
 }
 
+export function exploreFeaturesEmail(params: { displayName: string; dashboardUrl: string }): EmailTemplate {
+  return {
+    subject: 'Tips to get the most out of OpenBin',
+    html: wrap([
+      greeting(params.displayName),
+      p('You\'ve been using OpenBin for a couple of days — here are some features that can help you get even more organized:'),
+      `<ul style="margin:0 0 16px;padding-left:20px;font-size:15px;line-height:1.7;color:#333">
+        <li><strong>QR Labels</strong> — Print and stick QR codes on your bins for instant scanning</li>
+        <li><strong>AI Item Recognition</strong> — Snap a photo and let AI catalog your items</li>
+        <li><strong>Team Sharing</strong> — Invite others to your location so everyone stays in sync</li>
+        <li><strong>Bin Search</strong> — Find any item across all your bins in seconds</li>
+      </ul>`,
+      `<p style="margin:24px 0 0">${btn(params.dashboardUrl, 'Explore Your Dashboard')}</p>`,
+    ].join('')),
+    text: [
+      `Hi ${params.displayName},`,
+      '',
+      'You\'ve been using OpenBin for a couple of days — here are some features that can help you get even more organized:',
+      '',
+      '- QR Labels — Print and stick QR codes on your bins for instant scanning',
+      '- AI Item Recognition — Snap a photo and let AI catalog your items',
+      '- Team Sharing — Invite others to your location so everyone stays in sync',
+      '- Bin Search — Find any item across all your bins in seconds',
+      '',
+      `Explore your dashboard: ${params.dashboardUrl}`,
+    ].join('\n'),
+  };
+}
+
+export function postTrialEarlyEmail(params: { displayName: string; upgradeUrl: string }): EmailTemplate {
+  return {
+    subject: 'Your OpenBin data is waiting',
+    html: wrap([
+      greeting(params.displayName),
+      p('Your trial ended a couple of days ago, but all your bins, items, and photos are <strong>safe in read-only mode</strong> — nothing has been deleted.'),
+      p('Subscribe to pick up right where you left off and unlock full editing again.'),
+      `<p style="margin:24px 0 0">${btn(params.upgradeUrl, 'Subscribe Now')}</p>`,
+    ].join('')),
+    text: [
+      `Hi ${params.displayName},`,
+      '',
+      'Your trial ended a couple of days ago, but all your bins, items, and photos are safe in read-only mode — nothing has been deleted.',
+      '',
+      'Subscribe to pick up right where you left off and unlock full editing again.',
+      '',
+      `Subscribe now: ${params.upgradeUrl}`,
+    ].join('\n'),
+  };
+}
+
+export function postTrialLateEmail(params: { displayName: string; upgradeUrl: string }): EmailTemplate {
+  return {
+    subject: 'Still organizing? Unlock OpenBin again',
+    html: wrap([
+      greeting(params.displayName),
+      p('It\'s been a while since your trial ended. Your data is still here — bins, items, photos, everything.'),
+      p('Subscribe any time to pick up exactly where you left off. No setup needed.'),
+      `<p style="margin:24px 0 0">${btn(params.upgradeUrl, 'Subscribe Now')}</p>`,
+    ].join('')),
+    text: [
+      `Hi ${params.displayName},`,
+      '',
+      'It\'s been a while since your trial ended. Your data is still here — bins, items, photos, everything.',
+      '',
+      'Subscribe any time to pick up exactly where you left off. No setup needed.',
+      '',
+      `Subscribe now: ${params.upgradeUrl}`,
+    ].join('\n'),
+  };
+}
+
+export function passwordResetEmail(params: { displayName: string; resetUrl: string }): EmailTemplate {
+  return {
+    subject: 'Reset your OpenBin password',
+    html: wrap([
+      greeting(params.displayName),
+      p('A password reset was requested for your account. Click the button below to set a new password.'),
+      `<p style="margin:24px 0 0">${btn(params.resetUrl, 'Reset Password')}</p>`,
+      p('This link expires in 4 hours. If you didn\'t request this, you can safely ignore this email.'),
+    ].join('')),
+    text: [
+      `Hi ${params.displayName},`,
+      '',
+      'A password reset was requested for your account. Use the link below to set a new password.',
+      '',
+      `Reset password: ${params.resetUrl}`,
+      '',
+      'This link expires in 4 hours. If you didn\'t request this, you can safely ignore this email.',
+    ].join('\n'),
+  };
+}
+
 export function subscriptionExpiredEmail(params: { displayName: string; upgradeUrl: string }): EmailTemplate {
   return {
     subject: 'Your OpenBin subscription has expired',
