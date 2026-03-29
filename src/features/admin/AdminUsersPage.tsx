@@ -1,10 +1,9 @@
-import { Globe, Lock, Mail, Search, UserPlus, Users } from 'lucide-react';
+import { BarChart3, Globe, Lock, Mail, Search, UserPlus, Users } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Disclosure } from '@/components/ui/disclosure';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,7 +19,7 @@ import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { AdminMetricsSection } from './AdminMetricsSection';
 import { AdminUsersTable } from './AdminUsersTable';
-import { type AdminUser, capitalize, useAdminUsers } from './useAdminUsers';
+import { type AdminUser, useAdminUsers } from './useAdminUsers';
 
 const PAGE_SIZE = 25;
 
@@ -88,117 +87,142 @@ export function AdminUsersPage() {
     }
   }, [createForm, createUser, showToast]);
 
+  const [tab, setTab] = useState<'users' | 'metrics'>('users');
+
+  const registrationSection = (
+    <div className="flat-card rounded-[var(--radius-lg)] px-4 py-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <p className="text-[15px] font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+            {registration.locked ? <Lock className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
+            Registration
+          </p>
+          {registration.locked && (
+            <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">Locked by REGISTRATION_MODE env var</p>
+          )}
+        </div>
+        <OptionGroup
+          options={[
+            { key: 'open' as const, label: 'Open', icon: UserPlus, disabled: registration.locked, disabledTitle: 'Locked by env var' },
+            { key: 'invite' as const, label: 'Invite', icon: Mail, disabled: registration.locked, disabledTitle: 'Locked by env var' },
+            { key: 'closed' as const, label: 'Closed', icon: Lock, disabled: registration.locked, disabledTitle: 'Locked by env var' },
+          ]}
+          value={registration.mode}
+          onChange={handleRegistrationChange}
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="page-content-wide">
       <PageHeader title="Admin" back />
 
-      {/* Registration — disclosure, collapsed by default */}
-      <div className="flat-card rounded-[var(--radius-lg)] px-3 py-1">
-      <Disclosure
-        label={
-          <span className="flex items-center gap-2">
-            {registration.locked ? <Lock className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-            <span>Registration</span>
-            <Badge variant="secondary" className="text-[11px]">{capitalize(registration.mode)}</Badge>
-          </span>
-        }
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
-          <OptionGroup
-            options={[
-              { key: 'open' as const, label: 'Open', icon: UserPlus, disabled: registration.locked, disabledTitle: 'Locked by env var' },
-              { key: 'invite' as const, label: 'Invite', icon: Mail, disabled: registration.locked, disabledTitle: 'Locked by env var' },
-              { key: 'closed' as const, label: 'Closed', icon: Lock, disabled: registration.locked, disabledTitle: 'Locked by env var' },
-            ]}
-            value={registration.mode}
-            onChange={handleRegistrationChange}
-          />
-          {registration.locked && (
-            <span className="text-[12px] text-[var(--text-tertiary)]">Locked by REGISTRATION_MODE env var</span>
-          )}
-        </div>
-      </Disclosure>
-      </div>
-
-      {/* Cloud Metrics — single component for all sizes */}
-      {!isSelfHosted && <AdminMetricsSection />}
-
-      {/* Toolbar */}
-      <div className="flex items-center gap-2">
-        <Users className="h-4 w-4 text-[var(--text-secondary)]" />
-        <span className="text-[15px] font-semibold text-[var(--text-primary)]">Users</span>
-        <Badge variant="secondary" className="text-[11px]">{count}</Badge>
-        <div className="flex-1">
-          <SearchInput
-            placeholder="Search users..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            onClear={search ? () => { setSearch(''); setPage(1); } : undefined}
-            containerClassName="max-w-sm"
-          />
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-          <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-          Create User
-        </Button>
-      </div>
-
-      {/* Users table — responsive, single rendering path */}
-      {isLoading ? (
-        <div className="flat-card rounded-[var(--radius-lg)] overflow-hidden">
-          <div className="flex items-center gap-3 px-3 py-2.5 bg-[var(--bg-hover)] border-b-2 border-[var(--border-flat)]">
-            <Skeleton className="h-3 w-12" />
-            <Skeleton className="h-3 w-12 hidden lg:block" />
-            <Skeleton className="h-3 w-8" />
-            <Skeleton className="h-3 w-8" />
-            <Skeleton className="h-3 w-10" />
-            <div className="flex-1" />
-            <Skeleton className="h-3 w-14" />
-          </div>
-          {Array.from({ length: 8 }, (_, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
-            <div key={i} className="flex items-center gap-3 px-3 py-3 border-b border-[var(--border-subtle)]">
-              <div className="min-w-0 space-y-1">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-3 w-20" />
-              </div>
-              <Skeleton className="h-5 w-12 hidden lg:block" />
-              <Skeleton className="h-5 w-12" />
-              <Skeleton className="h-5 w-10" />
-              <Skeleton className="h-5 w-14" />
-              <div className="flex-1" />
-              <Skeleton className="h-3 w-16" />
-            </div>
-          ))}
-        </div>
-      ) : users.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-16 text-[var(--text-tertiary)]">
-          <Search className="h-10 w-10 opacity-25" />
-          <div className="text-center space-y-1">
-            <p className="text-[17px] font-semibold text-[var(--text-secondary)]">No users found</p>
-            {search && <p className="text-[13px]">Try a different search term</p>}
-          </div>
-        </div>
-      ) : (
-        <AdminUsersTable
-          users={users}
-          currentUserId={user?.id ?? ''}
-          sortColumn={sortColumn}
-          sortDirection={sortDirection}
-          onSort={handleSort}
-          onDelete={setDeleteTarget}
-          onClickUser={(id) => navigate(`/admin/users/${id}`)}
+      {/* Tabs — only show for cloud (self-hosted has no metrics tab) */}
+      {!isSelfHosted && (
+        <OptionGroup
+          options={[
+            { key: 'users' as const, label: 'Users', icon: Users },
+            { key: 'metrics' as const, label: 'Metrics', icon: BarChart3 },
+          ]}
+          value={tab}
+          onChange={setTab}
+          className="w-fit"
         />
       )}
 
-      <Pagination
-        currentPage={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-        totalCount={count}
-        pageSize={PAGE_SIZE}
-        itemLabel="users"
-      />
+      {/* Self-hosted: registration + users (no tabs) */}
+      {/* Cloud: show tab content */}
+      {(isSelfHosted || tab === 'users') && (
+        <>
+          {/* Registration — self-hosted only shows here (cloud has it in metrics tab) */}
+          {isSelfHosted && registrationSection}
+
+          {/* Toolbar */}
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-[var(--text-secondary)]" />
+            <span className="text-[15px] font-semibold text-[var(--text-primary)]">Users</span>
+            <Badge variant="secondary" className="text-[11px]">{count}</Badge>
+            <div className="flex-1">
+              <SearchInput
+                placeholder="Search users..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                onClear={search ? () => { setSearch(''); setPage(1); } : undefined}
+                containerClassName="max-w-sm"
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+              <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+              Create User
+            </Button>
+          </div>
+
+          {/* Users table */}
+          {isLoading ? (
+            <div className="flat-card rounded-[var(--radius-lg)] overflow-hidden">
+              <div className="flex items-center gap-3 px-3 py-2.5 bg-[var(--bg-hover)] border-b-2 border-[var(--border-flat)]">
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-3 w-12 hidden lg:block" />
+                <Skeleton className="h-3 w-8" />
+                <Skeleton className="h-3 w-8" />
+                <Skeleton className="h-3 w-10" />
+                <div className="flex-1" />
+                <Skeleton className="h-3 w-14" />
+              </div>
+              {Array.from({ length: 8 }, (_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
+                <div key={i} className="flex items-center gap-3 px-3 py-3 border-b border-[var(--border-subtle)]">
+                  <div className="min-w-0 space-y-1">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <Skeleton className="h-5 w-12 hidden lg:block" />
+                  <Skeleton className="h-5 w-12" />
+                  <Skeleton className="h-5 w-10" />
+                  <Skeleton className="h-5 w-14" />
+                  <div className="flex-1" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              ))}
+            </div>
+          ) : users.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-16 text-[var(--text-tertiary)]">
+              <Search className="h-10 w-10 opacity-25" />
+              <div className="text-center space-y-1">
+                <p className="text-[17px] font-semibold text-[var(--text-secondary)]">No users found</p>
+                {search && <p className="text-[13px]">Try a different search term</p>}
+              </div>
+            </div>
+          ) : (
+            <AdminUsersTable
+              users={users}
+              currentUserId={user?.id ?? ''}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              onSort={handleSort}
+              onDelete={setDeleteTarget}
+              onClickUser={(id) => navigate(`/admin/users/${id}`)}
+            />
+          )}
+
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            totalCount={count}
+            pageSize={PAGE_SIZE}
+            itemLabel="users"
+          />
+        </>
+      )}
+
+      {!isSelfHosted && tab === 'metrics' && (
+        <>
+          {registrationSection}
+          <AdminMetricsSection />
+        </>
+      )}
 
       {/* Delete confirmation dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
