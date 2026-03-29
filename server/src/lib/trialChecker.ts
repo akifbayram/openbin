@@ -37,8 +37,8 @@ async function checkTrials(): Promise<void> {
     for (const user of expired.rows) {
       fireTrialExpiredEmail(user.id, user.email, user.display_name);
       await query(
-        "UPDATE users SET sub_status = $1, updated_at = datetime('now') WHERE id = $2",
-        [SubStatus.INACTIVE, user.id],
+        "UPDATE users SET sub_status = $1, previous_sub_status = $2, updated_at = datetime('now') WHERE id = $3",
+        [SubStatus.INACTIVE, SubStatus.TRIAL, user.id],
       );
     }
 

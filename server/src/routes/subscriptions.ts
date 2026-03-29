@@ -4,7 +4,7 @@ import { query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
-import { Plan, SubStatus } from '../lib/planGate.js';
+import { invalidateOverLimitCache, Plan, SubStatus } from '../lib/planGate.js';
 import { invalidatePlanRateLimit } from '../lib/rateLimiters.js';
 
 const router = Router();
@@ -48,9 +48,12 @@ router.post('/callback', asyncHandler(async (req, res) => {
     throw new ValidationError('Invalid status value');
   }
 
+  const prevRow = await query<{ sub_status: number }>('SELECT sub_status FROM users WHERE id = $1', [userId]);
+  const previousSubStatus = prevRow.rows[0]?.sub_status ?? null;
+
   const result = await query(
-    'UPDATE users SET plan = $1, sub_status = $2, active_until = $3, updated_at = datetime(\'now\') WHERE id = $4',
-    [plan, status, activeUntil || null, userId],
+    'UPDATE users SET plan = $1, sub_status = $2, active_until = $3, previous_sub_status = $4, updated_at = datetime(\'now\') WHERE id = $5',
+    [plan, status, activeUntil || null, status === SubStatus.INACTIVE ? previousSubStatus : null, userId],
   );
 
   if (result.rowCount === 0) {
@@ -58,6 +61,7 @@ router.post('/callback', asyncHandler(async (req, res) => {
   }
 
   invalidatePlanRateLimit(userId);
+  invalidateOverLimitCache(userId);
 
   res.json({ ok: true });
 
