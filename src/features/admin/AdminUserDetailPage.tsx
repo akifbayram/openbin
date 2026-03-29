@@ -1,4 +1,6 @@
 import {
+  KeyRound,
+  Mail,
   Pencil,
   Trash2,
 } from 'lucide-react';
@@ -25,7 +27,7 @@ import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
-import { capitalize, deleteUser, statusVariant, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
+import { capitalize, deleteUser, regenerateApiKey, sendPasswordReset, statusVariant, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
 
 function StatItem({ label, value }: { label: string; value: string | number }) {
   return (
@@ -45,7 +47,13 @@ export function AdminUserDetailPage() {
   const { detail, isLoading, notFound, refresh } = useAdminUserDetail(id ?? '');
   const { planInfo } = usePlan();
 
+  // Redirect non-admins
+  useEffect(() => {
+    if (currentUser && !currentUser.isAdmin) navigate('/', { replace: true });
+  }, [currentUser, navigate]);
+
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [regenKeyOpen, setRegenKeyOpen] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<'lite' | 'pro' | null>(null);
   const [pendingStatus, setPendingStatus] = useState<'inactive' | 'trial' | 'active' | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -159,6 +167,29 @@ export function AdminUserDetailPage() {
     }
   }, [detail, editForm, showToast, refresh]);
 
+  const handleRegenerateApiKey = useCallback(async () => {
+    if (!detail) return;
+    try {
+      const result = await regenerateApiKey(detail.id);
+      showToast({ message: `New API key: ${result.keyPrefix}...`, variant: 'success' });
+      refresh();
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : 'Failed to regenerate API key', variant: 'error' });
+    } finally {
+      setRegenKeyOpen(false);
+    }
+  }, [detail, showToast, refresh]);
+
+  const handleSendPasswordReset = useCallback(async () => {
+    if (!detail) return;
+    try {
+      await sendPasswordReset(detail.id);
+      showToast({ message: 'Password reset email sent', variant: 'success' });
+    } catch (err) {
+      showToast({ message: err instanceof Error ? err.message : 'Failed to send password reset', variant: 'error' });
+    }
+  }, [detail, showToast]);
+
   if (isLoading) {
     return (
       <div className="page-content">
@@ -229,6 +260,7 @@ export function AdminUserDetailPage() {
             <div>
               <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Status</span>
               <div className="flex flex-wrap items-center gap-2 mt-1">
+                {detail.deletedAt && <Badge variant="destructive">Deleted</Badge>}
                 {detail.isAdmin && <Badge variant="default">Admin</Badge>}
                 <Badge variant="secondary">{capitalize(detail.plan)}</Badge>
                 <Badge variant={statusVariant(detail.status)}>{capitalize(detail.status)}</Badge>
@@ -339,6 +371,22 @@ export function AdminUserDetailPage() {
               </div>
             )}
 
+            <div className="flex items-center justify-between py-3">
+              <span className="text-[14px] text-[var(--text-secondary)]">Regenerate API key</span>
+              <Button variant="outline" size="sm" onClick={() => setRegenKeyOpen(true)}>
+                <KeyRound className="h-3.5 w-3.5 mr-1.5" />
+                Regenerate
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between py-3">
+              <span className="text-[14px] text-[var(--text-secondary)]">Send password reset</span>
+              <Button variant="outline" size="sm" onClick={handleSendPasswordReset} disabled={!detail.email}>
+                <Mail className="h-3.5 w-3.5 mr-1.5" />
+                Send Reset
+              </Button>
+            </div>
+
             <div className="flex items-center justify-between py-3 last:pb-0">
               <span className="text-[14px] text-[var(--text-secondary)]">Delete user</span>
               <Button
@@ -368,6 +416,22 @@ export function AdminUserDetailPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Regenerate API key confirmation dialog */}
+      <Dialog open={regenKeyOpen} onOpenChange={(open) => !open && setRegenKeyOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Regenerate API Key</DialogTitle>
+            <DialogDescription>
+              This will revoke all existing API keys for <strong>{detail.username}</strong> and create a new one.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRegenKeyOpen(false)}>Cancel</Button>
+            <Button onClick={handleRegenerateApiKey}>Regenerate</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

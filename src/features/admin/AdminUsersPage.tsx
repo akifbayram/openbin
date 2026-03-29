@@ -1,5 +1,5 @@
 import { BarChart3, Globe, Lock, Mail, Search, UserPlus, Users } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,11 @@ export function AdminUsersPage() {
   const { isSelfHosted } = usePlan();
   const { showToast } = useToast();
   const navigate = useNavigate();
+
+  // Redirect non-admins
+  useEffect(() => {
+    if (user && !user.isAdmin) navigate('/', { replace: true });
+  }, [user, navigate]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [sortColumn, setSortColumn] = useState<'username' | 'email' | 'plan' | 'status' | 'bins' | 'locations' | 'storage' | 'created'>('created');
