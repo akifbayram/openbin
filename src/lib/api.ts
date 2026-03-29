@@ -1,3 +1,5 @@
+import { Events, notify } from '@/lib/eventBus';
+
 const API_BASE = '';
 
 export class ApiError extends Error {
@@ -100,7 +102,7 @@ async function doFetch<T>(path: string, options: ApiFetchOptions, isRetry: boole
     const code = data.error as string | undefined;
     const upgradeUrl = data.upgrade_url as string | null | undefined;
     if (code === 'PLAN_RESTRICTED' || code === 'SUBSCRIPTION_EXPIRED' || code === 'OVER_LIMIT') {
-      window.dispatchEvent(new Event('plan-changed'));
+      notify(Events.PLAN);
       window.dispatchEvent(new CustomEvent('openbin-plan-restricted', { detail: { code, message: data.message, upgradeUrl } }));
     }
     throw new ApiError(res.status, data.message || data.error || res.statusText, code, upgradeUrl);

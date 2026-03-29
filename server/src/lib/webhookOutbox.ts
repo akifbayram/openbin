@@ -25,6 +25,15 @@ export function enqueueWebhook(endpoint: string, payload: Record<string, unknown
   });
 }
 
+async function recordRetry(id: string, attempts: number, errorMsg: string): Promise<void> {
+  const backoff = getBackoff(attempts);
+  await query(
+    `UPDATE webhook_outbox SET attempts = attempts + 1, last_error = $1,
+     next_retry_at = datetime('now', '+' || $2 || ' seconds') WHERE id = $3`,
+    [errorMsg, backoff, id],
+  );
+}
+
 async function processOutbox(): Promise<void> {
   if (!config.managerUrl || !config.subscriptionJwtSecret) return;
   if (!acquireJobLock('webhook_outbox', 60)) return;
@@ -68,20 +77,10 @@ async function processOutbox(): Promise<void> {
         if (res.ok) {
           await query("UPDATE webhook_outbox SET sent_at = datetime('now') WHERE id = $1", [row.id]);
         } else {
-          const backoff = getBackoff(row.attempts);
-          await query(
-            `UPDATE webhook_outbox SET attempts = attempts + 1, last_error = $1,
-             next_retry_at = datetime('now', '+' || $2 || ' seconds') WHERE id = $3`,
-            [`HTTP ${res.status}`, backoff, row.id],
-          );
+          await recordRetry(row.id, row.attempts, `HTTP ${res.status}`);
         }
       } catch (err) {
-        const backoff = getBackoff(row.attempts);
-        await query(
-          `UPDATE webhook_outbox SET attempts = attempts + 1, last_error = $1,
-           next_retry_at = datetime('now', '+' || $2 || ' seconds') WHERE id = $3`,
-          [err instanceof Error ? err.message : 'Unknown error', backoff, row.id],
-        );
+        await recordRetry(row.id, row.attempts, err instanceof Error ? err.message : 'Unknown error');
       }
     }
   } catch (err) {

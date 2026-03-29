@@ -11,10 +11,10 @@ import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinI
 import { validateBinFields, validateCodeFormat } from '../lib/binValidation.js';
 import { config } from '../lib/config.js';
 import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
-import { ForbiddenError, GoneError, NotFoundError, OverLimitError, PlanRestrictedError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
+import { ForbiddenError, GoneError, NotFoundError, OverLimitError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
-import { checkLocationWritable, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache, throwPlanRestricted } from '../lib/planGate.js';
+import { assertLocationWritable, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache } from '../lib/planGate.js';
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { storage } from '../lib/storage.js';
@@ -40,10 +40,7 @@ router.post('/', asyncHandler(async (req, res) => {
 
   await requireMemberOrAbove(locationId, req.user!.id, 'create bins');
 
-  const writableCreate = await checkLocationWritable(locationId);
-  if (!writableCreate.writable) {
-    throw new PlanRestrictedError(writableCreate.reason || 'Location is read-only due to plan limits');
-  }
+  await assertLocationWritable(locationId);
 
   if (areaId) await verifyAreaInLocation(areaId, locationId);
 
@@ -351,10 +348,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
     throw new NotFoundError('Bin not found');
   }
 
-  const writableUpdate = await checkLocationWritable(access.locationId);
-  if (!writableUpdate.writable) {
-    throw new PlanRestrictedError(writableUpdate.reason || 'Location is read-only due to plan limits');
-  }
+  await assertLocationWritable(access.locationId);
 
   // Viewers cannot edit at all
   const role = await getMemberRole(access.locationId, req.user!.id);
@@ -440,10 +434,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
     throw new NotFoundError('Bin not found');
   }
 
-  const writableDelete = await checkLocationWritable(access.locationId);
-  if (!writableDelete.writable) {
-    throw new PlanRestrictedError(writableDelete.reason || 'Location is read-only due to plan limits');
-  }
+  await assertLocationWritable(access.locationId);
 
   await requireAdmin(access.locationId, req.user!.id, 'delete bins');
 
@@ -523,10 +514,7 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
   }
   await requireMemberOrAbove(access.locationId, req.user!.id, 'upload photos');
 
-  const writablePhoto = await checkLocationWritable(access.locationId);
-  if (!writablePhoto.writable) {
-    throw new PlanRestrictedError(writablePhoto.reason || 'Location is read-only due to plan limits');
-  }
+  await assertLocationWritable(access.locationId);
 
   // Per-bin photo count limit (always enforced)
   const countResult = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM photos WHERE bin_id = $1', [binId]);

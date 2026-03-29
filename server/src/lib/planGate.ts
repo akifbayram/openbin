@@ -181,28 +181,24 @@ export async function getMemberCount(locationId: string): Promise<number> {
   return result.rows[0].cnt;
 }
 
+function signManagerToken(userId: string, email: string | null): string | null {
+  if (!config.managerUrl || !config.subscriptionJwtSecret) return null;
+  return jwt.sign({ userId, email }, config.subscriptionJwtSecret, { expiresIn: '30m' });
+}
+
 export function generateUpgradeUrl(userId: string, email: string | null): string | null {
-  if (!config.managerUrl) return null;
-  if (!config.subscriptionJwtSecret) return null;
-  const secret = config.subscriptionJwtSecret;
-  const token = jwt.sign({ userId, email }, secret, { expiresIn: '30m' });
-  return `${config.managerUrl}/auth/openbin?token=${token}`;
+  const token = signManagerToken(userId, email);
+  return token ? `${config.managerUrl}/auth/openbin?token=${token}` : null;
 }
 
 export function generateUpgradePlanUrl(userId: string, email: string | null, plan: 'lite' | 'pro'): string | null {
-  if (!config.managerUrl) return null;
-  if (!config.subscriptionJwtSecret) return null;
-  const secret = config.subscriptionJwtSecret;
-  const token = jwt.sign({ userId, email }, secret, { expiresIn: '30m' });
-  return `${config.managerUrl}/auth/openbin?token=${token}&plan=${plan}`;
+  const token = signManagerToken(userId, email);
+  return token ? `${config.managerUrl}/auth/openbin?token=${token}&plan=${plan}` : null;
 }
 
 export function generatePortalUrl(userId: string, email: string | null): string | null {
-  if (!config.managerUrl) return null;
-  if (!config.subscriptionJwtSecret) return null;
-  const secret = config.subscriptionJwtSecret;
-  const token = jwt.sign({ userId, email }, secret, { expiresIn: '30m' });
-  return `${config.managerUrl}/portal?token=${token}`;
+  const token = signManagerToken(userId, email);
+  return token ? `${config.managerUrl}/portal?token=${token}` : null;
 }
 
 export interface OverLimits {
@@ -276,6 +272,12 @@ export function getUserFeaturesSync(db: import('better-sqlite3').Database, userI
   const row = db.prepare('SELECT plan FROM users WHERE id = ?').get(userId) as { plan: number } | undefined;
   if (!row) return getFeatureMap(Plan.PRO);
   return getFeatureMap(row.plan as PlanTier);
+}
+
+/** Throws PlanRestrictedError if the location owner is over their plan limits. */
+export async function assertLocationWritable(locationId: string): Promise<void> {
+  const { writable, reason } = await checkLocationWritable(locationId);
+  if (!writable) throw new PlanRestrictedError(reason ?? 'Location is read-only due to plan limits');
 }
 
 export async function checkLocationWritable(locationId: string): Promise<{ writable: boolean; reason?: string; ownerId?: string }> {

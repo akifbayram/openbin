@@ -24,21 +24,14 @@ const SKIP_DEDUP: ReadonlySet<EmailType> = new Set(['welcome', 'password_reset']
 /**
  * Attempt to claim an email send slot atomically.
  * Returns true if this instance won the claim, false if already sent today.
- * SKIP_DEDUP emails always succeed (unique per-second sent_at avoids conflict).
+ * SKIP_DEDUP emails bypass the daily unique constraint and always succeed.
  */
 async function claimEmailSlot(userId: string, emailType: EmailType, skipDedup: boolean): Promise<boolean> {
+  if (skipDedup) return true;
   try {
-    const id = generateUuid();
-    if (skipDedup) {
-      await query(
-        'INSERT INTO email_log (id, user_id, email_type) VALUES ($1, $2, $3)',
-        [id, userId, emailType],
-      );
-      return true;
-    }
     await query(
       'INSERT INTO email_log (id, user_id, email_type) VALUES ($1, $2, $3)',
-      [id, userId, emailType],
+      [generateUuid(), userId, emailType],
     );
     return true;
   } catch (err: unknown) {
