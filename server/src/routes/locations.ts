@@ -6,7 +6,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 import { ConflictError, ForbiddenError, NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
-import { getLocationOwnerFeatures, getUserFeatures, invalidateOverLimitCache, throwPlanRestricted } from '../lib/planGate.js';
+import { getEffectiveMemberRole, getLocationOwnerFeatures, getUserFeatures, invalidateOverLimitCache, throwPlanRestricted } from '../lib/planGate.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { validateRetentionDays } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
@@ -33,26 +33,33 @@ router.get('/', asyncHandler(async (req, res) => {
     [req.user!.id]
   );
 
-  const locations = result.rows.map(row => ({
-    id: row.id,
-    name: row.name,
-    created_by: row.created_by,
-    invite_code: row.role === 'admin' ? row.invite_code : undefined,
-    activity_retention_days: row.activity_retention_days,
-    trash_retention_days: row.trash_retention_days,
-    app_name: row.app_name,
-    term_bin: row.term_bin,
-    term_location: row.term_location,
-    term_area: row.term_area,
-    default_join_role: row.default_join_role,
-    role: row.role,
-    member_count: row.member_count,
-    area_count: row.area_count,
-    bin_count: row.bin_count,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  }));
-  res.json({ results: locations, count: locations.length });
+  const locationsWithEffectiveRoles = await Promise.all(
+    result.rows.map(async (row) => ({
+      id: row.id,
+      name: row.name,
+      created_by: row.created_by,
+      invite_code: row.role === 'admin' ? row.invite_code : undefined,
+      activity_retention_days: row.activity_retention_days,
+      trash_retention_days: row.trash_retention_days,
+      app_name: row.app_name,
+      term_bin: row.term_bin,
+      term_location: row.term_location,
+      term_area: row.term_area,
+      default_join_role: row.default_join_role,
+      role: await getEffectiveMemberRole(
+        req.user!.id,
+        row.id,
+        row.role as 'admin' | 'member' | 'viewer',
+        row.created_by,
+      ),
+      member_count: row.member_count,
+      area_count: row.area_count,
+      bin_count: row.bin_count,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    }))
+  );
+  res.json({ results: locationsWithEffectiveRoles, count: locationsWithEffectiveRoles.length });
 }));
 
 // POST /api/locations — create location
@@ -374,7 +381,25 @@ router.get('/:id/members', asyncHandler(async (req, res) => {
     [locationId]
   );
 
-  res.json({ results: result.rows, count: result.rows.length });
+  const locOwner = await query<{ created_by: string }>(
+    'SELECT created_by FROM locations WHERE id = $1',
+    [locationId]
+  );
+  const ownerCreatedBy = locOwner.rows[0]?.created_by ?? '';
+
+  const membersWithRoles = await Promise.all(
+    result.rows.map(async (m: Record<string, unknown>) => ({
+      ...m,
+      role: await getEffectiveMemberRole(
+        m.user_id as string,
+        locationId,
+        m.role as 'admin' | 'member' | 'viewer',
+        ownerCreatedBy,
+      ),
+    }))
+  );
+
+  res.json({ results: membersWithRoles, count: membersWithRoles.length });
 }));
 
 // DELETE /api/locations/:id/members/:userId — remove member
