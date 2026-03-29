@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Disclosure } from '@/components/ui/disclosure';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,11 +14,14 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { SortDirection } from '@/components/ui/sort-header';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { AdminMetricsSection } from './AdminMetricsSection';
+import { AdminUsersTable } from './AdminUsersTable';
+import { useAdminMetrics } from './useAdminMetrics';
 import { type AdminUser, capitalize, statusVariant, useAdminUsers } from './useAdminUsers';
 
 const PAGE_SIZE = 25;
@@ -53,6 +57,7 @@ function UserRow({
       </button>
 
       <div className="flex items-center gap-2 flex-wrap">
+        {u.deletedAt && <Badge variant="destructive" className="text-[11px]">Deleted</Badge>}
         <Badge variant={statusVariant(u.status)} className="text-[11px]">{capitalize(u.status)}</Badge>
         <Badge variant="secondary" className="text-[11px]">{capitalize(u.plan)}</Badge>
         <span className="text-[12px] text-[var(--text-muted)]">{new Date(u.createdAt).toLocaleDateString()}</span>
@@ -81,13 +86,23 @@ export function AdminUsersPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState<'username' | 'email' | 'plan' | 'status' | 'bins' | 'locations' | 'storage' | 'created'>('created');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ username: '', password: '', displayName: '', email: '', isAdmin: false });
   const [createLoading, setCreateLoading] = useState(false);
 
-  const { users, count, isLoading, registration, deleteUser, updateRegistrationMode, createUser } = useAdminUsers(search, page);
+  const sortParam = `${sortDirection === 'desc' ? '-' : ''}${sortColumn}`;
+  const { users, count, isLoading, registration, deleteUser, updateRegistrationMode, createUser } = useAdminUsers(search, page, sortParam);
+  const { metrics } = useAdminMetrics();
   const totalPages = Math.ceil(count / PAGE_SIZE);
+
+  const handleSort = useCallback((column: typeof sortColumn, direction: SortDirection) => {
+    setSortColumn(column);
+    setSortDirection(direction);
+    setPage(1);
+  }, []);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -130,22 +145,21 @@ export function AdminUsersPage() {
   }, [createForm, createUser, showToast]);
 
   return (
-    <div className="page-content">
+    <div className="page-content max-w-7xl">
       <PageHeader title="Admin" back />
 
-      {/* Registration Mode */}
-      <Card>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <p className="text-[15px] font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                {registration.locked ? <Lock className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-                Registration
-              </p>
-              {registration.locked && (
-                <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">Locked by REGISTRATION_MODE env var</p>
-              )}
-            </div>
+      {/* Registration — disclosure on desktop, full card on mobile */}
+      <div className="hidden lg:block">
+        <Disclosure
+          label={
+            <span className="flex items-center gap-2">
+              {registration.locked ? <Lock className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
+              <span>Registration</span>
+              <Badge variant="secondary" className="text-[11px]">{capitalize(registration.mode)}</Badge>
+            </span>
+          }
+        >
+          <div className="flex items-center gap-3 pt-1">
             <OptionGroup
               options={[
                 { key: 'open' as const, label: 'Open', icon: UserPlus, disabled: registration.locked, disabledTitle: 'Locked by env var' },
@@ -155,82 +169,181 @@ export function AdminUsersPage() {
               value={registration.mode}
               onChange={handleRegistrationChange}
             />
+            {registration.locked && (
+              <span className="text-[12px] text-[var(--text-tertiary)]">Locked by REGISTRATION_MODE env var</span>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </Disclosure>
+      </div>
+      <div className="lg:hidden">
+        <Card>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <p className="text-[15px] font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                  {registration.locked ? <Lock className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
+                  Registration
+                </p>
+                {registration.locked && (
+                  <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">Locked by REGISTRATION_MODE env var</p>
+                )}
+              </div>
+              <OptionGroup
+                options={[
+                  { key: 'open' as const, label: 'Open', icon: UserPlus, disabled: registration.locked, disabledTitle: 'Locked by env var' },
+                  { key: 'invite' as const, label: 'Invite', icon: Mail, disabled: registration.locked, disabledTitle: 'Locked by env var' },
+                  { key: 'closed' as const, label: 'Closed', icon: Lock, disabled: registration.locked, disabledTitle: 'Locked by env var' },
+                ]}
+                value={registration.mode}
+                onChange={handleRegistrationChange}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Cloud Metrics */}
-      {!isSelfHosted && <AdminMetricsSection />}
-
-      {/* Users */}
-      <Card>
-        <CardContent>
-          <div className="flex items-center gap-2 mb-3">
-            <Users className="h-4 w-4 text-[var(--text-secondary)]" />
-            <span className="text-[15px] font-semibold text-[var(--text-primary)]">Users</span>
-            <Badge variant="secondary" className="text-[11px]">{count}</Badge>
-            <div className="flex-1" />
-            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-              <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-              Create User
-            </Button>
+      {/* Metrics — inline strip on desktop, card on mobile (cloud only) */}
+      {!isSelfHosted && (
+        <>
+          {metrics && (
+            <div className="hidden lg:flex gap-3 flex-wrap">
+              <div className="flex-1 min-w-[120px] p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+                <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Total Users</span>
+                <p className="text-[20px] font-bold text-[var(--text-primary)] leading-tight">{metrics.plans.total}</p>
+              </div>
+              <div className="flex-1 min-w-[120px] p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+                <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Pro Active</span>
+                <p className="text-[20px] font-bold text-[var(--text-primary)] leading-tight">{metrics.plans.proActive}</p>
+              </div>
+              <div className="flex-1 min-w-[120px] p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+                <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Pro Trial</span>
+                <p className="text-[20px] font-bold text-[var(--text-primary)] leading-tight">{metrics.plans.proTrial}</p>
+              </div>
+              <div className="flex-1 min-w-[120px] p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+                <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Lite Active</span>
+                <p className="text-[20px] font-bold text-[var(--text-primary)] leading-tight">{metrics.plans.liteActive}</p>
+              </div>
+              <div className="flex-1 min-w-[120px] p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+                <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Trial Conv.</span>
+                <p className="text-[20px] font-bold text-[var(--text-primary)] leading-tight">{metrics.trialConversion.rate}%</p>
+                <span className="text-[12px] text-[var(--text-muted)]">{metrics.trialConversion.converted}/{metrics.trialConversion.started}</span>
+              </div>
+            </div>
+          )}
+          <div className="lg:hidden">
+            <AdminMetricsSection />
           </div>
+        </>
+      )}
 
+      {/* Toolbar */}
+      <div className="flex items-center gap-2">
+        <Users className="h-4 w-4 text-[var(--text-secondary)] hidden lg:block" />
+        <span className="text-[15px] font-semibold text-[var(--text-primary)] hidden lg:block">Users</span>
+        <Badge variant="secondary" className="text-[11px] hidden lg:inline-flex">{count}</Badge>
+        <div className="flex-1">
           <SearchInput
             placeholder="Search users..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             onClear={search ? () => { setSearch(''); setPage(1); } : undefined}
+            containerClassName="max-w-sm"
           />
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+          <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+          Create User
+        </Button>
+      </div>
 
-          <div className="mt-3 divide-y divide-[var(--border-flat)]">
-            {isLoading ? (
-              <div className="flex flex-col gap-1 py-1">
-                {Array.from({ length: 5 }, (_, i) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no stable identity
-                  <div key={i} className="flex items-center gap-3 px-3 py-3">
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-48" />
-                    </div>
-                    <Skeleton className="h-5 w-14" />
-                    <Skeleton className="h-5 w-10" />
-                  </div>
-                ))}
-              </div>
-            ) : users.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-16 text-[var(--text-tertiary)]">
-                <Search className="h-10 w-10 opacity-25" />
-                <div className="text-center space-y-1">
-                  <p className="text-[17px] font-semibold text-[var(--text-secondary)]">No users found</p>
-                  {search && <p className="text-[13px]">Try a different search term</p>}
-                </div>
-              </div>
-            ) : (
-              users.map((u) => (
-                <UserRow
-                  key={u.id}
-                  u={u}
-                  currentUserId={user?.id ?? ''}
-                  onDelete={setDeleteTarget}
-                  onClickUser={(id) => navigate(`/admin/users/${id}`)}
-                />
-              ))
-            )}
+      {/* Desktop: sortable table */}
+      <div className="hidden lg:block">
+        {isLoading ? (
+          <div className="flex flex-col gap-1">
+            {Array.from({ length: 8 }, (_, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
           </div>
-
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            totalCount={count}
-            pageSize={PAGE_SIZE}
-            itemLabel="users"
+        ) : users.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-16 text-[var(--text-tertiary)]">
+            <Search className="h-10 w-10 opacity-25" />
+            <div className="text-center space-y-1">
+              <p className="text-[17px] font-semibold text-[var(--text-secondary)]">No users found</p>
+              {search && <p className="text-[13px]">Try a different search term</p>}
+            </div>
+          </div>
+        ) : (
+          <AdminUsersTable
+            users={users}
+            currentUserId={user?.id ?? ''}
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+            onDelete={setDeleteTarget}
+            onClickUser={(id) => navigate(`/admin/users/${id}`)}
           />
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
-      {/* Delete confirmation dialog */}
+      {/* Mobile: card list */}
+      <div className="lg:hidden">
+        <Card>
+          <CardContent>
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="h-4 w-4 text-[var(--text-secondary)]" />
+              <span className="text-[15px] font-semibold text-[var(--text-primary)]">Users</span>
+              <Badge variant="secondary" className="text-[11px]">{count}</Badge>
+            </div>
+            <div className="divide-y divide-[var(--border-flat)]">
+              {isLoading ? (
+                <div className="flex flex-col gap-1 py-1">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
+                    <div key={i} className="flex items-center gap-3 px-3 py-3">
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-48" />
+                      </div>
+                      <Skeleton className="h-5 w-14" />
+                      <Skeleton className="h-5 w-10" />
+                    </div>
+                  ))}
+                </div>
+              ) : users.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-16 text-[var(--text-tertiary)]">
+                  <Search className="h-10 w-10 opacity-25" />
+                  <div className="text-center space-y-1">
+                    <p className="text-[17px] font-semibold text-[var(--text-secondary)]">No users found</p>
+                    {search && <p className="text-[13px]">Try a different search term</p>}
+                  </div>
+                </div>
+              ) : (
+                users.map((u) => (
+                  <UserRow
+                    key={u.id}
+                    u={u}
+                    currentUserId={user?.id ?? ''}
+                    onDelete={setDeleteTarget}
+                    onClickUser={(id) => navigate(`/admin/users/${id}`)}
+                  />
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        totalCount={count}
+        pageSize={PAGE_SIZE}
+        itemLabel="users"
+      />
+
+      {/* Delete confirmation dialog — keep unchanged */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
@@ -246,7 +359,7 @@ export function AdminUsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create user dialog */}
+      {/* Create user dialog — keep unchanged */}
       <Dialog open={createOpen} onOpenChange={(open) => {
         if (!open) {
           setCreateOpen(false);
