@@ -50,6 +50,7 @@ vi.mock('../lib/config.js', () => ({
     demoAiRateLimit: 10,
     demoAiMaxPhotosPerRequest: 3,
     demoAiDailyBudget: 100,
+    trialPeriodDays: 7,
   },
   hasEnvAiConfig: () => false,
   getEnvAiConfig: () => null,

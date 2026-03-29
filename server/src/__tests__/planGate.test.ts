@@ -173,7 +173,7 @@ describe('getFeatureMap()', () => {
     expect(features.maxLocations).toBe(1);
     expect(features.maxPhotoStorageMb).toBe(100);
     expect(features.maxMembersPerLocation).toBe(1);
-    expect(features.activityRetentionDays).toBe(90);
+    expect(features.activityRetentionDays).toBe(30);
   });
 
   it('returns PRO features when self-hosted regardless of plan argument', () => {
