@@ -201,6 +201,9 @@ db.exec(`CREATE TABLE IF NOT EXISTS job_locks (
   expires_at TEXT NOT NULL
 )`);
 
+// Atomic email dedup: one email per type per user per day
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_email_log_daily ON email_log(user_id, email_type, date(sent_at))');
+
 /** O(min(m,n)) space — reuses module-level buffers to avoid per-call allocation */
 const _levBuf0 = new Int32Array(256);
 const _levBuf1 = new Int32Array(256);

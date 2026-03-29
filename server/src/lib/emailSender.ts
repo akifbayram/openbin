@@ -21,29 +21,41 @@ type EmailType = 'welcome' | 'trial_expiring' | 'trial_expired' | 'subscription_
 
 const SKIP_DEDUP: ReadonlySet<EmailType> = new Set(['welcome', 'password_reset']);
 
-async function wasSentRecently(userId: string, emailType: EmailType): Promise<boolean> {
-  const result = await query(
-    "SELECT id FROM email_log WHERE user_id = $1 AND email_type = $2 AND sent_at > datetime('now', '-24 hours') LIMIT 1",
-    [userId, emailType],
-  );
-  return result.rows.length > 0;
-}
-
-async function logSent(userId: string, emailType: EmailType): Promise<void> {
-  await query(
-    'INSERT INTO email_log (id, user_id, email_type) VALUES ($1, $2, $3)',
-    [generateUuid(), userId, emailType],
-  );
+/**
+ * Attempt to claim an email send slot atomically.
+ * Returns true if this instance won the claim, false if already sent today.
+ * SKIP_DEDUP emails always succeed (unique per-second sent_at avoids conflict).
+ */
+async function claimEmailSlot(userId: string, emailType: EmailType, skipDedup: boolean): Promise<boolean> {
+  try {
+    const id = generateUuid();
+    if (skipDedup) {
+      await query(
+        'INSERT INTO email_log (id, user_id, email_type) VALUES ($1, $2, $3)',
+        [id, userId, emailType],
+      );
+      return true;
+    }
+    await query(
+      'INSERT INTO email_log (id, user_id, email_type) VALUES ($1, $2, $3)',
+      [id, userId, emailType],
+    );
+    return true;
+  } catch (err: unknown) {
+    const sqliteErr = err as { code?: string };
+    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') return false;
+    throw err;
+  }
 }
 
 /**
- * Fire-and-forget email send with dedup. Never throws.
+ * Fire-and-forget email send with atomic dedup. Never throws.
  */
 async function safeSend(userId: string, emailType: EmailType, to: string, template: { subject: string; html: string; text: string }): Promise<void> {
   try {
-    if (!SKIP_DEDUP.has(emailType) && await wasSentRecently(userId, emailType)) return;
+    const claimed = await claimEmailSlot(userId, emailType, SKIP_DEDUP.has(emailType));
+    if (!claimed) return;
     await sendEmail(to, template.subject, template.html, template.text);
-    await logSent(userId, emailType);
   } catch (err) {
     console.error(`Failed to send ${emailType} email to user ${userId}:`, err instanceof Error ? err.message : err);
   }

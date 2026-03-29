@@ -284,6 +284,7 @@ CREATE TABLE IF NOT EXISTS email_log (
   sent_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_email_log_dedup ON email_log(user_id, email_type, sent_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_email_log_daily ON email_log(user_id, email_type, date(sent_at));
 
 CREATE TABLE IF NOT EXISTS api_key_daily_usage (
   api_key_id    TEXT NOT NULL,
