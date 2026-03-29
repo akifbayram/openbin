@@ -24,6 +24,7 @@ function Header({
   onSort,
   className,
   defaultDirection,
+  desktopOnly,
 }: {
   label: string;
   column: SortField;
@@ -32,9 +33,10 @@ function Header({
   onSort: (column: SortField, direction: SortDirection) => void;
   className?: string;
   defaultDirection?: SortDirection;
+  desktopOnly?: boolean;
 }) {
   return (
-    <th className={className}>
+    <th className={desktopOnly ? `hidden lg:table-cell ${className}` : className}>
       <SortHeader
         label={label}
         column={column}
@@ -67,15 +69,15 @@ export function AdminUsersTable({
         <thead>
           <tr className="border-b-2 border-[var(--border-flat)]">
             <Header label="User" column="username" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thBase} />
-            <Header label="Email" column="email" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thBase} />
+            <Header label="Email" column="email" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thBase} desktopOnly />
             <th className={thBase}>
               <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Role</span>
             </th>
             <Header label="Plan" column="plan" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thBase} />
             <Header label="Status" column="status" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thBase} />
-            <Header label="Bins" column="bins" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thRight} defaultDirection="desc" />
-            <Header label="Locations" column="locations" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thRight} defaultDirection="desc" />
-            <Header label="Storage" column="storage" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thRight} defaultDirection="desc" />
+            <Header label="Bins" column="bins" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thRight} defaultDirection="desc" desktopOnly />
+            <Header label="Locations" column="locations" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thRight} defaultDirection="desc" desktopOnly />
+            <Header label="Storage" column="storage" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thRight} defaultDirection="desc" desktopOnly />
             <Header label="Created" column="created" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thBase} />
             <th className={thBase} />
           </tr>
@@ -94,7 +96,7 @@ export function AdminUsersTable({
                   <div className="font-medium text-[var(--text-primary)]">{u.displayName || u.username}</div>
                   <div className="text-[12px] text-[var(--text-tertiary)]">@{u.username}</div>
                 </td>
-                <td className={tdBase}>{u.email || '—'}</td>
+                <td className={`hidden lg:table-cell ${tdBase}`}>{u.email || '—'}</td>
                 <td className={tdBase}>
                   {u.isAdmin ? <Badge variant="default" className="text-[11px]">Admin</Badge> : <span className="text-[var(--text-muted)]">—</span>}
                 </td>
@@ -107,9 +109,9 @@ export function AdminUsersTable({
                     <Badge variant={statusVariant(u.status)} className="text-[11px]">{capitalize(u.status)}</Badge>
                   </span>
                 </td>
-                <td className={tdRight}>{u.deletedAt ? '—' : u.binCount}</td>
-                <td className={tdRight}>{u.deletedAt ? '—' : u.locationCount}</td>
-                <td className={tdRight}>{u.deletedAt ? '—' : `${u.photoStorageMb} MB`}</td>
+                <td className={`hidden lg:table-cell ${tdRight}`}>{u.deletedAt ? '—' : u.binCount}</td>
+                <td className={`hidden lg:table-cell ${tdRight}`}>{u.deletedAt ? '—' : u.locationCount}</td>
+                <td className={`hidden lg:table-cell ${tdRight}`}>{u.deletedAt ? '—' : `${u.photoStorageMb} MB`}</td>
                 <td className={tdBase}>
                   <span className="text-[12px] text-[var(--text-muted)] whitespace-nowrap">{new Date(u.createdAt).toLocaleDateString()}</span>
                 </td>
