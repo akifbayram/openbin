@@ -90,8 +90,7 @@ export function AdminUsersTable({
               <tr
                 key={u.id}
                 onClick={() => onClickUser(u.id)}
-                className="border-b border-[var(--border-subtle)] cursor-pointer transition-colors [@media(hover:hover)]:hover:bg-[var(--bg-hover)]"
-                style={u.deletedAt ? { opacity: 0.5 } : undefined}
+                className={cn('border-b border-[var(--border-subtle)] cursor-pointer transition-colors [@media(hover:hover)]:hover:bg-[var(--bg-hover)]', u.deletedAt && 'opacity-50')}
               >
                 <td className={tdBase}>
                   <div className="font-medium text-[var(--text-primary)]">{u.displayName || u.username}</div>

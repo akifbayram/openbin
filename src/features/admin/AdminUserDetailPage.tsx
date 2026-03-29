@@ -190,6 +190,9 @@ export function AdminUserDetailPage() {
     }
   }, [detail, showToast]);
 
+  // Prevent flash of admin content for non-admins
+  if (currentUser && !currentUser.isAdmin) return null;
+
   if (isLoading) {
     return (
       <div className="page-content">

@@ -33,6 +33,8 @@ export function AdminUsersPage() {
   useEffect(() => {
     if (user && !user.isAdmin) navigate('/', { replace: true });
   }, [user, navigate]);
+
+  const [tab, setTab] = useState<'users' | 'metrics'>('users');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [sortColumn, setSortColumn] = useState<'username' | 'email' | 'plan' | 'status' | 'bins' | 'locations' | 'storage' | 'created'>('created');
@@ -92,7 +94,8 @@ export function AdminUsersPage() {
     }
   }, [createForm, createUser, showToast]);
 
-  const [tab, setTab] = useState<'users' | 'metrics'>('users');
+  // Prevent flash of admin content for non-admins
+  if (user && !user.isAdmin) return null;
 
   const registrationSection = (
     <div className="flat-card rounded-[var(--radius-lg)] px-4 py-3">
