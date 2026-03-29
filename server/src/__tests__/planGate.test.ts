@@ -20,10 +20,14 @@ vi.mock('../db.js', () => ({
 import { query } from '../db.js';
 import { config } from '../lib/config.js';
 import {
+  checkLocationWritable,
   computeOverLimits,
   generateUpgradeUrl,
+  getEffectiveMemberRole,
   getFeatureMap,
+  getUserOverLimits,
   getUserPlanInfo,
+  invalidateOverLimitCache,
   isPlanRestricted,
   isProUser,
   isSelfHosted,
@@ -336,5 +340,119 @@ describe('computeOverLimits()', () => {
       { ...getFeatureMap(Plan.PRO), maxPhotoStorageMb: null },
     );
     expect(result).toEqual({ locations: false, photos: false, members: [] });
+  });
+});
+
+describe('getUserOverLimits() with cache', () => {
+  beforeEach(() => {
+    setConfig({ selfHosted: false });
+    invalidateOverLimitCache('user1');
+    vi.mocked(query).mockReset();
+  });
+
+  it('returns empty over-limits in self-hosted mode', async () => {
+    setConfig({ selfHosted: true });
+    const result = await getUserOverLimits('user1');
+    expect(result).toEqual({ locations: false, photos: false, members: [] });
+    expect(vi.mocked(query)).not.toHaveBeenCalled();
+  });
+
+  it('computes over-limits from DB queries', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 3 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 200 * 1024 * 1024 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });
+    const result = await getUserOverLimits('user1');
+    expect(result.locations).toBe(true);
+    expect(result.photos).toBe(true);
+    expect(result.members).toEqual(['loc1']);
+  });
+
+  it('returns cached result on second call', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    await getUserOverLimits('user1');
+    const callCount = vi.mocked(query).mock.calls.length;
+    await getUserOverLimits('user1');
+    expect(vi.mocked(query).mock.calls.length).toBe(callCount);
+  });
+});
+
+describe('checkLocationWritable()', () => {
+  beforeEach(() => {
+    setConfig({ selfHosted: false });
+    invalidateOverLimitCache('owner1');
+    vi.mocked(query).mockReset();
+  });
+
+  it('returns writable=true when under location limit', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ created_by: 'owner1' }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    const result = await checkLocationWritable('loc1');
+    expect(result.writable).toBe(true);
+  });
+
+  it('returns writable=false when over location limit', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ created_by: 'owner1' }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 3 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    const result = await checkLocationWritable('loc1');
+    expect(result.writable).toBe(false);
+    expect(result.reason).toContain('location');
+  });
+
+  it('returns writable=true in self-hosted mode', async () => {
+    setConfig({ selfHosted: true });
+    const result = await checkLocationWritable('loc1');
+    expect(result.writable).toBe(true);
+  });
+});
+
+describe('getEffectiveMemberRole()', () => {
+  beforeEach(() => {
+    setConfig({ selfHosted: false });
+    invalidateOverLimitCache('owner1');
+    vi.mocked(query).mockReset();
+  });
+
+  it('returns stored role when not over member limit', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 1 }], rowCount: 1 });
+    const role = await getEffectiveMemberRole('member1', 'loc1', 'member', 'owner1');
+    expect(role).toBe('member');
+  });
+
+  it('downgrades non-owner to viewer when over member limit', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });
+    const role = await getEffectiveMemberRole('member1', 'loc1', 'admin', 'owner1');
+    expect(role).toBe('viewer');
+  });
+
+  it('preserves owner role even when over member limit', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });
+    const role = await getEffectiveMemberRole('owner1', 'loc1', 'admin', 'owner1');
+    expect(role).toBe('admin');
   });
 });
