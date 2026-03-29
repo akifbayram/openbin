@@ -6,7 +6,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 import { ConflictError, ForbiddenError, NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
-import { getLocationOwnerFeatures, getUserFeatures, throwPlanRestricted } from '../lib/planGate.js';
+import { getLocationOwnerFeatures, getUserFeatures, invalidateOverLimitCache, throwPlanRestricted } from '../lib/planGate.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { validateRetentionDays } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
@@ -84,6 +84,8 @@ router.post('/', asyncHandler(async (req, res) => {
   );
 
   const location = locationResult.rows[0];
+
+  invalidateOverLimitCache(req.user!.id);
 
   // Auto-add creator as admin
   await query(
@@ -267,6 +269,8 @@ router.delete('/:id', asyncHandler(async (req, res) => {
     throw new NotFoundError('Location not found');
   }
 
+  invalidateOverLimitCache(req.user!.id);
+
   res.json({ message: 'Location deleted' });
 }));
 
@@ -310,6 +314,9 @@ router.post('/join', asyncHandler(async (req, res) => {
     'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
     [generateUuid(), location.id, req.user!.id, location.default_join_role]
   );
+
+  const joinOwnerRow = await query<{ created_by: string }>('SELECT created_by FROM locations WHERE id = $1', [location.id]);
+  if (joinOwnerRow.rows[0]) invalidateOverLimitCache(joinOwnerRow.rows[0].created_by);
 
   logRouteActivity(req, {
     locationId: location.id,
@@ -411,6 +418,9 @@ router.delete('/:id/members/:userId', asyncHandler(async (req, res) => {
   if (result.rows.length === 0) {
     throw new NotFoundError('Member not found');
   }
+
+  const ownerRow = await query<{ created_by: string }>('SELECT created_by FROM locations WHERE id = $1', [id]);
+  if (ownerRow.rows[0]) invalidateOverLimitCache(ownerRow.rows[0].created_by);
 
   const action = requesterId === userId ? 'leave' : 'remove_member';
   logRouteActivity(req, {
