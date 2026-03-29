@@ -10,7 +10,11 @@ export interface AdminUser {
   plan: 'lite' | 'pro';
   status: 'active' | 'inactive' | 'trial';
   activeUntil: string | null;
+  deletedAt: string | null;
   createdAt: string;
+  binCount: number;
+  locationCount: number;
+  photoStorageMb: number;
 }
 
 interface RegistrationInfo {
@@ -18,7 +22,7 @@ interface RegistrationInfo {
   locked: boolean;
 }
 
-export function useAdminUsers(query = '', page = 1) {
+export function useAdminUsers(query = '', page = 1, sort = '-created') {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [count, setCount] = useState(0);
   const [adminCount, setAdminCount] = useState(0);
@@ -31,6 +35,7 @@ export function useAdminUsers(query = '', page = 1) {
       const params = new URLSearchParams();
       if (query) params.set('q', query);
       params.set('page', String(page));
+      params.set('sort', sort);
       const qs = params.toString();
       const data = await apiFetch<{ results: AdminUser[]; count: number; adminCount: number }>(`/api/admin/users?${qs}`);
       setUsers(data.results);
@@ -42,7 +47,7 @@ export function useAdminUsers(query = '', page = 1) {
     } finally {
       setIsLoading(false);
     }
-  }, [query, page]);
+  }, [query, page, sort]);
 
   const fetchRegistration = useCallback(async () => {
     try {
@@ -89,6 +94,7 @@ export interface AdminUserDetail {
   plan: 'lite' | 'pro';
   status: 'active' | 'inactive' | 'trial';
   activeUntil: string | null;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
   stats: {
@@ -111,6 +117,14 @@ export async function updateUser(id: string, updates: { isAdmin?: boolean; subSt
 
 export async function deleteUser(id: string) {
   await apiFetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+}
+
+export async function regenerateApiKey(id: string) {
+  return apiFetch<{ keyPrefix: string; name: string; createdAt: string }>(`/api/admin/users/${id}/regenerate-api-key`, { method: 'POST' });
+}
+
+export async function sendPasswordReset(id: string) {
+  return apiFetch<{ message: string }>(`/api/admin/users/${id}/send-password-reset`, { method: 'POST' });
 }
 
 export async function fetchAdminCount(): Promise<number> {
