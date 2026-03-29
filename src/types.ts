@@ -284,10 +284,24 @@ export interface PlanFeatures {
   activityRetentionDays: number | null;
 }
 
+export interface OverLimits {
+  locations: boolean;
+  photos: boolean;
+  members: string[];
+}
+
+export interface PlanUsage {
+  locationCount: number;
+  photoStorageMb: number;
+  memberCounts: Record<string, number>;
+  overLimits: OverLimits;
+}
+
 export interface PlanInfo {
   plan: PlanTier;
   status: SubscriptionStatus;
   activeUntil: string | null;
+  previousSubStatus: 'trial' | 'active' | null;
   selfHosted: boolean;
   locked: boolean;
   features: PlanFeatures;

@@ -21,10 +21,18 @@ import type { PlanInfo } from '@/types';
 const mockApiFetch = vi.mocked(apiFetch);
 const mockUseAuth = vi.mocked(useAuth);
 
+const MOCK_USAGE = {
+  locationCount: 1,
+  photoStorageMb: 10,
+  memberCounts: {},
+  overLimits: { locations: false, photos: false, members: [] },
+};
+
 const SELF_HOSTED_PLAN: PlanInfo = {
   plan: 'pro',
   status: 'active',
   activeUntil: null,
+  previousSubStatus: null,
   selfHosted: true,
   locked: false,
   features: {
@@ -50,6 +58,7 @@ const LITE_PLAN: PlanInfo = {
   plan: 'lite',
   status: 'inactive',
   activeUntil: null,
+  previousSubStatus: 'active',
   selfHosted: false,
   locked: true,
   features: {
@@ -75,6 +84,7 @@ const PRO_PLAN: PlanInfo = {
   plan: 'pro',
   status: 'active',
   activeUntil: '2027-01-01T00:00:00.000Z',
+  previousSubStatus: null,
   selfHosted: false,
   locked: false,
   features: {
@@ -102,6 +112,13 @@ function makeWrapper() {
   };
 }
 
+function mockPlanFetch(plan: PlanInfo) {
+  mockApiFetch.mockImplementation((path: string) => {
+    if (path === '/api/plan/usage') return Promise.resolve(MOCK_USAGE);
+    return Promise.resolve(plan);
+  });
+}
+
 describe('usePlan', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -113,7 +130,7 @@ describe('usePlan', () => {
   });
 
   it('provides self-hosted plan when API returns selfHosted: true', async () => {
-    mockApiFetch.mockResolvedValue(SELF_HOSTED_PLAN);
+    mockPlanFetch(SELF_HOSTED_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
@@ -127,7 +144,7 @@ describe('usePlan', () => {
   });
 
   it('provides lite plan info for lite users', async () => {
-    mockApiFetch.mockResolvedValue(LITE_PLAN);
+    mockPlanFetch(LITE_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
@@ -140,7 +157,7 @@ describe('usePlan', () => {
   });
 
   it('provides pro plan info for pro users', async () => {
-    mockApiFetch.mockResolvedValue(PRO_PLAN);
+    mockPlanFetch(PRO_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
@@ -153,7 +170,7 @@ describe('usePlan', () => {
   });
 
   it('isGated returns true for gated boolean features on lite plan', async () => {
-    mockApiFetch.mockResolvedValue(LITE_PLAN);
+    mockPlanFetch(LITE_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
@@ -166,7 +183,7 @@ describe('usePlan', () => {
   });
 
   it('isGated returns false for numeric limit features (not boolean)', async () => {
-    mockApiFetch.mockResolvedValue(LITE_PLAN);
+    mockPlanFetch(LITE_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
@@ -177,7 +194,7 @@ describe('usePlan', () => {
   });
 
   it('isGated returns false for all features on pro plan', async () => {
-    mockApiFetch.mockResolvedValue(PRO_PLAN);
+    mockPlanFetch(PRO_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 

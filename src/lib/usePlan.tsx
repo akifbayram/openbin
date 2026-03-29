@@ -1,13 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { PlanFeatures, PlanInfo } from '@/types';
+import { Events, useRefreshOn } from '@/lib/eventBus';
+import type { OverLimits, PlanFeatures, PlanInfo, PlanUsage } from '@/types';
 
-// Self-hosted mode: full pro features, no API call needed
 const SELF_HOSTED_PLAN: PlanInfo = {
   plan: 'pro',
   status: 'active',
   activeUntil: null,
+  previousSubStatus: null,
   selfHosted: true,
   locked: false,
   features: {
@@ -38,6 +39,10 @@ interface PlanContextValue {
   isLocked: boolean;
   isGated: (feature: keyof PlanFeatures) => boolean;
   refresh: () => Promise<PlanInfo | null>;
+  overLimits: OverLimits | null;
+  isOverAnyLimit: boolean;
+  isLocationOverLimit: (locationId: string) => boolean;
+  refreshUsage: () => Promise<void>;
 }
 
 const PlanContext = createContext<PlanContextValue | null>(null);
@@ -45,7 +50,9 @@ const PlanContext = createContext<PlanContextValue | null>(null);
 export function PlanProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
+  const [overLimits, setOverLimits] = useState<OverLimits | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const usageRefresh = useRefreshOn(Events.LOCATIONS, Events.PHOTOS);
 
   const fetchPlan = useCallback(async (): Promise<PlanInfo | null> => {
     if (!token) return null;
@@ -60,6 +67,16 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token]);
 
+  const fetchUsage = useCallback(async (): Promise<void> => {
+    if (!token) return;
+    try {
+      const data = await apiFetch<PlanUsage>('/api/plan/usage');
+      setOverLimits(data.overLimits);
+    } catch {
+      setOverLimits(null);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (!token) {
       setIsLoading(false);
@@ -69,12 +86,16 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     setIsLoading(true);
 
-    fetchPlan().finally(() => {
+    Promise.all([fetchPlan(), fetchUsage()]).finally(() => {
       if (!cancelled) setIsLoading(false);
     });
 
     return () => { cancelled = true; };
-  }, [fetchPlan]);
+  }, [fetchPlan, fetchUsage]);
+
+  useEffect(() => {
+    if (usageRefresh > 0) fetchUsage();
+  }, [usageRefresh, fetchUsage]);
 
   const value = useMemo<PlanContextValue>(() => {
     const info = planInfo ?? SELF_HOSTED_PLAN;
@@ -88,6 +109,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       if (val === null) return false;
       return false;
     };
+    const isOverAnyLimit = overLimits !== null && (overLimits.locations || overLimits.photos || overLimits.members.length > 0);
+    const isLocationOverLimit = (locationId: string) => overLimits?.members.includes(locationId) ?? false;
 
     return {
       planInfo: info,
@@ -98,8 +121,12 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       isLocked,
       isGated,
       refresh: fetchPlan,
+      overLimits,
+      isOverAnyLimit,
+      isLocationOverLimit,
+      refreshUsage: fetchUsage,
     };
-  }, [planInfo, isLoading, fetchPlan]);
+  }, [planInfo, isLoading, fetchPlan, overLimits, fetchUsage]);
 
   return <PlanContext.Provider value={value}>{children}</PlanContext.Provider>;
 }
