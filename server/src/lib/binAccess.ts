@@ -70,9 +70,8 @@ export async function requireMemberOrAbove(locationId: string, userId: string, a
     throw new OverLimitError(writableCheck.reason ?? 'Location is read-only due to plan limits', upgradeUrl);
   }
 
-  // Compute effective role (may downgrade to viewer if over member limit)
-  const ownerResult = await query<{ created_by: string }>('SELECT created_by FROM locations WHERE id = $1', [locationId]);
-  const ownerId = ownerResult.rows[0]?.created_by ?? '';
+  // Use ownerId from writableCheck instead of querying again
+  const ownerId = writableCheck.ownerId ?? '';
   const effectiveRole = await getEffectiveMemberRole(userId, locationId, role as 'admin' | 'member' | 'viewer', ownerId);
 
   if (effectiveRole === 'viewer') {

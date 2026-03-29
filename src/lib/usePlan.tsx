@@ -4,6 +4,16 @@ import { useAuth } from '@/lib/auth';
 import { Events, useRefreshOn } from '@/lib/eventBus';
 import type { OverLimits, PlanFeatures, PlanInfo, PlanUsage } from '@/types';
 
+export function getLockedMessage(previousSubStatus: 'trial' | 'active' | null): string {
+  if (previousSubStatus === 'trial') return 'Your trial has ended. Subscribe to continue using OpenBin.';
+  if (previousSubStatus === 'active') return 'Your subscription has expired. Resubscribe to continue using OpenBin.';
+  return 'Your plan is inactive. Subscribe to continue using OpenBin.';
+}
+
+export function getLockedCta(previousSubStatus: 'trial' | 'active' | null): string {
+  return previousSubStatus === 'trial' ? 'Subscribe' : 'Resubscribe';
+}
+
 const SELF_HOSTED_PLAN: PlanInfo = {
   plan: 'pro',
   status: 'active',

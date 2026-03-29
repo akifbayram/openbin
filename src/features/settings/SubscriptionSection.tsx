@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { useToast } from '@/components/ui/toast';
 import { apiFetch } from '@/lib/api';
-import { usePlan } from '@/lib/usePlan';
+import { getLockedMessage, usePlan } from '@/lib/usePlan';
 import { cn, focusRing } from '@/lib/utils';
 import type { PlanUsage } from '@/types';
 
@@ -181,11 +181,7 @@ export function SubscriptionSection() {
           {isLocked && (
             <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] bg-[var(--destructive-soft)] text-[var(--destructive)]">
               <Clock className="h-3.5 w-3.5" />
-              {planInfo.previousSubStatus === 'trial'
-                ? 'Your trial has ended. Subscribe to continue using OpenBin.'
-                : planInfo.previousSubStatus === 'active'
-                  ? 'Your subscription has expired. Resubscribe to continue using OpenBin.'
-                  : 'Your plan is inactive. Subscribe to continue using OpenBin.'}
+              {getLockedMessage(planInfo.previousSubStatus)}
             </div>
           )}
           {!isLocked && isTrialing && daysRemaining !== null && (

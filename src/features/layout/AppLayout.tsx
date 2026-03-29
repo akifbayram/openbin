@@ -24,7 +24,7 @@ import { useTerminology } from '@/lib/terminology';
 import { useTheme } from '@/lib/theme';
 import { useKeyboardShortcuts } from '@/lib/useKeyboardShortcuts';
 import { usePermissions } from '@/lib/usePermissions';
-import { usePlan } from '@/lib/usePlan';
+import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
 import { useUserPreferences } from '@/lib/userPreferences';
 import { toggleSidebarCollapsed, useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
 import { cn } from '@/lib/utils';
@@ -210,11 +210,7 @@ export function AppLayout() {
                   : 'text-amber-600 dark:text-amber-400',
               )}>
                 {showLockedBanner
-                  ? (planInfo.previousSubStatus === 'trial'
-                    ? 'Your trial has ended. Subscribe to continue using OpenBin.'
-                    : planInfo.previousSubStatus === 'active'
-                      ? 'Your subscription has expired. Resubscribe to continue using OpenBin.'
-                      : 'Your plan is inactive. Subscribe to continue using OpenBin.')
+                  ? getLockedMessage(planInfo.previousSubStatus)
                   : 'You\'re over your Lite plan limits. Reduce usage or upgrade to Pro to resume editing.'}
               </p>
               {(showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) && (
@@ -225,7 +221,7 @@ export function AppLayout() {
                   className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity shrink-0"
                 >
                   {showLockedBanner
-                    ? (planInfo.previousSubStatus === 'trial' ? 'Subscribe' : 'Resubscribe')
+                    ? getLockedCta(planInfo.previousSubStatus)
                     : 'Upgrade'}
                   <ArrowUpRight className="h-3 w-3" />
                 </a>

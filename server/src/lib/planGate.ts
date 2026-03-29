@@ -148,6 +148,34 @@ export async function getUserQuotaUsage(userId: string): Promise<{ locationCount
   };
 }
 
+export interface UserUsage {
+  locationCount: number;
+  photoStorageMb: number;
+  memberCounts: Record<string, number>;
+}
+
+export async function getUserUsage(userId: string): Promise<UserUsage> {
+  const [locResult, photoResult, memberResult] = await Promise.all([
+    query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM locations WHERE created_by = $1', [userId]),
+    query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [userId]),
+    query<{ location_id: string; cnt: number }>(
+      `SELECT location_id, COUNT(*) as cnt FROM location_members
+       WHERE location_id IN (SELECT id FROM locations WHERE created_by = $1)
+       GROUP BY location_id`,
+      [userId],
+    ),
+  ]);
+
+  const memberCounts: Record<string, number> = {};
+  for (const row of memberResult.rows) memberCounts[row.location_id] = row.cnt;
+
+  return {
+    locationCount: locResult.rows[0].cnt,
+    photoStorageMb: Math.round((photoResult.rows[0].total / (1024 * 1024)) * 100) / 100,
+    memberCounts,
+  };
+}
+
 export async function getMemberCount(locationId: string): Promise<number> {
   const result = await query<{ cnt: number }>(
     'SELECT COUNT(*) as cnt FROM location_members WHERE location_id = $1',
@@ -226,31 +254,14 @@ export async function getUserOverLimits(userId: string): Promise<OverLimits> {
   if (!planInfo) return EMPTY_OVER_LIMITS;
 
   const features = getFeatureMap(planInfo.plan);
+  const usage = await getUserUsage(userId);
 
-  const [locResult, photoResult, memberResult] = await Promise.all([
-    query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM locations WHERE created_by = $1', [userId]),
-    query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [userId]),
-    query<{ location_id: string; cnt: number }>(
-      `SELECT location_id, COUNT(*) as cnt FROM location_members
-       WHERE location_id IN (SELECT id FROM locations WHERE created_by = $1)
-       GROUP BY location_id`,
-      [userId],
-    ),
-  ]);
-
-  const memberCounts: Record<string, number> = {};
-  for (const row of memberResult.rows) memberCounts[row.location_id] = row.cnt;
-
-  const data = computeOverLimits(
-    { locationCount: locResult.rows[0].cnt, photoStorageMb: photoResult.rows[0].total / (1024 * 1024), memberCounts },
-    features,
-  );
-
+  const data = computeOverLimits(usage, features);
   overLimitCache.set(userId, { data, expiresAt: Date.now() + OVER_LIMIT_CACHE_TTL });
   return data;
 }
 
-export async function checkLocationWritable(locationId: string): Promise<{ writable: boolean; reason?: string }> {
+export async function checkLocationWritable(locationId: string): Promise<{ writable: boolean; reason?: string; ownerId?: string }> {
   if (config.selfHosted) return { writable: true };
 
   const locResult = await query<{ created_by: string }>(
@@ -263,9 +274,9 @@ export async function checkLocationWritable(locationId: string): Promise<{ writa
   const overLimits = await getUserOverLimits(ownerId);
 
   if (overLimits.locations) {
-    return { writable: false, reason: 'You\'ve exceeded your plan\'s location limit. Delete a location or upgrade to resume editing.' };
+    return { writable: false, ownerId, reason: 'You\'ve exceeded your plan\'s location limit. Delete a location or upgrade to resume editing.' };
   }
-  return { writable: true };
+  return { writable: true, ownerId };
 }
 
 export async function getEffectiveMemberRole(

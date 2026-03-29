@@ -48,12 +48,14 @@ router.post('/callback', asyncHandler(async (req, res) => {
     throw new ValidationError('Invalid status value');
   }
 
-  const prevRow = await query<{ sub_status: number }>('SELECT sub_status FROM users WHERE id = $1', [userId]);
-  const previousSubStatus = prevRow.rows[0]?.sub_status ?? null;
+  const prevRow = await query<{ plan: number; sub_status: number }>('SELECT plan, sub_status FROM users WHERE id = $1', [userId]);
+  const wasPro = prevRow.rows[0]?.plan === Plan.PRO;
 
   const result = await query(
-    'UPDATE users SET plan = $1, sub_status = $2, active_until = $3, previous_sub_status = $4, updated_at = datetime(\'now\') WHERE id = $5',
-    [plan, status, activeUntil || null, status === SubStatus.INACTIVE ? previousSubStatus : null, userId],
+    `UPDATE users SET plan = $1, sub_status = $2, active_until = $3,
+     previous_sub_status = CASE WHEN $2 = ${SubStatus.INACTIVE} THEN sub_status ELSE NULL END,
+     updated_at = datetime('now') WHERE id = $4`,
+    [plan, status, activeUntil || null, userId],
   );
 
   if (result.rowCount === 0) {
@@ -74,7 +76,7 @@ router.post('/callback', asyncHandler(async (req, res) => {
     } else if (status === SubStatus.INACTIVE) {
       fireSubscriptionExpiredEmail(userId, userRow.email, userRow.display_name);
     }
-    if (plan === Plan.LITE && previousSubStatus !== null) {
+    if (plan === Plan.LITE && wasPro) {
       const { fireDowngradeImpactEmail } = await import('../lib/emailSender.js');
       const [locRes, photoRes, memberRes] = await Promise.all([
         query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM locations WHERE created_by = $1', [userId]),
