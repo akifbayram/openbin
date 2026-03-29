@@ -7,7 +7,7 @@ import { config } from '../lib/config.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '../lib/cookies.js';
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
 import { deleteUserData, notifyManagerNewUser, notifyManagerUserUpdate } from '../lib/managerWebhook.js';
-import { consumeResetToken } from '../lib/passwordReset.js';
+import { consumeResetToken, createPasswordResetToken } from '../lib/passwordReset.js';
 import { safePath } from '../lib/pathSafety.js';
 import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
@@ -571,6 +571,35 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
   console.log(`[auth] User ${req.user!.username} deleted their account`);
 
   res.json({ message: 'Account deleted' });
+}));
+
+// POST /api/auth/forgot-password — request a password reset email (no auth)
+router.post('/forgot-password', asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email || typeof email !== 'string') {
+    throw new ValidationError('Email is required');
+  }
+  validateEmail(email.trim());
+
+  const result = await query<{ id: string; display_name: string; email: string }>(
+    'SELECT id, display_name, email FROM users WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL',
+    [email.trim()],
+  );
+
+  if (result.rows.length > 0) {
+    if (config.baseUrl) {
+      const user = result.rows[0];
+      const { rawToken } = await createPasswordResetToken(user.id, null);
+      const resetUrl = `${config.baseUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
+      const { firePasswordResetEmail } = await import('../lib/emailSender.js');
+      firePasswordResetEmail(user.id, user.email, user.display_name, resetUrl);
+    } else {
+      console.warn('[auth] forgot-password: BASE_URL is not set, reset email not sent');
+    }
+  }
+
+  res.json({ message: 'If an account with that email exists, a reset link has been sent.' });
 }));
 
 // POST /api/auth/reset-password — consume reset token and set new password (no auth)

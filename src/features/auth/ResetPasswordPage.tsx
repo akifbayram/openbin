@@ -1,6 +1,7 @@
 import { KeyRound, Monitor, Moon, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { BrandIcon } from '@/components/BrandIcon';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -46,33 +47,43 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center px-6 bg-[var(--bg-base)] relative">
+    <div className="auth-pattern min-h-dvh flex flex-col items-center justify-center px-6 bg-[var(--bg-base)]">
       <button
         type="button"
         onClick={() => setThemePreference(cycleThemePreference(preference))}
-        aria-label={`Theme: ${preference}`}
-        className="absolute top-4 right-4 p-2.5 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
+        aria-label={`Switch theme, currently ${preference}`}
+        className="absolute top-4 right-4 z-10 p-2.5 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
       >
         <ThemeIcon className="h-5 w-5" />
       </button>
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center">
+      <div className="relative z-[1] w-full max-w-sm space-y-8">
+        <div className="text-center space-y-1">
+          <BrandIcon className="h-12 w-12 mx-auto text-[var(--accent)] mb-3" />
           <h1 className="font-heading text-[28px] font-bold text-[var(--text-primary)] tracking-tight">
             {settings.appName}
           </h1>
+          <p className="text-[14px] text-[var(--text-tertiary)]">Set a new password</p>
         </div>
 
         {!token ? (
-          <Card>
-            <CardContent className="py-6 text-center space-y-4">
-              <p className="text-[15px] text-[var(--text-secondary)]">
-                Invalid reset link. Please ask your admin for a new one.
-              </p>
-              <Link to="/login" className="text-[var(--accent)] font-medium hover:underline text-[14px]">
-                Back to login
+          <>
+            <Card>
+              <CardContent className="py-6 text-center space-y-4">
+                <p className="text-[15px] text-[var(--text-secondary)]">
+                  Invalid or expired reset link.
+                </p>
+                <Link to="/forgot-password" className="text-[var(--accent)] font-medium hover:underline text-[14px]">
+                  Request a new link
+                </Link>
+              </CardContent>
+            </Card>
+            <p className="text-center text-[14px] text-[var(--text-secondary)]">
+              Remember your password?{' '}
+              <Link to="/login" className="text-[var(--accent)] font-medium hover:underline">
+                Sign in
               </Link>
-            </CardContent>
-          </Card>
+            </p>
+          </>
         ) : success ? (
           <Card>
             <CardContent className="py-6 text-center space-y-4">

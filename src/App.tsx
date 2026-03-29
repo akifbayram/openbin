@@ -36,6 +36,10 @@ const SharedBinPage = lazyWithRetry(() =>
   import('@/features/bins/SharedBinPage').then((m) => ({ default: m.SharedBinPage }))
 );
 
+const ForgotPasswordPage = lazyWithRetry(() =>
+  import('@/features/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage }))
+);
+
 const ResetPasswordPage = lazyWithRetry(() =>
   import('@/features/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage }))
 );
@@ -250,6 +254,14 @@ export default function App() {
                 element={
                   <Suspense fallback={<LoadingFallback />}>
                     <RegisterPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/forgot-password"
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <ForgotPasswordPage />
                   </Suspense>
                 }
               />
