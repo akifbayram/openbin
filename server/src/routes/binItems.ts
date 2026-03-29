@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { isLocationAdmin, requireMemberOrAbove, verifyBinAccess } from '../lib/binAccess.js';
-import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { ForbiddenError, NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
+import { checkLocationWritable } from '../lib/planGate.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -31,6 +32,11 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
   }
 
   const access = await verifyBinEditAccess(id, req.user!.id);
+
+  const writableAddItems = await checkLocationWritable(access.locationId);
+  if (!writableAddItems.writable) {
+    throw new PlanRestrictedError(writableAddItems.reason || 'Location is read-only due to plan limits');
+  }
 
   // Get max position
   const maxResult = await query<{ max_pos: number | null }>(
@@ -134,6 +140,11 @@ router.put('/:id/items/:itemId', asyncHandler(async (req, res) => {
 
   const access = await verifyBinEditAccess(id, req.user!.id);
 
+  const writableRenameItem = await checkLocationWritable(access.locationId);
+  if (!writableRenameItem.writable) {
+    throw new PlanRestrictedError(writableRenameItem.reason || 'Location is read-only due to plan limits');
+  }
+
   const itemResult = await query<{ name: string; quantity: number | null }>(
     'SELECT name, quantity FROM bin_items WHERE id = $1 AND bin_id = $2',
     [itemId, id]
@@ -184,6 +195,11 @@ router.patch('/:id/items/:itemId/quantity', asyncHandler(async (req, res) => {
   }
 
   const access = await verifyBinEditAccess(id, req.user!.id);
+
+  const writableQuantity = await checkLocationWritable(access.locationId);
+  if (!writableQuantity.writable) {
+    throw new PlanRestrictedError(writableQuantity.reason || 'Location is read-only due to plan limits');
+  }
 
   const itemResult = await query<{ name: string; quantity: number | null }>(
     'SELECT name, quantity FROM bin_items WHERE id = $1 AND bin_id = $2',

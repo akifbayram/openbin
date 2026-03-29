@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { generateUuid, getDb, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireAdmin, verifyLocationMembership } from '../lib/binAccess.js';
-import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { ForbiddenError, NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
+import { checkLocationWritable } from '../lib/planGate.js';
 import { validateRequiredString } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePro } from '../middleware/requirePlan.js';
@@ -30,6 +31,11 @@ router.get('/:locationId/custom-fields', asyncHandler(async (req, res) => {
 router.post('/:locationId/custom-fields', requirePro(), asyncHandler(async (req, res) => {
   const { locationId } = req.params;
   const { name } = req.body;
+
+  const writablePostCf = await checkLocationWritable(locationId);
+  if (!writablePostCf.writable) {
+    throw new PlanRestrictedError(writablePostCf.reason || 'Location is read-only due to plan limits');
+  }
 
   await requireAdmin(locationId, req.user!.id, 'manage custom fields');
 
@@ -64,6 +70,11 @@ router.put('/:locationId/custom-fields/reorder', requirePro(), asyncHandler(asyn
   const { locationId } = req.params;
   const { field_ids } = req.body;
 
+  const writableReorder = await checkLocationWritable(locationId);
+  if (!writableReorder.writable) {
+    throw new PlanRestrictedError(writableReorder.reason || 'Location is read-only due to plan limits');
+  }
+
   await requireAdmin(locationId, req.user!.id, 'manage custom fields');
 
   if (!Array.isArray(field_ids) || field_ids.length === 0) {
@@ -87,6 +98,11 @@ router.put('/:locationId/custom-fields/reorder', requirePro(), asyncHandler(asyn
 router.put('/:locationId/custom-fields/:fieldId', requirePro(), asyncHandler(async (req, res) => {
   const { locationId, fieldId } = req.params;
   const { name, position } = req.body;
+
+  const writablePutCf = await checkLocationWritable(locationId);
+  if (!writablePutCf.writable) {
+    throw new PlanRestrictedError(writablePutCf.reason || 'Location is read-only due to plan limits');
+  }
 
   await requireAdmin(locationId, req.user!.id, 'manage custom fields');
 
@@ -135,6 +151,11 @@ router.put('/:locationId/custom-fields/:fieldId', requirePro(), asyncHandler(asy
 // DELETE /api/locations/:locationId/custom-fields/:fieldId
 router.delete('/:locationId/custom-fields/:fieldId', requirePro(), asyncHandler(async (req, res) => {
   const { locationId, fieldId } = req.params;
+
+  const writableDeleteCf = await checkLocationWritable(locationId);
+  if (!writableDeleteCf.writable) {
+    throw new PlanRestrictedError(writableDeleteCf.reason || 'Location is read-only due to plan limits');
+  }
 
   await requireAdmin(locationId, req.user!.id, 'manage custom fields');
 
