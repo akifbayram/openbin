@@ -62,6 +62,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const [overLimits, setOverLimits] = useState<OverLimits | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const usageRefresh = useRefreshOn(Events.LOCATIONS, Events.PHOTOS);
+  const planRefresh = useRefreshOn(Events.PLAN);
 
   const fetchPlan = useCallback(async (): Promise<PlanInfo | null> => {
     if (!token) return null;
@@ -105,6 +106,10 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (usageRefresh > 0) fetchUsage();
   }, [usageRefresh, fetchUsage]);
+
+  useEffect(() => {
+    if (planRefresh > 0) fetchPlan();
+  }, [planRefresh, fetchPlan]);
 
   const value = useMemo<PlanContextValue>(() => {
     const info = planInfo ?? SELF_HOSTED_PLAN;

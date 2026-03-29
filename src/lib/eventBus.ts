@@ -9,6 +9,7 @@ export const Events = {
   TAG_COLORS: 'tag-colors-changed',
   SCAN_HISTORY: 'scan-history-changed',
   CUSTOM_FIELDS: 'custom-fields-changed',
+  PLAN: 'plan-changed',
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];
