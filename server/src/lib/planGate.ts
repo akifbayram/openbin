@@ -270,6 +270,14 @@ export function validatePlanTransition(plan: PlanTier, status: SubStatusType): b
   return true;
 }
 
+/** Synchronous feature lookup for use inside transactions. */
+export function getUserFeaturesSync(db: import('better-sqlite3').Database, userId: string): PlanFeatures {
+  if (config.selfHosted) return getFeatureMap(Plan.PRO);
+  const row = db.prepare('SELECT plan FROM users WHERE id = ?').get(userId) as { plan: number } | undefined;
+  if (!row) return getFeatureMap(Plan.PRO);
+  return getFeatureMap(row.plan as PlanTier);
+}
+
 export async function checkLocationWritable(locationId: string): Promise<{ writable: boolean; reason?: string; ownerId?: string }> {
   if (config.selfHosted) return { writable: true };
 

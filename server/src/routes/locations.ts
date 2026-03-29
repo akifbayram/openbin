@@ -1,12 +1,12 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
-import { generateUuid, query } from '../db.js';
+import { generateUuid, getDb, query } from '../db.js';
 import { computeChanges } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 import { ConflictError, ForbiddenError, NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
-import { getEffectiveMemberRole, getLocationOwnerFeatures, getUserFeatures, invalidateOverLimitCache, throwPlanRestricted } from '../lib/planGate.js';
+import { getEffectiveMemberRole, getUserFeaturesSync, invalidateOverLimitCache } from '../lib/planGate.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { validateRetentionDays } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
@@ -69,43 +69,42 @@ router.post('/', asyncHandler(async (req, res) => {
     throw new ValidationError('Location name is required');
   }
 
-  const features = await getUserFeatures(req.user!.id);
-  if (features.maxLocations !== null) {
-    const countResult = await query<{ cnt: number }>(
-      'SELECT COUNT(*) as cnt FROM locations WHERE created_by = $1',
-      [req.user!.id],
-    );
-    if (countResult.rows[0].cnt >= features.maxLocations) {
-      await throwPlanRestricted(
-        req.user!.id,
-        `Your plan allows a maximum of ${features.maxLocations} location${features.maxLocations === 1 ? '' : 's'}`,
-      );
-    }
-  }
-
-  const inviteCode = generateInviteCode();
+  const db = getDb();
   const locationId = generateUuid();
-  const locationResult = await query(
-    'INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4) RETURNING id, name, invite_code, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, default_join_role, created_at, updated_at',
-    [locationId, name.trim(), req.user!.id, inviteCode]
-  );
+  const inviteCode = generateInviteCode();
 
-  const location = locationResult.rows[0];
+  const location = db.transaction(() => {
+    const features = getUserFeaturesSync(db, req.user!.id);
+    if (features.maxLocations !== null) {
+      const { cnt } = db.prepare('SELECT COUNT(*) as cnt FROM locations WHERE created_by = ?')
+        .get(req.user!.id) as { cnt: number };
+      if (cnt >= features.maxLocations) {
+        throw new PlanRestrictedError(
+          `Your plan allows a maximum of ${features.maxLocations} location${features.maxLocations === 1 ? '' : 's'}`,
+        );
+      }
+    }
+    db.prepare('INSERT INTO locations (id, name, created_by, invite_code) VALUES (?, ?, ?, ?)')
+      .run(locationId, name.trim(), req.user!.id, inviteCode);
+    return db.prepare(
+      'SELECT id, name, invite_code, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, default_join_role, created_at, updated_at FROM locations WHERE id = ?'
+    ).get(locationId) as Record<string, unknown>;
+  })();
 
   invalidateOverLimitCache(req.user!.id);
 
   // Auto-add creator as admin
   await query(
     'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
-    [generateUuid(), location.id, req.user!.id, 'admin']
+    [generateUuid(), locationId, req.user!.id, 'admin']
   );
 
   logRouteActivity(req, {
-    locationId: location.id,
+    locationId,
     action: 'create',
     entityType: 'location',
-    entityId: location.id,
-    entityName: location.name,
+    entityId: locationId,
+    entityName: location.name as string,
   });
 
   res.status(201).json({
@@ -305,25 +304,25 @@ router.post('/join', asyncHandler(async (req, res) => {
     throw new ConflictError('Already a member of this location');
   }
 
-  // No upgradeUrl here — the joining user can't upgrade the owner's plan
-  const locationFeatures = await getLocationOwnerFeatures(location.id);
-  if (locationFeatures.maxMembersPerLocation !== null) {
-    const memberCount = await query<{ cnt: number }>(
-      'SELECT COUNT(*) as cnt FROM location_members WHERE location_id = $1',
-      [location.id],
-    );
-    if (memberCount.rows[0].cnt >= locationFeatures.maxMembersPerLocation) {
-      throw new PlanRestrictedError('This location has reached its member limit');
+  const db = getDb();
+  const newMemberId = generateUuid();
+
+  // Wrap member count check + INSERT in a transaction to prevent race conditions
+  db.transaction(() => {
+    // No upgradeUrl here — the joining user can't upgrade the owner's plan
+    const ownerFeatures = getUserFeaturesSync(db, location.created_by);
+    if (ownerFeatures.maxMembersPerLocation !== null) {
+      const { cnt } = db.prepare('SELECT COUNT(*) as cnt FROM location_members WHERE location_id = ?')
+        .get(location.id) as { cnt: number };
+      if (cnt >= ownerFeatures.maxMembersPerLocation) {
+        throw new PlanRestrictedError('This location has reached its member limit');
+      }
     }
-  }
+    db.prepare('INSERT INTO location_members (id, location_id, user_id, role) VALUES (?, ?, ?, ?)')
+      .run(newMemberId, location.id, req.user!.id, location.default_join_role);
+  })();
 
-  await query(
-    'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
-    [generateUuid(), location.id, req.user!.id, location.default_join_role]
-  );
-
-  const joinOwnerRow = await query<{ created_by: string }>('SELECT created_by FROM locations WHERE id = $1', [location.id]);
-  if (joinOwnerRow.rows[0]) invalidateOverLimitCache(joinOwnerRow.rows[0].created_by);
+  invalidateOverLimitCache(location.created_by);
 
   logRouteActivity(req, {
     locationId: location.id,
