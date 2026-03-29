@@ -2,6 +2,7 @@ import { Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
+import { cn } from '@/lib/utils';
 import { type AdminUser, capitalize, statusVariant } from './useAdminUsers';
 
 type SortField = 'username' | 'email' | 'plan' | 'status' | 'bins' | 'locations' | 'storage' | 'created';
@@ -36,7 +37,7 @@ function Header({
   desktopOnly?: boolean;
 }) {
   return (
-    <th className={desktopOnly ? `hidden lg:table-cell ${className}` : className}>
+    <th className={cn(desktopOnly && 'hidden lg:table-cell', className)}>
       <SortHeader
         label={label}
         column={column}
@@ -96,7 +97,7 @@ export function AdminUsersTable({
                   <div className="font-medium text-[var(--text-primary)]">{u.displayName || u.username}</div>
                   <div className="text-[12px] text-[var(--text-tertiary)]">@{u.username}</div>
                 </td>
-                <td className={`hidden lg:table-cell ${tdBase}`}>{u.email || '—'}</td>
+                <td className={cn('hidden lg:table-cell', tdBase)}>{u.email || '—'}</td>
                 <td className={tdBase}>
                   {u.isAdmin ? <Badge variant="default" className="text-[11px]">Admin</Badge> : <span className="text-[var(--text-muted)]">—</span>}
                 </td>
@@ -109,9 +110,9 @@ export function AdminUsersTable({
                     <Badge variant={statusVariant(u.status)} className="text-[11px]">{capitalize(u.status)}</Badge>
                   </span>
                 </td>
-                <td className={`hidden lg:table-cell ${tdRight}`}>{u.deletedAt ? '—' : u.binCount}</td>
-                <td className={`hidden lg:table-cell ${tdRight}`}>{u.deletedAt ? '—' : u.locationCount}</td>
-                <td className={`hidden lg:table-cell ${tdRight}`}>{u.deletedAt ? '—' : `${u.photoStorageMb} MB`}</td>
+                <td className={cn('hidden lg:table-cell', tdRight)}>{u.deletedAt ? '—' : u.binCount}</td>
+                <td className={cn('hidden lg:table-cell', tdRight)}>{u.deletedAt ? '—' : u.locationCount}</td>
+                <td className={cn('hidden lg:table-cell', tdRight)}>{u.deletedAt ? '—' : `${u.photoStorageMb} MB`}</td>
                 <td className={tdBase}>
                   <span className="text-[12px] text-[var(--text-muted)] whitespace-nowrap">{new Date(u.createdAt).toLocaleDateString()}</span>
                 </td>
