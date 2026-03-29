@@ -2,19 +2,22 @@ import { generateUuid, query } from '../db.js';
 import { config } from './config.js';
 import { sendEmail } from './email.js';
 import {
+  downgradeImpactEmail,
+  type DowngradeImpact,
   exploreFeaturesEmail,
   passwordResetEmail,
   postTrialEarlyEmail,
   postTrialLateEmail,
   subscriptionConfirmedEmail,
   subscriptionExpiredEmail,
+  subscriptionExpiringEmail,
   trialExpiredEmail,
   trialExpiringEmail,
   welcomeEmail,
 } from './emailTemplates.js';
 import { generateUpgradeUrl, type PlanTier, planLabel } from './planGate.js';
 
-type EmailType = 'welcome' | 'trial_expiring' | 'trial_expired' | 'subscription_confirmed' | 'subscription_expired' | 'explore_features' | 'post_trial_early' | 'post_trial_late' | 'password_reset';
+type EmailType = 'welcome' | 'trial_expiring' | 'trial_expired' | 'subscription_confirmed' | 'subscription_expired' | 'subscription_expiring' | 'downgrade_impact' | 'explore_features' | 'post_trial_early' | 'post_trial_late' | 'password_reset';
 
 const SKIP_DEDUP: ReadonlySet<EmailType> = new Set(['welcome', 'password_reset']);
 
@@ -92,4 +95,14 @@ export function firePostTrialLateEmail(userId: string, email: string, displayNam
 
 export function firePasswordResetEmail(userId: string, email: string, displayName: string, resetUrl: string): void {
   safeSend(userId, 'password_reset', email, passwordResetEmail({ displayName, resetUrl }));
+}
+
+export function fireSubscriptionExpiringEmail(userId: string, email: string, displayName: string, expiryDate: string): void {
+  const upgradeUrl = generateUpgradeUrl(userId, email) || '';
+  safeSend(userId, 'subscription_expiring', email, subscriptionExpiringEmail({ displayName, expiryDate, upgradeUrl }));
+}
+
+export function fireDowngradeImpactEmail(userId: string, email: string, displayName: string, impact: DowngradeImpact): void {
+  const upgradeUrl = generateUpgradeUrl(userId, email) || '';
+  safeSend(userId, 'downgrade_impact', email, downgradeImpactEmail({ displayName, impact, upgradeUrl }));
 }

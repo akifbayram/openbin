@@ -281,7 +281,8 @@ export function subscriptionExpiredEmail(params: { displayName: string; upgradeU
       h1('Subscription expired'),
       greeting(params.displayName),
       p('Your OpenBin subscription has expired and your account is now in <strong>read-only mode</strong>.'),
-      p('All your data is safe — nothing has been deleted. Resubscribe to continue creating and editing.'),
+      p('<strong>Your data is safe</strong> — all your bins, items, photos, and settings are preserved. Nothing has been deleted.'),
+      p('Resubscribe to resume creating and editing.'),
       divider,
       btn(params.upgradeUrl, 'Resubscribe'),
     ].join('')),
@@ -290,9 +291,95 @@ export function subscriptionExpiredEmail(params: { displayName: string; upgradeU
       '',
       'Your OpenBin subscription has expired and your account is now in read-only mode.',
       '',
-      'All your data is safe — nothing has been deleted. Resubscribe to continue creating and editing.',
+      'Your data is safe — all your bins, items, photos, and settings are preserved. Nothing has been deleted.',
+      '',
+      'Resubscribe to resume creating and editing.',
       '',
       `Resubscribe: ${params.upgradeUrl}`,
+    ].join('\n'),
+  };
+}
+
+export function subscriptionExpiringEmail(params: { displayName: string; expiryDate: string; upgradeUrl: string }): EmailTemplate {
+  return {
+    subject: 'Your OpenBin subscription expires in 3 days',
+    html: wrap([
+      h1('Your subscription expires soon'),
+      greeting(params.displayName),
+      p(`Your OpenBin subscription expires on <strong>${params.expiryDate}</strong>.`),
+      p('When it expires, your account will switch to read-only mode. All your data stays safe — you just won\'t be able to create or edit until you renew.'),
+      `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse"><tr><td align="center" style="padding-top:20px">
+<div style="border-top:2px solid #ff9500;width:60px;margin:0 auto 8px"></div>
+<p style="margin:0;font-size:12px;color:#ff9500;font-weight:600">3 days remaining</p>
+</td></tr></table>`,
+      divider,
+      btn(params.upgradeUrl, 'Renew Now'),
+    ].join('')),
+    text: [
+      `Hi ${params.displayName},`,
+      '',
+      `Your OpenBin subscription expires on ${params.expiryDate}.`,
+      '',
+      'When it expires, your account will switch to read-only mode. All your data stays safe — you just won\'t be able to create or edit until you renew.',
+      '',
+      `Renew now: ${params.upgradeUrl}`,
+    ].join('\n'),
+  };
+}
+
+export interface DowngradeImpact {
+  locationCount: number;
+  maxLocations: number;
+  photoStorageMb: number;
+  maxPhotoStorageMb: number;
+  overLimitMembers: Array<{ locationName: string; memberCount: number }>;
+  maxMembersPerLocation: number;
+}
+
+export function downgradeImpactEmail(params: { displayName: string; impact: DowngradeImpact; upgradeUrl: string }): EmailTemplate {
+  const { impact } = params;
+  const lines: string[] = [];
+
+  if (impact.locationCount > impact.maxLocations) {
+    lines.push(`You have ${impact.locationCount} locations (Lite allows ${impact.maxLocations}) — all locations are now read-only until you reduce to ${impact.maxLocations}.`);
+  }
+  if (impact.overLimitMembers.length > 0) {
+    for (const loc of impact.overLimitMembers) {
+      lines.push(`${loc.locationName} has ${loc.memberCount} members (Lite allows ${impact.maxMembersPerLocation}) — extra members are now view-only.`);
+    }
+  }
+  if (impact.photoStorageMb > impact.maxPhotoStorageMb) {
+    lines.push(`You're using ${impact.photoStorageMb.toFixed(1)} MB of photo storage (Lite allows ${impact.maxPhotoStorageMb} MB) — new uploads are blocked.`);
+  }
+
+  const impactHtml = lines.length > 0
+    ? `<ul style="margin:0 0 16px;padding-left:20px;font-size:15px;line-height:1.6;color:#3c3c43">${lines.map(l => `<li style="margin-bottom:8px">${l}</li>`).join('')}</ul>`
+    : '';
+
+  return {
+    subject: 'Your OpenBin plan has changed to Lite',
+    html: wrap([
+      h1('Your plan has changed'),
+      greeting(params.displayName),
+      p('Your OpenBin plan has been changed to <strong>Lite</strong>.'),
+      p('<strong>Your data is safe</strong> — nothing has been deleted. Here\'s what\'s affected based on your current usage:'),
+      impactHtml,
+      p('Pro-only features (AI recognition, API keys, custom fields, reorganization, webhooks) are now restricted.'),
+      divider,
+      btn(params.upgradeUrl, 'Upgrade to Pro'),
+    ].join('')),
+    text: [
+      `Hi ${params.displayName},`,
+      '',
+      'Your OpenBin plan has been changed to Lite.',
+      '',
+      'Your data is safe — nothing has been deleted. Here\'s what\'s affected:',
+      '',
+      ...lines.map(l => `- ${l}`),
+      '',
+      'Pro-only features (AI recognition, API keys, custom fields, reorganization, webhooks) are now restricted.',
+      '',
+      `Upgrade to Pro: ${params.upgradeUrl}`,
     ].join('\n'),
   };
 }

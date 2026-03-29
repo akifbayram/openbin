@@ -1,6 +1,6 @@
 import { query } from '../db.js';
 import { config } from './config.js';
-import { fireExploreFeaturesEmail, firePostTrialEarlyEmail, firePostTrialLateEmail, fireTrialExpiredEmail, fireTrialExpiringEmail } from './emailSender.js';
+import { fireExploreFeaturesEmail, firePostTrialEarlyEmail, firePostTrialLateEmail, fireSubscriptionExpiringEmail, fireTrialExpiredEmail, fireTrialExpiringEmail } from './emailSender.js';
 import { SubStatus } from './planGate.js';
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
@@ -24,6 +24,18 @@ async function checkTrials(): Promise<void> {
     );
     for (const user of expiring.rows) {
       fireTrialExpiringEmail(user.id, user.email, user.display_name, user.active_until.split('T')[0]);
+    }
+
+    // Paid subscription expiring in 3 days
+    const subExpiring = await query<TrialUser>(
+      `SELECT id, email, display_name, active_until FROM users
+       WHERE sub_status = $1 AND active_until IS NOT NULL
+       AND active_until > datetime('now') AND active_until <= datetime('now', '+3 days')
+       AND email IS NOT NULL`,
+      [SubStatus.ACTIVE],
+    );
+    for (const user of subExpiring.rows) {
+      fireSubscriptionExpiringEmail(user.id, user.email, user.display_name, user.active_until.split('T')[0]);
     }
 
     // Trial expired
