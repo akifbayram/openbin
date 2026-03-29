@@ -159,8 +159,11 @@ router.post('/register', asyncHandler(async (req, res) => {
       ]
     );
   } catch (err: unknown) {
-    const sqliteErr = err as { code?: string };
+    const sqliteErr = err as { code?: string; message?: string };
     if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      if (sqliteErr.message?.includes('idx_users_email_unique')) {
+        throw new ConflictError('An account with this email already exists');
+      }
       throw new ConflictError('Username already taken');
     }
     throw err;
