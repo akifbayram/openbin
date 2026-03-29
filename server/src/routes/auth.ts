@@ -155,7 +155,7 @@ router.post('/register', asyncHandler(async (req, res) => {
         isSelfHosted() ? SubStatus.ACTIVE : SubStatus.TRIAL,
         isSelfHosted()
           ? new Date(Date.now() + 1000 * 365 * 24 * 60 * 60 * 1000).toISOString()  // +1000 years
-          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),           // +7 days
+          : new Date(Date.now() + config.trialPeriodDays * 24 * 60 * 60 * 1000).toISOString(),
       ]
     );
   } catch (err: unknown) {

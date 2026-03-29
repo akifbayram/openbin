@@ -59,6 +59,7 @@ export const config = Object.freeze({
   managerUrl: process.env.MANAGER_URL || null,
   subscriptionJwtSecret: process.env.SUBSCRIPTION_JWT_SECRET || null,
   subscriptionWebhookSecret: process.env.SUBSCRIPTION_WEBHOOK_SECRET || null,
+  trialPeriodDays: clamp(parseInt(process.env.TRIAL_PERIOD_DAYS || '7', 10), 1, 90, 7),
   // Email (Resend)
   emailEnabled: parseBool(process.env.EMAIL_ENABLED, false),
   emailFrom: process.env.EMAIL_FROM || 'OpenBin <noreply@openbin.app>',

@@ -105,7 +105,7 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
     maxLocations: 1,
     maxPhotoStorageMb: 100,
     maxMembersPerLocation: 1,
-    activityRetentionDays: 90,
+    activityRetentionDays: 30,
   };
 }
 
