@@ -1,11 +1,14 @@
+import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import { generateUuid, getDb, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
+import { firePasswordResetEmail } from '../lib/emailSender.js';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
-import { deleteUserData, notifyManagerUserUpdate } from '../lib/managerWebhook.js';
+import { notifyManagerUserUpdate } from '../lib/managerWebhook.js';
 import { getCloudMetrics } from '../lib/metrics.js';
+import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel } from '../lib/planGate.js';
 import { invalidatePlanRateLimit, metricsLimiter } from '../lib/rateLimiters.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
@@ -32,19 +35,39 @@ router.get('/users', asyncHandler(async (req, res) => {
   let whereClause = '';
   const params: unknown[] = [];
   if (q) {
-    whereClause = 'WHERE (LOWER(username) LIKE $1 OR LOWER(email) LIKE $1 OR LOWER(display_name) LIKE $1)';
+    whereClause = 'WHERE (LOWER(u.username) LIKE $1 OR LOWER(u.email) LIKE $1 OR LOWER(u.display_name) LIKE $1)';
     params.push(`%${q.toLowerCase()}%`);
   }
 
   const countResult = await query<{ cnt: number }>(
-    `SELECT COUNT(*) as cnt FROM users ${whereClause}`,
+    `SELECT COUNT(*) as cnt FROM users u ${whereClause}`,
     params,
   );
 
+  const sortField = typeof req.query.sort === 'string' ? req.query.sort : '-created';
+  const desc = sortField.startsWith('-');
+  const field = desc ? sortField.slice(1) : sortField;
+
+  const sortMap: Record<string, string> = {
+    username: 'u.username',
+    email: 'u.email',
+    plan: 'u.plan',
+    status: 'u.sub_status',
+    created: 'u.created_at',
+    bins: 'bin_count',
+    locations: 'location_count',
+    storage: 'photo_storage_bytes',
+  };
+  const orderCol = sortMap[field] || 'u.created_at';
+  const orderDir = desc ? 'DESC' : 'ASC';
+
   const usersResult = await query(
-    `SELECT id, username, display_name, email, is_admin, plan, sub_status, active_until, created_at
-     FROM users ${whereClause}
-     ORDER BY created_at ASC
+    `SELECT u.id, u.username, u.display_name, u.email, u.is_admin, u.plan, u.sub_status, u.active_until, u.deleted_at, u.created_at,
+       (SELECT COUNT(*) FROM bins b JOIN location_members lm ON b.location_id = lm.location_id WHERE lm.user_id = u.id AND b.deleted_at IS NULL) AS bin_count,
+       (SELECT COUNT(DISTINCT lm.location_id) FROM location_members lm WHERE lm.user_id = u.id) AS location_count,
+       (SELECT COALESCE(SUM(p.size), 0) FROM photos p WHERE p.created_by = u.id) AS photo_storage_bytes
+     FROM users u ${whereClause}
+     ORDER BY ${orderCol} ${orderDir}
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, limit, offset],
   );
@@ -58,7 +81,11 @@ router.get('/users', asyncHandler(async (req, res) => {
     plan: planLabel(u.plan),
     status: subStatusLabel(u.sub_status),
     activeUntil: u.active_until || null,
+    deletedAt: u.deleted_at || null,
     createdAt: u.created_at,
+    binCount: u.bin_count ?? 0,
+    locationCount: u.location_count ?? 0,
+    photoStorageMb: Math.round((u.photo_storage_bytes ?? 0) / 1024 / 1024 * 10) / 10,
   }));
 
   res.json({ results, count: countResult.rows[0].cnt, adminCount: getAdminCount() });
@@ -129,11 +156,11 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
   const userId = req.params.id;
 
   const row = db.prepare(
-    'SELECT id, username, display_name, email, is_admin, plan, sub_status, active_until, created_at, updated_at FROM users WHERE id = ?'
+    'SELECT id, username, display_name, email, is_admin, plan, sub_status, active_until, deleted_at, created_at, updated_at FROM users WHERE id = ?'
   ).get(userId) as {
     id: string; username: string; display_name: string; email: string | null;
     is_admin: number; plan: PlanTier; sub_status: SubStatusType;
-    active_until: string | null; created_at: string; updated_at: string;
+    active_until: string | null; deleted_at: string | null; created_at: string; updated_at: string;
   } | undefined;
 
   if (!row) throw new NotFoundError('User not found');
@@ -154,6 +181,7 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
     plan: planLabel(row.plan),
     status: subStatusLabel(row.sub_status),
     activeUntil: row.active_until || null,
+    deletedAt: row.deleted_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     stats: {
@@ -276,7 +304,8 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
     });
   }
 
-  console.log(`[admin] User ${req.user!.username} updated user ${target.username}: ${JSON.stringify(req.body)}`);
+  const { password: _, ...safeBody } = req.body;
+  console.log(`[admin] User ${req.user!.username} updated user ${target.username}: ${JSON.stringify(safeBody)}`);
 
   res.json({ message: 'User updated' });
 }));
@@ -300,14 +329,61 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Cannot delete the only admin');
   }
 
-  deleteUserData(targetId);
-  db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
+  db.prepare("UPDATE users SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(targetId);
 
   notifyManagerUserUpdate({ userId: targetId, action: 'delete_user' });
 
-  console.log(`[admin] User ${req.user!.username} deleted user ${target.username}`);
+  console.log(`[admin] User ${req.user!.username} soft-deleted user ${target.username}`);
 
-  res.json({ message: 'User deleted' });
+  res.json({ message: 'User marked for deletion' });
+}));
+
+// POST /api/admin/users/:id/regenerate-api-key — revoke all keys and generate a new one
+router.post('/users/:id/regenerate-api-key', asyncHandler(async (req, res) => {
+  const targetId = req.params.id;
+  const db = getDb();
+
+  const target = db.prepare('SELECT id, username FROM users WHERE id = ?').get(targetId) as
+    { id: string; username: string } | undefined;
+  if (!target) throw new NotFoundError('User not found');
+
+  // Revoke all existing keys
+  db.prepare("UPDATE api_keys SET revoked_at = datetime('now') WHERE user_id = ? AND revoked_at IS NULL").run(targetId);
+
+  // Generate a new key (same pattern as apiKeys.ts)
+  const key = `sk_openbin_${crypto.randomBytes(32).toString('hex')}`;
+  const keyHash = crypto.createHash('sha256').update(key).digest('hex');
+  const keyPrefix = key.slice(0, 18);
+  const id = generateUuid();
+
+  await query(
+    'INSERT INTO api_keys (id, user_id, key_hash, key_prefix, name) VALUES ($1, $2, $3, $4, $5)',
+    [id, targetId, keyHash, keyPrefix, 'Admin-generated key'],
+  );
+
+  console.log(`[admin] User ${req.user!.username} regenerated API key for user ${target.username}`);
+
+  res.json({ keyPrefix, name: 'Admin-generated key', createdAt: new Date().toISOString() });
+}));
+
+// POST /api/admin/users/:id/send-password-reset — send password reset email
+router.post('/users/:id/send-password-reset', asyncHandler(async (req, res) => {
+  const targetId = req.params.id;
+  const db = getDb();
+
+  const target = db.prepare('SELECT id, username, email, display_name FROM users WHERE id = ?').get(targetId) as
+    { id: string; username: string; email: string | null; display_name: string } | undefined;
+  if (!target) throw new NotFoundError('User not found');
+  if (!target.email) throw new ValidationError('User does not have an email address');
+
+  const { rawToken } = await createPasswordResetToken(targetId, req.user!.id);
+  const resetUrl = `${config.baseUrl}/reset-password?token=${rawToken}`;
+
+  firePasswordResetEmail(targetId, target.email, target.display_name, resetUrl);
+
+  console.log(`[admin] User ${req.user!.username} sent password reset for user ${target.username}`);
+
+  res.json({ message: 'Password reset email sent' });
 }));
 
 // GET /api/admin/metrics — cloud metrics (cloud mode only)
