@@ -18,7 +18,7 @@ async function resolveShare(token: string): Promise<ShareRow> {
   const result = await query<ShareRow>(
     `SELECT bs.id AS share_id, bs.bin_id, bs.visibility FROM bin_shares bs
      JOIN bins b ON b.id = bs.bin_id
-     WHERE bs.token = $1 AND bs.revoked_at IS NULL AND b.deleted_at IS NULL`,
+     WHERE bs.token = $1 AND bs.revoked_at IS NULL AND b.deleted_at IS NULL AND b.visibility != 'private'`,
     [token],
   );
   if (result.rows.length === 0) throw new NotFoundError('This link is no longer available');

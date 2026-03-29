@@ -20,6 +20,7 @@ router.post('/:id/share', requirePro(), asyncHandler(async (req, res) => {
 
   const access = await verifyBinAccess(binId, userId);
   if (!access) throw new NotFoundError('Bin not found');
+  if (access.visibility === 'private') throw new ValidationError('Private bins cannot be shared');
 
   await requireAdmin(access.locationId, userId, 'share bins');
 

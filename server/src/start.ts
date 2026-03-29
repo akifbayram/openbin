@@ -23,6 +23,9 @@ if (!config.selfHosted && !config.subscriptionJwtSecret) {
 if (!config.selfHosted && !config.managerUrl) {
   console.warn('WARNING: Cloud mode is active but MANAGER_URL is not set');
 }
+if (!config.selfHosted && !config.trustProxy) {
+  console.warn('WARNING: TRUST_PROXY is false in cloud mode — rate limiting and IP detection will not work behind a reverse proxy');
+}
 
 if (config.demoMode) {
   seedDemoData();

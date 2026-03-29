@@ -1,4 +1,5 @@
 import { ArrowUpRight } from 'lucide-react';
+import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
 
 interface UpgradePromptProps {
@@ -9,6 +10,9 @@ interface UpgradePromptProps {
 }
 
 export function UpgradePrompt({ feature, description, upgradeUrl, className }: UpgradePromptProps) {
+  const { isLite, isLocked } = usePlan();
+  const isActiveLite = isLite && !isLocked;
+
   return (
     <div className={cn(
       'flat-card flex items-center justify-between gap-4 p-4',
@@ -16,7 +20,9 @@ export function UpgradePrompt({ feature, description, upgradeUrl, className }: U
     )}>
       <div>
         <p className="font-medium text-sm">
-          {feature} requires a Pro plan
+          {isActiveLite
+            ? `Upgrade to Pro to unlock ${feature}`
+            : `${feature} requires a Pro plan`}
         </p>
         {description && (
           <p className="text-xs text-[var(--text-secondary)] mt-1">{description}</p>

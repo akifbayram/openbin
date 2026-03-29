@@ -1,4 +1,5 @@
 import { config } from './config.js';
+import { TOKEN_EXPIRY_HOURS } from './passwordReset.js';
 
 interface EmailTemplate {
   subject: string;
@@ -263,7 +264,7 @@ export function passwordResetEmail(params: { displayName: string; resetUrl: stri
       p('A password reset was requested for your account. Click the button below to set a new password.'),
       divider,
       btn(params.resetUrl, 'Reset Password'),
-      `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse"><tr><td style="padding-top:20px"><div style="background:#f5f5f5;border-radius:6px;padding:12px 16px;text-align:center;font-size:13px;color:#6d6d72">This link expires in 4 hours</div></td></tr></table>`,
+      `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse"><tr><td style="padding-top:20px"><div style="background:#f5f5f5;border-radius:6px;padding:12px 16px;text-align:center;font-size:13px;color:#6d6d72">This link expires in ${TOKEN_EXPIRY_HOURS} hours</div></td></tr></table>`,
       `<p style="margin:16px 0 0;font-size:15px;line-height:1.6;color:#3c3c43">If you didn't request this, you can safely ignore this email.</p>`,
     ].join('')),
     text: [
@@ -273,7 +274,7 @@ export function passwordResetEmail(params: { displayName: string; resetUrl: stri
       '',
       `Reset password: ${params.resetUrl}`,
       '',
-      'This link expires in 4 hours. If you didn\'t request this, you can safely ignore this email.',
+      'This link expires in ${TOKEN_EXPIRY_HOURS} hours. If you didn\'t request this, you can safely ignore this email.',
     ].join('\n'),
   };
 }

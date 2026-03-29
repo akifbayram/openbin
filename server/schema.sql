@@ -201,7 +201,7 @@ CREATE TABLE IF NOT EXISTS scan_history (
   scanned_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_scan_history_user ON scan_history(user_id, scanned_at DESC);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_scan_history_user_bin ON scan_history(user_id, bin_id);
+-- idx_scan_history_user_bin created in db.ts migration (needs dedup handling for existing DBs)
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   id TEXT PRIMARY KEY,
@@ -260,7 +260,6 @@ CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id
 CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id);
 CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status);
 CREATE INDEX IF NOT EXISTS idx_users_trial ON users(sub_status, created_at);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(LOWER(email)) WHERE email IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_locations_created_by ON locations(created_by);
 CREATE INDEX IF NOT EXISTS idx_photos_created_by ON photos(created_by);
 
@@ -274,17 +273,20 @@ CREATE TABLE IF NOT EXISTS bin_shares (
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
   revoked_at  TEXT
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_bin_shares_active ON bin_shares(bin_id) WHERE revoked_at IS NULL;
+-- idx_bin_shares_active created in db.ts migration (needs dedup handling for existing DBs)
 CREATE INDEX IF NOT EXISTS idx_bin_shares_token ON bin_shares(token) WHERE revoked_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS email_log (
   id         TEXT PRIMARY KEY,
-  user_id    TEXT NOT NULL,
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   email_type TEXT NOT NULL,
   sent_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_email_log_dedup ON email_log(user_id, email_type, sent_at);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_email_log_daily ON email_log(user_id, email_type, date(sent_at));
+-- idx_email_log_daily created in db.ts migration (needs dedup handling for existing DBs)
+-- NOTE: FK on user_id added after initial release. SQLite cannot add FK constraints to
+-- existing columns via ALTER TABLE, so existing DBs only get the constraint after a
+-- fresh install or manual table rebuild. This matches the project's migration pattern.
 
 CREATE TABLE IF NOT EXISTS api_key_daily_usage (
   api_key_id    TEXT NOT NULL,

@@ -92,14 +92,13 @@ export function SettingsPage() {
             <button
               type="button"
               onClick={() => navigate('/admin/users')}
-              className="flex items-center gap-3 w-full text-left py-1"
+              className="flex items-center justify-between w-full text-[15px] font-semibold rounded-[var(--radius-xs)]"
             >
-              <Shield className="h-4 w-4 text-[var(--accent)]" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-semibold text-[var(--text-primary)]">Admin</p>
-                <p className="text-[13px] text-[var(--text-tertiary)]">Manage users, registration, and metrics</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+              <span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]">
+                <Shield className="h-3.5 w-3.5" />
+                Admin
+              </span>
+              <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)]" />
             </button>
           </CardContent>
         </Card>

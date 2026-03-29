@@ -1,5 +1,5 @@
 import type { Request, RequestHandler, Response } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { query } from '../db.js';
 import { config } from './config.js';
 import { generateUpgradeUrl, Plan, SubStatus } from './planGate.js';
@@ -89,7 +89,7 @@ async function getCachedPlanInfo(userId: string): Promise<PlanCacheEntry | null>
 
 export const planApiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  keyGenerator: (req: Request) => req.user?.id ?? req.ip ?? 'unknown',
+  keyGenerator: (req: Request) => req.user?.id ?? ipKeyGenerator(req.ip ?? 'unknown'),
   max: async (req: Request) => {
     if (!req.user) return 200;
     const info = await getCachedPlanInfo(req.user.id);

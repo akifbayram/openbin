@@ -30,7 +30,7 @@ async function cleanupDeletedUsers(): Promise<void> {
 async function hardDeleteUser(userId: string): Promise<void> {
   // Delete photo files first (before DB rows are removed)
   const photos = await query<{ id: string; storage_path: string; thumb_path: string | null }>(
-    'SELECT id, storage_path, thumb_path FROM photos WHERE created_by = ?',
+    'SELECT id, storage_path, thumb_path FROM photos WHERE created_by = $1',
     [userId],
   );
   for (const photo of photos.rows) {

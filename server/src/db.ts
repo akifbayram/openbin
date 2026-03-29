@@ -44,6 +44,7 @@ try { db.exec('ALTER TABLE areas ADD COLUMN parent_id TEXT REFERENCES areas(id) 
   const areaTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='areas'").get() as { sql: string } | undefined;
   if (areaTableInfo?.sql && !areaTableInfo.sql.includes('parent_id, name')) {
     db.exec(`
+      DROP TABLE IF EXISTS areas_new;
       CREATE TABLE areas_new (
         id            TEXT PRIMARY KEY,
         location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
@@ -86,6 +87,7 @@ db.exec([
   const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='location_members'").get() as { sql: string } | undefined;
   if (tableInfo?.sql && !tableInfo.sql.includes("'viewer'")) {
     db.exec(`
+      DROP TABLE IF EXISTS location_members_new;
       CREATE TABLE location_members_new (
         id            TEXT PRIMARY KEY,
         location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
@@ -116,8 +118,25 @@ try { db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0'
 // Soft delete for users
 try { db.exec('ALTER TABLE users ADD COLUMN deleted_at TEXT'); } catch { /* column already exists */ }
 
-// Unique email (case-insensitive)
-db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(LOWER(email)) WHERE email IS NOT NULL');
+/** Try to create a unique index; if duplicates exist, run dedupSql first then retry. */
+function createUniqueIndexWithDedup(indexDdl: string, dedupSql: string): void {
+  try {
+    db.exec(indexDdl);
+  } catch {
+    db.exec(dedupSql);
+    db.exec(indexDdl);
+  }
+}
+
+// Unique email (case-insensitive) — deduplicate before creating index on existing DBs
+createUniqueIndexWithDedup(
+  'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(LOWER(email)) WHERE email IS NOT NULL',
+  `UPDATE users SET email = NULL
+   WHERE email IS NOT NULL
+     AND rowid NOT IN (
+       SELECT MAX(rowid) FROM users WHERE email IS NOT NULL GROUP BY LOWER(email)
+     )`,
+);
 
 // Seed default admin account (admin/admin) — idempotent
 // Pre-computed bcrypt hash for "admin" at cost 12 avoids blocking the event loop at startup
@@ -143,6 +162,15 @@ db.exec(`
   );
 `);
 
+// Unique scan history per (user, bin) — deduplicate if needed
+createUniqueIndexWithDedup(
+  'CREATE UNIQUE INDEX IF NOT EXISTS idx_scan_history_user_bin ON scan_history(user_id, bin_id)',
+  `DELETE FROM scan_history
+   WHERE rowid NOT IN (
+     SELECT MAX(rowid) FROM scan_history GROUP BY user_id, bin_id
+   )`,
+);
+
 // Bin sharing table
 db.exec(`
   CREATE TABLE IF NOT EXISTS bin_shares (
@@ -155,9 +183,16 @@ db.exec(`
     created_at  TEXT NOT NULL DEFAULT (datetime('now')),
     revoked_at  TEXT
   );
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_bin_shares_active ON bin_shares(bin_id) WHERE revoked_at IS NULL;
   CREATE INDEX IF NOT EXISTS idx_bin_shares_token ON bin_shares(token) WHERE revoked_at IS NULL;
 `);
+createUniqueIndexWithDedup(
+  'CREATE UNIQUE INDEX IF NOT EXISTS idx_bin_shares_active ON bin_shares(bin_id) WHERE revoked_at IS NULL',
+  `UPDATE bin_shares SET revoked_at = datetime('now')
+   WHERE revoked_at IS NULL
+     AND rowid NOT IN (
+       SELECT MAX(rowid) FROM bin_shares WHERE revoked_at IS NULL GROUP BY bin_id
+     )`,
+);
 
 // API key daily usage tracking
 db.exec(`
@@ -173,7 +208,7 @@ db.exec(`
 db.exec(`
   CREATE TABLE IF NOT EXISTS email_log (
     id         TEXT PRIMARY KEY,
-    user_id    TEXT NOT NULL,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     email_type TEXT NOT NULL,
     sent_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -202,7 +237,13 @@ db.exec(`CREATE TABLE IF NOT EXISTS job_locks (
 )`);
 
 // Atomic email dedup: one email per type per user per day
-db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_email_log_daily ON email_log(user_id, email_type, date(sent_at))');
+createUniqueIndexWithDedup(
+  'CREATE UNIQUE INDEX IF NOT EXISTS idx_email_log_daily ON email_log(user_id, email_type, date(sent_at))',
+  `DELETE FROM email_log
+   WHERE rowid NOT IN (
+     SELECT MAX(rowid) FROM email_log GROUP BY user_id, email_type, date(sent_at)
+   )`,
+);
 
 /** O(min(m,n)) space — reuses module-level buffers to avoid per-call allocation */
 const _levBuf0 = new Int32Array(256);
