@@ -98,7 +98,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   if (token.startsWith('sk_openbin_')) {
     const keyHash = crypto.createHash('sha256').update(token).digest('hex');
     query(
-      `SELECT ak.id AS key_id, u.id, u.username, u.deleted_at
+      `SELECT ak.id AS key_id, u.id, u.username, u.deleted_at, u.plan
        FROM api_keys ak
        JOIN users u ON u.id = ak.user_id
        WHERE ak.key_hash = $1 AND ak.revoked_at IS NULL`,
@@ -108,9 +108,13 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
         res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid API key' });
         return;
       }
-      const row = result.rows[0] as { key_id: string; id: string; username: string; deleted_at: string | null };
+      const row = result.rows[0] as { key_id: string; id: string; username: string; deleted_at: string | null; plan: number };
       if (row.deleted_at) {
         res.status(401).json({ error: 'ACCOUNT_DELETED', message: 'This account has been deleted' });
+        return;
+      }
+      if (!config.selfHosted && row.plan === 0) {
+        res.status(403).json({ error: 'PLAN_RESTRICTED', message: 'API key access requires a Pro plan' });
         return;
       }
       req.user = { id: row.id, username: row.username };
