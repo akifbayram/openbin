@@ -59,7 +59,7 @@ export function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { preferences, updatePreferences } = useUserPreferences();
   const { canWrite } = usePermissions();
-  const { isLocked, isSelfHosted, planInfo } = usePlan();
+  const { isLocked, isSelfHosted, planInfo, isOverAnyLimit } = usePlan();
   const showLockedBanner = isLocked && !isSelfHosted;
   const { settings: aiSettings } = useAiSettings();
   const terminology = useTerminology();
@@ -195,20 +195,38 @@ export function AppLayout() {
         'pt-[var(--safe-top)] lg:pt-[var(--safe-top)] pb-[calc(16px+var(--safe-bottom))] lg:pb-8 transition-[margin-left] duration-200 ease-in-out',
         sidebarCollapsed ? 'lg:ml-[var(--sidebar-collapsed-width)]' : 'lg:ml-[var(--sidebar-width)]',
       )}>
-        {showLockedBanner && (
+        {(showLockedBanner || (!isLocked && isOverAnyLimit && !isSelfHosted)) && (
           <div className="mx-auto w-full max-w-7xl px-4 lg:px-6 pt-4">
-            <div className="flat-card flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border-red-500/20 bg-red-500/10 px-4 py-3">
-              <p className="text-sm font-medium text-red-600 dark:text-red-400">
-                Your trial has ended. Subscribe to continue using OpenBin.
+            <div className={cn(
+              'flat-card flex items-center justify-between gap-4 rounded-[var(--radius-lg)] px-4 py-3',
+              showLockedBanner
+                ? 'border-red-500/20 bg-red-500/10'
+                : 'border-amber-500/20 bg-amber-500/10',
+            )}>
+              <p className={cn(
+                'text-sm font-medium',
+                showLockedBanner
+                  ? 'text-red-600 dark:text-red-400'
+                  : 'text-amber-600 dark:text-amber-400',
+              )}>
+                {showLockedBanner
+                  ? (planInfo.previousSubStatus === 'trial'
+                    ? 'Your trial has ended. Subscribe to continue using OpenBin.'
+                    : planInfo.previousSubStatus === 'active'
+                      ? 'Your subscription has expired. Resubscribe to continue using OpenBin.'
+                      : 'Your plan is inactive. Subscribe to continue using OpenBin.')
+                  : 'You\'re over your Lite plan limits. Reduce usage or upgrade to Pro to resume editing.'}
               </p>
-              {planInfo.upgradeUrl && (
+              {(showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) && (
                 <a
-                  href={planInfo.upgradeUrl}
+                  href={(showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity shrink-0"
                 >
-                  Subscribe
+                  {showLockedBanner
+                    ? (planInfo.previousSubStatus === 'trial' ? 'Subscribe' : 'Resubscribe')
+                    : 'Upgrade'}
                   <ArrowUpRight className="h-3 w-3" />
                 </a>
               )}
