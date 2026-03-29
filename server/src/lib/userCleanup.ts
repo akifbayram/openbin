@@ -1,9 +1,12 @@
 import { getDb, query } from '../db.js';
+import { config } from './config.js';
+import { acquireJobLock, releaseJobLock } from './jobLock.js';
 import { storage } from './storage.js';
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 async function cleanupDeletedUsers(): Promise<void> {
+  if (!acquireJobLock('user_cleanup', 7200)) return;
   try {
     const users = await query<{ id: string }>(
       `SELECT id FROM users WHERE deleted_at IS NOT NULL AND deleted_at <= datetime('now', '-1 hour')`,
@@ -19,6 +22,8 @@ async function cleanupDeletedUsers(): Promise<void> {
     }
   } catch (err) {
     console.error('[cleanup] User cleanup check failed:', err instanceof Error ? err.message : err);
+  } finally {
+    releaseJobLock('user_cleanup');
   }
 }
 
@@ -66,6 +71,7 @@ async function hardDeleteUser(userId: string): Promise<void> {
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
 export function startUserCleanupJob(): void {
+  if (config.selfHosted) return;
   // Run immediately, then every hour
   cleanupDeletedUsers();
   intervalId = setInterval(cleanupDeletedUsers, CHECK_INTERVAL_MS);

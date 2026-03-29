@@ -1,6 +1,7 @@
 import { query } from '../db.js';
 import { config } from './config.js';
 import { fireExploreFeaturesEmail, firePostTrialEarlyEmail, firePostTrialLateEmail, fireSubscriptionExpiringEmail, fireTrialExpiredEmail, fireTrialExpiringEmail } from './emailSender.js';
+import { acquireJobLock, releaseJobLock } from './jobLock.js';
 import { SubStatus } from './planGate.js';
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
@@ -13,6 +14,7 @@ interface TrialUser {
 }
 
 async function checkTrials(): Promise<void> {
+  if (!acquireJobLock('trial_checker', 7200)) return;
   try {
     // Trial expiring in 3 days
     const expiring = await query<TrialUser>(
@@ -94,12 +96,15 @@ async function checkTrials(): Promise<void> {
     }
   } catch (err) {
     console.error('Trial check failed:', err instanceof Error ? err.message : err);
+  } finally {
+    releaseJobLock('trial_checker');
   }
 }
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
 export function startTrialChecker(): void {
+  if (config.selfHosted) return;
   if (!config.emailEnabled) return;
 
   // Run immediately, then every hour
