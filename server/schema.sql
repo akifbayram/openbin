@@ -306,3 +306,22 @@ CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS webhook_outbox (
+  id            TEXT PRIMARY KEY,
+  endpoint      TEXT NOT NULL,
+  payload_json  TEXT NOT NULL,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  sent_at       TEXT,
+  attempts      INTEGER NOT NULL DEFAULT 0,
+  last_error    TEXT,
+  next_retry_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_webhook_outbox_pending ON webhook_outbox(next_retry_at) WHERE sent_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS job_locks (
+  job_name   TEXT PRIMARY KEY,
+  locked_by  TEXT NOT NULL,
+  locked_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT NOT NULL
+);
