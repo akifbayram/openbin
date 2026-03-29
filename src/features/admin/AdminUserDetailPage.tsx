@@ -238,6 +238,7 @@ export function AdminUserDetailPage() {
       <PageHeader
         title={detail.displayName || detail.username}
         back
+        backTo="/admin/users"
       />
 
       {/* Identity */}

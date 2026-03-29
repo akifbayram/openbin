@@ -144,23 +144,24 @@ export function AdminUsersPage() {
           {isSelfHosted && registrationSection}
 
           {/* Toolbar */}
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-[var(--text-secondary)]" />
-            <span className="text-[15px] font-semibold text-[var(--text-primary)]">Users</span>
-            <Badge variant="secondary" className="text-[11px]">{count}</Badge>
-            <div className="flex-1">
-              <SearchInput
-                placeholder="Search users..."
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                onClear={search ? () => { setSearch(''); setPage(1); } : undefined}
-                containerClassName="max-w-sm"
-              />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-[var(--text-secondary)]" />
+              <span className="text-[15px] font-semibold text-[var(--text-primary)]">Users</span>
+              <Badge variant="secondary" className="text-[11px]">{count}</Badge>
+              <div className="flex-1" />
+              <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+                <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                Create User
+              </Button>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-              <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-              Create User
-            </Button>
+            <SearchInput
+              placeholder="Search users..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onClear={search ? () => { setSearch(''); setPage(1); } : undefined}
+              containerClassName="max-w-sm"
+            />
           </div>
 
           {/* Users table */}

@@ -9,17 +9,31 @@ interface PageHeaderProps {
   title: string;
   actions?: React.ReactNode;
   back?: boolean;
+  /** Explicit back path — renders on all breakpoints (not just lg) */
+  backTo?: string;
   className?: string;
 }
 
-export function PageHeader({ title, actions, back, className }: PageHeaderProps) {
+export function PageHeader({ title, actions, back, backTo, className }: PageHeaderProps) {
   const navigate = useNavigate();
 
   return (
     <div className={cn(actions ? 'flex items-center justify-between' : 'flex items-center gap-2', className)}>
       <div className="flex items-center gap-2">
         <MenuButton />
-        {back && (
+        {backTo ? (
+          <Tooltip content="Go back" side="bottom">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => navigate(backTo)}
+              className="shrink-0"
+              aria-label="Go back"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          </Tooltip>
+        ) : back && (
           <Tooltip content="Go back" side="bottom">
             <Button
               variant="ghost"
