@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   plan               INTEGER NOT NULL DEFAULT 1,
   sub_status         INTEGER NOT NULL DEFAULT 1,
   active_until       TEXT,
+  previous_sub_status INTEGER,
   is_admin           INTEGER NOT NULL DEFAULT 0,
   deleted_at         TEXT,
   created_at         TEXT NOT NULL DEFAULT (datetime('now')),
