@@ -11,10 +11,10 @@ import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinI
 import { validateBinFields, validateCodeFormat } from '../lib/binValidation.js';
 import { config } from '../lib/config.js';
 import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
-import { ForbiddenError, GoneError, NotFoundError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
+import { ForbiddenError, GoneError, NotFoundError, OverLimitError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
-import { getUserFeatures, throwPlanRestricted } from '../lib/planGate.js';
+import { generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache, throwPlanRestricted } from '../lib/planGate.js';
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { storage } from '../lib/storage.js';
@@ -522,7 +522,9 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
     const usedBytes = usageResult.rows[0].total;
 
     if (photoFeatures.maxPhotoStorageMb !== null && usedBytes >= photoFeatures.maxPhotoStorageMb * 1024 * 1024) {
-      await throwPlanRestricted(req.user!.id, `Photo storage limit reached (${photoFeatures.maxPhotoStorageMb} MB)`);
+      const planInfo = await getUserPlanInfo(req.user!.id);
+      const upgradeUrl = planInfo ? generateUpgradeUrl(req.user!.id, planInfo.email) : null;
+      throw new OverLimitError(`Photo storage limit reached (${photoFeatures.maxPhotoStorageMb} MB)`, upgradeUrl);
     }
 
     if (config.demoMode) {
@@ -603,6 +605,8 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
   );
 
   await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [binId]);
+
+  invalidateOverLimitCache(req.user!.id);
 
   const photo = result.rows[0];
 
