@@ -6,7 +6,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { useToast } from '@/components/ui/toast';
 import { apiFetch } from '@/lib/api';
 import { usePlan } from '@/lib/usePlan';
-import { cn } from '@/lib/utils';
+import { cn, focusRing } from '@/lib/utils';
 
 interface PlanUsage {
   locationCount: number;
@@ -16,7 +16,7 @@ interface PlanUsage {
 
 function UsageBar({ label, current, max }: { label: string; current: number; max: number }) {
   const pct = max > 0 ? Math.min((current / max) * 100, 100) : 0;
-  const color = pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-emerald-500';
+  const color = pct > 90 ? 'bg-[var(--destructive)]' : pct > 70 ? 'bg-[var(--color-warning)]' : 'bg-[var(--color-success)]';
 
   return (
     <div className="space-y-1">
@@ -24,7 +24,7 @@ function UsageBar({ label, current, max }: { label: string; current: number; max
         <span className="text-[var(--text-secondary)]">{label}</span>
         <span className="text-[var(--text-tertiary)]">{current} / {max}</span>
       </div>
-      <div className="h-2 rounded-[var(--radius-xs)] bg-[var(--bg-input)] overflow-hidden">
+      <div className="h-2 rounded-[var(--radius-xs)] bg-[var(--bg-input)] overflow-hidden" role="progressbar" aria-valuenow={current} aria-valuemin={0} aria-valuemax={max} aria-label={label}>
         <div className={cn('h-full rounded-[var(--radius-xs)] transition-all', color)} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -109,7 +109,7 @@ export function SubscriptionSection() {
           labelClassName="text-[15px] font-semibold"
           defaultOpen={isTrialing || isLocked}
         >
-        <div className="mt-1 space-y-3">
+        <div className="flex flex-col gap-3 mt-1">
           {/* Plan status */}
           <div className="flex items-center justify-between rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3.5 py-3">
             <div className="flex items-center gap-2">
@@ -117,7 +117,7 @@ export function SubscriptionSection() {
                 {isPro ? 'Pro' : 'Lite'} Plan
               </span>
               {isTrialing && (
-                <span className="rounded-[var(--radius-sm)] bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                <span className="rounded-[var(--radius-sm)] bg-[var(--color-warning-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-warning)]">
                   Trial
                 </span>
               )}
@@ -127,7 +127,7 @@ export function SubscriptionSection() {
                 href={planInfo.portalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity"
+                className={cn('inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent)] h-9 px-3.5 text-[13px] font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] transition-colors', focusRing)}
               >
                 Manage Subscription
                 <ArrowUpRight className="h-3 w-3" />
@@ -143,7 +143,7 @@ export function SubscriptionSection() {
                   href={planInfo.upgradeLiteUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex flex-1 items-center justify-center gap-1 rounded-[var(--radius-sm)] border border-[var(--border-flat)] px-3 py-2 text-[13px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  className={cn('inline-flex flex-1 items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--border-flat)] bg-[var(--bg-input)] h-9 px-3.5 text-[13px] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors', focusRing)}
                 >
                   Upgrade to Lite
                   <ArrowUpRight className="h-3 w-3" />
@@ -154,7 +154,7 @@ export function SubscriptionSection() {
                   href={planInfo.upgradeProUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex flex-1 items-center justify-center gap-1 rounded-[var(--radius-sm)] bg-[var(--accent)] px-3 py-2 text-[13px] font-medium text-white hover:opacity-90 transition-opacity"
+                  className={cn('inline-flex flex-1 items-center justify-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent)] h-9 px-3.5 text-[13px] font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] transition-colors', focusRing)}
                 >
                   Upgrade to Pro
                   <ArrowUpRight className="h-3 w-3" />
@@ -165,13 +165,13 @@ export function SubscriptionSection() {
 
           {/* Trial/expiry info */}
           {isLocked && (
-            <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] bg-red-500/10 text-red-600 dark:text-red-400">
+            <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] bg-[var(--destructive-soft)] text-[var(--destructive)]">
               <Clock className="h-3.5 w-3.5" />
               Your trial has ended. Subscribe to continue using OpenBin.
             </div>
           )}
           {!isLocked && isTrialing && daysRemaining !== null && (
-            <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] bg-[var(--color-warning-soft)] text-[var(--color-warning)]">
               <Clock className="h-3.5 w-3.5" />
               {`${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining in your trial`}
             </div>
@@ -191,13 +191,13 @@ export function SubscriptionSection() {
                   max={planInfo.features.maxPhotoStorageMb}
                 />
               )}
-              {planInfo.features.maxMembersPerLocation !== null && (() => {
-                const maxMembers = Math.max(0, ...Object.values(usage.memberCounts));
-                const limit = planInfo.features.maxMembersPerLocation ?? 0;
-                return (
-                  <UsageBar label="Members per location" current={maxMembers} max={limit} />
-                );
-              })()}
+              {planInfo.features.maxMembersPerLocation !== null && (
+                <UsageBar
+                  label="Members per location"
+                  current={Math.max(0, ...Object.values(usage.memberCounts))}
+                  max={planInfo.features.maxMembersPerLocation}
+                />
+              )}
             </div>
           )}
         </div>

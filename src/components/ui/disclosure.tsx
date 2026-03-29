@@ -37,7 +37,8 @@ export function Disclosure({ label, defaultOpen = false, indicator, labelClassNa
           open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
         )}
       >
-        <div className="overflow-hidden min-h-0 -mx-1.5 px-1.5">
+        {/* @ts-expect-error -- inert is valid HTML but not typed in React 18 */}
+        <div className="overflow-hidden min-h-0 -mx-1.5 px-1.5" inert={!open ? true : undefined}>
           <div className={cn('mt-2 transition-opacity duration-200 motion-reduce:transition-none', open ? 'opacity-100' : 'opacity-0')}>
             {children}
           </div>

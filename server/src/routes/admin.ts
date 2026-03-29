@@ -12,7 +12,7 @@ import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel } from '../lib/planGate.js';
 import { invalidatePlanRateLimit, metricsLimiter } from '../lib/rateLimiters.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, invalidateDeletedCache } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 
 const router = Router();
@@ -330,6 +330,7 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
   }
 
   db.prepare("UPDATE users SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(targetId);
+  invalidateDeletedCache(targetId);
 
   notifyManagerUserUpdate({ userId: targetId, action: 'delete_user' });
 

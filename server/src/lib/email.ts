@@ -25,13 +25,16 @@ export async function sendEmail(
   }
 
   try {
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: config.emailFrom,
       to,
       subject,
       html,
       text,
     });
+    if (error) {
+      throw new Error(`${error.name}: ${error.message}`);
+    }
   } catch (err) {
     console.error('Failed to send email:', err instanceof Error ? err.message : err);
   }

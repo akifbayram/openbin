@@ -111,7 +111,7 @@ router.post('/register', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Registration is currently disabled');
   }
 
-  const { username, password, displayName, inviteCode } = req.body;
+  const { username, password, displayName, email, inviteCode } = req.body;
 
   // In invite mode, invite code is required
   if (regMode === 'invite' && !inviteCode) {
@@ -134,20 +134,23 @@ router.post('/register', asyncHandler(async (req, res) => {
   validateUsername(username);
   validatePassword(password);
   if (displayName !== undefined) validateDisplayName(displayName);
+  const trimmedEmail = (typeof email === 'string' && email.trim()) || null;
+  if (trimmedEmail) validateEmail(trimmedEmail);
 
   const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
   const userId = generateUuid();
   let result: import('../db.js').QueryResult<Record<string, unknown>>;
   try {
     result = await query(
-      `INSERT INTO users (id, username, password_hash, display_name, plan, sub_status, active_until)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, username, display_name, created_at, active_until`,
+      `INSERT INTO users (id, username, password_hash, display_name, email, plan, sub_status, active_until)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, username, display_name, email, created_at, active_until`,
       [
         userId,
         username.toLowerCase(),
         passwordHash,
         displayName || username,
+        trimmedEmail,
         Plan.PRO,
         isSelfHosted() ? SubStatus.ACTIVE : SubStatus.TRIAL,
         isSelfHosted()
@@ -163,7 +166,7 @@ router.post('/register', asyncHandler(async (req, res) => {
     throw err;
   }
 
-  const user = result.rows[0] as { id: string; username: string; display_name: string; created_at: string; active_until: string };
+  const user = result.rows[0] as { id: string; username: string; display_name: string; email: string | null; created_at: string; active_until: string };
 
   // Auto-join location if invite code was valid
   if (locationToJoin) {
@@ -185,7 +188,7 @@ router.post('/register', asyncHandler(async (req, res) => {
       id: user.id,
       username: user.username,
       displayName: user.display_name,
-      email: null,
+      email: user.email || null,
       avatarUrl: null,
       createdAt: user.created_at,
     },
@@ -194,11 +197,17 @@ router.post('/register', asyncHandler(async (req, res) => {
   // Notify Manager service of new cloud registration (fire-and-forget)
   notifyManagerNewUser({
     userId: user.id,
-    email: null,
+    email: user.email,
     username: user.username,
     activeUntil: user.active_until,
     status: 'trial',
   });
+
+  // Fire welcome email if email was provided (cloud mode only)
+  if (user.email && !isSelfHosted()) {
+    const { fireWelcomeEmail } = await import('../lib/emailSender.js');
+    fireWelcomeEmail(user.id, user.email, user.display_name);
+  }
 }));
 
 // POST /api/auth/login
@@ -210,7 +219,7 @@ router.post('/login', asyncHandler(async (req, res) => {
   }
 
   const result = await query(
-    'SELECT id, username, password_hash, display_name, email, avatar_path, active_location_id FROM users WHERE username = $1',
+    'SELECT id, username, password_hash, display_name, email, avatar_path, active_location_id, deleted_at, is_admin FROM users WHERE username = $1',
     [username.toLowerCase()]
   );
 
@@ -223,6 +232,9 @@ router.post('/login', asyncHandler(async (req, res) => {
   const user = result.rows[0];
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
+    throw new UnauthorizedError('Invalid username or password');
+  }
+  if (user.deleted_at) {
     throw new UnauthorizedError('Invalid username or password');
   }
 
@@ -266,6 +278,7 @@ router.post('/login', asyncHandler(async (req, res) => {
       displayName: user.display_name,
       email: user.email || null,
       avatarUrl: user.avatar_path ? `/api/auth/avatar/${user.id}` : null,
+      isAdmin: user.is_admin === 1,
     },
     activeLocationId,
   });

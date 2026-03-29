@@ -23,6 +23,7 @@ export function RegisterPage() {
   const ThemeIcon = preference === 'light' ? Sun : preference === 'dark' ? Moon : Monitor;
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [inviteCode, setInviteCode] = useState(searchParams.get('invite') ?? '');
@@ -95,7 +96,7 @@ export function RegisterPage() {
     }
     setLoading(true);
     try {
-      await register(username.trim(), password, displayName.trim() || username.trim(), inviteCode.trim() || undefined);
+      await register(username.trim(), password, displayName.trim() || username.trim(), email.trim() || undefined, inviteCode.trim() || undefined);
       navigate('/');
     } catch (err) {
       showToast({
@@ -165,6 +166,17 @@ export function RegisterPage() {
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="How you appear to others"
                   autoComplete="name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reg-email">Email</Label>
+                <Input
+                  id="reg-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Optional"
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">

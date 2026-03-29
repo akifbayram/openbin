@@ -38,10 +38,10 @@ async function hardDeleteUser(userId: string): Promise<void> {
   // Delete all user data in a transaction
   const db = getDb();
   const deleteAll = db.transaction(() => {
+    db.prepare('DELETE FROM api_key_daily_usage WHERE api_key_id IN (SELECT id FROM api_keys WHERE user_id = ?)').run(userId);
     db.prepare('DELETE FROM api_keys WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM email_log WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM ai_usage WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM api_key_daily_usage WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM password_reset_tokens WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM bin_shares WHERE created_by = ?').run(userId);
     db.prepare('DELETE FROM photos WHERE created_by = ?').run(userId);

@@ -16,6 +16,8 @@ import { generateUpgradeUrl, type PlanTier, planLabel } from './planGate.js';
 
 type EmailType = 'welcome' | 'trial_expiring' | 'trial_expired' | 'subscription_confirmed' | 'subscription_expired' | 'explore_features' | 'post_trial_early' | 'post_trial_late' | 'password_reset';
 
+const SKIP_DEDUP: ReadonlySet<EmailType> = new Set(['welcome', 'password_reset']);
+
 async function wasSentRecently(userId: string, emailType: EmailType): Promise<boolean> {
   const result = await query(
     "SELECT id FROM email_log WHERE user_id = $1 AND email_type = $2 AND sent_at > datetime('now', '-24 hours') LIMIT 1",
@@ -36,7 +38,7 @@ async function logSent(userId: string, emailType: EmailType): Promise<void> {
  */
 async function safeSend(userId: string, emailType: EmailType, to: string, template: { subject: string; html: string; text: string }): Promise<void> {
   try {
-    if (emailType !== 'welcome' && await wasSentRecently(userId, emailType)) return;
+    if (!SKIP_DEDUP.has(emailType) && await wasSentRecently(userId, emailType)) return;
     await sendEmail(to, template.subject, template.html, template.text);
     await logSent(userId, emailType);
   } catch (err) {

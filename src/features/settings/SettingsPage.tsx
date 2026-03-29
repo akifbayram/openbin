@@ -156,7 +156,7 @@ export function SettingsPage() {
           <div className="mt-1">
             <div className="row-spread py-1">
               <div>
-                <span className="text-[14px] text-[var(--text-primary)]">Enable keyboard shortcuts</span>
+                <span id="kbd-shortcuts-label" className="text-[14px] text-[var(--text-primary)]">Enable keyboard shortcuts</span>
                 <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">
                   Press <kbd className="inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-[var(--radius-sm)] bg-[var(--bg-input)] font-mono text-[11px] text-[var(--text-secondary)] leading-none">?</kbd> to view all shortcuts
                 </p>
@@ -164,6 +164,7 @@ export function SettingsPage() {
               <Switch
                 checked={preferences.keyboard_shortcuts_enabled}
                 onCheckedChange={(checked) => updatePreferences({ keyboard_shortcuts_enabled: checked })}
+                aria-labelledby="kbd-shortcuts-label"
               />
             </div>
           </div>

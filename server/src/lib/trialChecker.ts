@@ -47,6 +47,7 @@ async function checkTrials(): Promise<void> {
       `SELECT id, email, display_name, active_until FROM users
        WHERE sub_status IN ($1, $2)
        AND created_at <= datetime('now', '-2 days')
+       AND created_at > datetime('now', '-3 days')
        AND email IS NOT NULL`,
       [SubStatus.TRIAL, SubStatus.ACTIVE],
     );
@@ -87,7 +88,6 @@ async function checkTrials(): Promise<void> {
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
 export function startTrialChecker(): void {
-  if (config.selfHosted && !config.emailEnabled) return;
   if (!config.emailEnabled) return;
 
   // Run immediately, then every hour

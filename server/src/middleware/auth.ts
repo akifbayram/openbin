@@ -50,18 +50,43 @@ export function tryAuthenticate(req: Request, _res: Response, next: NextFunction
   next();
 }
 
+// Short-lived cache so soft-delete checks don't hit the DB on every request.
+// Soft-deletes are rare admin actions; 60 s staleness is acceptable.
+const deletedCache = new Map<string, { deleted: boolean; expires: number }>();
+const DELETED_CACHE_TTL = 60_000;
+
 function checkSoftDeleted(userId: string): Promise<boolean> {
+  const cached = deletedCache.get(userId);
+  if (cached && cached.expires > Date.now()) return Promise.resolve(cached.deleted);
+
   return query<{ deleted_at: string | null }>(
     'SELECT deleted_at FROM users WHERE id = $1',
     [userId],
   ).then((result) => {
-    if (result.rows.length === 0) return true;
-    return result.rows[0].deleted_at !== null;
+    const deleted = result.rows.length === 0 || result.rows[0].deleted_at !== null;
+    deletedCache.set(userId, { deleted, expires: Date.now() + DELETED_CACHE_TTL });
+    return deleted;
   });
 }
 
+/** Call after soft-deleting a user so the next request sees it immediately. */
+export function invalidateDeletedCache(userId: string): void {
+  deletedCache.delete(userId);
+}
+
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
-  if (req.user) { next(); return; }
+  if (req.user) {
+    checkSoftDeleted(req.user.id).then((deleted) => {
+      if (deleted) {
+        req.user = undefined;
+        req.authMethod = undefined;
+        res.status(401).json({ error: 'ACCOUNT_DELETED', message: 'This account has been deleted' });
+        return;
+      }
+      next();
+    }).catch(next);
+    return;
+  }
 
   const token = extractToken(req);
   if (!token) {

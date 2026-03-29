@@ -361,6 +361,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         <Input
                           id="ai-temperature"
                           type="number"
+                          inputMode="decimal"
                           min={0}
                           max={2}
                           step={0.1}
@@ -382,6 +383,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         <Input
                           id="ai-max-tokens"
                           type="number"
+                          inputMode="numeric"
                           min={100}
                           max={16000}
                           step={100}
@@ -403,6 +405,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         <Input
                           id="ai-top-p"
                           type="number"
+                          inputMode="decimal"
                           min={0}
                           max={1}
                           step={0.05}
@@ -424,6 +427,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         <Input
                           id="ai-timeout"
                           type="number"
+                          inputMode="numeric"
                           min={10}
                           max={300}
                           step={5}

@@ -27,7 +27,7 @@ export function UpgradePrompt({ feature, description, upgradeUrl, className }: U
           href={upgradeUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity shrink-0"
+          className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-[var(--text-on-accent)] hover:opacity-90 transition-opacity shrink-0"
         >
           Upgrade
           <ArrowUpRight className="h-3 w-3" />

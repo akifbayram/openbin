@@ -248,8 +248,8 @@ export function DataSection({
           <div className="space-y-5">
             <LocationPickerSection locations={locations} value={selectedLocationId} onChange={setSelectedLocationId} />
             <div className="space-y-2.5">
-              <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
-              <div className="flex flex-col gap-3">
+              <span id="export-format-label" className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
+              <div className="flex flex-col gap-3" role="radiogroup" aria-labelledby="export-format-label">
                 <label className={cn('flex items-start gap-2 text-sm', exportGated ? 'opacity-40 pointer-events-none' : 'cursor-pointer')}>
                   <input
                     type="radio"
@@ -319,8 +319,8 @@ export function DataSection({
           <div className="space-y-5">
             <LocationPickerSection locations={locations} value={selectedLocationId} onChange={setSelectedLocationId} />
             <div className="space-y-2.5">
-              <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
-              <div className="flex flex-col gap-3">
+              <span id="import-format-label" className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
+              <div className="flex flex-col gap-3" role="radiogroup" aria-labelledby="import-format-label">
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
                     type="radio"
@@ -364,8 +364,8 @@ export function DataSection({
             </div>
 
             <div className="space-y-2.5">
-              <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Mode</span>
-              <div className="flex flex-col gap-3">
+              <span id="import-mode-label" className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Mode</span>
+              <div className="flex flex-col gap-3" role="radiogroup" aria-labelledby="import-mode-label">
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
                     type="radio"

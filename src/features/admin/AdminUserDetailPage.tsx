@@ -17,8 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { OptionGroup } from '@/components/ui/option-group';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -314,7 +314,7 @@ export function AdminUserDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col divide-y divide-[var(--border-flat)]">
-            <div className="flex items-center justify-between py-3 first:pt-0">
+            <div className="row-spread py-3 first:pt-0">
               <span className="text-[14px] text-[var(--text-secondary)]">Admin role</span>
               <span className={cn('flex items-center gap-1.5', adminDisabled && 'opacity-50')}>
                 <Switch
@@ -325,7 +325,7 @@ export function AdminUserDetailPage() {
               </span>
             </div>
 
-            <div className="flex items-center justify-between py-3">
+            <div className="row-spread py-3">
               <span className="text-[14px] text-[var(--text-secondary)]">Edit details</span>
               <Button variant="outline" size="sm" onClick={openEdit}>
                 <Pencil className="h-3.5 w-3.5 mr-1.5" />
@@ -334,7 +334,7 @@ export function AdminUserDetailPage() {
             </div>
 
             {!planInfo.selfHosted && (
-              <div className="flex items-center justify-between py-3">
+              <div className="row-spread py-3">
                 <span className="text-[14px] text-[var(--text-secondary)]">Plan tier</span>
                 <OptionGroup
                   options={[
@@ -349,7 +349,7 @@ export function AdminUserDetailPage() {
             )}
 
             {!planInfo.selfHosted && (
-              <div className="flex items-center justify-between py-3">
+              <div className="row-spread py-3">
                 <span className="text-[14px] text-[var(--text-secondary)]">Subscription</span>
                 <OptionGroup
                   options={[
@@ -365,7 +365,7 @@ export function AdminUserDetailPage() {
             )}
 
             {!planInfo.selfHosted && (
-              <div className="flex items-center justify-between py-3">
+              <div className="row-spread py-3">
                 <span className="text-[14px] text-[var(--text-secondary)]">Active until</span>
                 <div className="flex items-center gap-2">
                   <Input
@@ -381,7 +381,7 @@ export function AdminUserDetailPage() {
               </div>
             )}
 
-            <div className="flex items-center justify-between py-3">
+            <div className="row-spread py-3">
               <span className="text-[14px] text-[var(--text-secondary)]">Regenerate API key</span>
               <Button variant="outline" size="sm" onClick={() => setRegenKeyOpen(true)}>
                 <KeyRound className="h-3.5 w-3.5 mr-1.5" />
@@ -389,7 +389,7 @@ export function AdminUserDetailPage() {
               </Button>
             </div>
 
-            <div className="flex items-center justify-between py-3">
+            <div className="row-spread py-3">
               <span className="text-[14px] text-[var(--text-secondary)]">Send password reset</span>
               <Button variant="outline" size="sm" onClick={handleSendPasswordReset} disabled={!detail.email}>
                 <Mail className="h-3.5 w-3.5 mr-1.5" />
@@ -397,7 +397,7 @@ export function AdminUserDetailPage() {
               </Button>
             </div>
 
-            <div className="flex items-center justify-between py-3 last:pb-0">
+            <div className="row-spread py-3 last:pb-0">
               <span className="text-[14px] text-[var(--text-secondary)]">Delete user</span>
               <Button
                 variant="outline"
@@ -484,26 +484,23 @@ export function AdminUserDetailPage() {
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEdit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-displayName">Display Name</Label>
+          <form onSubmit={handleEdit} className="space-y-5">
+            <FormField label="Display Name" htmlFor="edit-displayName">
               <Input
                 id="edit-displayName"
                 value={editForm.displayName}
                 onChange={(e) => setEditForm((f) => ({ ...f, displayName: e.target.value }))}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
+            </FormField>
+            <FormField label="Email" htmlFor="edit-email">
               <Input
                 id="edit-email"
                 type="email"
                 value={editForm.email}
                 onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-password">New Password</Label>
+            </FormField>
+            <FormField label="New Password" htmlFor="edit-password">
               <Input
                 id="edit-password"
                 type="password"
@@ -511,7 +508,7 @@ export function AdminUserDetailPage() {
                 onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
                 placeholder="Leave blank to keep current"
               />
-            </div>
+            </FormField>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>

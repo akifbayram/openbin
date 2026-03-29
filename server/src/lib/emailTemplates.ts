@@ -1,36 +1,84 @@
+import { config } from './config.js';
+
 interface EmailTemplate {
   subject: string;
   html: string;
   text: string;
 }
 
+function logoHtml(): string {
+  if (config.baseUrl) return `<img src="${config.baseUrl}/logo-horizontal.png" alt="OpenBin" width="140" height="31" style="display:block;border:0">`;
+  return `<span style="font-size:18px;font-weight:700;color:#5e2fe0">OpenBin</span>`;
+}
+
 function wrap(body: string): string {
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5">
-<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:560px;margin:0 auto;padding:32px 16px">
-<tr><td style="font-size:22px;font-weight:700;padding-bottom:24px;color:#111">OpenBin</td></tr>
-<tr><td style="background:#ffffff;border:1px solid #e5e5e5;border-radius:8px;padding:32px">${body}</td></tr>
-<tr><td style="padding-top:24px;font-size:12px;color:#999;text-align:center">OpenBin &mdash; Organize your stuff</td></tr>
+<body style="margin:0;padding:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale">
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f5f5f5">
+<tr><td align="center" style="padding:40px 16px">
+<table width="560" cellpadding="0" cellspacing="0" role="presentation" style="max-width:560px;width:100%">
+<tr><td style="padding-bottom:32px">${logoHtml()}</td></tr>
+<tr><td style="background:#ffffff;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden">
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse"><tr><td style="height:4px;background:#5e2fe0;font-size:0;line-height:0">&nbsp;</td></tr></table>
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse"><tr><td style="padding:36px 40px">${body}</td></tr></table>
+</td></tr>
+<tr><td style="padding-top:24px;text-align:center;font-size:12px;color:#6d6d72"><span style="font-weight:600">OpenBin</span> &mdash; Organize your stuff</td></tr>
+</table>
+</td></tr>
 </table>
 </body></html>`;
 }
 
 function btn(href: string, label: string): string {
-  return `<a href="${href}" style="display:inline-block;background:#2563eb;color:#ffffff;padding:10px 24px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600">${label}</a>`;
+  return `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse"><tr><td align="center" style="padding-top:28px">
+<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${href}" style="height:42px;v-text-anchor:middle;width:220px;" arcsize="14%" stroke="f" fillcolor="#5e2fe0">
+<w:anchorlock/>
+<center>
+<![endif]-->
+<a href="${href}" style="display:inline-block;background:#5e2fe0;color:#ffffff;padding:13px 32px;border-radius:6px;text-decoration:none;font-size:15px;font-weight:600;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">${label}</a>
+<!--[if mso]>
+</center>
+</v:roundrect>
+<![endif]-->
+</td></tr></table>`;
 }
 
-const p = (text: string) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#333">${text}</p>`;
-const greeting = (name: string) => `<p style="margin:0 0 16px;font-size:16px;color:#111">Hi ${name},</p>`;
+const h1 = (text: string) => `<h1 style="margin:0 0 20px;padding:0;font-size:22px;font-weight:700;color:#1c1c1e;line-height:1.3">${text}</h1>`;
+const p = (text: string) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3c3c43">${text}</p>`;
+const greeting = (name: string) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3c3c43">Hi ${name},</p>`;
+const divider = `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse"><tr><td style="height:1px;background:#e8e8ed;font-size:0;line-height:0">&nbsp;</td></tr></table>`;
+
+function featureCard(emoji: string, title: string, body: string, opts?: { bg?: string; size?: 'sm' | 'lg' }): string {
+  const iconSize = opts?.size === 'sm' ? 28 : 40;
+  const fontSize = opts?.size === 'sm' ? 14 : 18;
+  const bg = opts?.bg ?? 'transparent';
+  const inner = [
+    `<div style="width:${iconSize}px;height:${iconSize}px;border-radius:50%;background:#f0ebfc;text-align:center;line-height:${iconSize}px;font-size:${fontSize}px;margin:0 auto 8px">${emoji}</div>`,
+    `<p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#1c1c1e">${title}</p>`,
+    `<p style="margin:0;font-size:12px;color:#6d6d72;line-height:1.4">${body}</p>`,
+  ].join('');
+  if (bg !== 'transparent') {
+    return `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;background:${bg};border-radius:6px"><tr><td style="padding:12px">${inner}</td></tr></table>`;
+  }
+  return inner;
+}
 
 export function welcomeEmail(params: { displayName: string; loginUrl: string }): EmailTemplate {
   return {
     subject: 'Welcome to OpenBin',
     html: wrap([
+      h1('Welcome to OpenBin'),
       greeting(params.displayName),
-      p('Welcome to OpenBin! Your account is ready with a <strong>7-day Pro trial</strong> — all features are unlocked.'),
-      p('Organize your physical storage with QR codes, invite team members, and let AI help catalog your items.'),
-      `<p style="margin:24px 0 0">${btn(params.loginUrl, 'Get Started')}</p>`,
+      p('Your account is ready with a <strong>7-day Pro trial</strong> — all features are unlocked.'),
+      `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;margin:24px 0 8px"><tr>
+<td width="33%" align="center" valign="top" style="padding:0 8px 0 0">${featureCard('📦', 'QR Labels', 'Print codes for instant scanning')}</td>
+<td width="33%" align="center" valign="top" style="padding:0 4px">${featureCard('🤖', 'AI Recognition', 'Photo-based item cataloging')}</td>
+<td width="33%" align="center" valign="top" style="padding:0 0 0 8px">${featureCard('👥', 'Team Sharing', 'Invite others and stay in sync')}</td>
+</tr></table>`,
+      divider,
+      btn(params.loginUrl, 'Get Started'),
     ].join('')),
     text: [
       `Hi ${params.displayName},`,
@@ -48,10 +96,16 @@ export function trialExpiringEmail(params: { displayName: string; expiryDate: st
   return {
     subject: 'Your OpenBin trial ends in 3 days',
     html: wrap([
+      h1('Your trial ends in 3 days'),
       greeting(params.displayName),
       p(`Your Pro trial ends on <strong>${params.expiryDate}</strong>.`),
       p('When it expires, your account will switch to read-only mode. All your data stays safe — you just won\'t be able to create or edit bins until you subscribe.'),
-      `<p style="margin:24px 0 0">${btn(params.upgradeUrl, 'Subscribe Now')}</p>`,
+      `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse"><tr><td align="center" style="padding-top:20px">
+<div style="border-top:2px solid #ff9500;width:60px;margin:0 auto 8px"></div>
+<p style="margin:0;font-size:12px;color:#ff9500;font-weight:600">3 days remaining</p>
+</td></tr></table>`,
+      divider,
+      btn(params.upgradeUrl, 'Subscribe Now'),
     ].join('')),
     text: [
       `Hi ${params.displayName},`,
@@ -69,10 +123,12 @@ export function trialExpiredEmail(params: { displayName: string; upgradeUrl: str
   return {
     subject: 'Your OpenBin trial has ended',
     html: wrap([
+      h1('Your trial has ended'),
       greeting(params.displayName),
       p('Your Pro trial has ended and your account is now in <strong>read-only mode</strong>.'),
       p('All your bins, items, and photos are safe — nothing has been deleted. Subscribe to a plan to continue creating and editing.'),
-      `<p style="margin:24px 0 0">${btn(params.upgradeUrl, 'Subscribe Now')}</p>`,
+      divider,
+      btn(params.upgradeUrl, 'Subscribe Now'),
     ].join('')),
     text: [
       `Hi ${params.displayName},`,
@@ -92,9 +148,14 @@ export function subscriptionConfirmedEmail(params: { displayName: string; plan: 
   return {
     subject: 'Your OpenBin subscription is active',
     html: wrap([
+      `<table cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse"><tr>
+<td valign="middle" style="padding-right:10px"><div style="width:28px;height:28px;border-radius:50%;background:#34c759;text-align:center;line-height:28px;color:#ffffff;font-size:16px;font-weight:700">&#10003;</div></td>
+<td valign="middle"><h1 style="margin:0;padding:0;font-size:22px;font-weight:700;color:#1c1c1e;line-height:1.3">Subscription active</h1></td>
+</tr></table>`,
+      `<div style="height:20px"></div>`,
       greeting(params.displayName),
       p(`Your <strong>${params.plan}</strong> subscription is now active.${untilLine}`),
-      p('All features for your plan are unlocked. Thanks for subscribing!'),
+      `<p style="margin:0;font-size:15px;line-height:1.6;color:#3c3c43">All features for your plan are unlocked. Thanks for subscribing!</p>`,
     ].join('')),
     text: [
       `Hi ${params.displayName},`,
@@ -107,18 +168,25 @@ export function subscriptionConfirmedEmail(params: { displayName: string; plan: 
 }
 
 export function exploreFeaturesEmail(params: { displayName: string; dashboardUrl: string }): EmailTemplate {
+  const cardOpts = { bg: '#f8f6fe', size: 'sm' as const };
   return {
     subject: 'Tips to get the most out of OpenBin',
     html: wrap([
+      h1('Tips to get organized'),
       greeting(params.displayName),
       p('You\'ve been using OpenBin for a couple of days — here are some features that can help you get even more organized:'),
-      `<ul style="margin:0 0 16px;padding-left:20px;font-size:15px;line-height:1.7;color:#333">
-        <li><strong>QR Labels</strong> — Print and stick QR codes on your bins for instant scanning</li>
-        <li><strong>AI Item Recognition</strong> — Snap a photo and let AI catalog your items</li>
-        <li><strong>Team Sharing</strong> — Invite others to your location so everyone stays in sync</li>
-        <li><strong>Bin Search</strong> — Find any item across all your bins in seconds</li>
-      </ul>`,
-      `<p style="margin:24px 0 0">${btn(params.dashboardUrl, 'Explore Your Dashboard')}</p>`,
+      `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;margin:8px 0">
+<tr>
+<td width="50%" valign="top" style="padding:0 6px 12px 0">${featureCard('📦', 'QR Labels', 'Print and stick QR codes on your bins for instant scanning', cardOpts)}</td>
+<td width="50%" valign="top" style="padding:0 0 12px 6px">${featureCard('🤖', 'AI Recognition', 'Snap a photo and let AI catalog your items', cardOpts)}</td>
+</tr>
+<tr>
+<td width="50%" valign="top" style="padding:0 6px 0 0">${featureCard('👥', 'Team Sharing', 'Invite others to your location so everyone stays in sync', cardOpts)}</td>
+<td width="50%" valign="top" style="padding:0 0 0 6px">${featureCard('🔍', 'Bin Search', 'Find any item across all your bins in seconds', cardOpts)}</td>
+</tr>
+</table>`,
+      divider,
+      btn(params.dashboardUrl, 'Explore Your Dashboard'),
     ].join('')),
     text: [
       `Hi ${params.displayName},`,
@@ -139,10 +207,12 @@ export function postTrialEarlyEmail(params: { displayName: string; upgradeUrl: s
   return {
     subject: 'Your OpenBin data is waiting',
     html: wrap([
+      h1('Your data is waiting'),
       greeting(params.displayName),
       p('Your trial ended a couple of days ago, but all your bins, items, and photos are <strong>safe in read-only mode</strong> — nothing has been deleted.'),
       p('Subscribe to pick up right where you left off and unlock full editing again.'),
-      `<p style="margin:24px 0 0">${btn(params.upgradeUrl, 'Subscribe Now')}</p>`,
+      divider,
+      btn(params.upgradeUrl, 'Subscribe Now'),
     ].join('')),
     text: [
       `Hi ${params.displayName},`,
@@ -160,10 +230,12 @@ export function postTrialLateEmail(params: { displayName: string; upgradeUrl: st
   return {
     subject: 'Still organizing? Unlock OpenBin again',
     html: wrap([
+      h1('Still organizing?'),
       greeting(params.displayName),
       p('It\'s been a while since your trial ended. Your data is still here — bins, items, photos, everything.'),
       p('Subscribe any time to pick up exactly where you left off. No setup needed.'),
-      `<p style="margin:24px 0 0">${btn(params.upgradeUrl, 'Subscribe Now')}</p>`,
+      divider,
+      btn(params.upgradeUrl, 'Subscribe Now'),
     ].join('')),
     text: [
       `Hi ${params.displayName},`,
@@ -181,10 +253,14 @@ export function passwordResetEmail(params: { displayName: string; resetUrl: stri
   return {
     subject: 'Reset your OpenBin password',
     html: wrap([
+      `<div style="margin:0 0 16px"><div style="width:40px;height:40px;border-radius:50%;background:#f0ebfc;text-align:center;line-height:40px;font-size:18px">&#128274;</div></div>`,
+      h1('Reset your password'),
       greeting(params.displayName),
       p('A password reset was requested for your account. Click the button below to set a new password.'),
-      `<p style="margin:24px 0 0">${btn(params.resetUrl, 'Reset Password')}</p>`,
-      p('This link expires in 4 hours. If you didn\'t request this, you can safely ignore this email.'),
+      divider,
+      btn(params.resetUrl, 'Reset Password'),
+      `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse"><tr><td style="padding-top:20px"><div style="background:#f5f5f5;border-radius:6px;padding:12px 16px;text-align:center;font-size:13px;color:#6d6d72">This link expires in 4 hours</div></td></tr></table>`,
+      `<p style="margin:16px 0 0;font-size:15px;line-height:1.6;color:#3c3c43">If you didn\'t request this, you can safely ignore this email.</p>`,
     ].join('')),
     text: [
       `Hi ${params.displayName},`,
@@ -202,10 +278,12 @@ export function subscriptionExpiredEmail(params: { displayName: string; upgradeU
   return {
     subject: 'Your OpenBin subscription has expired',
     html: wrap([
+      h1('Subscription expired'),
       greeting(params.displayName),
       p('Your OpenBin subscription has expired and your account is now in <strong>read-only mode</strong>.'),
       p('All your data is safe — nothing has been deleted. Resubscribe to continue creating and editing.'),
-      `<p style="margin:24px 0 0">${btn(params.upgradeUrl, 'Resubscribe')}</p>`,
+      divider,
+      btn(params.upgradeUrl, 'Resubscribe'),
     ].join('')),
     text: [
       `Hi ${params.displayName},`,

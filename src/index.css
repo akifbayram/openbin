@@ -71,6 +71,7 @@
   --color-warning-ring: rgba(245, 158, 11, 0.25);
   --color-warning-border: rgba(245, 158, 11, 0.5);
   --color-info: #3b82f6;
+  --destructive-soft: rgba(255, 59, 48, 0.10);
   --tag-text-on-color: rgba(0, 0, 0, 0.75);
   --border-preview: rgba(0, 0, 0, 0.08);
   --bg-print-surface: #e0e0e0;
@@ -115,6 +116,7 @@
   --color-warning-ring: rgba(251, 191, 36, 0.3);
   --color-warning-border: rgba(251, 191, 36, 0.5);
   --color-info: #60a5fa;
+  --destructive-soft: rgba(255, 69, 58, 0.12);
   --tag-text-on-color: rgba(255, 255, 255, 0.9);
   --border-preview: rgba(255, 255, 255, 0.08);
   --bg-print-surface: #2a2a2a;
