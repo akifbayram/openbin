@@ -6,6 +6,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '../lib/cookies.js';
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
+import { createLogger } from '../lib/logger.js';
 import { deleteUserData, notifyManagerNewUser, notifyManagerUserUpdate } from '../lib/managerWebhook.js';
 import { consumeResetToken, createPasswordResetToken } from '../lib/passwordReset.js';
 import { safePath } from '../lib/pathSafety.js';
@@ -13,8 +14,10 @@ import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, signToken } from '../middleware/auth.js';
+
 import { getRegistrationMode } from './admin.js';
 
+const log = createLogger('auth');
 const router = Router();
 
 // GET /api/auth/status — public (no auth required)
@@ -186,6 +189,8 @@ router.post('/register', asyncHandler(async (req, res) => {
   setAccessTokenCookie(res, token);
   setRefreshTokenCookie(res, refresh.rawToken);
 
+  log.info(`New user registered: ${user.username}`);
+
   res.status(201).json({
     user: {
       id: user.id,
@@ -229,15 +234,18 @@ router.post('/login', asyncHandler(async (req, res) => {
   if (result.rows.length === 0) {
     // Constant-time rejection — prevent timing-based username enumeration
     await bcrypt.compare(password, '$2b$12$000000000000000000000uVjKPCGJcotDu8bMahKn7VoPxpL0Wi');
+    log.warn(`Login failed: unknown user "${username}"`);
     throw new UnauthorizedError('Invalid username or password');
   }
 
   const user = result.rows[0];
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
+    log.warn(`Login failed: bad password for user "${username}"`);
     throw new UnauthorizedError('Invalid username or password');
   }
   if (user.deleted_at) {
+    log.warn(`Login failed: deleted user "${username}"`);
     throw new UnauthorizedError('Invalid username or password');
   }
 
@@ -273,6 +281,8 @@ router.post('/login', asyncHandler(async (req, res) => {
       await query('UPDATE users SET active_location_id = $1 WHERE id = $2', [activeLocationId, user.id]);
     }
   }
+
+  log.info(`User "${user.username}" logged in`);
 
   res.json({
     user: {
@@ -497,6 +507,7 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
   await revokeAllUserTokens(req.user!.id);
   clearAuthCookies(res);
 
+  log.info(`User ${req.user!.username} changed password`);
   res.json({ message: 'Password updated successfully' });
 }));
 
@@ -580,7 +591,7 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
 
   clearAuthCookies(res);
 
-  console.log(`[auth] User ${req.user!.username} deleted their account`);
+  log.info(`User ${req.user!.username} deleted their account`);
 
   res.json({ message: 'Account deleted' });
 }));
@@ -607,7 +618,7 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
       const { firePasswordResetEmail } = await import('../lib/emailSender.js');
       firePasswordResetEmail(user.id, user.email, user.display_name, resetUrl);
     } else {
-      console.warn('[auth] forgot-password: BASE_URL is not set, reset email not sent');
+      log.warn('forgot-password: BASE_URL is not set, reset email not sent');
     }
   }
 
@@ -627,6 +638,7 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
 
   await consumeResetToken(token, newPassword);
 
+  log.info('Password reset completed via token');
   res.json({ message: 'Password has been reset successfully' });
 }));
 

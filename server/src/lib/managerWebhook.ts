@@ -1,11 +1,14 @@
 import { getDb } from '../db.js';
 import { config } from './config.js';
+import { createLogger } from './logger.js';
 import { enqueueWebhook } from './webhookOutbox.js';
+
+const log = createLogger('managerWebhook');
 
 function sendManagerRequest(endpoint: string, payload: Record<string, unknown>, errorTag: string): void {
   if (!config.managerUrl || config.selfHosted) return;
   if (!config.subscriptionJwtSecret) {
-    console.warn(`[managerWebhook] ${errorTag}: SUBSCRIPTION_JWT_SECRET not set, skipping`);
+    log.warn(`${errorTag}: SUBSCRIPTION_JWT_SECRET not set, skipping`);
     return;
   }
   enqueueWebhook(endpoint, payload);

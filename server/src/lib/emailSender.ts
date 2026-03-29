@@ -15,10 +15,12 @@ import {
   trialExpiringEmail,
   welcomeEmail,
 } from './emailTemplates.js';
+import { createLogger } from './logger.js';
 import { generateUpgradeUrl, type PlanTier, planLabel } from './planGate.js';
 
 type EmailType = 'welcome' | 'trial_expiring' | 'trial_expired' | 'subscription_confirmed' | 'subscription_expired' | 'subscription_expiring' | 'downgrade_impact' | 'explore_features' | 'post_trial_early' | 'post_trial_late' | 'password_reset';
 
+const log = createLogger('email');
 const SKIP_DEDUP: ReadonlySet<EmailType> = new Set(['welcome', 'password_reset']);
 
 /**
@@ -50,7 +52,7 @@ async function safeSend(userId: string, emailType: EmailType, to: string, templa
     if (!claimed) return;
     await sendEmail(to, template.subject, template.html, template.text);
   } catch (err) {
-    console.error(`Failed to send ${emailType} email to user ${userId}:`, err instanceof Error ? err.message : err);
+    log.error(`Failed to send ${emailType} email to user ${userId}:`, err instanceof Error ? err.message : err);
   }
 }
 

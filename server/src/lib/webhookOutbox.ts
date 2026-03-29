@@ -2,6 +2,9 @@ import jwt from 'jsonwebtoken';
 import { generateUuid, query } from '../db.js';
 import { config } from './config.js';
 import { acquireJobLock, releaseJobLock } from './jobLock.js';
+import { createLogger } from './logger.js';
+
+const log = createLogger('webhookOutbox');
 
 const PROCESS_INTERVAL_MS = 30_000;
 const BATCH_SIZE = 10;
@@ -21,7 +24,7 @@ export function enqueueWebhook(endpoint: string, payload: Record<string, unknown
     'INSERT INTO webhook_outbox (id, endpoint, payload_json) VALUES ($1, $2, $3)',
     [id, endpoint, JSON.stringify(payload)],
   ).catch((err) => {
-    console.error('[webhookOutbox] Failed to enqueue:', err instanceof Error ? err.message : err);
+    log.error('Failed to enqueue:', err instanceof Error ? err.message : err);
   });
 }
 
@@ -84,7 +87,7 @@ async function processOutbox(): Promise<void> {
       }
     }
   } catch (err) {
-    console.error('[webhookOutbox] Processing failed:', err instanceof Error ? err.message : err);
+    log.error('Processing failed:', err instanceof Error ? err.message : err);
   } finally {
     releaseJobLock('webhook_outbox');
   }

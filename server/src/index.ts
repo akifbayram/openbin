@@ -9,6 +9,7 @@ import { getDb } from './db.js';
 import { config } from './lib/config.js';
 import { HttpError, OverLimitError, PlanRestrictedError } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
+import { createLogger } from './lib/logger.js';
 import { apiLimiter, authLimiter, joinLimiter, planApiLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { tryAuthenticate } from './middleware/auth.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -165,8 +166,9 @@ export function createApp(): express.Express {
       res.status(422).json({ error: 'VALIDATION_ERROR', message });
       return;
     }
+    const log = createLogger('http');
     pushLog({ level: 'error', message: `${err.name}: ${err.message}` });
-    console.error(err.stack);
+    log.error(`${err.name}: ${err.message}`, err.stack);
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
   });
 

@@ -23,6 +23,7 @@ import {
   TRASHED_BINS,
 } from './demoSeedData.js';
 import { pushLog } from './logBuffer.js';
+import { createLogger } from './logger.js';
 import { generateShortCode } from './shortCode.js';
 
 function createLocation(userId: string, name: string): string {
@@ -400,10 +401,12 @@ export function seedDemoData(): void {
     const storageBins = DEMO_BINS.filter((b) => b.location === 'storage').length;
     const totalAreas = HOME_AREAS.length + Object.values(NESTED_AREAS).flat().length + STORAGE_AREAS.length;
     const message = `Demo data seeded in ${elapsed}ms (${DEMO_USERNAMES.length} users, ${homeBins} + ${storageBins} bins, ${TRASHED_BINS.length} trashed, ${totalAreas} areas, ${CUSTOM_FIELD_DEFINITIONS.length} custom fields, ${DEMO_ACTIVITY_ENTRIES.length} activity log entries across 2 locations)`;
-    console.log(message);
+    const log = createLogger('demoSeed');
+    log.info(message);
     pushLog({ level: 'info', message });
   } catch (err) {
-    console.error('Failed to seed demo data:', err);
+    const log = createLogger('demoSeed');
+    log.error('Failed to seed demo data:', err instanceof Error ? err.message : err);
     pushLog({ level: 'error', message: `Demo seed failed: ${err}` });
     throw err;
   }

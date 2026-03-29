@@ -1,7 +1,10 @@
 import { getDb, query } from '../db.js';
 import { config } from './config.js';
 import { acquireJobLock, releaseJobLock } from './jobLock.js';
+import { createLogger } from './logger.js';
 import { storage } from './storage.js';
+
+const log = createLogger('cleanup');
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -15,13 +18,13 @@ async function cleanupDeletedUsers(): Promise<void> {
     for (const user of users.rows) {
       try {
         await hardDeleteUser(user.id);
-        console.log(`[cleanup] Hard-deleted user ${user.id}`);
+        log.info(`Hard-deleted user ${user.id}`);
       } catch (err) {
-        console.error(`[cleanup] Failed to hard-delete user ${user.id}:`, err instanceof Error ? err.message : err);
+        log.error(`Failed to hard-delete user ${user.id}:`, err instanceof Error ? err.message : err);
       }
     }
   } catch (err) {
-    console.error('[cleanup] User cleanup check failed:', err instanceof Error ? err.message : err);
+    log.error('User cleanup check failed:', err instanceof Error ? err.message : err);
   } finally {
     releaseJobLock('user_cleanup');
   }

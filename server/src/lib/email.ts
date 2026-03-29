@@ -1,5 +1,8 @@
 import { Resend } from 'resend';
 import { config } from './config.js';
+import { createLogger } from './logger.js';
+
+const log = createLogger('email');
 
 const isConfigured = config.emailEnabled && !!config.resendApiKey;
 const resend = isConfigured ? new Resend(config.resendApiKey!) : null;
@@ -18,7 +21,7 @@ export async function sendEmail(
 ): Promise<void> {
   if (!resend) {
     if (!loggedSkip) {
-      console.log('Email not configured (EMAIL_ENABLED=false or RESEND_API_KEY missing), skipping sends');
+      log.info('Email not configured (EMAIL_ENABLED=false or RESEND_API_KEY missing), skipping sends');
       loggedSkip = true;
     }
     return;
@@ -36,6 +39,6 @@ export async function sendEmail(
       throw new Error(`${error.name}: ${error.message}`);
     }
   } catch (err) {
-    console.error('Failed to send email:', err instanceof Error ? err.message : err);
+    log.error('Failed to send email:', err instanceof Error ? err.message : err);
   }
 }

@@ -4,6 +4,7 @@ import { query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
+import { createLogger } from '../lib/logger.js';
 import { invalidateOverLimitCache, Plan, type PlanTier, SubStatus, type SubStatusType, validatePlanTransition } from '../lib/planGate.js';
 import { invalidatePlanRateLimit } from '../lib/rateLimiters.js';
 
@@ -58,7 +59,7 @@ router.post('/callback', asyncHandler(async (req, res) => {
       [userId],
     );
     if (current.rows.length > 0 && current.rows[0].updated_at > payload.updatedAt) {
-      console.warn(`[subscriptions] Stale webhook for user ${userId}: incoming ${payload.updatedAt} < current ${current.rows[0].updated_at}`);
+      createLogger('subscriptions').warn(`Stale webhook for user ${userId}: incoming ${payload.updatedAt} < current ${current.rows[0].updated_at}`);
       res.json({ ok: true, stale: true });
       return;
     }

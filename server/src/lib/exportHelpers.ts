@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateUuid, query, querySync } from '../db.js';
 import { config } from './config.js';
 import { replaceCustomFieldValuesSync } from './customFieldHelpers.js';
+import { createLogger } from './logger.js';
 import { isPathSafe, safePath } from './pathSafety.js';
 import { generateShortCode } from './shortCode.js';
 import { storage } from './storage.js';
@@ -654,7 +655,8 @@ export function importPhotosSync(binId: string, photos: ExportPhoto[], userId: s
     if (config.storageBackend === 's3') {
       // S3: async upload, fire-and-forget within sync transaction context
       storage.upload(storagePath, buffer, safeMimeType).catch((err) => {
-        console.error(`[photo-import] Failed to upload ${storagePath} to S3:`, err);
+        const log = createLogger('photo-import');
+        log.error(`Failed to upload ${storagePath} to S3:`, err);
       });
     } else {
       // Local: synchronous file write

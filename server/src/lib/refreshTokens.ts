@@ -1,6 +1,9 @@
 import crypto from 'node:crypto';
 import { generateUuid, getDb, query } from '../db.js';
 import { config } from './config.js';
+import { createLogger } from './logger.js';
+
+const log = createLogger('refreshTokens');
 
 export function hashToken(raw: string): string {
   return crypto.createHash('sha256').update(raw).digest('hex');
@@ -56,6 +59,7 @@ export async function rotateRefreshToken(rawToken: string): Promise<{ userId: st
 
   // Replay detection: if already revoked, revoke the entire family
   if (existing.revoked_at) {
+    log.warn(`Refresh token replay detected for user ${existing.user_id}, revoking family ${existing.family_id}`);
     await query(
       `UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE family_id = $1 AND revoked_at IS NULL`,
       [existing.family_id],

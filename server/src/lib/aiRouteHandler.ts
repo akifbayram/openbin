@@ -2,6 +2,9 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { AiAnalysisError, toSafeAiMessage } from './aiCaller.js';
 import { aiErrorToStatus, NoAiSettingsError } from './aiSettings.js';
 import { HttpError, ValidationError } from './httpErrors.js';
+import { createLogger } from './logger.js';
+
+const log = createLogger('ai');
 
 /** Wrap an async AI route handler with standard error handling. */
 export function aiRouteHandler(
@@ -20,7 +23,7 @@ export function aiRouteHandler(
         const message = toSafeAiMessage(err);
         if (err.code === 'PROVIDER_ERROR') {
           const safeErr = { message: err.message, name: err.name, code: err.code };
-          console.error(`AI ${action} provider error:`, safeErr);
+          log.error(`${action} provider error:`, safeErr);
         }
         res.status(aiErrorToStatus(err.code)).json({ error: message, code: err.code });
         return;
@@ -35,7 +38,7 @@ export function aiRouteHandler(
       }
       // Redact potentially sensitive fields (auth headers, API keys) from external provider errors
       const safeErr = err instanceof Error ? { message: err.message, name: err.name } : '[non-Error thrown]';
-      console.error(`AI ${action} error:`, safeErr);
+      log.error(`${action} error:`, safeErr);
       res.status(500).json({ error: 'INTERNAL_ERROR', message: `Failed to ${action}` });
     }
   };

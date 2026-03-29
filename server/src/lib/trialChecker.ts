@@ -2,7 +2,10 @@ import { query } from '../db.js';
 import { config } from './config.js';
 import { fireExploreFeaturesEmail, firePostTrialEarlyEmail, firePostTrialLateEmail, fireSubscriptionExpiringEmail, fireTrialExpiredEmail, fireTrialExpiringEmail } from './emailSender.js';
 import { acquireJobLock, releaseJobLock } from './jobLock.js';
+import { createLogger } from './logger.js';
 import { SubStatus } from './planGate.js';
+
+const log = createLogger('trialChecker');
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -95,7 +98,7 @@ async function checkTrials(): Promise<void> {
       firePostTrialLateEmail(user.id, user.email, user.display_name);
     }
   } catch (err) {
-    console.error('Trial check failed:', err instanceof Error ? err.message : err);
+    log.error('Trial check failed:', err instanceof Error ? err.message : err);
   } finally {
     releaseJobLock('trial_checker');
   }

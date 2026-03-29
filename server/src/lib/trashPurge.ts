@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import { query } from '../db.js';
 import { config } from './config.js';
+import { createLogger } from './logger.js';
 import { safePath } from './pathSafety.js';
+
+const log = createLogger('trashPurge');
 
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
@@ -64,6 +67,6 @@ export async function purgeExpiredTrash(locationId: string): Promise<void> {
       }
     }
   } catch (err) {
-    console.error('Trash purge error:', err);
+    log.error('Trash purge error:', err instanceof Error ? err.message : err);
   }
 }

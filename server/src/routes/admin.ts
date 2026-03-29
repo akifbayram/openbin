@@ -6,6 +6,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { firePasswordResetEmail } from '../lib/emailSender.js';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { createLogger } from '../lib/logger.js';
 import { notifyManagerUserUpdate } from '../lib/managerWebhook.js';
 import { getCloudMetrics } from '../lib/metrics.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
@@ -15,6 +16,7 @@ import { validateDisplayName, validateEmail, validatePassword, validateUsername 
 import { authenticate, invalidateDeletedCache } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 
+const log = createLogger('admin');
 const router = Router();
 
 function getAdminCount(): number {
@@ -136,7 +138,7 @@ router.post('/users', asyncHandler(async (req, res) => {
     is_admin: number; plan: PlanTier; sub_status: SubStatusType; created_at: string;
   };
 
-  console.log(`[admin] User ${req.user!.username} created user ${username}`);
+  log.info(`User ${req.user!.username} created user ${username}`);
 
   res.status(201).json({
     id: user.id,
@@ -334,7 +336,7 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   }
 
   const { password: _, ...safeBody } = req.body;
-  console.log(`[admin] User ${req.user!.username} updated user ${target.username}: ${JSON.stringify(safeBody)}`);
+  log.info(`User ${req.user!.username} updated user ${target.username}: ${JSON.stringify(safeBody)}`);
 
   res.json({ message: 'User updated' });
 }));
@@ -363,7 +365,7 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
 
   notifyManagerUserUpdate({ userId: targetId, action: 'delete_user' });
 
-  console.log(`[admin] User ${req.user!.username} soft-deleted user ${target.username}`);
+  log.info(`User ${req.user!.username} soft-deleted user ${target.username}`);
 
   res.json({ message: 'User marked for deletion' });
 }));
@@ -391,7 +393,7 @@ router.post('/users/:id/regenerate-api-key', asyncHandler(async (req, res) => {
     [id, targetId, keyHash, keyPrefix, 'Admin-generated key'],
   );
 
-  console.log(`[admin] User ${req.user!.username} regenerated API key for user ${target.username}`);
+  log.info(`User ${req.user!.username} regenerated API key for user ${target.username}`);
 
   res.json({ keyPrefix, name: 'Admin-generated key', createdAt: new Date().toISOString() });
 }));
@@ -411,7 +413,7 @@ router.post('/users/:id/send-password-reset', asyncHandler(async (req, res) => {
 
   firePasswordResetEmail(targetId, target.email, target.display_name, resetUrl);
 
-  console.log(`[admin] User ${req.user!.username} sent password reset for user ${target.username}`);
+  log.info(`User ${req.user!.username} sent password reset for user ${target.username}`);
 
   res.json({ message: 'Password reset email sent' });
 }));
@@ -444,7 +446,7 @@ router.patch('/registration', asyncHandler(async (req, res) => {
     "INSERT INTO settings (key, value) VALUES ('registration_mode', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
   ).run(mode);
 
-  console.log(`[admin] User ${req.user!.username} changed registration mode to ${mode}`);
+  log.info(`User ${req.user!.username} changed registration mode to ${mode}`);
 
   res.json({ mode });
 }));

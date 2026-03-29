@@ -2,9 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { querySync } from '../db.js';
 import { config } from './config.js';
+import { createLogger } from './logger.js';
 import { safePath } from './pathSafety.js';
 import { storage } from './storage.js';
 import { PHOTO_STORAGE_PATH } from './uploadConfig.js';
+
+const log = createLogger('photo-cleanup');
 
 export async function cleanupBinPhotos(
   binId: string,
@@ -69,7 +72,7 @@ export function cleanupOrphanPhotos(): void {
 
         try {
           fs.unlinkSync(filePath);
-          console.log(`[photo-cleanup] Deleted orphan file: ${relativePath}`);
+          log.info(`Deleted orphan file: ${relativePath}`);
           deletedCount++;
         } catch {
           // Ignore individual file deletion errors
@@ -84,10 +87,10 @@ export function cleanupOrphanPhotos(): void {
       }
     }
   } catch (err) {
-    console.error('[photo-cleanup] Error scanning uploads directory:', err);
+    log.error('Error scanning uploads directory:', err);
   }
 
   if (deletedCount > 0) {
-    console.log(`[photo-cleanup] Removed ${deletedCount} orphan file(s)`);
+    log.info(`Removed ${deletedCount} orphan file(s)`);
   }
 }
