@@ -45,9 +45,13 @@ function btn(href: string, label: string): string {
 </td></tr></table>`;
 }
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 const h1 = (text: string) => `<h1 style="margin:0 0 20px;padding:0;font-size:22px;font-weight:700;color:#1c1c1e;line-height:1.3">${text}</h1>`;
 const p = (text: string) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3c3c43">${text}</p>`;
-const greeting = (name: string) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3c3c43">Hi ${name},</p>`;
+const greeting = (name: string) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3c3c43">Hi ${escapeHtml(name)},</p>`;
 const divider = `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse"><tr><td style="height:1px;background:#e8e8ed;font-size:0;line-height:0">&nbsp;</td></tr></table>`;
 
 function featureCard(emoji: string, title: string, body: string, opts?: { bg?: string; size?: 'sm' | 'lg' }): string {
