@@ -66,3 +66,12 @@ export class PlanRestrictedError extends HttpError {
     this.upgradeUrl = upgradeUrl;
   }
 }
+
+export class OverLimitError extends HttpError {
+  public readonly upgradeUrl: string | null;
+  constructor(message: string, upgradeUrl: string | null = null) {
+    super(403, 'OVER_LIMIT', message);
+    this.name = 'OverLimitError';
+    this.upgradeUrl = upgradeUrl;
+  }
+}

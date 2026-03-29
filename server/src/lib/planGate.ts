@@ -174,3 +174,28 @@ export function generatePortalUrl(userId: string, email: string | null): string 
   const token = jwt.sign({ userId, email }, secret, { expiresIn: '30m' });
   return `${config.managerUrl}/portal?token=${token}`;
 }
+
+export interface OverLimits {
+  locations: boolean;
+  photos: boolean;
+  members: string[]; // locationIds exceeding member limit
+}
+
+const EMPTY_OVER_LIMITS: OverLimits = { locations: false, photos: false, members: [] };
+
+export function computeOverLimits(
+  usage: { locationCount: number; photoStorageMb: number; memberCounts: Record<string, number> },
+  features: PlanFeatures,
+): OverLimits {
+  if (config.selfHosted) return EMPTY_OVER_LIMITS;
+
+  const locations = features.maxLocations !== null && usage.locationCount > features.maxLocations;
+  const photos = features.maxPhotoStorageMb !== null && usage.photoStorageMb > features.maxPhotoStorageMb;
+  const members: string[] = [];
+  if (features.maxMembersPerLocation !== null) {
+    for (const [locId, count] of Object.entries(usage.memberCounts)) {
+      if (count > features.maxMembersPerLocation) members.push(locId);
+    }
+  }
+  return { locations, photos, members };
+}

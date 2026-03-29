@@ -20,6 +20,7 @@ vi.mock('../db.js', () => ({
 import { query } from '../db.js';
 import { config } from '../lib/config.js';
 import {
+  computeOverLimits,
   generateUpgradeUrl,
   getFeatureMap,
   getUserPlanInfo,
@@ -288,5 +289,52 @@ describe('generateUpgradeUrl()', () => {
     const decoded = jwt.verify(token, 'sub-secret') as Record<string, unknown>;
     expect(decoded.userId).toBe('user-id');
     expect(decoded.email).toBeNull();
+  });
+});
+
+describe('computeOverLimits()', () => {
+  it('returns all false when under limits', () => {
+    setConfig({ selfHosted: false });
+    const result = computeOverLimits(
+      { locationCount: 1, photoStorageMb: 50, memberCounts: { loc1: 1 } },
+      { ...getFeatureMap(Plan.LITE) },
+    );
+    expect(result).toEqual({ locations: false, photos: false, members: [] });
+  });
+
+  it('returns locations=true when over location limit', () => {
+    setConfig({ selfHosted: false });
+    const result = computeOverLimits(
+      { locationCount: 3, photoStorageMb: 50, memberCounts: {} },
+      { ...getFeatureMap(Plan.LITE) },
+    );
+    expect(result.locations).toBe(true);
+  });
+
+  it('returns photos=true when over photo storage limit', () => {
+    setConfig({ selfHosted: false });
+    const result = computeOverLimits(
+      { locationCount: 1, photoStorageMb: 200, memberCounts: {} },
+      { ...getFeatureMap(Plan.LITE) },
+    );
+    expect(result.photos).toBe(true);
+  });
+
+  it('returns member locationIds when over member limit', () => {
+    setConfig({ selfHosted: false });
+    const result = computeOverLimits(
+      { locationCount: 1, photoStorageMb: 50, memberCounts: { loc1: 5, loc2: 1 } },
+      { ...getFeatureMap(Plan.LITE) },
+    );
+    expect(result.members).toEqual(['loc1']);
+  });
+
+  it('returns all false when limits are null (unlimited)', () => {
+    setConfig({ selfHosted: false });
+    const result = computeOverLimits(
+      { locationCount: 100, photoStorageMb: 9999, memberCounts: { loc1: 999 } },
+      { ...getFeatureMap(Plan.PRO), maxPhotoStorageMb: null },
+    );
+    expect(result).toEqual({ locations: false, photos: false, members: [] });
   });
 });
