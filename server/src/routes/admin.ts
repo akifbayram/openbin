@@ -314,6 +314,25 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
     invalidateOverLimitCache(targetId);
   }
 
+  // Fire lifecycle emails on plan/status changes
+  if (!isSelfHosted() && (plan !== undefined || typeof subStatus === 'number')) {
+    const updatedUser = db.prepare('SELECT email, display_name, active_until FROM users WHERE id = ?')
+      .get(targetId) as { email: string | null; display_name: string; active_until: string | null } | undefined;
+
+    if (updatedUser?.email) {
+      const effectiveStatus = typeof subStatus === 'number' ? subStatus : target.sub_status;
+      const effectivePlan = plan !== undefined ? plan : target.plan;
+
+      if (effectiveStatus === SubStatus.ACTIVE) {
+        const { fireSubscriptionConfirmedEmail } = await import('../lib/emailSender.js');
+        fireSubscriptionConfirmedEmail(targetId, updatedUser.email, updatedUser.display_name, effectivePlan as PlanTier, updatedUser.active_until);
+      } else if (effectiveStatus === SubStatus.INACTIVE) {
+        const { fireSubscriptionExpiredEmail } = await import('../lib/emailSender.js');
+        fireSubscriptionExpiredEmail(targetId, updatedUser.email, updatedUser.display_name);
+      }
+    }
+  }
+
   const { password: _, ...safeBody } = req.body;
   console.log(`[admin] User ${req.user!.username} updated user ${target.username}: ${JSON.stringify(safeBody)}`);
 
