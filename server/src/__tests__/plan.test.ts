@@ -93,6 +93,7 @@ describe('GET /api/plan', () => {
       subStatus: SubStatus.ACTIVE,
       activeUntil: null,
       email: 'pro@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
     vi.mocked(generateUpgradeUrl).mockReturnValue(null);
@@ -119,6 +120,7 @@ describe('GET /api/plan', () => {
       subStatus: SubStatus.TRIAL,
       activeUntil: '2027-01-01T00:00:00.000Z',
       email: 'trial@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
     vi.mocked(generateUpgradeUrl).mockReturnValue('https://manager.example.com/auth/openbin?token=trial');
@@ -142,6 +144,7 @@ describe('GET /api/plan', () => {
       subStatus: SubStatus.ACTIVE,
       activeUntil: null,
       email: 'lite@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(LITE_FEATURES);
     vi.mocked(generateUpgradeUrl).mockReturnValue('https://manager.example.com/auth/openbin?token=abc');
@@ -167,6 +170,7 @@ describe('GET /api/plan', () => {
       subStatus: SubStatus.INACTIVE,
       activeUntil: null,
       email: 'inactive@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(LITE_FEATURES);
     vi.mocked(generateUpgradeUrl).mockReturnValue(null);

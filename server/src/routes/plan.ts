@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError } from '../lib/httpErrors.js';
-import { generatePortalUrl, generateUpgradePlanUrl, generateUpgradeUrl, getFeatureMap, getUserPlanInfo, isSelfHosted, isSubscriptionActive, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
+import { computeOverLimits, generatePortalUrl, generateUpgradePlanUrl, generateUpgradeUrl, getFeatureMap, getUserPlanInfo, isSelfHosted, isSubscriptionActive, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -38,6 +38,9 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     activeUntil: planInfo.activeUntil,
     selfHosted: false,
     locked: !active,
+    previousSubStatus: planInfo.previousSubStatus !== null
+      ? (planInfo.previousSubStatus === SubStatus.TRIAL ? 'trial' : 'active')
+      : null,
     features: getFeatureMap(planInfo.plan),
     upgradeUrl: active && planInfo.plan === Plan.PRO && planInfo.subStatus !== SubStatus.TRIAL ? null : generateUpgradeUrl(userId, email),
     upgradeLiteUrl: isPaidActive ? null : generateUpgradePlanUrl(userId, email, 'lite'),
@@ -60,15 +63,21 @@ router.get('/usage', authenticate, asyncHandler(async (req, res) => {
     ),
   ]);
 
+  const planInfo = await getUserPlanInfo(userId);
+  const features = planInfo ? getFeatureMap(planInfo.plan) : getFeatureMap(Plan.PRO);
+
+  const locationCount = locResult.rows[0].cnt;
+  const photoStorageMb = Math.round((photoResult.rows[0].total / (1024 * 1024)) * 100) / 100;
   const memberCounts: Record<string, number> = {};
   for (const row of memberResult.rows) {
     memberCounts[row.location_id] = row.cnt;
   }
 
   res.json({
-    locationCount: locResult.rows[0].cnt,
-    photoStorageMb: Math.round((photoResult.rows[0].total / (1024 * 1024)) * 100) / 100,
+    locationCount,
+    photoStorageMb,
     memberCounts,
+    overLimits: computeOverLimits({ locationCount, photoStorageMb, memberCounts }, features),
   });
 }));
 

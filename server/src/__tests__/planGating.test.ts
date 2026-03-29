@@ -40,6 +40,7 @@ function mockProUser() {
     subStatus: SubStatus.ACTIVE,
     activeUntil: null,
     email: 'pro@example.com',
+    previousSubStatus: null,
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
   vi.mocked(isProUser).mockReturnValue(true);
@@ -54,6 +55,7 @@ function mockLiteUser() {
     subStatus: SubStatus.ACTIVE,
     activeUntil: null,
     email: 'lite@example.com',
+    previousSubStatus: null,
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
   vi.mocked(isProUser).mockReturnValue(false);

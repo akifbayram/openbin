@@ -14,6 +14,7 @@ export interface UserPlanInfo {
   subStatus: SubStatusType;
   activeUntil: string | null;
   email: string | null;
+  previousSubStatus: SubStatusType | null;
 }
 
 export interface PlanFeatures {
@@ -52,8 +53,8 @@ export function isSubscriptionActive(planInfo: { subStatus: SubStatusType; activ
 }
 
 export async function getUserPlanInfo(userId: string): Promise<UserPlanInfo | null> {
-  const result = await query<{ plan: number; sub_status: number; active_until: string | null; email: string | null }>(
-    'SELECT plan, sub_status, active_until, email FROM users WHERE id = $1',
+  const result = await query<{ plan: number; sub_status: number; active_until: string | null; email: string | null; previous_sub_status: number | null }>(
+    'SELECT plan, sub_status, active_until, email, previous_sub_status FROM users WHERE id = $1',
     [userId],
   );
   if (result.rows.length === 0) return null;
@@ -63,6 +64,7 @@ export async function getUserPlanInfo(userId: string): Promise<UserPlanInfo | nu
     subStatus: row.sub_status as SubStatusType,
     activeUntil: row.active_until,
     email: row.email,
+    previousSubStatus: row.previous_sub_status as SubStatusType | null,
   };
 }
 
