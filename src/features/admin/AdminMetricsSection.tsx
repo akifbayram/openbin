@@ -1,17 +1,7 @@
 import { AlertTriangle, BarChart3 } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { apiFetch } from '@/lib/api';
-
-interface CloudMetrics {
-  plans: { liteActive: number; liteInactive: number; proActive: number; proTrial: number; proInactive: number; total: number };
-  bins: { total: number; avgPerLocation: number; createdLast7d: number; createdLast30d: number };
-  storage: { totalMb: number; avgPerLocationMb: number; nearingLimitCount: number };
-  trialConversion: { started: number; converted: number; expired: number; active: number; rate: number };
-  featureAdoption: Record<string, { usersOrLocations: number; percentage: number }>;
-  warnings: string[];
-}
+import { useAdminMetrics } from './useAdminMetrics';
 
 function MetricCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -24,14 +14,7 @@ function MetricCard({ label, value, sub }: { label: string; value: string | numb
 }
 
 export function AdminMetricsSection() {
-  const [metrics, setMetrics] = useState<CloudMetrics | null>(null);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    apiFetch<CloudMetrics>('/api/admin/metrics')
-      .then(setMetrics)
-      .catch(() => setError(true));
-  }, []);
+  const { metrics, error } = useAdminMetrics();
 
   if (error) return null;
   if (!metrics) {
