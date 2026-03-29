@@ -30,7 +30,7 @@ router.post('/callback', asyncHandler(async (req, res) => {
 
   const token = authHeader.slice(7);
 
-  let payload: { userId: string; plan: number; status: number; activeUntil: string };
+  let payload: { userId: string; plan: number; status: number; activeUntil: string; updatedAt?: string };
   try {
     payload = jwt.verify(token, secret) as typeof payload;
   } catch {
@@ -49,6 +49,19 @@ router.post('/callback', asyncHandler(async (req, res) => {
   }
   if (!validatePlanTransition(plan as PlanTier, status as SubStatusType)) {
     throw new ValidationError('Invalid plan/status combination: TRIAL is only valid for PRO');
+  }
+
+  // Reject stale webhooks if updatedAt is provided
+  if (payload.updatedAt && typeof payload.updatedAt === 'string') {
+    const current = await query<{ updated_at: string }>(
+      'SELECT updated_at FROM users WHERE id = $1',
+      [userId],
+    );
+    if (current.rows.length > 0 && current.rows[0].updated_at > payload.updatedAt) {
+      console.warn(`[subscriptions] Stale webhook for user ${userId}: incoming ${payload.updatedAt} < current ${current.rows[0].updated_at}`);
+      res.json({ ok: true, stale: true });
+      return;
+    }
   }
 
   const prevRow = await query<{ plan: number; sub_status: number }>('SELECT plan, sub_status FROM users WHERE id = $1', [userId]);
