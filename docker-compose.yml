@@ -10,25 +10,8 @@ services:
       DATABASE_PATH: /data/openbin.db
       PHOTO_STORAGE_PATH: /data/photos
       BACKUP_PATH: /data/backups
-      CLAMAV_HOST: clamav
     volumes:
       - api_data:/data
-    depends_on:
-      clamav:
-        condition: service_healthy
-
-  clamav:
-    image: clamav/clamav:latest
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "clamdscan", "--ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 120s
-    volumes:
-      - clamav_data:/var/lib/clamav
 
 volumes:
   api_data:
-  clamav_data:

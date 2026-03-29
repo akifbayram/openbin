@@ -15,6 +15,7 @@ beforeAll(() => {
 });
 
 const TABLES = [
+  'email_log',
   'refresh_tokens',
   'scan_history',
   'saved_views',

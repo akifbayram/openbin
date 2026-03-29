@@ -985,3 +985,137 @@ describe('POST /api/bins/:id/photos — viewer restriction', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('PUT /api/bins/:id — visibility changes', () => {
+  it('changes visibility from location to private', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    const res = await request(app)
+      .put(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ visibility: 'private' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.visibility).toBe('private');
+
+    const getRes = await request(app)
+      .get(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(getRes.body.visibility).toBe('private');
+  });
+
+  it('changes visibility from private to location', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    await request(app)
+      .put(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ visibility: 'private' });
+
+    const res = await request(app)
+      .put(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ visibility: 'location' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.visibility).toBe('location');
+  });
+
+  it('viewer cannot change visibility', async () => {
+    const { token: adminToken } = await createTestUser(app);
+    const location = await createTestLocation(app, adminToken);
+    const bin = await createTestBin(app, adminToken, location.id);
+    const { token: viewerToken, user: viewerUser } = await createTestUser(app);
+    await request(app)
+      .post('/api/locations/join')
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ inviteCode: location.invite_code });
+    const { query: dbQuery } = await import('../db.js');
+    await dbQuery(
+      "UPDATE location_members SET role = 'viewer' WHERE location_id = $1 AND user_id = $2",
+      [location.id, viewerUser.id],
+    );
+
+    const res = await request(app)
+      .put(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${viewerToken}`)
+      .send({ visibility: 'private' });
+
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('PUT /api/bins/:id — custom fields', () => {
+  async function setupCustomField(locationId: string, name: string, position: number) {
+    const { generateUuid, query: dbQuery } = await import('../db.js');
+    const id = generateUuid();
+    await dbQuery(
+      'INSERT INTO location_custom_fields (id, location_id, name, position) VALUES ($1, $2, $3, $4)',
+      [id, locationId, name, position],
+    );
+    return id;
+  }
+
+  it('sets custom field values via PUT', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    const fieldId = await setupCustomField(location.id, 'Color', 0);
+
+    const res = await request(app)
+      .put(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ customFields: { [fieldId]: 'Red' } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.custom_fields[fieldId]).toBe('Red');
+  });
+
+  it('replaces existing custom field values', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    const fieldA = await setupCustomField(location.id, 'Color', 0);
+    const fieldB = await setupCustomField(location.id, 'Size', 1);
+
+    await request(app)
+      .put(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ customFields: { [fieldA]: 'Red', [fieldB]: 'Large' } });
+
+    const res = await request(app)
+      .put(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ customFields: { [fieldA]: 'Blue' } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.custom_fields[fieldA]).toBe('Blue');
+    expect(res.body.custom_fields[fieldB]).toBeUndefined();
+  });
+
+  it('GET bin returns custom_fields after PUT', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id);
+
+    const fieldId = await setupCustomField(location.id, 'Material', 0);
+
+    await request(app)
+      .put(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ customFields: { [fieldId]: 'Wood' } });
+
+    const getRes = await request(app)
+      .get(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.custom_fields[fieldId]).toBe('Wood');
+  });
+});

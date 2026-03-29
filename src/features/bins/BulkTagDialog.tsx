@@ -11,6 +11,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
 import { TagInput } from './TagInput';
+import { notifyBinsChanged } from './useBins';
 
 interface BulkTagDialogProps {
   open: boolean;
@@ -47,6 +48,7 @@ export function BulkTagDialog({ open, onOpenChange, binIds, onDone, allTags }: B
       );
       setTags([]);
       onOpenChange(false);
+      notifyBinsChanged();
       onDone();
     } finally {
       setLoading(false);

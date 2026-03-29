@@ -568,3 +568,72 @@ describe('GET /api/auth/status — selfHosted flag', () => {
     expect(res.body.selfHosted).toBe(true);
   });
 });
+
+describe('POST /api/auth/forgot-password', () => {
+  it('returns 200 for existing email', async () => {
+    const { token, user } = await createTestUser(app);
+    // Set an email on the user first
+    await request(app)
+      .put('/api/auth/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ email: 'exists@example.com' });
+
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'exists@example.com' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/If an account/);
+  });
+
+  it('returns 200 for unknown email (no info leak)', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'nobody@example.com' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/If an account/);
+  });
+
+  it('returns 422 for missing email', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({});
+
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 422 for invalid email format', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'not-an-email' });
+
+    expect(res.status).toBe(422);
+  });
+});
+
+describe('Avatar endpoints', () => {
+  it('GET /api/auth/avatar/:userId — 404 when no avatar set', async () => {
+    const { token, user } = await createTestUser(app);
+    const res = await request(app)
+      .get(`/api/auth/avatar/${user.id}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('DELETE /api/auth/avatar — succeeds even without avatar', async () => {
+    const { token } = await createTestUser(app);
+    const res = await request(app)
+      .delete('/api/auth/avatar')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Avatar removed');
+  });
+
+  it('POST /api/auth/avatar — 401 without auth', async () => {
+    const res = await request(app)
+      .post('/api/auth/avatar')
+      .attach('avatar', Buffer.from('fake'), 'test.png');
+    expect(res.status).toBe(401);
+  });
+});
