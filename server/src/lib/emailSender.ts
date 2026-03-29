@@ -2,8 +2,8 @@ import { generateUuid, query } from '../db.js';
 import { config } from './config.js';
 import { sendEmail } from './email.js';
 import {
-  downgradeImpactEmail,
   type DowngradeImpact,
+  downgradeImpactEmail,
   exploreFeaturesEmail,
   passwordResetEmail,
   postTrialEarlyEmail,
