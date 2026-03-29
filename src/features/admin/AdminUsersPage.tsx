@@ -93,6 +93,7 @@ export function AdminUsersPage() {
       <PageHeader title="Admin" back />
 
       {/* Registration — disclosure, collapsed by default */}
+      <div className="flat-card rounded-[var(--radius-lg)] px-3 py-1">
       <Disclosure
         label={
           <span className="flex items-center gap-2">
@@ -117,6 +118,7 @@ export function AdminUsersPage() {
           )}
         </div>
       </Disclosure>
+      </div>
 
       {/* Cloud Metrics — single component for all sizes */}
       {!isSelfHosted && <AdminMetricsSection />}
@@ -143,10 +145,30 @@ export function AdminUsersPage() {
 
       {/* Users table — responsive, single rendering path */}
       {isLoading ? (
-        <div className="flex flex-col gap-1">
+        <div className="flat-card rounded-[var(--radius-lg)] overflow-hidden">
+          <div className="flex items-center gap-3 px-3 py-2.5 bg-[var(--bg-hover)] border-b-2 border-[var(--border-flat)]">
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-3 w-12 hidden lg:block" />
+            <Skeleton className="h-3 w-8" />
+            <Skeleton className="h-3 w-8" />
+            <Skeleton className="h-3 w-10" />
+            <div className="flex-1" />
+            <Skeleton className="h-3 w-14" />
+          </div>
           {Array.from({ length: 8 }, (_, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
-            <Skeleton key={i} className="h-12 w-full" />
+            <div key={i} className="flex items-center gap-3 px-3 py-3 border-b border-[var(--border-subtle)]">
+              <div className="min-w-0 space-y-1">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+              <Skeleton className="h-5 w-12 hidden lg:block" />
+              <Skeleton className="h-5 w-12" />
+              <Skeleton className="h-5 w-10" />
+              <Skeleton className="h-5 w-14" />
+              <div className="flex-1" />
+              <Skeleton className="h-3 w-16" />
+            </div>
           ))}
         </div>
       ) : users.length === 0 ? (

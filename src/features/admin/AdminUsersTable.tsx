@@ -65,10 +65,10 @@ export function AdminUsersTable({
   const tdRight = 'px-3 py-2.5 text-[14px] text-[var(--text-secondary)] text-right tabular-nums';
 
   return (
-    <div className="overflow-x-auto">
+    <div className="flat-card rounded-[var(--radius-lg)] overflow-x-auto">
       <table className="w-full border-collapse text-[14px]">
         <thead>
-          <tr className="border-b-2 border-[var(--border-flat)]">
+          <tr className="border-b-2 border-[var(--border-flat)] bg-[var(--bg-hover)]">
             <Header label="User" column="username" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thBase} />
             <Header label="Email" column="email" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thBase} desktopOnly />
             <th className={thBase}>
@@ -79,7 +79,7 @@ export function AdminUsersTable({
             <Header label="Bins" column="bins" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thRight} defaultDirection="desc" desktopOnly />
             <Header label="Locations" column="locations" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thRight} defaultDirection="desc" desktopOnly />
             <Header label="Storage" column="storage" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thRight} defaultDirection="desc" desktopOnly />
-            <Header label="Created" column="created" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={thBase} />
+            <Header label="Created" column="created" sortColumn={sortColumn} sortDirection={sortDirection} onSort={onSort} className={cn(thBase, 'hidden sm:table-cell')} />
             <th className={thBase} />
           </tr>
         </thead>
@@ -113,7 +113,7 @@ export function AdminUsersTable({
                 <td className={cn('hidden lg:table-cell', tdRight)}>{u.deletedAt ? '—' : u.binCount}</td>
                 <td className={cn('hidden lg:table-cell', tdRight)}>{u.deletedAt ? '—' : u.locationCount}</td>
                 <td className={cn('hidden lg:table-cell', tdRight)}>{u.deletedAt ? '—' : `${u.photoStorageMb} MB`}</td>
-                <td className={tdBase}>
+                <td className={cn(tdBase, 'hidden sm:table-cell')}>
                   <span className="text-[12px] text-[var(--text-muted)] whitespace-nowrap">{new Date(u.createdAt).toLocaleDateString()}</span>
                 </td>
                 <td className={tdBase}>
