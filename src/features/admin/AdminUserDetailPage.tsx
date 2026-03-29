@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -198,8 +198,8 @@ export function AdminUserDetailPage() {
       <div className="page-content">
         <PageHeader title="" back />
         <Card>
+          <CardHeader><Skeleton className="h-5 w-20" /></CardHeader>
           <CardContent>
-            <Skeleton className="h-4 w-20 mb-3" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {Array.from({ length: 6 }, (_, i) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no stable identity
@@ -212,8 +212,8 @@ export function AdminUserDetailPage() {
           </CardContent>
         </Card>
         <Card>
+          <CardHeader><Skeleton className="h-5 w-14" /></CardHeader>
           <CardContent>
-            <Skeleton className="h-4 w-14 mb-3" />
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               {Array.from({ length: 6 }, (_, i) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no stable identity
@@ -246,8 +246,10 @@ export function AdminUserDetailPage() {
 
       {/* Identity */}
       <Card>
+        <CardHeader>
+          <CardTitle>Identity</CardTitle>
+        </CardHeader>
         <CardContent>
-          <p className="text-[15px] font-semibold text-[var(--text-primary)] mb-3">Identity</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Username</span>
@@ -290,8 +292,10 @@ export function AdminUserDetailPage() {
 
       {/* Stats */}
       <Card>
+        <CardHeader>
+          <CardTitle>Stats</CardTitle>
+        </CardHeader>
         <CardContent>
-          <p className="text-[15px] font-semibold text-[var(--text-primary)] mb-3">Stats</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             <StatItem label="Locations" value={detail.stats.locationCount} />
             <StatItem label="Bins" value={detail.stats.binCount} />
@@ -305,8 +309,10 @@ export function AdminUserDetailPage() {
 
       {/* Actions */}
       <Card>
+        <CardHeader>
+          <CardTitle>Actions</CardTitle>
+        </CardHeader>
         <CardContent>
-          <p className="text-[15px] font-semibold text-[var(--text-primary)] mb-3">Actions</p>
           <div className="flex flex-col divide-y divide-[var(--border-flat)]">
             <div className="flex items-center justify-between py-3 first:pt-0">
               <span className="text-[14px] text-[var(--text-secondary)]">Admin role</span>
