@@ -286,12 +286,12 @@ router.post('/refresh', asyncHandler(async (req, res) => {
     throw new UnauthorizedError('Invalid or expired refresh token');
   }
 
-  // Look up user for new access token
-  const userResult = await query<{ id: string; username: string }>(
-    'SELECT id, username FROM users WHERE id = $1',
+  // Look up user for new access token (reject soft-deleted users)
+  const userResult = await query<{ id: string; username: string; deleted_at: string | null }>(
+    'SELECT id, username, deleted_at FROM users WHERE id = $1',
     [rotated.userId],
   );
-  if (userResult.rows.length === 0) {
+  if (userResult.rows.length === 0 || userResult.rows[0].deleted_at !== null) {
     clearAuthCookies(res);
     throw new UnauthorizedError('User not found');
   }

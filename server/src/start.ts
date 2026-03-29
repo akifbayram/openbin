@@ -6,6 +6,7 @@ import { pushLog } from './lib/logBuffer.js';
 import { cleanupOrphanPhotos } from './lib/photoCleanup.js';
 import { purgeExpiredRefreshTokens } from './lib/refreshTokens.js';
 import { startTrialChecker } from './lib/trialChecker.js';
+import { startUserCleanupJob } from './lib/userCleanup.js';
 
 const app = createApp();
 
@@ -30,6 +31,7 @@ app.listen(config.port, () => {
   setInterval(() => purgeExpiredRefreshTokens().catch(() => {}), 24 * 60 * 60 * 1000);
 
   startTrialChecker();
+  startUserCleanupJob();
 
   // Orphan photo cleanup — 30s after startup, then every 6 hours
   setTimeout(() => {

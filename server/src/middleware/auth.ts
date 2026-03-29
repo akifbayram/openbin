@@ -50,6 +50,16 @@ export function tryAuthenticate(req: Request, _res: Response, next: NextFunction
   next();
 }
 
+function checkSoftDeleted(userId: string): Promise<boolean> {
+  return query<{ deleted_at: string | null }>(
+    'SELECT deleted_at FROM users WHERE id = $1',
+    [userId],
+  ).then((result) => {
+    if (result.rows.length === 0) return true;
+    return result.rows[0].deleted_at !== null;
+  });
+}
+
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   if (req.user) { next(); return; }
 
@@ -63,7 +73,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   if (token.startsWith('sk_openbin_')) {
     const keyHash = crypto.createHash('sha256').update(token).digest('hex');
     query(
-      `SELECT ak.id AS key_id, u.id, u.username
+      `SELECT ak.id AS key_id, u.id, u.username, u.deleted_at
        FROM api_keys ak
        JOIN users u ON u.id = ak.user_id
        WHERE ak.key_hash = $1 AND ak.revoked_at IS NULL`,
@@ -73,7 +83,11 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
         res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid API key' });
         return;
       }
-      const row = result.rows[0] as { key_id: string; id: string; username: string };
+      const row = result.rows[0] as { key_id: string; id: string; username: string; deleted_at: string | null };
+      if (row.deleted_at) {
+        res.status(401).json({ error: 'ACCOUNT_DELETED', message: 'This account has been deleted' });
+        return;
+      }
       req.user = { id: row.id, username: row.username };
       req.authMethod = 'api_key';
       req.apiKeyId = row.key_id;
@@ -90,9 +104,15 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   // JWT path
   const user = verifyJwt(token);
   if (user) {
-    req.user = user;
-    req.authMethod = 'jwt';
-    next();
+    checkSoftDeleted(user.id).then((deleted) => {
+      if (deleted) {
+        res.status(401).json({ error: 'ACCOUNT_DELETED', message: 'This account has been deleted' });
+        return;
+      }
+      req.user = user;
+      req.authMethod = 'jwt';
+      next();
+    }).catch(next);
   } else {
     res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid token' });
   }

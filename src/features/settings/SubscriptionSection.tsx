@@ -1,10 +1,35 @@
 import { ArrowUpRight, Clock, CreditCard } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { useToast } from '@/components/ui/toast';
+import { apiFetch } from '@/lib/api';
 import { usePlan } from '@/lib/usePlan';
+import { cn } from '@/lib/utils';
+
+interface PlanUsage {
+  locationCount: number;
+  photoStorageMb: number;
+  memberCounts: Record<string, number>;
+}
+
+function UsageBar({ label, current, max }: { label: string; current: number; max: number }) {
+  const pct = max > 0 ? Math.min((current / max) * 100, 100) : 0;
+  const color = pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-emerald-500';
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-[13px]">
+        <span className="text-[var(--text-secondary)]">{label}</span>
+        <span className="text-[var(--text-tertiary)]">{current} / {max}</span>
+      </div>
+      <div className="h-2 rounded-[var(--radius-xs)] bg-[var(--bg-input)] overflow-hidden">
+        <div className={cn('h-full rounded-[var(--radius-xs)] transition-all', color)} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
 
 export function SubscriptionSection() {
   const { planInfo, isPro, isSelfHosted, isLocked, refresh } = usePlan();
@@ -60,6 +85,13 @@ export function SubscriptionSection() {
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [refresh]);
+
+  const [usage, setUsage] = useState<PlanUsage | null>(null);
+
+  useEffect(() => {
+    if (isSelfHosted) return;
+    apiFetch<PlanUsage>('/api/plan/usage').then(setUsage).catch(() => {});
+  }, [isSelfHosted]);
 
   // Don't render in self-hosted mode
   if (isSelfHosted) return null;
@@ -142,6 +174,30 @@ export function SubscriptionSection() {
             <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] bg-amber-500/10 text-amber-600 dark:text-amber-400">
               <Clock className="h-3.5 w-3.5" />
               {`${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining in your trial`}
+            </div>
+          )}
+
+          {/* Usage */}
+          {usage && (planInfo.features.maxLocations !== null || planInfo.features.maxPhotoStorageMb !== null || planInfo.features.maxMembersPerLocation !== null) && (
+            <div className="space-y-2 pt-1">
+              <p className="text-[13px] font-semibold text-[var(--text-primary)]">Usage</p>
+              {planInfo.features.maxLocations !== null && (
+                <UsageBar label="Locations" current={usage.locationCount} max={planInfo.features.maxLocations} />
+              )}
+              {planInfo.features.maxPhotoStorageMb !== null && (
+                <UsageBar
+                  label={`Photo Storage (${usage.photoStorageMb.toFixed(1)} MB / ${planInfo.features.maxPhotoStorageMb} MB)`}
+                  current={usage.photoStorageMb}
+                  max={planInfo.features.maxPhotoStorageMb}
+                />
+              )}
+              {planInfo.features.maxMembersPerLocation !== null && (() => {
+                const maxMembers = Math.max(0, ...Object.values(usage.memberCounts));
+                const limit = planInfo.features.maxMembersPerLocation ?? 0;
+                return (
+                  <UsageBar label="Members per location" current={maxMembers} max={limit} />
+                );
+              })()}
             </div>
           )}
         </div>

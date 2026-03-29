@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   sub_status         INTEGER NOT NULL DEFAULT 1,
   active_until       TEXT,
   is_admin           INTEGER NOT NULL DEFAULT 0,
+  deleted_at         TEXT,
   created_at         TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
 );
