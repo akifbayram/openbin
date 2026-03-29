@@ -7,32 +7,30 @@ import { useToast } from '@/components/ui/toast';
 import { apiFetch } from '@/lib/api';
 import { usePlan } from '@/lib/usePlan';
 import { cn, focusRing } from '@/lib/utils';
-
-interface PlanUsage {
-  locationCount: number;
-  photoStorageMb: number;
-  memberCounts: Record<string, number>;
-}
+import type { PlanUsage } from '@/types';
 
 function UsageBar({ label, current, max }: { label: string; current: number; max: number }) {
   const pct = max > 0 ? Math.min((current / max) * 100, 100) : 0;
-  const color = pct > 90 ? 'bg-[var(--destructive)]' : pct > 70 ? 'bg-[var(--color-warning)]' : 'bg-[var(--color-success)]';
+  const isOver = current > max;
+  const color = isOver ? 'bg-[var(--destructive)]' : pct > 90 ? 'bg-[var(--destructive)]' : pct > 70 ? 'bg-[var(--color-warning)]' : 'bg-[var(--color-success)]';
 
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-[13px]">
         <span className="text-[var(--text-secondary)]">{label}</span>
-        <span className="text-[var(--text-tertiary)]">{current} / {max}</span>
+        <span className={cn('text-[var(--text-tertiary)]', isOver && 'text-[var(--destructive)] font-semibold')}>
+          {current} / {max}{isOver && ' — Over limit'}
+        </span>
       </div>
       <div className="h-2 rounded-[var(--radius-xs)] bg-[var(--bg-input)] overflow-hidden" role="progressbar" aria-valuenow={current} aria-valuemin={0} aria-valuemax={max} aria-label={label}>
-        <div className={cn('h-full rounded-[var(--radius-xs)] transition-all', color)} style={{ width: `${pct}%` }} />
+        <div className={cn('h-full rounded-[var(--radius-xs)] transition-all', color)} style={{ width: `${Math.min(pct, 100)}%` }} />
       </div>
     </div>
   );
 }
 
 export function SubscriptionSection() {
-  const { planInfo, isPro, isSelfHosted, isLocked, refresh } = usePlan();
+  const { planInfo, isPro, isLite, isSelfHosted, isLocked, refresh } = usePlan();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const handledRef = useRef(false);
@@ -163,11 +161,31 @@ export function SubscriptionSection() {
             </div>
           )}
 
+          {/* Lite entitlements */}
+          {isLite && !isLocked && planInfo.status === 'active' && (
+            <ul className="flex flex-col gap-0.5 text-[13px] text-[var(--text-secondary)] px-1">
+              {planInfo.features.maxLocations !== null && (
+                <li>{planInfo.features.maxLocations} {planInfo.features.maxLocations === 1 ? 'location' : 'locations'}</li>
+              )}
+              {planInfo.features.maxPhotoStorageMb !== null && (
+                <li>{planInfo.features.maxPhotoStorageMb} MB photo storage</li>
+              )}
+              <li>Unlimited bins</li>
+              {planInfo.features.maxMembersPerLocation !== null && (
+                <li>{planInfo.features.maxMembersPerLocation} {planInfo.features.maxMembersPerLocation === 1 ? 'member' : 'members'} per location</li>
+              )}
+            </ul>
+          )}
+
           {/* Trial/expiry info */}
           {isLocked && (
             <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] bg-[var(--destructive-soft)] text-[var(--destructive)]">
               <Clock className="h-3.5 w-3.5" />
-              Your trial has ended. Subscribe to continue using OpenBin.
+              {planInfo.previousSubStatus === 'trial'
+                ? 'Your trial has ended. Subscribe to continue using OpenBin.'
+                : planInfo.previousSubStatus === 'active'
+                  ? 'Your subscription has expired. Resubscribe to continue using OpenBin.'
+                  : 'Your plan is inactive. Subscribe to continue using OpenBin.'}
             </div>
           )}
           {!isLocked && isTrialing && daysRemaining !== null && (
