@@ -9,7 +9,7 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '.
 import { notifyManagerUserUpdate } from '../lib/managerWebhook.js';
 import { getCloudMetrics } from '../lib/metrics.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
-import { isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
+import { invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
 import { invalidatePlanRateLimit, metricsLimiter } from '../lib/rateLimiters.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, invalidateDeletedCache } from '../middleware/auth.js';
@@ -311,6 +311,7 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
       ...(typeof subStatus === 'number' ? { status: subStatus } : {}),
       ...(activeUntil !== undefined ? { activeUntil: activeUntil || null } : {}),
     });
+    invalidateOverLimitCache(targetId);
   }
 
   const { password: _, ...safeBody } = req.body;
