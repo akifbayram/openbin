@@ -7,6 +7,7 @@ import { cleanupOrphanPhotos } from './lib/photoCleanup.js';
 import { purgeExpiredRefreshTokens } from './lib/refreshTokens.js';
 import { startTrialChecker } from './lib/trialChecker.js';
 import { startUserCleanupJob } from './lib/userCleanup.js';
+import { startWebhookOutboxProcessor } from './lib/webhookOutbox.js';
 
 const app = createApp();
 
@@ -38,6 +39,7 @@ app.listen(config.port, () => {
 
   startTrialChecker();
   startUserCleanupJob();
+  startWebhookOutboxProcessor();
 
   // Orphan photo cleanup — 30s after startup, then every 6 hours
   setTimeout(() => {

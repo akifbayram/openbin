@@ -1,25 +1,14 @@
-import jwt from 'jsonwebtoken';
 import { getDb } from '../db.js';
 import { config } from './config.js';
+import { enqueueWebhook } from './webhookOutbox.js';
 
 function sendManagerRequest(endpoint: string, payload: Record<string, unknown>, errorTag: string): void {
   if (!config.managerUrl || config.selfHosted) return;
-
   if (!config.subscriptionJwtSecret) {
     console.warn(`[managerWebhook] ${errorTag}: SUBSCRIPTION_JWT_SECRET not set, skipping`);
     return;
   }
-
-  const secret = config.subscriptionJwtSecret;
-  const token = jwt.sign(payload, secret, { algorithm: 'HS256', expiresIn: '5m' });
-
-  fetch(`${config.managerUrl}${endpoint}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token }),
-  }).catch((err) => {
-    console.error(`[managerWebhook] ${errorTag}:`, err);
-  });
+  enqueueWebhook(endpoint, payload);
 }
 
 interface NewUserPayload {
