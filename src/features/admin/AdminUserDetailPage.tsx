@@ -26,7 +26,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import { capitalize, deleteUser, regenerateApiKey, sendPasswordReset, statusVariant, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
 
 function StatItem({ label, value }: { label: string; value: string | number }) {
@@ -76,7 +76,7 @@ export function AdminUserDetailPage() {
       showToast({ message: 'Active until updated', variant: 'success' });
       refresh();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to update active until', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to update active until'), variant: 'error' });
     }
   }, [detail, activeUntilInput, showToast, refresh]);
 
@@ -88,7 +88,7 @@ export function AdminUserDetailPage() {
       refresh();
       refreshAdminCount();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to update user', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to update user'), variant: 'error' });
     }
   }, [detail, showToast, refresh, refreshAdminCount]);
 
@@ -99,7 +99,7 @@ export function AdminUserDetailPage() {
       showToast({ message: `User ${detail.username} deleted`, variant: 'success' });
       navigate('/admin/users');
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete user', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to delete user'), variant: 'error' });
     }
   }, [detail, showToast, navigate]);
 
@@ -115,7 +115,7 @@ export function AdminUserDetailPage() {
       showToast({ message: `Plan changed to ${pendingPlan}`, variant: 'success' });
       refresh();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to update plan', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to update plan'), variant: 'error' });
     } finally {
       setPendingPlan(null);
     }
@@ -134,7 +134,7 @@ export function AdminUserDetailPage() {
       showToast({ message: `Status changed to ${pendingStatus}`, variant: 'success' });
       refresh();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to update status', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to update status'), variant: 'error' });
     } finally {
       setPendingStatus(null);
     }
@@ -161,7 +161,7 @@ export function AdminUserDetailPage() {
       refresh();
       setEditOpen(false);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to update user', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to update user'), variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -174,7 +174,7 @@ export function AdminUserDetailPage() {
       showToast({ message: `New API key: ${result.keyPrefix}...`, variant: 'success' });
       refresh();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to regenerate API key', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to regenerate API key'), variant: 'error' });
     } finally {
       setRegenKeyOpen(false);
     }
@@ -186,7 +186,7 @@ export function AdminUserDetailPage() {
       await sendPasswordReset(detail.id);
       showToast({ message: 'Password reset email sent', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to send password reset', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to send password reset'), variant: 'error' });
     }
   }, [detail, showToast]);
 
@@ -248,6 +248,12 @@ export function AdminUserDetailPage() {
       <Card>
         <CardHeader>
           <CardTitle>Identity</CardTitle>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {detail.deletedAt && <Badge variant="destructive">Deleted</Badge>}
+            {detail.isAdmin && <Badge variant="default">Admin</Badge>}
+            <Badge variant="secondary">{capitalize(detail.plan)}</Badge>
+            <Badge variant={statusVariant(detail.status)}>{capitalize(detail.status)}</Badge>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -262,15 +268,6 @@ export function AdminUserDetailPage() {
             <div>
               <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Email</span>
               <p className="text-[15px] text-[var(--text-primary)]">{detail.email || '—'}</p>
-            </div>
-            <div>
-              <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Status</span>
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                {detail.deletedAt && <Badge variant="destructive">Deleted</Badge>}
-                {detail.isAdmin && <Badge variant="default">Admin</Badge>}
-                <Badge variant="secondary">{capitalize(detail.plan)}</Badge>
-                <Badge variant={statusVariant(detail.status)}>{capitalize(detail.status)}</Badge>
-              </div>
             </div>
             {!planInfo.selfHosted && (
               <div>

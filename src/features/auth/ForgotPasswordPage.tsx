@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/toast';
 import { apiFetch } from '@/lib/api';
 import { useAppSettings } from '@/lib/appSettings';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
+import { getErrorMessage } from '@/lib/utils';
 
 export function ForgotPasswordPage() {
   const { showToast } = useToast();
@@ -32,7 +33,7 @@ export function ForgotPasswordPage() {
       setSubmitted(true);
     } catch (err) {
       showToast({
-        message: err instanceof Error ? err.message : 'Something went wrong',
+        message: getErrorMessage(err, 'Something went wrong'),
         variant: 'error',
       });
     } finally {

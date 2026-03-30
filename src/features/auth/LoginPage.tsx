@@ -11,6 +11,7 @@ import { apiFetch } from '@/lib/api';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
+import { getErrorMessage } from '@/lib/utils';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -69,7 +70,7 @@ export function LoginPage() {
       navigate('/');
     } catch (err) {
       showToast({
-        message: err instanceof Error ? err.message : 'Login failed',
+        message: getErrorMessage(err, 'Login failed'),
         variant: 'error',
       });
     } finally {

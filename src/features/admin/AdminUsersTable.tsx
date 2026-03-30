@@ -76,7 +76,7 @@ export function AdminUsersTable({
             </div>
             <div className="hidden lg:block w-40 text-[14px] text-[var(--text-secondary)] truncate">{u.email || '—'}</div>
             <div className="w-16 text-[14px]">
-              {u.isAdmin ? <Badge variant="default" className="text-[11px]">Admin</Badge> : <span className="text-[var(--text-muted)]">—</span>}
+              {u.isAdmin ? <Badge variant="default" className="text-[11px]">Admin</Badge> : <span className="text-[var(--text-tertiary)]">—</span>}
             </div>
             <div className="w-16 text-[14px]">
               <Badge variant="secondary" className="text-[11px]">{capitalize(u.plan)}</Badge>
@@ -91,7 +91,7 @@ export function AdminUsersTable({
             <div className="hidden lg:block w-14 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : u.locationCount}</div>
             <div className="hidden lg:block w-20 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : `${u.photoStorageMb} MB`}</div>
             <div className="hidden sm:block w-24">
-              <span className="text-[12px] text-[var(--text-muted)] whitespace-nowrap">{new Date(u.createdAt).toLocaleDateString()}</span>
+              <span className="text-[12px] text-[var(--text-tertiary)] whitespace-nowrap">{new Date(u.createdAt).toLocaleDateString()}</span>
             </div>
             <div className="w-9 flex justify-center">
               <Button

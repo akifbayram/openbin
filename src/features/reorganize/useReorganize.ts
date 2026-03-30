@@ -3,6 +3,7 @@ import { useAiStream } from '@/features/ai/useAiStream';
 import { addBin, deleteBin } from '@/features/bins/useBins';
 import { useAuth } from '@/lib/auth';
 import { Events, notify } from '@/lib/eventBus';
+import { getErrorMessage } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { type PartialReorgResult, parsePartialReorg } from './parsePartialReorg';
 
@@ -77,7 +78,7 @@ export function useReorganize() {
         notify(Events.BINS);
         notify(Events.AREAS);
       } catch (err) {
-        setApplyError(err instanceof Error ? err.message : 'Failed to apply reorganization');
+        setApplyError(getErrorMessage(err, 'Failed to apply reorganization'));
       } finally {
         setIsApplying(false);
       }

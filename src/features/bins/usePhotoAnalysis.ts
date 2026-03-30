@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
+import { getErrorMessage } from '@/lib/utils';
 import { compressImage } from '@/features/photos/compressImage';
 import type { AiSuggestions } from '@/types';
 
@@ -76,7 +77,7 @@ export function usePhotoAnalysis({
         setSuggestions(result);
       }
     } catch (err) {
-      setAnalyzeError(err instanceof Error ? err.message : 'Failed to analyze photos');
+      setAnalyzeError(getErrorMessage(err, 'Failed to analyze photos'));
     } finally {
       setAnalyzing(false);
     }

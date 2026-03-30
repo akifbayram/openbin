@@ -20,7 +20,7 @@ import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import { AreaCard, CreateAreaCard, UnassignedAreaCard } from './AreaCard';
 import { CreateAreaDialog, DeleteAreaDialog } from './AreaDialogs';
 import { LocationSettingsMenu } from './LocationSettingsMenu';
@@ -119,7 +119,7 @@ export function AreasPage() {
       }
       showToast({ message: 'Left location', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to leave', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to leave'), variant: 'error' });
     }
   }
 

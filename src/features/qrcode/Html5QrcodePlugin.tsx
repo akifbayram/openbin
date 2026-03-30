@@ -1,6 +1,7 @@
 import './html5qrcode-overrides.css';
 import type { Html5Qrcode } from 'html5-qrcode';
 import { useEffect, useRef, useState } from 'react';
+import { getErrorMessage } from '@/lib/utils';
 
 interface Html5QrcodePluginProps {
   paused?: boolean;
@@ -37,7 +38,7 @@ export function Html5QrcodePlugin({ paused, onScanSuccess, onScanFailure }: Html
         )
         .catch((err) => {
           if (!cancelled) {
-            setError(err instanceof Error ? err.message : 'Failed to start camera');
+            setError(getErrorMessage(err, 'Failed to start camera'));
           }
         });
     });

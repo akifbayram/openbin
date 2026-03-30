@@ -7,7 +7,7 @@ const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLI
       <input
         type={type}
         autoComplete="off"
-        className={cn('flex h-11', inputBase, 'focus-visible:ring-2 focus-visible:ring-[var(--accent)]', className)}
+        className={cn('flex h-11', inputBase, 'focus-visible:ring-2 focus-visible:ring-[var(--accent)] aria-[invalid=true]:border-[var(--destructive)] aria-[invalid=true]:focus-visible:ring-[var(--destructive)]', className)}
         ref={ref}
         {...props}
       />

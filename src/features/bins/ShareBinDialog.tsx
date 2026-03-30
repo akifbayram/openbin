@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useToast } from '@/components/ui/toast';
 import { UpgradePrompt } from '@/components/ui/upgrade-prompt';
 import { usePlan } from '@/lib/usePlan';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import { type BinShare, createShare, revokeShare, useBinShare } from './useBinShare';
 
 interface ShareBinDialogProps {
@@ -30,7 +30,7 @@ export function ShareBinDialog({ binId, open, onOpenChange }: ShareBinDialogProp
       const result = await createShare(binId, visibility);
       setShare(result);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to create share link', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to create share link'), variant: 'error' });
     } finally {
       setCreating(false);
     }
@@ -42,7 +42,7 @@ export function ShareBinDialog({ binId, open, onOpenChange }: ShareBinDialogProp
       await revokeShare(binId);
       setShare(null);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to revoke share link', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to revoke share link'), variant: 'error' });
     } finally {
       setRevoking(false);
     }

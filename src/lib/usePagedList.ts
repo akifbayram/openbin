@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { getErrorMessage } from '@/lib/utils';
 import type { EventName } from '@/lib/eventBus';
 import { useRefreshOn } from '@/lib/eventBus';
 import type { ListResponse } from '@/types';
@@ -66,7 +67,7 @@ export function usePagedList<T>(
         if (generation !== generationRef.current) return;
         setItems([]);
         setTotalCount(0);
-        setError(err instanceof Error ? err.message : 'Failed to load');
+        setError(getErrorMessage(err, 'Failed to load'));
       })
       .finally(() => {
         if (generation !== generationRef.current) return;

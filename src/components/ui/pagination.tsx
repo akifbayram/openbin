@@ -125,7 +125,7 @@ export function Pagination({
               className={cn(
                 'flex items-center justify-center h-11 w-11 rounded-[var(--radius-md)] text-sm transition-colors',
                 currentPage <= 1
-                  ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
+                  ? 'text-[var(--text-tertiary)] cursor-not-allowed opacity-40'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
               )}
             >
@@ -138,7 +138,7 @@ export function Pagination({
             {pages.map((p, i) =>
               p === 'ellipsis' ? (
                 // biome-ignore lint/suspicious/noArrayIndexKey: ellipsis separators have no stable identity
-                <span key={`e${i}`} aria-hidden="true" className="flex items-center justify-center h-11 w-11 text-sm text-[var(--text-muted)]">
+                <span key={`e${i}`} aria-hidden="true" className="flex items-center justify-center h-11 w-11 text-sm text-[var(--text-tertiary)]">
                   &hellip;
                 </span>
               ) : (
@@ -177,7 +177,7 @@ export function Pagination({
               className={cn(
                 'flex items-center justify-center h-11 w-11 rounded-[var(--radius-md)] text-sm transition-colors',
                 currentPage >= totalPages
-                  ? 'text-[var(--text-muted)] cursor-not-allowed opacity-40'
+                  ? 'text-[var(--text-tertiary)] cursor-not-allowed opacity-40'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]',
               )}
             >
@@ -189,7 +189,7 @@ export function Pagination({
 
       {/* Summary + page size */}
       {showFooter && (
-        <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+        <div className="flex items-center gap-3 text-xs text-[var(--text-tertiary)]">
           {showSummary && (
             <span>
               Showing {rangeStart}&ndash;{rangeEnd} of {totalCount} {itemLabel}

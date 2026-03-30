@@ -12,7 +12,7 @@ import { useLocationList } from '@/features/locations/useLocations';
 import { compressImage } from '@/features/photos/compressImage';
 import { apiFetch, getAvatarUrl } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import type { User } from '@/types';
 
 export function ProfilePage() {
@@ -56,7 +56,7 @@ export function ProfilePage() {
       updateUser(updated);
       showToast({ message: 'Profile updated', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to update profile', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to update profile'), variant: 'error' });
     } finally {
       setSavingProfile(false);
     }
@@ -83,7 +83,7 @@ export function ProfilePage() {
       setConfirmPassword('');
       showToast({ message: 'Password updated', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to change password', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to change password'), variant: 'error' });
     } finally {
       setSavingPassword(false);
     }
@@ -103,7 +103,7 @@ export function ProfilePage() {
       if (user) updateUser({ ...user, avatarUrl: result.avatarUrl });
       showToast({ message: 'Avatar updated', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to upload avatar', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to upload avatar'), variant: 'error' });
     } finally {
       setUploadingAvatar(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -117,7 +117,7 @@ export function ProfilePage() {
       if (user) updateUser({ ...user, avatarUrl: null });
       showToast({ message: 'Avatar removed', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to remove avatar', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to remove avatar'), variant: 'error' });
     } finally {
       setUploadingAvatar(false);
     }

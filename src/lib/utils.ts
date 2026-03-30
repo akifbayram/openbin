@@ -16,6 +16,13 @@ export function haptic(pattern: number | number[] = 10) {
   }
 }
 
+/** Extract a human-readable message from an unknown catch value. */
+export function getErrorMessage(err: unknown, fallback = 'Something went wrong'): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return fallback;
+}
+
 // ── Shared UI class constants ──────────────────────────────────────
 
 /** Focus ring used on buttons, switches, checkboxes, and similar interactive controls. */

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { getErrorMessage } from '@/lib/utils';
 import type { EventName } from '@/lib/eventBus';
 import { useRefreshOn } from '@/lib/eventBus';
 import type { ListResponse } from '@/types';
@@ -67,7 +68,7 @@ export function usePaginatedList<T>(
         if (generation !== generationRef.current) return;
         setItems([]);
         setTotalCount(0);
-        setError(err instanceof Error ? err.message : 'Failed to load');
+        setError(getErrorMessage(err, 'Failed to load'));
       })
       .finally(() => {
         if (generation !== generationRef.current) return;
@@ -100,7 +101,7 @@ export function usePaginatedList<T>(
       })
       .catch((err) => {
         if (generation !== generationRef.current) return;
-        setError(err instanceof Error ? err.message : 'Failed to load more');
+        setError(getErrorMessage(err, 'Failed to load more'));
       })
       .finally(() => {
         isLoadingMoreRef.current = false;

@@ -18,7 +18,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/lib/auth';
 import { usePopover } from '@/lib/usePopover';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import { changeMemberRole, leaveLocation, regenerateInvite, removeMember, resetMemberPassword, useLocationList, useLocationMembers } from './useLocations';
 
 interface LocationMembersDialogProps {
@@ -57,7 +57,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
       await regenerateInvite(locationId);
       showToast({ message: 'Invite code regenerated', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to regenerate', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to regenerate'), variant: 'error' });
     } finally {
       setRegenerating(false);
     }
@@ -68,7 +68,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
       await removeMember(locationId, userId);
       showToast({ message: 'Member removed', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to remove member', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to remove member'), variant: 'error' });
     }
   }
 
@@ -77,7 +77,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
       await changeMemberRole(locationId, userId, newRole);
       showToast({ message: `Role updated to ${newRole}`, variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to change role', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to change role'), variant: 'error' });
     }
   }
 
@@ -92,7 +92,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
       onOpenChange(false);
       showToast({ message: 'Left location', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to leave', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to leave'), variant: 'error' });
     }
   }
 
@@ -102,7 +102,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
       setResetToken({ token, userId });
       showToast({ message: 'Reset link generated', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to generate reset link', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to generate reset link'), variant: 'error' });
     }
   }
 

@@ -14,6 +14,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
+import { getErrorMessage } from '@/lib/utils';
 
 interface DangerZoneSectionProps {
   deleteAccount: (password: string) => Promise<void>;
@@ -32,7 +33,7 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
     try {
       await deleteAccount(deletePassword);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete account', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to delete account'), variant: 'error' });
       setDeleting(false);
     }
   }

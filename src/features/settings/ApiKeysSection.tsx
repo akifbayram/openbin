@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
+import { getErrorMessage } from '@/lib/utils';
 import { createApiKey, revokeApiKey, useApiKeys } from './useApiKeys';
 
 function formatDate(iso: string | null): string {
@@ -45,7 +46,7 @@ export function ApiKeysSection() {
       setNewKey(result.key);
       setKeyName('');
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to create API key', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to create API key'), variant: 'error' });
     } finally {
       setCreating(false);
     }
@@ -59,7 +60,7 @@ export function ApiKeysSection() {
       showToast({ message: 'API key revoked', variant: 'success' });
       setRevokeId(null);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to revoke API key', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to revoke API key'), variant: 'error' });
     } finally {
       setRevoking(false);
     }

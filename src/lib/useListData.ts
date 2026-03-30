@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { getErrorMessage } from '@/lib/utils';
 import type { EventName } from '@/lib/eventBus';
 import { notify, useRefreshOn } from '@/lib/eventBus';
 import type { ListResponse } from '@/types';
@@ -43,7 +44,7 @@ export function useListData<T, R = T>(
       .catch((err) => {
         if (!cancelled) {
           setData([]);
-          setError(err instanceof Error ? err.message : 'Failed to load');
+          setError(getErrorMessage(err, 'Failed to load'));
         }
       })
       .finally(() => {

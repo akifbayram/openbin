@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import { AI_PROVIDERS, KEY_PLACEHOLDERS, MODEL_HINTS } from './aiConstants';
 import { useAiProviderSetup } from './useAiProviderSetup';
 import { deleteAiSettings, saveAiSettings, testAiConnection, useAiSettings } from './useAiSettings';
@@ -86,7 +86,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setup.setTestResult('success');
     } catch (err) {
       setup.setTestResult('error');
-      const base = err instanceof Error ? err.message : 'Connection failed';
+      const base = getErrorMessage(err, 'Connection failed');
       setTestError(setup.model ? `${base} (model: ${setup.model})` : base);
     }
   }
@@ -112,7 +112,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setSettings(saved);
       showToast({ message: 'AI settings saved', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to save', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to save'), variant: 'error' });
     }
   }
 

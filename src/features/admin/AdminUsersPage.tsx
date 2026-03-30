@@ -20,6 +20,7 @@ import { Table, TableHeader } from '@/components/ui/table';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
+import { getErrorMessage } from '@/lib/utils';
 import { AdminMetricsSection } from './AdminMetricsSection';
 import { AdminUsersTable } from './AdminUsersTable';
 import { type AdminUser, useAdminUsers } from './useAdminUsers';
@@ -64,7 +65,7 @@ export function AdminUsersPage() {
       showToast({ message: `User ${deleteTarget.username} deleted`, variant: 'success' });
       setDeleteTarget(null);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete user', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to delete user'), variant: 'error' });
     }
   }, [deleteTarget, deleteUser, showToast]);
 
@@ -73,7 +74,7 @@ export function AdminUsersPage() {
       await updateRegistrationMode(mode as 'open' | 'invite' | 'closed');
       showToast({ message: `Registration mode set to ${mode}`, variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to update registration mode', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to update registration mode'), variant: 'error' });
     }
   }, [updateRegistrationMode, showToast]);
 
@@ -91,7 +92,7 @@ export function AdminUsersPage() {
       setCreateOpen(false);
       setCreateForm({ username: '', password: '', displayName: '', email: '', isAdmin: false });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to create user', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to create user'), variant: 'error' });
     } finally {
       setCreateLoading(false);
     }

@@ -12,7 +12,7 @@ export function MenuButton({ className }: { className?: string }) {
       onClick={openDrawer}
       aria-label="Open navigation"
       className={cn(
-        'lg:hidden print-hide flex flex-col justify-center items-center gap-[5px] w-10 h-10 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] transition-colors shrink-0',
+        'lg:hidden print-hide flex flex-col justify-center items-center gap-[5px] w-11 h-11 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] transition-colors shrink-0',
         className,
       )}
     >

@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { addPhoto } from '@/features/photos/usePhotos';
+import { getErrorMessage } from '@/lib/utils';
 
 export type PhotoStatus = 'pending' | 'uploading' | 'uploaded' | 'failed';
 
@@ -58,7 +59,7 @@ export function useCapture(binId?: string) {
               ? {
                   ...p,
                   status: 'failed' as const,
-                  error: err instanceof Error ? err.message : 'Upload failed',
+                  error: getErrorMessage(err, 'Upload failed'),
                 }
               : p,
           ),

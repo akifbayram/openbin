@@ -1,14 +1,15 @@
 import { AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { useAdminMetrics } from './useAdminMetrics';
 
-function MetricCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+function MetricCard({ label, value, sub, large }: { label: string; value: string | number; sub?: string; large?: boolean }) {
   return (
-    <div className="flex flex-col gap-0.5 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+    <div className={cn('flex flex-col gap-0.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)]', large ? 'p-4' : 'p-3')}>
       <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">{label}</span>
-      <span className="text-[20px] font-bold text-[var(--text-primary)] leading-tight">{value}</span>
-      {sub && <span className="text-[12px] text-[var(--text-muted)]">{sub}</span>}
+      <span className={cn('font-bold text-[var(--text-primary)] leading-tight tabular-nums', large ? 'text-[28px]' : 'text-[20px]')}>{value}</span>
+      {sub && <span className="text-[12px] text-[var(--text-tertiary)]">{sub}</span>}
     </div>
   );
 }
@@ -71,11 +72,11 @@ export function AdminMetricsSection() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            <MetricCard label="Total Users" value={metrics.plans.total} />
+            <MetricCard label="Total Users" value={metrics.plans.total} large />
             <MetricCard label="Pro Active" value={metrics.plans.proActive} />
             <MetricCard label="Pro Trial" value={metrics.plans.proTrial} />
             <MetricCard label="Lite Active" value={metrics.plans.liteActive} />
-            <MetricCard label="Trial Conv." value={`${metrics.trialConversion.rate}%`} sub={`${metrics.trialConversion.converted}/${metrics.trialConversion.started}`} />
+            <MetricCard label="Conversion" value={`${metrics.trialConversion.rate}%`} sub={`${metrics.trialConversion.converted} of ${metrics.trialConversion.started} trials`} />
           </div>
         </CardContent>
       </Card>
@@ -104,7 +105,7 @@ export function AdminMetricsSection() {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {Object.entries(metrics.featureAdoption).map(([key, val]) => (
-              <MetricCard key={key} label={featureNames[key] || key} value={`${val.percentage}%`} sub={`${val.usersOrLocations} users/locs`} />
+              <MetricCard key={key} label={featureNames[key] || key} value={`${val.percentage}%`} sub={`${val.usersOrLocations} active`} />
             ))}
           </div>
         </CardContent>

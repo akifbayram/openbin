@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/toast';
 import { apiFetch } from '@/lib/api';
 import { useAppSettings } from '@/lib/appSettings';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
+import { getErrorMessage } from '@/lib/utils';
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -38,7 +39,7 @@ export function ResetPasswordPage() {
       setSuccess(true);
     } catch (err) {
       showToast({
-        message: err instanceof Error ? err.message : 'Failed to reset password',
+        message: getErrorMessage(err, 'Failed to reset password'),
         variant: 'error',
       });
     } finally {
