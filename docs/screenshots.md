@@ -53,6 +53,24 @@ aside: false
   </div>
   <div class="screenshot-item">
     <div class="screenshot-text">
+      <h4>Print Names</h4>
+      <p>Colorful name cards with icons — perfect for shelf labels and drawer fronts.</p>
+    </div>
+    <div class="screenshot-img">
+      <img src="./assets/print-names.png" alt="OpenBin print page with name card grid preview" />
+    </div>
+  </div>
+  <div class="screenshot-item">
+    <div class="screenshot-text">
+      <h4>Print Item List</h4>
+      <p>Text-based inventory checklists with quantities — ideal for audits and packing lists.</p>
+    </div>
+    <div class="screenshot-img">
+      <img src="./assets/print-item-list.png" alt="OpenBin print page with item list checklist preview" />
+    </div>
+  </div>
+  <div class="screenshot-item">
+    <div class="screenshot-text">
       <h4>Dark Mode</h4>
       <p>Full dark theme.</p>
     </div>
