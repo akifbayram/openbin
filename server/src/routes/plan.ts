@@ -41,10 +41,10 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       ? (planInfo.previousSubStatus === SubStatus.TRIAL ? 'trial' : 'active')
       : null,
     features: getFeatureMap(planInfo.plan),
-    upgradeUrl: active && planInfo.plan === Plan.PRO && planInfo.subStatus !== SubStatus.TRIAL ? null : generateUpgradeUrl(userId, email),
-    upgradeLiteUrl: isPaidActive ? null : generateUpgradePlanUrl(userId, email, 'lite'),
-    upgradeProUrl: isPaidActive ? null : generateUpgradePlanUrl(userId, email, 'pro'),
-    portalUrl: isPaidActive ? generatePortalUrl(userId, email) : null,
+    upgradeUrl: active && planInfo.plan === Plan.PRO && planInfo.subStatus !== SubStatus.TRIAL ? null : await generateUpgradeUrl(userId, email),
+    upgradeLiteUrl: isPaidActive ? null : await generateUpgradePlanUrl(userId, email, 'lite'),
+    upgradeProUrl: isPaidActive ? null : await generateUpgradePlanUrl(userId, email, 'pro'),
+    portalUrl: isPaidActive ? await generatePortalUrl(userId, email) : null,
   });
 }));
 

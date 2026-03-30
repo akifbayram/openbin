@@ -1,7 +1,15 @@
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 import { query } from '../db.js';
 import { config } from './config.js';
 import { PlanRestrictedError } from './httpErrors.js';
+
+let _subSecretKey: Uint8Array | null = null;
+/** Lazily cached subscription JWT secret key for jose signing/verification. */
+export function getSubscriptionSecretKey(): Uint8Array {
+  if (!config.subscriptionJwtSecret) throw new Error('subscriptionJwtSecret not configured');
+  if (!_subSecretKey) _subSecretKey = new TextEncoder().encode(config.subscriptionJwtSecret);
+  return _subSecretKey;
+}
 
 export const Plan = { LITE: 0, PRO: 1 } as const;
 export type PlanTier = (typeof Plan)[keyof typeof Plan];
@@ -129,7 +137,7 @@ export async function getLocationOwnerFeatures(locationId: string): Promise<Plan
 /** Throws PlanRestrictedError with the user's upgrade URL. */
 export async function throwPlanRestricted(userId: string, message: string): Promise<never> {
   const planInfo = await getUserPlanInfo(userId);
-  const upgradeUrl = planInfo ? generateUpgradeUrl(userId, planInfo.email) : null;
+  const upgradeUrl = planInfo ? await generateUpgradeUrl(userId, planInfo.email) : null;
   throw new PlanRestrictedError(message, upgradeUrl);
 }
 
@@ -181,23 +189,26 @@ export async function getMemberCount(locationId: string): Promise<number> {
   return result.rows[0].cnt;
 }
 
-function signManagerToken(userId: string, email: string | null): string | null {
+async function signManagerToken(userId: string, email: string | null): Promise<string | null> {
   if (!config.managerUrl || !config.subscriptionJwtSecret) return null;
-  return jwt.sign({ userId, email }, config.subscriptionJwtSecret, { expiresIn: '30m' });
+  return new jose.SignJWT({ userId, email })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setExpirationTime('30m')
+    .sign(getSubscriptionSecretKey());
 }
 
-export function generateUpgradeUrl(userId: string, email: string | null): string | null {
-  const token = signManagerToken(userId, email);
+export async function generateUpgradeUrl(userId: string, email: string | null): Promise<string | null> {
+  const token = await signManagerToken(userId, email);
   return token ? `${config.managerUrl}/auth/openbin?token=${token}` : null;
 }
 
-export function generateUpgradePlanUrl(userId: string, email: string | null, plan: 'lite' | 'pro'): string | null {
-  const token = signManagerToken(userId, email);
+export async function generateUpgradePlanUrl(userId: string, email: string | null, plan: 'lite' | 'pro'): Promise<string | null> {
+  const token = await signManagerToken(userId, email);
   return token ? `${config.managerUrl}/auth/openbin?token=${token}&plan=${plan}` : null;
 }
 
-export function generatePortalUrl(userId: string, email: string | null): string | null {
-  const token = signManagerToken(userId, email);
+export async function generatePortalUrl(userId: string, email: string | null): Promise<string | null> {
+  const token = await signManagerToken(userId, email);
   return token ? `${config.managerUrl}/portal?token=${token}` : null;
 }
 

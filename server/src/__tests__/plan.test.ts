@@ -94,7 +94,7 @@ describe('GET /api/plan', () => {
       previousSubStatus: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -121,7 +121,7 @@ describe('GET /api/plan', () => {
       previousSubStatus: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
-    vi.mocked(generateUpgradeUrl).mockReturnValue('https://manager.example.com/auth/openbin?token=trial');
+    vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/auth/openbin?token=trial');
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -145,7 +145,7 @@ describe('GET /api/plan', () => {
       previousSubStatus: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(LITE_FEATURES);
-    vi.mocked(generateUpgradeUrl).mockReturnValue('https://manager.example.com/auth/openbin?token=abc');
+    vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/auth/openbin?token=abc');
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -171,7 +171,7 @@ describe('GET /api/plan', () => {
       previousSubStatus: null,
     });
     vi.mocked(getFeatureMap).mockReturnValue(LITE_FEATURES);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
     const { token } = await createTestUser(app);
 
     const res = await request(app)

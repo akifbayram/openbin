@@ -103,10 +103,10 @@ export const planApiLimiter = rateLimit({
   skip: (req: Request) => isTest || config.selfHosted || !req.user,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  handler: (req: Request, res: Response) => {
+  handler: async (req: Request, res: Response) => {
     const info = planCache.get(req.user?.id ?? '');
     const upgradeUrl = req.user
-      ? generateUpgradeUrl(req.user.id, info?.email ?? null)
+      ? await generateUpgradeUrl(req.user.id, info?.email ?? null)
       : null;
     res.status(429).json({
       error: 'RATE_LIMITED',

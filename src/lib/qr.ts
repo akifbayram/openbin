@@ -1,4 +1,3 @@
-import QRCode from 'qrcode';
 import { getBinQrPayload } from './constants';
 
 export const BIN_URL_REGEX = /(?:openbin:\/\/bin\/|https?:\/\/[^/]+(?:\/[^/]+)*\/bin\/)([A-Z0-9]{4,8})(?:[/?#]|$)/i;
@@ -10,28 +9,51 @@ export interface QRColorOptions {
   light: string;
 }
 
-// LRU cache: key = "binId:size:dark:light", value = data URL string
-const MAX_CACHE = 200;
-const cache = new Map<string, string>();
+// Module-level import cache — import once, reuse forever
+let QRCodeStylingCtor: typeof import('qr-code-styling').default | null = null;
 
-function cacheGet(key: string): string | undefined {
-  const val = cache.get(key);
-  if (val !== undefined) {
-    // refresh recency: delete + re-insert
-    cache.delete(key);
-    cache.set(key, val);
+export async function getQRCodeStyling() {
+  if (!QRCodeStylingCtor) {
+    const mod = await import('qr-code-styling');
+    QRCodeStylingCtor = mod.default;
   }
-  return val;
+  return QRCodeStylingCtor;
 }
 
-function cacheSet(key: string, value: string): void {
-  if (cache.size >= MAX_CACHE) {
-    // evict oldest (first inserted)
-    const oldest = cache.keys().next().value;
-    if (oldest !== undefined) cache.delete(oldest);
-  }
-  cache.set(key, value);
+/** Create an LRU cache with get/set helpers. */
+export function makeLruCache(maxSize: number = 200) {
+  const map = new Map<string, string>();
+  return {
+    get(key: string): string | undefined {
+      const val = map.get(key);
+      if (val !== undefined) {
+        map.delete(key);
+        map.set(key, val);
+      }
+      return val;
+    },
+    set(key: string, value: string): void {
+      if (map.size >= maxSize) {
+        const oldest = map.keys().next().value;
+        if (oldest !== undefined) map.delete(oldest);
+      }
+      map.set(key, value);
+    },
+  };
 }
+
+/** Convert raw QR output (Blob or ArrayBuffer) to a data URL string. */
+export async function rawQrToDataURL(raw: Blob | ArrayBuffer): Promise<string> {
+  const blob = raw instanceof Blob ? raw : new Blob([raw], { type: 'image/png' });
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+const cache = makeLruCache();
 
 export async function generateQRDataURL(
   binId: string,
@@ -41,16 +63,25 @@ export async function generateQRDataURL(
   const dark = colors?.dark ?? '#000000';
   const light = colors?.light ?? '#ffffff';
   const key = `${binId}:${size}:${dark}:${light}`;
-  const cached = cacheGet(key);
+  const cached = cache.get(key);
   if (cached) return cached;
 
+  const Ctor = await getQRCodeStyling();
   const payload = getBinQrPayload(binId);
-  const dataUrl = await QRCode.toDataURL(payload, {
+  const qr = new Ctor({
     width: size,
-    margin: 1,
-    color: { dark, light },
+    height: size,
+    type: 'canvas',
+    data: payload,
+    margin: 4,
+    dotsOptions: { type: 'square', color: dark },
+    backgroundOptions: { color: light },
   });
-  cacheSet(key, dataUrl);
+
+  const raw = await qr.getRawData('png');
+  if (!raw) throw new Error('Failed to generate QR code');
+  const dataUrl = await rawQrToDataURL(raw);
+  cache.set(key, dataUrl);
   return dataUrl;
 }
 

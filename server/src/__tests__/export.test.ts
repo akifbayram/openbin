@@ -1,5 +1,5 @@
-import AdmZip from 'adm-zip';
 import type { Express } from 'express';
+import { strToU8, zipSync } from 'fflate';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../index.js';
@@ -490,18 +490,18 @@ describe('POST /api/locations/:id/import/csv', () => {
 // ZIP Import
 // ---------------------------------------------------------------------------
 
-function buildTestZip(bins: unknown[], manifest?: Record<string, unknown>) {
-  const zip = new AdmZip();
-  zip.addFile('manifest.json', Buffer.from(JSON.stringify({
-    format: 'openbin-zip',
-    version: 3,
-    exportedAt: new Date().toISOString(),
-    locationName: 'Test',
-    binCount: bins.length,
-    ...manifest,
-  })));
-  zip.addFile('bins.json', Buffer.from(JSON.stringify(bins)));
-  return zip.toBuffer();
+function buildTestZip(bins: unknown[], manifest?: Record<string, unknown>): Buffer {
+  return Buffer.from(zipSync({
+    'manifest.json': strToU8(JSON.stringify({
+      format: 'openbin-zip',
+      version: 3,
+      exportedAt: new Date().toISOString(),
+      locationName: 'Test',
+      binCount: bins.length,
+      ...manifest,
+    })),
+    'bins.json': strToU8(JSON.stringify(bins)),
+  }));
 }
 
 describe('POST /api/locations/:id/import/zip', () => {
@@ -509,7 +509,7 @@ describe('POST /api/locations/:id/import/zip', () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
-    const zipBuf = buildTestZip([
+    const zipBuf = await buildTestZip([
       { name: 'ZipBin1', items: ['Widget'], tags: ['import'], notes: '', icon: '', color: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
       { name: 'ZipBin2', items: [], tags: [], notes: '', icon: '', color: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     ]);
@@ -527,13 +527,12 @@ describe('POST /api/locations/:id/import/zip', () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
-    const zip = new AdmZip();
-    zip.addFile('bins.json', Buffer.from('[]'));
+    const buf = Buffer.from(zipSync({ 'bins.json': strToU8('[]') }));
 
     const res = await request(app)
       .post(`/api/locations/${location.id}/import/zip`)
       .set('Authorization', `Bearer ${token}`)
-      .attach('file', zip.toBuffer(), 'export.zip');
+      .attach('file', buf, 'export.zip');
 
     expect(res.status).toBe(422);
   });
@@ -542,14 +541,15 @@ describe('POST /api/locations/:id/import/zip', () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
-    const zip = new AdmZip();
-    zip.addFile('manifest.json', Buffer.from(JSON.stringify({ format: 'wrong' })));
-    zip.addFile('bins.json', Buffer.from('[]'));
+    const buf = Buffer.from(zipSync({
+      'manifest.json': strToU8(JSON.stringify({ format: 'wrong' })),
+      'bins.json': strToU8('[]'),
+    }));
 
     const res = await request(app)
       .post(`/api/locations/${location.id}/import/zip`)
       .set('Authorization', `Bearer ${token}`)
-      .attach('file', zip.toBuffer(), 'export.zip');
+      .attach('file', buf, 'export.zip');
 
     expect(res.status).toBe(422);
   });
@@ -558,7 +558,7 @@ describe('POST /api/locations/:id/import/zip', () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
-    const zipBuf = buildTestZip([{ id: 'z00001', name: 'DryZip', items: ['x'] }]);
+    const zipBuf = await buildTestZip([{ id: 'z00001', name: 'DryZip', items: ['x'] }]);
 
     const res = await request(app)
       .post(`/api/locations/${location.id}/import/zip`)
@@ -576,7 +576,7 @@ describe('POST /api/locations/:id/import/zip', () => {
     const location = await createTestLocation(app, token);
     await createTestBin(app, token, location.id, { name: 'OldBin' });
 
-    const zipBuf = buildTestZip([
+    const zipBuf = await buildTestZip([
       { name: 'NewZipBin', items: [], tags: [], notes: '', icon: '', color: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     ]);
 

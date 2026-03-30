@@ -1,5 +1,5 @@
 import type { Express } from 'express';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -71,8 +71,18 @@ beforeEach(() => {
   app = createApp();
 });
 
-function makeSubToken(payload: Record<string, unknown>, secret = SUB_SECRET, opts: jwt.SignOptions = {}) {
-  return jwt.sign(payload, secret, opts);
+async function makeSubToken(payload: Record<string, unknown>, secret = SUB_SECRET, opts: { expiresIn?: number | string } = {}) {
+  const signer = new jose.SignJWT(payload as jose.JWTPayload)
+    .setProtectedHeader({ alg: 'HS256' });
+  if (opts.expiresIn !== undefined) {
+    if (typeof opts.expiresIn === 'number' && opts.expiresIn < 0) {
+      // Expired token: set expiration in the past
+      signer.setExpirationTime(Math.floor(Date.now() / 1000) - 60);
+    } else {
+      signer.setExpirationTime(opts.expiresIn as string);
+    }
+  }
+  return signer.sign(new TextEncoder().encode(secret));
 }
 
 describe('POST /api/subscriptions/callback', () => {
@@ -93,7 +103,7 @@ describe('POST /api/subscriptions/callback', () => {
 
   it('returns 401 when JWT is signed with wrong secret', async () => {
     const { user } = await createTestUser(app);
-    const token = makeSubToken({ userId: user.id, plan: 1, status: 1, activeUntil: null }, 'wrong-secret');
+    const token = await makeSubToken({ userId: user.id, plan: 1, status: 1, activeUntil: null }, 'wrong-secret');
 
     const res = await request(app)
       .post('/api/subscriptions/callback')
@@ -107,7 +117,7 @@ describe('POST /api/subscriptions/callback', () => {
 
   it('returns 401 when JWT is expired', async () => {
     const { user } = await createTestUser(app);
-    const token = makeSubToken(
+    const token = await makeSubToken(
       { userId: user.id, plan: 1, status: 1, activeUntil: null },
       SUB_SECRET,
       { expiresIn: -1 },
@@ -127,7 +137,7 @@ describe('POST /api/subscriptions/callback', () => {
     const original = mockConfig.selfHosted;
     Object.defineProperty(mockConfig, 'selfHosted', { value: true, writable: true, configurable: true });
     try {
-      const token = makeSubToken({ userId: 'u1', plan: 1, status: 1, activeUntil: null });
+      const token = await makeSubToken({ userId: 'u1', plan: 1, status: 1, activeUntil: null });
       const res = await request(app)
         .post('/api/subscriptions/callback')
         .set('Authorization', `Bearer ${token}`)
@@ -143,7 +153,7 @@ describe('POST /api/subscriptions/callback', () => {
     const original = mockConfig.subscriptionWebhookSecret;
     Object.defineProperty(mockConfig, 'subscriptionWebhookSecret', { value: null, writable: true, configurable: true });
     try {
-      const token = makeSubToken({ userId: 'u1', plan: 1, status: 1, activeUntil: null });
+      const token = await makeSubToken({ userId: 'u1', plan: 1, status: 1, activeUntil: null });
       const res = await request(app)
         .post('/api/subscriptions/callback')
         .set('Authorization', `Bearer ${token}`)
@@ -157,7 +167,7 @@ describe('POST /api/subscriptions/callback', () => {
 
   it('returns 422 when plan value is invalid', async () => {
     const { user } = await createTestUser(app);
-    const token = makeSubToken({ userId: user.id, plan: 99, status: 1, activeUntil: null });
+    const token = await makeSubToken({ userId: user.id, plan: 99, status: 1, activeUntil: null });
 
     const res = await request(app)
       .post('/api/subscriptions/callback')
@@ -171,7 +181,7 @@ describe('POST /api/subscriptions/callback', () => {
 
   it('returns 422 when status value is invalid', async () => {
     const { user } = await createTestUser(app);
-    const token = makeSubToken({ userId: user.id, plan: 1, status: 99, activeUntil: null });
+    const token = await makeSubToken({ userId: user.id, plan: 1, status: 99, activeUntil: null });
 
     const res = await request(app)
       .post('/api/subscriptions/callback')
@@ -184,7 +194,7 @@ describe('POST /api/subscriptions/callback', () => {
   });
 
   it('returns 422 when userId is missing from payload', async () => {
-    const token = makeSubToken({ plan: 1, status: 1, activeUntil: null });
+    const token = await makeSubToken({ plan: 1, status: 1, activeUntil: null });
 
     const res = await request(app)
       .post('/api/subscriptions/callback')
@@ -197,7 +207,7 @@ describe('POST /api/subscriptions/callback', () => {
   });
 
   it('returns 404 for unknown userId', async () => {
-    const token = makeSubToken({ userId: 'nonexistent-user-id', plan: 1, status: 1, activeUntil: null });
+    const token = await makeSubToken({ userId: 'nonexistent-user-id', plan: 1, status: 1, activeUntil: null });
 
     const res = await request(app)
       .post('/api/subscriptions/callback')
@@ -212,7 +222,7 @@ describe('POST /api/subscriptions/callback', () => {
   it('updates user plan to PRO with active status', async () => {
     const { user } = await createTestUser(app);
     const activeUntil = '2027-06-01T00:00:00.000Z';
-    const token = makeSubToken({ userId: user.id, plan: 1, status: 1, activeUntil });
+    const token = await makeSubToken({ userId: user.id, plan: 1, status: 1, activeUntil });
 
     const res = await request(app)
       .post('/api/subscriptions/callback')
@@ -234,7 +244,7 @@ describe('POST /api/subscriptions/callback', () => {
 
   it('updates user plan to LITE with inactive status', async () => {
     const { user } = await createTestUser(app);
-    const token = makeSubToken({ userId: user.id, plan: 0, status: 0, activeUntil: null });
+    const token = await makeSubToken({ userId: user.id, plan: 0, status: 0, activeUntil: null });
 
     const res = await request(app)
       .post('/api/subscriptions/callback')
@@ -256,7 +266,7 @@ describe('POST /api/subscriptions/callback', () => {
   it('updates user to trial status (status=2)', async () => {
     const { user } = await createTestUser(app);
     const activeUntil = '2026-12-31T00:00:00.000Z';
-    const token = makeSubToken({ userId: user.id, plan: 1, status: 2, activeUntil });
+    const token = await makeSubToken({ userId: user.id, plan: 1, status: 2, activeUntil });
 
     const res = await request(app)
       .post('/api/subscriptions/callback')
@@ -278,7 +288,7 @@ describe('POST /api/subscriptions/callback', () => {
   it('sets active_until to null when not provided in payload', async () => {
     const { user } = await createTestUser(app);
     // activeUntil omitted from payload
-    const token = makeSubToken({ userId: user.id, plan: 1, status: 1 });
+    const token = await makeSubToken({ userId: user.id, plan: 1, status: 1 });
 
     const res = await request(app)
       .post('/api/subscriptions/callback')

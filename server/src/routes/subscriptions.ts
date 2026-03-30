@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 import { query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
@@ -33,7 +33,8 @@ router.post('/callback', asyncHandler(async (req, res) => {
 
   let payload: { userId: string; plan: number; status: number; activeUntil: string; updatedAt?: string };
   try {
-    payload = jwt.verify(token, secret) as typeof payload;
+    const result = await jose.jwtVerify(token, new TextEncoder().encode(secret));
+    payload = result.payload as unknown as typeof payload;
   } catch {
     throw new UnauthorizedError('Invalid subscription token');
   }

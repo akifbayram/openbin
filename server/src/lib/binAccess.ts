@@ -66,7 +66,7 @@ export async function requireMemberOrAbove(locationId: string, userId: string, a
   const writableCheck = await checkLocationWritable(locationId);
   if (!writableCheck.writable) {
     const planInfo = await getUserPlanInfo(userId);
-    const upgradeUrl = planInfo ? generateUpgradeUrl(userId, planInfo.email) : null;
+    const upgradeUrl = planInfo ? await generateUpgradeUrl(userId, planInfo.email) : null;
     throw new OverLimitError(writableCheck.reason ?? 'Location is read-only due to plan limits', upgradeUrl);
   }
 

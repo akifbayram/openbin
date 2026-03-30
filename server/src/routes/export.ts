@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import AdmZip from 'adm-zip';
 import archiver from 'archiver';
+import { unzipSync } from 'fflate';
 import express, { Router } from 'express';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
@@ -594,11 +594,11 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
     throw new ValidationError('ZIP file is required');
   }
 
-  const zip = new AdmZip(req.file.buffer);
+  const files = unzipSync(new Uint8Array(req.file.buffer));
 
   // Read and validate manifest
-  const manifestEntry = zip.getEntry('manifest.json');
-  if (!manifestEntry) {
+  const manifestData = files['manifest.json'];
+  if (!manifestData) {
     throw new ValidationError('ZIP does not contain manifest.json');
   }
   let manifest: {
@@ -611,8 +611,9 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
     savedViews?: ExportSavedView[];
     members?: ExportMember[];
   };
+  const decoder = new TextDecoder();
   try {
-    manifest = JSON.parse(manifestEntry.getData().toString('utf-8'));
+    manifest = JSON.parse(decoder.decode(manifestData));
   } catch {
     throw new ValidationError('manifest.json is not valid JSON');
   }
@@ -620,12 +621,14 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
     throw new ValidationError('Invalid ZIP format: manifest.format must be "openbin-zip"');
   }
 
-  // Read and validate bins
-  const binsEntry = zip.getEntry('bins.json');
-  if (!binsEntry) {
+  // Read bins + trashed bins
+  const binsData = files['bins.json'];
+  if (!binsData) {
     throw new ValidationError('ZIP does not contain bins.json');
   }
-  let zipBins: Array<{
+  const trashedBinsData = files['trashed-bins.json'];
+
+  type ZipBinEntry = {
     id?: string;
     name: string;
     location?: string;
@@ -642,9 +645,14 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
     createdAt?: string;
     updatedAt?: string;
     photos?: Array<{ id: string; filename: string; mimeType: string; zipPath: string; createdBy?: string; createdAt?: string }>;
-  }>;
+  };
+
+  const binsText = decoder.decode(binsData);
+  const trashedText = trashedBinsData ? decoder.decode(trashedBinsData) : null;
+
+  let zipBins: ZipBinEntry[];
   try {
-    zipBins = JSON.parse(binsEntry.getData().toString('utf-8'));
+    zipBins = JSON.parse(binsText);
   } catch {
     throw new ValidationError('bins.json is not valid JSON');
   }
@@ -652,12 +660,10 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
     throw new ValidationError('bins.json must be an array');
   }
 
-  // Read trashed bins if present
-  const trashedBinsEntry = zip.getEntry('trashed-bins.json');
-  let zipTrashedBins: typeof zipBins = [];
-  if (trashedBinsEntry) {
+  let zipTrashedBins: ZipBinEntry[] = [];
+  if (trashedText) {
     try {
-      const parsed = JSON.parse(trashedBinsEntry.getData().toString('utf-8'));
+      const parsed = JSON.parse(trashedText);
       if (Array.isArray(parsed)) zipTrashedBins = parsed;
     } catch { /* ignore malformed trashed-bins.json */ }
   }
@@ -686,9 +692,10 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
       const photos: ExportPhoto[] = [];
       if (bin.photos && Array.isArray(bin.photos)) {
         for (const ref of bin.photos) {
-          const photoEntry = zip.getEntry(ref.zipPath);
-          if (!photoEntry) continue;
-          photos.push({ id: ref.id, filename: ref.filename, mimeType: ref.mimeType, data: photoEntry.getData().toString('base64'), createdBy: ref.createdBy, createdAt: ref.createdAt });
+          const photoBytes = files[ref.zipPath];
+          if (!photoBytes) continue;
+          const data = Buffer.from(photoBytes).toString('base64');
+          photos.push({ id: ref.id, filename: ref.filename, mimeType: ref.mimeType, data, createdBy: ref.createdBy, createdAt: ref.createdAt });
         }
       }
       return {

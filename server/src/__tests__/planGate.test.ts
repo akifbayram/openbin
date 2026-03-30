@@ -243,51 +243,51 @@ describe('getUserPlanInfo()', () => {
 });
 
 describe('generateUpgradeUrl()', () => {
-  it('returns null when managerUrl is not set', () => {
+  it('returns null when managerUrl is not set', async () => {
     setConfig({ selfHosted: false, managerUrl: null });
-    const url = generateUpgradeUrl('user-id', 'user@example.com');
+    const url = await generateUpgradeUrl('user-id', 'user@example.com');
     expect(url).toBeNull();
   });
 
-  it('returns a valid URL when managerUrl is set', () => {
+  it('returns a valid URL when managerUrl is set', async () => {
     setConfig({ selfHosted: false, managerUrl: 'https://manager.example.com', subscriptionJwtSecret: 'sub-secret' });
-    const url = generateUpgradeUrl('user-id', 'user@example.com');
+    const url = await generateUpgradeUrl('user-id', 'user@example.com');
     expect(url).not.toBeNull();
     expect(url).toMatch(/^https:\/\/manager\.example\.com\/auth\/openbin\?token=/);
   });
 
   it('returns a URL with a valid JWT token', async () => {
     setConfig({ selfHosted: false, managerUrl: 'https://manager.example.com', subscriptionJwtSecret: 'sub-secret' });
-    const url = generateUpgradeUrl('user-id', 'user@example.com');
+    const url = await generateUpgradeUrl('user-id', 'user@example.com');
     expect(url).toBeTruthy();
     const token = url!.split('?token=')[1];
     expect(token).toBeTruthy();
 
     // Verify the token is a valid JWT
-    const jwt = await import('jsonwebtoken');
-    const decoded = jwt.verify(token, 'sub-secret') as Record<string, unknown>;
+    const jose = await import('jose');
+    const { payload: decoded } = await jose.jwtVerify(token, new TextEncoder().encode('sub-secret'));
     expect(decoded.userId).toBe('user-id');
     expect(decoded.email).toBe('user@example.com');
   });
 
-  it('returns null when subscriptionJwtSecret is not set', () => {
+  it('returns null when subscriptionJwtSecret is not set', async () => {
     setConfig({
       selfHosted: false,
       managerUrl: 'https://manager.example.com',
       subscriptionJwtSecret: null,
       jwtSecret: 'test-jwt-secret',
     });
-    const url = generateUpgradeUrl('user-id', null);
+    const url = await generateUpgradeUrl('user-id', null);
     expect(url).toBeNull();
   });
 
   it('handles null email in token', async () => {
     setConfig({ selfHosted: false, managerUrl: 'https://manager.example.com', subscriptionJwtSecret: 'sub-secret' });
-    const url = generateUpgradeUrl('user-id', null);
+    const url = await generateUpgradeUrl('user-id', null);
     expect(url).toBeTruthy();
     const token = url!.split('?token=')[1];
-    const jwt = await import('jsonwebtoken');
-    const decoded = jwt.verify(token, 'sub-secret') as Record<string, unknown>;
+    const jose = await import('jose');
+    const { payload: decoded } = await jose.jwtVerify(token, new TextEncoder().encode('sub-secret'));
     expect(decoded.userId).toBe('user-id');
     expect(decoded.email).toBeNull();
   });

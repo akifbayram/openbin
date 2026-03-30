@@ -1,6 +1,7 @@
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 import { generateUuid, query } from '../db.js';
 import { config } from './config.js';
+import { getSubscriptionSecretKey } from './planGate.js';
 import { acquireJobLock, releaseJobLock } from './jobLock.js';
 import { createLogger } from './logger.js';
 
@@ -67,7 +68,10 @@ async function processOutbox(): Promise<void> {
 
     for (const row of pending.rows) {
       const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
-      const token = jwt.sign(payload, config.subscriptionJwtSecret!, { algorithm: 'HS256', expiresIn: '5m' });
+      const token = await new jose.SignJWT(payload as jose.JWTPayload)
+        .setProtectedHeader({ alg: 'HS256' })
+        .setExpirationTime('5m')
+        .sign(getSubscriptionSecretKey());
 
       try {
         const res = await fetch(`${config.managerUrl}${row.endpoint}`, {

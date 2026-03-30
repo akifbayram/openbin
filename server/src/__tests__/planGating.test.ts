@@ -44,7 +44,7 @@ function mockProUser() {
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
   vi.mocked(isProUser).mockReturnValue(true);
-  vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+  vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 }
 
 /** Configure mocks so all plan checks fail for a Lite cloud user. */
@@ -59,13 +59,13 @@ function mockLiteUser() {
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
   vi.mocked(isProUser).mockReturnValue(false);
-  vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+  vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 }
 
 /** Configure mocks so the self-hosted fast-path is taken. */
 function mockSelfHosted() {
   vi.mocked(isSelfHosted).mockReturnValue(true);
-  vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+  vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 }
 
 beforeEach(() => {

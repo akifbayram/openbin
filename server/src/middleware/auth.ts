@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 import { query } from '../db.js';
 import { config } from '../lib/config.js';
+
+const JWT_SECRET_KEY = new TextEncoder().encode(config.jwtSecret);
 
 export interface AuthUser {
   id: string;
@@ -26,10 +28,10 @@ function extractToken(req: Request): string | undefined {
   return cookie;
 }
 
-function verifyJwt(token: string): AuthUser | null {
+async function verifyJwt(token: string): Promise<AuthUser | null> {
   try {
-    const payload = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] }) as AuthUser;
-    return { id: payload.id, username: payload.username };
+    const { payload } = await jose.jwtVerify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] });
+    return { id: payload.id as string, username: payload.username as string };
   } catch {
     return null;
   }
@@ -40,11 +42,14 @@ export function tryAuthenticate(req: Request, _res: Response, next: NextFunction
   if (!req.user) {
     const token = extractToken(req);
     if (token && !token.startsWith('sk_openbin_')) {
-      const user = verifyJwt(token);
-      if (user) {
-        req.user = user;
-        req.authMethod = 'jwt';
-      }
+      verifyJwt(token).then((user) => {
+        if (user) {
+          req.user = user;
+          req.authMethod = 'jwt';
+        }
+        next();
+      }).catch(() => next());
+      return;
     }
   }
   next();
@@ -131,22 +136,26 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   }
 
   // JWT path
-  const user = verifyJwt(token);
-  if (user) {
-    checkSoftDeleted(user.id).then((deleted) => {
-      if (deleted) {
-        res.status(401).json({ error: 'ACCOUNT_DELETED', message: 'This account has been deleted' });
-        return;
-      }
-      req.user = user;
-      req.authMethod = 'jwt';
-      next();
-    }).catch(next);
-  } else {
-    res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid token' });
-  }
+  verifyJwt(token).then((user) => {
+    if (user) {
+      checkSoftDeleted(user.id).then((deleted) => {
+        if (deleted) {
+          res.status(401).json({ error: 'ACCOUNT_DELETED', message: 'This account has been deleted' });
+          return;
+        }
+        req.user = user;
+        req.authMethod = 'jwt';
+        next();
+      }).catch(next);
+    } else {
+      res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid token' });
+    }
+  });
 }
 
-export function signToken(user: AuthUser): string {
-  return jwt.sign({ id: user.id, username: user.username }, config.jwtSecret, { expiresIn: config.accessTokenExpiresIn as unknown as import('ms').StringValue });
+export async function signToken(user: AuthUser): Promise<string> {
+  return new jose.SignJWT({ id: user.id, username: user.username })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setExpirationTime(config.accessTokenExpiresIn)
+    .sign(JWT_SECRET_KEY);
 }

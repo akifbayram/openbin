@@ -15,6 +15,7 @@ import { LocationMembersDialog } from '@/features/locations/LocationMembersDialo
 import { LocationRetentionDialog } from '@/features/locations/LocationRetentionDialog';
 import { leaveLocation, useLocationList } from '@/features/locations/useLocations';
 import { ApiError } from '@/lib/api';
+import { generateQRDataURL } from '@/lib/qr';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
@@ -68,10 +69,8 @@ export function AreasPage() {
     }
     let cancelled = false;
     const inviteLink = `${window.location.origin}/register?invite=${encodeURIComponent(activeLocation.invite_code)}`;
-    import('qrcode').then((QRCode) => {
-      QRCode.default.toDataURL(inviteLink, { width: 256, margin: 2 }).then((url) => {
-        if (!cancelled) setInviteQrUrl(url);
-      });
+    generateQRDataURL(inviteLink, 256).then((url) => {
+      if (!cancelled) setInviteQrUrl(url);
     });
     return () => { cancelled = true; };
   }, [inviteQrOpen, activeLocation?.invite_code]);

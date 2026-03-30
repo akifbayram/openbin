@@ -94,7 +94,7 @@ describe('requirePro()', () => {
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 
     const error = await runMiddleware(requirePro());
 
@@ -113,7 +113,7 @@ describe('requirePro()', () => {
       previousSubStatus: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 
     const error = await runMiddleware(requirePro());
 
@@ -144,7 +144,7 @@ describe('requirePro()', () => {
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(upgradeUrl);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(upgradeUrl);
 
     const error = await runMiddleware(requirePro());
 
@@ -164,7 +164,7 @@ describe('requirePro()', () => {
       previousSubStatus: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(upgradeUrl);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(upgradeUrl);
 
     const error = await runMiddleware(requirePro());
 
@@ -222,7 +222,7 @@ describe('requireWriteApi()', () => {
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 
     const error = await runMiddleware(requireWriteApi());
 
@@ -241,7 +241,7 @@ describe('requireWriteApi()', () => {
       previousSubStatus: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 
     const error = await runMiddleware(requireWriteApi());
 
@@ -261,7 +261,7 @@ describe('requireWriteApi()', () => {
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(upgradeUrl);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(upgradeUrl);
 
     const error = await runMiddleware(requireWriteApi());
 

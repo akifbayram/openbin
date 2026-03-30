@@ -533,7 +533,7 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
 
     if (photoFeatures.maxPhotoStorageMb !== null && usedBytes >= photoFeatures.maxPhotoStorageMb * 1024 * 1024) {
       const planInfo = await getUserPlanInfo(req.user!.id);
-      const upgradeUrl = planInfo ? generateUpgradeUrl(req.user!.id, planInfo.email) : null;
+      const upgradeUrl = planInfo ? await generateUpgradeUrl(req.user!.id, planInfo.email) : null;
       throw new OverLimitError(`Photo storage limit reached (${photoFeatures.maxPhotoStorageMb} MB)`, upgradeUrl);
     }
 

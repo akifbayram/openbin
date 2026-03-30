@@ -70,18 +70,18 @@ export function fireSubscriptionConfirmedEmail(userId: string, email: string, di
   }));
 }
 
-export function fireSubscriptionExpiredEmail(userId: string, email: string, displayName: string): void {
-  const upgradeUrl = generateUpgradeUrl(userId, email) || '';
+export async function fireSubscriptionExpiredEmail(userId: string, email: string, displayName: string): Promise<void> {
+  const upgradeUrl = await generateUpgradeUrl(userId, email) || '';
   safeSend(userId, 'subscription_expired', email, subscriptionExpiredEmail({ displayName, upgradeUrl }));
 }
 
-export function fireTrialExpiringEmail(userId: string, email: string, displayName: string, expiryDate: string): void {
-  const upgradeUrl = generateUpgradeUrl(userId, email) || '';
+export async function fireTrialExpiringEmail(userId: string, email: string, displayName: string, expiryDate: string): Promise<void> {
+  const upgradeUrl = await generateUpgradeUrl(userId, email) || '';
   safeSend(userId, 'trial_expiring', email, trialExpiringEmail({ displayName, expiryDate, upgradeUrl }));
 }
 
-export function fireTrialExpiredEmail(userId: string, email: string, displayName: string): void {
-  const upgradeUrl = generateUpgradeUrl(userId, email) || '';
+export async function fireTrialExpiredEmail(userId: string, email: string, displayName: string): Promise<void> {
+  const upgradeUrl = await generateUpgradeUrl(userId, email) || '';
   safeSend(userId, 'trial_expired', email, trialExpiredEmail({ displayName, upgradeUrl }));
 }
 
@@ -90,13 +90,13 @@ export function fireExploreFeaturesEmail(userId: string, email: string, displayN
   safeSend(userId, 'explore_features', email, exploreFeaturesEmail({ displayName, dashboardUrl }));
 }
 
-export function firePostTrialEarlyEmail(userId: string, email: string, displayName: string): void {
-  const upgradeUrl = generateUpgradeUrl(userId, email) || '';
+export async function firePostTrialEarlyEmail(userId: string, email: string, displayName: string): Promise<void> {
+  const upgradeUrl = await generateUpgradeUrl(userId, email) || '';
   safeSend(userId, 'post_trial_early', email, postTrialEarlyEmail({ displayName, upgradeUrl }));
 }
 
-export function firePostTrialLateEmail(userId: string, email: string, displayName: string): void {
-  const upgradeUrl = generateUpgradeUrl(userId, email) || '';
+export async function firePostTrialLateEmail(userId: string, email: string, displayName: string): Promise<void> {
+  const upgradeUrl = await generateUpgradeUrl(userId, email) || '';
   safeSend(userId, 'post_trial_late', email, postTrialLateEmail({ displayName, upgradeUrl }));
 }
 
@@ -104,12 +104,12 @@ export function firePasswordResetEmail(userId: string, email: string, displayNam
   safeSend(userId, 'password_reset', email, passwordResetEmail({ displayName, resetUrl }));
 }
 
-export function fireSubscriptionExpiringEmail(userId: string, email: string, displayName: string, expiryDate: string): void {
-  const upgradeUrl = generateUpgradeUrl(userId, email) || '';
+export async function fireSubscriptionExpiringEmail(userId: string, email: string, displayName: string, expiryDate: string): Promise<void> {
+  const upgradeUrl = await generateUpgradeUrl(userId, email) || '';
   safeSend(userId, 'subscription_expiring', email, subscriptionExpiringEmail({ displayName, expiryDate, upgradeUrl }));
 }
 
-export function fireDowngradeImpactEmail(userId: string, email: string, displayName: string, impact: DowngradeImpact): void {
-  const upgradeUrl = generateUpgradeUrl(userId, email) || '';
+export async function fireDowngradeImpactEmail(userId: string, email: string, displayName: string, impact: DowngradeImpact): Promise<void> {
+  const upgradeUrl = await generateUpgradeUrl(userId, email) || '';
   safeSend(userId, 'downgrade_impact', email, downgradeImpactEmail({ displayName, impact, upgradeUrl }));
 }

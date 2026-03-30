@@ -63,7 +63,7 @@ router.post('/demo-login', asyncHandler(async (_req, res) => {
     await query('INSERT INTO user_preferences (id, user_id, settings) VALUES ($1, $2, $3)', [generateUuid(), user.id, resetSettings]);
   }
 
-  const token = signToken({ id: user.id, username: user.username });
+  const token = await signToken({ id: user.id, username: user.username });
   const refresh = await createRefreshToken(user.id);
 
   setAccessTokenCookie(res, token);
@@ -183,7 +183,7 @@ router.post('/register', asyncHandler(async (req, res) => {
     await query('UPDATE users SET active_location_id = $1 WHERE id = $2', [locationToJoin.id, user.id]);
   }
 
-  const token = signToken({ id: user.id, username: user.username });
+  const token = await signToken({ id: user.id, username: user.username });
   const refresh = await createRefreshToken(user.id);
 
   setAccessTokenCookie(res, token);
@@ -249,7 +249,7 @@ router.post('/login', asyncHandler(async (req, res) => {
     throw new UnauthorizedError('Invalid username or password');
   }
 
-  const token = signToken({ id: user.id, username: user.username });
+  const token = await signToken({ id: user.id, username: user.username });
   const refresh = await createRefreshToken(user.id);
 
   setAccessTokenCookie(res, token);
@@ -323,7 +323,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
   }
 
   const user = userResult.rows[0];
-  const accessToken = signToken({ id: user.id, username: user.username });
+  const accessToken = await signToken({ id: user.id, username: user.username });
 
   setAccessTokenCookie(res, accessToken);
   setRefreshTokenCookie(res, rotated.rawToken);

@@ -26,12 +26,12 @@ function requireProAccess(message: string): RequestHandler {
     }
 
     if (!isSubscriptionActive(planInfo)) {
-      const upgradeUrl = generateUpgradeUrl(userId, planInfo.email);
+      const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
       throw new PlanRestrictedError('Your subscription has expired', upgradeUrl);
     }
 
     if (!isProUser(planInfo)) {
-      const upgradeUrl = generateUpgradeUrl(userId, planInfo.email);
+      const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
       throw new PlanRestrictedError(message, upgradeUrl);
     }
 
@@ -64,7 +64,7 @@ export function requireActiveSubscription(): RequestHandler {
 
     if (isSubscriptionActive(planInfo)) { next(); return; }
 
-    const upgradeUrl = generateUpgradeUrl(req.user.id, planInfo.email);
+    const upgradeUrl = await generateUpgradeUrl(req.user.id, planInfo.email);
     res.status(403).json({
       error: 'SUBSCRIPTION_EXPIRED',
       message: 'Your subscription has expired. Subscribe to continue using OpenBin.',
