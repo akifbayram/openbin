@@ -60,16 +60,23 @@ export function createApp(): express.Express {
   // Security headers
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+    if (config.frameAncestors) {
+      res.setHeader('X-Frame-Options', `ALLOW-FROM ${config.frameAncestors.split(' ')[0]}`);
+    } else {
+      res.setHeader('X-Frame-Options', 'DENY');
+    }
     if (config.trustProxy) {
       res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
     }
     // CSP hashes must match the inline scripts in index.html — update if those scripts change
+    const frameAncestorsCsp = config.frameAncestors
+      ? `frame-ancestors 'self' ${config.frameAncestors};`
+      : "frame-ancestors 'none';";
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; img-src 'self' data: blob:; script-src 'self' 'sha256-7KadoKzu1sd1+0LivMFrmxISBXbhj6nm/vOZqEaVC5I=' 'sha256-4kldY8Nv9iluY61Doo0WCNi1p1qCWgXWfSgXIX8g3g0='; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self' blob:;",
+      `default-src 'self'; ${frameAncestorsCsp} img-src 'self' data: blob:; script-src 'self' 'sha256-7KadoKzu1sd1+0LivMFrmxISBXbhj6nm/vOZqEaVC5I=' 'sha256-4kldY8Nv9iluY61Doo0WCNi1p1qCWgXWfSgXIX8g3g0='; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self' blob:;`,
     );
     next();
   });

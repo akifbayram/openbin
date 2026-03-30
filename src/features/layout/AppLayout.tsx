@@ -198,17 +198,12 @@ export function AppLayout() {
         {(showLockedBanner || (!isLocked && isOverAnyLimit && !isSelfHosted)) && (
           <div className="mx-auto w-full max-w-7xl px-4 lg:px-6 pt-4">
             <div className={cn(
-              'flat-card flex items-center justify-between gap-4 rounded-[var(--radius-lg)] px-4 py-3',
+              'flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border px-4 py-3',
               showLockedBanner
-                ? 'border-red-500/20 bg-red-500/10'
-                : 'border-amber-500/20 bg-amber-500/10',
+                ? 'border-red-600/30 bg-red-600 dark:bg-red-700'
+                : 'border-amber-600/30 bg-amber-500 dark:bg-amber-600',
             )}>
-              <p className={cn(
-                'text-sm font-medium',
-                showLockedBanner
-                  ? 'text-red-600 dark:text-red-400'
-                  : 'text-amber-600 dark:text-amber-400',
-              )}>
+              <p className="text-sm font-medium text-white">
                 {showLockedBanner
                   ? getLockedMessage(planInfo.previousSubStatus)
                   : 'You\'re over your Lite plan limits. Reduce usage or upgrade to Pro to resume editing.'}
@@ -218,7 +213,7 @@ export function AppLayout() {
                   href={(showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl)!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity shrink-0"
+                  className="inline-flex items-center gap-1 rounded-md bg-white/20 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/30 transition-colors shrink-0"
                 >
                   {showLockedBanner
                     ? getLockedCta(planInfo.previousSubStatus)

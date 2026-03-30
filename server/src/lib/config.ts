@@ -53,6 +53,7 @@ export const config = Object.freeze({
     return 'open' as const;
   })(),
   trustProxy: parseBool(process.env.TRUST_PROXY, false),
+  frameAncestors: process.env.FRAME_ANCESTORS || null,
 
   // Cloud tier
   selfHosted: parseBool(process.env.SELF_HOSTED, true),

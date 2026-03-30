@@ -1,4 +1,4 @@
-import { BookOpen, Boxes, ClipboardList, Github, LayoutDashboard, LogOut, MapPin, Package, PanelLeftClose, PanelLeftOpen, Printer, ScanLine, Settings, Tags } from
+import { Boxes, ClipboardList, LayoutDashboard, LogOut, MapPin, Package, PanelLeftClose, PanelLeftOpen, Printer, ScanLine, Settings, Tags } from
   'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BrandIcon } from '@/components/BrandIcon';
@@ -22,26 +22,36 @@ import { LocationSwitcher } from './LocationSwitcher';
    identical in both collapsed and expanded states, so icons never shift. */
 
 const topItems: { path: string; label: string; icon: React.ComponentType<{ className?: string }>; termKey?: TermKey }[] = [
-  { path: '/', label: 'Home', icon: LayoutDashboard },
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/bins', label: 'Bins', icon: Package, termKey: 'Bins' },
 ];
 
-const manageItems: { path: string; label: string; icon: React.ComponentType<{ className?: string }>; termKey?: TermKey; requireWrite?: boolean; proOnly?: boolean }[] = [
+type NavItem = { path: string; label: string; icon: React.ComponentType<{ className?: string }>; termKey?: TermKey; requireWrite?: boolean; proOnly?: boolean };
+
+const manageItems: NavItem[] = [
   { path: '/locations', label: 'Locations', icon: MapPin, termKey: 'Locations' },
   { path: '/items', label: 'Items', icon: ClipboardList },
   { path: '/tags', label: 'Tags', icon: Tags },
+];
+
+const toolItems: NavItem[] = [
   { path: '/print', label: 'Print', icon: Printer },
   { path: '/scan', label: 'Scan', icon: ScanLine },
   { path: '/reorganize', label: 'Reorganize', icon: Boxes, requireWrite: true, proOnly: true },
 ];
 
-const brandIcon = <BrandIcon className="h-5.5 w-5.5 text-[var(--accent)] shrink-0" />;
+const brandIcon = <BrandIcon className="h-8 w-8 text-[var(--accent)] shrink-0" />;
 
-const discordIcon = (
-  <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z" />
-  </svg>
-);
+function SectionLabel({ children, collapsed }: { children: React.ReactNode; collapsed?: boolean }) {
+  return (
+    <span className={cn(
+      'px-2 pt-8 pb-1 text-[11px] font-normal uppercase tracking-wider text-[var(--text-tertiary)] block',
+      collapsed && 'w-0 opacity-0 overflow-hidden'
+    )} aria-hidden={collapsed || undefined}>
+      {children}
+    </span>
+  );
+}
 
 function NavButton({ path, label, icon: Icon, currentPath, navigate, onClick, collapsed, proBadge }: {
   path: string;
@@ -101,7 +111,6 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
   const { canWrite } = usePermissions();
   const { isSelfHosted, isLite } = usePlan();
   const showProBadges = !isSelfHosted && isLite;
-  const footerLinkCls = 'p-2 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors';
 
   return (
     <>
@@ -111,7 +120,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
           {brandIcon}
           {/* biome-ignore lint/a11y/useHeadingContent: heading has dynamic text content and aria-label */}
           <h1 className={cn(
-            'font-heading text-[22px] font-bold text-[var(--text-primary)] tracking-tight leading-none truncate',
+            'font-heading text-[28px] font-bold text-[var(--text-primary)] tracking-tight leading-8 truncate',
             collapsed && 'w-0 opacity-0'
           )} aria-hidden={collapsed || undefined} aria-label={settings.appName}>
             {settings.appName}
@@ -146,30 +155,39 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
           ))}
         </div>
 
-        {/* Manage section — scrollable when viewport is short */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="space-y-1 pt-4">
-          {manageItems.filter((item) => !item.requireWrite || canWrite).map((item) =>
-            item.path === '/scan' ? (
-              <NavButton
-                key={item.path}
-                {...item}
-                label={item.label}
-                currentPath={location.pathname}
-                navigate={() => { onScanClick?.(); onItemClick?.(); }}
-                onClick={undefined}
-                collapsed={collapsed}
-              />
-            ) : (
+        {/* Manage & Tools sections — scrollable when viewport is short */}
+        <div className="flex-1 min-h-0 overflow-y-auto border-b border-[var(--border-subtle)]">
+          <SectionLabel collapsed={collapsed}>Manage</SectionLabel>
+          <div className="space-y-1">
+            {manageItems.map((item) => (
               <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate}
-                onClick={onItemClick} collapsed={collapsed} proBadge={showProBadges && item.proOnly} />
-            )
-          )}
-        </div>
+                onClick={onItemClick} collapsed={collapsed} />
+            ))}
+          </div>
+
+          <SectionLabel collapsed={collapsed}>Tools</SectionLabel>
+          <div className="space-y-1">
+            {toolItems.filter((item) => !item.requireWrite || canWrite).map((item) =>
+              item.path === '/scan' ? (
+                <NavButton
+                  key={item.path}
+                  {...item}
+                  label={item.label}
+                  currentPath={location.pathname}
+                  navigate={() => { onScanClick?.(); onItemClick?.(); }}
+                  onClick={undefined}
+                  collapsed={collapsed}
+                />
+              ) : (
+                <NavButton key={item.path} {...item} label={item.termKey ? t[item.termKey] : item.label} currentPath={location.pathname} navigate={navigate}
+                  onClick={onItemClick} collapsed={collapsed} proBadge={showProBadges && item.proOnly} />
+              )
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="py-4 border-t border-[var(--border-subtle)] px-3">
+      <div className="py-4 px-3">
         <div className="space-y-1">
           {user && (
             <button
@@ -211,24 +229,6 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
         </div>
       </div>
 
-      {/* External links + version */}
-      <div className="flex items-center gap-1 px-3 py-3 border-t border-[var(--border-subtle)]">
-        <a href="https://docs.openbin.app/" target="_blank" rel="noopener noreferrer" aria-label="Documentation" className={footerLinkCls}>
-          <BookOpen aria-hidden="true" className="h-4 w-4" />
-        </a>
-        <a href="https://discord.gg/W6JPZCqqx9" target="_blank" rel="noopener noreferrer" aria-label="Discord" className={footerLinkCls}>
-          {discordIcon}
-        </a>
-        <a href="https://github.com/akifbayram/openbin" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className={footerLinkCls}>
-          <Github aria-hidden="true" className="h-4 w-4" />
-        </a>
-        <span className={cn(
-          'ml-auto text-xs text-[var(--text-tertiary)] tabular-nums',
-          collapsed && 'w-0 opacity-0 overflow-hidden'
-        )} aria-hidden={collapsed || undefined}>
-          v{__APP_VERSION__}
-        </span>
-      </div>
     </>
   );
 }
