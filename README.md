@@ -13,7 +13,7 @@
   <img src="public/logo-horizontal.svg" alt="OpenBin" height="64" />
 </picture>
 
-<p>Self-hosted inventory system for organizing physical storage bins with an AI inventory assistant.</p>
+<p>Inventory with intelligence. Organize physical storage bins with QR codes, photo recognition, and multi-user collaboration.</p>
 
 
   <img src="docs/assets/bins.png" alt="OpenBin dashboard showing bins organized by area" width="700" />
