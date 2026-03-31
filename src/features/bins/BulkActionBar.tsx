@@ -101,7 +101,7 @@ export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, 
           </Button>
         </Tooltip>
       )}
-      {aiEnabled && onAskAi && (
+      {aiEnabled && canWrite && onAskAi && (
         <Tooltip content="AI" side="top">
           <Button
             variant="ghost"
