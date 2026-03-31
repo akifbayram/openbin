@@ -96,6 +96,12 @@ router.post('/', asyncHandler(async (req, res) => {
       [locationId, name.trim(), req.user!.id, inviteCode],
     );
 
+    // Auto-add creator as admin (inside transaction)
+    await tx(
+      'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
+      [generateUuid(), locationId, req.user!.id, 'admin'],
+    );
+
     const locResult = await tx<Record<string, unknown>>(
       'SELECT id, name, invite_code, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, default_join_role, created_at, updated_at FROM locations WHERE id = $1',
       [locationId],
@@ -104,12 +110,6 @@ router.post('/', asyncHandler(async (req, res) => {
   });
 
   invalidateOverLimitCache(req.user!.id);
-
-  // Auto-add creator as admin
-  await query(
-    'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
-    [generateUuid(), locationId, req.user!.id, 'admin']
-  );
 
   logRouteActivity(req, {
     locationId,

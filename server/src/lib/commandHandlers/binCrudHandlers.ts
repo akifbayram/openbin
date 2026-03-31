@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import type { TxQueryFn } from '../../db.js';
 import { d, generateUuid } from '../../db.js';
 import type { ActionResult } from '../commandExecutor.js';
@@ -62,7 +61,7 @@ export async function handleCreateBin(action: Extract<CommandAction, { type: 'cr
     const item = createItems[i];
     const itemName = typeof item === 'string' ? item : item.name;
     const qty = typeof item === 'object' && typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : null;
-    await tx('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)', [crypto.randomUUID(), binId, itemName, qty, i]);
+    await tx('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)', [generateUuid(), binId, itemName, qty, i]);
   }
 
   // Insert custom field values

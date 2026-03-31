@@ -1,21 +1,11 @@
 import pg from 'pg';
+import { deserializeRow } from './shared.js';
 import type { DatabaseEngine, QueryResult, TxQueryFn } from './types.js';
 
-const { Pool } = pg;
+const { Pool, types } = pg;
 
-/** Columns whose TEXT/JSONB values should be parsed as JSON when returned */
-const JSON_COLUMNS = new Set(['items', 'tags', 'changes', 'settings', 'filters', 'custom_fields']);
-
-/** Parse JSON columns — PG returns JSONB natively as objects, but TEXT columns still need parsing */
-function deserializeRow<T>(row: Record<string, any>): T {
-  const result = { ...row };
-  for (const key of Object.keys(result)) {
-    if (JSON_COLUMNS.has(key) && typeof result[key] === 'string') {
-      try { result[key] = JSON.parse(result[key] as string); } catch { /* leave as string */ }
-    }
-  }
-  return result as T;
-}
+// PostgreSQL bigint (OID 20) → JavaScript number (safe for COUNT(*) values)
+types.setTypeParser(20, (val: string) => Number(val));
 
 /** Auto-serialize arrays to JSON strings in params */
 function serializeParams(params?: unknown[]): unknown[] {
@@ -26,7 +16,11 @@ function serializeParams(params?: unknown[]): unknown[] {
 let pool: pg.Pool | null = null;
 
 export function initPostgres(connectionString: string): pg.Pool {
-  pool = new Pool({ connectionString });
+  pool = new Pool({
+    connectionString,
+    connectionTimeoutMillis: 5000,
+    idleTimeoutMillis: 30000,
+  });
   return pool;
 }
 

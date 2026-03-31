@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { deserializeRow } from './shared.js';
 import type { DatabaseEngine, QueryResult, TxQueryFn } from './types.js';
 
 // Module-level database handle — null until initSqlite() is called
@@ -91,9 +92,6 @@ export function getSqliteDb(): Database.Database {
 // SQL helpers
 // ---------------------------------------------------------------------------
 
-/** Columns whose TEXT values should be parsed as JSON when returned */
-const JSON_COLUMNS = new Set(['items', 'tags', 'changes', 'settings', 'filters', 'custom_fields']);
-
 /**
  * Convert PostgreSQL-style $1, $2, ... placeholders to SQLite ? placeholders.
  * Returns the rewritten SQL and reordered params array.
@@ -132,21 +130,6 @@ export function convertParams(
   return { sql, orderedParams: newParams };
 }
 
-/** Parse JSON columns in result rows */
-export function deserializeRow<T>(row: Record<string, unknown>): T {
-  const result = { ...row };
-  for (const key of Object.keys(result)) {
-    if (JSON_COLUMNS.has(key) && typeof result[key] === 'string') {
-      try {
-        result[key] = JSON.parse(result[key] as string);
-      } catch {
-        // leave as string if not valid JSON
-      }
-    }
-  }
-  return result as T;
-}
-
 /** Detect if a statement returns rows */
 export function isReturningQuery(sql: string): boolean {
   const trimmed = sql.trimStart().toUpperCase();
@@ -163,6 +146,12 @@ export function isReturningQuery(sql: string): boolean {
 function runQuery<T>(sql: string, params?: unknown[]): QueryResult<T> {
   const instance = getSqliteDb();
   const { sql: convertedSql, orderedParams } = convertParams(sql, params);
+
+  // PRAGMA statements must use exec(), not prepare()
+  if (convertedSql.trimStart().toUpperCase().startsWith('PRAGMA')) {
+    instance.exec(convertedSql);
+    return { rows: [] as T[], rowCount: 0 };
+  }
 
   if (isReturningQuery(convertedSql)) {
     const stmt = instance.prepare(convertedSql);

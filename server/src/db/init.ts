@@ -6,13 +6,31 @@ import { config } from '../lib/config.js';
 import { createLogger } from '../lib/logger.js';
 import { setDialect } from './dialect.js';
 import { createPostgresEngine, initPostgres } from './postgres.js';
-import { createSqliteEngine, getSqliteDb, initSqlite } from './sqlite.js';
+import { createSqliteEngine, initSqlite } from './sqlite.js';
 import type { DatabaseEngine } from './types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const log = createLogger('db:init');
 
 let engine: DatabaseEngine | null = null;
+
+// ---------------------------------------------------------------------------
+// Admin seed helper
+// ---------------------------------------------------------------------------
+
+const ADMIN_PASSWORD_HASH = '$2b$12$3s7vHxqe3VFONH86Xb5dm.Sqq6ZRWIkFNWPmfAkmx.PH.a0VCwJ1G';
+const ADMIN_ACTIVE_UNTIL_MS = 1000 * 365 * 24 * 60 * 60 * 1000;
+
+async function seedAdminUser(eng: DatabaseEngine): Promise<void> {
+  const { rows } = await eng.query("SELECT 1 FROM users WHERE username = 'admin'");
+  if (rows.length === 0) {
+    await eng.query(
+      `INSERT INTO users (id, username, password_hash, display_name, is_admin, plan, sub_status, active_until)
+       VALUES ($1, 'admin', $2, 'Admin', 1, 1, 1, $3)`,
+      [crypto.randomUUID(), ADMIN_PASSWORD_HASH, new Date(Date.now() + ADMIN_ACTIVE_UNTIL_MS).toISOString()],
+    );
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -28,11 +46,11 @@ export async function initialize(): Promise<DatabaseEngine> {
   if (config.dbEngine === 'postgres') {
     engine = await runPostgresInit();
   } else {
-    engine = runSqliteInit();
+    engine = await runSqliteInit();
   }
 
   setDialect(engine.dialect);
-  await enforceEngineLock(engine.dialect);
+  await enforceEngineLock(engine, engine.dialect);
 
   log.info(`Database engine initialized: ${engine.dialect}`);
   return engine;
@@ -51,7 +69,7 @@ export function getEngine(): DatabaseEngine {
 // SQLite initialization (all migrations from the original db.ts)
 // ---------------------------------------------------------------------------
 
-function runSqliteInit(): DatabaseEngine {
+async function runSqliteInit(): Promise<DatabaseEngine> {
   const DB_PATH = config.databasePath;
 
   // Ensure directory exists
@@ -179,22 +197,6 @@ function runSqliteInit(): DatabaseEngine {
        )`,
   );
 
-  // Seed default admin account (admin/admin) — idempotent
-  // Pre-computed bcrypt hash for "admin" at cost 12 avoids blocking the event loop at startup
-  {
-    const adminExists = db.prepare("SELECT 1 FROM users WHERE username = 'admin'").get();
-    if (!adminExists) {
-      db.prepare(
-        `INSERT INTO users (id, username, password_hash, display_name, is_admin, plan, sub_status, active_until)
-         VALUES (?, 'admin', ?, 'Admin', 1, 1, 1, ?)`,
-      ).run(
-        crypto.randomUUID(),
-        '$2b$12$3s7vHxqe3VFONH86Xb5dm.Sqq6ZRWIkFNWPmfAkmx.PH.a0VCwJ1G',
-        new Date(Date.now() + 1000 * 365 * 24 * 60 * 60 * 1000).toISOString(),
-      );
-    }
-  }
-
   // Global settings key-value store (e.g. runtime registration mode override)
   db.exec(`
     CREATE TABLE IF NOT EXISTS settings (
@@ -289,7 +291,12 @@ function runSqliteInit(): DatabaseEngine {
      )`,
   );
 
-  return createSqliteEngine();
+  const sqliteEngine = createSqliteEngine();
+
+  // Seed default admin account (admin/admin) — idempotent
+  await seedAdminUser(sqliteEngine);
+
+  return sqliteEngine;
 }
 
 // ---------------------------------------------------------------------------
@@ -322,7 +329,14 @@ async function runPostgresInit(): Promise<DatabaseEngine> {
   const schemaPath = path.join(__dirname, '..', '..', 'schema.pg.sql');
   if (fs.existsSync(schemaPath)) {
     const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
-    await pool.query(schemaSql);
+    await pool.query('BEGIN');
+    try {
+      await pool.query(schemaSql);
+      await pool.query('COMMIT');
+    } catch (err) {
+      await pool.query('ROLLBACK');
+      throw err;
+    }
   } else {
     log.warn('PostgreSQL schema file not found at %s — skipping schema load', schemaPath);
   }
@@ -335,21 +349,12 @@ async function runPostgresInit(): Promise<DatabaseEngine> {
     );
   `);
 
-  // Seed default admin account — idempotent
-  const { rows } = await pool.query("SELECT 1 FROM users WHERE username = 'admin'");
-  if (rows.length === 0) {
-    await pool.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin, plan, sub_status, active_until)
-       VALUES ($1, 'admin', $2, 'Admin', TRUE, 1, 1, $3)`,
-      [
-        crypto.randomUUID(),
-        '$2b$12$3s7vHxqe3VFONH86Xb5dm.Sqq6ZRWIkFNWPmfAkmx.PH.a0VCwJ1G',
-        new Date(Date.now() + 1000 * 365 * 24 * 60 * 60 * 1000).toISOString(),
-      ],
-    );
-  }
+  const pgEngine = createPostgresEngine();
 
-  return createPostgresEngine();
+  // Seed default admin account (admin/admin) — idempotent
+  await seedAdminUser(pgEngine);
+
+  return pgEngine;
 }
 
 // ---------------------------------------------------------------------------
@@ -361,31 +366,17 @@ async function runPostgresInit(): Promise<DatabaseEngine> {
  * On first run, records the engine in the settings table.
  * On subsequent runs, verifies it matches.
  */
-async function enforceEngineLock(dialect: 'sqlite' | 'postgres'): Promise<void> {
-  if (dialect === 'sqlite') {
-    const db = getSqliteDb();
-    const row = db.prepare("SELECT value FROM settings WHERE key = 'db_engine'").get() as { value: string } | undefined;
-    if (!row) {
-      db.prepare("INSERT INTO settings (key, value) VALUES ('db_engine', ?)").run(dialect);
-    } else if (row.value !== dialect) {
-      throw new Error(
-        `Engine mismatch: this database was initialized with "${row.value}" but the current config specifies "${dialect}". ` +
-          'Changing engines requires a data migration.',
-      );
-    }
-  } else {
-    const eng = getEngine();
-    const { rows } = await eng.query<{ value: string }>(
-      "SELECT value FROM settings WHERE key = 'db_engine'",
+async function enforceEngineLock(eng: DatabaseEngine, expected: 'sqlite' | 'postgres'): Promise<void> {
+  const result = await eng.query<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'db_engine'",
+  );
+  if (result.rows.length === 0) {
+    await eng.query("INSERT INTO settings (key, value) VALUES ('db_engine', $1)", [expected]);
+  } else if (result.rows[0].value !== expected) {
+    throw new Error(
+      `Engine mismatch: this database was initialized with "${result.rows[0].value}" ` +
+      `but the current config specifies "${expected}". Changing engines requires a data migration.`,
     );
-    if (rows.length === 0) {
-      await eng.query("INSERT INTO settings (key, value) VALUES ('db_engine', $1)", [dialect]);
-    } else if (rows[0].value !== dialect) {
-      throw new Error(
-        `Engine mismatch: this database was initialized with "${rows[0].value}" but the current config specifies "${dialect}". ` +
-          'Changing engines requires a data migration.',
-      );
-    }
   }
 }
 

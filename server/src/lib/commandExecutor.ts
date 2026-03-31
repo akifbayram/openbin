@@ -42,21 +42,27 @@ export async function executeActions(
   const ctx: ActionContext = { locationId, userId, userName, pendingActivities, authMethod, apiKeyId };
 
   await withTransaction(async (tx) => {
-    for (const action of actions) {
+    for (let i = 0; i < actions.length; i++) {
+      const action = actions[i];
+      const handler = handlers[action.type];
+      if (!handler) {
+        executed.push({
+          type: action.type,
+          success: false,
+          details: 'Unknown action type',
+          error: 'Unknown action type',
+        });
+        continue;
+      }
+
+      const savepointName = `action_${i}`;
       try {
-        const handler = handlers[action.type];
-        if (!handler) {
-          executed.push({
-            type: action.type,
-            success: false,
-            details: 'Unknown action type',
-            error: 'Unknown action type',
-          });
-          continue;
-        }
+        await tx(`SAVEPOINT ${savepointName}`);
         const result = await handler(action, ctx, tx);
+        await tx(`RELEASE SAVEPOINT ${savepointName}`);
         executed.push(result);
       } catch (err) {
+        await tx(`ROLLBACK TO SAVEPOINT ${savepointName}`);
         const msg = err instanceof Error ? err.message : 'Unknown error';
         errors.push(`${action.type}: ${msg}`);
         executed.push({

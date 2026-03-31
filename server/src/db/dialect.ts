@@ -78,7 +78,7 @@ export const d = {
 
   insertOrIgnore(sql: string): string {
     if (currentDialect === 'sqlite') {
-      return sql.replace(/^INSERT /, 'INSERT OR IGNORE ');
+      return sql.trimStart().replace(/^INSERT /, 'INSERT OR IGNORE ');
     }
     return `${sql} ON CONFLICT DO NOTHING`;
   },
