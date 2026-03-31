@@ -84,6 +84,7 @@ export function OptionGroup<K extends string>({
   return (
     <div
       ref={containerRef}
+      role="radiogroup"
       className={cn(
         'relative flex bg-[var(--bg-flat)] border border-[var(--border-flat)] p-1 gap-0.5',
         containerRadius,
@@ -108,10 +109,13 @@ export function OptionGroup<K extends string>({
         const disabled = opt.disabled && !active;
 
         return (
+          // biome-ignore lint/a11y/useSemanticElements: custom segmented control with sliding indicator cannot use native radio inputs
           <button
             key={opt.key}
             ref={setButtonRef(opt.key)}
             type="button"
+            role="radio"
+            aria-checked={active}
             disabled={disabled}
             title={disabled ? opt.disabledTitle : undefined}
             onClick={() => !disabled && onChange(opt.key)}
