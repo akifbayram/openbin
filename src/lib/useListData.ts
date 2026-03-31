@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { getErrorMessage } from '@/lib/utils';
 import type { EventName } from '@/lib/eventBus';
 import { notify, useRefreshOn } from '@/lib/eventBus';
+import { getErrorMessage } from '@/lib/utils';
 import type { ListResponse } from '@/types';
 
 /**

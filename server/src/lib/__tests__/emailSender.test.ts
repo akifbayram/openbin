@@ -4,23 +4,23 @@ vi.mock('../email.js', () => ({
   sendEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { sendEmail } from '../email.js';
 import { query } from '../../db.js';
+import { sendEmail } from '../email.js';
 import {
+  fireDowngradeImpactEmail,
+  fireExploreFeaturesEmail,
   firePasswordResetEmail,
+  firePostTrialEarlyEmail,
+  firePostTrialLateEmail,
   fireSubscriptionConfirmedEmail,
   fireSubscriptionExpiredEmail,
   fireSubscriptionExpiringEmail,
-  fireTrialExpiringEmail,
   fireTrialExpiredEmail,
-  fireExploreFeaturesEmail,
-  firePostTrialEarlyEmail,
-  firePostTrialLateEmail,
-  fireDowngradeImpactEmail,
+  fireTrialExpiringEmail,
   fireWelcomeEmail,
 } from '../emailSender.js';
-import { Plan } from '../planGate.js';
 import type { DowngradeImpact } from '../emailTemplates.js';
+import { Plan } from '../planGate.js';
 
 const mockSendEmail = vi.mocked(sendEmail);
 

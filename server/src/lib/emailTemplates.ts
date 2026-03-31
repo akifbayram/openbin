@@ -274,7 +274,7 @@ export function passwordResetEmail(params: { displayName: string; resetUrl: stri
       '',
       `Reset password: ${params.resetUrl}`,
       '',
-      'This link expires in ${TOKEN_EXPIRY_HOURS} hours. If you didn\'t request this, you can safely ignore this email.',
+      `This link expires in ${TOKEN_EXPIRY_HOURS} hours. If you didn't request this, you can safely ignore this email.`,
     ].join('\n'),
   };
 }

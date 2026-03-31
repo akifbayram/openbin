@@ -15,8 +15,8 @@ import { LocationMembersDialog } from '@/features/locations/LocationMembersDialo
 import { LocationRetentionDialog } from '@/features/locations/LocationRetentionDialog';
 import { leaveLocation, useLocationList } from '@/features/locations/useLocations';
 import { ApiError } from '@/lib/api';
-import { generateQRDataURL } from '@/lib/qr';
 import { useAuth } from '@/lib/auth';
+import { generateQRDataURL } from '@/lib/qr';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';

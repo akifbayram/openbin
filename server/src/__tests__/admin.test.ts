@@ -188,7 +188,7 @@ describe('PUT /api/admin/users/:id', () => {
   it('updates password on a user', async () => {
     const { token, user } = await createTestUser(app);
     makeAdmin(user.id);
-    const { user: target, password: oldPassword } = await createTestUser(app);
+    const { user: target } = await createTestUser(app);
 
     const res = await request(app)
       .put(`/api/admin/users/${target.id}`)

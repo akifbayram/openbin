@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
-import { getErrorMessage } from '@/lib/utils';
 import { compressImage } from '@/features/photos/compressImage';
+import { getErrorMessage } from '@/lib/utils';
 import type { AiSuggestions } from '@/types';
 
 interface UsePhotoAnalysisOptions {

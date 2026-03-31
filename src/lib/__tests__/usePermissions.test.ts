@@ -4,8 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@/lib/auth', () => ({ useAuth: vi.fn() }));
 vi.mock('@/features/locations/useLocations', () => ({ useLocationList: vi.fn() }));
 
-import { useAuth } from '@/lib/auth';
 import { useLocationList } from '@/features/locations/useLocations';
+import { useAuth } from '@/lib/auth';
+import type { Location } from '@/types';
 import { usePermissions } from '../usePermissions';
 
 const mockUseAuth = vi.mocked(useAuth);
@@ -18,10 +19,10 @@ function setup(role: string | undefined, userId = 'user1', locationId = 'loc1') 
   } as ReturnType<typeof useAuth>);
 
   const locations = role
-    ? [{ id: locationId, role } as any]
+    ? [{ id: locationId, role } as Pick<Location, 'id' | 'role'>]
     : [];
 
-  mockUseLocationList.mockReturnValue({ locations, isLoading: false } as any);
+  mockUseLocationList.mockReturnValue({ locations, isLoading: false } as ReturnType<typeof useLocationList>);
 }
 
 describe('usePermissions', () => {
@@ -88,7 +89,7 @@ describe('usePermissions', () => {
       user: { id: 'user1' },
       activeLocationId: 'missing',
     } as ReturnType<typeof useAuth>);
-    mockUseLocationList.mockReturnValue({ locations: [{ id: 'loc1', role: 'admin' } as any], isLoading: false } as any);
+    mockUseLocationList.mockReturnValue({ locations: [{ id: 'loc1', role: 'admin' } as Pick<Location, 'id' | 'role'>], isLoading: false } as ReturnType<typeof useLocationList>);
 
     const { result } = renderHook(() => usePermissions());
     expect(result.current.role).toBeUndefined();
@@ -103,7 +104,7 @@ describe('usePermissions', () => {
       user: null,
       activeLocationId: 'loc1',
     } as ReturnType<typeof useAuth>);
-    mockUseLocationList.mockReturnValue({ locations: [{ id: 'loc1', role: 'member' } as any], isLoading: false } as any);
+    mockUseLocationList.mockReturnValue({ locations: [{ id: 'loc1', role: 'member' } as Pick<Location, 'id' | 'role'>], isLoading: false } as ReturnType<typeof useLocationList>);
 
     const { result } = renderHook(() => usePermissions());
     expect(result.current.canEditBin('anyone')).toBe(false);
@@ -112,7 +113,7 @@ describe('usePermissions', () => {
 
   it('isLoading passes through from useLocationList', () => {
     setup('admin');
-    mockUseLocationList.mockReturnValue({ locations: [], isLoading: true } as any);
+    mockUseLocationList.mockReturnValue({ locations: [], isLoading: true } as ReturnType<typeof useLocationList>);
     const { result } = renderHook(() => usePermissions());
     expect(result.current.isLoading).toBe(true);
   });

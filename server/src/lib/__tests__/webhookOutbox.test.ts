@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockQuery = vi.fn().mockResolvedValue({ rows: [] });
 const mockGenerateUuid = vi.fn().mockReturnValue('test-uuid-1');

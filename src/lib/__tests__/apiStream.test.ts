@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StreamEvent } from '../apiStream';
 
 vi.mock('../api', () => ({
@@ -16,8 +16,8 @@ vi.mock('../api', () => ({
   tryRefresh: vi.fn(),
 }));
 
-import { apiStream } from '../apiStream';
 import { ApiError, tryRefresh } from '../api';
+import { apiStream } from '../apiStream';
 
 function mockStreamResponse(chunks: string[], status = 200) {
   const encoder = new TextEncoder();

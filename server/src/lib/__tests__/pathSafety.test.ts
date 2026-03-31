@@ -77,7 +77,7 @@ describe('safePath', () => {
   });
 
   it('very long relative path does not crash', () => {
-    const long = 'a/'.repeat(500) + 'file.txt';
+    const long = `${'a/'.repeat(500)}file.txt`;
     const result = safePath(base, long);
     expect(result).toBe(path.resolve(base, long));
   });

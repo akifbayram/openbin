@@ -571,7 +571,7 @@ describe('GET /api/auth/status — selfHosted flag', () => {
 
 describe('POST /api/auth/forgot-password', () => {
   it('returns 200 for existing email', async () => {
-    const { token, user } = await createTestUser(app);
+    const { token } = await createTestUser(app);
     // Set an email on the user first
     await request(app)
       .put('/api/auth/profile')

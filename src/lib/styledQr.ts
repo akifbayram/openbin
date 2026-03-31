@@ -1,6 +1,6 @@
 import type { QrStyleOptions } from '@/features/print/usePrintSettings';
 import { getBinQrPayload } from './constants';
-import { getQRCodeStyling, makeLruCache, rawQrToDataURL, type QRColorOptions } from './qr';
+import { getQRCodeStyling, makeLruCache, type QRColorOptions, rawQrToDataURL } from './qr';
 
 const cache = makeLruCache();
 

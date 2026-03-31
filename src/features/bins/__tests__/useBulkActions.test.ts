@@ -1,7 +1,7 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Bin } from '@/types';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Terminology } from '@/lib/terminology';
+import type { Bin } from '@/types';
 
 const mockNavigate = vi.fn();
 
@@ -24,10 +24,10 @@ vi.mock('@/lib/utils', () => ({
   haptic: vi.fn(),
 }));
 
-import { useBulkActions } from '../useBulkActions';
-import { deleteBin, restoreBin, addBin } from '@/features/bins/useBins';
+import { addBin, deleteBin } from '@/features/bins/useBins';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 import { useAuth } from '@/lib/auth';
+import { useBulkActions } from '../useBulkActions';
 
 function makeBin(overrides: Partial<Bin> & { id: string }): Bin {
   return {

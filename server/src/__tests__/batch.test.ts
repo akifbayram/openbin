@@ -7,13 +7,11 @@ import { createTestArea, createTestBin, createTestLocation, createTestUser } fro
 let app: Express;
 let token: string;
 let locationId: string;
-let userId: string;
 
 beforeEach(async () => {
   app = createApp();
   const user = await createTestUser(app);
   token = user.token;
-  userId = user.user.id;
   const loc = await createTestLocation(app, token);
   locationId = loc.id;
 });
