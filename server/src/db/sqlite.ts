@@ -201,26 +201,21 @@ export function createSqliteEngine(): DatabaseEngine {
 
     async withTransaction<T>(fn: (query: TxQueryFn) => Promise<T>): Promise<T> {
       const instance = getSqliteDb();
-      let result: T;
-
-      const txFn = instance.transaction(() => {
-        const txQuery: TxQueryFn = async <R = Record<string, unknown>>(
+      instance.exec('BEGIN');
+      try {
+        const txQuery: TxQueryFn = async <R = Record<string, any>>(
           sql: string,
           params?: unknown[],
         ): Promise<QueryResult<R>> => {
           return runQuery<R>(sql, params);
         };
-
-        const promise = fn(txQuery);
-        // Since all awaited calls resolve synchronously (better-sqlite3 is sync),
-        // the .then callback runs in the same tick.
-        promise.then((r) => {
-          result = r;
-        });
-      });
-
-      txFn();
-      return result!;
+        const result = await fn(txQuery);
+        instance.exec('COMMIT');
+        return result;
+      } catch (err) {
+        instance.exec('ROLLBACK');
+        throw err;
+      }
     },
 
     async close(): Promise<void> {
