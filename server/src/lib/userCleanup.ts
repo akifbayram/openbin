@@ -9,7 +9,7 @@ const log = createLogger('cleanup');
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 async function cleanupDeletedUsers(): Promise<void> {
-  if (!acquireJobLock('user_cleanup', 7200)) return;
+  if (!(await acquireJobLock('user_cleanup', 7200))) return;
   try {
     const users = await query<{ id: string }>(
       `SELECT id FROM users WHERE deleted_at IS NOT NULL AND deleted_at <= datetime('now', '-1 hour')`,
@@ -26,7 +26,7 @@ async function cleanupDeletedUsers(): Promise<void> {
   } catch (err) {
     log.error('User cleanup check failed:', err instanceof Error ? err.message : err);
   } finally {
-    releaseJobLock('user_cleanup');
+    await releaseJobLock('user_cleanup');
   }
 }
 

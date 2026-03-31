@@ -21,8 +21,8 @@ const log = createLogger('auth');
 const router = Router();
 
 // GET /api/auth/status — public (no auth required)
-router.get('/status', (_req, res) => {
-  const regMode = getRegistrationMode();
+router.get('/status', async (_req, res) => {
+  const regMode = await getRegistrationMode();
   const body: Record<string, unknown> = {
     registrationEnabled: regMode !== 'closed',
     registrationMode: regMode,
@@ -109,7 +109,7 @@ router.get('/invite-preview', asyncHandler(async (req, res) => {
 
 // POST /api/auth/register
 router.post('/register', asyncHandler(async (req, res) => {
-  const regMode = getRegistrationMode();
+  const regMode = await getRegistrationMode();
   if (regMode === 'closed') {
     throw new ForbiddenError('Registration is currently disabled');
   }
@@ -583,7 +583,7 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
     try { fs.unlinkSync(avatarPath); } catch { /* ignore */ }
   }
 
-  deleteUserData(userId);
+  await deleteUserData(userId);
 
   await query('DELETE FROM users WHERE id = $1', [userId]);
 

@@ -42,75 +42,79 @@ function sweepExpired(): void {
 function createAiRateLimiter(): RequestHandler {
   if (config.disableRateLimit) return (_req, _res, next) => next();
 
-  return (req, res, next) => {
-    if (!req.user) { next(); return; }
+  return async (req, res, next) => {
+    try {
+      if (!req.user) { next(); return; }
 
-    const userId = req.user.id;
-    const demo = isDemoUser(req);
-    const limit = demo
-      ? config.demoAiRateLimit
-      : req.authMethod === 'api_key'
-        ? config.aiRateLimitApiKey
-        : config.aiRateLimit;
+      const userId = req.user.id;
+      const demo = isDemoUser(req);
+      const limit = demo
+        ? config.demoAiRateLimit
+        : req.authMethod === 'api_key'
+          ? config.aiRateLimitApiKey
+          : config.aiRateLimit;
 
-    const photoCount = countPhotosInRequest(req);
-    const cost = Math.max(1, photoCount);
+      const photoCount = countPhotosInRequest(req);
+      const cost = Math.max(1, photoCount);
 
-    // Demo guard: reject if too many photos per request
-    if (demo && photoCount > config.demoAiMaxPhotosPerRequest) {
-      res.status(422).json({
-        error: 'DEMO_RESTRICTION',
-        message: `Demo accounts limited to ${config.demoAiMaxPhotosPerRequest} photos per request`,
-      });
-      return;
-    }
-
-    // Demo guard: check daily budget
-    if (demo) {
-      const budget = checkDailyBudget(userId, cost);
-      if (!budget.allowed) {
-        res.status(429).json({
-          error: 'DAILY_LIMIT_EXCEEDED',
-          message: 'Daily AI usage limit reached',
-          remaining: 0,
-          limit: budget.limit,
+      // Demo guard: reject if too many photos per request
+      if (demo && photoCount > config.demoAiMaxPhotosPerRequest) {
+        res.status(422).json({
+          error: 'DEMO_RESTRICTION',
+          message: `Demo accounts limited to ${config.demoAiMaxPhotosPerRequest} photos per request`,
         });
         return;
       }
-    }
 
-    // Sliding window token bucket
-    const now = Date.now();
-    let entry = buckets.get(userId);
-    if (!entry || now - entry.windowStart >= WINDOW_MS) {
-      entry = { tokens: 0, windowStart: now };
-      buckets.set(userId, entry);
-    }
-
-    if (entry.tokens + cost > limit) {
-      const retryAfter = Math.ceil((entry.windowStart + WINDOW_MS - now) / 1000);
-      res.set('Retry-After', String(retryAfter));
-      res.status(429).json({
-        error: 'RATE_LIMITED',
-        message: 'Too many AI requests, please try again later',
-      });
-      return;
-    }
-
-    entry.tokens += cost;
-
-    // Record usage for demo users after successful response
-    res.once('finish', () => {
-      if (res.statusCode < 400 && demo) {
-        recordAiUsage(userId, cost);
+      // Demo guard: check daily budget
+      if (demo) {
+        const budget = await checkDailyBudget(userId, cost);
+        if (!budget.allowed) {
+          res.status(429).json({
+            error: 'DAILY_LIMIT_EXCEEDED',
+            message: 'Daily AI usage limit reached',
+            remaining: 0,
+            limit: budget.limit,
+          });
+          return;
+        }
       }
-    });
 
-    // Periodic sweep of expired buckets
-    invocationCount++;
-    if (invocationCount % 100 === 0) sweepExpired();
+      // Sliding window token bucket
+      const now = Date.now();
+      let entry = buckets.get(userId);
+      if (!entry || now - entry.windowStart >= WINDOW_MS) {
+        entry = { tokens: 0, windowStart: now };
+        buckets.set(userId, entry);
+      }
 
-    next();
+      if (entry.tokens + cost > limit) {
+        const retryAfter = Math.ceil((entry.windowStart + WINDOW_MS - now) / 1000);
+        res.set('Retry-After', String(retryAfter));
+        res.status(429).json({
+          error: 'RATE_LIMITED',
+          message: 'Too many AI requests, please try again later',
+        });
+        return;
+      }
+
+      entry.tokens += cost;
+
+      // Record usage for demo users after successful response
+      res.once('finish', () => {
+        if (res.statusCode < 400 && demo) {
+          recordAiUsage(userId, cost).catch(() => {});
+        }
+      });
+
+      // Periodic sweep of expired buckets
+      invocationCount++;
+      if (invocationCount % 100 === 0) sweepExpired();
+
+      next();
+    } catch (err) {
+      next(err);
+    }
   };
 }
 

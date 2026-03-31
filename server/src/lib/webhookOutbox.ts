@@ -40,7 +40,7 @@ async function recordRetry(id: string, attempts: number, errorMsg: string): Prom
 
 async function processOutbox(): Promise<void> {
   if (!config.managerUrl || !config.subscriptionJwtSecret) return;
-  if (!acquireJobLock('webhook_outbox', 60)) return;
+  if (!(await acquireJobLock('webhook_outbox', 60))) return;
 
   try {
     // Abandon entries older than 48 hours
@@ -93,7 +93,7 @@ async function processOutbox(): Promise<void> {
   } catch (err) {
     log.error('Processing failed:', err instanceof Error ? err.message : err);
   } finally {
-    releaseJobLock('webhook_outbox');
+    await releaseJobLock('webhook_outbox');
   }
 }
 

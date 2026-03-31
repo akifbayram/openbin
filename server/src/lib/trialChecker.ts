@@ -17,7 +17,7 @@ interface TrialUser {
 }
 
 async function checkTrials(): Promise<void> {
-  if (!acquireJobLock('trial_checker', 7200)) return;
+  if (!(await acquireJobLock('trial_checker', 7200))) return;
   try {
     // Trial expiring in 3 days
     const expiring = await query<TrialUser>(
@@ -100,7 +100,7 @@ async function checkTrials(): Promise<void> {
   } catch (err) {
     log.error('Trial check failed:', err instanceof Error ? err.message : err);
   } finally {
-    releaseJobLock('trial_checker');
+    await releaseJobLock('trial_checker');
   }
 }
 
