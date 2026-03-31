@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { generateUuid, query } from '../db.js';
+import { d, generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { ValidationError } from '../lib/httpErrors.js';
 import { authenticate } from '../middleware/auth.js';
@@ -42,7 +42,7 @@ router.post('/', asyncHandler(async (req, res) => {
   await query(
     `INSERT INTO scan_history (id, user_id, bin_id)
      VALUES ($1, $2, $3)
-     ON CONFLICT (user_id, bin_id) DO UPDATE SET scanned_at = datetime('now')`,
+     ON CONFLICT (user_id, bin_id) DO UPDATE SET scanned_at = ${d.now()}`,
     [id, req.user!.id, binId]
   );
 

@@ -1,4 +1,4 @@
-import { query } from '../db.js';
+import { d, query } from '../db.js';
 import { sanitizeBinForContext } from './aiSanitize.js';
 import type { CommandRequest } from './commandParser.js';
 import type { InventoryContext } from './inventoryQuery.js';
@@ -15,7 +15,7 @@ async function fetchLocationData(locationId: string, userId: string) {
   const [binsResult, areasResult, trashResult, cfResult] = await Promise.all([
     query(
       `SELECT b.id, b.name,
-        COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name, 'quantity', bi.quantity)) FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
+        COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))} FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
         b.tags, b.area_id, COALESCE(a.name, '') AS area_name, b.notes, b.icon, b.color,
         b.visibility,
         (SELECT COUNT(*) FROM photos WHERE photos.bin_id = b.id) AS photo_count,
@@ -136,7 +136,7 @@ export async function buildInventoryContext(locationId: string, userId: string):
 /** Fetch distinct tags for a location (for tag reuse suggestions). */
 export async function fetchExistingTags(locationId: string): Promise<string[]> {
   const tagsResult = await query(
-    `SELECT DISTINCT je.value AS tag FROM bins, json_each(bins.tags) je WHERE bins.location_id = $1 AND bins.deleted_at IS NULL`,
+    `SELECT DISTINCT je.value AS tag FROM bins, ${d.jsonEachFrom('bins.tags', 'je')} WHERE bins.location_id = $1 AND bins.deleted_at IS NULL`,
     [locationId]
   );
   return tagsResult.rows.map((r) => r.tag as string).sort();

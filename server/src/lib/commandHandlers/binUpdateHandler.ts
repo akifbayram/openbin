@@ -1,4 +1,4 @@
-import { generateUuid, querySync } from '../../db.js';
+import { d, generateUuid, querySync } from '../../db.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
 import { replaceCustomFieldValuesSync } from '../customFieldHelpers.js';
@@ -90,7 +90,7 @@ export function handleUpdateBin(action: Extract<CommandAction, { type: 'update_b
   }
 
   if (updates.length > 0) {
-    updates.push(`updated_at = datetime('now')`);
+    updates.push(`updated_at = ${d.now()}`);
     params.push(action.bin_id);
     querySync(`UPDATE bins SET ${updates.join(', ')} WHERE id = $${paramIdx}`, params);
   }

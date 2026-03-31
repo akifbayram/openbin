@@ -1,4 +1,4 @@
-import { generateUuid, getDb, query } from '../db.js';
+import { d, generateUuid, getDb, query } from '../db.js';
 
 export interface CustomFieldDef {
   id: string;
@@ -106,7 +106,7 @@ export function remapCustomFieldsForMove(
   let nextPos = targetFields.length > 0 ? targetFields[targetFields.length - 1].position + 1 : 0;
 
   const updateStmt = db.prepare(
-    "UPDATE bin_custom_field_values SET field_id = ?, updated_at = datetime('now') WHERE id = ?"
+`UPDATE bin_custom_field_values SET field_id = ?, updated_at = ${d.now()} WHERE id = ?`
   );
   const insertFieldStmt = db.prepare(
     'INSERT INTO location_custom_fields (id, location_id, name, position) VALUES (?, ?, ?, ?)'

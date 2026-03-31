@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { generateUuid, getDb, query } from '../db.js';
+import { d, generateUuid, getDb, query } from '../db.js';
 import { config } from './config.js';
 import { createLogger } from './logger.js';
 
@@ -61,7 +61,7 @@ export async function rotateRefreshToken(rawToken: string): Promise<{ userId: st
   if (existing.revoked_at) {
     log.warn(`Refresh token replay detected for user ${existing.user_id}, revoking family ${existing.family_id}`);
     await query(
-      `UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE family_id = $1 AND revoked_at IS NULL`,
+      `UPDATE refresh_tokens SET revoked_at = ${d.now()} WHERE family_id = $1 AND revoked_at IS NULL`,
       [existing.family_id],
     );
     return null;
@@ -69,7 +69,7 @@ export async function rotateRefreshToken(rawToken: string): Promise<{ userId: st
 
   // Check expiry
   if (new Date(existing.expires_at) < new Date()) {
-    await query(`UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE id = $1`, [existing.id]);
+    await query(`UPDATE refresh_tokens SET revoked_at = ${d.now()} WHERE id = $1`, [existing.id]);
     return null;
   }
 
@@ -80,7 +80,7 @@ export async function rotateRefreshToken(rawToken: string): Promise<{ userId: st
   const expiresAt = new Date(Date.now() + config.refreshTokenMaxDays * 24 * 60 * 60 * 1000).toISOString();
 
   const db = getDb();
-  const revokeStmt = db.prepare(`UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE id = ?`);
+  const revokeStmt = db.prepare(`UPDATE refresh_tokens SET revoked_at = ${d.now()} WHERE id = ?`);
   const insertStmt = db.prepare(
     `INSERT INTO refresh_tokens (id, user_id, token_hash, family_id, expires_at) VALUES (?, ?, ?, ?, ?)`,
   );
@@ -96,7 +96,7 @@ export async function rotateRefreshToken(rawToken: string): Promise<{ userId: st
 /** Revoke all refresh tokens for a user (logout-all, password change). */
 export async function revokeAllUserTokens(userId: string): Promise<void> {
   await query(
-    `UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE user_id = $1 AND revoked_at IS NULL`,
+    `UPDATE refresh_tokens SET revoked_at = ${d.now()} WHERE user_id = $1 AND revoked_at IS NULL`,
     [userId],
   );
 }
@@ -104,12 +104,12 @@ export async function revokeAllUserTokens(userId: string): Promise<void> {
 /** Revoke a single refresh token by its raw value. */
 export async function revokeSingleToken(rawToken: string): Promise<void> {
   const tokenHash = hashToken(rawToken);
-  await query(`UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE token_hash = $1`, [tokenHash]);
+  await query(`UPDATE refresh_tokens SET revoked_at = ${d.now()} WHERE token_hash = $1`, [tokenHash]);
 }
 
 /** Purge expired refresh tokens older than 30 days (cleanup job). */
 export async function purgeExpiredRefreshTokens(): Promise<void> {
   await query(
-    `DELETE FROM refresh_tokens WHERE expires_at < datetime('now', '-30 days')`,
+    `DELETE FROM refresh_tokens WHERE expires_at < ${d.daysAgo(30)}`,
   );
 }

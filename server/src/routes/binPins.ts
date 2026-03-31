@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getDb, query } from '../db.js';
+import { d, getDb, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireMemberOrAbove, verifyBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS } from '../lib/binQueries.js';
@@ -20,7 +20,7 @@ router.get('/pinned', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Not a member of this location');
   }
   const result = await query(
-    `SELECT ${BIN_SELECT_COLS}, 1 AS is_pinned
+    `SELECT ${BIN_SELECT_COLS()}, 1 AS is_pinned
      FROM pinned_bins pb
      JOIN bins b ON b.id = pb.bin_id
      LEFT JOIN areas a ON a.id = b.area_id
@@ -77,7 +77,7 @@ router.post('/:id/pin', asyncHandler(async (req, res) => {
   const nextPos = maxResult.rows[0].max_pos + 1;
 
   await query(
-    'INSERT OR IGNORE INTO pinned_bins (user_id, bin_id, position) VALUES ($1, $2, $3)',
+    d.insertOrIgnore('INSERT INTO pinned_bins (user_id, bin_id, position) VALUES ($1, $2, $3)'),
     [req.user!.id, id, nextPos]
   );
 

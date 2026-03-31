@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db.js';
+import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { verifyLocationMembership } from '../lib/binAccess.js';
 import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
@@ -34,7 +34,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
   const baseQuery = `
     SELECT jt.value AS tag, COUNT(DISTINCT b.id) AS count
-    FROM bins b, json_each(b.tags) jt
+    FROM bins b, ${d.jsonEachFrom('b.tags', 'jt')}
     WHERE b.location_id = $1
       AND b.deleted_at IS NULL
       AND (b.visibility = 'location' OR b.created_by = $2)
@@ -53,8 +53,8 @@ router.get('/', asyncHandler(async (req, res) => {
   const orderParam = req.query.sort_dir as string | undefined;
   const desc = orderParam === 'desc';
   const orderBy = sortParam === 'count'
-    ? `count ${desc ? 'DESC' : 'ASC'}, jt.value COLLATE NOCASE ASC`
-    : `jt.value COLLATE NOCASE ${desc ? 'DESC' : 'ASC'}`;
+    ? `count ${desc ? 'DESC' : 'ASC'}, jt.value ${d.nocase()} ASC`
+    : `jt.value ${d.nocase()} ${desc ? 'DESC' : 'ASC'}`;
 
   // Data query with sort, limit, offset
   params.push(limit, offset);

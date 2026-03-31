@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { generateUuid, query } from '../db.js';
+import { d, generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireMemberOrAbove, verifyLocationMembership } from '../lib/binAccess.js';
 import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
@@ -21,7 +21,7 @@ router.get('/', asyncHandler(async (req, res) => {
   }
 
   const result = await query(
-    'SELECT id, location_id, tag, color, created_at, updated_at FROM tag_colors WHERE location_id = $1 ORDER BY tag COLLATE NOCASE',
+    `SELECT id, location_id, tag, color, created_at, updated_at FROM tag_colors WHERE location_id = $1 ORDER BY tag ${d.nocase()}`,
     [locationId]
   );
 
@@ -52,7 +52,7 @@ router.put('/', asyncHandler(async (req, res) => {
   const result = await query(
     `INSERT INTO tag_colors (id, location_id, tag, color)
      VALUES ($1, $2, $3, $4)
-     ON CONFLICT (location_id, tag) DO UPDATE SET color = $4, updated_at = datetime('now')
+     ON CONFLICT (location_id, tag) DO UPDATE SET color = $4, updated_at = ${d.now()}
      RETURNING id, location_id, tag, color, created_at, updated_at`,
     [newId, locationId, tag, color]
   );

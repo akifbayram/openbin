@@ -1,4 +1,4 @@
-import { generateUuid, getDb, query, querySync } from '../db.js';
+import { d, generateUuid, getDb, query, querySync } from '../db.js';
 import { computeChanges } from './activityLog.js';
 import { fetchBinById } from './binQueries.js';
 import { replaceCustomFieldValuesSync } from './customFieldHelpers.js';
@@ -14,7 +14,7 @@ export function buildBinSetClauses(fields: {
   cardStyle?: unknown;
   visibility?: unknown;
 }): { setClauses: string[]; params: unknown[]; nextParamIdx: number } {
-  const setClauses: string[] = ["updated_at = datetime('now')"];
+  const setClauses: string[] = [`updated_at = ${d.now()}`];
   const params: unknown[] = [];
   let paramIdx = 1;
 

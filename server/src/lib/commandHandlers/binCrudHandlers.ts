@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { generateUuid, querySync } from '../../db.js';
+import { d, generateUuid, querySync } from '../../db.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
 import { replaceCustomFieldValuesSync } from '../customFieldHelpers.js';
@@ -79,7 +79,7 @@ export function handleCreateBin(action: Extract<CommandAction, { type: 'create_b
 export function handleDeleteBin(action: Extract<CommandAction, { type: 'delete_bin' }>, ctx: ActionContext): ActionResult {
   const bin = querySync('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
-  querySync("UPDATE bins SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
+  querySync(`UPDATE bins SET deleted_at = ${d.now()}, updated_at = ${d.now()} WHERE id = $1`, [action.bin_id]);
   ctx.pendingActivities.push({
     locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,
     action: 'delete', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
@@ -90,7 +90,7 @@ export function handleDeleteBin(action: Extract<CommandAction, { type: 'delete_b
 export function handleRestoreBin(action: Extract<CommandAction, { type: 'restore_bin' }>, ctx: ActionContext): ActionResult {
   const bin = querySync('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NOT NULL', [action.bin_id]);
   if (bin.rows.length === 0) throw new Error(`Bin not found in trash: ${action.bin_name}`);
-  querySync("UPDATE bins SET deleted_at = NULL, updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
+  querySync(`UPDATE bins SET deleted_at = NULL, updated_at = ${d.now()} WHERE id = $1`, [action.bin_id]);
   ctx.pendingActivities.push({
     locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,
     action: 'restore', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,

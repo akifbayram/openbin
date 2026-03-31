@@ -53,7 +53,7 @@ app.listen(config.port, () => {
 
   // Orphan photo cleanup — 30s after startup, then every 6 hours
   setTimeout(() => {
-    cleanupOrphanPhotos();
-    setInterval(() => cleanupOrphanPhotos(), 6 * 60 * 60 * 1000);
+    cleanupOrphanPhotos().catch(() => {});
+    setInterval(() => cleanupOrphanPhotos().catch(() => {}), 6 * 60 * 60 * 1000);
   }, 30_000);
 });

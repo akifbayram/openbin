@@ -1,7 +1,9 @@
-import { query } from '../db.js';
+import { d, query } from '../db.js';
 
 /** Shared SELECT columns for bin queries (requires b alias for bins, a alias for areas). */
-export const BIN_SELECT_COLS = `b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name, 'quantity', bi.quantity)) FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items, b.notes, b.tags, b.icon, b.color, b.card_style, b.created_by, COALESCE((SELECT COALESCE(u.display_name, u.username) FROM users u WHERE u.id = b.created_by), '') AS created_by_name, b.visibility, b.created_at, b.updated_at, COALESCE((SELECT json_group_object(bcfv.field_id, bcfv.value) FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields`;
+export function BIN_SELECT_COLS(): string {
+  return `b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))} FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items, b.notes, b.tags, b.icon, b.color, b.card_style, b.created_by, COALESCE((SELECT COALESCE(u.display_name, u.username) FROM users u WHERE u.id = b.created_by), '') AS created_by_name, b.visibility, b.created_at, b.updated_at, COALESCE((SELECT ${d.jsonGroupObject('bcfv.field_id', 'bcfv.value')} FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields`;
+}
 
 /**
  * Fetch a single bin by ID with BIN_SELECT_COLS.
@@ -22,7 +24,7 @@ export async function fetchBinById(
   const params: unknown[] = userId ? [binId, userId] : [binId];
 
   const result = await query(
-    `SELECT ${BIN_SELECT_COLS}${pinnedCol} FROM bins b LEFT JOIN areas a ON a.id = b.area_id ${pinnedJoin} WHERE b.id = $1${deletedFilter}`,
+    `SELECT ${BIN_SELECT_COLS()}${pinnedCol} FROM bins b LEFT JOIN areas a ON a.id = b.area_id ${pinnedJoin} WHERE b.id = $1${deletedFilter}`,
     params,
   );
 
@@ -61,7 +63,7 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   if (filters.q?.trim()) {
     const searchTerm = filters.q.trim();
     whereClauses.push(
-      `(fuzzy_match(b.name, $${paramIdx}) = 1 OR fuzzy_match(b.notes, $${paramIdx}) = 1 OR fuzzy_match(b.id, $${paramIdx}) = 1 OR fuzzy_match(COALESCE(a.name, ''), $${paramIdx}) = 1 OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND fuzzy_match(bi.name, $${paramIdx}) = 1) OR EXISTS (SELECT 1 FROM json_each(b.tags) WHERE fuzzy_match(value, $${paramIdx}) = 1) OR EXISTS (SELECT 1 FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id AND fuzzy_match(bcfv.value, $${paramIdx}) = 1))`
+      `(${d.fuzzyMatch('b.name', `$${paramIdx}`)} OR ${d.fuzzyMatch('b.notes', `$${paramIdx}`)} OR ${d.fuzzyMatch('b.id', `$${paramIdx}`)} OR ${d.fuzzyMatch("COALESCE(a.name, '')", `$${paramIdx}`)} OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND ${d.fuzzyMatch('bi.name', `$${paramIdx}`)}) OR EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE ${d.fuzzyMatch('value', `$${paramIdx}`)}) OR EXISTS (SELECT 1 FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id AND ${d.fuzzyMatch('bcfv.value', `$${paramIdx}`)}))`
     );
     params.push(searchTerm);
     paramIdx++;
@@ -72,14 +74,14 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   if (tagList.length > 0) {
     const tagPlaceholders = tagList.map((_, i) => `$${paramIdx + i}`);
     if (filters.tagMode === 'all') {
-      whereClauses.push(`(SELECT COUNT(DISTINCT value) FROM json_each(b.tags) WHERE value IN (${tagPlaceholders.join(', ')})) = ${tagList.length}`);
+      whereClauses.push(`(SELECT COUNT(DISTINCT value) FROM ${d.jsonEach('b.tags')} WHERE value IN (${tagPlaceholders.join(', ')})) = ${tagList.length}`);
     } else {
-      whereClauses.push(`EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value IN (${tagPlaceholders.join(', ')}))`);
+      whereClauses.push(`EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE value IN (${tagPlaceholders.join(', ')}))`);
     }
     params.push(...tagList);
     paramIdx += tagList.length;
   } else if (filters.tag?.trim()) {
-    whereClauses.push(`EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value = $${paramIdx})`);
+    whereClauses.push(`EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE value = $${paramIdx})`);
     params.push(filters.tag.trim());
     paramIdx++;
   }
@@ -139,7 +141,7 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   }
 
   const validSorts: Record<string, string> = {
-    name: 'b.name COLLATE NOCASE',
+    name: `b.name ${d.nocase()}`,
     created_at: 'b.created_at',
     updated_at: 'b.updated_at',
   };
@@ -148,7 +150,7 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
 
   let orderClause: string;
   if (sortKey === 'area') {
-    orderClause = `CASE WHEN a.name IS NULL OR a.name = '' THEN 1 ELSE 0 END ASC, a.name COLLATE NOCASE ${dir}, b.name COLLATE NOCASE ASC`;
+    orderClause = `CASE WHEN a.name IS NULL OR a.name = '' THEN 1 ELSE 0 END ASC, a.name ${d.nocase()} ${dir}, b.name ${d.nocase()} ASC`;
   } else {
     const orderBy = validSorts[sortKey] || 'b.updated_at';
     orderClause = `${orderBy} ${dir}`;

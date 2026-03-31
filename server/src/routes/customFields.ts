@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { generateUuid, getDb, query } from '../db.js';
+import { d, generateUuid, getDb, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
@@ -77,7 +77,7 @@ router.put('/:locationId/custom-fields/reorder', requirePro(), asyncHandler(asyn
 
   const db = getDb();
   const stmt = db.prepare(
-    `UPDATE location_custom_fields SET position = ?, updated_at = datetime('now') WHERE id = ? AND location_id = ?`,
+    `UPDATE location_custom_fields SET position = ?, updated_at = ${d.now()} WHERE id = ? AND location_id = ?`,
   );
   db.transaction(() => {
     for (let i = 0; i < field_ids.length; i++) {
@@ -105,7 +105,7 @@ router.put('/:locationId/custom-fields/:fieldId', requirePro(), asyncHandler(asy
     throw new NotFoundError('Custom field not found');
   }
 
-  const setClauses: string[] = ["updated_at = datetime('now')"];
+  const setClauses: string[] = [`updated_at = ${d.now()}`];
   const params: unknown[] = [];
   let idx = 1;
 

@@ -1,4 +1,4 @@
-import { generateUuid, querySync } from '../../db.js';
+import { d, generateUuid, querySync } from '../../db.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
 import type { ActionContext } from './types.js';
@@ -30,7 +30,7 @@ export function handleSetArea(action: Extract<CommandAction, { type: 'set_area' 
     }
   }
 
-  querySync("UPDATE bins SET area_id = $1, updated_at = datetime('now') WHERE id = $2", [areaId, action.bin_id]);
+  querySync(`UPDATE bins SET area_id = $1, updated_at = ${d.now()} WHERE id = $2`, [areaId, action.bin_id]);
   // Resolve old area name for activity log
   const oldAreaId = bin.rows[0].area_id as string | null;
   let oldAreaName = '';
@@ -50,7 +50,7 @@ export function handleRenameArea(action: Extract<CommandAction, { type: 'rename_
   const area = querySync('SELECT id, name FROM areas WHERE id = $1 AND location_id = $2', [action.area_id, ctx.locationId]);
   if (area.rows.length === 0) throw new Error(`Area not found: ${action.area_name}`);
   const oldName = area.rows[0].name as string;
-  querySync("UPDATE areas SET name = $1, updated_at = datetime('now') WHERE id = $2 AND location_id = $3", [action.new_name, action.area_id, ctx.locationId]);
+  querySync(`UPDATE areas SET name = $1, updated_at = ${d.now()} WHERE id = $2 AND location_id = $3`, [action.new_name, action.area_id, ctx.locationId]);
   ctx.pendingActivities.push({
     locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,
     action: 'update', entityType: 'area', entityId: action.area_id, entityName: action.new_name,

@@ -1,4 +1,4 @@
-import { generateUuid, querySync } from '../../db.js';
+import { d, generateUuid, querySync } from '../../db.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
 import type { ActionContext } from './types.js';
@@ -18,7 +18,7 @@ export function handleAddItems(action: Extract<CommandAction, { type: 'add_items
     querySync('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)', [generateUuid(), action.bin_id, itemName, qty, nextPos++]);
     itemNames.push(itemName);
   }
-  querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
+  querySync(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [action.bin_id]);
   ctx.pendingActivities.push({
     locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,
     action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
@@ -33,7 +33,7 @@ export function handleRemoveItems(action: Extract<CommandAction, { type: 'remove
   for (const itemName of action.items) {
     querySync('DELETE FROM bin_items WHERE bin_id = $1 AND LOWER(name) = LOWER($2)', [action.bin_id, itemName]);
   }
-  querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
+  querySync(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [action.bin_id]);
   ctx.pendingActivities.push({
     locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,
     action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
@@ -45,8 +45,8 @@ export function handleRemoveItems(action: Extract<CommandAction, { type: 'remove
 export function handleModifyItem(action: Extract<CommandAction, { type: 'modify_item' }>, ctx: ActionContext): ActionResult {
   const bin = querySync('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
-  querySync("UPDATE bin_items SET name = $1, updated_at = datetime('now') WHERE bin_id = $2 AND LOWER(name) = LOWER($3)", [action.new_item, action.bin_id, action.old_item]);
-  querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
+  querySync(`UPDATE bin_items SET name = $1, updated_at = ${d.now()} WHERE bin_id = $2 AND LOWER(name) = LOWER($3)`, [action.new_item, action.bin_id, action.old_item]);
+  querySync(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [action.bin_id]);
   ctx.pendingActivities.push({
     locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,
     action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,
@@ -61,7 +61,7 @@ export function handleReorderItems(action: Extract<CommandAction, { type: 'reord
   for (let i = 0; i < action.item_ids.length; i++) {
     querySync('UPDATE bin_items SET position = $1 WHERE id = $2 AND bin_id = $3', [i, action.item_ids[i], action.bin_id]);
   }
-  querySync("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [action.bin_id]);
+  querySync(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [action.bin_id]);
   ctx.pendingActivities.push({
     locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,
     action: 'update', entityType: 'bin', entityId: action.bin_id, entityName: action.bin_name,

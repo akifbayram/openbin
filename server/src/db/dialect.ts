@@ -100,4 +100,10 @@ export const d = {
       ? `datetime('now', '-${n} days')`
       : `NOW() - interval '${n} days'`;
   },
+
+  daysFromNow(n: number): string {
+    return currentDialect === 'sqlite'
+      ? `datetime('now', '+${n} days')`
+      : `NOW() + interval '${n} days'`;
+  },
 };

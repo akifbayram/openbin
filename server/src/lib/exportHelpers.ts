@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
-import { generateUuid, query, querySync } from '../db.js';
+import { d, generateUuid, query, querySync } from '../db.js';
 import { config } from './config.js';
 import { replaceCustomFieldValuesSync } from './customFieldHelpers.js';
 import { createLogger } from './logger.js';
@@ -111,10 +111,10 @@ export interface ExportData {
 export async function fetchLocationBins(locationId: string) {
   const result = await query(
     `SELECT b.id, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
-       COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name, 'quantity', bi.quantity))
+       COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))}
          FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
        b.notes, b.tags, b.icon, b.color, b.card_style, b.visibility,
-       COALESCE((SELECT json_group_object(bcfv.field_id, bcfv.value) FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
+       COALESCE((SELECT ${d.jsonGroupObject('bcfv.field_id', 'bcfv.value')} FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
        b.created_by, b.created_at, b.updated_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
      WHERE b.location_id = $1 AND b.deleted_at IS NULL
@@ -358,7 +358,7 @@ export function importTagColorsSync(locationId: string, tagColors: ExportTagColo
     if (!tc.tag || !tc.color) continue;
     querySync(
       `INSERT INTO tag_colors (id, location_id, tag, color) VALUES ($1, $2, $3, $4)
-       ON CONFLICT(location_id, tag) DO UPDATE SET color = excluded.color, updated_at = datetime('now')`,
+       ON CONFLICT(location_id, tag) DO UPDATE SET color = excluded.color, updated_at = ${d.now()}`,
       [generateUuid(), locationId, tc.tag, tc.color]
     );
   }
@@ -413,10 +413,10 @@ export function mapCustomFieldsToIds(
 export async function fetchTrashedBins(locationId: string) {
   const result = await query(
     `SELECT b.id, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
-       COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name, 'quantity', bi.quantity))
+       COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))}
          FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
        b.notes, b.tags, b.icon, b.color, b.card_style, b.visibility,
-       COALESCE((SELECT json_group_object(bcfv.field_id, bcfv.value) FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
+       COALESCE((SELECT ${d.jsonGroupObject('bcfv.field_id', 'bcfv.value')} FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
        b.created_by, b.deleted_at, b.created_at, b.updated_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
      WHERE b.location_id = $1 AND b.deleted_at IS NOT NULL
@@ -505,7 +505,7 @@ export function importLocationSettingsSync(locationId: string, settings: ExportL
     `UPDATE locations SET
        activity_retention_days = $1, trash_retention_days = $2,
        app_name = $3, term_bin = $4, term_location = $5, term_area = $6,
-       default_join_role = $7, updated_at = datetime('now')
+       default_join_role = $7, updated_at = ${d.now()}
      WHERE id = $8`,
     [retDays, trashDays, settings.appName || 'OpenBin', settings.termBin || '', settings.termLocation || '', settings.termArea || '', joinRole, locationId]
   );
@@ -540,7 +540,7 @@ export function importPinnedBinsSync(pins: ExportPinnedBin[], oldToNewBinId: Map
     if (userExists.rows.length === 0) continue;
     try {
       querySync(
-        'INSERT OR IGNORE INTO pinned_bins (user_id, bin_id, position, created_at) VALUES ($1, $2, $3, datetime(\'now\'))',
+        d.insertOrIgnore(`INSERT INTO pinned_bins (user_id, bin_id, position, created_at) VALUES ($1, $2, $3, ${d.now()})`),
         [pin.userId, newBinId, pin.position]
       );
       count++;
@@ -582,7 +582,7 @@ export function importMembersSync(locationId: string, members: ExportMember[]): 
     if (userExists.rows.length === 0) continue;
     try {
       querySync(
-        'INSERT OR IGNORE INTO location_members (id, location_id, user_id, role, joined_at) VALUES ($1, $2, $3, $4, $5)',
+        d.insertOrIgnore('INSERT INTO location_members (id, location_id, user_id, role, joined_at) VALUES ($1, $2, $3, $4, $5)'),
         [generateUuid(), locationId, m.userId, role, m.joinedAt || new Date().toISOString()]
       );
       count++;

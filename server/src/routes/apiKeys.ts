@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
-import { generateUuid, query } from '../db.js';
+import { d, generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { enforceCountLimit } from '../lib/countLimiter.js';
 import { NotFoundError } from '../lib/httpErrors.js';
@@ -66,7 +66,7 @@ router.delete('/:id', requirePro(), asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const result = await query(
-    `UPDATE api_keys SET revoked_at = datetime('now')
+    `UPDATE api_keys SET revoked_at = ${d.now()}
      WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL
      RETURNING id`,
     [id, req.user!.id]

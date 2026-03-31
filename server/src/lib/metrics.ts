@@ -1,4 +1,4 @@
-import { query } from '../db.js';
+import { d, query } from '../db.js';
 import { config } from './config.js';
 import { getFeatureMap, Plan, SubStatus } from './planGate.js';
 
@@ -66,8 +66,8 @@ async function queryLocationStats(demo: { clause: string; params: string[] }) {
 async function queryBinStats() {
   const result = await query<{ total: number; last7d: number; last30d: number }>(
     `SELECT COUNT(*) as total,
-       SUM(CASE WHEN created_at >= datetime('now', '-7 days') THEN 1 ELSE 0 END) as last7d,
-       SUM(CASE WHEN created_at >= datetime('now', '-30 days') THEN 1 ELSE 0 END) as last30d
+       SUM(CASE WHEN created_at >= ${d.daysAgo(7)} THEN 1 ELSE 0 END) as last7d,
+       SUM(CASE WHEN created_at >= ${d.daysAgo(30)} THEN 1 ELSE 0 END) as last30d
      FROM bins WHERE deleted_at IS NULL`,
   );
   const r = result.rows[0];
@@ -135,7 +135,7 @@ async function queryFeatureAdoption(totalProUsers: number) {
   const adoption: Record<string, { usersOrLocations: number; percentage: number }> = {};
   const base = Math.max(totalProUsers, 1);
 
-  const ai = await query<{ cnt: number }>("SELECT COUNT(DISTINCT user_id) as cnt FROM activity_log WHERE action LIKE '%ai%' AND created_at >= datetime('now', '-30 days')");
+  const ai = await query<{ cnt: number }>(`SELECT COUNT(DISTINCT user_id) as cnt FROM activity_log WHERE action LIKE '%ai%' AND created_at >= ${d.daysAgo(30)}`);
   adoption.ai = { usersOrLocations: ai.rows[0].cnt, percentage: Math.round(ai.rows[0].cnt / base * 100) };
 
   const apiKeys = await query<{ cnt: number }>('SELECT COUNT(DISTINCT user_id) as cnt FROM api_keys WHERE revoked_at IS NULL');
@@ -147,7 +147,7 @@ async function queryFeatureAdoption(totalProUsers: number) {
   const sharing = await query<{ cnt: number }>('SELECT COUNT(DISTINCT bin_id) as cnt FROM bin_shares WHERE revoked_at IS NULL');
   adoption.binSharing = { usersOrLocations: sharing.rows[0].cnt, percentage: Math.round(sharing.rows[0].cnt / base * 100) };
 
-  const reorganize = await query<{ cnt: number }>("SELECT COUNT(DISTINCT user_id) as cnt FROM activity_log WHERE action LIKE '%reorganiz%' AND created_at >= datetime('now', '-30 days')");
+  const reorganize = await query<{ cnt: number }>(`SELECT COUNT(DISTINCT user_id) as cnt FROM activity_log WHERE action LIKE '%reorganiz%' AND created_at >= ${d.daysAgo(30)}`);
   adoption.reorganize = { usersOrLocations: reorganize.rows[0].cnt, percentage: Math.round(reorganize.rows[0].cnt / base * 100) };
 
   return adoption;
@@ -155,8 +155,8 @@ async function queryFeatureAdoption(totalProUsers: number) {
 
 async function queryActivityVolume() {
   const result = await query<{ d: string; entity_type: string; cnt: number }>(
-    `SELECT date(created_at) as d, entity_type, COUNT(*) as cnt FROM activity_log
-     WHERE created_at >= datetime('now', '-30 days')
+    `SELECT ${d.dateOf('created_at')} as d, entity_type, COUNT(*) as cnt FROM activity_log
+     WHERE created_at >= ${d.daysAgo(30)}
      GROUP BY d, entity_type ORDER BY d`,
   );
 
@@ -192,10 +192,10 @@ async function queryTrialConversion(demo: { clause: string; params: string[] }) 
 async function queryApiKeyUsage() {
   const totalKeys = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM api_keys WHERE revoked_at IS NULL');
   const today = await query<{ active: number; reqs: number }>(
-    "SELECT COUNT(DISTINCT api_key_id) as active, COALESCE(SUM(request_count), 0) as reqs FROM api_key_daily_usage WHERE date = date('now')",
+    `SELECT COUNT(DISTINCT api_key_id) as active, COALESCE(SUM(request_count), 0) as reqs FROM api_key_daily_usage WHERE date = ${d.today()}`,
   );
   const week = await query<{ reqs: number }>(
-    "SELECT COALESCE(SUM(request_count), 0) as reqs FROM api_key_daily_usage WHERE date >= date('now', '-7 days')",
+    `SELECT COALESCE(SUM(request_count), 0) as reqs FROM api_key_daily_usage WHERE date >= ${d.dateOf(d.daysAgo(7))}`,
   );
   return {
     totalKeys: totalKeys.rows[0].cnt,

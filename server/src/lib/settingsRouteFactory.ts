@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { generateUuid, query } from '../db.js';
+import { d, generateUuid, query } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from './asyncHandler.js';
 import { ValidationError } from './httpErrors.js';
@@ -46,7 +46,7 @@ export function createSettingsRouter({ table, label: _label }: SettingsRouteOpti
     const result = await query(
       `INSERT INTO ${table} (id, user_id, settings)
        VALUES ($1, $2, $3)
-       ON CONFLICT (user_id) DO UPDATE SET settings = $3, updated_at = datetime('now')
+       ON CONFLICT (user_id) DO UPDATE SET settings = $3, updated_at = ${d.now()}
        RETURNING settings`,
       [newId, req.user!.id, JSON.stringify(settings)]
     );

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db.js';
+import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { verifyLocationMembership } from '../lib/binAccess.js';
 import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
@@ -30,7 +30,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
   if (searchQuery?.trim()) {
     params.push(searchQuery.trim());
-    whereClause = `AND (fuzzy_match(bi.name, $${params.length}) = 1 OR fuzzy_match(b.name, $${params.length}) = 1)`;
+    whereClause = `AND (${d.fuzzyMatch('bi.name', `$${params.length}`)} OR ${d.fuzzyMatch('b.name', `$${params.length}`)})`;
   }
 
   const baseQuery = `
@@ -53,8 +53,8 @@ router.get('/', asyncHandler(async (req, res) => {
   const desc = orderParam === 'desc';
   const dir = desc ? 'DESC' : 'ASC';
   const orderBy = sortParam === 'bin'
-    ? `b.name COLLATE NOCASE ${dir}, bi.name COLLATE NOCASE ${dir}`
-    : `bi.name COLLATE NOCASE ${dir}`;
+    ? `b.name ${d.nocase()} ${dir}, bi.name ${d.nocase()} ${dir}`
+    : `bi.name ${d.nocase()} ${dir}`;
 
   // Data query
   params.push(limit, offset);

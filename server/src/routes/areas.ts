@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { generateUuid, query } from '../db.js';
+import { d, generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { ConflictError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
@@ -32,7 +32,7 @@ router.get('/:locationId/areas', requireLocationMember('locationId'), asyncHandl
     FROM areas a
     LEFT JOIN desc_counts dc ON dc.root_id = a.id
     WHERE a.location_id = $1
-    ORDER BY a.name COLLATE NOCASE`,
+    ORDER BY a.name ${d.nocase()}`,
     [locationId]
   );
   const unassignedResult = await query(
@@ -117,7 +117,7 @@ router.put('/:locationId/areas/:areaId', requireLocationAdmin('locationId'), asy
 
   try {
     const result = await query(
-      `UPDATE areas SET name = $1, updated_at = datetime('now')
+      `UPDATE areas SET name = $1, updated_at = ${d.now()}
        WHERE id = $2 AND location_id = $3
        RETURNING id, location_id, name, parent_id, created_by, created_at, updated_at`,
       [name.trim(), areaId, locationId]

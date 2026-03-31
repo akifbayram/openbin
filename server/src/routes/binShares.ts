@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
-import { generateUuid, query } from '../db.js';
+import { d, generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireAdmin, verifyBinAccess } from '../lib/binAccess.js';
 import { config } from '../lib/config.js';
@@ -72,7 +72,7 @@ router.delete('/:id/share', asyncHandler(async (req, res) => {
   await requireAdmin(access.locationId, userId, 'revoke share links');
 
   const result = await query(
-    "UPDATE bin_shares SET revoked_at = datetime('now') WHERE bin_id = $1 AND revoked_at IS NULL",
+    `UPDATE bin_shares SET revoked_at = ${d.now()} WHERE bin_id = $1 AND revoked_at IS NULL`,
     [binId],
   );
 

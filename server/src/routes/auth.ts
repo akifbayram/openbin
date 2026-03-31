@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import bcrypt from 'bcrypt';
 import { Router } from 'express';
-import { generateUuid, query } from '../db.js';
+import { d, generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '../lib/cookies.js';
@@ -424,7 +424,7 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
     throw new ValidationError('No fields to update');
   }
 
-  updates.push(`updated_at = datetime('now')`);
+  updates.push(`updated_at = ${d.now()}`);
   values.push(req.user!.id);
 
   let result: import('../db.js').QueryResult<Record<string, unknown>>;
@@ -501,7 +501,7 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
   }
 
   const newHash = await bcrypt.hash(newPassword, config.bcryptRounds);
-  await query(`UPDATE users SET password_hash = $1, updated_at = datetime('now') WHERE id = $2`, [newHash, req.user!.id]);
+  await query(`UPDATE users SET password_hash = $1, updated_at = ${d.now()} WHERE id = $2`, [newHash, req.user!.id]);
 
   // Revoke all refresh tokens to force re-login on all devices
   await revokeAllUserTokens(req.user!.id);

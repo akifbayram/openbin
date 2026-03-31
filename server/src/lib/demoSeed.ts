@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
-import { generateUuid, getDb, querySync } from '../db.js';
+import { d, generateUuid, getDb, querySync } from '../db.js';
 import { config } from './config.js';
 import type { DemoMember } from './demoSeedData.js';
 import {
@@ -209,7 +209,7 @@ function createTrashedBins(
 
     querySync(
       `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, deleted_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, datetime('now', '-${daysAgo} days'))`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, ${d.daysAgo(daysAgo)})`,
       [binId, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle, creatorId],
     );
 
@@ -359,7 +359,7 @@ function seedActivityLog(
 
     querySync(
       `INSERT INTO activity_log (id, location_id, user_id, user_name, action, entity_type, entity_id, entity_name, changes, auth_method, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, datetime('now', '-${daysAgo} days'))`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, ${d.daysAgo(daysAgo)})`,
       [generateUuid(), locationId, userId, entry.user, entry.action, entry.entityType, entityId, entry.entityName ?? null, changes, 'jwt'],
     );
   }

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
-import { generateUuid, getDb, query } from '../db.js';
+import { d, generateUuid, getDb, query } from '../db.js';
 import { computeChanges } from '../lib/activityLog.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
@@ -29,7 +29,7 @@ router.get('/', asyncHandler(async (req, res) => {
             (SELECT COUNT(*) FROM bins WHERE location_id = l.id AND deleted_at IS NULL) AS bin_count
      FROM locations l
      JOIN location_members lm ON lm.location_id = l.id AND lm.user_id = $1
-     ORDER BY l.name COLLATE NOCASE ASC`,
+     ORDER BY l.name ${d.nocase()} ASC`,
     [req.user!.id]
   );
 
@@ -175,7 +175,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
   }
   const oldLoc = oldResult.rows[0];
 
-  const setClauses: string[] = [`updated_at = datetime('now')`];
+  const setClauses: string[] = [`updated_at = ${d.now()}`];
   const params: unknown[] = [];
   let paramIdx = 1;
 
@@ -592,7 +592,7 @@ router.post('/:id/regenerate-invite', asyncHandler(async (req, res) => {
 
   const newCode = generateInviteCode();
   const result = await query(
-    `UPDATE locations SET invite_code = $1, updated_at = datetime('now') WHERE id = $2 RETURNING invite_code`,
+    `UPDATE locations SET invite_code = $1, updated_at = ${d.now()} WHERE id = $2 RETURNING invite_code`,
     [newCode, id]
   );
 

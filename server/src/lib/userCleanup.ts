@@ -1,4 +1,4 @@
-import { getDb, query } from '../db.js';
+import { d, getDb, query } from '../db.js';
 import { config } from './config.js';
 import { acquireJobLock, releaseJobLock } from './jobLock.js';
 import { createLogger } from './logger.js';
@@ -12,7 +12,7 @@ async function cleanupDeletedUsers(): Promise<void> {
   if (!(await acquireJobLock('user_cleanup', 7200))) return;
   try {
     const users = await query<{ id: string }>(
-      `SELECT id FROM users WHERE deleted_at IS NOT NULL AND deleted_at <= datetime('now', '-1 hour')`,
+      `SELECT id FROM users WHERE deleted_at IS NOT NULL AND deleted_at <= ${d.hoursAgo(1)}`,
     );
 
     for (const user of users.rows) {

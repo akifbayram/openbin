@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 import sharp from 'sharp';
-import { getDb, query } from '../db.js';
+import { d, getDb, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isBinCreator, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
@@ -114,7 +114,7 @@ router.get('/', asyncHandler(async (req, res) => {
     const limitIdx = params.length + 1;
     const offsetIdx = params.length + 2;
     const result = await query(
-      `${ctePrefix}SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
+      `${ctePrefix}SELECT ${BIN_SELECT_COLS()}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
        LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
        WHERE ${whereSQL} ORDER BY ${orderClause} LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
@@ -124,7 +124,7 @@ router.get('/', asyncHandler(async (req, res) => {
     res.json({ results: result.rows, count: total });
   } else {
     const result = await query(
-      `${ctePrefix}SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
+      `${ctePrefix}SELECT ${BIN_SELECT_COLS()}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
        LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
        WHERE ${whereSQL} ORDER BY ${orderClause}`,
@@ -151,7 +151,7 @@ router.get('/trash', asyncHandler(async (req, res) => {
   purgeExpiredTrash(locationId).catch(() => {});
 
   const result = await query(
-    `SELECT ${BIN_SELECT_COLS}, b.deleted_at
+    `SELECT ${BIN_SELECT_COLS()}, b.deleted_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
      WHERE b.location_id = $1 AND b.deleted_at IS NOT NULL AND (b.visibility = 'location' OR b.created_by = $2) ORDER BY b.deleted_at DESC`,
     [locationId, req.user!.id]
@@ -165,7 +165,7 @@ router.get('/lookup/:shortCode', asyncHandler(async (req, res) => {
   const code = req.params.shortCode.toUpperCase();
 
   const result = await query(
-    `SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
+    `SELECT ${BIN_SELECT_COLS()}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
      FROM bins b
      LEFT JOIN areas a ON a.id = b.area_id
      LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
@@ -243,7 +243,7 @@ router.post('/:id/change-code', sensitiveAuthLimiter, asyncHandler(async (req, r
         ELSE NULL END
       WHERE bin_id = ?`),
     updateActivityLog: db.prepare("UPDATE activity_log SET entity_id = ? WHERE entity_id = ? AND entity_type = 'bin'"),
-    renameBin: db.prepare("UPDATE bins SET id = ?, updated_at = datetime('now') WHERE id = ?"),
+    renameBin: db.prepare(`UPDATE bins SET id = ?, updated_at = ${d.now()} WHERE id = ?`),
   };
 
   db.transaction(() => {
@@ -447,7 +447,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   }
 
   // Soft delete
-  await query("UPDATE bins SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = $1", [id]);
+  await query(`UPDATE bins SET deleted_at = ${d.now()}, updated_at = ${d.now()} WHERE id = $1`, [id]);
 
   logRouteActivity(req, { entityType: 'bin', locationId: access.locationId, action: 'delete', entityId: id, entityName: bin.name });
 
@@ -467,7 +467,7 @@ router.post('/:id/restore', asyncHandler(async (req, res) => {
   await requireAdmin(locationId, req.user!.id, 'restore bins');
 
   await query(
-    `UPDATE bins SET deleted_at = NULL, updated_at = datetime('now') WHERE id = $1`,
+    `UPDATE bins SET deleted_at = NULL, updated_at = ${d.now()} WHERE id = $1`,
     [id]
   );
 
@@ -614,7 +614,7 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
     [photoId, binId, path.basename(file.originalname).slice(0, 255), file.mimetype, file.size, storagePath, thumbPath, req.user!.id]
   );
 
-  await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [binId]);
+  await query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [binId]);
 
   invalidateOverLimitCache(req.user!.id);
 
@@ -664,7 +664,7 @@ router.post('/:id/move', asyncHandler(async (req, res) => {
   // Move bin: update location, clear area, remap custom fields (all in one transaction)
   const db = getDb();
   db.transaction(() => {
-    db.prepare(`UPDATE bins SET location_id = ?, area_id = NULL, updated_at = datetime('now') WHERE id = ?`)
+    db.prepare(`UPDATE bins SET location_id = ?, area_id = NULL, updated_at = ${d.now()} WHERE id = ?`)
       .run(targetLocationId, id);
     remapCustomFieldsForMove(id, access.locationId, targetLocationId, skipFieldCreation);
   })();
@@ -779,7 +779,7 @@ router.put('/:id/add-tags', asyncHandler(async (req, res) => {
   }
 
   const result = await query(
-    `UPDATE bins SET tags = $1, updated_at = datetime('now')
+    `UPDATE bins SET tags = $1, updated_at = ${d.now()}
      WHERE id = $2 AND deleted_at IS NULL
      RETURNING id, tags`,
     [mergedTags, id]
