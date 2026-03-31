@@ -4,8 +4,9 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { DASHBOARD_LIMITS, type DashboardSettings } from '@/lib/dashboardSettings';
+import { clamp, DASHBOARD_LIMITS, type DashboardSettings } from '@/lib/dashboardSettings';
 import { useTerminology } from '@/lib/terminology';
+import { SavedBadge, useSavedFlash } from './useSavedFlash';
 
 interface DashboardSectionProps {
   settings: DashboardSettings;
@@ -14,11 +15,26 @@ interface DashboardSectionProps {
 
 export function DashboardSection({ settings, updateSettings }: DashboardSectionProps) {
   const t = useTerminology();
+  const { saved, flash } = useSavedFlash();
+
+  function handleUpdate(updates: Partial<DashboardSettings>) {
+    updateSettings(updates);
+    flash();
+  }
 
   return (
     <Card id="dashboard-settings">
       <CardContent>
-        <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><LayoutDashboard className="h-3.5 w-3.5" />Dashboard</span>} labelClassName="text-[15px] font-semibold">
+        <Disclosure
+          label={
+            <span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]">
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+              <SavedBadge visible={saved} />
+            </span>
+          }
+          labelClassName="text-[15px] font-semibold"
+        >
         <div className="flex flex-col gap-3 mt-1">
           <div className="space-y-1.5">
             <div className="flex flex-col gap-2">
@@ -34,7 +50,7 @@ export function DashboardSection({ settings, updateSettings }: DashboardSectionP
                   <span id={`dash-${key}`} className="text-[14px] text-[var(--text-primary)]">{label}</span>
                   <Switch
                     checked={settings[key]}
-                    onCheckedChange={(checked) => updateSettings({ [key]: checked })}
+                    onCheckedChange={(checked) => handleUpdate({ [key]: checked })}
                     aria-labelledby={`dash-${key}`}
                   />
                 </div>
@@ -55,6 +71,11 @@ export function DashboardSection({ settings, updateSettings }: DashboardSectionP
                 max={DASHBOARD_LIMITS.recentBinsCount.max}
                 value={settings.recentBinsCount}
                 onChange={(e) => updateSettings({ recentBinsCount: Number(e.target.value) })}
+                onBlur={(e) => {
+                  const clamped = clamp(Number(e.target.value), DASHBOARD_LIMITS.recentBinsCount.min, DASHBOARD_LIMITS.recentBinsCount.max);
+                  if (clamped !== settings.recentBinsCount) updateSettings({ recentBinsCount: clamped });
+                  flash();
+                }}
               />
             </FormField>
             <FormField
@@ -70,6 +91,11 @@ export function DashboardSection({ settings, updateSettings }: DashboardSectionP
                 max={DASHBOARD_LIMITS.scanHistoryMax.max}
                 value={settings.scanHistoryMax}
                 onChange={(e) => updateSettings({ scanHistoryMax: Number(e.target.value) })}
+                onBlur={(e) => {
+                  const clamped = clamp(Number(e.target.value), DASHBOARD_LIMITS.scanHistoryMax.min, DASHBOARD_LIMITS.scanHistoryMax.max);
+                  if (clamped !== settings.scanHistoryMax) updateSettings({ scanHistoryMax: clamped });
+                  flash();
+                }}
               />
             </FormField>
           </div>

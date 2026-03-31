@@ -96,7 +96,7 @@ export function ApiKeysSection() {
     <>
       <Card>
         <CardContent>
-          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><KeyRound className="h-3.5 w-3.5" />API Keys</span>} labelClassName="text-[15px] font-semibold">
+          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><KeyRound className="h-4 w-4" />API Keys</span>} labelClassName="text-[15px] font-semibold">
           <div className="flex items-baseline justify-between mt-1">
             <p className="text-[13px] text-[var(--text-tertiary)]">
               Use API keys for smart home integrations and automation.

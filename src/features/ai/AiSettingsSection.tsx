@@ -146,12 +146,12 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
   return (
     <Card id="ai-settings">
       <CardContent>
-        <Disclosure defaultOpen={window.location.hash === '#ai-settings'} label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Sparkles className="h-3.5 w-3.5" />AI Features</span>} labelClassName="text-[15px] font-semibold">
+        <Disclosure defaultOpen={window.location.hash === '#ai-settings'} label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Sparkles className="h-4 w-4" />AI Features</span>} labelClassName="text-[15px] font-semibold">
         <div className="row-spread mt-1">
-          <p className="text-[13px] text-[var(--text-tertiary)]">
+          <p id="ai-toggle-description" className="text-[13px] text-[var(--text-tertiary)]">
             Photo analysis, item extraction, and AI commands
           </p>
-          <Switch id="ai-toggle" checked={aiEnabled} onCheckedChange={onToggle} />
+          <Switch id="ai-toggle" checked={aiEnabled} onCheckedChange={onToggle} aria-labelledby="ai-toggle-description" />
         </div>
 
         {/* Animated expand/collapse wrapper */}
@@ -235,7 +235,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
 
                 {/* Required fields hint */}
                 {touched && !setup.apiKey && !setup.model && (
-                  <p className="text-[12px] text-[var(--text-tertiary)]">
+                  <p className="text-[12px] text-[var(--text-tertiary)]" role="alert">
                     API key and model are required.
                   </p>
                 )}
@@ -448,35 +448,39 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
 
                 {/* Test result */}
                 {setup.testResult === 'success' && (
-                  <p className="text-[13px] text-[var(--color-success)]">Connected to {setup.model} successfully</p>
+                  <p className="text-[13px] text-[var(--color-success)]" aria-live="polite">Connected to {setup.model} successfully</p>
                 )}
                 {setup.testResult === 'error' && (
-                  <p className="text-[13px] text-[var(--destructive)]">{testError}</p>
+                  <p className="text-[13px] text-[var(--destructive)]" role="alert">{testError}</p>
                 )}
 
                 {/* Buttons */}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleTest}
-                    disabled={setup.testing || !setup.apiKey || !setup.model}
-                  >
-                    {setup.testing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
-                    Test Connection
-                  </Button>
-                  <Button
-                    onClick={handleSave}
-                    disabled={setup.saving || !setup.apiKey || !setup.model}
-                  >
-                    {setup.saving ? 'Saving...' : 'Save'}
-                  </Button>
-                  {settings && settings.source !== 'env' && (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-wrap gap-2">
                     <Button
-                      variant="destructive-ghost"
-                      onClick={handleRemove}
+                      variant="outline"
+                      onClick={handleTest}
+                      disabled={setup.testing || !setup.apiKey || !setup.model}
                     >
-                      Remove AI Settings
+                      {setup.testing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+                      Test Connection
                     </Button>
+                    <Button
+                      onClick={handleSave}
+                      disabled={setup.saving || !setup.apiKey || !setup.model}
+                    >
+                      {setup.saving ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                  {settings && settings.source !== 'env' && (
+                    <div className="pt-1 border-t border-[var(--border-flat)]">
+                      <Button
+                        variant="destructive-ghost"
+                        onClick={handleRemove}
+                      >
+                        Remove AI Settings
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

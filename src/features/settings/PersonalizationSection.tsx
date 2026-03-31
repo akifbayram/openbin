@@ -5,6 +5,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import type { AppSettings } from '@/lib/appSettings';
+import { SavedBadge, useSavedFlash } from './useSavedFlash';
 
 interface PersonalizationSectionProps {
   settings: AppSettings;
@@ -13,16 +14,28 @@ interface PersonalizationSectionProps {
 }
 
 export function PersonalizationSection({ settings, updateSettings, resetSettings }: PersonalizationSectionProps) {
+  const { saved, flash } = useSavedFlash();
+
   return (
     <Card>
       <CardContent>
-        <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Paintbrush className="h-3.5 w-3.5" />Personalization</span>} labelClassName="text-[15px] font-semibold">
+        <Disclosure
+          label={
+            <span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]">
+              <Paintbrush className="h-4 w-4" />
+              Personalization
+              <SavedBadge visible={saved} />
+            </span>
+          }
+          labelClassName="text-[15px] font-semibold"
+        >
           <div className="flex flex-col gap-3 mt-1">
             <FormField label="App Name" htmlFor="app-name">
               <Input
                 id="app-name"
                 value={settings.appName}
                 onChange={(e) => updateSettings({ appName: e.target.value })}
+                onBlur={flash}
                 placeholder="OpenBin"
               />
             </FormField>
@@ -46,6 +59,7 @@ export function PersonalizationSection({ settings, updateSettings, resetSettings
                           const newPlural = parts[1] || '';
                           updateSettings({ [key]: newSingular || newPlural ? `${newSingular}|${newPlural}` : '' });
                         }}
+                        onBlur={flash}
                         placeholder={`${singular} (singular)`}
                         aria-label={`${singular} singular name`}
                       />
@@ -56,6 +70,7 @@ export function PersonalizationSection({ settings, updateSettings, resetSettings
                           const newPlural = e.target.value;
                           updateSettings({ [key]: newSingular || newPlural ? `${newSingular}|${newPlural}` : '' });
                         }}
+                        onBlur={flash}
                         placeholder={`${plural} (plural)`}
                         aria-label={`${plural} plural name`}
                       />

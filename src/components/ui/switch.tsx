@@ -23,6 +23,7 @@ export function Switch({ checked, onCheckedChange, id, disabled, className, 'ari
       onClick={() => onCheckedChange(!checked)}
       className={cn(
         'relative inline-flex h-[28px] w-[50px] shrink-0 cursor-pointer rounded-full transition-colors duration-200',
+        'before:absolute before:-inset-2 before:content-[""]',
         focusRing,
         disabledClasses,
         checked ? 'bg-[var(--accent)]' : 'bg-[var(--bg-active)]',

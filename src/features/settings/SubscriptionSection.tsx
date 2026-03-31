@@ -103,7 +103,7 @@ export function SubscriptionSection() {
     <Card>
       <CardContent>
         <Disclosure
-          label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><CreditCard className="h-3.5 w-3.5" />Subscription</span>}
+          label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><CreditCard className="h-4 w-4" />Subscription</span>}
           labelClassName="text-[15px] font-semibold"
           defaultOpen={isTrialing || isLocked}
         >

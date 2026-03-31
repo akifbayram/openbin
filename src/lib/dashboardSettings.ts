@@ -19,7 +19,7 @@ export const DASHBOARD_LIMITS = {
   scanHistoryMax: { min: 5, max: 100 },
 } as const;
 
-function clamp(value: number, min: number, max: number): number {
+export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.round(value)));
 }
 

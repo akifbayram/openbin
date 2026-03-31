@@ -40,10 +40,13 @@ export function DangerZoneSection({ deleteAccount }: DangerZoneSectionProps) {
 
   return (
     <>
-      <Card>
+      <Card className="border-l-2 border-l-[var(--destructive)]">
         <CardContent>
-          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><ShieldAlert className="h-3.5 w-3.5" />Danger Zone</span>} labelClassName="text-[15px] font-semibold">
+          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--destructive)]"><ShieldAlert className="h-4 w-4" />Danger Zone</span>} labelClassName="text-[15px] font-semibold">
           <div className="flex flex-col gap-2 mt-1">
+            <p className="text-[13px] text-[var(--text-tertiary)]">
+              Permanent actions that cannot be undone.
+            </p>
             <Button
               variant="destructive"
               onClick={() => setDeleteOpen(true)}

@@ -4,6 +4,7 @@ import {
   Compass,
   Database,
   Download,
+  Lock,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -176,7 +177,7 @@ export function DataSection({
     <>
       <Card>
         <CardContent>
-          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Compass className="h-3.5 w-3.5" />Navigation</span>} labelClassName="text-[15px] font-semibold">
+          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Compass className="h-4 w-4" />Navigation</span>} labelClassName="text-[15px] font-semibold">
           <div className="mt-1">
             <RowGroup>
               <SettingsRow
@@ -202,7 +203,7 @@ export function DataSection({
 
       <Card>
         <CardContent>
-          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Database className="h-3.5 w-3.5" />Data</span>} labelClassName="text-[15px] font-semibold">
+          <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><Database className="h-4 w-4" />Data</span>} labelClassName="text-[15px] font-semibold">
           <div className="mt-1">
             <RowGroup>
               <SettingsRow
@@ -250,7 +251,7 @@ export function DataSection({
             <div className="space-y-2.5">
               <span id="export-format-label" className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
               <div className="flex flex-col gap-3" role="radiogroup" aria-labelledby="export-format-label">
-                <label className={cn('flex items-start gap-2 text-sm', exportGated ? 'opacity-40 pointer-events-none' : 'cursor-pointer')}>
+                <label className={cn('flex items-start gap-2 text-sm', exportGated ? 'opacity-50 pointer-events-none' : 'cursor-pointer')}>
                   <input
                     type="radio"
                     name="export-format"
@@ -260,11 +261,19 @@ export function DataSection({
                     className="accent-[var(--accent)] mt-0.5"
                   />
                   <div>
-                    <span className="text-[var(--text-primary)]">Backup (ZIP){exportGated && <span className="ml-1.5 text-[10px] font-semibold text-[var(--text-tertiary)]">Pro</span>}</span>
+                    <span className="text-[var(--text-primary)]">
+                      Backup (ZIP)
+                      {exportGated && (
+                        <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-[var(--radius-xs)] bg-[var(--bg-input)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--text-tertiary)]">
+                          <Lock className="h-2.5 w-2.5" />
+                          Pro
+                        </span>
+                      )}
+                    </span>
                     <p className="text-[13px] text-[var(--text-tertiary)]">All data including photos</p>
                   </div>
                 </label>
-                <label className={cn('flex items-start gap-2 text-sm', exportGated ? 'opacity-40 pointer-events-none' : 'cursor-pointer')}>
+                <label className={cn('flex items-start gap-2 text-sm', exportGated ? 'opacity-50 pointer-events-none' : 'cursor-pointer')}>
                   <input
                     type="radio"
                     name="export-format"
@@ -274,7 +283,15 @@ export function DataSection({
                     className="accent-[var(--accent)] mt-0.5"
                   />
                   <div>
-                    <span className="text-[var(--text-primary)]">Backup (JSON){exportGated && <span className="ml-1.5 text-[10px] font-semibold text-[var(--text-tertiary)]">Pro</span>}</span>
+                    <span className="text-[var(--text-primary)]">
+                      Backup (JSON)
+                      {exportGated && (
+                        <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-[var(--radius-xs)] bg-[var(--bg-input)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--text-tertiary)]">
+                          <Lock className="h-2.5 w-2.5" />
+                          Pro
+                        </span>
+                      )}
+                    </span>
                     <p className="text-[13px] text-[var(--text-tertiary)]">Data and settings, no photos</p>
                   </div>
                 </label>
@@ -319,7 +336,7 @@ export function DataSection({
           <div className="space-y-5">
             <LocationPickerSection locations={locations} value={selectedLocationId} onChange={setSelectedLocationId} />
             <div className="space-y-2.5">
-              <span id="import-format-label" className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
+              <span id="import-format-label" className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">1. Format</span>
               <div className="flex flex-col gap-3" role="radiogroup" aria-labelledby="import-format-label">
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
@@ -364,7 +381,7 @@ export function DataSection({
             </div>
 
             <div className="space-y-2.5">
-              <span id="import-mode-label" className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Mode</span>
+              <span id="import-mode-label" className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">2. Mode</span>
               <div className="flex flex-col gap-3" role="radiogroup" aria-labelledby="import-mode-label">
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
@@ -398,6 +415,7 @@ export function DataSection({
             </div>
 
             <div className="flex flex-col gap-2">
+              <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">3. File</span>
               <Button variant="outline" onClick={handleImportFileClick} disabled={importing}>
                 {hasImportFile ? 'Change File' : 'Select File'}
               </Button>
