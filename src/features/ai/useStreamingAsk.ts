@@ -57,7 +57,7 @@ export function useStreamingAsk() {
   );
 
   const ask = useCallback(
-    (options: { text: string; locationId: string }) => stream(options),
+    (options: { text: string; locationId: string; binIds?: string[] }) => stream(options),
     [stream]
   );
 
