@@ -10,6 +10,7 @@ export interface UserPreferences {
   dashboard_show_pinned_bins: boolean;
   dashboard_show_recently_scanned: boolean;
   dashboard_show_recently_updated: boolean;
+  dashboard_show_timestamps: boolean;
   ai_enabled: boolean;
   onboarding_completed: boolean;
   onboarding_step: number;
@@ -28,6 +29,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   dashboard_show_pinned_bins: true,
   dashboard_show_recently_scanned: true,
   dashboard_show_recently_updated: true,
+  dashboard_show_timestamps: true,
   ai_enabled: true,
   onboarding_completed: false,
   onboarding_step: 0,

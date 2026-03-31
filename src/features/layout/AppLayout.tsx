@@ -107,6 +107,7 @@ export function AppLayout() {
       const el = document.querySelector<HTMLInputElement>('[data-shortcut-search]');
       el?.focus();
     },
+    'ask-ai': () => getCommandInputRef().current?.open(),
     'command-palette': () => setCommandPaletteOpen(true),
     'shortcuts-help': () => setShortcutsHelpOpen(true),
     'toggle-sidebar': () => toggleSidebarCollapsed(),

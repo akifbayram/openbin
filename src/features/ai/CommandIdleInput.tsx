@@ -83,13 +83,27 @@ export function CommandIdleInput({
         </button>
         {examplesOpen && (
           <div className="grid gap-1 mt-1.5">
-            <p><span className="text-[var(--text-secondary)]">Add/remove items</span> — &quot;Add screwdriver to the tools bin&quot; or &quot;Remove batteries from kitchen box&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Organize</span> — &quot;Move batteries from kitchen to garage&quot; or &quot;Tag tools bin as hardware&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Manage {t.bins}</span> — &quot;Create a {t.bin} called Holiday Decorations in the attic&quot; or &quot;Delete the empty box {t.bin}&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Quick actions</span> — &quot;Duplicate the tools {t.bin}&quot; or &quot;Pin my kitchen {t.bin}&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Manage {t.areas}</span> — &quot;Rename the garage {t.area} to workshop&quot; or &quot;Delete the empty attic {t.area}&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Find things</span> — &quot;Where is the glass cleaner?&quot; or &quot;Which {t.bins} have batteries?&quot;</p>
-            <p><span className="text-[var(--text-secondary)]">Search trash</span> — &quot;What&apos;s in my trash?&quot; or &quot;Restore the holiday decorations {t.bin}&quot;</p>
+            {[
+              { label: 'Add/remove items', example: 'Add screwdriver to the tools bin' },
+              { label: 'Organize', example: 'Move batteries from kitchen to garage' },
+              { label: `Manage ${t.bins}`, example: `Create a ${t.bin} called Holiday Decorations in the attic` },
+              { label: 'Quick actions', example: `Duplicate the tools ${t.bin}` },
+              { label: `Manage ${t.areas}`, example: `Rename the garage ${t.area} to workshop` },
+              { label: 'Find things', example: 'Where is the glass cleaner?' },
+              { label: 'Search trash', example: "What's in my trash?" },
+            ].map(({ label, example }) => (
+              <p key={label}>
+                <span className="text-[var(--text-secondary)]">{label}</span>
+                {' — '}
+                <button
+                  type="button"
+                  onClick={() => setText(example)}
+                  className="text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:underline transition-colors cursor-pointer"
+                >
+                  &quot;{example}&quot;
+                </button>
+              </p>
+            ))}
             <p><span className="text-[var(--text-secondary)]">Upload photos</span> — Snap a photo of a {t.bin} and AI will create it for you</p>
           </div>
         )}

@@ -1,4 +1,5 @@
-import { Check, ChevronLeft, Loader2, Sparkles } from 'lucide-react';
+import { AlertTriangle, Check, ChevronLeft, Loader2, Sparkles } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,18 @@ export function CommandActionPreview({
   onExecute,
 }: CommandActionPreviewProps) {
   const t = useTerminology();
+  const [confirmDestructive, setConfirmDestructive] = useState(false);
+
+  const destructiveCount = actions.filter((a, i) => checkedActions.get(i) !== false && isDestructiveAction(a)).length;
+
+  function handleExecuteClick() {
+    if (destructiveCount > 0 && !confirmDestructive) {
+      setConfirmDestructive(true);
+      return;
+    }
+    setConfirmDestructive(false);
+    onExecute();
+  }
 
   return (
     <div className="space-y-4">
@@ -56,7 +69,7 @@ export function CommandActionPreview({
               <li key={i} className="ai-stagger-item" style={{ animationDelay: `${Math.min(i * 50, 500)}ms` }}>
                 <button
                   type="button"
-                  onClick={() => toggleAction(i)}
+                  onClick={() => { toggleAction(i); setConfirmDestructive(false); }}
                   className="flex items-start gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 hover:bg-[var(--bg-active)] transition-colors cursor-pointer w-full text-left"
                 >
                   <span
@@ -106,6 +119,16 @@ export function CommandActionPreview({
         </div>
       )}
 
+      {/* Destructive confirmation inline banner */}
+      {confirmDestructive && !isExecuting && (
+        <div className="flex items-start gap-2 rounded-[var(--radius-sm)] bg-[var(--destructive)]/10 px-3 py-2">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-[var(--destructive)]" />
+          <p className="text-[13px] text-[var(--destructive)]">
+            {destructiveCount} destructive action{destructiveCount !== 1 ? 's' : ''} selected. Click apply again to confirm.
+          </p>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onBack}>
           <ChevronLeft className="h-4 w-4 mr-0.5" />
@@ -114,15 +137,17 @@ export function CommandActionPreview({
         <Button
           type="button"
           size="sm"
-          onClick={onExecute}
+          onClick={handleExecuteClick}
           disabled={selectedCount === 0 || isExecuting}
-          className="flex-1"
+          className={cn('flex-1', confirmDestructive && 'bg-[var(--destructive)] hover:bg-[var(--destructive)]/90')}
         >
           {isExecuting ? (
             <>
               <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
               Applying {executingProgress.current} of {executingProgress.total}...
             </>
+          ) : confirmDestructive ? (
+            <>Confirm {selectedCount} Change{selectedCount !== 1 ? 's' : ''}</>
           ) : (
             <>Apply {selectedCount} Change{selectedCount !== 1 ? 's' : ''}</>
           )}

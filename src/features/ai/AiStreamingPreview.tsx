@@ -1,4 +1,5 @@
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, ChevronDown, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -69,12 +70,28 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
 }
 
 /** Inline error banner with retry button for AI analysis failures. */
-export function AiAnalyzeError({ error, onRetry }: { error: string; onRetry: () => void }) {
+export function AiAnalyzeError({ error, detail, onRetry }: { error: string; detail?: string; onRetry: () => void }) {
+  const [showDetail, setShowDetail] = useState(false);
   return (
     <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-[var(--destructive)]/10 px-3 py-2.5">
       <AlertCircle className="h-4 w-4 text-[var(--destructive)] shrink-0 mt-0.5" />
       <div className="flex-1">
         <p className="text-[13px] text-[var(--destructive)]">{error}</p>
+        {detail && detail !== error && (
+          <>
+            <button
+              type="button"
+              onClick={() => setShowDetail(!showDetail)}
+              className="mt-1 flex items-center gap-1 text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+            >
+              <ChevronDown className={cn('h-3 w-3 transition-transform', !showDetail && '-rotate-90')} />
+              Details
+            </button>
+            {showDetail && (
+              <p className="mt-1 text-[11px] text-[var(--text-tertiary)] font-mono break-all">{detail}</p>
+            )}
+          </>
+        )}
         <Button variant="ghost" size="sm" onClick={onRetry} className="mt-1 h-7 px-2 text-[12px]">
           Retry
         </Button>

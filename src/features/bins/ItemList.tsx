@@ -183,8 +183,10 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
           </button>
         )}
 
-        {/* Desktop delete button */}
-        {!isEditing && (
+        {/* Desktop delete button — spacer preserves row width during edit */}
+        {isEditing ? (
+          <div className="size-9 shrink-0" />
+        ) : (
           <Tooltip content="Remove item">
             <button
               type="button"

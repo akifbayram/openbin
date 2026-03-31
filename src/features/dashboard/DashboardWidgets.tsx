@@ -1,4 +1,5 @@
 import { ChevronRight } from 'lucide-react';
+import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -49,6 +50,7 @@ export function StatCard({
   return (
     <div className="flex-1">
       <Wrapper
+        type={onClick ? 'button' : undefined}
         className={cn(
           "w-full text-left rounded-[var(--radius-md)] bg-[var(--bg-input)] px-4 py-3",
           onClick && "hover:bg-[var(--bg-active)] transition-colors duration-150",
@@ -65,22 +67,27 @@ export function StatCard({
 }
 
 export function SectionHeader({
+  id,
+  icon: Icon,
   title,
   action,
 }: {
+  id?: string;
+  icon?: React.ComponentType<{ className?: string }>;
   title: string;
   action?: { label: string; onClick: () => void };
 }) {
   return (
     <div className="row-spread">
-      <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
+      <h2 id={id} className="flex items-center gap-2 text-[17px] font-semibold text-[var(--text-primary)]">
+        {Icon && <Icon className="h-4 w-4 text-[var(--text-tertiary)]" />}
         {title}
       </h2>
       {action && (
         <button
           type="button"
           onClick={action.onClick}
-          className="flex items-center gap-0.5 text-[13px] font-medium text-[var(--accent)] py-2 -my-2 px-1 -mx-1"
+          className="flex items-center gap-0.5 text-[13px] font-medium text-[var(--accent)] min-h-[44px] py-2 -my-2 px-2 -mx-2"
         >
           {action.label}
           <ChevronRight className="h-3.5 w-3.5" />

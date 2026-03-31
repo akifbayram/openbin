@@ -70,14 +70,6 @@ export function AiProgressBar({
           compact ? 'h-1.5' : 'h-3',
         )}
       >
-        {/* Glow backdrop */}
-        <div
-          className={cn(
-            'absolute inset-0 rounded-full',
-            complete ? 'ai-progress-glow-complete' : 'ai-progress-glow',
-          )}
-        />
-
         {/* Fill */}
         <div
           className={cn(

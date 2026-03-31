@@ -1,5 +1,8 @@
-import { ChevronLeft, ChevronRight, Search, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Sparkles, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import { StreamingText } from './StreamingText';
 import type { QueryResult } from './useInventoryQuery';
 
@@ -9,12 +12,14 @@ interface InventoryQueryResultProps {
   isStreaming?: boolean;
   onBinClick: (binId: string, isTrashed?: boolean) => void;
   onBack: () => void;
+  onFollowUp?: (text: string) => void;
 }
 
-export function InventoryQueryResult({ queryResult, streamingText, isStreaming, onBinClick, onBack }: InventoryQueryResultProps) {
+export function InventoryQueryResult({ queryResult, streamingText, isStreaming, onBinClick, onBack, onFollowUp }: InventoryQueryResultProps) {
   const showStreaming = isStreaming && !queryResult;
   const answer = queryResult?.answer ?? streamingText ?? '';
   const matches = queryResult?.matches ?? [];
+  const [followUp, setFollowUp] = useState('');
 
   return (
     <div className="space-y-4">
@@ -52,6 +57,45 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
               <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
             </button>
           ))}
+        </div>
+      )}
+
+      {!isStreaming && matches.length === 0 && queryResult && (
+        <p className="text-[13px] text-[var(--text-tertiary)] text-center py-2">
+          No matching bins found. Try different terms or check trash.
+        </p>
+      )}
+
+      {!isStreaming && onFollowUp && (
+        <div className="relative">
+          <Textarea
+            value={followUp}
+            onChange={(e) => setFollowUp(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && followUp.trim()) {
+                e.preventDefault();
+                onFollowUp(followUp.trim());
+                setFollowUp('');
+              }
+            }}
+            placeholder="Ask a follow-up..."
+            rows={1}
+            className="min-h-[44px] pr-12 bg-[var(--bg-elevated)]"
+          />
+          <button
+            type="button"
+            onClick={() => { if (followUp.trim()) { onFollowUp(followUp.trim()); setFollowUp(''); } }}
+            disabled={!followUp.trim()}
+            aria-label="Send follow-up"
+            className={cn(
+              'absolute right-2.5 bottom-2.5 p-1.5 rounded-[var(--radius-lg)] transition-colors',
+              followUp.trim()
+                ? 'text-[var(--ai-accent)] hover:bg-[var(--bg-active)]'
+                : 'text-[var(--text-tertiary)] opacity-40',
+            )}
+          >
+            <Sparkles className="h-5 w-5" />
+          </button>
         </div>
       )}
 

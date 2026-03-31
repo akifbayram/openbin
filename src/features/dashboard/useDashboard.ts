@@ -1,34 +1,58 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useBinList } from '@/features/bins/useBins';
 import { usePinnedBins } from '@/features/pins/usePins';
+import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
+import { Events, useRefreshOn } from '@/lib/eventBus';
 import type { Bin } from '@/types';
 import { useScanHistory } from './scanHistory';
 
-export interface AreaStat {
-  id: string | null;
-  name: string;
-  binCount: number;
+interface DashboardStats {
+  total_bins: number;
+  total_items: number;
+  total_areas: number;
+  needs_organizing: number;
+}
+
+function useDashboardStats(locationId: string | null) {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const refreshKey = useRefreshOn(Events.BINS, Events.AREAS);
+
+  useEffect(() => {
+    if (!locationId) {
+      setStats(null);
+      setIsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setIsLoading(true);
+    apiFetch<DashboardStats>(`/locations/${locationId}/stats`)
+      .then((data) => { if (!cancelled) { setStats(data); setIsLoading(false); } })
+      .catch(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, [locationId, refreshKey]);
+
+  return { stats, isLoading };
 }
 
 export function useDashboard() {
   const { activeLocationId } = useAuth();
-  const { bins, isLoading } = useBinList();
+  const { bins, isLoading: binsLoading } = useBinList();
   const { pinnedBins } = usePinnedBins();
   const { areas } = useAreaList(activeLocationId);
   const { settings: dashSettings } = useDashboardSettings();
   const { history: scanHistory } = useScanHistory(dashSettings.recentBinsCount);
+  const { stats, isLoading: statsLoading } = useDashboardStats(activeLocationId);
 
-  const totalBins = bins.length;
-
-  const totalItems = useMemo(
+  // Client-side fallbacks (used until server stats arrive)
+  const clientTotalItems = useMemo(
     () => bins.reduce((sum, b) => sum + (b.items?.length ?? 0), 0),
-    [bins]
+    [bins],
   );
-
-  const needsOrganizing = useMemo(
+  const clientNeedsOrganizing = useMemo(
     () =>
       bins.filter(
         (b) =>
@@ -36,29 +60,14 @@ export function useDashboard() {
           !b.area_id &&
           (!Array.isArray(b.items) || b.items.length === 0)
       ).length,
-    [bins]
+    [bins],
   );
 
-  const totalAreas = areas.length;
-
-  const areaStats = useMemo(() => {
-    const countMap = new Map<string | null, number>();
-    for (const bin of bins) {
-      const key = bin.area_id;
-      countMap.set(key, (countMap.get(key) || 0) + 1);
-    }
-    const stats: AreaStat[] = areas.map((a) => ({
-      id: a.id,
-      name: a.name,
-      binCount: countMap.get(a.id) || 0,
-    }));
-    stats.sort((a, b) => b.binCount - a.binCount);
-    const unassigned = countMap.get(null) || 0;
-    if (unassigned > 0) {
-      stats.push({ id: null, name: 'Unassigned', binCount: unassigned });
-    }
-    return stats;
-  }, [areas, bins]);
+  // Use server stats when available, fall back to client-computed
+  const totalBins = stats?.total_bins ?? bins.length;
+  const totalItems = stats?.total_items ?? clientTotalItems;
+  const totalAreas = stats?.total_areas ?? areas.length;
+  const needsOrganizing = stats?.needs_organizing ?? clientNeedsOrganizing;
 
   const recentlyUpdated = useMemo(
     () =>
@@ -76,5 +85,14 @@ export function useDashboard() {
       .slice(0, dashSettings.recentBinsCount);
   }, [bins, scanHistory, dashSettings.recentBinsCount]);
 
-  return { totalBins, totalItems, totalAreas, needsOrganizing, areaStats, recentlyUpdated, recentlyScanned, pinnedBins, isLoading };
+  // Map binId → scannedAt for display
+  const scanTimeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const entry of scanHistory) map.set(entry.binId, entry.scannedAt);
+    return map;
+  }, [scanHistory]);
+
+  const isLoading = binsLoading || statsLoading;
+
+  return { totalBins, totalItems, totalAreas, needsOrganizing, recentlyUpdated, recentlyScanned, scanTimeMap, pinnedBins, isLoading };
 }

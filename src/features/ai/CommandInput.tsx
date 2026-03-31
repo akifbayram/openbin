@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AiProgressBar } from '@/components/ui/ai-progress-bar';
+import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { takeCapturedPhotos } from '@/features/capture/capturedPhotos';
 import { CommandActionPreview } from './CommandActionPreview';
@@ -36,7 +37,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
     actions, interpretation, error,
     handleParse, handleBack, toggleAction,
     handleClose, handlePhotoSelect, handleBinClick,
-    handleExecuteComplete, handleAskAnother,
+    handleExecuteComplete, handleAskAnother, handleFollowUp,
   } = useCommandInputState(onOpenChange);
 
   const { isExecuting, executingProgress, executeActions } = useActionExecutor({
@@ -120,12 +121,19 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
             />
           </div>
         ) : showProgress ? (
-          <div key="progress" className="ai-content-enter py-4">
+          <div key="progress" className="ai-content-enter py-4 space-y-3">
             <AiProgressBar
               active={isParsing}
               complete={parseDone}
               label={isParsing ? 'Processing' : 'Complete'}
             />
+            {isParsing && (
+              <div className="flex justify-center">
+                <Button variant="ghost" size="sm" onClick={handleBack}>
+                  Cancel
+                </Button>
+              </div>
+            )}
           </div>
         ) : effectiveState === 'success' && executionResult ? (
           <div key="success" className="ai-content-enter">
@@ -144,6 +152,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
               isStreaming={isQueryStreaming}
               onBinClick={handleBinClick}
               onBack={handleBack}
+              onFollowUp={handleFollowUp}
             />
           </div>
         ) : effectiveState === 'preview' && actions ? (
@@ -162,14 +171,17 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
           </div>
         ) : !aiSettingsLoading && !isAiReady ? (
           <div key="setup" className="ai-content-enter">
-            <AiSetupView onNavigate={() => { handleClose(false); navigate('/settings#ai-settings'); }} />
+            <AiSetupView
+              onNavigate={() => { handleClose(false); navigate('/settings#ai-settings'); }}
+              onDismiss={() => handleClose(false)}
+            />
           </div>
         ) : (
           <div key="idle" className="ai-content-enter">
             <CommandIdleInput
               text={text}
               setText={setText}
-              isLoading={false}
+              isLoading={isParsing}
               examplesOpen={examplesOpen}
               setExamplesOpen={setExamplesOpen}
               error={error}

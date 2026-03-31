@@ -1,5 +1,5 @@
 import { ArrowUp, ChevronDown, ChevronLeft, ChevronUp, Loader2, Sparkles } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,7 @@ import type { AiSuggestions } from '@/types';
 import { AiSettingsSection } from './AiSettingsSection';
 import { AiAnalyzeError, AiStreamingPreview } from './AiStreamingPreview';
 
+import { parsePartialAnalysis } from './parsePartialAnalysis';
 import { MAX_AI_PHOTOS } from './useAiAnalysis';
 import { useAiSettings } from './useAiSettings';
 import { useAiStream } from './useAiStream';
@@ -64,21 +65,28 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   const {
     isStreaming: isAnalyzing,
     error: analyzeError,
+    partialText: analyzePartial,
     stream: streamAnalyze,
     cancel: cancelAnalyze,
   } = useAiStream<AiSuggestions>('/api/ai/analyze-image/stream', "Couldn't analyze — try again");
 
   const {
     isStreaming: isCorrecting,
+    partialText: correctPartial,
     stream: streamCorrection,
     cancel: cancelCorrection,
   } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
 
   const {
     isStreaming: isReanalyzing,
+    partialText: reanalyzePartial,
     stream: streamReanalyze,
     cancel: cancelReanalyze,
   } = useAiStream<AiSuggestions>('/api/ai/reanalyze-image/stream', "Couldn't reanalyze — try again");
+
+  // Parse partial streaming text to show progressive name/items
+  const activePartial = isAnalyzing ? analyzePartial : isCorrecting ? correctPartial : isReanalyzing ? reanalyzePartial : '';
+  const parsedPartial = useMemo(() => activePartial ? parsePartialAnalysis(activePartial) : null, [activePartial]);
 
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -273,8 +281,8 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
       {(isAnalyzing || isCorrecting || isReanalyzing) ? (
         <AiStreamingPreview
           previewUrls={previewUrls}
-          streamedName=""
-          streamedItems={[]}
+          streamedName={parsedPartial?.name ?? ''}
+          streamedItems={parsedPartial?.items ?? []}
           initialStatusLabel={isCorrecting ? 'Applying correction...' : isReanalyzing ? 'Reanalyzing...' : `Analyzing ${Math.min(files.length, MAX_AI_PHOTOS)} photo${Math.min(files.length, MAX_AI_PHOTOS) !== 1 ? 's' : ''}...`}
         />
       ) : (
@@ -324,38 +332,43 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
           {/* AI action bar (correction + reanalyze) */}
           <div className={correctionOpen && name ? 'ai-correction-enter' : 'hidden'}>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {correctionCount >= MAX_CORRECTIONS ? (
                 <p className="text-[12px] text-[var(--text-tertiary)] italic">
-                  You can still edit any field below.
+                  Max corrections reached. You can still edit any field below.
                 </p>
               ) : (
-                <div className="row">
-                  <Input
-                    value={correctionText}
-                    onChange={(e) => setCorrectionText(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCorrectionSubmit(); } }}
-                    placeholder="Optionally describe what to fix..."
-                    className="flex-1 h-9 text-[13px]"
-                  />
-                  {correctionText.trim() ? (
+                <>
+                  <div className="row">
+                    <Input
+                      value={correctionText}
+                      onChange={(e) => setCorrectionText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (correctionText.trim()) handleCorrectionSubmit(); } }}
+                      placeholder="e.g. &quot;The red box has tools, not toys&quot;"
+                      className="flex-1 h-9 text-[13px]"
+                    />
                     <button
                       type="button"
                       onClick={handleCorrectionSubmit}
-                      className="shrink-0 p-2 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors"
+                      disabled={!correctionText.trim()}
+                      className="shrink-0 p-2 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors disabled:opacity-40"
                     >
                       <ArrowUp className="h-4 w-4" />
                     </button>
-                  ) : (
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] text-[var(--text-tertiary)]">
+                      Describe what to fix, or reanalyze from scratch
+                    </p>
                     <button
                       type="button"
                       onClick={() => { setCorrectionOpen(false); triggerReanalyze(); }}
-                      className="shrink-0 h-9 px-3 rounded-[var(--radius-lg)] bg-[var(--ai-accent)] text-white hover:bg-[var(--ai-accent-hover)] transition-colors text-[13px] font-medium"
+                      className="text-[12px] text-[var(--ai-accent)] hover:underline shrink-0"
                     >
                       Reanalyze
                     </button>
-                  )}
-                </div>
+                  </div>
+                </>
               )}
             </div>
           </div>

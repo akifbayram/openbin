@@ -40,11 +40,13 @@ export function InlineAiSetup({ expanded, onExpandedChange, setup, label = 'Set 
               value={setup.apiKey}
               onChange={(e) => { setup.setApiKey(e.target.value); setup.setTestResult(null); }}
               placeholder="API key"
+              aria-label="API key"
               className="w-full h-8 rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border-primary)] px-2.5 pr-8 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
             <button
               type="button"
               onClick={() => setup.setShowKey(!setup.showKey)}
+              aria-label={setup.showKey ? 'Hide API key' : 'Show API key'}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
             >
               {setup.showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -56,6 +58,7 @@ export function InlineAiSetup({ expanded, onExpandedChange, setup, label = 'Set 
             value={setup.model}
             onChange={(e) => { setup.setModel(e.target.value); setup.setTestResult(null); }}
             placeholder="Model name"
+            aria-label="Model name"
             className="w-full h-8 rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border-primary)] px-2.5 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
           />
           {/* Endpoint URL (openai-compatible only) */}
@@ -65,6 +68,7 @@ export function InlineAiSetup({ expanded, onExpandedChange, setup, label = 'Set 
               value={setup.endpointUrl}
               onChange={(e) => setup.setEndpointUrl(e.target.value)}
               placeholder="Endpoint URL"
+              aria-label="Endpoint URL"
               className="w-full h-8 rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border-primary)] px-2.5 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
           )}

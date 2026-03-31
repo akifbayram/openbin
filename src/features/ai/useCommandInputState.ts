@@ -47,41 +47,38 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     ? actions.filter((_, i) => checkedActions.get(i) !== false).length
     : 0;
 
+  function applyAskResult(result: unknown) {
+    const asCmd = result as { actions?: CommandAction[]; interpretation?: string };
+    const asQuery = result as { answer?: string; matches?: Array<{ bin_id: string; name: string; area_name: string; items: string[]; tags: string[]; relevance: string }> };
+
+    if (Array.isArray(asCmd.actions) && asCmd.actions.length > 0) {
+      const validActions = asCmd.actions.filter(
+        (a): a is CommandAction => typeof a === 'object' && a !== null && typeof (a as Record<string, unknown>).type === 'string'
+      );
+      setActions(validActions);
+      setInterpretation(asCmd.interpretation ?? '');
+      const initial = new Map<number, boolean>();
+      for (let i = 0; i < validActions.length; i++) initial.set(i, true);
+      setCheckedActions(initial);
+    } else if (typeof asQuery.answer === 'string') {
+      setQueryResult({ answer: asQuery.answer, matches: asQuery.matches ?? [] });
+    } else if (Array.isArray(asCmd.actions) && asCmd.actions.length === 0) {
+      setQueryResult({
+        answer: asCmd.interpretation || 'I couldn\'t find relevant information for that.',
+        matches: [],
+      });
+    }
+  }
+
   async function handleParse() {
     if (!text.trim() || !activeLocationId || !isAiReady) return;
-    // Reset previous state
     setActions(null);
     setInterpretation('');
     setQueryResult(null);
 
     try {
       const result = await ask({ text: text.trim(), locationId: activeLocationId });
-      if (!result) return;
-
-      // The hook classifies internally, but we need to read the classified value
-      // after the stream completes. Since `classified` is derived from `result`,
-      // we classify here from the raw result.
-      const asCmd = result as { actions?: CommandAction[]; interpretation?: string };
-      const asQuery = result as { answer?: string; matches?: Array<{ bin_id: string; name: string; area_name: string; items: string[]; tags: string[]; relevance: string }> };
-
-      if (Array.isArray(asCmd.actions) && asCmd.actions.length > 0) {
-        const validActions = asCmd.actions.filter(
-          (a): a is CommandAction => typeof a === 'object' && a !== null && typeof (a as Record<string, unknown>).type === 'string'
-        );
-        setActions(validActions);
-        setInterpretation(asCmd.interpretation ?? '');
-        const initial = new Map<number, boolean>();
-        for (let i = 0; i < validActions.length; i++) initial.set(i, true);
-        setCheckedActions(initial);
-      } else if (typeof asQuery.answer === 'string') {
-        setQueryResult({ answer: asQuery.answer, matches: asQuery.matches ?? [] });
-      } else if (Array.isArray(asCmd.actions) && asCmd.actions.length === 0) {
-        // AI returned empty actions — treat interpretation as query answer
-        setQueryResult({
-          answer: asCmd.interpretation || 'I couldn\'t find relevant information for that.',
-          matches: [],
-        });
-      }
+      if (result) applyAskResult(result);
     } catch (err) {
       showToast({ message: mapAiError(err, 'Request failed') });
     }
@@ -146,6 +143,34 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     setCheckedActions(new Map());
   }
 
+  async function handleFollowUp(followUpText: string) {
+    if (!activeLocationId || !isAiReady) return;
+
+    // Build context-aware prompt with previous Q&A
+    const contextParts: string[] = [];
+    if (text) contextParts.push(`Previous question: "${text}"`);
+    if (queryResult?.answer) contextParts.push(`Previous answer: "${queryResult.answer}"`);
+    if (queryResult?.matches?.length) {
+      contextParts.push(`Matched bins: ${queryResult.matches.map(m => m.name).join(', ')}`);
+    }
+    const contextPrefix = contextParts.length > 0
+      ? `Context from prior exchange:\n${contextParts.join('\n')}\n\nFollow-up: `
+      : '';
+
+    clearAsk();
+    setActions(null);
+    setInterpretation('');
+    setQueryResult(null);
+    setText(followUpText);
+
+    try {
+      const result = await ask({ text: contextPrefix + followUpText, locationId: activeLocationId });
+      if (result) applyAskResult(result);
+    } catch (err) {
+      showToast({ message: mapAiError(err, 'Request failed') });
+    }
+  }
+
   function handleAskAnother() {
     setText('');
     clearAsk();
@@ -188,6 +213,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     handleBinClick,
     handleExecuteComplete,
     handleAskAnother,
+    handleFollowUp,
   };
 }
 

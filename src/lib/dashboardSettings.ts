@@ -11,6 +11,7 @@ export interface DashboardSettings {
   showPinnedBins: boolean;
   showRecentlyScanned: boolean;
   showRecentlyUpdated: boolean;
+  showTimestamps: boolean;
 }
 
 export const DASHBOARD_LIMITS = {
@@ -31,6 +32,7 @@ const DEFAULTS: DashboardSettings = {
   showPinnedBins: DEFAULT_PREFERENCES.dashboard_show_pinned_bins,
   showRecentlyScanned: DEFAULT_PREFERENCES.dashboard_show_recently_scanned,
   showRecentlyUpdated: DEFAULT_PREFERENCES.dashboard_show_recently_updated,
+  showTimestamps: DEFAULT_PREFERENCES.dashboard_show_timestamps,
 };
 
 export function getDashboardSettings(): DashboardSettings {
@@ -57,6 +59,7 @@ export function useDashboardSettings() {
     showPinnedBins: preferences.dashboard_show_pinned_bins,
     showRecentlyScanned: preferences.dashboard_show_recently_scanned,
     showRecentlyUpdated: preferences.dashboard_show_recently_updated,
+    showTimestamps: preferences.dashboard_show_timestamps,
   };
 
   const updateSettings = useCallback((patch: Partial<DashboardSettings>) => {
@@ -73,6 +76,7 @@ export function useDashboardSettings() {
     if (patch.showPinnedBins !== undefined) dbPatch.dashboard_show_pinned_bins = patch.showPinnedBins;
     if (patch.showRecentlyScanned !== undefined) dbPatch.dashboard_show_recently_scanned = patch.showRecentlyScanned;
     if (patch.showRecentlyUpdated !== undefined) dbPatch.dashboard_show_recently_updated = patch.showRecentlyUpdated;
+    if (patch.showTimestamps !== undefined) dbPatch.dashboard_show_timestamps = patch.showTimestamps;
     updatePreferences(dbPatch);
   }, [updatePreferences]);
 
@@ -86,6 +90,7 @@ export function useDashboardSettings() {
       dashboard_show_pinned_bins: DEFAULT_PREFERENCES.dashboard_show_pinned_bins,
       dashboard_show_recently_scanned: DEFAULT_PREFERENCES.dashboard_show_recently_scanned,
       dashboard_show_recently_updated: DEFAULT_PREFERENCES.dashboard_show_recently_updated,
+      dashboard_show_timestamps: DEFAULT_PREFERENCES.dashboard_show_timestamps,
     });
   }, [updatePreferences]);
 

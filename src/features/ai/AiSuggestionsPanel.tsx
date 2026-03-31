@@ -1,4 +1,4 @@
-import { RefreshCw } from 'lucide-react';
+import { Check, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -125,16 +125,16 @@ export function AiSuggestionsPanel({
 
         {/* Name */}
         {hasName && (
-          <label className={cn(
-            'flex items-start gap-3 cursor-pointer',
+          <button type="button" onClick={() => setAcceptName(!acceptName)} className={cn(
+            'flex items-start gap-3 cursor-pointer text-left w-full',
             nameDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
           )}>
-            <input
-              type="checkbox"
-              checked={acceptName}
-              onChange={(e) => setAcceptName(e.target.checked)}
-              className="mt-1 accent-[var(--accent)]"
-            />
+            <span className={cn(
+              'shrink-0 mt-1 h-4 w-4 rounded border flex items-center justify-center transition-colors',
+              acceptName ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--border-primary)] bg-transparent',
+            )}>
+              {acceptName && <Check className="h-3 w-3 text-white" />}
+            </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <p className="text-[13px] font-medium text-[var(--text-secondary)]">Name</p>
@@ -145,21 +145,21 @@ export function AiSuggestionsPanel({
               <p className="text-[15px] text-[var(--text-primary)] font-semibold">{suggestions.name}</p>
               <p className="text-[12px] text-[var(--text-tertiary)]">Current: {currentName}</p>
             </div>
-          </label>
+          </button>
         )}
 
         {/* Items */}
         {hasItems && (
-          <label className={cn(
-            'flex items-start gap-3 cursor-pointer',
+          <button type="button" onClick={() => setAcceptItems(!acceptItems)} className={cn(
+            'flex items-start gap-3 cursor-pointer text-left w-full',
             itemsDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
           )}>
-            <input
-              type="checkbox"
-              checked={acceptItems}
-              onChange={(e) => setAcceptItems(e.target.checked)}
-              className="mt-1 accent-[var(--accent)]"
-            />
+            <span className={cn(
+              'shrink-0 mt-1 h-4 w-4 rounded border flex items-center justify-center transition-colors',
+              acceptItems ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--border-primary)] bg-transparent',
+            )}>
+              {acceptItems && <Check className="h-3 w-3 text-white" />}
+            </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <p className="text-[13px] font-medium text-[var(--text-secondary)]">Items</p>
@@ -182,21 +182,21 @@ export function AiSuggestionsPanel({
                 </p>
               )}
             </div>
-          </label>
+          </button>
         )}
 
         {/* Tags */}
         {hasTags && (
-          <label className={cn(
-            'flex items-start gap-3 cursor-pointer',
+          <button type="button" onClick={() => setAcceptTags(!acceptTags)} className={cn(
+            'flex items-start gap-3 cursor-pointer text-left w-full',
             tagsDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
           )}>
-            <input
-              type="checkbox"
-              checked={acceptTags}
-              onChange={(e) => setAcceptTags(e.target.checked)}
-              className="mt-1 accent-[var(--accent)]"
-            />
+            <span className={cn(
+              'shrink-0 mt-1 h-4 w-4 rounded border flex items-center justify-center transition-colors',
+              acceptTags ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--border-primary)] bg-transparent',
+            )}>
+              {acceptTags && <Check className="h-3 w-3 text-white" />}
+            </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <p className="text-[13px] font-medium text-[var(--text-secondary)]">Tags</p>
@@ -215,21 +215,21 @@ export function AiSuggestionsPanel({
                 </p>
               )}
             </div>
-          </label>
+          </button>
         )}
 
         {/* Notes */}
         {hasNotes && (
-          <label className={cn(
-            'flex items-start gap-3 cursor-pointer',
+          <button type="button" onClick={() => setAcceptNotes(!acceptNotes)} className={cn(
+            'flex items-start gap-3 cursor-pointer text-left w-full',
             notesDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
           )}>
-            <input
-              type="checkbox"
-              checked={acceptNotes}
-              onChange={(e) => setAcceptNotes(e.target.checked)}
-              className="mt-1 accent-[var(--accent)]"
-            />
+            <span className={cn(
+              'shrink-0 mt-1 h-4 w-4 rounded border flex items-center justify-center transition-colors',
+              acceptNotes ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--border-primary)] bg-transparent',
+            )}>
+              {acceptNotes && <Check className="h-3 w-3 text-white" />}
+            </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <p className="text-[13px] font-medium text-[var(--text-secondary)]">Notes</p>
@@ -242,18 +242,18 @@ export function AiSuggestionsPanel({
                 <p className="text-[12px] text-[var(--text-tertiary)] mt-1">Will replace current notes</p>
               )}
             </div>
-          </label>
+          </button>
         )}
 
         {/* Custom Fields */}
         {hasCustomFields && (
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={acceptCustomFields}
-              onChange={(e) => setAcceptCustomFields(e.target.checked)}
-              className="mt-1 accent-[var(--accent)]"
-            />
+          <button type="button" onClick={() => setAcceptCustomFields(!acceptCustomFields)} className="flex items-start gap-3 cursor-pointer text-left w-full">
+            <span className={cn(
+              'shrink-0 mt-1 h-4 w-4 rounded border flex items-center justify-center transition-colors',
+              acceptCustomFields ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--border-primary)] bg-transparent',
+            )}>
+              {acceptCustomFields && <Check className="h-3 w-3 text-white" />}
+            </span>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-medium text-[var(--text-secondary)]">Custom Fields</p>
               <div className="mt-1 space-y-1">
@@ -265,7 +265,7 @@ export function AiSuggestionsPanel({
                 ))}
               </div>
             </div>
-          </label>
+          </button>
         )}
 
         {/* Buttons */}

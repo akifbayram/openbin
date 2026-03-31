@@ -453,10 +453,6 @@ body {
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
-.ai-progress-glow {
-  display: none;
-}
-
 .ai-progress-fill {
   background: var(--ai-accent);
   animation: ai-fill-shimmer 2s ease-in-out infinite;
@@ -467,23 +463,13 @@ body {
   transition: width 500ms ease-out;
 }
 
-.ai-progress-glow-complete {
-  display: none;
-}
-
 @keyframes ai-fill-shimmer {
   0%, 100% { background-position: 200% 0; }
   50% { background-position: -200% 0; }
 }
 
-@keyframes ai-glow-drift {
-  0% { opacity: 0.4; transform: translateX(-10%); }
-  100% { opacity: 0.7; transform: translateX(10%); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .ai-progress-fill,
-  .ai-progress-glow { animation: none !important; }
+  .ai-progress-fill { animation: none !important; }
 }
 
 /* --- AI Thinking Pulse --- */
@@ -496,4 +482,73 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .ai-thinking-pulse { animation: none !important; }
+}
+
+/* --- AI Content Enter (dialog state transitions) --- */
+.ai-content-enter {
+  animation: aiContentEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes aiContentEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- AI Stagger Item (list reveals with inline animationDelay) --- */
+.ai-stagger-item {
+  opacity: 0;
+  animation: aiStaggerIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes aiStaggerIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- AI Correction Panel Expand --- */
+.ai-correction-enter {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  animation: aiCorrectionEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.ai-correction-enter > * {
+  overflow: hidden;
+  min-height: 0;
+}
+@keyframes aiCorrectionEnter {
+  from { grid-template-rows: 0fr; opacity: 0; }
+  to   { grid-template-rows: 1fr; opacity: 1; }
+}
+
+/* --- AI Checkbox Pop --- */
+.ai-check-pop {
+  animation: aiCheckPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes aiCheckPop {
+  from { transform: scale(0.6); }
+  to   { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-content-enter,
+  .ai-stagger-item,
+  .ai-check-pop { animation: none !important; opacity: 1 !important; }
+  .ai-correction-enter {
+    animation: none !important;
+    opacity: 1 !important;
+    grid-template-rows: 1fr !important;
+  }
+}
+
+/* ─── Card Stagger Entrance ─── */
+@keyframes card-stagger-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-card-stagger {
+  opacity: 0;
+  animation: card-stagger-in 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 40ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-card-stagger { animation: none !important; opacity: 1; }
 }

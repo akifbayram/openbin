@@ -17,6 +17,7 @@ export const SHORTCUTS: ShortcutDef[] = [
   { id: 'go-settings', label: 'Go to Settings', category: 'navigation', keys: 'g e' },
   { id: 'new-bin', label: 'New Bin', category: 'action', keys: 'n' },
   { id: 'focus-search', label: 'Focus Search', category: 'action', keys: '/' },
+  { id: 'ask-ai', label: 'Ask AI', category: 'action', keys: 'mod+j' },
   { id: 'command-palette', label: 'Command Palette', category: 'general', keys: 'mod+k' },
   { id: 'toggle-sidebar', label: 'Toggle Sidebar', category: 'general', keys: '[' },
   { id: 'shortcuts-help', label: 'Keyboard Shortcuts', category: 'general', keys: '?' },
@@ -26,7 +27,10 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigat
 
 export function formatKeys(keys: string): string[] {
   return keys.split(' ').map((part) => {
-    if (part === 'mod+k') return isMac ? '\u2318K' : 'Ctrl+K';
+    if (part.startsWith('mod+')) {
+      const key = part.slice(4).toUpperCase();
+      return isMac ? `\u2318${key}` : `Ctrl+${key}`;
+    }
     return part.toUpperCase();
   });
 }

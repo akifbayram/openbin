@@ -1,4 +1,4 @@
-import { ChevronRight, Inbox, MapPin, Plus, ScanLine, Sparkles } from 'lucide-react';
+import { Bookmark, ChevronRight, Clock, Inbox, MapPin, Package, Pin, Plus, Printer, QrCode, ScanLine, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -22,6 +22,7 @@ import { useRegisterCommandInput } from '@/features/tour/useRegisterCommandInput
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
+import { formatTimeAgo } from '@/lib/formatTime';
 import { deleteView, useSavedViews } from '@/lib/savedViews';
 import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';
@@ -30,6 +31,7 @@ import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { DashboardDialogs } from './DashboardDialogs';
+import { DashboardSettingsMenu } from './DashboardSettingsMenu';
 import { DashboardSkeleton } from './DashboardSkeleton';
 import { SectionHeader, StatCard } from './DashboardWidgets';
 import { useDashboard } from './useDashboard';
@@ -43,7 +45,7 @@ export function DashboardPage() {
   const { isGated, isSelfHosted } = usePlan();
   const aiAvailable = aiEnabled && (isSelfHosted || !isGated('ai'));
   const { showToast } = useToast();
-  const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, recentlyUpdated, pinnedBins, isLoading } =
+  const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, scanTimeMap, recentlyUpdated, pinnedBins, isLoading } =
     useDashboard();
   const { settings: dashSettings, updateSettings: updateDashSettings } = useDashboardSettings();
   const [search, setSearch] = useState('');
@@ -106,7 +108,7 @@ export function DashboardPage() {
 
   if (!activeLocationId) {
     return (
-      <div className="page-content max-w-none">
+      <div className="page-content-wide">
         <PageHeader title="Dashboard" />
         <EmptyState
           icon={MapPin}
@@ -127,12 +129,13 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="page-content max-w-none">
+    <div className="page-content-wide">
       <PageHeader
         title="Dashboard"
         actions={
           <div className="row">
             <div className="flex items-center">
+              <DashboardSettingsMenu settings={dashSettings} onUpdate={updateDashSettings} terminology={t} />
               <Tooltip content="Scan QR code" side="bottom">
                 <Button
                   onClick={() => openScanDialog()}
@@ -145,7 +148,7 @@ export function DashboardPage() {
                 </Button>
               </Tooltip>
               {aiAvailable && (
-                <Tooltip content="Ask AI" side="bottom">
+                <Tooltip content={`Ask AI (${/Mac|iPhone|iPad/.test(navigator.userAgent) ? '\u2318' : 'Ctrl+'}J)`} side="bottom">
                   <Button
                     onClick={() => setCommandOpen(true)}
                     size="icon"
@@ -215,7 +218,7 @@ export function DashboardPage() {
             className="rounded-[var(--radius-md)] bg-[var(--color-warning-soft)] px-4 py-3 row-spread hover:brightness-[0.97] transition-colors duration-150"
           >
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-[var(--radius-xl)] bg-[var(--color-warning-soft)] flex items-center justify-center">
+              <div className="h-9 w-9 rounded-[var(--radius-xl)] bg-[var(--color-warning)]/15 flex items-center justify-center">
                 <Inbox className="h-[18px] w-[18px] text-[var(--color-warning)]" />
               </div>
               <div className="text-left">
@@ -231,8 +234,8 @@ export function DashboardPage() {
 
         {/* Saved Views */}
         {dashSettings.showSavedViews && savedViews.length > 0 && (
-          <div className="flex flex-col gap-2">
-          <SectionHeader title="Saved Searches" />
+          <section aria-labelledby="dash-saved-views" className="flex flex-col gap-2">
+          <SectionHeader id="dash-saved-views" icon={Bookmark} title="Saved Searches" />
           <SavedViewChips
             views={savedViews}
             onApply={(view) => {
@@ -243,50 +246,97 @@ export function DashboardPage() {
               deleteView(viewId).catch(() => {});
             }}
           />
-          </div>
+          </section>
         )}
 
         {/* Pinned Bins */}
         {dashSettings.showPinnedBins && pinnedBins.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <SectionHeader title="Pinned" />
+          <section aria-labelledby="dash-pinned" className="flex flex-col gap-2">
+            <SectionHeader id="dash-pinned" icon={Pin} title="Pinned" />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {pinnedBins.map((bin) => (
-                <BinCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+              {pinnedBins.map((bin, i) => (
+                <div key={bin.id} className="animate-card-stagger" style={{ '--stagger-index': i } as React.CSSProperties}>
+                  <BinCard bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+                </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Recently Scanned */}
         {dashSettings.showRecentlyScanned && recentlyScanned.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <SectionHeader title="Recently Scanned" />
+          <section aria-labelledby="dash-scanned" className="flex flex-col gap-2">
+            <SectionHeader id="dash-scanned" icon={ScanLine} title="Recently Scanned" />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {recentlyScanned.map((bin) => (
-                <BinCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+              {recentlyScanned.map((bin, i) => (
+                <div key={bin.id} className="flex flex-col gap-1 animate-card-stagger" style={{ '--stagger-index': i } as React.CSSProperties}>
+                  <BinCard bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+                  {dashSettings.showTimestamps && scanTimeMap.has(bin.id) && (
+                    <p className="text-[11px] text-[var(--text-tertiary)] px-1">{formatTimeAgo(scanTimeMap.get(bin.id) as string)}</p>
+                  )}
+                </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Recently Updated */}
         {dashSettings.showRecentlyUpdated && recentlyUpdated.length > 0 && (
-          <div className={cn("flex flex-col gap-2", selectable && "pb-16")}>
+          <section aria-labelledby="dash-updated" className={cn("flex flex-col gap-2", selectable && "pb-16")}>
             <SectionHeader
+              id="dash-updated"
+              icon={Clock}
               title="Recently Updated"
               action={{ label: `All ${t.Bins}`, onClick: () => navigate('/bins') }}
             />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {recentlyUpdated.map((bin) => (
-                <BinCard key={bin.id} bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+              {recentlyUpdated.map((bin, i) => (
+                <div key={bin.id} className="flex flex-col gap-1 animate-card-stagger" style={{ '--stagger-index': i } as React.CSSProperties}>
+                  <BinCard bin={bin} index={binIndexMap.get(bin.id) ?? 0} selectable={selectable} selected={selectedIds.has(bin.id)} onSelect={toggleSelect} />
+                  {dashSettings.showTimestamps && (
+                    <p className="text-[11px] text-[var(--text-tertiary)] px-1">{formatTimeAgo(bin.updated_at)}</p>
+                  )}
+                </div>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* First-run onboarding (0 bins) */}
+        {totalBins === 0 && (
+          <div className="flex flex-col items-center justify-center gap-6 py-16">
+            <div className="h-20 w-20 rounded-[var(--radius-xl)] bg-[var(--accent)]/10 flex items-center justify-center">
+              <Package aria-hidden className="h-10 w-10 text-[var(--accent)] opacity-80" />
+            </div>
+            <div className="text-center space-y-1.5">
+              <h3 className="text-[19px] font-semibold text-[var(--text-secondary)]">
+                Get started with {t.Bins}
+              </h3>
+              <p className="text-[14px] text-[var(--text-tertiary)] max-w-xs mx-auto">
+                Create your first {t.bin}, print a QR label, and scan it to find what's inside.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {canCreateBin && (
+                <Button onClick={() => setCreateOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create {t.bin}
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => navigate('/print')}>
+                <Printer className="h-4 w-4 mr-2" />
+                Print labels
+              </Button>
+              <Button variant="outline" onClick={() => openScanDialog()}>
+                <QrCode className="h-4 w-4 mr-2" />
+                Scan QR
+              </Button>
             </div>
           </div>
         )}
 
-        {/* Empty state nudge */}
-        {!(
+        {/* Empty sections nudge (has bins but all sections disabled) */}
+        {totalBins > 0 && !(
           (dashSettings.showNeedsOrganizing && needsOrganizing > 0) ||
           (dashSettings.showSavedViews && savedViews.length > 0) ||
           (dashSettings.showPinnedBins && pinnedBins.length > 0) ||

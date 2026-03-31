@@ -45,6 +45,14 @@ export function useKeyboardShortcuts({ actions, enabled = true }: Options) {
         return;
       }
 
+      // mod+j opens Ask AI (even in inputs)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
+        e.preventDefault();
+        acts['ask-ai']?.();
+        clearPrefix();
+        return;
+      }
+
       // Skip all other shortcuts when focused in an editable element
       if (editable) return;
 

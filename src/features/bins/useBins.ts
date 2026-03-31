@@ -6,10 +6,23 @@ import { useListData } from '@/lib/useListData';
 import { usePagedList } from '@/lib/usePagedList';
 import type { Bin, BinItem, BinVisibility } from '@/types';
 
-/** Check if `query` appears at a word boundary in `text` (case-insensitive) */
-function matchesSearch(text: string, query: string): boolean {
+/** Build a word-boundary regex from a raw search query */
+export function buildSearchRegex(query: string): RegExp {
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`\\b${escaped}`, 'i').test(text);
+  return new RegExp(`\\b${escaped}`, 'i');
+}
+
+/** Test whether a bin matches a pre-compiled search regex */
+export function binMatchesSearch(bin: Bin, regex: RegExp): boolean {
+  return (
+    regex.test(bin.name) ||
+    regex.test(bin.area_name ?? '') ||
+    (Array.isArray(bin.items) ? bin.items : []).some((item) => regex.test(item.name)) ||
+    regex.test(bin.notes) ||
+    (Array.isArray(bin.tags) ? bin.tags : []).some((tag: string) => regex.test(tag)) ||
+    regex.test(bin.id) ||
+    (bin.custom_fields != null && Object.values(bin.custom_fields).some((v) => regex.test(v)))
+  );
 }
 
 /** Notify all useBinList / useBin instances to refetch */
@@ -52,17 +65,8 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
     let filtered = [...rawBins];
 
     if (searchQuery?.trim()) {
-      const q = searchQuery.trim();
-      filtered = filtered.filter(
-        (bin) =>
-          matchesSearch(bin.name, q) ||
-          matchesSearch(bin.area_name ?? '', q) ||
-          (Array.isArray(bin.items) ? bin.items : []).some((item) => matchesSearch(item.name, q)) ||
-          matchesSearch(bin.notes, q) ||
-          (Array.isArray(bin.tags) ? bin.tags : []).some((tag: string) => matchesSearch(tag, q)) ||
-          matchesSearch(bin.id, q) ||
-          (bin.custom_fields && Object.values(bin.custom_fields).some((v) => matchesSearch(v, q)))
-      );
+      const regex = buildSearchRegex(searchQuery.trim());
+      filtered = filtered.filter((bin) => binMatchesSearch(bin, regex));
     }
 
     if (filters) {

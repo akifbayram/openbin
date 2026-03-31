@@ -1,5 +1,6 @@
 import { Check, ChevronLeft, Loader2, Plus, Sparkles } from 'lucide-react';
 import { useRef } from 'react';
+import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -73,6 +74,9 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
             disabled={quickAdd.isStructuring}
             className="w-full min-h-[80px] bg-[var(--bg-elevated)] rounded-[var(--radius-sm)] px-3 py-2 text-base text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none resize-none disabled:opacity-50"
           />
+          {quickAdd.isStructuring && (
+            <AiProgressBar active complete={false} compact label="Extracting items..." />
+          )}
           {quickAdd.structureError && (
             <p className="text-[13px] text-[var(--destructive)]">{quickAdd.structureError}</p>
           )}
