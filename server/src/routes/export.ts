@@ -5,7 +5,7 @@ import express, { Router } from 'express';
 import { unzipSync } from 'fflate';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
-import { getDb, query, querySync } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireMemberOrAbove } from '../lib/binAccess.js';
 import { config } from '../lib/config.js';
@@ -31,20 +31,20 @@ import {
   fetchLocationSettings,
   fetchLocationTagColors,
   fetchTrashedBins,
-  importPhotosSync,
-  insertBinItemsSync,
+  importPhotos,
+  insertBinItems,
   insertBinWithShortCode,
-  isLocationAdminSync,
+  isLocationAdminCheck,
   loadBinPhotoMeta,
   loadBinPhotosBase64,
-  resolveAreaSync,
+  resolveArea,
 } from '../lib/exportHelpers.js';
 import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import {
   buildDryRunPreview,
   type DryRunBin,
   executeFullImportTransaction,
-  lookupAreaSync,
+  lookupArea,
 } from '../lib/importTransaction.js';
 import { safePath } from '../lib/pathSafety.js';
 import { authenticate } from '../middleware/auth.js';
@@ -327,14 +327,14 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
   const userId = req.user!.id;
 
   if (dryRun) {
-    res.json(buildDryRunPreview(bins, importMode));
+    res.json(await buildDryRunPreview(bins, importMode));
     return;
   }
 
-  const result = executeFullImportTransaction({
+  const result = await executeFullImportTransaction({
     locationId,
     userId,
-    isAdmin: isLocationAdminSync(locationId, userId),
+    isAdmin: await isLocationAdminCheck(locationId, userId),
     importMode,
     bins,
     trashedBins,
@@ -492,13 +492,13 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
       if (importMode === 'merge') {
         let areaId = areaCache.get(bin.area);
         if (areaId === undefined) {
-          areaId = lookupAreaSync(locationId, bin.area);
+          areaId = await lookupArea(locationId, bin.area);
           areaCache.set(bin.area, areaId);
         }
 
         const areaClause = areaId ? 'AND area_id = $3' : 'AND area_id IS NULL';
         const params = areaId ? [locationId, bin.name, areaId] : [locationId, bin.name];
-        const existing = querySync(
+        const existing = await query(
           `SELECT id FROM bins WHERE location_id = $1 AND name = $2 ${areaClause} AND deleted_at IS NULL`,
           params,
         );
@@ -517,13 +517,13 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
 
   const now = new Date().toISOString();
 
-  const doImport = getDb().transaction(() => {
+  const result = await withTransaction(async (tx) => {
     if (importMode === 'replace') {
-      const existingPhotos = querySync<{ storage_path: string }>(
+      const existingPhotos = await tx<{ storage_path: string }>(
         'SELECT storage_path FROM photos WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1)',
         [locationId]
       );
-      querySync('DELETE FROM bins WHERE location_id = $1', [locationId]);
+      await tx('DELETE FROM bins WHERE location_id = $1', [locationId]);
       for (const photo of existingPhotos.rows) {
         try {
           const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
@@ -537,7 +537,7 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
     let itemsImported = 0;
 
     for (const bin of pendingBins) {
-      const areaId = resolveAreaSync(locationId, bin.area, userId);
+      const areaId = await resolveArea(locationId, bin.area, userId, tx);
 
       if (importMode === 'merge') {
         const areaClause = areaId
@@ -546,7 +546,7 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
         const params = areaId
           ? [locationId, bin.name, areaId]
           : [locationId, bin.name];
-        const existing = querySync(
+        const existing = await tx(
           `SELECT id FROM bins WHERE location_id = $1 AND name = $2 ${areaClause} AND deleted_at IS NULL`,
           params
         );
@@ -556,7 +556,7 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
         }
       }
 
-      const binId = insertBinWithShortCode('', locationId, {
+      const binId = await insertBinWithShortCode('', locationId, {
         name: bin.name,
         notes: '',
         tags: bin.tags,
@@ -564,9 +564,9 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
         color: '',
         createdAt: now,
         updatedAt: now,
-      }, areaId, userId);
+      }, areaId, userId, tx);
 
-      insertBinItemsSync(binId, bin.items.map(i => ({ name: i.name, quantity: i.quantity })));
+      await insertBinItems(binId, bin.items.map(i => ({ name: i.name, quantity: i.quantity })), tx);
       itemsImported += bin.items.length;
       binsImported++;
     }
@@ -574,7 +574,6 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
     return { binsImported, binsSkipped, itemsImported };
   });
 
-  const result = doImport();
   res.json(result);
 }));
 
@@ -682,7 +681,7 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
       items: b.items,
       tags: b.tags,
     }));
-    res.json(buildDryRunPreview(dryRunBins, importMode));
+    res.json(await buildDryRunPreview(dryRunBins, importMode));
     return;
   }
 
@@ -723,10 +722,10 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
   const exportBins = convertZipBins(zipBins);
   const exportTrashedBins = convertZipBins(zipTrashedBins, { trashed: true });
 
-  const result = executeFullImportTransaction({
+  const result = await executeFullImportTransaction({
     locationId,
     userId,
-    isAdmin: isLocationAdminSync(locationId, userId),
+    isAdmin: await isLocationAdminCheck(locationId, userId),
     importMode,
     bins: exportBins,
     trashedBins: exportTrashedBins,
@@ -789,13 +788,13 @@ router.post('/import/legacy', asyncHandler(async (req, res) => {
     };
   });
 
-  const doImport = getDb().transaction(() => {
-    let imported = 0;
+  const imported = await withTransaction(async (tx) => {
+    let count = 0;
 
     for (const bin of normalizedBins) {
-      const areaId = resolveAreaSync(locationId, bin.location || '', userId);
+      const areaId = await resolveArea(locationId, bin.location || '', userId, tx);
 
-      const binId = insertBinWithShortCode('', locationId, {
+      const binId = await insertBinWithShortCode('', locationId, {
         name: bin.name,
         notes: bin.notes,
         tags: bin.tags,
@@ -804,18 +803,16 @@ router.post('/import/legacy', asyncHandler(async (req, res) => {
         cardStyle: bin.cardStyle,
         createdAt: bin.createdAt,
         updatedAt: bin.updatedAt,
-      }, areaId, userId);
+      }, areaId, userId, tx);
 
-      insertBinItemsSync(binId, bin.items || []);
-      importPhotosSync(binId, bin.photos, userId);
+      await insertBinItems(binId, bin.items || [], tx);
+      await importPhotos(binId, bin.photos, userId, tx);
 
-      imported++;
+      count++;
     }
 
-    return imported;
+    return count;
   });
-
-  const imported = doImport();
 
   res.json({
     message: 'Legacy import complete',

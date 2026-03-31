@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { d, generateUuid, getDb, query } from '../db.js';
+import { d, generateUuid, query, withTransaction } from '../db.js';
 import { config } from './config.js';
 import { createLogger } from './logger.js';
 
@@ -79,16 +79,13 @@ export async function rotateRefreshToken(rawToken: string): Promise<{ userId: st
   const newId = generateUuid();
   const expiresAt = new Date(Date.now() + config.refreshTokenMaxDays * 24 * 60 * 60 * 1000).toISOString();
 
-  const db = getDb();
-  const revokeStmt = db.prepare(`UPDATE refresh_tokens SET revoked_at = ${d.now()} WHERE id = ?`);
-  const insertStmt = db.prepare(
-    `INSERT INTO refresh_tokens (id, user_id, token_hash, family_id, expires_at) VALUES (?, ?, ?, ?, ?)`,
-  );
-  const rotateTransaction = db.transaction(() => {
-    revokeStmt.run(existing.id);
-    insertStmt.run(newId, existing.user_id, newTokenHash, existing.family_id, expiresAt);
+  await withTransaction(async (tx) => {
+    await tx(`UPDATE refresh_tokens SET revoked_at = ${d.now()} WHERE id = $1`, [existing.id]);
+    await tx(
+      'INSERT INTO refresh_tokens (id, user_id, token_hash, family_id, expires_at) VALUES ($1, $2, $3, $4, $5)',
+      [newId, existing.user_id, newTokenHash, existing.family_id, expiresAt],
+    );
   });
-  rotateTransaction();
 
   return { userId: existing.user_id, rawToken: newRawToken };
 }

@@ -1,4 +1,4 @@
-import { getDb } from '../db.js';
+import { withTransaction } from '../db.js';
 import { logActivity } from './activityLog.js';
 import { handlers } from './commandHandlers/index.js';
 import type { ActionContext, PendingActivity } from './commandHandlers/types.js';
@@ -41,8 +41,7 @@ export async function executeActions(
 
   const ctx: ActionContext = { locationId, userId, userName, pendingActivities, authMethod, apiKeyId };
 
-  const db = getDb();
-  const transaction = db.transaction(() => {
+  await withTransaction(async (tx) => {
     for (const action of actions) {
       try {
         const handler = handlers[action.type];
@@ -55,7 +54,7 @@ export async function executeActions(
           });
           continue;
         }
-        const result = handler(action, ctx);
+        const result = await handler(action, ctx, tx);
         executed.push(result);
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -69,8 +68,6 @@ export async function executeActions(
       }
     }
   });
-
-  transaction();
 
   // Fire-and-forget activity log entries after transaction commits
   for (const activity of pendingActivities) {

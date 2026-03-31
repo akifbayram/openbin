@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
-import { d, generateUuid, query, querySync } from '../db.js';
+import type { TxQueryFn } from '../db.js';
+import { d, generateUuid, query } from '../db.js';
 import { config } from './config.js';
-import { replaceCustomFieldValuesSync } from './customFieldHelpers.js';
+import { replaceCustomFieldValues } from './customFieldHelpers.js';
 import { createLogger } from './logger.js';
 import { isPathSafe, safePath } from './pathSafety.js';
 import { generateShortCode } from './shortCode.js';
@@ -180,9 +181,13 @@ export async function loadBinPhotoMeta(binId: string) {
 /**
  * Resolve an area name string to an area ID within a location.
  * Supports hierarchical paths delimited by " / " (e.g. "Garage / Shelf 1").
- * Creates areas as needed. Synchronous (for use in transactions).
+ * Creates areas as needed.
+ *
+ * When `tx` is provided, uses it (for running inside a transaction).
+ * Otherwise uses the top-level `query` function.
  */
-export function resolveAreaSync(locationId: string, areaName: string, userId: string): string | null {
+export async function resolveArea(locationId: string, areaName: string, userId: string, tx?: TxQueryFn): Promise<string | null> {
+  const q = tx ?? query;
   const trimmed = areaName.trim();
   if (!trimmed) return null;
 
@@ -201,12 +206,12 @@ export function resolveAreaSync(locationId: string, areaName: string, userId: st
       ? [locationId, part]
       : [locationId, part, parentId];
 
-    const existing = querySync(existingQuery, existingParams);
+    const existing = await q(existingQuery, existingParams);
     if (existing.rows.length > 0) {
       lastId = existing.rows[0].id as string;
     } else {
       lastId = generateUuid();
-      querySync(
+      await q(
         'INSERT INTO areas (id, location_id, name, parent_id, created_by) VALUES ($1, $2, $3, $4, $5)',
         [lastId, locationId, part, parentId, userId]
       );
@@ -223,7 +228,7 @@ export interface AreaPathInfo {
 }
 
 /**
- * Build a map of area ID → full path string (e.g. "Garage / Shelf 1") for a location.
+ * Build a map of area ID -> full path string (e.g. "Garage / Shelf 1") for a location.
  * Also returns creator info for each leaf area.
  */
 export async function buildAreaPathMap(locationId: string): Promise<Map<string, AreaPathInfo>> {
@@ -256,32 +261,37 @@ export async function buildAreaPathMap(locationId: string): Promise<Map<string, 
 }
 
 /**
- * Insert a bin with short code as ID, with collision retry. Synchronous (for use in transactions).
+ * Insert a bin with short code as ID, with collision retry.
  * Returns the generated bin ID.
+ *
+ * When `tx` is provided, uses it (for running inside a transaction).
+ * Otherwise uses the top-level `query` function.
  */
-export function insertBinWithShortCode(
+export async function insertBinWithShortCode(
   _binId: string,
   locationId: string,
   bin: { name: string; notes: string; tags: string[]; icon: string; color: string; cardStyle?: string; visibility?: 'location' | 'private'; customFields?: Record<string, string>; shortCode?: string; deletedAt?: string | null; createdAt: string; updatedAt: string },
   areaId: string | null,
   userId: string,
-): string {
+  tx?: TxQueryFn,
+): Promise<string> {
+  const q = tx ?? query;
   const validCode = bin.shortCode && /^[A-Z0-9]{6}$/.test(bin.shortCode) ? bin.shortCode : undefined;
   for (let attempt = 0; attempt <= 10; attempt++) {
     const id = attempt === 0 && validCode ? validCode : generateShortCode(bin.name);
     try {
-      querySync(
+      await q(
         `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, visibility, created_by, created_at, updated_at, deleted_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
         [id, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle || '', bin.visibility || 'location', userId, bin.createdAt, bin.updatedAt, bin.deletedAt || null]
       );
       if (bin.customFields && Object.keys(bin.customFields).length > 0) {
-        replaceCustomFieldValuesSync(id, bin.customFields, locationId);
+        await replaceCustomFieldValues(id, bin.customFields, locationId, tx);
       }
       return id;
     } catch (err: unknown) {
-      const sqliteErr = err as { code?: string };
-      if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && attempt < 10) {
+      const errObj = err as { code?: string };
+      if ((errObj.code === 'SQLITE_CONSTRAINT_UNIQUE' || errObj.code === '23505') && attempt < 10) {
         continue;
       }
       throw err;
@@ -290,13 +300,14 @@ export function insertBinWithShortCode(
   throw new Error('Failed to generate unique short code');
 }
 
-/** Insert items into bin_items. Synchronous (for use in transactions). */
-export function insertBinItemsSync(binId: string, items: Array<string | { name: string; quantity?: number | null }>): void {
+/** Insert items into bin_items. */
+export async function insertBinItems(binId: string, items: Array<string | { name: string; quantity?: number | null }>, tx?: TxQueryFn): Promise<void> {
+  const q = tx ?? query;
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     const name = typeof item === 'string' ? item : item.name;
     const qty = typeof item === 'object' && item.quantity != null ? item.quantity : null;
-    querySync(
+    await q(
       'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)',
       [generateUuid(), binId, name, qty, i]
     );
@@ -321,7 +332,7 @@ export async function fetchLocationFieldDefs(locationId: string): Promise<Export
   return result.rows;
 }
 
-/** Build a fieldId → fieldName map for a location. */
+/** Build a fieldId -> fieldName map for a location. */
 export async function buildFieldIdToNameMap(locationId: string): Promise<Map<string, string>> {
   const result = await query<{ id: string; name: string }>(
     'SELECT id, name FROM location_custom_fields WHERE location_id = $1',
@@ -352,11 +363,12 @@ export function mapCustomFieldsToNames(
   return hasValues ? mapped : undefined;
 }
 
-/** Import tag colors for a location. Synchronous (for transactions). */
-export function importTagColorsSync(locationId: string, tagColors: ExportTagColor[]): void {
+/** Import tag colors for a location. */
+export async function importTagColors(locationId: string, tagColors: ExportTagColor[], tx?: TxQueryFn): Promise<void> {
+  const q = tx ?? query;
   for (const tc of tagColors) {
     if (!tc.tag || !tc.color) continue;
-    querySync(
+    await q(
       `INSERT INTO tag_colors (id, location_id, tag, color) VALUES ($1, $2, $3, $4)
        ON CONFLICT(location_id, tag) DO UPDATE SET color = excluded.color, updated_at = ${d.now()}`,
       [generateUuid(), locationId, tc.tag, tc.color]
@@ -364,15 +376,17 @@ export function importTagColorsSync(locationId: string, tagColors: ExportTagColo
   }
 }
 
-/** Ensure custom field definitions exist, returning a name → fieldId map. Synchronous (for transactions). */
-export function resolveCustomFieldDefsSync(
+/** Ensure custom field definitions exist, returning a name -> fieldId map. */
+export async function resolveCustomFieldDefs(
   locationId: string,
   defs: ExportCustomFieldDef[],
-): Map<string, string> {
+  tx?: TxQueryFn,
+): Promise<Map<string, string>> {
+  const q = tx ?? query;
   const nameToId = new Map<string, string>();
   for (const def of defs) {
     if (!def.name) continue;
-    const existing = querySync<{ id: string }>(
+    const existing = await q<{ id: string }>(
       'SELECT id FROM location_custom_fields WHERE location_id = $1 AND name = $2',
       [locationId, def.name]
     );
@@ -380,7 +394,7 @@ export function resolveCustomFieldDefsSync(
       nameToId.set(def.name, existing.rows[0].id);
     } else {
       const id = generateUuid();
-      querySync(
+      await q(
         'INSERT INTO location_custom_fields (id, location_id, name, position) VALUES ($1, $2, $3, $4)',
         [id, locationId, def.name, def.position]
       );
@@ -390,7 +404,7 @@ export function resolveCustomFieldDefsSync(
   return nameToId;
 }
 
-/** Convert name-keyed custom fields to fieldId-keyed using a name→id map. */
+/** Convert name-keyed custom fields to fieldId-keyed using a name->id map. */
 export function mapCustomFieldsToIds(
   fields: Record<string, string>,
   nameToId: Map<string, string>,
@@ -496,12 +510,13 @@ export async function fetchLocationMembers(locationId: string): Promise<ExportMe
   return result.rows.map(r => ({ userId: r.user_id, username: r.username, role: r.role, joinedAt: r.joined_at }));
 }
 
-/** Apply exported location settings. Synchronous (for transactions). */
-export function importLocationSettingsSync(locationId: string, settings: ExportLocationSettings): void {
+/** Apply exported location settings. */
+export async function importLocationSettings(locationId: string, settings: ExportLocationSettings, tx?: TxQueryFn): Promise<void> {
+  const q = tx ?? query;
   const retDays = Math.max(7, Math.min(365, settings.activityRetentionDays || 90));
   const trashDays = Math.max(7, Math.min(365, settings.trashRetentionDays || 30));
   const joinRole = settings.defaultJoinRole === 'viewer' ? 'viewer' : 'member';
-  querySync(
+  await q(
     `UPDATE locations SET
        activity_retention_days = $1, trash_retention_days = $2,
        app_name = $3, term_bin = $4, term_location = $5, term_area = $6,
@@ -511,35 +526,37 @@ export function importLocationSettingsSync(locationId: string, settings: ExportL
   );
 }
 
-/** Import standalone area paths. Synchronous (for transactions). */
-export function importAreasSync(locationId: string, areas: ExportArea[], userId: string): number {
+/** Import standalone area paths. */
+export async function importAreas(locationId: string, areas: ExportArea[], userId: string, tx?: TxQueryFn): Promise<number> {
   let count = 0;
   for (const area of areas) {
     if (!area.path) continue;
-    const creator = resolveCreatedBySync(area.createdBy, userId);
-    resolveAreaSync(locationId, area.path, creator);
+    const creator = await resolveCreatedBy(area.createdBy, userId, tx);
+    await resolveArea(locationId, area.path, creator, tx);
     count++;
   }
   return count;
 }
 
-/** Resolve a createdBy user ID, falling back to the importing user if not found. Synchronous. */
-export function resolveCreatedBySync(createdBy: string | undefined, fallbackUserId: string): string {
+/** Resolve a createdBy user ID, falling back to the importing user if not found. */
+export async function resolveCreatedBy(createdBy: string | undefined, fallbackUserId: string, tx?: TxQueryFn): Promise<string> {
   if (!createdBy) return fallbackUserId;
-  const result = querySync<{ id: string }>('SELECT id FROM users WHERE id = $1', [createdBy]);
+  const q = tx ?? query;
+  const result = await q<{ id: string }>('SELECT id FROM users WHERE id = $1', [createdBy]);
   return result.rows.length > 0 ? createdBy : fallbackUserId;
 }
 
-/** Import pinned bins. Synchronous (for transactions). */
-export function importPinnedBinsSync(pins: ExportPinnedBin[], oldToNewBinId: Map<string, string>): number {
+/** Import pinned bins. */
+export async function importPinnedBins(pins: ExportPinnedBin[], oldToNewBinId: Map<string, string>, tx?: TxQueryFn): Promise<number> {
+  const q = tx ?? query;
   let count = 0;
   for (const pin of pins) {
     const newBinId = oldToNewBinId.get(pin.binId);
     if (!newBinId) continue;
-    const userExists = querySync<{ id: string }>('SELECT id FROM users WHERE id = $1', [pin.userId]);
+    const userExists = await q<{ id: string }>('SELECT id FROM users WHERE id = $1', [pin.userId]);
     if (userExists.rows.length === 0) continue;
     try {
-      querySync(
+      await q(
         d.insertOrIgnore(`INSERT INTO pinned_bins (user_id, bin_id, position, created_at) VALUES ($1, $2, $3, ${d.now()})`),
         [pin.userId, newBinId, pin.position]
       );
@@ -551,19 +568,20 @@ export function importPinnedBinsSync(pins: ExportPinnedBin[], oldToNewBinId: Map
   return count;
 }
 
-/** Import saved views for existing users. Synchronous (for transactions). */
-export function importSavedViewsSync(views: ExportSavedView[]): number {
+/** Import saved views for existing users. */
+export async function importSavedViews(views: ExportSavedView[], tx?: TxQueryFn): Promise<number> {
+  const q = tx ?? query;
   let count = 0;
   for (const view of views) {
     if (!view.name) continue;
-    const userExists = querySync<{ id: string }>('SELECT id FROM users WHERE id = $1', [view.userId]);
+    const userExists = await q<{ id: string }>('SELECT id FROM users WHERE id = $1', [view.userId]);
     if (userExists.rows.length === 0) continue;
-    const dup = querySync<{ id: string }>(
+    const dup = await q<{ id: string }>(
       'SELECT id FROM saved_views WHERE user_id = $1 AND name = $2',
       [view.userId, view.name]
     );
     if (dup.rows.length > 0) continue;
-    querySync(
+    await q(
       'INSERT INTO saved_views (id, user_id, name, search_query, sort, filters) VALUES ($1, $2, $3, $4, $5, $6)',
       [generateUuid(), view.userId, view.name, view.searchQuery || '', view.sort || 'updated', view.filters || '{}']
     );
@@ -572,16 +590,17 @@ export function importSavedViewsSync(views: ExportSavedView[]): number {
   return count;
 }
 
-/** Import location members for existing users. Synchronous (for transactions). */
-export function importMembersSync(locationId: string, members: ExportMember[]): number {
+/** Import location members for existing users. */
+export async function importMembers(locationId: string, members: ExportMember[], tx?: TxQueryFn): Promise<number> {
+  const q = tx ?? query;
   let count = 0;
   for (const m of members) {
     if (!m.userId) continue;
     const role = ['admin', 'member', 'viewer'].includes(m.role) ? m.role : 'member';
-    const userExists = querySync<{ id: string }>('SELECT id FROM users WHERE id = $1', [m.userId]);
+    const userExists = await q<{ id: string }>('SELECT id FROM users WHERE id = $1', [m.userId]);
     if (userExists.rows.length === 0) continue;
     try {
-      querySync(
+      await q(
         d.insertOrIgnore('INSERT INTO location_members (id, location_id, user_id, role, joined_at) VALUES ($1, $2, $3, $4, $5)'),
         [generateUuid(), locationId, m.userId, role, m.joinedAt || new Date().toISOString()]
       );
@@ -596,26 +615,26 @@ export function importMembersSync(locationId: string, members: ExportMember[]): 
 /**
  * Delete all bins (cascading to items, photos rows, custom field values)
  * and areas for a location. Also removes photo files from storage.
- * Synchronous (for use in replace-mode import transactions).
  */
-export function replaceCleanupSync(locationId: string): void {
-  const existingPhotos = querySync<{ storage_path: string }>(
+export async function replaceCleanup(locationId: string, tx?: TxQueryFn): Promise<void> {
+  const q = tx ?? query;
+  const existingPhotos = await q<{ storage_path: string }>(
     'SELECT storage_path FROM photos WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1)',
     [locationId]
   );
-  querySync('DELETE FROM bins WHERE location_id = $1', [locationId]);
-  querySync('DELETE FROM areas WHERE location_id = $1', [locationId]);
+  await q('DELETE FROM bins WHERE location_id = $1', [locationId]);
+  await q('DELETE FROM areas WHERE location_id = $1', [locationId]);
   for (const photo of existingPhotos.rows) {
-    // storage.delete is async; fire-and-forget within sync transaction context
+    // storage.delete is async; fire-and-forget
     storage.delete(photo.storage_path).catch(() => {});
   }
 }
 
 /**
- * Check if a user is an admin of a location. Synchronous.
+ * Check if a user is an admin of a location.
  */
-export function isLocationAdminSync(locationId: string, userId: string): boolean {
-  const row = querySync<{ role: string }>(
+export async function isLocationAdminCheck(locationId: string, userId: string): Promise<boolean> {
+  const row = await query<{ role: string }>(
     'SELECT role FROM location_members WHERE location_id = $1 AND user_id = $2',
     [locationId, userId]
   );
@@ -635,8 +654,9 @@ function isAllowedImageBuffer(buf: Buffer): boolean {
   return false;
 }
 
-/** Import photos from base64 data into storage. Synchronous (for use in transactions). */
-export function importPhotosSync(binId: string, photos: ExportPhoto[], userId: string): number {
+/** Import photos from base64 data into storage. */
+export async function importPhotos(binId: string, photos: ExportPhoto[], userId: string, tx?: TxQueryFn): Promise<number> {
+  const q = tx ?? query;
   let count = 0;
   for (const photo of photos) {
     const buffer = Buffer.from(photo.data, 'base64');
@@ -653,7 +673,7 @@ export function importPhotosSync(binId: string, photos: ExportPhoto[], userId: s
     const safeMimeType = ALLOWED_MIME_TYPES.includes(photo.mimeType) ? photo.mimeType : 'image/jpeg';
 
     if (config.storageBackend === 's3') {
-      // S3: async upload, fire-and-forget within sync transaction context
+      // S3: async upload, fire-and-forget within transaction context
       storage.upload(storagePath, buffer, safeMimeType).catch((err) => {
         const log = createLogger('photo-import');
         log.error(`Failed to upload ${storagePath} to S3:`, err);
@@ -669,8 +689,8 @@ export function importPhotosSync(binId: string, photos: ExportPhoto[], userId: s
       fs.writeFileSync(fullPath, buffer);
     }
 
-    const resolvedPhotoCreator = resolveCreatedBySync(photo.createdBy, userId);
-    querySync(
+    const resolvedPhotoCreator = await resolveCreatedBy(photo.createdBy, userId, tx);
+    await q(
       `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [photoId, binId, safeOriginalName, safeMimeType, buffer.length, storagePath, resolvedPhotoCreator, photo.createdAt || new Date().toISOString()]

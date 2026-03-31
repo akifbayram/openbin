@@ -35,7 +35,7 @@ if (!config.selfHosted && !config.trustProxy) {
 }
 
 if (config.demoMode) {
-  seedDemoData();
+  seedDemoData().catch((err) => log.error('Demo seed failed:', err instanceof Error ? err.message : err));
 }
 
 app.listen(config.port, () => {

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
-import { d, generateUuid, getDb, querySync } from '../db.js';
+import type { TxQueryFn } from '../db.js';
+import { d, generateUuid, withTransaction } from '../db.js';
 import { config } from './config.js';
 import type { DemoMember } from './demoSeedData.js';
 import {
@@ -26,15 +27,15 @@ import { pushLog } from './logBuffer.js';
 import { createLogger } from './logger.js';
 import { generateShortCode } from './shortCode.js';
 
-function createLocation(userId: string, name: string): string {
+async function createLocation(tx: TxQueryFn, userId: string, name: string): Promise<string> {
   const locationId = generateUuid();
   const inviteCode = crypto.randomBytes(16).toString('hex');
 
-  querySync(
+  await tx(
     'INSERT INTO locations (id, name, created_by, invite_code) VALUES ($1, $2, $3, $4)',
     [locationId, name, userId, inviteCode],
   );
-  querySync(
+  await tx(
     'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
     [generateUuid(), locationId, userId, 'admin'],
   );
@@ -42,25 +43,25 @@ function createLocation(userId: string, name: string): string {
   return locationId;
 }
 
-function cleanupExistingDemoUsers(): void {
+async function cleanupExistingDemoUsers(tx: TxQueryFn): Promise<void> {
   for (const username of DEMO_USERNAMES) {
-    const existing = querySync<{ id: string }>(
+    const existing = await tx<{ id: string }>(
       'SELECT id FROM users WHERE username = $1',
       [username],
     );
     if (existing.rows.length > 0) {
-      querySync('DELETE FROM locations WHERE created_by = $1', [existing.rows[0].id]);
-      querySync('DELETE FROM users WHERE id = $1', [existing.rows[0].id]);
+      await tx('DELETE FROM locations WHERE created_by = $1', [existing.rows[0].id]);
+      await tx('DELETE FROM users WHERE id = $1', [existing.rows[0].id]);
     }
   }
 }
 
-function createDemoUsers(passwordHash: string): Map<DemoMember, string> {
+async function createDemoUsers(tx: TxQueryFn, passwordHash: string): Promise<Map<DemoMember, string>> {
   const userIdMap = new Map<DemoMember, string>();
   for (const [username, displayName] of Object.entries(DEMO_USERS)) {
     const id = generateUuid();
     userIdMap.set(username as DemoMember, id);
-    querySync(
+    await tx(
       'INSERT INTO users (id, username, password_hash, display_name) VALUES ($1, $2, $3, $4)',
       [id, username, passwordHash, displayName],
     );
@@ -68,61 +69,63 @@ function createDemoUsers(passwordHash: string): Map<DemoMember, string> {
   return userIdMap;
 }
 
-function setupLocations(userId: string): { homeLocationId: string; storageLocationId: string } {
+async function setupLocations(tx: TxQueryFn, userId: string): Promise<{ homeLocationId: string; storageLocationId: string }> {
   return {
-    homeLocationId: createLocation(userId, 'Our House'),
-    storageLocationId: createLocation(userId, 'Self Storage Unit'),
+    homeLocationId: await createLocation(tx, userId, 'Our House'),
+    storageLocationId: await createLocation(tx, userId, 'Self Storage Unit'),
   };
 }
 
-function assignMemberships(
+async function assignMemberships(
+  tx: TxQueryFn,
   homeLocationId: string,
   storageLocationId: string,
   userIdMap: Map<DemoMember, string>,
-): void {
+): Promise<void> {
   // Sarah: admin of both locations (partner)
   for (const locId of [homeLocationId, storageLocationId]) {
-    querySync(
+    await tx(
       'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
       [generateUuid(), locId, userIdMap.get('sarah')!, 'admin'],
     );
   }
   // Alex: member of home (teen)
-  querySync(
+  await tx(
     'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
     [generateUuid(), homeLocationId, userIdMap.get('alex')!, 'member'],
   );
   // Jordan: member of storage unit only (friend helping with storage)
-  querySync(
+  await tx(
     'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
     [generateUuid(), storageLocationId, userIdMap.get('jordan')!, 'member'],
   );
   // Pat: viewer of home (family friend)
-  querySync(
+  await tx(
     'INSERT INTO location_members (id, location_id, user_id, role) VALUES ($1, $2, $3, $4)',
     [generateUuid(), homeLocationId, userIdMap.get('pat')!, 'viewer'],
   );
 
   // Set active location for all users
-  querySync('UPDATE users SET active_location_id = $1 WHERE id = $2', [homeLocationId, userIdMap.get('demo')!]);
-  querySync('UPDATE users SET active_location_id = $1 WHERE id = $2', [homeLocationId, userIdMap.get('sarah')!]);
-  querySync('UPDATE users SET active_location_id = $1 WHERE id = $2', [homeLocationId, userIdMap.get('alex')!]);
-  querySync('UPDATE users SET active_location_id = $1 WHERE id = $2', [storageLocationId, userIdMap.get('jordan')!]);
-  querySync('UPDATE users SET active_location_id = $1 WHERE id = $2', [homeLocationId, userIdMap.get('pat')!]);
+  await tx('UPDATE users SET active_location_id = $1 WHERE id = $2', [homeLocationId, userIdMap.get('demo')!]);
+  await tx('UPDATE users SET active_location_id = $1 WHERE id = $2', [homeLocationId, userIdMap.get('sarah')!]);
+  await tx('UPDATE users SET active_location_id = $1 WHERE id = $2', [homeLocationId, userIdMap.get('alex')!]);
+  await tx('UPDATE users SET active_location_id = $1 WHERE id = $2', [storageLocationId, userIdMap.get('jordan')!]);
+  await tx('UPDATE users SET active_location_id = $1 WHERE id = $2', [homeLocationId, userIdMap.get('pat')!]);
 }
 
-function createAreas(
+async function createAreas(
+  tx: TxQueryFn,
   homeLocationId: string,
   storageLocationId: string,
   userId: string,
-): Map<string, string> {
+): Promise<Map<string, string>> {
   const areaMap = new Map<string, string>();
 
   // Home parent areas
   for (const areaName of HOME_AREAS) {
     const areaId = generateUuid();
     areaMap.set(areaName, areaId);
-    querySync(
+    await tx(
       'INSERT INTO areas (id, location_id, name, created_by) VALUES ($1, $2, $3, $4)',
       [areaId, homeLocationId, areaName, userId],
     );
@@ -135,7 +138,7 @@ function createAreas(
     for (const childName of children) {
       const childId = generateUuid();
       areaMap.set(childName, childId);
-      querySync(
+      await tx(
         'INSERT INTO areas (id, location_id, name, parent_id, created_by) VALUES ($1, $2, $3, $4, $5)',
         [childId, homeLocationId, childName, parentId, userId],
       );
@@ -146,7 +149,7 @@ function createAreas(
   for (const areaName of STORAGE_AREAS) {
     const areaId = generateUuid();
     areaMap.set(areaName, areaId);
-    querySync(
+    await tx(
       'INSERT INTO areas (id, location_id, name, created_by) VALUES ($1, $2, $3, $4)',
       [areaId, storageLocationId, areaName, userId],
     );
@@ -155,12 +158,13 @@ function createAreas(
   return areaMap;
 }
 
-function createBins(
+async function createBins(
+  tx: TxQueryFn,
   homeLocationId: string,
   storageLocationId: string,
   areaMap: Map<string, string>,
   userIdMap: Map<DemoMember, string>,
-): Map<string, string> {
+): Promise<Map<string, string>> {
   const binIdMap = new Map<string, string>();
 
   for (const bin of DEMO_BINS) {
@@ -171,7 +175,7 @@ function createBins(
     const creatorId = userIdMap.get(bin.createdBy ?? 'demo')!;
     const visibility = bin.visibility ?? 'location';
 
-    querySync(
+    await tx(
       `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [binId, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle, creatorId, visibility],
@@ -181,7 +185,7 @@ function createBins(
       const item = bin.items[i];
       const itemName = typeof item === 'string' ? item : item.name;
       const itemQuantity = typeof item === 'string' ? null : item.quantity;
-      querySync(
+      await tx(
         'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)',
         [generateUuid(), binId, itemName, itemQuantity, i],
       );
@@ -191,13 +195,14 @@ function createBins(
   return binIdMap;
 }
 
-function createTrashedBins(
+async function createTrashedBins(
+  tx: TxQueryFn,
   homeLocationId: string,
   storageLocationId: string,
   areaMap: Map<string, string>,
   userIdMap: Map<DemoMember, string>,
   binIdMap: Map<string, string>,
-): void {
+): Promise<void> {
   for (let i = 0; i < TRASHED_BINS.length; i++) {
     const bin = TRASHED_BINS[i];
     const binId = generateShortCode(bin.name);
@@ -207,7 +212,7 @@ function createTrashedBins(
     const creatorId = userIdMap.get(bin.createdBy ?? 'demo')!;
     const daysAgo = 3 + i * 2;
 
-    querySync(
+    await tx(
       `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, deleted_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, ${d.daysAgo(daysAgo)})`,
       [binId, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle, creatorId],
@@ -217,7 +222,7 @@ function createTrashedBins(
       const item = bin.items[j];
       const itemName = typeof item === 'string' ? item : item.name;
       const itemQuantity = typeof item === 'string' ? null : item.quantity;
-      querySync(
+      await tx(
         'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)',
         [generateUuid(), binId, itemName, itemQuantity, j],
       );
@@ -225,10 +230,10 @@ function createTrashedBins(
   }
 }
 
-function seedTagColors(homeLocationId: string, storageLocationId: string): void {
+async function seedTagColors(tx: TxQueryFn, homeLocationId: string, storageLocationId: string): Promise<void> {
   for (const locId of [homeLocationId, storageLocationId]) {
     for (const [tag, color] of Object.entries(TAG_COLORS)) {
-      querySync(
+      await tx(
         'INSERT INTO tag_colors (id, location_id, tag, color) VALUES ($1, $2, $3, $4)',
         [generateUuid(), locId, tag, color],
       );
@@ -236,11 +241,11 @@ function seedTagColors(homeLocationId: string, storageLocationId: string): void 
   }
 }
 
-function seedPins(userId: string, patUserId: string, binIdMap: Map<string, string>): void {
+async function seedPins(tx: TxQueryFn, userId: string, patUserId: string, binIdMap: Map<string, string>): Promise<void> {
   for (let i = 0; i < PINNED_BIN_NAMES.length; i++) {
     const binId = binIdMap.get(PINNED_BIN_NAMES[i]);
     if (binId) {
-      querySync(
+      await tx(
         'INSERT INTO pinned_bins (user_id, bin_id, position) VALUES ($1, $2, $3)',
         [userId, binId, i],
       );
@@ -249,7 +254,7 @@ function seedPins(userId: string, patUserId: string, binIdMap: Map<string, strin
   for (let i = 0; i < PINNED_BIN_NAMES_PAT.length; i++) {
     const binId = binIdMap.get(PINNED_BIN_NAMES_PAT[i]);
     if (binId) {
-      querySync(
+      await tx(
         'INSERT INTO pinned_bins (user_id, bin_id, position) VALUES ($1, $2, $3)',
         [patUserId, binId, i],
       );
@@ -257,7 +262,7 @@ function seedPins(userId: string, patUserId: string, binIdMap: Map<string, strin
   }
 }
 
-function seedSavedViews(userId: string, sarahUserId: string, areaMap: Map<string, string>): void {
+async function seedSavedViews(tx: TxQueryFn, userId: string, sarahUserId: string, areaMap: Map<string, string>): Promise<void> {
   const savedViews = [
     { name: 'Kids stuff', search_query: '', sort: 'name', filters: JSON.stringify({ tags: ['kids'], tagMode: 'any', colors: [], areas: [], hasItems: false, hasNotes: false }) },
     { name: 'Outdoor & sports', search_query: '', sort: 'updated', filters: JSON.stringify({ tags: ['outdoor', 'sports'], tagMode: 'any', colors: [], areas: [], hasItems: false, hasNotes: false }) },
@@ -265,7 +270,7 @@ function seedSavedViews(userId: string, sarahUserId: string, areaMap: Map<string
     { name: 'Holiday & seasonal', search_query: '', sort: 'updated', filters: JSON.stringify({ tags: ['seasonal', 'holiday'], tagMode: 'any', colors: [], areas: [], hasItems: false, hasNotes: false }) },
   ];
   for (const view of savedViews) {
-    querySync(
+    await tx(
       'INSERT INTO saved_views (id, user_id, name, search_query, sort, filters) VALUES ($1, $2, $3, $4, $5, $6)',
       [generateUuid(), userId, view.name, view.search_query, view.sort, view.filters],
     );
@@ -277,14 +282,14 @@ function seedSavedViews(userId: string, sarahUserId: string, areaMap: Map<string
     { name: 'Coffee gear', search_query: '', sort: 'name', filters: JSON.stringify({ tags: ['coffee', 'brewing'], tagMode: 'any', colors: [], areas: [], hasItems: false, hasNotes: false }) },
   ];
   for (const view of sarahViews) {
-    querySync(
+    await tx(
       'INSERT INTO saved_views (id, user_id, name, search_query, sort, filters) VALUES ($1, $2, $3, $4, $5, $6)',
       [generateUuid(), sarahUserId, view.name, view.search_query, view.sort, view.filters],
     );
   }
 }
 
-function seedScanHistory(userIdMap: Map<DemoMember, string>, binIdMap: Map<string, string>): void {
+async function seedScanHistory(tx: TxQueryFn, userIdMap: Map<DemoMember, string>, binIdMap: Map<string, string>): Promise<void> {
   const scanEntries: [DemoMember, string[]][] = [
     ['demo', SCANNED_BIN_NAMES],
     ['sarah', SCANNED_BIN_NAMES_SARAH],
@@ -297,7 +302,7 @@ function seedScanHistory(userIdMap: Map<DemoMember, string>, binIdMap: Map<strin
     for (const name of binNames) {
       const binId = binIdMap.get(name);
       if (binId) {
-        querySync(
+        await tx(
           'INSERT INTO scan_history (id, user_id, bin_id) VALUES ($1, $2, $3)',
           [generateUuid(), userId, binId],
         );
@@ -306,25 +311,25 @@ function seedScanHistory(userIdMap: Map<DemoMember, string>, binIdMap: Map<strin
   }
 }
 
-function seedOnboardingPrefs(userIdMap: Map<DemoMember, string>): void {
+async function seedOnboardingPrefs(tx: TxQueryFn, userIdMap: Map<DemoMember, string>): Promise<void> {
   for (const [username, id] of userIdMap.entries()) {
     const prefs = username === 'demo'
       ? { onboarding_completed: false, onboarding_step: 0 }
       : { onboarding_completed: true };
-    querySync(
+    await tx(
       'INSERT INTO user_preferences (id, user_id, settings) VALUES ($1, $2, $3)',
       [generateUuid(), id, JSON.stringify(prefs)],
     );
   }
 }
 
-function seedCustomFields(homeLocationId: string, binIdMap: Map<string, string>): void {
+async function seedCustomFields(tx: TxQueryFn, homeLocationId: string, binIdMap: Map<string, string>): Promise<void> {
   const fieldIdMap = new Map<string, string>();
 
   for (const field of CUSTOM_FIELD_DEFINITIONS) {
     const fieldId = generateUuid();
     fieldIdMap.set(field.name, fieldId);
-    querySync(
+    await tx(
       'INSERT INTO location_custom_fields (id, location_id, name, position) VALUES ($1, $2, $3, $4)',
       [fieldId, homeLocationId, field.name, field.position],
     );
@@ -336,7 +341,7 @@ function seedCustomFields(homeLocationId: string, binIdMap: Map<string, string>)
     for (const [fieldName, value] of Object.entries(fields)) {
       const fieldId = fieldIdMap.get(fieldName);
       if (!fieldId) continue;
-      querySync(
+      await tx(
         'INSERT INTO bin_custom_field_values (id, bin_id, field_id, value) VALUES ($1, $2, $3, $4)',
         [generateUuid(), binId, fieldId, value],
       );
@@ -344,12 +349,13 @@ function seedCustomFields(homeLocationId: string, binIdMap: Map<string, string>)
   }
 }
 
-function seedActivityLog(
+async function seedActivityLog(
+  tx: TxQueryFn,
   homeLocationId: string,
   storageLocationId: string,
   userIdMap: Map<DemoMember, string>,
   binIdMap: Map<string, string>,
-): void {
+): Promise<void> {
   for (const entry of DEMO_ACTIVITY_ENTRIES) {
     const locationId = entry.location === 'home' ? homeLocationId : storageLocationId;
     const userId = userIdMap.get(entry.user)!;
@@ -357,7 +363,7 @@ function seedActivityLog(
     const changes = entry.changes ? JSON.stringify(entry.changes) : null;
     const daysAgo = entry.daysAgo;
 
-    querySync(
+    await tx(
       `INSERT INTO activity_log (id, location_id, user_id, user_name, action, entity_type, entity_id, entity_name, changes, auth_method, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, ${d.daysAgo(daysAgo)})`,
       [generateUuid(), locationId, userId, entry.user, entry.action, entry.entityType, entityId, entry.entityName ?? null, changes, 'jwt'],
@@ -365,37 +371,35 @@ function seedActivityLog(
   }
 }
 
-export function seedDemoData(): void {
+export async function seedDemoData(): Promise<void> {
   if (!config.demoMode) return;
 
   const startTime = Date.now();
-  const db = getDb();
-
-  const runSeed = db.transaction(() => {
-    cleanupExistingDemoUsers();
-
-    const randomPassword = crypto.randomBytes(32).toString('hex');
-    const passwordHash = bcrypt.hashSync(randomPassword, 10);
-    const userIdMap = createDemoUsers(passwordHash);
-    const userId = userIdMap.get('demo')!;
-
-    const { homeLocationId, storageLocationId } = setupLocations(userId);
-    assignMemberships(homeLocationId, storageLocationId, userIdMap);
-    const areaMap = createAreas(homeLocationId, storageLocationId, userId);
-    const binIdMap = createBins(homeLocationId, storageLocationId, areaMap, userIdMap);
-    createTrashedBins(homeLocationId, storageLocationId, areaMap, userIdMap, binIdMap);
-
-    seedTagColors(homeLocationId, storageLocationId);
-    seedPins(userId, userIdMap.get('pat')!, binIdMap);
-    seedSavedViews(userId, userIdMap.get('sarah')!, areaMap);
-    seedScanHistory(userIdMap, binIdMap);
-    seedOnboardingPrefs(userIdMap);
-    seedCustomFields(homeLocationId, binIdMap);
-    seedActivityLog(homeLocationId, storageLocationId, userIdMap, binIdMap);
-  });
 
   try {
-    runSeed();
+    await withTransaction(async (tx) => {
+      await cleanupExistingDemoUsers(tx);
+
+      const randomPassword = crypto.randomBytes(32).toString('hex');
+      const passwordHash = bcrypt.hashSync(randomPassword, 10);
+      const userIdMap = await createDemoUsers(tx, passwordHash);
+      const userId = userIdMap.get('demo')!;
+
+      const { homeLocationId, storageLocationId } = await setupLocations(tx, userId);
+      await assignMemberships(tx, homeLocationId, storageLocationId, userIdMap);
+      const areaMap = await createAreas(tx, homeLocationId, storageLocationId, userId);
+      const binIdMap = await createBins(tx, homeLocationId, storageLocationId, areaMap, userIdMap);
+      await createTrashedBins(tx, homeLocationId, storageLocationId, areaMap, userIdMap, binIdMap);
+
+      await seedTagColors(tx, homeLocationId, storageLocationId);
+      await seedPins(tx, userId, userIdMap.get('pat')!, binIdMap);
+      await seedSavedViews(tx, userId, userIdMap.get('sarah')!, areaMap);
+      await seedScanHistory(tx, userIdMap, binIdMap);
+      await seedOnboardingPrefs(tx, userIdMap);
+      await seedCustomFields(tx, homeLocationId, binIdMap);
+      await seedActivityLog(tx, homeLocationId, storageLocationId, userIdMap, binIdMap);
+    });
+
     const elapsed = Date.now() - startTime;
     const homeBins = DEMO_BINS.filter((b) => b.location === 'home').length;
     const storageBins = DEMO_BINS.filter((b) => b.location === 'storage').length;

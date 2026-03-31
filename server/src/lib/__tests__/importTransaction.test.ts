@@ -4,7 +4,7 @@ import type { ExportBin } from '../exportHelpers.js';
 import {
   buildDryRunPreview,
   executeFullImportTransaction,
-  lookupAreaSync,
+  lookupArea,
 } from '../importTransaction.js';
 
 // ---------------------------------------------------------------------------
@@ -58,12 +58,12 @@ beforeEach(async () => {
 // ---------------------------------------------------------------------------
 
 describe('buildDryRunPreview', () => {
-  it('replace mode puts all bins in toCreate', () => {
+  it('replace mode puts all bins in toCreate', async () => {
     const bins = [
       { name: 'Bin A', id: 'aaa', items: [{ name: 'wrench' }], tags: ['tool'] },
       { name: 'Bin B', id: 'bbb', items: [], tags: [] },
     ];
-    const result = buildDryRunPreview(bins, 'replace');
+    const result = await buildDryRunPreview(bins, 'replace');
     expect(result.preview).toBe(true);
     expect(result.toCreate).toHaveLength(2);
     expect(result.toSkip).toHaveLength(0);
@@ -71,7 +71,7 @@ describe('buildDryRunPreview', () => {
     expect(result.totalItems).toBe(1);
   });
 
-  it('merge mode skips existing bin IDs', () => {
+  it('merge mode skips existing bin IDs', async () => {
     // Insert a bin into DB so it exists
     const db = getDb();
     db.prepare(
@@ -82,7 +82,7 @@ describe('buildDryRunPreview', () => {
       { name: 'Existing', id: 'existid', items: [], tags: [] },
       { name: 'New Bin', id: 'newbin', items: [{ name: 'item1' }, { name: 'item2' }], tags: ['a'] },
     ];
-    const result = buildDryRunPreview(bins, 'merge');
+    const result = await buildDryRunPreview(bins, 'merge');
     expect(result.toSkip).toHaveLength(1);
     expect(result.toSkip[0].name).toBe('Existing');
     expect(result.toSkip[0].reason).toBe('already exists');
@@ -90,45 +90,45 @@ describe('buildDryRunPreview', () => {
     expect(result.toCreate[0].name).toBe('New Bin');
   });
 
-  it('returns empty arrays for empty bins input', () => {
-    const result = buildDryRunPreview([], 'merge');
+  it('returns empty arrays for empty bins input', async () => {
+    const result = await buildDryRunPreview([], 'merge');
     expect(result.toCreate).toEqual([]);
     expect(result.toSkip).toEqual([]);
     expect(result.totalBins).toBe(0);
     expect(result.totalItems).toBe(0);
   });
 
-  it('counts totalItems across all bins', () => {
+  it('counts totalItems across all bins', async () => {
     const bins = [
       { name: 'A', id: 'a1', items: [{ name: 'x' }, { name: 'y' }], tags: [] },
       { name: 'B', id: 'b1', items: [{ name: 'z' }], tags: [] },
       { name: 'C', id: 'c1', items: [], tags: [] },
     ];
-    const result = buildDryRunPreview(bins, 'replace');
+    const result = await buildDryRunPreview(bins, 'replace');
     expect(result.totalItems).toBe(3);
   });
 });
 
 // ---------------------------------------------------------------------------
-// lookupAreaSync
+// lookupArea
 // ---------------------------------------------------------------------------
 
-describe('lookupAreaSync', () => {
-  it('returns null for non-existent area', () => {
-    expect(lookupAreaSync(LOCATION_ID, 'NoSuchArea')).toBeNull();
+describe('lookupArea', () => {
+  it('returns null for non-existent area', async () => {
+    expect(await lookupArea(LOCATION_ID, 'NoSuchArea')).toBeNull();
   });
 
-  it('returns area ID for existing top-level area', () => {
+  it('returns area ID for existing top-level area', async () => {
     const areaId = generateUuid();
     const db = getDb();
     db.prepare(
       'INSERT INTO areas (id, location_id, name, parent_id, created_by) VALUES (?, ?, ?, NULL, ?)',
     ).run(areaId, LOCATION_ID, 'Garage', USER_ID);
 
-    expect(lookupAreaSync(LOCATION_ID, 'Garage')).toBe(areaId);
+    expect(await lookupArea(LOCATION_ID, 'Garage')).toBe(areaId);
   });
 
-  it('handles nested path "Parent / Child"', () => {
+  it('handles nested path "Parent / Child"', async () => {
     const db = getDb();
     const parentId = generateUuid();
     const childId = generateUuid();
@@ -139,10 +139,10 @@ describe('lookupAreaSync', () => {
       'INSERT INTO areas (id, location_id, name, parent_id, created_by) VALUES (?, ?, ?, ?, ?)',
     ).run(childId, LOCATION_ID, 'Shelf A', parentId, USER_ID);
 
-    expect(lookupAreaSync(LOCATION_ID, 'Garage / Shelf A')).toBe(childId);
+    expect(await lookupArea(LOCATION_ID, 'Garage / Shelf A')).toBe(childId);
   });
 
-  it('returns null if any path segment is missing', () => {
+  it('returns null if any path segment is missing', async () => {
     const db = getDb();
     const parentId = generateUuid();
     db.prepare(
@@ -150,7 +150,7 @@ describe('lookupAreaSync', () => {
     ).run(parentId, LOCATION_ID, 'Garage', USER_ID);
 
     // "Garage" exists but "Shelf B" does not
-    expect(lookupAreaSync(LOCATION_ID, 'Garage / Shelf B')).toBeNull();
+    expect(await lookupArea(LOCATION_ID, 'Garage / Shelf B')).toBeNull();
   });
 });
 
@@ -159,13 +159,13 @@ describe('lookupAreaSync', () => {
 // ---------------------------------------------------------------------------
 
 describe('executeFullImportTransaction', () => {
-  it('merge mode imports new bins and skips existing', () => {
+  it('merge mode imports new bins and skips existing', async () => {
     const db = getDb();
     db.prepare(
       'INSERT INTO bins (id, location_id, name, area_id, notes, icon, color, created_by) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)',
     ).run('exist1', LOCATION_ID, 'Existing Bin', '', '', '', USER_ID);
 
-    const result = executeFullImportTransaction({
+    const result = await executeFullImportTransaction({
       locationId: LOCATION_ID,
       userId: USER_ID,
       isAdmin: true,
@@ -185,13 +185,13 @@ describe('executeFullImportTransaction', () => {
     expect(names).toContain('New Bin');
   });
 
-  it('replace mode clears existing bins and imports all', () => {
+  it('replace mode clears existing bins and imports all', async () => {
     const db = getDb();
     db.prepare(
       'INSERT INTO bins (id, location_id, name, area_id, notes, icon, color, created_by) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)',
     ).run('old111', LOCATION_ID, 'Old Bin', '', '', '', USER_ID);
 
-    const result = executeFullImportTransaction({
+    const result = await executeFullImportTransaction({
       locationId: LOCATION_ID,
       userId: USER_ID,
       isAdmin: true,
@@ -210,8 +210,8 @@ describe('executeFullImportTransaction', () => {
     expect(names).toContain('Imported Bin');
   });
 
-  it('imports tag colors', () => {
-    executeFullImportTransaction({
+  it('imports tag colors', async () => {
+    await executeFullImportTransaction({
       locationId: LOCATION_ID,
       userId: USER_ID,
       isAdmin: false,
@@ -230,8 +230,8 @@ describe('executeFullImportTransaction', () => {
     expect(tags).toContain('low');
   });
 
-  it('imports areas hierarchy', () => {
-    const result = executeFullImportTransaction({
+  it('imports areas hierarchy', async () => {
+    const result = await executeFullImportTransaction({
       locationId: LOCATION_ID,
       userId: USER_ID,
       isAdmin: false,
@@ -258,8 +258,8 @@ describe('executeFullImportTransaction', () => {
     expect(shelfA.rows).toHaveLength(1);
   });
 
-  it('imports custom field definitions and maps to bin values', () => {
-    const result = executeFullImportTransaction({
+  it('imports custom field definitions and maps to bin values', async () => {
+    const result = await executeFullImportTransaction({
       locationId: LOCATION_ID,
       userId: USER_ID,
       isAdmin: false,
@@ -300,9 +300,9 @@ describe('executeFullImportTransaction', () => {
     expect(vals.rows).toHaveLength(2);
   });
 
-  it('imports trashed bins with deleted_at set', () => {
+  it('imports trashed bins with deleted_at set', async () => {
     const deletedAt = '2025-01-15T00:00:00.000Z';
-    const result = executeFullImportTransaction({
+    const result = await executeFullImportTransaction({
       locationId: LOCATION_ID,
       userId: USER_ID,
       isAdmin: false,
@@ -336,8 +336,8 @@ describe('executeFullImportTransaction', () => {
     expect((active.rows[0] as { deleted_at: string | null }).deleted_at).toBeNull();
   });
 
-  it('imports pinned bins', () => {
-    const result = executeFullImportTransaction({
+  it('imports pinned bins', async () => {
+    const result = await executeFullImportTransaction({
       locationId: LOCATION_ID,
       userId: USER_ID,
       isAdmin: false,
@@ -365,7 +365,7 @@ describe('executeFullImportTransaction', () => {
     expect((pins.rows[1] as { position: number }).position).toBe(1);
   });
 
-  it('imports location settings in replace mode as admin', () => {
+  it('imports location settings in replace mode as admin', async () => {
     const settings = {
       activityRetentionDays: 60,
       trashRetentionDays: 14,
@@ -376,7 +376,7 @@ describe('executeFullImportTransaction', () => {
       defaultJoinRole: 'viewer' as const,
     };
 
-    const result = executeFullImportTransaction({
+    const result = await executeFullImportTransaction({
       locationId: LOCATION_ID,
       userId: USER_ID,
       isAdmin: true,
@@ -400,8 +400,8 @@ describe('executeFullImportTransaction', () => {
     expect(row.default_join_role).toBe('viewer');
   });
 
-  it('does NOT apply location settings when not admin', () => {
-    const result = executeFullImportTransaction({
+  it('does NOT apply location settings when not admin', async () => {
+    const result = await executeFullImportTransaction({
       locationId: LOCATION_ID,
       userId: USER_ID,
       isAdmin: false,
@@ -421,8 +421,8 @@ describe('executeFullImportTransaction', () => {
     expect(result.settingsApplied).toBe(false);
   });
 
-  it('does NOT apply location settings in merge mode', () => {
-    const result = executeFullImportTransaction({
+  it('does NOT apply location settings in merge mode', async () => {
+    const result = await executeFullImportTransaction({
       locationId: LOCATION_ID,
       userId: USER_ID,
       isAdmin: true,
@@ -442,7 +442,7 @@ describe('executeFullImportTransaction', () => {
     expect(result.settingsApplied).toBe(false);
   });
 
-  it('transaction is atomic: partial failure rolls back', () => {
+  it('transaction is atomic: partial failure rolls back', async () => {
     const db = getDb();
     // Insert a bin so we can verify it survives a failed replace import
     db.prepare(
@@ -454,7 +454,7 @@ describe('executeFullImportTransaction', () => {
     const badBin = makeBin({ id: 'bad111', name: null as unknown as string });
 
     try {
-      executeFullImportTransaction({
+      await executeFullImportTransaction({
         locationId: LOCATION_ID,
         userId: USER_ID,
         isAdmin: true,

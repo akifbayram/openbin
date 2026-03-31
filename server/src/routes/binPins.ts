@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { d, getDb, query } from '../db.js';
+import { d, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireMemberOrAbove, verifyBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS } from '../lib/binQueries.js';
@@ -37,14 +37,14 @@ router.put('/pinned/reorder', asyncHandler(async (req, res) => {
   if (!Array.isArray(bin_ids) || bin_ids.length === 0) {
     throw new ValidationError('bin_ids array is required');
   }
-  const db = getDb();
-  const stmt = db.prepare('UPDATE pinned_bins SET position = ? WHERE user_id = ? AND bin_id = ?');
-  const updateAll = db.transaction(() => {
+  await withTransaction(async (tx) => {
     for (let i = 0; i < bin_ids.length; i++) {
-      stmt.run(i, req.user!.id, bin_ids[i]);
+      await tx(
+        'UPDATE pinned_bins SET position = $1 WHERE user_id = $2 AND bin_id = $3',
+        [i, req.user!.id, bin_ids[i]],
+      );
     }
   });
-  updateAll();
   res.json({ success: true });
 }));
 

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { d, generateUuid, getDb, query } from '../db.js';
+import { d, generateUuid, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
@@ -75,15 +75,14 @@ router.put('/:locationId/custom-fields/reorder', requirePro(), asyncHandler(asyn
     throw new ValidationError('field_ids array is required');
   }
 
-  const db = getDb();
-  const stmt = db.prepare(
-    `UPDATE location_custom_fields SET position = ?, updated_at = ${d.now()} WHERE id = ? AND location_id = ?`,
-  );
-  db.transaction(() => {
+  await withTransaction(async (tx) => {
     for (let i = 0; i < field_ids.length; i++) {
-      stmt.run(i, field_ids[i], locationId);
+      await tx(
+        `UPDATE location_custom_fields SET position = $1, updated_at = ${d.now()} WHERE id = $2 AND location_id = $3`,
+        [i, field_ids[i], locationId],
+      );
     }
-  })();
+  });
 
   res.json({ success: true });
 }));
