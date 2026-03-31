@@ -4,8 +4,8 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import archiver from 'archiver';
 import cron from 'node-cron';
-import { getDialect } from '../db.js';
 import { getSqliteDb } from '../db/sqlite.js';
+import { getDialect } from '../db.js';
 import { config as appConfig } from './config.js';
 import { createLogger } from './logger.js';
 

@@ -1,4 +1,4 @@
-import { query, querySync } from '../db.js';
+import { query } from '../db.js';
 import { NotFoundError } from './httpErrors.js';
 
 /**
@@ -11,20 +11,6 @@ export async function queryOne<T = Record<string, any>>(
 ): Promise<T> {
   const result = await query<T>(sql, params);
   if (result.rows.length === 0) throw new NotFoundError(notFoundMessage);
-  return result.rows[0];
-}
-
-/**
- * Synchronous variant for use inside db.transaction() blocks.
- * Throws a plain Error (not HttpError) to match commandExecutor error handling.
- */
-export function queryOneSync<T = Record<string, any>>(
-  sql: string,
-  params: unknown[],
-  errorMessage: string,
-): T {
-  const result = querySync<T>(sql, params);
-  if (result.rows.length === 0) throw new Error(errorMessage);
   return result.rows[0];
 }
 
