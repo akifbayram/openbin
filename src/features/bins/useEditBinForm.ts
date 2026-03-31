@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
+import { useWarnOnUnload } from '@/lib/useWarnOnUnload';
 import type { Bin, BinVisibility } from '@/types';
 import { useBinFormFields } from './useBinFormFields';
 import { updateBin } from './useBins';
@@ -67,15 +68,7 @@ export function useEditBinForm(id: string | undefined) {
     );
   }, [editing, name, areaId, items, notes, tags, icon, color, cardStyle, visibility, customFields]);
 
-  // beforeunload warning when dirty
-  useEffect(() => {
-    if (!editing || !isDirty) return;
-    function handleBeforeUnload(e: BeforeUnloadEvent) {
-      e.preventDefault();
-    }
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [editing, isDirty]);
+  useWarnOnUnload(editing && isDirty);
 
   // Wrap setItems to keep quantities in sync
   const setItemsWithQuantities = useCallback((newItems: string[]) => {

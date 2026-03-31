@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, Monitor, Moon, Sun, UserPlus, Users } from 'lucide-react';
+import { AlertTriangle, Monitor, Moon, Sun, UserPlus, Users } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BrandIcon } from '@/components/BrandIcon';
@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordChecklist } from '@/components/ui/password-checklist';
 import { useToast } from '@/components/ui/toast';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
+import { allChecksPassing, computePasswordChecks } from '@/lib/passwordStrength';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
 import { getErrorMessage } from '@/lib/utils';
 
@@ -67,12 +69,7 @@ export function RegisterPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const passwordChecks = useMemo(() => ({
-    length: password.length >= 8,
-    uppercase: /[A-Z]/.test(password),
-    lowercase: /[a-z]/.test(password),
-    digit: /\d/.test(password),
-  }), [password]);
+  const passwordChecks = useMemo(() => computePasswordChecks(password), [password]);
 
   const fieldErrors = useMemo(() => {
     const errors: Record<string, string | undefined> = {};
@@ -92,7 +89,7 @@ export function RegisterPage() {
     if (!USERNAME_REGEX.test(username)) {
       return 'Username must be 3-50 characters (letters, numbers, underscores)';
     }
-    if (!passwordChecks.length || !passwordChecks.uppercase || !passwordChecks.lowercase || !passwordChecks.digit) {
+    if (!allChecksPassing(passwordChecks)) {
       return 'Password must be 8+ characters with uppercase, lowercase, and a number';
     }
     if (password !== confirmPassword) {
@@ -215,25 +212,9 @@ export function RegisterPage() {
                   required
                 />
                 {password.length > 0 && (
-                  <ul aria-label="Password requirements" className="space-y-1 pt-1.5 text-[13px]">
-                    {([
-                      ['length', 'At least 8 characters'],
-                      ['uppercase', 'Contains an uppercase letter'],
-                      ['lowercase', 'Contains a lowercase letter'],
-                      ['digit', 'Contains a number'],
-                    ] as const).map(([key, label]) => (
-                      <li key={key} className="row-tight" aria-label={`${label} — ${passwordChecks[key] ? 'met' : 'not met'}`}>
-                        {passwordChecks[key] ? (
-                          <Check className="h-3.5 w-3.5 text-[var(--accent)] shrink-0" aria-hidden="true" />
-                        ) : (
-                          <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--border-default)]" aria-hidden="true" />
-                        )}
-                        <span className={passwordChecks[key] ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'}>
-                          {label}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="pt-1.5">
+                    <PasswordChecklist checks={passwordChecks} />
+                  </div>
                 )}
               </div>
               <div className="space-y-2">
