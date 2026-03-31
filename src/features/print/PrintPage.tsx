@@ -1,10 +1,12 @@
 import './print.css';
-import { List, Tag, Type } from 'lucide-react';
+import { Download, List, Printer, Tag, Type } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MenuButton } from '@/components/ui/menu-button';
 import { OptionGroup } from '@/components/ui/option-group';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { BinSelectorCard } from './BinSelectorCard';
 import { ItemListOptionsCard } from './ItemListOptionsCard';
 import { ItemSheet } from './ItemSheet';
@@ -33,6 +35,8 @@ export function PrintPage() {
     pdfLoading, handleDownloadPDF,
     labelSheetProps,
   } = usePrintPageActions();
+
+  const hasSelection = selection.selectedBins.length > 0;
 
   if (isLoading) {
     return (
@@ -69,7 +73,7 @@ export function PrintPage() {
 
   return (
     <>
-      <div className="page-content print-hide max-w-6xl">
+      <div className="page-content print-hide max-w-6xl pb-24 lg:pb-0">
         <PageHeader title="Print" back />
 
         <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
@@ -157,6 +161,33 @@ export function PrintPage() {
           />
         </div>
         </div>
+      </div>
+
+      {/* Mobile sticky bottom bar */}
+      <div className={cn(
+        'fixed bottom-0 inset-x-0 z-50 lg:hidden print-hide',
+        'flat-heavy border-t border-[var(--border-flat)]',
+        'px-4 py-3 pb-[calc(0.75rem+var(--safe-bottom,0px))]',
+        'flex gap-2',
+      )}>
+        <Button
+          onClick={() => window.print()}
+          disabled={!hasSelection}
+          className="flex-1 rounded-[var(--radius-md)] h-11"
+        >
+          <Printer className="h-5 w-5 mr-2" />
+          {hasSelection ? `Print ${selection.selectedBins.length}` : 'Print'}
+        </Button>
+        {(printMode === 'labels' || printMode === 'names') && (
+          <Button
+            variant="outline"
+            onClick={handleDownloadPDF}
+            disabled={!hasSelection || pdfLoading}
+            className="rounded-[var(--radius-md)] h-11 px-4"
+          >
+            <Download className={cn('h-5 w-5', pdfLoading && 'animate-pulse')} />
+          </Button>
+        )}
       </div>
 
       <div className="print-show">

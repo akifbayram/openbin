@@ -1,4 +1,4 @@
-import { ChevronDown, Palette, SlidersHorizontal, Smile } from 'lucide-react';
+import { ChevronDown, Palette, Smile, Type } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -8,10 +8,10 @@ import { cn } from '@/lib/utils';
 import type { NameCardOptions } from './usePrintSettings';
 
 const FONT_SCALE_PRESETS = [
-  { label: 'S', value: 0.75 },
-  { label: 'Default', value: 1 },
-  { label: 'L', value: 1.25 },
-  { label: 'XL', value: 1.5 },
+  { label: 'Compact', value: 0.75 },
+  { label: 'Normal', value: 1 },
+  { label: 'Large', value: 1.25 },
+  { label: 'X-Large', value: 1.5 },
 ];
 
 interface NameCardOptionsCardProps {
@@ -30,10 +30,11 @@ export function NameCardOptionsCard({ options, onUpdate, expanded, onExpandedCha
         <button
           type="button"
           className="row-spread w-full"
+          aria-expanded={expanded}
           onClick={() => onExpandedChange(!expanded)}
         >
           <div className="row">
-            <SlidersHorizontal className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <Type className="h-4 w-4 text-[var(--text-tertiary)]" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Name Options</Label>
           </div>
           <ChevronDown className={cn(

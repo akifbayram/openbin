@@ -49,31 +49,26 @@ export function BinSelectorCard({
   return (
     <Card>
       <CardContent>
-        <div className="row-spread w-full">
-          <button
-            type="button"
-            className="row flex-1 min-w-0"
-            aria-expanded={expanded}
-            onClick={() => onExpandedChange(!expanded)}
-          >
+        <button
+          type="button"
+          className="row-spread w-full"
+          aria-expanded={expanded}
+          onClick={() => onExpandedChange(!expanded)}
+        >
+          <div className="row">
             <Package className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Select {t.Bins}</Label>
-          </button>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Button variant="ghost" size="sm" onClick={selectAll} className="text-[13px] text-[var(--accent)] h-8 px-2.5">All</Button>
-            <Button variant="ghost" size="sm" onClick={selectNone} className="text-[13px] text-[var(--accent)] h-8 px-2.5">None</Button>
-            <button
-              type="button"
-              className="p-1"
-              onClick={() => onExpandedChange(!expanded)}
-            >
-              <ChevronDown className={cn(
-                'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
-                expanded && 'rotate-180'
-              )} />
-            </button>
+            {!expanded && selectedIds.size > 0 && (
+              <span className="text-[13px] text-[var(--text-tertiary)]">
+                ({selectedIds.size} of {allBins.length})
+              </span>
+            )}
           </div>
-        </div>
+          <ChevronDown className={cn(
+            'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
+            expanded && 'rotate-180'
+          )} />
+        </button>
 
         {expanded && (
           allBins.length === 0 ? (
@@ -82,6 +77,14 @@ export function BinSelectorCard({
             </p>
           ) : (
             <>
+              <div className="flex items-center gap-1.5 mt-2">
+                <Button variant="ghost" size="sm" onClick={selectAll} className="text-[13px] text-[var(--accent)] h-8 px-2.5">All</Button>
+                <Button variant="ghost" size="sm" onClick={selectNone} className="text-[13px] text-[var(--accent)] h-8 px-2.5">None</Button>
+                <span className="text-[12px] text-[var(--text-tertiary)] ml-auto tabular-nums">
+                  {selectedIds.size} of {allBins.length} selected
+                </span>
+              </div>
+
               {grouped.length > 1 && (
                 <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
                   {grouped.map((group) => {
@@ -106,41 +109,43 @@ export function BinSelectorCard({
                   })}
                 </div>
               )}
-              <div className="space-y-0.5 max-h-80 overflow-y-auto -mx-2">
-                {grouped.map((group) => (
-                  <div key={group.areaId ?? 'unassigned'}>
-                    {grouped.length > 1 && (
-                      <div className={cn(categoryHeader, 'px-3 pt-3 pb-1')}>
-                        {group.label}
-                      </div>
-                    )}
-                    {group.bins.map((bin) => {
-                      const checked = selectedIds.has(bin.id);
-                      const colorPreset = bin.color ? resolveColor(bin.color) : null;
-                      return (
-                        <button
-                          type="button"
-                          key={bin.id}
-                          className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-3 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
-                          onClick={() => toggleBin(bin.id)}
-                        >
-                          {checked ? (
-                            <CheckCircle2 className="h-[22px] w-[22px] text-[var(--accent)] shrink-0" />
-                          ) : (
-                            <Circle className="h-[22px] w-[22px] text-[var(--text-tertiary)] shrink-0" />
-                          )}
-                          {colorPreset && (
-                            <div
-                              className="h-2.5 w-2.5 rounded-full shrink-0 ring-1 ring-[var(--border-subtle)]"
-                              style={{ backgroundColor: colorPreset.bg }}
-                            />
-                          )}
-                          <span className="text-[15px] text-[var(--text-primary)] truncate">{bin.name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
+              <div className="relative">
+                <div className="space-y-0.5 max-h-[50vh] lg:max-h-80 overflow-y-auto -mx-2">
+                  {grouped.map((group) => (
+                    <div key={group.areaId ?? 'unassigned'}>
+                      {grouped.length > 1 && (
+                        <div className={cn(categoryHeader, 'px-3 pt-3 pb-1')}>
+                          {group.label}
+                        </div>
+                      )}
+                      {group.bins.map((bin) => {
+                        const checked = selectedIds.has(bin.id);
+                        const colorPreset = bin.color ? resolveColor(bin.color) : null;
+                        return (
+                          <button
+                            type="button"
+                            key={bin.id}
+                            className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-3 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
+                            onClick={() => toggleBin(bin.id)}
+                          >
+                            {checked ? (
+                              <CheckCircle2 className="h-[22px] w-[22px] text-[var(--accent)] shrink-0" />
+                            ) : (
+                              <Circle className="h-[22px] w-[22px] text-[var(--text-tertiary)] shrink-0" />
+                            )}
+                            {colorPreset && (
+                              <div
+                                className="h-3.5 w-3.5 rounded-full shrink-0 ring-1 ring-[var(--border-subtle)]"
+                                style={{ backgroundColor: colorPreset.bg }}
+                              />
+                            )}
+                            <span className="text-[15px] text-[var(--text-primary)] truncate">{bin.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
               </div>
             </>
           )

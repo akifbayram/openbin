@@ -1,10 +1,11 @@
-import { CheckCircle2, ChevronDown, Circle, LayoutGrid, RectangleHorizontal, RectangleVertical, Save, Search, X } from 'lucide-react';
-import { useState } from 'react';
+import { CheckCircle2, ChevronDown, Circle, LayoutGrid, RectangleHorizontal, RectangleVertical, Save, Search, Trash2, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { OptionGroup } from '@/components/ui/option-group';
+import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { computeLabelsPerPage, filterLabelFormats } from './labelFormats';
@@ -18,13 +19,35 @@ interface LabelFormatCardProps {
   onExpandedChange: (v: boolean) => void;
 }
 
+/** Tiny grid thumbnail showing the column×row layout of a format. */
+function FormatThumbnail({ columns, perPage }: { columns: number; perPage: number }) {
+  const isLarge = perPage === 1;
+  const cells = Math.min(perPage, 12);
+  return (
+    <div
+      className="grid gap-[1px] shrink-0"
+      style={{ gridTemplateColumns: `repeat(${columns}, 1fr)`, width: isLarge ? 18 : 20, height: isLarge ? 14 : 16 }}
+      aria-hidden
+    >
+      {Array.from({ length: cells }, (_, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: static thumbnail grid
+        <div key={i} className="rounded-[0.5px] bg-[var(--text-tertiary)] opacity-40" />
+      ))}
+    </div>
+  );
+}
+
 export function LabelFormatCard({ format: f, expanded, onExpandedChange }: LabelFormatCardProps) {
   const [formatSearch, setFormatSearch] = useState('');
   const [presetName, setPresetName] = useState('');
   const [showSaveInput, setShowSaveInput] = useState(false);
+  const { showToast } = useToast();
+  const filteredFormats = useMemo(() => filterLabelFormats(formatSearch), [formatSearch]);
 
   function handleSave() {
+    if (!presetName.trim()) return;
     f.handleSavePreset(presetName);
+    showToast({ message: `Preset "${presetName.trim()}" saved`, variant: 'success' });
     setPresetName('');
     setShowSaveInput(false);
   }
@@ -35,6 +58,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
         <button
           type="button"
           className="row-spread w-full"
+          aria-expanded={expanded}
           onClick={() => onExpandedChange(!expanded)}
         >
           <div className="row">
@@ -66,6 +90,7 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                 <button
                   type="button"
                   onClick={() => setFormatSearch('')}
+                  aria-label="Clear search"
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -76,47 +101,51 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
             {f.savedPresets.length > 0 && (
               <div className="space-y-1 mt-2">
                 <span className="text-[12px] text-[var(--text-tertiary)] font-medium px-3">Saved Presets</span>
-                {f.savedPresets.map((fmt) => (
-                  <div key={fmt.key} className="flex items-center group">
-                    <button
-                      type="button"
-                      className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 flex-1 min-w-0 text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
-                      onClick={() => f.handleFormatChange(fmt.key)}
-                    >
-                      {f.formatKey === fmt.key ? (
-                        <CheckCircle2 className="h-[20px] w-[20px] text-[var(--accent)] shrink-0" />
-                      ) : (
-                        <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
-                      )}
-                      <div className="min-w-0 truncate">
-                        <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
-                        <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
-                          {f.displayUnit === 'mm'
-                            ? `${inchesToMm(parseFloat(String(fmt.cellWidth).replace(/in$/, '')))}mm × ${inchesToMm(parseFloat(String(fmt.cellHeight).replace(/in$/, '')))}mm`
-                            : `${fmt.cellWidth} × ${fmt.cellHeight}`}
-                        </span>
-                      </div>
-                    </button>
-                    <Tooltip content={`Delete ${fmt.name}`}>
+                {f.savedPresets.map((fmt) => {
+                  const perPage = computeLabelsPerPage(fmt);
+                  return (
+                    <div key={fmt.key} className="flex items-center group">
                       <button
                         type="button"
-                        className="shrink-0 p-2 mr-1 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                        onClick={() => f.handleDeletePreset(fmt.key)}
-                        aria-label={`Delete ${fmt.name}`}
+                        className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 flex-1 min-w-0 text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
+                        onClick={() => f.handleFormatChange(fmt.key)}
                       >
-                        <X className="h-4 w-4" />
+                        {f.formatKey === fmt.key ? (
+                          <CheckCircle2 className="h-[20px] w-[20px] text-[var(--accent)] shrink-0" />
+                        ) : (
+                          <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
+                        )}
+                        <FormatThumbnail columns={fmt.columns} perPage={perPage} />
+                        <div className="min-w-0 truncate">
+                          <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
+                          <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
+                            {f.displayUnit === 'mm'
+                              ? `${inchesToMm(parseFloat(String(fmt.cellWidth).replace(/in$/, '')))}mm × ${inchesToMm(parseFloat(String(fmt.cellHeight).replace(/in$/, '')))}mm`
+                              : `${fmt.cellWidth} × ${fmt.cellHeight}`}
+                          </span>
+                        </div>
                       </button>
-                    </Tooltip>
-                  </div>
-                ))}
+                      <Tooltip content={`Delete ${fmt.name}`}>
+                        <button
+                          type="button"
+                          className="shrink-0 p-2 mr-1 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors"
+                          onClick={() => f.handleDeletePreset(fmt.key)}
+                          aria-label={`Delete ${fmt.name}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </Tooltip>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {(() => {
-              const filteredFormats = filterLabelFormats(formatSearch);
-              return filteredFormats.length > 0 ? (
-                <div className={cn('space-y-1 mt-2', f.savedPresets.length > 0 && 'pt-2 border-t border-[var(--border-subtle)]')}>
-                  {filteredFormats.map((fmt) => (
+            {filteredFormats.length > 0 ? (
+              <div className={cn('space-y-1 mt-2', f.savedPresets.length > 0 && 'pt-2 border-t border-[var(--border-subtle)]')}>
+                {filteredFormats.map((fmt) => {
+                  const perPage = computeLabelsPerPage(fmt);
+                  return (
                     <button
                       type="button"
                       key={fmt.key}
@@ -128,21 +157,22 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                       ) : (
                         <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
                       )}
+                      <FormatThumbnail columns={fmt.columns} perPage={perPage} />
                       <div className="min-w-0">
                         <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
                         <span className="text-[13px] text-[var(--text-tertiary)] ml-2">
-                          {computeLabelsPerPage(fmt) > 1 ? `${computeLabelsPerPage(fmt)} per page` : 'single label'}
+                          {perPage > 1 ? `${perPage} per page` : 'single label'}
                         </span>
                       </div>
                     </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[13px] text-[var(--text-tertiary)] py-6 text-center">
-                  No matching label formats
-                </p>
-              );
-            })()}
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-[13px] text-[var(--text-tertiary)] py-6 text-center">
+                No matching label formats
+              </p>
+            )}
 
             {/* Orientation toggle */}
             <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[var(--border-subtle)] px-1">

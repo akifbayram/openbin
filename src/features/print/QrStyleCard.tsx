@@ -209,6 +209,7 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
         <button
           type="button"
           className="row-spread w-full"
+          aria-expanded={expanded}
           onClick={() => onExpandedChange(!expanded)}
         >
           <div className="row">
@@ -312,8 +313,20 @@ export function QrStyleCard({ qrStyle, onUpdateStyle, expanded, onExpandedChange
                             step={15}
                             value={qrStyle.gradientRotation}
                             onChange={(e) => update('gradientRotation', parseInt(e.target.value, 10))}
+                            aria-label="Gradient rotation angle"
                             className="qr-range-slider w-full"
+                            list="rotation-ticks"
                           />
+                          <datalist id="rotation-ticks">
+                            <option value="0" label="0°" />
+                            <option value="90" label="90°" />
+                            <option value="180" label="180°" />
+                            <option value="270" label="270°" />
+                            <option value="360" label="360°" />
+                          </datalist>
+                          <div className="flex justify-between text-[10px] text-[var(--text-tertiary)] mt-0.5 px-0.5" aria-hidden>
+                            <span>0°</span><span>90°</span><span>180°</span><span>270°</span><span>360°</span>
+                          </div>
                         </div>
                       </div>
                     )}

@@ -1,4 +1,4 @@
-import { CheckSquare, ChevronDown, Hash, SlidersHorizontal } from 'lucide-react';
+import { CheckSquare, ChevronDown, Hash, List } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -22,10 +22,11 @@ export function ItemListOptionsCard({ options, onUpdate, expanded, onExpandedCha
         <button
           type="button"
           className="row-spread w-full"
+          aria-expanded={expanded}
           onClick={() => onExpandedChange(!expanded)}
         >
           <div className="row">
-            <SlidersHorizontal className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <List className="h-4 w-4 text-[var(--text-tertiary)]" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">List Options</Label>
           </div>
           <ChevronDown className={cn(
