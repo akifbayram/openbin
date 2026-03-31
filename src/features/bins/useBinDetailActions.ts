@@ -132,7 +132,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
         customFields: bin.custom_fields ? { ...bin.custom_fields } : undefined,
       });
       navigate(`/bin/${newBin.id}`);
-      showToast({ message: `Duplicated "${bin.name}"` });
+      showToast({ message: photos.length > 0 ? `Duplicated "${bin.name}" (photos not copied)` : `Duplicated "${bin.name}"` });
     } catch {
       showToast({ message: 'Failed to duplicate' });
     }

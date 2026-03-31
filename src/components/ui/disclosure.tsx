@@ -5,12 +5,13 @@ import { cn, focusRing } from '@/lib/utils';
 interface DisclosureProps {
   label: ReactNode;
   defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
   indicator?: boolean;
   labelClassName?: string;
   children: ReactNode;
 }
 
-export function Disclosure({ label, defaultOpen = false, indicator, labelClassName, children }: DisclosureProps) {
+export function Disclosure({ label, defaultOpen = false, onOpenChange, indicator, labelClassName, children }: DisclosureProps) {
   const [open, setOpen] = useState(defaultOpen);
   const contentId = useId();
 
@@ -18,7 +19,7 @@ export function Disclosure({ label, defaultOpen = false, indicator, labelClassNa
     <div>
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => { const next = !open; setOpen(next); onOpenChange?.(next); }}
         aria-expanded={open}
         aria-controls={contentId}
         className={cn('flex items-center justify-between w-full text-[13px] text-[var(--text-secondary)] font-medium rounded-[var(--radius-xs)]', focusRing, labelClassName)}

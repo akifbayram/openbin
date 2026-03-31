@@ -6,6 +6,7 @@ import { MenuButton } from '@/components/ui/menu-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
+import { useMenuKeyboard } from '@/lib/useMenuKeyboard';
 import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
 import type { Bin, Location } from '@/types';
@@ -23,6 +24,7 @@ interface BinDetailToolbarProps {
   isAnalyzing: boolean;
   isReanalysis: boolean;
   editNameValid: boolean;
+  isSaving: boolean;
   otherLocations: Location[];
   onClose: () => void;
   onPrev: (() => void) | null;
@@ -56,6 +58,7 @@ export function BinDetailToolbar({
   isAnalyzing,
   isReanalysis,
   editNameValid,
+  isSaving,
   otherLocations,
   onClose,
   onPrev,
@@ -77,8 +80,9 @@ export function BinDetailToolbar({
 }: BinDetailToolbarProps) {
   const t = useTerminology();
   const { visible, animating, close, toggle } = usePopover();
-  const menuRef = useRef<HTMLDivElement>(null);
-  useClickOutside(menuRef, close);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  useClickOutside(wrapperRef, close);
+  const { menuRef, onKeyDown: menuKeyDown } = useMenuKeyboard(visible, close);
 
   function handleItem(action: () => void) {
     close();
@@ -148,12 +152,18 @@ export function BinDetailToolbar({
           <Button
             size="icon"
             onClick={onSave}
-            disabled={!editNameValid}
+            disabled={!editNameValid || isSaving}
             className="lg:w-auto lg:px-3"
           >
-            <Check className="h-4 w-4 lg:hidden" />
-            <Save className="h-4 w-4 mr-1.5 hidden lg:block" />
-            <span className="hidden lg:inline text-sm">Save</span>
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Check className="h-4 w-4 lg:hidden" />
+                <Save className="h-4 w-4 mr-1.5 hidden lg:block" />
+              </>
+            )}
+            <span className="hidden lg:inline text-sm">{isSaving ? 'Saving...' : 'Save'}</span>
           </Button>
         </div>
       ) : (
@@ -202,7 +212,7 @@ export function BinDetailToolbar({
               </Tooltip>
             )}
           </div>
-          <div className="relative" ref={menuRef}>
+          <div className="relative" ref={wrapperRef}>
             <Tooltip content="More" side="bottom">
               <Button
                 variant="ghost"
@@ -214,10 +224,15 @@ export function BinDetailToolbar({
               </Button>
             </Tooltip>
             {visible && (
-              <div className={cn(
-                animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-                'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] flat-popover overflow-hidden',
-              )}>
+              <div
+                ref={menuRef}
+                role="menu"
+                onKeyDown={menuKeyDown}
+                className={cn(
+                  animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
+                  'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] flat-popover overflow-hidden',
+                )}
+              >
                 {/* Mobile-only: AI, Pin, Edit (hidden on desktop where they're inline) */}
                 {showAiButton && (
                   <button

@@ -1,12 +1,13 @@
-import { ArrowUpDown, Check, Search, X } from 'lucide-react';
+import { ArrowUpDown, Check, Search, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
+import { useMenuKeyboard } from '@/lib/useMenuKeyboard';
 import { usePopover } from '@/lib/usePopover';
-import { cn } from '@/lib/utils';
+import { cn, rowAction } from '@/lib/utils';
 import type { BinItem } from '@/types';
 import { removeItemFromBin, renameItem, reorderItems } from './useBins';
 import { useCollapsibleList } from './useCollapsibleList';
@@ -34,6 +35,13 @@ const SWIPE_THRESHOLD = 80;
 function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onDelete }: ItemRowProps) {
   const [editValue, setEditValue] = useState(text);
   const [editQuantity, setEditQuantity] = useState<string>(quantity != null ? String(quantity) : '');
+  const [inlineQty, setInlineQty] = useState(quantity != null ? String(quantity) : '');
+  // Sync inline quantity when prop changes (e.g. after server round-trip)
+  const prevQty = useRef(quantity);
+  if (quantity !== prevQty.current) {
+    prevQty.current = quantity;
+    setInlineQty(quantity != null ? String(quantity) : '');
+  }
   const [swipeX, setSwipeX] = useState(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const swipingRef = useRef(false);
@@ -76,7 +84,6 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
     }
 
     if (swipingRef.current) {
-      e.preventDefault();
       setSwipeX(Math.min(0, dx));
     }
   }
@@ -95,17 +102,22 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
     <div className="relative overflow-hidden">
       {/* Delete zone behind */}
       <div
-        className="absolute inset-y-0 right-0 flex items-center justify-end px-4 text-[var(--text-tertiary)] text-[13px] font-medium"
-        style={{ width: Math.max(0, -swipeX) }}
+        className="absolute inset-y-0 right-0 flex items-center justify-end gap-1.5 px-4 text-white text-[13px] font-medium"
+        style={{ width: Math.max(0, -swipeX), backgroundColor: swipeX < 0 ? 'var(--destructive)' : undefined }}
       >
-        {-swipeX > SWIPE_THRESHOLD / 2 && 'Delete'}
+        {-swipeX > SWIPE_THRESHOLD / 2 && (
+          <>
+            <Trash2 className="h-3.5 w-3.5 shrink-0" />
+            <span className="shrink-0">Delete</span>
+          </>
+        )}
       </div>
 
       {/* Foreground row */}
       <div
         ref={rowRef}
         className={cn(
-          'relative row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors',
+          'relative row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors touch-pan-y',
           !isEditing && 'group'
         )}
         style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 0.2s ease' : 'none' }}
@@ -114,13 +126,11 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
         onTouchEnd={handleTouchEnd}
       >
         <input
-          value={isEditing ? editQuantity : (quantity != null ? String(quantity) : '')}
+          value={isEditing ? editQuantity : inlineQty}
           onChange={(e) => {
             const val = e.target.value.replace(/[^0-9]/g, '');
             if (!isEditing) {
-              const num = val === '' ? null : Number.parseInt(val, 10);
-              const finalQty = num != null && Number.isFinite(num) && num >= 0 ? num : null;
-              onSave(text, finalQty);
+              setInlineQty(val);
             } else {
               setEditQuantity(val);
             }
@@ -129,9 +139,19 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
             if (isEditing) {
               if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
               else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+            } else if (e.key === 'Enter') {
+              e.preventDefault();
+              (e.target as HTMLElement).blur();
             }
           }}
-          onBlur={isEditing ? () => { requestAnimationFrame(() => { if (!rowRef.current?.contains(document.activeElement)) handleSave(); }); } : undefined}
+          onBlur={isEditing
+            ? () => { requestAnimationFrame(() => { if (!rowRef.current?.contains(document.activeElement)) handleSave(); }); }
+            : () => {
+                const num = inlineQty.trim() === '' ? null : Number.parseInt(inlineQty, 10);
+                const finalQty = num != null && Number.isFinite(num) && num >= 0 ? num : null;
+                if (finalQty !== quantity) onSave(text, finalQty);
+              }
+          }
           placeholder="1"
           className="shrink-0 w-8 text-center text-[13px] tabular-nums text-[var(--text-tertiary)] bg-transparent outline-none focus:text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)]"
           inputMode="numeric"
@@ -169,7 +189,7 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
             <button
               type="button"
               onClick={onDelete}
-              className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity"
+              className={rowAction}
               aria-label="Remove item"
             >
               <X className="h-3.5 w-3.5" />
@@ -225,8 +245,9 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
   }, [items, binId, showToast]);
 
   const { visible: sortOpen, animating: sortAnimating, close: sortClose, toggle: sortToggle } = usePopover();
-  const sortRef = useRef<HTMLDivElement>(null);
-  useClickOutside(sortRef, sortClose);
+  const sortWrapperRef = useRef<HTMLDivElement>(null);
+  useClickOutside(sortWrapperRef, sortClose);
+  const { menuRef: sortMenuRef, onKeyDown: sortKeyDown } = useMenuKeyboard(sortOpen, sortClose);
 
   async function handleSaveEdit(itemId: string, value: string, quantity: number | null) {
     setEditingId(null);
@@ -301,7 +322,7 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
             : `${displayItems.length} ${displayItems.length === 1 ? 'Item' : 'Items'}`}
         </Label>
         {!readOnly && items.length >= 2 && (
-          <div ref={sortRef} className="relative">
+          <div ref={sortWrapperRef} className="relative">
             <Button
               variant="secondary"
               size="sm"
@@ -312,10 +333,15 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
               <span className="text-[13px]">{sortMode === 'manual' ? 'Sort' : sortLabel}</span>
             </Button>
             {sortOpen && (
-              <div className={cn(
-                sortAnimating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-                'absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] flat-popover overflow-hidden z-20',
-              )}>
+              <div
+                ref={sortMenuRef}
+                role="menu"
+                onKeyDown={sortKeyDown}
+                className={cn(
+                  sortAnimating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
+                  'absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] flat-popover overflow-hidden z-20',
+                )}
+              >
                 {sortOptions.map((opt) => (
                   <button
                     key={opt.key}
@@ -356,10 +382,12 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
       )}
 
       {displayItems.length === 0 ? (
-        <p className="text-[15px] text-[var(--text-tertiary)] italic">No items yet</p>
+        <p className="text-[14px] text-[var(--text-tertiary)] py-2">
+          {readOnly ? 'No items' : 'No items yet — add one below'}
+        </p>
       ) : (
         <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden">
-          {!readOnly && (
+          {(!readOnly || displayItems.some((item) => item.quantity != null)) && (
             <div className="row-tight px-3.5 pt-1.5 pb-0.5">
               <span className="shrink-0 w-8 text-center text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Qty</span>
               <span className="flex-1 text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Name</span>

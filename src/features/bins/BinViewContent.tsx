@@ -1,15 +1,16 @@
-import { ChevronDown } from 'lucide-react';
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Disclosure } from '@/components/ui/disclosure';
 import { Label } from '@/components/ui/label';
 import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
 import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import { resolveColor } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
-import { cn } from '@/lib/utils';
+import { disclosureSectionLabel } from '@/lib/utils';
 import type { AiSuggestions, Bin, CustomField } from '@/types';
 import { CustomFieldsViewCard } from './CustomFieldsViewCard';
 import { ItemList } from './ItemList';
@@ -51,12 +52,12 @@ export function BinViewContent({
   onApplySuggestions,
   onClearSuggestions,
 }: BinViewContentProps) {
+  const navigate = useNavigate();
   const { tagColors } = useTagColorsContext();
   const t = useTerminology();
-  const [qrExpanded, setQrExpanded] = useState(false);
 
   return (
-    <div className="fade-in-fast contents">
+    <div className="fade-in-fast flex flex-col gap-4">
       {/* AI error */}
       {aiError && (
         <Card className="border-t-2 border-t-[var(--destructive)]">
@@ -131,7 +132,14 @@ export function BinViewContent({
                         }
                       : undefined;
                     return (
-                      <Badge key={tag} variant="secondary" style={tagStyle}>{tag}</Badge>
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        style={tagStyle}
+                        onClick={() => navigate(`/bins?tags=${encodeURIComponent(tag)}`)}
+                      >
+                        {tag}
+                      </Badge>
                     );
                   })}
                 </div>
@@ -149,23 +157,12 @@ export function BinViewContent({
       {/* QR Code & Info */}
       <Card data-tour="qr-section">
         <CardContent className="!py-0">
-          <button
-            type="button"
-            onClick={() => setQrExpanded(!qrExpanded)}
-            aria-expanded={qrExpanded}
-            className="row-spread w-full py-4 text-left"
+          <Disclosure
+            label="QR Code & Info"
+            labelClassName={disclosureSectionLabel}
+            defaultOpen={localStorage.getItem('openbin-qr-expanded') === 'true'}
+            onOpenChange={(v) => localStorage.setItem('openbin-qr-expanded', String(v))}
           >
-            <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
-              QR Code & Info
-            </span>
-            <ChevronDown
-              className={cn(
-                'h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200',
-                qrExpanded && 'rotate-180'
-              )}
-            />
-          </button>
-          {qrExpanded && (
             <div className="pb-4 space-y-4">
               <div className="flex flex-col items-center">
                 <QRCodeDisplay binId={bin.id} size={160} />
@@ -201,7 +198,7 @@ export function BinViewContent({
                 </div>
               </div>
             </div>
-          )}
+          </Disclosure>
         </CardContent>
       </Card>
     </div>
