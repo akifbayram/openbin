@@ -227,11 +227,13 @@ export function LocationRenameDialog({ locationId, currentName, open, onOpenChan
 interface LocationDeleteDialogProps {
   locationId: string | null;
   locationName: string;
+  binCount?: number;
+  areaCount?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function LocationDeleteDialog({ locationId, locationName, open, onOpenChange }: LocationDeleteDialogProps) {
+export function LocationDeleteDialog({ locationId, locationName, binCount, areaCount, open, onOpenChange }: LocationDeleteDialogProps) {
   const { activeLocationId, setActiveLocationId } = useAuth();
   const { locations } = useLocationList();
   const t = useTerminology();
@@ -256,13 +258,19 @@ export function LocationDeleteDialog({ locationId, locationName, open, onOpenCha
     }
   }
 
+  const assetParts: string[] = [];
+  if (binCount != null && binCount > 0) assetParts.push(`${binCount} ${binCount !== 1 ? t.bins : t.bin}`);
+  if (areaCount != null && areaCount > 0) assetParts.push(`${areaCount} ${areaCount !== 1 ? t.areas : t.area}`);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete {t.Location}?</DialogTitle>
           <DialogDescription>
-            This will permanently delete &quot;{locationName}&quot; and all its {t.bins} and photos. This cannot be undone.
+            This will permanently delete &quot;{locationName}&quot;
+            {assetParts.length > 0 ? <> including {assetParts.join(' and ')}, along with all photos. </> : ' and all its data. '}
+            This cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

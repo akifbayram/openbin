@@ -1,9 +1,16 @@
-import { Check, Copy, Eye, LogIn, MapPin, MapPinned, Plus, QrCode, Shield, User, Users } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Box, Check, Copy, Download, Eye, FolderOpen, LogIn, MapPin, MapPinned, Plus, QrCode, Share2, Shield, User, Users } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -59,21 +66,28 @@ export function AreasPage() {
   const [inviteQrOpen, setInviteQrOpen] = useState(false);
   const [inviteQrUrl, setInviteQrUrl] = useState<string | null>(null);
 
+  // Leave confirmation state
+  const [leaveLocationId, setLeaveLocationId] = useState<string | null>(null);
+
   const activeLocation = locations.find((l) => l.id === activeLocationId);
 
-  // Generate invite QR code data URL when toggled open
+  const inviteLink = useMemo(() => {
+    if (!activeLocation?.invite_code) return '';
+    return `${window.location.origin}/register?invite=${encodeURIComponent(activeLocation.invite_code)}`;
+  }, [activeLocation?.invite_code]);
+
+  // Generate invite QR code data URL when toggled open (memoized by invite code)
   useEffect(() => {
-    if (!inviteQrOpen || !activeLocation?.invite_code) {
+    if (!inviteQrOpen || !inviteLink) {
       setInviteQrUrl(null);
       return;
     }
     let cancelled = false;
-    const inviteLink = `${window.location.origin}/register?invite=${encodeURIComponent(activeLocation.invite_code)}`;
     generateQRDataURL(inviteLink, 256).then((url) => {
       if (!cancelled) setInviteQrUrl(url);
     });
     return () => { cancelled = true; };
-  }, [inviteQrOpen, activeLocation?.invite_code]);
+  }, [inviteQrOpen, inviteLink]);
   const { isAdmin, isViewer } = usePermissions();
 
   async function handleCopyInvite() {
@@ -109,21 +123,48 @@ export function AreasPage() {
     setDeleteTarget({ id: areaId, name, binCount, descendantAreaCount, descendantBinCount });
   }
 
-  async function handleLeave(locationId: string) {
-    if (!user) return;
+  async function handleLeaveConfirmed() {
+    if (!user || !leaveLocationId) return;
     try {
-      await leaveLocation(locationId, user.id);
-      if (activeLocationId === locationId) {
-        const other = locations.find((l) => l.id !== locationId);
+      await leaveLocation(leaveLocationId, user.id);
+      if (activeLocationId === leaveLocationId) {
+        const other = locations.find((l) => l.id !== leaveLocationId);
         setActiveLocationId(other?.id ?? null);
       }
+      setLeaveLocationId(null);
       showToast({ message: 'Left location', variant: 'success' });
     } catch (err) {
       showToast({ message: getErrorMessage(err, 'Failed to leave'), variant: 'error' });
     }
   }
 
+  const handleDownloadQr = useCallback(() => {
+    if (!inviteQrUrl) return;
+    const a = document.createElement('a');
+    a.href = inviteQrUrl;
+    a.download = `invite-qr-${activeLocation?.name ?? 'code'}.png`;
+    a.click();
+  }, [inviteQrUrl, activeLocation?.name]);
+
+  const handleShareInvite = useCallback(async () => {
+    if (!inviteLink) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Join ${activeLocation?.name ?? 'location'}`, url: inviteLink });
+      } catch { /* cancelled by user */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(inviteLink);
+        showToast({ message: 'Invite link copied', variant: 'success' });
+      } catch {
+        showToast({ message: 'Failed to copy', variant: 'error' });
+      }
+    }
+  }, [inviteLink, activeLocation?.name, showToast]);
+
   const memberCount = activeLocation?.member_count ?? 0;
+  const deleteTargetLocation = locations.find((l) => l.id === deleteLocationId);
+  const leaveTargetLocation = locations.find((l) => l.id === leaveLocationId);
 
   return (
     <div className="page-content">
@@ -157,18 +198,23 @@ export function AreasPage() {
         isLoading={locationsLoading}
         skeleton={
           <div className="flex flex-col gap-4">
-            {/* Meta line skeleton */}
-            <div className="row">
-              <Skeleton className="h-4 w-12" />
-              <Skeleton className="h-4 w-1" />
-              <Skeleton className="h-4 w-20" />
+            {/* Info card skeleton */}
+            <div className="flat-card rounded-[var(--radius-lg)] p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-6 w-16 rounded-[var(--radius-full)]" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-16" />
+              </div>
             </div>
-            {/* Area grid skeleton */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Area list skeleton */}
+            <div className="flex flex-col gap-2">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flat-card rounded-[var(--radius-lg)] p-4 space-y-2">
-                  <Skeleton className="h-5 w-2/3" />
-                  <Skeleton className="h-4 w-1/3" />
+                <div key={i} className="flat-card rounded-[var(--radius-lg)] p-4 flex items-center gap-3">
+                  <Skeleton className="h-9 w-9 rounded-[var(--radius-sm)]" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-2/5" />
+                    <Skeleton className="h-3 w-1/4" />
+                  </div>
                 </div>
               ))}
             </div>
@@ -209,47 +255,41 @@ export function AreasPage() {
             )}
 
             {/* Location info card */}
-            <div className="flat-card rounded-[var(--radius-lg)] p-4">
+            <div className="flat-card rounded-[var(--radius-lg)] p-4 space-y-3">
+              {/* Top row: role + stats + settings */}
               <div className="row-spread gap-3">
-                <div className="flex items-center gap-3 min-w-0 overflow-hidden">
-                  <div className="row shrink-0">
-                    <span className={cn('inline-flex items-center gap-1.5 text-[12px] font-medium px-2 py-1 rounded-[var(--radius-full)]', isAdmin ? 'bg-[var(--accent)]/10 text-[var(--accent)]' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]')}>
-                      {isAdmin ? <Shield className="h-3 w-3" /> : isViewer ? <Eye className="h-3 w-3" /> : <User className="h-3 w-3" />}
-                      {isAdmin ? 'Admin' : isViewer ? 'Viewer' : 'Member'}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-3 flex-wrap min-w-0">
+                  <span
+                    role="img"
+                    aria-label={`Your role: ${isAdmin ? 'Admin' : isViewer ? 'Viewer' : 'Member'}`}
+                    className={cn('inline-flex items-center gap-1.5 text-[12px] font-medium px-2 py-1 rounded-[var(--radius-full)] shrink-0', isAdmin ? 'bg-[var(--accent)]/10 text-[var(--accent)]' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]')}
+                  >
+                    {isAdmin ? <Shield className="h-3 w-3" /> : isViewer ? <Eye className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                    {isAdmin ? 'Admin' : isViewer ? 'Viewer' : 'Member'}
+                  </span>
                   <span className="text-[var(--text-tertiary)] opacity-30 shrink-0">&middot;</span>
                   <button
                     type="button"
                     className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0"
                     onClick={() => setMembersLocationId(activeLocation.id)}
+                    aria-label={`View ${memberCount} ${memberCount !== 1 ? 'members' : 'member'}`}
                   >
                     <Users className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">{memberCount} {memberCount !== 1 ? 'members' : 'member'}</span>
                     <span className="sm:hidden">{memberCount}</span>
                   </button>
-                  {activeLocation.invite_code && isAdmin && (
+                  {(activeLocation.bin_count != null || activeLocation.area_count != null) && (
                     <>
                       <span className="text-[var(--text-tertiary)] opacity-30 shrink-0">&middot;</span>
-                      <button
-                        type="button"
-                        onClick={handleCopyInvite}
-                        className="inline-flex items-center gap-1.5 text-[13px] font-mono text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer min-w-0"
-                        title="Copy invite code"
-                      >
-                        {copied
-                          ? <Check className="h-3.5 w-3.5 shrink-0 text-[var(--color-success)]" />
-                          : <Copy className="h-3.5 w-3.5 shrink-0" />}
-                        <span className="truncate">{activeLocation.invite_code}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setInviteQrOpen((o) => !o)}
-                        className="inline-flex items-center text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0"
-                        title="Show invite QR code"
-                      >
-                        <QrCode className="h-3.5 w-3.5" />
-                      </button>
+                      <span className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] shrink-0">
+                        <Box className="h-3.5 w-3.5" />
+                        <span>{activeLocation.bin_count ?? 0} {(activeLocation.bin_count ?? 0) !== 1 ? t.bins : t.bin}</span>
+                      </span>
+                      <span className="text-[var(--text-tertiary)] opacity-30 shrink-0 hidden sm:inline">&middot;</span>
+                      <span className="hidden sm:inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] shrink-0">
+                        <FolderOpen className="h-3.5 w-3.5" />
+                        <span>{activeLocation.area_count ?? 0} {(activeLocation.area_count ?? 0) !== 1 ? t.areas : t.area}</span>
+                      </span>
                     </>
                   )}
                 </div>
@@ -260,25 +300,78 @@ export function AreasPage() {
                   onRetention={() => setRetentionLocationId(activeLocation.id)}
                   onCustomFields={() => setCustomFieldsLocationId(activeLocation.id)}
                   onDelete={() => setDeleteLocationId(activeLocation.id)}
-                  onLeave={() => handleLeave(activeLocation.id)}
+                  onLeave={() => setLeaveLocationId(activeLocation.id)}
                 />
               </div>
+              {/* Bottom row: invite code (admin only) */}
+              {activeLocation.invite_code && isAdmin && (
+                <div className="flex items-center gap-2 pt-2 border-t border-[var(--border-flat)]">
+                  <button
+                    type="button"
+                    onClick={handleCopyInvite}
+                    className="inline-flex items-center gap-1.5 text-[13px] font-mono text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer min-w-0"
+                    aria-label="Copy invite code"
+                  >
+                    {copied
+                      ? <Check className="h-3.5 w-3.5 shrink-0 text-[var(--color-success)]" />
+                      : <Copy className="h-3.5 w-3.5 shrink-0" />}
+                    <span className="truncate">{activeLocation.invite_code}</span>
+                  </button>
+                  <div className="flex-1" />
+                  <button
+                    type="button"
+                    onClick={() => setInviteQrOpen((o) => !o)}
+                    className="inline-flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0"
+                    aria-label={inviteQrOpen ? 'Hide invite QR code' : 'Show invite QR code'}
+                  >
+                    <QrCode className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">QR</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleShareInvite}
+                    className="inline-flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0"
+                    aria-label="Share invite link"
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Share</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Invite QR code */}
             {inviteQrOpen && activeLocation.invite_code && isAdmin && (
-              <div className="flat-card rounded-[var(--radius-lg)] p-4 flex flex-col items-center gap-3">
+              <div className="flat-card rounded-[var(--radius-lg)] p-4 flex flex-col items-center gap-3 animate-card-stagger">
                 <p className="text-[13px] font-medium text-[var(--text-secondary)]">
-                  Scan to register and join this {t.location}
+                  Scan to join <span className="font-semibold">{activeLocation.name}</span>
                 </p>
                 {inviteQrUrl ? (
                   <img src={inviteQrUrl} alt="Invite QR code" className="w-48 h-48 rounded-[var(--radius-md)]" />
                 ) : (
                   <Skeleton className="w-48 h-48" />
                 )}
-                <p className="text-[11px] text-[var(--text-tertiary)] font-mono break-all text-center max-w-xs">
-                  {`${window.location.origin}/register?invite=${activeLocation.invite_code}`}
-                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDownloadQr}
+                    disabled={!inviteQrUrl}
+                    className="text-[12px]"
+                  >
+                    <Download className="h-3.5 w-3.5 mr-1" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleShareInvite}
+                    className="text-[12px]"
+                  >
+                    <Share2 className="h-3.5 w-3.5 mr-1" />
+                    Share Link
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -289,10 +382,15 @@ export function AreasPage() {
                 title={`No ${t.areas} yet`}
                 subtitle={isAdmin ? `Create ${t.areas} to organize your ${t.bins} by zone` : `This ${t.location} has no ${t.areas} yet`}
               >
-                {isAdmin && (
+                {isAdmin ? (
                   <Button onClick={() => setCreateAreaOpen(true)} variant="outline" size="sm">
                     <Plus className="h-3.5 w-3.5 mr-1.5" />
                     {`Create ${t.Area}`}
+                  </Button>
+                ) : (
+                  <Button onClick={() => navigate('/bins')} variant="outline" size="sm">
+                    <Box className="h-3.5 w-3.5 mr-1.5" />
+                    {`Browse ${t.Bins}`}
                   </Button>
                 )}
               </EmptyState>
@@ -300,20 +398,21 @@ export function AreasPage() {
               <div className="flex flex-col gap-3">
                 <h2 className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{t.Areas}</h2>
                 <div className="flex flex-col gap-2">
-                {flattenAreaTree(areaTree).map((node: AreaTreeNode) => (
-                  <AreaCard
-                    key={node.id}
-                    id={node.id}
-                    name={node.name}
-                    binCount={node.bin_count}
-                    descendantBinCount={node.descendant_bin_count}
-                    depth={node.depth}
-                    hasChildren={node.children.length > 0}
-                    isAdmin={isAdmin}
-                    onNavigate={handleAreaClick}
-                    onRename={handleRenameArea}
-                    onDelete={handleDeleteAreaRequest}
-                  />
+                {flattenAreaTree(areaTree).map((node: AreaTreeNode, index: number) => (
+                  <div key={node.id} className="animate-card-stagger" style={{ '--stagger-index': index } as React.CSSProperties}>
+                    <AreaCard
+                      id={node.id}
+                      name={node.name}
+                      binCount={node.bin_count}
+                      descendantBinCount={node.descendant_bin_count}
+                      depth={node.depth}
+                      hasChildren={node.children.length > 0}
+                      isAdmin={isAdmin}
+                      onNavigate={handleAreaClick}
+                      onRename={handleRenameArea}
+                      onDelete={handleDeleteAreaRequest}
+                    />
+                  </div>
                 ))}
                 {unassignedCount > 0 && (
                   <UnassignedAreaCard
@@ -346,7 +445,9 @@ export function AreasPage() {
       />
       <LocationDeleteDialog
         locationId={deleteLocationId}
-        locationName={locations.find((l) => l.id === deleteLocationId)?.name ?? ''}
+        locationName={deleteTargetLocation?.name ?? ''}
+        binCount={deleteTargetLocation?.bin_count}
+        areaCount={deleteTargetLocation?.area_count}
         open={!!deleteLocationId}
         onOpenChange={(open) => !open && setDeleteLocationId(null)}
       />
@@ -373,6 +474,26 @@ export function AreasPage() {
           onOpenChange={(open) => !open && setCustomFieldsLocationId(null)}
         />
       )}
+
+      {/* Leave confirmation dialog */}
+      <Dialog open={!!leaveLocationId} onOpenChange={(open) => !open && setLeaveLocationId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave {t.Location}?</DialogTitle>
+            <DialogDescription>
+              You&apos;ll lose access to all {t.bins} and {t.areas} in &quot;{leaveTargetLocation?.name ?? ''}&quot;. You can rejoin later with an invite code.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setLeaveLocationId(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleLeaveConfirmed}>
+              Leave
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

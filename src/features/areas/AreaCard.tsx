@@ -1,4 +1,4 @@
-import { Check, Folder, Inbox, MoreHorizontal, Plus, X } from 'lucide-react';
+import { Check, ChevronRight, Folder, Inbox, MoreHorizontal, Plus, X } from 'lucide-react';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,7 +66,7 @@ export function AreaCard({ id, name, binCount, descendantBinCount, depth, hasChi
               size="icon-sm"
               onClick={handleSave}
               disabled={!editValue.trim() || saving}
-              className="shrink-0"
+              className="shrink-0 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
               aria-label="Save"
             >
               <Check className="h-4 w-4 text-[var(--accent)]" />
@@ -77,7 +77,7 @@ export function AreaCard({ id, name, binCount, descendantBinCount, depth, hasChi
               variant="ghost"
               size="icon-sm"
               onClick={cancelEdit}
-              className="shrink-0"
+              className="shrink-0 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
               aria-label="Cancel"
             >
               <X className="h-4 w-4" />
@@ -104,11 +104,11 @@ export function AreaCard({ id, name, binCount, descendantBinCount, depth, hasChi
       )}
       style={indentPx > 0 ? { marginLeft: indentPx } : undefined}
     >
-      <div className="flex items-start gap-3">
-        <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 flex items-center justify-center shrink-0 mt-0.5">
+      <div className="flex items-center gap-3">
+        <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--accent)]/10 flex items-center justify-center shrink-0">
           <Folder className="h-4.5 w-4.5 text-[var(--accent)]" />
         </div>
-        <div className="flex-1 min-w-0 pr-7">
+        <div className={cn("flex-1 min-w-0", isAdmin && "pr-7")}>
           <span className="text-[15px] font-semibold text-[var(--text-primary)] truncate block">
             {name}
           </span>
@@ -119,6 +119,7 @@ export function AreaCard({ id, name, binCount, descendantBinCount, depth, hasChi
             )}
           </span>
         </div>
+        {!isAdmin && <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] opacity-40 shrink-0" />}
       </div>
 
       {isAdmin && (
@@ -157,8 +158,8 @@ export function UnassignedAreaCard({ count, onNavigate }: UnassignedCardProps) {
       onClick={onNavigate}
       className="flat-card rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] text-left"
     >
-      <div className="flex items-start gap-3">
-        <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-input)] flex items-center justify-center shrink-0 mt-0.5">
+      <div className="flex items-center gap-3">
+        <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-input)] flex items-center justify-center shrink-0">
           <Inbox className="h-4.5 w-4.5 text-[var(--text-tertiary)]" />
         </div>
         <div className="flex-1 min-w-0">
@@ -169,6 +170,7 @@ export function UnassignedAreaCard({ count, onNavigate }: UnassignedCardProps) {
             {count} {count !== 1 ? t.bins : t.bin}
           </span>
         </div>
+        <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] opacity-40 shrink-0" />
       </div>
     </button>
   );
@@ -180,9 +182,9 @@ export function CreateAreaCard({ onCreate }: CreateCardProps) {
     <button
       type="button"
       onClick={onCreate}
-      className="rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] border-2 border-dashed border-[var(--border-flat)] bg-transparent flex items-center gap-3 text-[var(--text-tertiary)]"
+      className="rounded-[var(--radius-lg)] p-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors duration-150 active:bg-[var(--bg-active)] border border-dashed border-[var(--border-flat)] bg-transparent flex items-center gap-3 text-[var(--text-tertiary)]"
     >
-      <div className="h-9 w-9 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-flat)] flex items-center justify-center shrink-0">
+      <div className="h-9 w-9 rounded-[var(--radius-sm)] border border-dashed border-[var(--border-flat)] flex items-center justify-center shrink-0">
         <Plus className="h-4 w-4" />
       </div>
       <span className="text-[13px] font-medium">{`Create ${t.Area}`}</span>

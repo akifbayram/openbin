@@ -1,5 +1,5 @@
 import { Check, Copy, EllipsisVertical, KeyRound, LogOut, RefreshCw, UserMinus } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +11,7 @@ import {
   useDialogPortal,
 } from '@/components/ui/dialog';
 import { OptionGroup } from '@/components/ui/option-group';
+import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
@@ -36,9 +37,19 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   const [regenerating, setRegenerating] = useState(false);
   const [resetToken, setResetToken] = useState<{ token: string; userId: string } | null>(null);
   const [resetCopied, setResetCopied] = useState(false);
+  const [memberSearch, setMemberSearch] = useState('');
 
   const location = locations.find((h) => h.id === locationId);
   const isAdmin = location?.role === 'admin';
+
+  const filteredMembers = useMemo(() => {
+    if (!memberSearch.trim()) return members;
+    const q = memberSearch.toLowerCase();
+    return members.filter((m) =>
+      (m.display_name || '').toLowerCase().includes(q) ||
+      (m.username || '').toLowerCase().includes(q),
+    );
+  }, [members, memberSearch]);
 
   async function handleCopyInvite() {
     if (!location?.invite_code) return;
@@ -81,7 +92,9 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
     }
   }
 
-  async function handleLeave() {
+  const [confirmLeave, setConfirmLeave] = useState(false);
+
+  async function handleLeaveConfirmed() {
     if (!user) return;
     try {
       await leaveLocation(locationId, user.id);
@@ -89,6 +102,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
         const other = locations.find((h) => h.id !== locationId);
         setActiveLocationId(other?.id ?? null);
       }
+      setConfirmLeave(false);
       onOpenChange(false);
       showToast({ message: 'Left location', variant: 'success' });
     } catch (err) {
@@ -120,7 +134,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) setResetToken(null); onOpenChange(v); }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) { setResetToken(null); setMemberSearch(''); } onOpenChange(v); }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{location?.name ?? 'Location'} Members</DialogTitle>
@@ -175,7 +189,16 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
           </SkeletonList>
         ) : (
           <div className="space-y-1 py-2">
-            {members.map((member) => {
+            {members.length > 5 && (
+              <SearchInput
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                onClear={memberSearch ? () => setMemberSearch('') : undefined}
+                placeholder="Search members..."
+                containerClassName="mb-2"
+              />
+            )}
+            {filteredMembers.map((member) => {
               const isSelf = member.user_id === user?.id;
               const displayName = member.display_name || member.user_id.slice(0, 8);
               const showUsername = member.username && member.username !== member.display_name;
@@ -239,15 +262,30 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
         )}
 
         {/* Leave button for non-admins */}
-        {!isAdmin && (
+        {!isAdmin && !confirmLeave && (
           <Button
             variant="destructive-outline"
-            onClick={handleLeave}
+            onClick={() => setConfirmLeave(true)}
             className="w-full rounded-[var(--radius-sm)]"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Leave Location
           </Button>
+        )}
+        {!isAdmin && confirmLeave && (
+          <div className="space-y-2 p-3 rounded-[var(--radius-sm)] bg-[var(--destructive-soft)]">
+            <p className="text-[13px] text-[var(--text-secondary)]">
+              You&apos;ll lose access to all content in this location. Continue?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" size="sm" onClick={() => setConfirmLeave(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" size="sm" onClick={handleLeaveConfirmed}>
+                Leave
+              </Button>
+            </div>
+          </div>
         )}
       </DialogContent>
     </Dialog>

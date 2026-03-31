@@ -72,6 +72,8 @@ export function LocationRetentionDialog({ location, open, onOpenChange }: Locati
             <Input
               id="activity-retention"
               type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               min={7}
               max={365}
               value={activityRetention}
@@ -84,6 +86,8 @@ export function LocationRetentionDialog({ location, open, onOpenChange }: Locati
             <Input
               id="trash-retention"
               type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               min={7}
               max={365}
               value={trashRetention}
