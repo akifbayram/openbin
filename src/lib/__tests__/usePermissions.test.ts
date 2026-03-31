@@ -113,7 +113,7 @@ describe('usePermissions', () => {
 
   it('isLoading passes through from useLocationList', () => {
     setup('admin');
-    mockUseLocationList.mockReturnValue({ locations: [], isLoading: true } as ReturnType<typeof useLocationList>);
+    mockUseLocationList.mockReturnValue({ locations: [], isLoading: true, refresh: vi.fn() } as ReturnType<typeof useLocationList>);
     const { result } = renderHook(() => usePermissions());
     expect(result.current.isLoading).toBe(true);
   });

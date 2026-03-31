@@ -103,7 +103,7 @@ describe('useEditBinForm', () => {
   });
 
   it('saveEdit calls updateBin with correct payload', async () => {
-    vi.mocked(updateBin).mockResolvedValue({} as Bin);
+    vi.mocked(updateBin).mockResolvedValue(undefined);
     const { result } = renderHook(() => useEditBinForm('abc123'));
     act(() => result.current.startEdit(mockBin));
     await act(() => result.current.saveEdit());

@@ -68,8 +68,8 @@ const t: Terminology = {
 };
 
 describe('useBulkActions', () => {
-  let clearSelection: ReturnType<typeof vi.fn>;
-  let showToast: ReturnType<typeof vi.fn>;
+  let clearSelection: () => void;
+  let showToast: (toast: { message: string; action?: { label: string; onClick: () => void } }) => void;
 
   beforeEach(() => {
     vi.clearAllMocks();

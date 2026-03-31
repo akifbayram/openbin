@@ -43,8 +43,8 @@ export function makeLruCache(maxSize: number = 200) {
 }
 
 /** Convert raw QR output (Blob or ArrayBuffer) to a data URL string. */
-export async function rawQrToDataURL(raw: Blob | ArrayBuffer): Promise<string> {
-  const blob = raw instanceof Blob ? raw : new Blob([raw], { type: 'image/png' });
+export async function rawQrToDataURL(raw: Blob | ArrayBuffer | Buffer): Promise<string> {
+  const blob = raw instanceof Blob ? raw : new Blob([raw instanceof ArrayBuffer ? raw : new Uint8Array(raw)], { type: 'image/png' });
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result as string);
