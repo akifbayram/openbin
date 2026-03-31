@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS users (
   plan               INTEGER NOT NULL DEFAULT 1,
   sub_status         INTEGER NOT NULL DEFAULT 1,
   active_until       TEXT,
+  previous_sub_status INTEGER,
+  is_admin           INTEGER NOT NULL DEFAULT 0,
+  deleted_at         TEXT,
   created_at         TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -198,7 +201,7 @@ CREATE TABLE IF NOT EXISTS scan_history (
   scanned_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_scan_history_user ON scan_history(user_id, scanned_at DESC);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_scan_history_user_bin ON scan_history(user_id, bin_id);
+-- idx_scan_history_user_bin created in db.ts migration (needs dedup handling for existing DBs)
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   id TEXT PRIMARY KEY,
@@ -256,6 +259,41 @@ CREATE INDEX IF NOT EXISTS idx_photos_bin_id ON photos(bin_id);
 CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id);
 CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status);
+CREATE INDEX IF NOT EXISTS idx_users_trial ON users(sub_status, created_at);
+CREATE INDEX IF NOT EXISTS idx_locations_created_by ON locations(created_by);
+CREATE INDEX IF NOT EXISTS idx_photos_created_by ON photos(created_by);
+
+CREATE TABLE IF NOT EXISTS bin_shares (
+  id          TEXT PRIMARY KEY,
+  bin_id      TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE,
+  token       TEXT NOT NULL UNIQUE,
+  visibility  TEXT NOT NULL DEFAULT 'unlisted' CHECK (visibility IN ('public', 'unlisted')),
+  created_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
+  view_count  INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  revoked_at  TEXT
+);
+-- idx_bin_shares_active created in db.ts migration (needs dedup handling for existing DBs)
+CREATE INDEX IF NOT EXISTS idx_bin_shares_token ON bin_shares(token) WHERE revoked_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS email_log (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email_type TEXT NOT NULL,
+  sent_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_email_log_dedup ON email_log(user_id, email_type, sent_at);
+-- idx_email_log_daily created in db.ts migration (needs dedup handling for existing DBs)
+-- NOTE: FK on user_id added after initial release. SQLite cannot add FK constraints to
+-- existing columns via ALTER TABLE, so existing DBs only get the constraint after a
+-- fresh install or manual table rebuild. This matches the project's migration pattern.
+
+CREATE TABLE IF NOT EXISTS api_key_daily_usage (
+  api_key_id    TEXT NOT NULL,
+  date          TEXT NOT NULL DEFAULT (date('now')),
+  request_count INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (api_key_id, date)
+);
 
 CREATE TABLE IF NOT EXISTS ai_usage (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -266,3 +304,27 @@ CREATE TABLE IF NOT EXISTS ai_usage (
   UNIQUE(user_id, date)
 );
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user_date ON ai_usage(user_id, date);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS webhook_outbox (
+  id            TEXT PRIMARY KEY,
+  endpoint      TEXT NOT NULL,
+  payload_json  TEXT NOT NULL,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  sent_at       TEXT,
+  attempts      INTEGER NOT NULL DEFAULT 0,
+  last_error    TEXT,
+  next_retry_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_webhook_outbox_pending ON webhook_outbox(next_retry_at) WHERE sent_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS job_locks (
+  job_name   TEXT PRIMARY KEY,
+  locked_by  TEXT NOT NULL,
+  locked_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT NOT NULL
+);

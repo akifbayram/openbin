@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { useTerminology } from '@/lib/terminology';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import type { Location } from '@/types';
 import { updateLocation } from './useLocations';
 
@@ -51,7 +51,7 @@ export function LocationRetentionDialog({ location, open, onOpenChange }: Locati
       onOpenChange(false);
       showToast({ message: 'Retention settings saved', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to save retention settings', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to save retention settings'), variant: 'error' });
     } finally {
       setSaving(false);
     }

@@ -212,7 +212,7 @@ export function DashboardPage() {
           <button
             type="button"
             onClick={() => navigate('/bins?needs_organizing=true')}
-            className="rounded-[var(--radius-md)] border-l-[3px] border-[var(--color-warning-border)] bg-[var(--color-warning-soft)] px-4 py-3 row-spread hover:brightness-[0.97] transition-colors duration-150"
+            className="rounded-[var(--radius-md)] bg-[var(--color-warning-soft)] px-4 py-3 row-spread hover:brightness-[0.97] transition-colors duration-150"
           >
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-[var(--radius-xl)] bg-[var(--color-warning-soft)] flex items-center justify-center">

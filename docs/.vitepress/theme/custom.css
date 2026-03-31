@@ -7,6 +7,21 @@
   --vp-home-hero-name-background: linear-gradient(120deg, #5e2fe0, #7b52f5);
 }
 
+/* ── Nav logo sizing (match openbin-website) ── */
+
+.VPNavBarTitle .logo {
+  height: 32px;
+  width: auto;
+}
+
+.VPNav {
+  border-bottom: 1px solid var(--vp-c-divider) !important;
+}
+
+.dark .VPNav {
+  border-bottom: 1px solid #000 !important;
+}
+
 /* ── Medium zoom ── */
 
 .vp-doc img {

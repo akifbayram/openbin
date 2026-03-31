@@ -1,5 +1,5 @@
-import AdmZip from 'adm-zip';
 import type { Express } from 'express';
+import { strToU8, zipSync } from 'fflate';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../index.js';
@@ -275,6 +275,112 @@ describe('POST /api/locations/:id/import', () => {
     expect(res.status).toBe(422);
   });
 
+  it('imports with areas creating hierarchy', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .post(`/api/locations/${location.id}/import`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        bins: [
+          { id: 'area01', name: 'Drill', items: ['Bit'], notes: '', tags: [], icon: '', color: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), photos: [] },
+        ],
+        areas: [
+          { path: 'Garage' },
+          { path: 'Garage / Shelf A' },
+        ],
+        mode: 'merge',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.binsImported).toBe(1);
+
+    // Verify areas were created
+    const areasRes = await request(app)
+      .get(`/api/locations/${location.id}/areas`)
+      .set('Authorization', `Bearer ${token}`);
+    const areaNames = areasRes.body.results.map((a: { name: string }) => a.name);
+    expect(areaNames).toContain('Garage');
+    expect(areaNames).toContain('Shelf A');
+
+    // Verify hierarchy: Shelf A should have Garage as parent
+    const shelfA = areasRes.body.results.find((a: { name: string }) => a.name === 'Shelf A');
+    const garage = areasRes.body.results.find((a: { name: string }) => a.name === 'Garage');
+    expect(shelfA.parent_id).toBe(garage.id);
+  });
+
+  it('imports with custom field definitions and maps values to bins', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .post(`/api/locations/${location.id}/import`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        bins: [
+          { id: 'cf0001', name: 'PaintCan', items: ['Brush'], notes: '', tags: [], icon: '', color: '', customFields: { Color: 'Red', Size: 'Large' }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), photos: [] },
+        ],
+        customFieldDefinitions: [
+          { name: 'Color', position: 0 },
+          { name: 'Size', position: 1 },
+        ],
+        mode: 'merge',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.binsImported).toBe(1);
+
+    // Verify custom field definitions were created
+    const cfRes = await request(app)
+      .get(`/api/locations/${location.id}/custom-fields`)
+      .set('Authorization', `Bearer ${token}`);
+    const fieldNames = cfRes.body.results.map((f: { name: string }) => f.name);
+    expect(fieldNames).toContain('Color');
+    expect(fieldNames).toContain('Size');
+
+    // Verify bin has custom field values mapped by ID
+    const binsRes = await request(app)
+      .get(`/api/bins?location_id=${location.id}`)
+      .set('Authorization', `Bearer ${token}`);
+    const bin = binsRes.body.results.find((b: { name: string }) => b.name === 'PaintCan');
+    const colorField = cfRes.body.results.find((f: { name: string }) => f.name === 'Color');
+    const sizeField = cfRes.body.results.find((f: { name: string }) => f.name === 'Size');
+    expect(bin.custom_fields[colorField.id]).toBe('Red');
+    expect(bin.custom_fields[sizeField.id]).toBe('Large');
+  });
+
+  it('dry-run preview includes area count', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .post(`/api/locations/${location.id}/import`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        bins: [
+          { id: 'dry002', name: 'DryBin2', items: [], notes: '', tags: [], icon: '', color: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), photos: [] },
+        ],
+        areas: [
+          { path: 'Workshop' },
+          { path: 'Workshop / Bench' },
+          { path: 'Attic' },
+        ],
+        mode: 'merge',
+        dryRun: true,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.preview).toBe(true);
+    expect(res.body.totalBins).toBe(1);
+
+    // Verify no areas were actually created (dry-run should not mutate)
+    const areasRes = await request(app)
+      .get(`/api/locations/${location.id}/areas`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(areasRes.body.results).toHaveLength(0);
+  });
+
   it('imports tag colors alongside bins', async () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
@@ -384,18 +490,18 @@ describe('POST /api/locations/:id/import/csv', () => {
 // ZIP Import
 // ---------------------------------------------------------------------------
 
-function buildTestZip(bins: unknown[], manifest?: Record<string, unknown>) {
-  const zip = new AdmZip();
-  zip.addFile('manifest.json', Buffer.from(JSON.stringify({
-    format: 'openbin-zip',
-    version: 3,
-    exportedAt: new Date().toISOString(),
-    locationName: 'Test',
-    binCount: bins.length,
-    ...manifest,
-  })));
-  zip.addFile('bins.json', Buffer.from(JSON.stringify(bins)));
-  return zip.toBuffer();
+function buildTestZip(bins: unknown[], manifest?: Record<string, unknown>): Buffer {
+  return Buffer.from(zipSync({
+    'manifest.json': strToU8(JSON.stringify({
+      format: 'openbin-zip',
+      version: 3,
+      exportedAt: new Date().toISOString(),
+      locationName: 'Test',
+      binCount: bins.length,
+      ...manifest,
+    })),
+    'bins.json': strToU8(JSON.stringify(bins)),
+  }));
 }
 
 describe('POST /api/locations/:id/import/zip', () => {
@@ -403,7 +509,7 @@ describe('POST /api/locations/:id/import/zip', () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
-    const zipBuf = buildTestZip([
+    const zipBuf = await buildTestZip([
       { name: 'ZipBin1', items: ['Widget'], tags: ['import'], notes: '', icon: '', color: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
       { name: 'ZipBin2', items: [], tags: [], notes: '', icon: '', color: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     ]);
@@ -421,13 +527,12 @@ describe('POST /api/locations/:id/import/zip', () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
-    const zip = new AdmZip();
-    zip.addFile('bins.json', Buffer.from('[]'));
+    const buf = Buffer.from(zipSync({ 'bins.json': strToU8('[]') }));
 
     const res = await request(app)
       .post(`/api/locations/${location.id}/import/zip`)
       .set('Authorization', `Bearer ${token}`)
-      .attach('file', zip.toBuffer(), 'export.zip');
+      .attach('file', buf, 'export.zip');
 
     expect(res.status).toBe(422);
   });
@@ -436,14 +541,15 @@ describe('POST /api/locations/:id/import/zip', () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
-    const zip = new AdmZip();
-    zip.addFile('manifest.json', Buffer.from(JSON.stringify({ format: 'wrong' })));
-    zip.addFile('bins.json', Buffer.from('[]'));
+    const buf = Buffer.from(zipSync({
+      'manifest.json': strToU8(JSON.stringify({ format: 'wrong' })),
+      'bins.json': strToU8('[]'),
+    }));
 
     const res = await request(app)
       .post(`/api/locations/${location.id}/import/zip`)
       .set('Authorization', `Bearer ${token}`)
-      .attach('file', zip.toBuffer(), 'export.zip');
+      .attach('file', buf, 'export.zip');
 
     expect(res.status).toBe(422);
   });
@@ -452,7 +558,7 @@ describe('POST /api/locations/:id/import/zip', () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
-    const zipBuf = buildTestZip([{ id: 'z00001', name: 'DryZip', items: ['x'] }]);
+    const zipBuf = await buildTestZip([{ id: 'z00001', name: 'DryZip', items: ['x'] }]);
 
     const res = await request(app)
       .post(`/api/locations/${location.id}/import/zip`)
@@ -470,7 +576,7 @@ describe('POST /api/locations/:id/import/zip', () => {
     const location = await createTestLocation(app, token);
     await createTestBin(app, token, location.id, { name: 'OldBin' });
 
-    const zipBuf = buildTestZip([
+    const zipBuf = await buildTestZip([
       { name: 'NewZipBin', items: [], tags: [], notes: '', icon: '', color: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     ]);
 

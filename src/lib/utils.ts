@@ -16,6 +16,13 @@ export function haptic(pattern: number | number[] = 10) {
   }
 }
 
+/** Extract a human-readable message from an unknown catch value. */
+export function getErrorMessage(err: unknown, fallback = 'Something went wrong'): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return fallback;
+}
+
 // ── Shared UI class constants ──────────────────────────────────────
 
 /** Focus ring used on buttons, switches, checkboxes, and similar interactive controls. */
@@ -43,3 +50,14 @@ export const overlayBackdrop =
 /** Small uppercase category/section header text. */
 export const categoryHeader =
   'text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]';
+
+/** Inline icon-button: 36px tap target, flex-centered. */
+export const iconButton = 'shrink-0 flex items-center justify-center size-9';
+
+/** Fade-in-on-hover remove button for list rows (visible at 30% on mobile). */
+export const rowAction =
+  'shrink-0 flex items-center justify-center size-9 text-[var(--text-tertiary)] opacity-30 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity';
+
+/** Disclosure label for collapsible card sections (Photos, QR Code). */
+export const disclosureSectionLabel =
+  'py-4 text-[var(--text-tertiary)] uppercase tracking-wider';

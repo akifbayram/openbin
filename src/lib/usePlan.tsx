@@ -1,26 +1,42 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { PlanFeatures, PlanInfo } from '@/types';
+import { Events, useRefreshOn } from '@/lib/eventBus';
+import type { OverLimits, PlanFeatures, PlanInfo, PlanUsage } from '@/types';
 
-// Self-hosted mode: full pro features, no API call needed
+export function getLockedMessage(previousSubStatus: 'trial' | 'active' | null): string {
+  if (previousSubStatus === 'trial') return 'Your trial has ended. Subscribe to continue using OpenBin.';
+  if (previousSubStatus === 'active') return 'Your subscription has expired. Resubscribe to continue using OpenBin.';
+  return 'Your plan is inactive. Subscribe to continue using OpenBin.';
+}
+
+export function getLockedCta(previousSubStatus: 'trial' | 'active' | null): string {
+  return previousSubStatus === 'trial' ? 'Subscribe' : 'Resubscribe';
+}
+
 const SELF_HOSTED_PLAN: PlanInfo = {
   plan: 'pro',
   status: 'active',
   activeUntil: null,
+  previousSubStatus: null,
   selfHosted: true,
+  locked: false,
   features: {
     ai: true,
     apiKeys: true,
     customFields: true,
     fullExport: true,
+    reorganize: true,
+    binSharing: true,
     maxLocations: null,
-    maxBinsPerLocation: null,
     maxPhotoStorageMb: null,
     maxMembersPerLocation: null,
     activityRetentionDays: null,
   },
   upgradeUrl: null,
+  upgradeLiteUrl: null,
+  upgradeProUrl: null,
+  portalUrl: null,
 };
 
 interface PlanContextValue {
@@ -29,7 +45,13 @@ interface PlanContextValue {
   isPro: boolean;
   isLite: boolean;
   isSelfHosted: boolean;
+  isLocked: boolean;
   isGated: (feature: keyof PlanFeatures) => boolean;
+  refresh: () => Promise<PlanInfo | null>;
+  overLimits: OverLimits | null;
+  isOverAnyLimit: boolean;
+  isLocationOverLimit: (locationId: string) => boolean;
+  refreshUsage: () => Promise<void>;
 }
 
 const PlanContext = createContext<PlanContextValue | null>(null);
@@ -37,7 +59,33 @@ const PlanContext = createContext<PlanContextValue | null>(null);
 export function PlanProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
+  const [overLimits, setOverLimits] = useState<OverLimits | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const usageRefresh = useRefreshOn(Events.LOCATIONS, Events.PHOTOS);
+  const planRefresh = useRefreshOn(Events.PLAN);
+
+  const fetchPlan = useCallback(async (): Promise<PlanInfo | null> => {
+    if (!token) return null;
+    try {
+      const data = await apiFetch<PlanInfo>('/api/plan');
+      const info = data.selfHosted ? SELF_HOSTED_PLAN : data;
+      setPlanInfo(info);
+      return info;
+    } catch {
+      setPlanInfo(SELF_HOSTED_PLAN);
+      return SELF_HOSTED_PLAN;
+    }
+  }, [token]);
+
+  const fetchUsage = useCallback(async (): Promise<void> => {
+    if (!token) return;
+    try {
+      const data = await apiFetch<PlanUsage>('/api/plan/usage');
+      setOverLimits(data.overLimits);
+    } catch {
+      setOverLimits(null);
+    }
+  }, [token]);
 
   useEffect(() => {
     if (!token) {
@@ -48,40 +96,35 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     setIsLoading(true);
 
-    apiFetch<PlanInfo>('/api/plan')
-      .then((data) => {
-        if (!cancelled) {
-          if (data.selfHosted) {
-            setPlanInfo(SELF_HOSTED_PLAN);
-          } else {
-            setPlanInfo(data);
-          }
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          // On error (e.g. self-hosted without plan endpoint), fall back to self-hosted plan
-          setPlanInfo(SELF_HOSTED_PLAN);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
+    Promise.all([fetchPlan(), fetchUsage()]).finally(() => {
+      if (!cancelled) setIsLoading(false);
+    });
 
     return () => { cancelled = true; };
-  }, [token]);
+  }, [fetchPlan, fetchUsage]);
+
+  useEffect(() => {
+    if (usageRefresh > 0) fetchUsage();
+  }, [usageRefresh, fetchUsage]);
+
+  useEffect(() => {
+    if (planRefresh > 0) fetchPlan();
+  }, [planRefresh, fetchPlan]);
 
   const value = useMemo<PlanContextValue>(() => {
     const info = planInfo ?? SELF_HOSTED_PLAN;
     const isPro = info.plan === 'pro';
     const isLite = info.plan === 'lite';
     const isSelfHosted = info.selfHosted;
+    const isLocked = !!info.locked;
     const isGated = (feature: keyof PlanFeatures): boolean => {
       const val = info.features[feature];
       if (typeof val === 'boolean') return !val;
       if (val === null) return false;
       return false;
     };
+    const isOverAnyLimit = overLimits !== null && (overLimits.locations || overLimits.photos || overLimits.members.length > 0);
+    const isLocationOverLimit = (locationId: string) => overLimits?.members.includes(locationId) ?? false;
 
     return {
       planInfo: info,
@@ -89,9 +132,15 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       isPro,
       isLite,
       isSelfHosted,
+      isLocked,
       isGated,
+      refresh: fetchPlan,
+      overLimits,
+      isOverAnyLimit,
+      isLocationOverLimit,
+      refreshUsage: fetchUsage,
     };
-  }, [planInfo, isLoading]);
+  }, [planInfo, isLoading, fetchPlan, overLimits, fetchUsage]);
 
   return <PlanContext.Provider value={value}>{children}</PlanContext.Provider>;
 }

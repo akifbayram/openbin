@@ -44,6 +44,7 @@ try { db.exec('ALTER TABLE areas ADD COLUMN parent_id TEXT REFERENCES areas(id) 
   const areaTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='areas'").get() as { sql: string } | undefined;
   if (areaTableInfo?.sql && !areaTableInfo.sql.includes('parent_id, name')) {
     db.exec(`
+      DROP TABLE IF EXISTS areas_new;
       CREATE TABLE areas_new (
         id            TEXT PRIMARY KEY,
         location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
@@ -86,6 +87,7 @@ db.exec([
   const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='location_members'").get() as { sql: string } | undefined;
   if (tableInfo?.sql && !tableInfo.sql.includes("'viewer'")) {
     db.exec(`
+      DROP TABLE IF EXISTS location_members_new;
       CREATE TABLE location_members_new (
         id            TEXT PRIMARY KEY,
         location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
@@ -107,7 +109,141 @@ db.exec([
 try { db.exec('ALTER TABLE users ADD COLUMN plan INTEGER NOT NULL DEFAULT 1'); } catch { /* column already exists */ }
 try { db.exec('ALTER TABLE users ADD COLUMN sub_status INTEGER NOT NULL DEFAULT 1'); } catch { /* column already exists */ }
 try { db.exec('ALTER TABLE users ADD COLUMN active_until TEXT'); } catch { /* column already exists */ }
+try { db.exec('ALTER TABLE users ADD COLUMN previous_sub_status INTEGER'); } catch { /* column already exists */ }
 db.exec('CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status)');
+
+// Global admin role
+try { db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0'); } catch { /* column already exists */ }
+
+// Soft delete for users
+try { db.exec('ALTER TABLE users ADD COLUMN deleted_at TEXT'); } catch { /* column already exists */ }
+
+/** Try to create a unique index; if duplicates exist, run dedupSql first then retry. */
+function createUniqueIndexWithDedup(indexDdl: string, dedupSql: string): void {
+  try {
+    db.exec(indexDdl);
+  } catch {
+    db.exec(dedupSql);
+    db.exec(indexDdl);
+  }
+}
+
+// Unique email (case-insensitive) — deduplicate before creating index on existing DBs
+createUniqueIndexWithDedup(
+  'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(LOWER(email)) WHERE email IS NOT NULL',
+  `UPDATE users SET email = NULL
+   WHERE email IS NOT NULL
+     AND rowid NOT IN (
+       SELECT MAX(rowid) FROM users WHERE email IS NOT NULL GROUP BY LOWER(email)
+     )`,
+);
+
+// Seed default admin account (admin/admin) — idempotent
+// Pre-computed bcrypt hash for "admin" at cost 12 avoids blocking the event loop at startup
+{
+  const adminExists = db.prepare("SELECT 1 FROM users WHERE username = 'admin'").get();
+  if (!adminExists) {
+    db.prepare(
+      `INSERT INTO users (id, username, password_hash, display_name, is_admin, plan, sub_status, active_until)
+       VALUES (?, 'admin', ?, 'Admin', 1, 1, 1, ?)`
+    ).run(
+      crypto.randomUUID(),
+      '$2b$12$3s7vHxqe3VFONH86Xb5dm.Sqq6ZRWIkFNWPmfAkmx.PH.a0VCwJ1G',
+      new Date(Date.now() + 1000 * 365 * 24 * 60 * 60 * 1000).toISOString(),
+    );
+  }
+}
+
+// Global settings key-value store (e.g. runtime registration mode override)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+`);
+
+// Unique scan history per (user, bin) — deduplicate if needed
+createUniqueIndexWithDedup(
+  'CREATE UNIQUE INDEX IF NOT EXISTS idx_scan_history_user_bin ON scan_history(user_id, bin_id)',
+  `DELETE FROM scan_history
+   WHERE rowid NOT IN (
+     SELECT MAX(rowid) FROM scan_history GROUP BY user_id, bin_id
+   )`,
+);
+
+// Bin sharing table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bin_shares (
+    id          TEXT PRIMARY KEY,
+    bin_id      TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE,
+    token       TEXT NOT NULL UNIQUE,
+    visibility  TEXT NOT NULL DEFAULT 'unlisted' CHECK (visibility IN ('public', 'unlisted')),
+    created_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    view_count  INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    revoked_at  TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_bin_shares_token ON bin_shares(token) WHERE revoked_at IS NULL;
+`);
+createUniqueIndexWithDedup(
+  'CREATE UNIQUE INDEX IF NOT EXISTS idx_bin_shares_active ON bin_shares(bin_id) WHERE revoked_at IS NULL',
+  `UPDATE bin_shares SET revoked_at = datetime('now')
+   WHERE revoked_at IS NULL
+     AND rowid NOT IN (
+       SELECT MAX(rowid) FROM bin_shares WHERE revoked_at IS NULL GROUP BY bin_id
+     )`,
+);
+
+// API key daily usage tracking
+db.exec(`
+  CREATE TABLE IF NOT EXISTS api_key_daily_usage (
+    api_key_id    TEXT NOT NULL,
+    date          TEXT NOT NULL DEFAULT (date('now')),
+    request_count INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (api_key_id, date)
+  );
+`);
+
+// Email deduplication log
+db.exec(`
+  CREATE TABLE IF NOT EXISTS email_log (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email_type TEXT NOT NULL,
+    sent_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_email_log_dedup ON email_log(user_id, email_type, sent_at);
+`);
+
+// Webhook outbox for reliable Manager notifications
+db.exec(`CREATE TABLE IF NOT EXISTS webhook_outbox (
+  id            TEXT PRIMARY KEY,
+  endpoint      TEXT NOT NULL,
+  payload_json  TEXT NOT NULL,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  sent_at       TEXT,
+  attempts      INTEGER NOT NULL DEFAULT 0,
+  last_error    TEXT,
+  next_retry_at TEXT NOT NULL DEFAULT (datetime('now'))
+)`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_webhook_outbox_pending ON webhook_outbox(next_retry_at) WHERE sent_at IS NULL');
+
+// Job locks for background job leader election
+db.exec(`CREATE TABLE IF NOT EXISTS job_locks (
+  job_name   TEXT PRIMARY KEY,
+  locked_by  TEXT NOT NULL,
+  locked_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT NOT NULL
+)`);
+
+// Atomic email dedup: one email per type per user per day
+createUniqueIndexWithDedup(
+  'CREATE UNIQUE INDEX IF NOT EXISTS idx_email_log_daily ON email_log(user_id, email_type, date(sent_at))',
+  `DELETE FROM email_log
+   WHERE rowid NOT IN (
+     SELECT MAX(rowid) FROM email_log GROUP BY user_id, email_type, date(sent_at)
+   )`,
+);
 
 /** O(min(m,n)) space — reuses module-level buffers to avoid per-call allocation */
 const _levBuf0 = new Int32Array(256);

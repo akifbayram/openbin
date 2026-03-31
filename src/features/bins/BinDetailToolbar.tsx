@@ -1,11 +1,12 @@
 import type { LucideIcon } from 'lucide-react';
-import { ArrowRightLeft, Check, ChevronLeft, ChevronRight, Copy, Loader2, Lock, MoreHorizontal, Pencil, Pin, Printer, QrCode, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowRightLeft, Check, ChevronLeft, ChevronRight, Copy, Loader2, Lock, MoreHorizontal, Pencil, Pin, Printer, QrCode, Save, Share2, Sparkles, Trash2, X } from 'lucide-react';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { MenuButton } from '@/components/ui/menu-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
+import { useMenuKeyboard } from '@/lib/useMenuKeyboard';
 import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
 import type { Bin, Location } from '@/types';
@@ -23,6 +24,7 @@ interface BinDetailToolbarProps {
   isAnalyzing: boolean;
   isReanalysis: boolean;
   editNameValid: boolean;
+  isSaving: boolean;
   otherLocations: Location[];
   onClose: () => void;
   onPrev: (() => void) | null;
@@ -39,6 +41,8 @@ interface BinDetailToolbarProps {
   onDelete: () => void;
   isAdmin: boolean;
   onChangeCode: () => void;
+  onShare?: () => void;
+  showShareButton: boolean;
 }
 
 export function BinDetailToolbar({
@@ -54,6 +58,7 @@ export function BinDetailToolbar({
   isAnalyzing,
   isReanalysis,
   editNameValid,
+  isSaving,
   otherLocations,
   onClose,
   onPrev,
@@ -70,11 +75,14 @@ export function BinDetailToolbar({
   onDelete,
   isAdmin,
   onChangeCode,
+  onShare,
+  showShareButton,
 }: BinDetailToolbarProps) {
   const t = useTerminology();
   const { visible, animating, close, toggle } = usePopover();
-  const menuRef = useRef<HTMLDivElement>(null);
-  useClickOutside(menuRef, close);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  useClickOutside(wrapperRef, close);
+  const { menuRef, onKeyDown: menuKeyDown } = useMenuKeyboard(visible, close);
 
   function handleItem(action: () => void) {
     close();
@@ -144,12 +152,18 @@ export function BinDetailToolbar({
           <Button
             size="icon"
             onClick={onSave}
-            disabled={!editNameValid}
+            disabled={!editNameValid || isSaving}
             className="lg:w-auto lg:px-3"
           >
-            <Check className="h-4 w-4 lg:hidden" />
-            <Save className="h-4 w-4 mr-1.5 hidden lg:block" />
-            <span className="hidden lg:inline text-sm">Save</span>
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Check className="h-4 w-4 lg:hidden" />
+                <Save className="h-4 w-4 mr-1.5 hidden lg:block" />
+              </>
+            )}
+            <span className="hidden lg:inline text-sm">{isSaving ? 'Saving...' : 'Save'}</span>
           </Button>
         </div>
       ) : (
@@ -198,7 +212,7 @@ export function BinDetailToolbar({
               </Tooltip>
             )}
           </div>
-          <div className="relative" ref={menuRef}>
+          <div className="relative" ref={wrapperRef}>
             <Tooltip content="More" side="bottom">
               <Button
                 variant="ghost"
@@ -210,10 +224,15 @@ export function BinDetailToolbar({
               </Button>
             </Tooltip>
             {visible && (
-              <div className={cn(
-                animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-                'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] flat-popover overflow-hidden',
-              )}>
+              <div
+                ref={menuRef}
+                role="menu"
+                onKeyDown={menuKeyDown}
+                className={cn(
+                  animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
+                  'absolute right-0 top-full mt-1.5 z-50 min-w-[180px] rounded-[var(--radius-lg)] flat-popover overflow-hidden',
+                )}
+              >
                 {/* Mobile-only: AI, Pin, Edit (hidden on desktop where they're inline) */}
                 {showAiButton && (
                   <button
@@ -289,6 +308,16 @@ export function BinDetailToolbar({
                   >
                     <QrCode className="h-4 w-4 text-[var(--text-tertiary)]" />
                     Change Code
+                  </button>
+                )}
+                {showShareButton && onShare && (
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
+                    onClick={() => handleItem(onShare)}
+                  >
+                    <Share2 className="h-4 w-4 text-[var(--text-tertiary)]" />
+                    Share
                   </button>
                 )}
                 {canDelete && (

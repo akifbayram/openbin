@@ -32,6 +32,14 @@ const RegisterPage = lazyWithRetry(() =>
   import('@/features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage }))
 );
 
+const SharedBinPage = lazyWithRetry(() =>
+  import('@/features/bins/SharedBinPage').then((m) => ({ default: m.SharedBinPage }))
+);
+
+const ForgotPasswordPage = lazyWithRetry(() =>
+  import('@/features/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage }))
+);
+
 const ResetPasswordPage = lazyWithRetry(() =>
   import('@/features/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage }))
 );
@@ -78,6 +86,14 @@ const ReorganizePage = lazyWithRetry(() =>
 
 const CapturePage = lazyWithRetry(() =>
   import('@/features/capture/CapturePage').then((m) => ({ default: m.CapturePage }))
+);
+
+const AdminUsersPage = lazyWithRetry(() =>
+  import('@/features/admin/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage }))
+);
+
+const AdminUserDetailPage = lazyWithRetry(() =>
+  import('@/features/admin/AdminUserDetailPage').then((m) => ({ default: m.AdminUserDetailPage }))
 );
 
 function LoadingFallback() {
@@ -171,6 +187,38 @@ function SWUpdateNotifier() {
   return null;
 }
 
+function PlanErrorNotifier() {
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { code, message: serverMessage, upgradeUrl } = (e as CustomEvent).detail ?? {};
+      let message: string;
+      let actionLabel: string;
+      if (code === 'SUBSCRIPTION_EXPIRED') {
+        message = 'Your subscription has expired';
+        actionLabel = 'Resubscribe';
+      } else if (code === 'OVER_LIMIT') {
+        message = serverMessage || 'You\'ve exceeded a plan limit';
+        actionLabel = 'Upgrade';
+      } else {
+        message = 'This feature requires a Pro plan';
+        actionLabel = 'Upgrade';
+      }
+      showToast({
+        message,
+        variant: 'warning',
+        duration: 6000,
+        ...(upgradeUrl ? { action: { label: actionLabel, onClick: () => window.open(upgradeUrl, '_blank') } } : {}),
+      });
+    };
+    window.addEventListener('openbin-plan-restricted', handler);
+    return () => window.removeEventListener('openbin-plan-restricted', handler);
+  }, [showToast]);
+
+  return null;
+}
+
 function ScanRedirect() {
   const { openScanDialog } = useScanDialog();
   useEffect(() => { openScanDialog(); }, [openScanDialog]);
@@ -199,6 +247,7 @@ export default function App() {
         <ToastProvider>
           <AuthProvider>
             <SWUpdateNotifier />
+            <PlanErrorNotifier />
             <Routes>
               {/* Public routes */}
               <Route
@@ -218,10 +267,26 @@ export default function App() {
                 }
               />
               <Route
+                path="/forgot-password"
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <ForgotPasswordPage />
+                  </Suspense>
+                }
+              />
+              <Route
                 path="/reset-password"
                 element={
                   <Suspense fallback={<LoadingFallback />}>
                     <ResetPasswordPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/s/:token"
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <SharedBinPage />
                   </Suspense>
                 }
               />
@@ -342,6 +407,22 @@ export default function App() {
                   element={
                     <Suspense fallback={<LoadingFallback />}>
                       <CapturePage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/admin/users"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <AdminUsersPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/admin/users/:id"
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <AdminUserDetailPage />
                     </Suspense>
                   }
                 />

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
-import { cn } from '@/lib/utils';
+import { cn, rowAction } from '@/lib/utils';
 import { useCollapsibleList } from './useCollapsibleList';
 
 type InputState = 'input' | 'expanded' | 'processing' | 'preview';
@@ -319,7 +319,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
                   <button
                     type="button"
                     onClick={() => removeItem(idx)}
-                    className="shrink-0 p-1 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-all"
+                    className={rowAction}
                     aria-label={`Remove ${items[idx]}`}
                   >
                     <X className="h-3.5 w-3.5" />
@@ -374,7 +374,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
                   tabIndex={-1}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={addItemAndRefocus}
-                  className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+                  className="shrink-0 flex items-center justify-center size-9 rounded-[var(--radius-lg)] text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
                   aria-label="Add item"
                 >
                   <Plus className="h-4 w-4" />
@@ -386,7 +386,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
                 <button
                   type="button"
                   onClick={handleSparklesClick}
-                  className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
+                  className="shrink-0 flex items-center justify-center size-9 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
                   aria-label="Add with AI"
                 >
                   <Sparkles className="h-4 w-4" />
@@ -450,7 +450,7 @@ export function ItemsInput({ items, onChange, quantities, onQuantityChange, show
                     type="button"
                     onClick={() => toggleItem(i)}
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] transition-all',
+                      'inline-flex items-center gap-1.5 rounded-full min-h-[44px] px-3 py-2 text-[13px] transition-all',
                       checked
                         ? 'bg-[var(--accent)] text-white'
                         : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] line-through',

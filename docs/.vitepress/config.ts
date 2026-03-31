@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'OpenBin',
-  description: 'Self-hosted bin inventory with QR codes and AI',
+  description: 'Inventory with intelligence. QR codes, photo recognition, and collaboration.',
   base: '/',
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }]

@@ -100,7 +100,7 @@ function DialogContent({
             <button
               type="button"
               aria-label="Close"
-              className="absolute right-2.5 top-2.5 z-10 rounded-[var(--radius-sm)] h-10 w-10 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-center"
+              className="absolute right-2.5 top-2.5 z-10 rounded-[var(--radius-sm)] h-11 w-11 bg-[var(--bg-input)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors flex items-center justify-center"
               onClick={() => onOpenChange(false)}
             >
               <X className="h-4 w-4" />

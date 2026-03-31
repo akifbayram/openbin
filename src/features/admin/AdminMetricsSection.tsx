@@ -1,0 +1,115 @@
+import { AlertTriangle } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { useAdminMetrics } from './useAdminMetrics';
+
+function MetricCard({ label, value, sub, large }: { label: string; value: string | number; sub?: string; large?: boolean }) {
+  return (
+    <div className={cn('flex flex-col gap-0.5 rounded-[var(--radius-sm)] bg-[var(--bg-input)]', large ? 'p-4' : 'p-3')}>
+      <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">{label}</span>
+      <span className={cn('font-bold text-[var(--text-primary)] leading-tight tabular-nums', large ? 'text-[28px]' : 'text-[20px]')}>{value}</span>
+      {sub && <span className="text-[12px] text-[var(--text-tertiary)]">{sub}</span>}
+    </div>
+  );
+}
+
+export function AdminMetricsSection() {
+  const { metrics, error } = useAdminMetrics();
+
+  if (error) return null;
+  if (!metrics) {
+    return (
+      <>
+        {[0, 1, 2].map((i) => (
+          <Card key={i}>
+            <CardHeader>
+              <Skeleton className="h-5 w-28" />
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                {Array.from({ length: 5 }, (_, j) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no stable identity
+                  <div key={j} className="flex flex-col gap-1.5 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-5 w-12" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </>
+    );
+  }
+
+  const featureNames: Record<string, string> = {
+    ai: 'AI',
+    apiKeys: 'API Keys',
+    customFields: 'Custom Fields',
+    binSharing: 'Bin Sharing',
+    reorganize: 'Reorganize',
+  };
+
+  return (
+    <>
+      {/* Warnings */}
+      {metrics.warnings.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {metrics.warnings.map((w) => (
+            <div key={w} className="flex items-start gap-2 p-2.5 rounded-[var(--radius-sm)] bg-[var(--color-warning-soft)] ring-1 ring-[var(--color-warning-ring)] text-[13px] text-[var(--text-secondary)]">
+              <AlertTriangle className="h-4 w-4 text-[var(--color-warning)] shrink-0 mt-0.5" />
+              {w}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Plan Distribution */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Plan Distribution</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            <MetricCard label="Total Users" value={metrics.plans.total} large />
+            <MetricCard label="Pro Active" value={metrics.plans.proActive} />
+            <MetricCard label="Pro Trial" value={metrics.plans.proTrial} />
+            <MetricCard label="Lite Active" value={metrics.plans.liteActive} />
+            <MetricCard label="Conversion" value={`${metrics.trialConversion.rate}%`} sub={`${metrics.trialConversion.converted} of ${metrics.trialConversion.started} trials`} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Usage */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Usage</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            <MetricCard label="Total Bins" value={metrics.bins.total ?? 0} sub={`+${metrics.bins.createdLast7d ?? 0} this week`} />
+            <MetricCard label="Avg Bins/Loc" value={metrics.bins.avgPerLocation} />
+            <MetricCard label="Storage" value={`${metrics.storage.totalMb} MB`} sub={`${metrics.storage.avgPerLocationMb} MB avg`} />
+            <MetricCard label="Near Limit" value={metrics.storage.nearingLimitCount} sub="locations >90% storage" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Feature Adoption */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Feature Adoption</CardTitle>
+          <CardDescription>Last 30 days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {Object.entries(metrics.featureAdoption).map(([key, val]) => (
+              <MetricCard key={key} label={featureNames[key] || key} value={`${val.percentage}%`} sub={`${val.usersOrLocations} active`} />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  );
+}

@@ -2,6 +2,9 @@ import type { LanguageModel, UserContent } from 'ai';
 import { Output, streamText } from 'ai';
 import type { Response } from 'express';
 import { mapSdkError, toSafeAiMessage } from './aiCaller.js';
+import { createLogger } from './logger.js';
+
+const log = createLogger('ai');
 
 export interface StreamOptions {
   system: string;
@@ -89,7 +92,7 @@ export async function pipeAiStreamToResponse(
     const safeMessage = toSafeAiMessage(mapped) || 'Provider error — check server logs';
     if (mapped.code === 'PROVIDER_ERROR') {
       const safeErr = err instanceof Error ? { message: err.message, name: err.name } : '[non-Error thrown]';
-      console.error('AI stream error:', safeErr);
+      log.error('Stream error:', safeErr);
     }
     writeEvent({ type: 'error', message: safeMessage, code: mapped.code });
   } finally {

@@ -83,7 +83,7 @@ export function TagsPage() {
           <EmptyState
             icon={TagsIcon}
             title={search ? 'No tags match your search' : 'No tags yet'}
-            subtitle={search ? undefined : `Tags added to ${t.bins} will appear here`}
+            subtitle={search ? 'Try a different search term' : `Tags added to ${t.bins} will appear here`}
             variant={search ? 'search' : undefined}
           />
         ) : (

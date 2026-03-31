@@ -19,6 +19,14 @@ vi.mock('@/lib/auth', () => ({
   })),
 }));
 
+vi.mock('@/lib/usePlan', () => ({
+  usePlan: vi.fn(() => ({
+    isGated: () => false,
+    isSelfHosted: false,
+    isLoading: false,
+  })),
+}));
+
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { deleteAiSettings, saveAiSettings, testAiConnection, useAiSettings } from '../useAiSettings';

@@ -24,7 +24,7 @@ const sizes = {
   default: 'h-11 px-5 py-2.5',
   sm: 'h-9 px-3.5 text-[13px]',
   lg: 'h-12 px-8',
-  icon: 'h-10 w-10',
+  icon: 'h-11 w-11',
   'icon-sm': 'h-8 w-8',
 };
 

@@ -5,6 +5,7 @@ import { query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { invalidateOverLimitCache } from '../lib/planGate.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { storage } from '../lib/storage.js';
 import { authenticate } from '../middleware/auth.js';
@@ -166,6 +167,8 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   const thumbPath = thumbResult.rows[0]?.thumb_path;
 
   await query('DELETE FROM photos WHERE id = $1', [id]);
+
+  invalidateOverLimitCache(req.user!.id);
 
   await storage.delete(access.storagePath).catch(() => {});
 

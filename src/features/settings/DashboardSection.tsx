@@ -31,10 +31,11 @@ export function DashboardSection({ settings, updateSettings }: DashboardSectionP
                 { key: 'showRecentlyUpdated' as const, label: 'Recently Updated' },
               ]).map(({ key, label }) => (
                 <div key={key} className="row-spread py-1">
-                  <span className="text-[14px] text-[var(--text-primary)]">{label}</span>
+                  <span id={`dash-${key}`} className="text-[14px] text-[var(--text-primary)]">{label}</span>
                   <Switch
                     checked={settings[key]}
                     onCheckedChange={(checked) => updateSettings({ [key]: checked })}
+                    aria-labelledby={`dash-${key}`}
                   />
                 </div>
               ))}
@@ -49,6 +50,7 @@ export function DashboardSection({ settings, updateSettings }: DashboardSectionP
               <Input
                 id="recent-bins"
                 type="number"
+                inputMode="numeric"
                 min={DASHBOARD_LIMITS.recentBinsCount.min}
                 max={DASHBOARD_LIMITS.recentBinsCount.max}
                 value={settings.recentBinsCount}
@@ -63,6 +65,7 @@ export function DashboardSection({ settings, updateSettings }: DashboardSectionP
               <Input
                 id="scan-history"
                 type="number"
+                inputMode="numeric"
                 min={DASHBOARD_LIMITS.scanHistoryMax.min}
                 max={DASHBOARD_LIMITS.scanHistoryMax.max}
                 value={settings.scanHistoryMax}

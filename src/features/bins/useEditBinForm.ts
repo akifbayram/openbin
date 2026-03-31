@@ -33,6 +33,7 @@ function recordsEqual(a: Record<string, string>, b: Record<string, string>): boo
 export function useEditBinForm(id: string | undefined) {
   const { showToast } = useToast();
   const [editing, setEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const {
     name, setName,
     areaId, setAreaId,
@@ -130,7 +131,8 @@ export function useEditBinForm(id: string | undefined) {
   }
 
   async function saveEdit() {
-    if (!id || !name.trim()) return;
+    if (!id || !name.trim() || isSaving) return;
+    setIsSaving(true);
     try {
       const itemsWithQty = items.map((name, i) => ({ name, quantity: quantities[i] ?? null }));
       await updateBin(id, {
@@ -147,8 +149,11 @@ export function useEditBinForm(id: string | undefined) {
       });
       setEditing(false);
       originalRef.current = null;
+      showToast({ message: 'Changes saved', variant: 'success' });
     } catch {
       showToast({ message: 'Failed to save changes' });
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -167,6 +172,7 @@ export function useEditBinForm(id: string | undefined) {
 
   return {
     editing,
+    isSaving,
     isDirty,
     name, setName,
     areaId, setAreaId,

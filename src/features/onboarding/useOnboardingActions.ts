@@ -6,6 +6,7 @@ import { addBin } from '@/features/bins/useBins';
 import { createLocation } from '@/features/locations/useLocations';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import { getErrorMessage } from '@/lib/utils';
 import type { Bin } from '@/types';
 import type { OnboardingActions } from './onboardingConstants';
 
@@ -110,7 +111,7 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
         }
       }
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.location}`, variant: 'error' });
+      showToast({ message: getErrorMessage(err, `Failed to create ${t.location}`), variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -129,7 +130,7 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
       setCreatedBin(bin);
       advanceStep();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : `Failed to create ${t.bin}`, variant: 'error' });
+      showToast({ message: getErrorMessage(err, `Failed to create ${t.bin}`), variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -144,7 +145,7 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
       }
       complete();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to skip setup', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to skip setup'), variant: 'error' });
     } finally {
       setLoading(false);
     }

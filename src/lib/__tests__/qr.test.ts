@@ -1,22 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('qrcode', () => ({
-  default: {
-    toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,MOCK'),
-  },
-}));
+const mockGetRawData = vi.fn();
+const ctorSpy = vi.fn();
+
+vi.mock('qr-code-styling', () => {
+  return {
+    default: class MockQRCodeStyling {
+      constructor(opts: unknown) { ctorSpy(opts); }
+      getRawData = mockGetRawData;
+    },
+  };
+});
 
 vi.mock('@/lib/qrConfig', () => ({
   getQrConfig: () => ({ qrPayloadMode: 'app' }),
   initQrConfig: vi.fn(),
 }));
 
-import QRCode from 'qrcode';
 import { BIN_URL_REGEX, batchGenerateQRDataURLs, generateQRDataURL } from '@/lib/qr';
 
 describe('generateQRDataURL', () => {
   beforeEach(() => {
-    vi.mocked(QRCode.toDataURL).mockClear();
+    ctorSpy.mockClear();
+    mockGetRawData.mockClear();
+    mockGetRawData.mockResolvedValue(new Blob(['png'], { type: 'image/png' }));
   });
 
   it('returns a data URL string', async () => {
@@ -25,29 +32,30 @@ describe('generateQRDataURL', () => {
   });
 
   it('encodes the openbin:// URI as QR payload in app mode', async () => {
-    vi.mocked(QRCode.toDataURL).mockClear();
+    ctorSpy.mockClear();
     await generateQRDataURL('ABCDEF', 128);
-    expect(QRCode.toDataURL).toHaveBeenCalledWith(
-      'openbin://bin/ABCDEF',
-      expect.any(Object),
+    expect(ctorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ data: 'openbin://bin/ABCDEF' }),
     );
   });
 
-  it('caches results and avoids redundant QRCode.toDataURL calls', async () => {
+  it('caches results and avoids redundant generation calls', async () => {
     const binId = 'cache-test-bin';
-    vi.mocked(QRCode.toDataURL).mockClear();
+    ctorSpy.mockClear();
 
     const first = await generateQRDataURL(binId, 128);
     const second = await generateQRDataURL(binId, 128);
 
     expect(first).toBe(second);
-    expect(QRCode.toDataURL).toHaveBeenCalledTimes(1);
+    expect(ctorSpy).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('batchGenerateQRDataURLs', () => {
   beforeEach(() => {
-    vi.mocked(QRCode.toDataURL).mockClear();
+    ctorSpy.mockClear();
+    mockGetRawData.mockClear();
+    mockGetRawData.mockResolvedValue(new Blob(['png'], { type: 'image/png' }));
   });
 
   it('returns a Map with all binIds', async () => {

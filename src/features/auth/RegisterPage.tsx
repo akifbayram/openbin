@@ -1,5 +1,5 @@
 import { AlertTriangle, Check, Monitor, Moon, Sun, UserPlus, Users } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BrandIcon } from '@/components/BrandIcon';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/toast';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
+import { getErrorMessage } from '@/lib/utils';
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,50}$/;
 
@@ -23,6 +24,7 @@ export function RegisterPage() {
   const ThemeIcon = preference === 'light' ? Sun : preference === 'dark' ? Moon : Monitor;
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [inviteCode, setInviteCode] = useState(searchParams.get('invite') ?? '');
@@ -30,6 +32,8 @@ export function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [invitePreview, setInvitePreview] = useState<{ name: string; memberCount: number } | null>(null);
   const [inviteInvalid, setInviteInvalid] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const markTouched = useCallback((field: string) => setTouched((t) => ({ ...t, [field]: true })), []);
 
   useEffect(() => {
     fetch('/api/auth/status')
@@ -70,6 +74,20 @@ export function RegisterPage() {
     digit: /\d/.test(password),
   }), [password]);
 
+  const fieldErrors = useMemo(() => {
+    const errors: Record<string, string | undefined> = {};
+    if (username && !USERNAME_REGEX.test(username)) {
+      errors.username = 'Must be 3-50 characters (letters, numbers, underscores)';
+    }
+    if (confirmPassword && password !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+    if (registrationMode === 'invite' && touched.inviteCode && !inviteCode.trim()) {
+      errors.inviteCode = 'An invite code is required to register';
+    }
+    return errors;
+  }, [username, password, confirmPassword, inviteCode, registrationMode, touched.inviteCode]);
+
   function validate(): string | null {
     if (!USERNAME_REGEX.test(username)) {
       return 'Username must be 3-50 characters (letters, numbers, underscores)';
@@ -90,16 +108,17 @@ export function RegisterPage() {
     e.preventDefault();
     const error = validate();
     if (error) {
+      setTouched({ username: true, confirmPassword: true, inviteCode: true });
       showToast({ message: error, variant: 'error' });
       return;
     }
     setLoading(true);
     try {
-      await register(username.trim(), password, displayName.trim() || username.trim(), inviteCode.trim() || undefined);
+      await register(username.trim(), password, displayName.trim() || username.trim(), email.trim() || undefined, inviteCode.trim() || undefined);
       navigate('/');
     } catch (err) {
       showToast({
-        message: err instanceof Error ? err.message : 'Registration failed',
+        message: getErrorMessage(err, 'Registration failed'),
         variant: 'error',
       });
     } finally {
@@ -151,11 +170,17 @@ export function RegisterPage() {
                   id="reg-username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  onBlur={() => markTouched('username')}
                   placeholder="Letters, numbers, underscores"
                   autoComplete="username"
                   autoFocus
                   required
+                  aria-invalid={touched.username && !!fieldErrors.username}
+                  aria-describedby={touched.username && fieldErrors.username ? 'reg-username-error' : undefined}
                 />
+                {touched.username && fieldErrors.username && (
+                  <p id="reg-username-error" role="alert" className="text-[11px] text-[var(--destructive)]">{fieldErrors.username}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reg-display-name">Display Name</Label>
@@ -165,6 +190,17 @@ export function RegisterPage() {
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="How you appear to others"
                   autoComplete="name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reg-email">Email</Label>
+                <Input
+                  id="reg-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Optional"
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">
@@ -207,10 +243,16 @@ export function RegisterPage() {
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  onBlur={() => markTouched('confirmPassword')}
                   placeholder="Repeat password"
                   autoComplete="new-password"
                   required
+                  aria-invalid={touched.confirmPassword && !!fieldErrors.confirmPassword}
+                  aria-describedby={touched.confirmPassword && fieldErrors.confirmPassword ? 'reg-confirm-error' : undefined}
                 />
+                {touched.confirmPassword && fieldErrors.confirmPassword && (
+                  <p id="reg-confirm-error" role="alert" className="text-[11px] text-[var(--destructive)]">{fieldErrors.confirmPassword}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reg-invite">
@@ -220,8 +262,14 @@ export function RegisterPage() {
                   id="reg-invite"
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value)}
+                  onBlur={() => markTouched('inviteCode')}
                   placeholder="Paste invite code to auto-join a location"
+                  aria-invalid={touched.inviteCode && !!fieldErrors.inviteCode}
+                  aria-describedby={touched.inviteCode && fieldErrors.inviteCode ? 'reg-invite-error' : undefined}
                 />
+                {touched.inviteCode && fieldErrors.inviteCode && (
+                  <p id="reg-invite-error" role="alert" className="text-[11px] text-[var(--destructive)]">{fieldErrors.inviteCode}</p>
+                )}
               </div>
               <Button
                 type="submit"

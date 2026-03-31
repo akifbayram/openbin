@@ -1,4 +1,4 @@
-import { ChevronRight, ExternalLink, Info, Keyboard, LogOut, Monitor, Moon, Sparkles, Sun, UserCircle } from 'lucide-react';
+import { ChevronRight, ExternalLink, Info, Keyboard, LogOut, Monitor, Moon, Shield, Sparkles, Sun, UserCircle } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -85,6 +85,25 @@ export function SettingsPage() {
         }
       />
 
+      {/* Admin (global admin only) */}
+      {user?.isAdmin && (
+        <Card>
+          <CardContent>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/users')}
+              className="flex items-center justify-between w-full text-[15px] font-semibold rounded-[var(--radius-xs)]"
+            >
+              <span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]">
+                <Shield className="h-3.5 w-3.5" />
+                Admin
+              </span>
+              <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)]" />
+            </button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Account */}
       {user && (
         <Card>
@@ -136,7 +155,7 @@ export function SettingsPage() {
           <div className="mt-1">
             <div className="row-spread py-1">
               <div>
-                <span className="text-[14px] text-[var(--text-primary)]">Enable keyboard shortcuts</span>
+                <span id="kbd-shortcuts-label" className="text-[14px] text-[var(--text-primary)]">Enable keyboard shortcuts</span>
                 <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">
                   Press <kbd className="inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-[var(--radius-sm)] bg-[var(--bg-input)] font-mono text-[11px] text-[var(--text-secondary)] leading-none">?</kbd> to view all shortcuts
                 </p>
@@ -144,6 +163,7 @@ export function SettingsPage() {
               <Switch
                 checked={preferences.keyboard_shortcuts_enabled}
                 onCheckedChange={(checked) => updatePreferences({ keyboard_shortcuts_enabled: checked })}
+                aria-labelledby="kbd-shortcuts-label"
               />
             </div>
           </div>

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { usePlan } from '@/lib/usePlan';
 import type { AiProvider, AiSettings } from '@/types';
 
 export function useAiSettings() {
   const { token } = useAuth();
+  const { isGated, isSelfHosted, isLoading: planLoading } = usePlan();
+  const aiGated = !isSelfHosted && isGated('ai');
   const [settings, setSettings] = useState<AiSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -19,6 +22,14 @@ export function useAiSettings() {
 
   useEffect(() => {
     if (!token) {
+      setSettings(null);
+      setIsLoading(false);
+      return;
+    }
+
+    if (planLoading) return;
+
+    if (aiGated) {
       setSettings(null);
       setIsLoading(false);
       return;
@@ -39,7 +50,7 @@ export function useAiSettings() {
       });
 
     return () => { cancelled = true; };
-  }, [token, refreshKey]);
+  }, [token, planLoading, aiGated, refreshKey]);
 
   return { settings, isLoading, setSettings };
 }

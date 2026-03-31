@@ -47,6 +47,7 @@ export function PersonalizationSection({ settings, updateSettings, resetSettings
                           updateSettings({ [key]: newSingular || newPlural ? `${newSingular}|${newPlural}` : '' });
                         }}
                         placeholder={`${singular} (singular)`}
+                        aria-label={`${singular} singular name`}
                       />
                       <Input
                         value={parts[1] || ''}
@@ -56,6 +57,7 @@ export function PersonalizationSection({ settings, updateSettings, resetSettings
                           updateSettings({ [key]: newSingular || newPlural ? `${newSingular}|${newPlural}` : '' });
                         }}
                         placeholder={`${plural} (plural)`}
+                        aria-label={`${plural} plural name`}
                       />
                     </div>
                   );

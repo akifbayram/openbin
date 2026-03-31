@@ -13,6 +13,7 @@ export interface User {
   plan?: PlanTier;
   subscriptionStatus?: SubscriptionStatus;
   activeUntil?: string | null;
+  isAdmin?: boolean;
 }
 
 export interface Location {
@@ -274,18 +275,37 @@ export interface PlanFeatures {
   apiKeys: boolean;
   customFields: boolean;
   fullExport: boolean;
+  reorganize: boolean;
+  binSharing: boolean;
   maxLocations: number | null;
-  maxBinsPerLocation: number | null;
   maxPhotoStorageMb: number | null;
   maxMembersPerLocation: number | null;
   activityRetentionDays: number | null;
+}
+
+export interface OverLimits {
+  locations: boolean;
+  photos: boolean;
+  members: string[];
+}
+
+export interface PlanUsage {
+  locationCount: number;
+  photoStorageMb: number;
+  memberCounts: Record<string, number>;
+  overLimits: OverLimits;
 }
 
 export interface PlanInfo {
   plan: PlanTier;
   status: SubscriptionStatus;
   activeUntil: string | null;
+  previousSubStatus: 'trial' | 'active' | null;
   selfHosted: boolean;
+  locked: boolean;
   features: PlanFeatures;
   upgradeUrl: string | null;
+  upgradeLiteUrl: string | null;
+  upgradeProUrl: string | null;
+  portalUrl: string | null;
 }

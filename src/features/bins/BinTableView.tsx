@@ -51,17 +51,19 @@ export function BinTableView({
       {/* Header */}
       <TableHeader>
         {/* Checkbox */}
-        <div className="w-6 shrink-0 flex justify-center">
+        <div className="w-8 shrink-0 flex justify-center">
           {selectable && onSelectAll && (
             <button
               type="button"
               onClick={onSelectAll}
-              className={cn(
+              className="h-8 w-8 flex items-center justify-center rounded-full"
+            >
+              <div className={cn(
                 'h-4 w-4 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
                 allSelected ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)]',
-              )}
-            >
-              {allSelected && <Check className="h-2.5 w-2.5 text-[var(--text-on-accent)]" strokeWidth={3} />}
+              )}>
+                {allSelected && <Check className="h-2.5 w-2.5 text-[var(--text-on-accent)]" strokeWidth={3} />}
+              </div>
             </button>
           )}
         </div>
@@ -161,25 +163,27 @@ const BinTableRow = React.memo(function BinTableRow({
       onContextMenu={longPress.onContextMenu}
     >
       {/* Checkbox */}
-      <div className="w-6 shrink-0 flex justify-center">
+      <div className="w-8 shrink-0 flex justify-center">
         {selectable ? (
           <button
             type="button"
             tabIndex={0}
-            className={cn(
-              'h-4 w-4 rounded-full border-2 transition-all duration-200 flex items-center justify-center appearance-none bg-transparent p-0',
-              selected ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)]',
-            )}
+            className="h-8 w-8 flex items-center justify-center rounded-full appearance-none bg-transparent p-0"
             onClick={(e) => { e.stopPropagation(); onSelect(bin.id, index, e.shiftKey); }}
             aria-label="Select"
           >
-            {selected && <Check className="h-2.5 w-2.5 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
+            <div className={cn(
+              'h-4 w-4 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
+              selected ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)]',
+            )}>
+              {selected && <Check className="h-2.5 w-2.5 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
+            </div>
           </button>
         ) : (
           <button
             type="button"
             tabIndex={0}
-            className="relative h-5 w-5 appearance-none bg-transparent border-none p-0"
+            className="relative h-8 w-8 appearance-none bg-transparent border-none p-0 flex items-center justify-center"
             onClick={(e) => { e.stopPropagation(); onSelect(bin.id, index, e.shiftKey); }}
             aria-label="Select"
           >

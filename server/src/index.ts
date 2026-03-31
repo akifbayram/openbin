@@ -7,12 +7,15 @@ import express from 'express';
 import multer from 'multer';
 import { getDb } from './db.js';
 import { config } from './lib/config.js';
-import { HttpError, PlanRestrictedError } from './lib/httpErrors.js';
+import { HttpError, OverLimitError, PlanRestrictedError } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
+import { createLogger } from './lib/logger.js';
 import { apiLimiter, authLimiter, joinLimiter, planApiLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { tryAuthenticate } from './middleware/auth.js';
 import { requestLogger } from './middleware/requestLogger.js';
+import { requireActiveSubscription } from './middleware/requirePlan.js';
 import activityRoutes from './routes/activity.js';
+import { adminRoutes } from './routes/admin.js';
 import aiRoutes from './routes/ai.js';
 import { streamRouter as aiStreamRoutes } from './routes/aiStream.js';
 import apiKeysRoutes from './routes/apiKeys.js';
@@ -22,6 +25,7 @@ import avatarRoutes from './routes/avatar.js';
 import { batchRoutes } from './routes/batch.js';
 import binItemsRoutes from './routes/binItems.js';
 import binPinsRoutes from './routes/binPins.js';
+import { binSharesRoutes } from './routes/binShares.js';
 import binsRoutes from './routes/bins.js';
 import customFieldsRoutes from './routes/customFields.js';
 import exportRoutes from './routes/export.js';
@@ -32,6 +36,7 @@ import { planRoutes } from './routes/plan.js';
 import printSettingsRoutes from './routes/printSettings.js';
 import savedViewsRoutes from './routes/savedViews.js';
 import scanHistoryRoutes from './routes/scanHistory.js';
+import { sharedRoutes } from './routes/shared.js';
 import { subscriptionsRoutes } from './routes/subscriptions.js';
 import tagColorsRoutes from './routes/tagColors.js';
 import tagsRoutes from './routes/tags.js';
@@ -55,16 +60,23 @@ export function createApp(): express.Express {
   // Security headers
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+    if (config.frameAncestors) {
+      res.setHeader('X-Frame-Options', `ALLOW-FROM ${config.frameAncestors.split(' ')[0]}`);
+    } else {
+      res.setHeader('X-Frame-Options', 'DENY');
+    }
     if (config.trustProxy) {
       res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
     }
     // CSP hashes must match the inline scripts in index.html — update if those scripts change
+    const frameAncestorsCsp = config.frameAncestors
+      ? `frame-ancestors 'self' ${config.frameAncestors};`
+      : "frame-ancestors 'none';";
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; img-src 'self' data: blob:; script-src 'self' 'sha256-7KadoKzu1sd1+0LivMFrmxISBXbhj6nm/vOZqEaVC5I=' 'sha256-4kldY8Nv9iluY61Doo0WCNi1p1qCWgXWfSgXIX8g3g0='; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self' blob:;",
+      `default-src 'self'; ${frameAncestorsCsp} img-src 'self' data: blob:; script-src 'self' 'sha256-7KadoKzu1sd1+0LivMFrmxISBXbhj6nm/vOZqEaVC5I=' 'sha256-4kldY8Nv9iluY61Doo0WCNi1p1qCWgXWfSgXIX8g3g0='; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self' blob:;`,
     );
     next();
   });
@@ -94,7 +106,8 @@ export function createApp(): express.Express {
 
   // Routes
   app.use('/api', apiLimiter);
-  app.use('/api', tryAuthenticate, planApiLimiter);
+  app.use('/api', tryAuthenticate, requireActiveSubscription());
+  app.use('/api', planApiLimiter);
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/demo-login', authLimiter);
   app.use('/api/auth/register', registerLimiter);
@@ -102,6 +115,7 @@ export function createApp(): express.Express {
   app.use('/api/auth/refresh', sensitiveAuthLimiter);
   app.use('/api/auth/password', sensitiveAuthLimiter);
   app.use('/api/auth/account', sensitiveAuthLimiter);
+  app.use('/api/auth/forgot-password', sensitiveAuthLimiter);
   app.use('/api/auth/reset-password', sensitiveAuthLimiter);
   app.use('/api/auth', authRoutes);
   app.use('/api/auth', avatarRoutes);
@@ -111,6 +125,7 @@ export function createApp(): express.Express {
   app.use('/api/locations', activityRoutes);
   app.use('/api/locations', customFieldsRoutes);
   app.use('/api/bins', binPinsRoutes);
+  app.use('/api/bins', binSharesRoutes);
   app.use('/api/bins', binsRoutes);
   app.use('/api/bins', binItemsRoutes);
   app.use('/api/photos', photosRoutes);
@@ -120,6 +135,7 @@ export function createApp(): express.Express {
   app.use('/api/saved-views', savedViewsRoutes);
   app.use('/api/scan-history', scanHistoryRoutes);
   app.use('/api/plan', planRoutes);
+  app.use('/api/shared', sharedRoutes);
   app.use('/api/subscriptions', subscriptionsRoutes);
   app.use('/api', exportRoutes);
   app.use('/api/ai', aiRoutes);
@@ -128,10 +144,19 @@ export function createApp(): express.Express {
   app.use('/api/tags', tagsRoutes);
   app.use('/api/items', itemsRoutes);
   app.use('/api', batchRoutes);
+  app.use('/api/admin', adminRoutes);
 
   // Global error handler
   app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (err instanceof PlanRestrictedError) {
+      res.status(err.statusCode).json({
+        error: err.code,
+        message: err.message,
+        upgrade_url: err.upgradeUrl,
+      });
+      return;
+    }
+    if (err instanceof OverLimitError) {
       res.status(err.statusCode).json({
         error: err.code,
         message: err.message,
@@ -148,8 +173,9 @@ export function createApp(): express.Express {
       res.status(422).json({ error: 'VALIDATION_ERROR', message });
       return;
     }
+    const log = createLogger('http');
     pushLog({ level: 'error', message: `${err.name}: ${err.message}` });
-    console.error(err.stack);
+    log.error(`${err.name}: ${err.message}`, err.stack);
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
   });
 

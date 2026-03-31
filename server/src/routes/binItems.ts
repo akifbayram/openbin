@@ -3,6 +3,7 @@ import { generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { isLocationAdmin, requireMemberOrAbove, verifyBinAccess } from '../lib/binAccess.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { assertLocationWritable } from '../lib/planGate.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -31,6 +32,8 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
   }
 
   const access = await verifyBinEditAccess(id, req.user!.id);
+
+  await assertLocationWritable(access.locationId);
 
   // Get max position
   const maxResult = await query<{ max_pos: number | null }>(
@@ -134,6 +137,8 @@ router.put('/:id/items/:itemId', asyncHandler(async (req, res) => {
 
   const access = await verifyBinEditAccess(id, req.user!.id);
 
+  await assertLocationWritable(access.locationId);
+
   const itemResult = await query<{ name: string; quantity: number | null }>(
     'SELECT name, quantity FROM bin_items WHERE id = $1 AND bin_id = $2',
     [itemId, id]
@@ -184,6 +189,8 @@ router.patch('/:id/items/:itemId/quantity', asyncHandler(async (req, res) => {
   }
 
   const access = await verifyBinEditAccess(id, req.user!.id);
+
+  await assertLocationWritable(access.locationId);
 
   const itemResult = await query<{ name: string; quantity: number | null }>(
     'SELECT name, quantity FROM bin_items WHERE id = $1 AND bin_id = $2',

@@ -72,6 +72,7 @@ describe('requirePro()', () => {
       subStatus: 1,
       activeUntil: null,
       email: 'pro@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(true);
@@ -89,10 +90,11 @@ describe('requirePro()', () => {
       subStatus: 1,
       activeUntil: null,
       email: 'lite@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 
     const error = await runMiddleware(requirePro());
 
@@ -108,9 +110,10 @@ describe('requirePro()', () => {
       subStatus: 1,
       activeUntil: '2020-01-01T00:00:00.000Z',
       email: 'expired@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 
     const error = await runMiddleware(requirePro());
 
@@ -137,10 +140,11 @@ describe('requirePro()', () => {
       subStatus: 1,
       activeUntil: null,
       email: 'lite@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(upgradeUrl);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(upgradeUrl);
 
     const error = await runMiddleware(requirePro());
 
@@ -157,9 +161,10 @@ describe('requirePro()', () => {
       subStatus: 1,
       activeUntil: '2020-01-01T00:00:00.000Z',
       email: 'expired@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(upgradeUrl);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(upgradeUrl);
 
     const error = await runMiddleware(requirePro());
 
@@ -195,6 +200,7 @@ describe('requireWriteApi()', () => {
       subStatus: 1,
       activeUntil: null,
       email: 'pro@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(true);
@@ -212,10 +218,11 @@ describe('requireWriteApi()', () => {
       subStatus: 1,
       activeUntil: null,
       email: 'lite@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 
     const error = await runMiddleware(requireWriteApi());
 
@@ -231,9 +238,10 @@ describe('requireWriteApi()', () => {
       subStatus: 1,
       activeUntil: '2020-01-01T00:00:00.000Z',
       email: 'expired@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(null);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 
     const error = await runMiddleware(requireWriteApi());
 
@@ -249,10 +257,11 @@ describe('requireWriteApi()', () => {
       subStatus: 1,
       activeUntil: null,
       email: 'lite@example.com',
+      previousSubStatus: null,
     });
     vi.mocked(isSubscriptionActive).mockReturnValue(true);
     vi.mocked(isProUser).mockReturnValue(false);
-    vi.mocked(generateUpgradeUrl).mockReturnValue(upgradeUrl);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(upgradeUrl);
 
     const error = await runMiddleware(requireWriteApi());
 

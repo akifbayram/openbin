@@ -21,67 +21,99 @@ import type { PlanInfo } from '@/types';
 const mockApiFetch = vi.mocked(apiFetch);
 const mockUseAuth = vi.mocked(useAuth);
 
+const MOCK_USAGE = {
+  locationCount: 1,
+  photoStorageMb: 10,
+  memberCounts: {},
+  overLimits: { locations: false, photos: false, members: [] },
+};
+
 const SELF_HOSTED_PLAN: PlanInfo = {
   plan: 'pro',
   status: 'active',
   activeUntil: null,
+  previousSubStatus: null,
   selfHosted: true,
+  locked: false,
   features: {
     ai: true,
     apiKeys: true,
     customFields: true,
     fullExport: true,
+    reorganize: true,
+    binSharing: true,
     maxLocations: null,
-    maxBinsPerLocation: null,
     maxPhotoStorageMb: null,
     maxMembersPerLocation: null,
     activityRetentionDays: null,
   },
   upgradeUrl: null,
+  upgradeLiteUrl: null,
+  upgradeProUrl: null,
+  portalUrl: null,
 };
 
 const LITE_PLAN: PlanInfo = {
   plan: 'lite',
   status: 'inactive',
   activeUntil: null,
+  previousSubStatus: 'active',
   selfHosted: false,
+  locked: true,
   features: {
     ai: false,
     apiKeys: false,
     customFields: false,
     fullExport: false,
+    reorganize: false,
+    binSharing: false,
     maxLocations: 1,
-    maxBinsPerLocation: 100,
     maxPhotoStorageMb: 100,
     maxMembersPerLocation: 1,
-    activityRetentionDays: 30,
+    activityRetentionDays: 90,
   },
   upgradeUrl: 'https://example.com/upgrade',
+  upgradeLiteUrl: 'https://example.com/auth/openbin?token=abc&plan=lite',
+  upgradeProUrl: 'https://example.com/auth/openbin?token=abc&plan=pro',
+  portalUrl: null,
 };
 
 const PRO_PLAN: PlanInfo = {
   plan: 'pro',
   status: 'active',
   activeUntil: '2027-01-01T00:00:00.000Z',
+  previousSubStatus: null,
   selfHosted: false,
+  locked: false,
   features: {
     ai: true,
     apiKeys: true,
     customFields: true,
     fullExport: true,
+    reorganize: true,
+    binSharing: true,
     maxLocations: null,
-    maxBinsPerLocation: null,
-    maxPhotoStorageMb: 2048,
+    maxPhotoStorageMb: 5000,
     maxMembersPerLocation: null,
     activityRetentionDays: 90,
   },
   upgradeUrl: null,
+  upgradeLiteUrl: null,
+  upgradeProUrl: null,
+  portalUrl: 'https://example.com/portal?token=abc',
 };
 
 function makeWrapper() {
   return function Wrapper({ children }: { children: ReactNode }) {
     return React.createElement(PlanProvider, null, children);
   };
+}
+
+function mockPlanFetch(plan: PlanInfo) {
+  mockApiFetch.mockImplementation((path: string) => {
+    if (path === '/api/plan/usage') return Promise.resolve(MOCK_USAGE);
+    return Promise.resolve(plan);
+  });
 }
 
 describe('usePlan', () => {
@@ -95,7 +127,7 @@ describe('usePlan', () => {
   });
 
   it('provides self-hosted plan when API returns selfHosted: true', async () => {
-    mockApiFetch.mockResolvedValue(SELF_HOSTED_PLAN);
+    mockPlanFetch(SELF_HOSTED_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
@@ -109,7 +141,7 @@ describe('usePlan', () => {
   });
 
   it('provides lite plan info for lite users', async () => {
-    mockApiFetch.mockResolvedValue(LITE_PLAN);
+    mockPlanFetch(LITE_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
@@ -122,7 +154,7 @@ describe('usePlan', () => {
   });
 
   it('provides pro plan info for pro users', async () => {
-    mockApiFetch.mockResolvedValue(PRO_PLAN);
+    mockPlanFetch(PRO_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
@@ -135,7 +167,7 @@ describe('usePlan', () => {
   });
 
   it('isGated returns true for gated boolean features on lite plan', async () => {
-    mockApiFetch.mockResolvedValue(LITE_PLAN);
+    mockPlanFetch(LITE_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
@@ -148,7 +180,7 @@ describe('usePlan', () => {
   });
 
   it('isGated returns false for numeric limit features (not boolean)', async () => {
-    mockApiFetch.mockResolvedValue(LITE_PLAN);
+    mockPlanFetch(LITE_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
@@ -156,11 +188,10 @@ describe('usePlan', () => {
 
     // Numeric limits are not boolean-gated via isGated
     expect(result.current.isGated('maxLocations')).toBe(false);
-    expect(result.current.isGated('maxBinsPerLocation')).toBe(false);
   });
 
   it('isGated returns false for all features on pro plan', async () => {
-    mockApiFetch.mockResolvedValue(PRO_PLAN);
+    mockPlanFetch(PRO_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 

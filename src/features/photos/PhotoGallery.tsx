@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import type { Photo } from '@/types';
 import { compressImage } from './compressImage';
 import { DeletePhotoDialog } from './DeletePhotoDialog';
@@ -34,7 +34,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
         await addPhoto(binId, compressedFile);
       } catch (err) {
         showToast({
-          message: err instanceof Error ? err.message : 'Failed to add photo',
+          message: getErrorMessage(err, 'Failed to add photo'),
           variant: 'error',
         });
       }
@@ -47,7 +47,7 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
       await deletePhoto(photo.id);
       showToast({ message: 'Deleted photo', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete photo', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to delete photo'), variant: 'error' });
     }
   }, [showToast]);
 

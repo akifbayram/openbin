@@ -1,15 +1,18 @@
 import '@/components/ui/animations.css';
-import { ChevronDown } from 'lucide-react';
+import { PackageOpen } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Disclosure } from '@/components/ui/disclosure';
+import { EmptyState } from '@/components/ui/empty-state';
 import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { resolveIcon } from '@/lib/iconMap';
 import { useNavigationGuard } from '@/lib/navigationGuard';
 import { useTerminology } from '@/lib/terminology';
-import { cn } from '@/lib/utils';
+import { usePlan } from '@/lib/usePlan';
+import { disclosureSectionLabel } from '@/lib/utils';
 import { BinDetailSkeleton } from './BinDetailSkeleton';
 import { BinDetailToolbar } from './BinDetailToolbar';
 import { BinEditContent } from './BinEditContent';
@@ -17,6 +20,7 @@ import { BinViewContent } from './BinViewContent';
 import { ChangeCodeDialog } from './ChangeCodeDialog';
 import { DeleteBinDialog } from './DeleteBinDialog';
 import { MoveBinDialog } from './MoveBinDialog';
+import { ShareBinDialog } from './ShareBinDialog';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 import { useBinDetailActions } from './useBinDetailActions';
 import type { BinFilters, SortOption } from './useBins';
@@ -43,6 +47,9 @@ export function BinDetailPage() {
   const edit = useEditBinForm(id);
   const actions = useBinDetailActions(bin, id, edit.editing);
   const { fields: customFieldDefs } = useCustomFields(bin?.location_id);
+  const { isLocked } = usePlan();
+  const [shareOpen, setShareOpen] = useState(false);
+  const showShareButton = actions.isAdmin && !isLocked;
 
   // Fetch the bin list matching the sort/search/filters the user had active
   const hasBinListContext = !!backState?.backPath;
@@ -59,7 +66,6 @@ export function BinDetailPage() {
   const nextBinId = currentIndex >= 0 && currentIndex < binList.length - 1 ? binList[currentIndex + 1].id : null;
 
   const [unsavedOpen, setUnsavedOpen] = useState(false);
-  const [photosExpanded, setPhotosExpanded] = useState(false);
   const pendingNav = useRef<(() => void) | null>(null);
   const { setGuard, guardedNavigate } = useNavigationGuard();
 
@@ -92,18 +98,54 @@ export function BinDetailPage() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [edit.editing, edit.isDirty]);
 
+  // Keyboard shortcuts — use ref for unstable `edit` object to avoid re-registering listener every render
+  const editRef = useRef(edit);
+  editRef.current = edit;
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      const ed = editRef.current;
+
+      if (ed.editing) {
+        if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+          e.preventDefault();
+          ed.saveEdit();
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          guardedNavigate(() => ed.cancelEdit());
+        }
+      } else if (bin) {
+        if (e.key === 'e' && actions.canEdit) {
+          e.preventDefault();
+          ed.startEdit(bin);
+        }
+        if ((e.key === 'j' || e.key === 'ArrowLeft') && prevBinId) {
+          e.preventDefault();
+          navigate(`/bin/${prevBinId}`, { state: { ...backState } });
+        }
+        if ((e.key === 'k' || e.key === 'ArrowRight') && nextBinId) {
+          e.preventDefault();
+          navigate(`/bin/${nextBinId}`, { state: { ...backState } });
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [edit.editing, actions.canEdit, bin, prevBinId, nextBinId, navigate, backState, guardedNavigate]);
+
   if (isLoading && bin === undefined) {
     return <BinDetailSkeleton />;
   }
 
   if (!bin) {
     return (
-      <div className="flex flex-col items-center justify-center gap-5 py-24 text-[var(--text-tertiary)]">
-        <p className="text-[17px] font-semibold text-[var(--text-secondary)]">{t.Bin} not found</p>
+      <EmptyState icon={PackageOpen} title={`${t.Bin} not found`} subtitle="It may have been deleted or moved to another location.">
         <Button variant="outline" onClick={() => navigate('/bins')}>
           Back to {t.bins}
         </Button>
-      </div>
+      </EmptyState>
     );
   }
 
@@ -112,27 +154,14 @@ export function BinDetailPage() {
   const photosSection = (
     <Card>
       <CardContent className="!py-0">
-        <button
-          type="button"
-          onClick={() => setPhotosExpanded(!photosExpanded)}
-          aria-expanded={photosExpanded}
-          className="row-spread w-full py-4 text-left"
+        <Disclosure
+          label={`Photos${actions.photos.length > 0 ? ` (${actions.photos.length})` : ''}`}
+          labelClassName={disclosureSectionLabel}
         >
-          <span className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
-            Photos{actions.photos.length > 0 ? ` (${actions.photos.length})` : ''}
-          </span>
-          <ChevronDown
-            className={cn(
-              'h-4 w-4 text-[var(--text-tertiary)] transition-transform duration-200',
-              photosExpanded && 'rotate-180'
-            )}
-          />
-        </button>
-        {photosExpanded && (
-          <div className="pb-4">
+          <div className="pb-2">
             <PhotoGallery binId={bin.id} variant="inline" />
           </div>
-        )}
+        </Disclosure>
       </CardContent>
     </Card>
   );
@@ -152,6 +181,7 @@ export function BinDetailPage() {
         isAnalyzing={actions.isAnalyzing}
         isReanalysis={actions.isReanalysis}
         editNameValid={!!edit.name.trim()}
+        isSaving={edit.isSaving}
         otherLocations={actions.otherLocations}
         onClose={() => guardedNavigate(() => backState?.backPath ? navigate(backState.backPath) : window.history.length > 1 ? navigate(-1) : navigate('/bins'))}
         onPrev={prevBinId ? () => guardedNavigate(() => navigate(`/bin/${prevBinId}`, { state: { ...backState } })) : null}
@@ -174,6 +204,8 @@ export function BinDetailPage() {
         onDelete={() => actions.setDeleteOpen(true)}
         isAdmin={actions.isAdmin}
         onChangeCode={() => actions.setChangeCodeOpen(true)}
+        onShare={() => setShareOpen(true)}
+        showShareButton={showShareButton}
       />
 
       {edit.editing ? (
@@ -229,6 +261,14 @@ export function BinDetailPage() {
         onOpenChange={actions.setChangeCodeOpen}
         currentBin={{ id: bin.id, name: bin.name }}
       />
+
+      {showShareButton && (
+        <ShareBinDialog
+          binId={bin.id}
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+        />
+      )}
 
       <UnsavedChangesDialog
         open={unsavedOpen}

@@ -1,7 +1,8 @@
-import type { RequestHandler } from 'express';
-import rateLimit from 'express-rate-limit';
+import type { Request, RequestHandler, Response } from 'express';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import { query } from '../db.js';
 import { config } from './config.js';
-import { getUserPlanInfo, isProUser, isSelfHosted } from './planGate.js';
+import { generateUpgradeUrl, Plan, SubStatus } from './planGate.js';
 
 const noop: RequestHandler = (_req, _res, next) => next();
 const isTest = config.disableRateLimit;
@@ -46,31 +47,78 @@ export const apiLimiter: RequestHandler = isTest ? noop : rateLimit({
   message: { error: 'RATE_LIMITED', message: 'Too many requests, please try again later' },
 });
 
+export const metricsLimiter: RequestHandler = isTest ? noop : rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'RATE_LIMITED', message: 'Too many requests, please try again later' },
+});
+
+// Plan-aware API rate limiter — per-user hourly limits based on subscription tier
+interface PlanCacheEntry {
+  plan: number;
+  status: number;
+  email: string | null;
+  expiresAt: number;
+}
+
+const planCache = new Map<string, PlanCacheEntry>();
 const PLAN_CACHE_TTL = 5 * 60 * 1000;
-const planMaxCache = new Map<string, { limit: number; expiresAt: number }>();
 
-async function resolveMaxForUser(userId: string): Promise<number> {
-  const cached = planMaxCache.get(userId);
-  if (cached && cached.expiresAt > Date.now()) return cached.limit;
-  const planInfo = await getUserPlanInfo(userId);
-  const limit = planInfo && isProUser(planInfo) ? 1000 : 200;
-  planMaxCache.set(userId, { limit, expiresAt: Date.now() + PLAN_CACHE_TTL });
-  return limit;
+async function getCachedPlanInfo(userId: string): Promise<PlanCacheEntry | null> {
+  const cached = planCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) return cached;
+
+  const result = await query(
+    'SELECT plan, sub_status, email FROM users WHERE id = $1',
+    [userId],
+  );
+  if (result.rows.length === 0) return null;
+
+  const row = result.rows[0] as { plan: number; sub_status: number; email: string | null };
+  const entry: PlanCacheEntry = {
+    plan: row.plan,
+    status: row.sub_status,
+    email: row.email,
+    expiresAt: Date.now() + PLAN_CACHE_TTL,
+  };
+  planCache.set(userId, entry);
+  return entry;
 }
 
-export function createPlanApiLimiter(): RequestHandler {
-  if (isSelfHosted()) return noop;
-  return rateLimit({
-    windowMs: 60 * 60 * 1000,
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: (req) => req.user?.id ?? '',
-    skip: (req) => !req.user,
-    max: async (req) => resolveMaxForUser(req.user!.id),
-    message: { error: 'RATE_LIMITED', message: 'Hourly API rate limit exceeded, please try again later' },
-  });
-}
+export const planApiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  keyGenerator: (req: Request) => req.user?.id ?? ipKeyGenerator(req.ip ?? 'unknown'),
+  max: async (req: Request) => {
+    if (!req.user) return 200;
+    const info = await getCachedPlanInfo(req.user.id);
+    if (!info) return 100;
+    if (info.status === SubStatus.TRIAL) return 1000;
+    if (info.status === SubStatus.ACTIVE) {
+      return info.plan === Plan.PRO ? 1000 : 200;
+    }
+    return 100;
+  },
+  skip: (req: Request) => isTest || config.selfHosted || !req.user,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  handler: async (req: Request, res: Response) => {
+    const info = planCache.get(req.user?.id ?? '');
+    const upgradeUrl = req.user
+      ? await generateUpgradeUrl(req.user.id, info?.email ?? null)
+      : null;
+    res.status(429).json({
+      error: 'RATE_LIMITED',
+      message: 'Too many requests, please try again later',
+      ...(upgradeUrl ? { upgrade_url: upgradeUrl } : {}),
+    });
+  },
+});
 
-export const planApiLimiter: RequestHandler = isTest ? noop : createPlanApiLimiter();
+export function invalidatePlanRateLimit(userId: string): void {
+  planCache.delete(userId);
+  planApiLimiter.resetKey(userId);
+}
 
 export { aiLimiter } from './aiRateLimiter.js';

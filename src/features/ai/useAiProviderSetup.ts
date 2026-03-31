@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/toast';
+import { getErrorMessage } from '@/lib/utils';
 import type { AiProvider, AiSettings } from '@/types';
 import { DEFAULT_MODELS } from './aiConstants';
 import { saveAiSettings, testAiConnection } from './useAiSettings';
@@ -92,7 +93,7 @@ export function useAiProviderSetup(opts?: UseAiProviderSetupOptions): AiProvider
       showToast({ message: 'AI settings saved' });
       opts?.onSaveSuccess?.();
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to save AI settings' });
+      showToast({ message: getErrorMessage(err, 'Failed to save AI settings') });
     } finally {
       setSaving(false);
     }

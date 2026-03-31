@@ -4,6 +4,9 @@ import archiver from 'archiver';
 import cron from 'node-cron';
 import { getDb } from '../db.js';
 import { config as appConfig } from './config.js';
+import { createLogger } from './logger.js';
+
+const log = createLogger('backup');
 
 const SCHEDULE_PRESETS: Record<string, string> = {
   hourly: '0 * * * *',
@@ -53,7 +56,7 @@ async function notifyWebhook(url: string, error: Error): Promise<void> {
       }),
     });
   } catch (err) {
-    console.error('[backup] Webhook notification failed:', err);
+    log.error('Webhook notification failed:', err);
   }
 }
 
@@ -98,7 +101,7 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
     // Prune old backups
     pruneBackups(cfg.backupPath, cfg.retention);
 
-    console.log(`[backup] Created ${filename}`);
+    log.info(`Created ${filename}`);
     return zipPath;
   } catch (err) {
     // Clean up partial files
@@ -106,7 +109,7 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
     if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
 
     const error = err instanceof Error ? err : new Error(String(err));
-    console.error('[backup] Backup failed:', error.message);
+    log.error('Backup failed:', error.message);
 
     if (cfg.webhookUrl) {
       await notifyWebhook(cfg.webhookUrl, error);
@@ -127,9 +130,9 @@ export function pruneBackups(backupPath: string, retention: number): void {
   for (const file of toDelete) {
     try {
       fs.unlinkSync(path.join(backupPath, file));
-      console.log(`[backup] Pruned ${file}`);
+      log.info(`Pruned ${file}`);
     } catch (err) {
-      console.error(`[backup] Failed to prune ${file}:`, err);
+      log.error(`Failed to prune ${file}:`, err);
     }
   }
 }
@@ -140,13 +143,13 @@ export function startBackupScheduler(): void {
   const cfg = getConfig();
 
   if (!cfg.enabled) {
-    console.log('[backup] Scheduled backups disabled');
+    log.info('Scheduled backups disabled');
     return;
   }
 
   const cronExpr = resolveSchedule(cfg.schedule);
   if (!cronExpr) {
-    console.error(`[backup] Invalid schedule: "${cfg.schedule}". Backups will not run.`);
+    log.error(`Invalid schedule: "${cfg.schedule}". Backups will not run.`);
     return;
   }
 
@@ -158,7 +161,7 @@ export function startBackupScheduler(): void {
     }
   });
 
-  console.log(`[backup] Scheduled with cron "${cronExpr}" (${cfg.schedule}), retention=${cfg.retention}`);
+  log.info(`Scheduled with cron "${cronExpr}" (${cfg.schedule}), retention=${cfg.retention}`);
 }
 
 export function stopBackupScheduler(): void {

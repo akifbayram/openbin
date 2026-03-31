@@ -39,7 +39,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => { quickAdd.handleAdd(); inputRef.current?.focus(); }}
                 disabled={quickAdd.saving}
-                className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors disabled:opacity-50"
+                className="shrink-0 flex items-center justify-center size-9 rounded-[var(--radius-lg)] text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors disabled:opacity-50"
                 aria-label="Add item"
               >
                 <Plus className="h-4 w-4" />
@@ -51,7 +51,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               <button
                 type="button"
                 onClick={quickAdd.handleAiClick}
-                className="shrink-0 rounded-[var(--radius-lg)] p-1 text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
+                className="shrink-0 flex items-center justify-center size-9 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
                 aria-label="Add with AI"
               >
                 <Sparkles className="h-4 w-4" />
@@ -114,7 +114,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
                   type="button"
                   onClick={() => quickAdd.toggleChecked(i)}
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] transition-all',
+                    'inline-flex items-center gap-1.5 rounded-full min-h-[44px] px-3 py-2 text-[13px] transition-all',
                     checked
                       ? 'bg-[var(--accent)] text-white'
                       : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] line-through',

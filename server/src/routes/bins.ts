@@ -11,10 +11,11 @@ import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinI
 import { validateBinFields, validateCodeFormat } from '../lib/binValidation.js';
 import { config } from '../lib/config.js';
 import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
-import { ForbiddenError, GoneError, NotFoundError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
+import { ForbiddenError, GoneError, NotFoundError, OverLimitError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
+import { createLogger } from '../lib/logger.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
-import { enforceBinQuota, getUserFeatures, throwPlanRestricted } from '../lib/planGate.js';
+import { assertLocationWritable, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache } from '../lib/planGate.js';
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { storage } from '../lib/storage.js';
@@ -22,6 +23,7 @@ import { purgeExpiredTrash } from '../lib/trashPurge.js';
 import { binPhotoUpload, MIME_TO_EXT, validateFileBuffer, validateFileType } from '../lib/uploadConfig.js';
 import { validateBinName } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
+import { requireCleanFile } from '../middleware/malwareScan.js';
 
 const router = Router();
 
@@ -40,9 +42,9 @@ router.post('/', asyncHandler(async (req, res) => {
 
   await requireMemberOrAbove(locationId, req.user!.id, 'create bins');
 
-  if (areaId) await verifyAreaInLocation(areaId, locationId);
+  await assertLocationWritable(locationId);
 
-  await enforceBinQuota(locationId, req.user!.id);
+  if (areaId) await verifyAreaInLocation(areaId, locationId);
 
   const bin = await insertBinWithItems({
     locationId,
@@ -272,7 +274,7 @@ router.post('/:id/change-code', sensitiveAuthLimiter, asyncHandler(async (req, r
     fs.renameSync(oldDir, newDir);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-      console.error(`Failed to rename photo directory ${oldDir} → ${newDir}:`, err);
+      createLogger('bins').error(`Failed to rename photo directory ${oldDir} → ${newDir}:`, err);
     }
   }
 
@@ -347,6 +349,8 @@ router.put('/:id', asyncHandler(async (req, res) => {
   if (!access) {
     throw new NotFoundError('Bin not found');
   }
+
+  await assertLocationWritable(access.locationId);
 
   // Viewers cannot edit at all
   const role = await getMemberRole(access.locationId, req.user!.id);
@@ -432,6 +436,8 @@ router.delete('/:id', asyncHandler(async (req, res) => {
     throw new NotFoundError('Bin not found');
   }
 
+  await assertLocationWritable(access.locationId);
+
   await requireAdmin(access.locationId, req.user!.id, 'delete bins');
 
   // Fetch bin before soft-deleting for response
@@ -510,6 +516,8 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
   }
   await requireMemberOrAbove(access.locationId, req.user!.id, 'upload photos');
 
+  await assertLocationWritable(access.locationId);
+
   // Per-bin photo count limit (always enforced)
   const countResult = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM photos WHERE bin_id = $1', [binId]);
   if (countResult.rows[0].cnt >= config.maxPhotosPerBin) {
@@ -524,7 +532,9 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
     const usedBytes = usageResult.rows[0].total;
 
     if (photoFeatures.maxPhotoStorageMb !== null && usedBytes >= photoFeatures.maxPhotoStorageMb * 1024 * 1024) {
-      await throwPlanRestricted(req.user!.id, `Photo storage limit reached (${photoFeatures.maxPhotoStorageMb} MB)`);
+      const planInfo = await getUserPlanInfo(req.user!.id);
+      const upgradeUrl = planInfo ? await generateUpgradeUrl(req.user!.id, planInfo.email) : null;
+      throw new OverLimitError(`Photo storage limit reached (${photoFeatures.maxPhotoStorageMb} MB)`, upgradeUrl);
     }
 
     if (config.demoMode) {
@@ -542,7 +552,7 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
   }
 
   next();
-}), binPhotoUpload.single('photo'), asyncHandler(async (req, res) => {
+}), binPhotoUpload.single('photo'), requireCleanFile, asyncHandler(async (req, res) => {
   const binId = req.params.id;
   const file = req.file;
 
@@ -605,6 +615,8 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
   );
 
   await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [binId]);
+
+  invalidateOverLimitCache(req.user!.id);
 
   const photo = result.rows[0];
 
@@ -690,8 +702,6 @@ router.post('/:id/duplicate', asyncHandler(async (req, res) => {
 
   const newName = req.body.name ? String(req.body.name).trim() : `Copy of ${src.name}`;
   if (req.body.name) validateBinName(req.body.name);
-
-  await enforceBinQuota(src.location_id, req.user!.id);
 
   // Copy items from source
   const itemsResult = await query<{ name: string; position: number }>(

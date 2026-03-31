@@ -185,6 +185,7 @@ describe('startBackupScheduler', () => {
     startBackupScheduler();
 
     expect(logSpy).toHaveBeenCalledWith(
+      expect.anything(),
       expect.stringContaining('disabled')
     );
     logSpy.mockRestore();
@@ -198,6 +199,7 @@ describe('startBackupScheduler', () => {
     expect(() => startBackupScheduler()).not.toThrow();
 
     expect(errorSpy).toHaveBeenCalledWith(
+      expect.anything(),
       expect.stringContaining('Invalid schedule')
     );
     errorSpy.mockRestore();
@@ -211,6 +213,7 @@ describe('startBackupScheduler', () => {
     startBackupScheduler();
 
     expect(logSpy).toHaveBeenCalledWith(
+      expect.anything(),
       expect.stringContaining('Scheduled with cron')
     );
     logSpy.mockRestore();

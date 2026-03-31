@@ -1,38 +1,8 @@
 import type { QrStyleOptions } from '@/features/print/usePrintSettings';
 import { getBinQrPayload } from './constants';
-import type { QRColorOptions } from './qr';
+import { getQRCodeStyling, makeLruCache, type QRColorOptions, rawQrToDataURL } from './qr';
 
-// Module-level import cache — import once, reuse forever
-let QRCodeStylingCtor: typeof import('qr-code-styling').default | null = null;
-
-async function getQRCodeStyling() {
-  if (!QRCodeStylingCtor) {
-    const mod = await import('qr-code-styling');
-    QRCodeStylingCtor = mod.default;
-  }
-  return QRCodeStylingCtor;
-}
-
-// LRU cache: key = "binId:size:styleHash", value = data URL string
-const MAX_CACHE = 200;
-const cache = new Map<string, string>();
-
-function cacheGet(key: string): string | undefined {
-  const val = cache.get(key);
-  if (val !== undefined) {
-    cache.delete(key);
-    cache.set(key, val);
-  }
-  return val;
-}
-
-function cacheSet(key: string, value: string): void {
-  if (cache.size >= MAX_CACHE) {
-    const oldest = cache.keys().next().value;
-    if (oldest !== undefined) cache.delete(oldest);
-  }
-  cache.set(key, value);
-}
+const cache = makeLruCache();
 
 function styleHash(style: QrStyleOptions, colorOverride?: QRColorOptions): string {
   return JSON.stringify({ ...style, _co: colorOverride });
@@ -45,7 +15,7 @@ export async function generateStyledQRDataURL(
   colorOverride?: QRColorOptions,
 ): Promise<string> {
   const key = `${binId}:${size}:${styleHash(style, colorOverride)}`;
-  const cached = cacheGet(key);
+  const cached = cache.get(key);
   if (cached) return cached;
 
   const Ctor = await getQRCodeStyling();
@@ -102,14 +72,8 @@ export async function generateStyledQRDataURL(
 
   const raw = await qr.getRawData('png');
   if (!raw) throw new Error('Failed to generate styled QR code');
-  const blob = raw instanceof Blob ? raw : new Blob([new Uint8Array(raw)], { type: 'image/png' });
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-  cacheSet(key, dataUrl);
+  const dataUrl = await rawQrToDataURL(raw);
+  cache.set(key, dataUrl);
   return dataUrl;
 }
 

@@ -1,5 +1,6 @@
 import { query } from '../db.js';
-import { ForbiddenError, ValidationError } from './httpErrors.js';
+import { ForbiddenError, OverLimitError, ValidationError } from './httpErrors.js';
+import { checkLocationWritable, generateUpgradeUrl, getEffectiveMemberRole, getUserPlanInfo } from './planGate.js';
 
 /** Verify user is a member of the location that owns a non-deleted bin.
  *  Private bins are only accessible to their creator. */
@@ -60,7 +61,20 @@ export async function requireMemberOrAbove(locationId: string, userId: string, a
   if (!role) {
     throw new ForbiddenError(`Not a member of this location`);
   }
-  if (role === 'viewer') {
+
+  // Check if location is writable (owner's plan limit)
+  const writableCheck = await checkLocationWritable(locationId);
+  if (!writableCheck.writable) {
+    const planInfo = await getUserPlanInfo(userId);
+    const upgradeUrl = planInfo ? await generateUpgradeUrl(userId, planInfo.email) : null;
+    throw new OverLimitError(writableCheck.reason ?? 'Location is read-only due to plan limits', upgradeUrl);
+  }
+
+  // Use ownerId from writableCheck instead of querying again
+  const ownerId = writableCheck.ownerId ?? '';
+  const effectiveRole = await getEffectiveMemberRole(userId, locationId, role as 'admin' | 'member' | 'viewer', ownerId);
+
+  if (effectiveRole === 'viewer') {
     throw new ForbiddenError(`Only members and admins can ${action}`);
   }
 }

@@ -1,4 +1,7 @@
 import { generateUuid, query, querySync } from '../db.js';
+import { createLogger } from './logger.js';
+
+const log = createLogger('activity');
 
 export interface LogActivityOptions {
   locationId: string;
@@ -106,7 +109,7 @@ export async function logActivity(opts: LogActivityOptions): Promise<void> {
       [opts.locationId]
     ).catch(() => { /* ignore prune errors */ });
   } catch (err) {
-    console.error('Failed to log activity:', err);
+    log.error('Failed to log activity:', err instanceof Error ? err.message : err);
   }
 }
 

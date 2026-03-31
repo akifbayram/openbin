@@ -8,6 +8,7 @@ export interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   termKey?: TermKey;
+  proOnly?: boolean;
 }
 
 export const navItems: NavItem[] = [
@@ -15,7 +16,7 @@ export const navItems: NavItem[] = [
   { path: '/bins', label: 'Bins', icon: Package, termKey: 'Bins' },
   { path: '/locations', label: 'Locations', icon: MapPin, termKey: 'Locations' },
   { path: '/print', label: 'Print', icon: Printer },
-  { path: '/reorganize', label: 'Reorganize', icon: Sparkles },
+  { path: '/reorganize', label: 'Reorganize', icon: Sparkles, proOnly: true },
   { path: '/scan', label: 'Scan', icon: ScanLine },
 ];
 

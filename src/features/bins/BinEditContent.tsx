@@ -48,7 +48,7 @@ export function BinEditContent({
   const secondaryInfo = getSecondaryColorInfo(edit.cardStyle);
 
   return (
-    <div className="fade-in-fast contents">
+    <div className="fade-in-fast flex flex-col gap-4">
       {/* Items */}
       <Card>
         <CardContent>
@@ -74,7 +74,8 @@ export function BinEditContent({
             id="edit-notes"
             value={edit.notes}
             onChange={(e) => edit.setNotes(e.target.value)}
-            rows={1}
+            rows={3}
+            className="[field-sizing:content] min-h-[5rem]"
           />
         </CardContent>
       </Card>

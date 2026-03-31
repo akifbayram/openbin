@@ -53,12 +53,19 @@ export const config = Object.freeze({
     return 'open' as const;
   })(),
   trustProxy: parseBool(process.env.TRUST_PROXY, false),
+  frameAncestors: process.env.FRAME_ANCESTORS || null,
 
   // Cloud tier
   selfHosted: parseBool(process.env.SELF_HOSTED, true),
   managerUrl: process.env.MANAGER_URL || null,
   subscriptionJwtSecret: process.env.SUBSCRIPTION_JWT_SECRET || null,
   subscriptionWebhookSecret: process.env.SUBSCRIPTION_WEBHOOK_SECRET || null,
+  trialPeriodDays: clamp(parseInt(process.env.TRIAL_PERIOD_DAYS || '7', 10), 1, 90, 7),
+  // Email (Resend)
+  emailEnabled: parseBool(process.env.EMAIL_ENABLED, false),
+  emailFrom: process.env.EMAIL_FROM || 'OpenBin <noreply@openbin.app>',
+  resendApiKey: process.env.RESEND_API_KEY || null,
+
   demoMode: parseBool(process.env.DEMO_MODE, false),
   aiMock: parseBool(process.env.AI_MOCK, false),
   demoUsernames: new Set(
@@ -70,6 +77,11 @@ export const config = Object.freeze({
 
   // Encryption
   aiEncryptionKey: process.env.AI_ENCRYPTION_KEY || null,
+
+  // ClamAV malware scanning (opt-in for cloud deployments)
+  clamavHost: process.env.CLAMAV_HOST || null,
+  clamavPort: parseInt(process.env.CLAMAV_PORT || '3310', 10),
+  clamavTimeout: parseInt(process.env.CLAMAV_TIMEOUT || '30000', 10),
 
   // Upload limits
   maxPhotoSizeMb: clamp(parseInt(process.env.MAX_PHOTO_SIZE_MB || '5', 10), 1, 50, 5),

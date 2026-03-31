@@ -20,9 +20,14 @@ vi.mock('../db.js', () => ({
 import { query } from '../db.js';
 import { config } from '../lib/config.js';
 import {
+  checkLocationWritable,
+  computeOverLimits,
   generateUpgradeUrl,
+  getEffectiveMemberRole,
   getFeatureMap,
+  getUserOverLimits,
   getUserPlanInfo,
+  invalidateOverLimitCache,
   isPlanRestricted,
   isProUser,
   isSelfHosted,
@@ -148,9 +153,10 @@ describe('getFeatureMap()', () => {
     expect(features.apiKeys).toBe(true);
     expect(features.customFields).toBe(true);
     expect(features.fullExport).toBe(true);
+    expect(features.reorganize).toBe(true);
+    expect(features.binSharing).toBe(true);
     expect(features.maxLocations).toBe(null);
-    expect(features.maxBinsPerLocation).toBe(null);
-    expect(features.maxPhotoStorageMb).toBe(2048);
+    expect(features.maxPhotoStorageMb).toBe(5000);
     expect(features.maxMembersPerLocation).toBe(null);
     expect(features.activityRetentionDays).toBe(90);
   });
@@ -162,8 +168,9 @@ describe('getFeatureMap()', () => {
     expect(features.apiKeys).toBe(false);
     expect(features.customFields).toBe(false);
     expect(features.fullExport).toBe(false);
+    expect(features.reorganize).toBe(false);
+    expect(features.binSharing).toBe(false);
     expect(features.maxLocations).toBe(1);
-    expect(features.maxBinsPerLocation).toBe(100);
     expect(features.maxPhotoStorageMb).toBe(100);
     expect(features.maxMembersPerLocation).toBe(1);
     expect(features.activityRetentionDays).toBe(30);
@@ -176,8 +183,9 @@ describe('getFeatureMap()', () => {
     expect(features.apiKeys).toBe(true);
     expect(features.customFields).toBe(true);
     expect(features.fullExport).toBe(true);
+    expect(features.reorganize).toBe(true);
+    expect(features.binSharing).toBe(true);
     expect(features.maxLocations).toBe(null);
-    expect(features.maxBinsPerLocation).toBe(null);
     expect(features.maxPhotoStorageMb).toBe(null);
     expect(features.maxMembersPerLocation).toBe(null);
     expect(features.activityRetentionDays).toBe(null);
@@ -197,7 +205,7 @@ describe('getUserPlanInfo()', () => {
 
   it('returns mapped UserPlanInfo when user found', async () => {
     vi.mocked(query).mockResolvedValue({
-      rows: [{ plan: Plan.PRO, sub_status: SubStatus.ACTIVE, active_until: null, email: 'user@example.com' }],
+      rows: [{ plan: Plan.PRO, sub_status: SubStatus.ACTIVE, active_until: null, email: 'user@example.com', previous_sub_status: null }],
       rowCount: 1,
     });
     const result = await getUserPlanInfo('user-id');
@@ -206,13 +214,14 @@ describe('getUserPlanInfo()', () => {
       subStatus: SubStatus.ACTIVE,
       activeUntil: null,
       email: 'user@example.com',
+      previousSubStatus: null,
     });
   });
 
   it('maps snake_case DB columns to camelCase', async () => {
     const activeUntil = '2027-01-01T00:00:00.000Z';
     vi.mocked(query).mockResolvedValue({
-      rows: [{ plan: Plan.LITE, sub_status: SubStatus.TRIAL, active_until: activeUntil, email: null }],
+      rows: [{ plan: Plan.LITE, sub_status: SubStatus.TRIAL, active_until: activeUntil, email: null, previous_sub_status: SubStatus.ACTIVE }],
       rowCount: 1,
     });
     const result = await getUserPlanInfo('user-id');
@@ -220,6 +229,7 @@ describe('getUserPlanInfo()', () => {
     expect(result?.subStatus).toBe(SubStatus.TRIAL);
     expect(result?.activeUntil).toBe(activeUntil);
     expect(result?.email).toBeNull();
+    expect(result?.previousSubStatus).toBe(SubStatus.ACTIVE);
   });
 
   it('queries with the correct SQL and userId', async () => {
@@ -233,54 +243,213 @@ describe('getUserPlanInfo()', () => {
 });
 
 describe('generateUpgradeUrl()', () => {
-  it('returns null when managerUrl is not set', () => {
+  it('returns null when managerUrl is not set', async () => {
     setConfig({ selfHosted: false, managerUrl: null });
-    const url = generateUpgradeUrl('user-id', 'user@example.com');
+    const url = await generateUpgradeUrl('user-id', 'user@example.com');
     expect(url).toBeNull();
   });
 
-  it('returns a valid URL when managerUrl is set', () => {
+  it('returns a valid URL when managerUrl is set', async () => {
     setConfig({ selfHosted: false, managerUrl: 'https://manager.example.com', subscriptionJwtSecret: 'sub-secret' });
-    const url = generateUpgradeUrl('user-id', 'user@example.com');
+    const url = await generateUpgradeUrl('user-id', 'user@example.com');
     expect(url).not.toBeNull();
     expect(url).toMatch(/^https:\/\/manager\.example\.com\/auth\/openbin\?token=/);
   });
 
   it('returns a URL with a valid JWT token', async () => {
     setConfig({ selfHosted: false, managerUrl: 'https://manager.example.com', subscriptionJwtSecret: 'sub-secret' });
-    const url = generateUpgradeUrl('user-id', 'user@example.com');
+    const url = await generateUpgradeUrl('user-id', 'user@example.com');
     expect(url).toBeTruthy();
     const token = url!.split('?token=')[1];
     expect(token).toBeTruthy();
 
     // Verify the token is a valid JWT
-    const jwt = await import('jsonwebtoken');
-    const decoded = jwt.verify(token, 'sub-secret') as Record<string, unknown>;
+    const jose = await import('jose');
+    const { payload: decoded } = await jose.jwtVerify(token, new TextEncoder().encode('sub-secret'));
     expect(decoded.userId).toBe('user-id');
     expect(decoded.email).toBe('user@example.com');
   });
 
-  it('uses jwtSecret as fallback when subscriptionJwtSecret is not set', () => {
+  it('returns null when subscriptionJwtSecret is not set', async () => {
     setConfig({
       selfHosted: false,
       managerUrl: 'https://manager.example.com',
       subscriptionJwtSecret: null,
       jwtSecret: 'test-jwt-secret',
     });
-    // Should not throw — falls back to jwtSecret
-    const url = generateUpgradeUrl('user-id', null);
-    expect(url).not.toBeNull();
-    expect(url).toMatch(/^https:\/\/manager\.example\.com\/auth\/openbin\?token=/);
+    const url = await generateUpgradeUrl('user-id', null);
+    expect(url).toBeNull();
   });
 
   it('handles null email in token', async () => {
     setConfig({ selfHosted: false, managerUrl: 'https://manager.example.com', subscriptionJwtSecret: 'sub-secret' });
-    const url = generateUpgradeUrl('user-id', null);
+    const url = await generateUpgradeUrl('user-id', null);
     expect(url).toBeTruthy();
     const token = url!.split('?token=')[1];
-    const jwt = await import('jsonwebtoken');
-    const decoded = jwt.verify(token, 'sub-secret') as Record<string, unknown>;
+    const jose = await import('jose');
+    const { payload: decoded } = await jose.jwtVerify(token, new TextEncoder().encode('sub-secret'));
     expect(decoded.userId).toBe('user-id');
     expect(decoded.email).toBeNull();
+  });
+});
+
+describe('computeOverLimits()', () => {
+  it('returns all false when under limits', () => {
+    setConfig({ selfHosted: false });
+    const result = computeOverLimits(
+      { locationCount: 1, photoStorageMb: 50, memberCounts: { loc1: 1 } },
+      { ...getFeatureMap(Plan.LITE) },
+    );
+    expect(result).toEqual({ locations: false, photos: false, members: [] });
+  });
+
+  it('returns locations=true when over location limit', () => {
+    setConfig({ selfHosted: false });
+    const result = computeOverLimits(
+      { locationCount: 3, photoStorageMb: 50, memberCounts: {} },
+      { ...getFeatureMap(Plan.LITE) },
+    );
+    expect(result.locations).toBe(true);
+  });
+
+  it('returns photos=true when over photo storage limit', () => {
+    setConfig({ selfHosted: false });
+    const result = computeOverLimits(
+      { locationCount: 1, photoStorageMb: 200, memberCounts: {} },
+      { ...getFeatureMap(Plan.LITE) },
+    );
+    expect(result.photos).toBe(true);
+  });
+
+  it('returns member locationIds when over member limit', () => {
+    setConfig({ selfHosted: false });
+    const result = computeOverLimits(
+      { locationCount: 1, photoStorageMb: 50, memberCounts: { loc1: 5, loc2: 1 } },
+      { ...getFeatureMap(Plan.LITE) },
+    );
+    expect(result.members).toEqual(['loc1']);
+  });
+
+  it('returns all false when limits are null (unlimited)', () => {
+    setConfig({ selfHosted: false });
+    const result = computeOverLimits(
+      { locationCount: 100, photoStorageMb: 9999, memberCounts: { loc1: 999 } },
+      { ...getFeatureMap(Plan.PRO), maxPhotoStorageMb: null },
+    );
+    expect(result).toEqual({ locations: false, photos: false, members: [] });
+  });
+});
+
+describe('getUserOverLimits() with cache', () => {
+  beforeEach(() => {
+    setConfig({ selfHosted: false });
+    invalidateOverLimitCache('user1');
+    vi.mocked(query).mockReset();
+  });
+
+  it('returns empty over-limits in self-hosted mode', async () => {
+    setConfig({ selfHosted: true });
+    const result = await getUserOverLimits('user1');
+    expect(result).toEqual({ locations: false, photos: false, members: [] });
+    expect(vi.mocked(query)).not.toHaveBeenCalled();
+  });
+
+  it('computes over-limits from DB queries', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 3 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 200 * 1024 * 1024 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });
+    const result = await getUserOverLimits('user1');
+    expect(result.locations).toBe(true);
+    expect(result.photos).toBe(true);
+    expect(result.members).toEqual(['loc1']);
+  });
+
+  it('returns cached result on second call', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    await getUserOverLimits('user1');
+    const callCount = vi.mocked(query).mock.calls.length;
+    await getUserOverLimits('user1');
+    expect(vi.mocked(query).mock.calls.length).toBe(callCount);
+  });
+});
+
+describe('checkLocationWritable()', () => {
+  beforeEach(() => {
+    setConfig({ selfHosted: false });
+    invalidateOverLimitCache('owner1');
+    vi.mocked(query).mockReset();
+  });
+
+  it('returns writable=true when under location limit', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ created_by: 'owner1' }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    const result = await checkLocationWritable('loc1');
+    expect(result.writable).toBe(true);
+  });
+
+  it('returns writable=false when over location limit', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ created_by: 'owner1' }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 3 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    const result = await checkLocationWritable('loc1');
+    expect(result.writable).toBe(false);
+    expect(result.reason).toContain('location');
+  });
+
+  it('returns writable=true in self-hosted mode', async () => {
+    setConfig({ selfHosted: true });
+    const result = await checkLocationWritable('loc1');
+    expect(result.writable).toBe(true);
+  });
+});
+
+describe('getEffectiveMemberRole()', () => {
+  beforeEach(() => {
+    setConfig({ selfHosted: false });
+    invalidateOverLimitCache('owner1');
+    vi.mocked(query).mockReset();
+  });
+
+  it('returns stored role when not over member limit', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 1 }], rowCount: 1 });
+    const role = await getEffectiveMemberRole('member1', 'loc1', 'member', 'owner1');
+    expect(role).toBe('member');
+  });
+
+  it('downgrades non-owner to viewer when over member limit', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });
+    const role = await getEffectiveMemberRole('member1', 'loc1', 'admin', 'owner1');
+    expect(role).toBe('viewer');
+  });
+
+  it('preserves owner role even when over member limit', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });
+    const role = await getEffectiveMemberRole('owner1', 'loc1', 'admin', 'owner1');
+    expect(role).toBe('admin');
   });
 });

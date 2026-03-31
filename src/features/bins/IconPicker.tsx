@@ -18,6 +18,8 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-label={`Icon: ${displayName}`}
         className="row w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors border border-[var(--border-subtle)]"
       >
         <CurrentIcon className="h-5 w-5 text-[var(--text-tertiary)]" />
@@ -39,7 +41,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                 }}
                 title={name}
                 className={cn(
-                  'flex items-center justify-center p-2 rounded-[var(--radius-sm)] transition-colors',
+                  'flex items-center justify-center p-3 rounded-[var(--radius-sm)] transition-colors',
                   isSelected
                     ? 'bg-[var(--accent)] text-[var(--text-on-accent)]'
                     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'

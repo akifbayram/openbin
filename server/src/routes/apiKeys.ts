@@ -4,9 +4,11 @@ import { generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { enforceCountLimit } from '../lib/countLimiter.js';
 import { NotFoundError } from '../lib/httpErrors.js';
+import { createLogger } from '../lib/logger.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePro } from '../middleware/requirePlan.js';
 
+const log = createLogger('apiKeys');
 const router = Router();
 router.use(authenticate);
 
@@ -49,6 +51,8 @@ router.post('/', requirePro(), asyncHandler(async (req, res) => {
     [id, req.user!.id, keyHash, keyPrefix, (name || '').trim().slice(0, 255)]
   );
 
+  log.info(`API key created: ${keyPrefix} by user ${req.user!.username}`);
+
   res.status(201).json({
     id,
     key,
@@ -72,6 +76,7 @@ router.delete('/:id', requirePro(), asyncHandler(async (req, res) => {
     throw new NotFoundError('API key not found');
   }
 
+  log.info(`API key revoked: ${id} by user ${req.user!.username}`);
   res.json({ message: 'API key revoked' });
 }));
 

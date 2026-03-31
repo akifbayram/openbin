@@ -13,7 +13,7 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string, displayName: string, inviteCode?: string) => Promise<void>;
+  register: (username: string, password: string, displayName: string, email?: string, inviteCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   setActiveLocationId: (id: string | null) => void;
@@ -130,8 +130,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const register = useCallback(async (username: string, password: string, displayName: string, inviteCode?: string) => {
+  const register = useCallback(async (username: string, password: string, displayName: string, email?: string, inviteCode?: string) => {
     const body: Record<string, string> = { username, password, displayName };
+    if (email) body.email = email;
     if (inviteCode) body.inviteCode = inviteCode;
     const data = await apiFetch<{ token: string; user: User; activeLocationId?: string }>('/api/auth/register', {
       method: 'POST',

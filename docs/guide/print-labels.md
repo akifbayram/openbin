@@ -11,6 +11,16 @@ next:
 
 ![Print labels](../assets/print-labels.png)
 
+## Print Modes
+
+OpenBin supports three print modes: **Labels**, **Names**, and **Item List**.
+
+<div class="image-row">
+  <img alt="Labels mode" src="../assets/print-labels.png" />
+  <img alt="Names mode" src="../assets/print-names.png" />
+  <img alt="Item List mode" src="../assets/print-item-list.png" />
+</div>
+
 ## Selecting Bins
 
 The left panel shows bins grouped by area with checkboxes. Select individual bins, all bins, or all bins within an area. The preview updates live.

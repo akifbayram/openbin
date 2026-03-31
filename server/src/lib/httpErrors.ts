@@ -66,3 +66,26 @@ export class PlanRestrictedError extends HttpError {
     this.upgradeUrl = upgradeUrl;
   }
 }
+
+export class MalwareDetectedError extends HttpError {
+  constructor(message: string) {
+    super(422, 'MALWARE_DETECTED', message);
+    this.name = 'MalwareDetectedError';
+  }
+}
+
+export class ScanUnavailableError extends HttpError {
+  constructor(message: string) {
+    super(503, 'SCAN_UNAVAILABLE', message);
+    this.name = 'ScanUnavailableError';
+  }
+}
+
+export class OverLimitError extends HttpError {
+  public readonly upgradeUrl: string | null;
+  constructor(message: string, upgradeUrl: string | null = null) {
+    super(403, 'OVER_LIMIT', message);
+    this.name = 'OverLimitError';
+    this.upgradeUrl = upgradeUrl;
+  }
+}

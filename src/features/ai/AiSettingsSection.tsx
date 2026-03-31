@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import { AI_PROVIDERS, KEY_PLACEHOLDERS, MODEL_HINTS } from './aiConstants';
 import { useAiProviderSetup } from './useAiProviderSetup';
 import { deleteAiSettings, saveAiSettings, testAiConnection, useAiSettings } from './useAiSettings';
@@ -86,7 +86,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setup.setTestResult('success');
     } catch (err) {
       setup.setTestResult('error');
-      const base = err instanceof Error ? err.message : 'Connection failed';
+      const base = getErrorMessage(err, 'Connection failed');
       setTestError(setup.model ? `${base} (model: ${setup.model})` : base);
     }
   }
@@ -112,7 +112,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
       setSettings(saved);
       showToast({ message: 'AI settings saved', variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to save', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to save'), variant: 'error' });
     }
   }
 
@@ -361,6 +361,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         <Input
                           id="ai-temperature"
                           type="number"
+                          inputMode="decimal"
                           min={0}
                           max={2}
                           step={0.1}
@@ -382,6 +383,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         <Input
                           id="ai-max-tokens"
                           type="number"
+                          inputMode="numeric"
                           min={100}
                           max={16000}
                           step={100}
@@ -403,6 +405,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         <Input
                           id="ai-top-p"
                           type="number"
+                          inputMode="decimal"
                           min={0}
                           max={1}
                           step={0.05}
@@ -424,6 +427,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
                         <Input
                           id="ai-timeout"
                           type="number"
+                          inputMode="numeric"
                           min={10}
                           max={300}
                           step={5}

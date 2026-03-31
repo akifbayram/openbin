@@ -18,7 +18,7 @@ export default defineConfig({
       manifest: {
         name: 'OpenBin',
         short_name: 'OpenBin',
-        description: 'Label storage bins with QR codes and maintain a searchable digital inventory',
+        description: 'Inventory with intelligence. Organize physical storage with QR codes and photo recognition.',
         theme_color: '#000000',
         background_color: '#000000',
         display: 'standalone',

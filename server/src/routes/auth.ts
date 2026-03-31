@@ -6,20 +6,26 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '../lib/cookies.js';
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
-import { consumeResetToken } from '../lib/passwordReset.js';
+import { createLogger } from '../lib/logger.js';
+import { deleteUserData, notifyManagerNewUser, notifyManagerUserUpdate } from '../lib/managerWebhook.js';
+import { consumeResetToken, createPasswordResetToken } from '../lib/passwordReset.js';
 import { safePath } from '../lib/pathSafety.js';
 import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, signToken } from '../middleware/auth.js';
 
+import { getRegistrationMode } from './admin.js';
+
+const log = createLogger('auth');
 const router = Router();
 
 // GET /api/auth/status — public (no auth required)
 router.get('/status', (_req, res) => {
+  const regMode = getRegistrationMode();
   const body: Record<string, unknown> = {
-    registrationEnabled: config.registrationMode !== 'closed',
-    registrationMode: config.registrationMode,
+    registrationEnabled: regMode !== 'closed',
+    registrationMode: regMode,
     demoMode: config.demoMode,
     qrPayloadMode: config.qrPayloadMode,
     selfHosted: config.selfHosted,
@@ -57,7 +63,7 @@ router.post('/demo-login', asyncHandler(async (_req, res) => {
     await query('INSERT INTO user_preferences (id, user_id, settings) VALUES ($1, $2, $3)', [generateUuid(), user.id, resetSettings]);
   }
 
-  const token = signToken({ id: user.id, username: user.username });
+  const token = await signToken({ id: user.id, username: user.username });
   const refresh = await createRefreshToken(user.id);
 
   setAccessTokenCookie(res, token);
@@ -103,14 +109,15 @@ router.get('/invite-preview', asyncHandler(async (req, res) => {
 
 // POST /api/auth/register
 router.post('/register', asyncHandler(async (req, res) => {
-  if (config.registrationMode === 'closed') {
+  const regMode = getRegistrationMode();
+  if (regMode === 'closed') {
     throw new ForbiddenError('Registration is currently disabled');
   }
 
-  const { username, password, displayName, inviteCode } = req.body;
+  const { username, password, displayName, email, inviteCode } = req.body;
 
   // In invite mode, invite code is required
-  if (config.registrationMode === 'invite' && !inviteCode) {
+  if (regMode === 'invite' && !inviteCode) {
     throw new ValidationError('An invite code is required to register');
   }
 
@@ -130,36 +137,42 @@ router.post('/register', asyncHandler(async (req, res) => {
   validateUsername(username);
   validatePassword(password);
   if (displayName !== undefined) validateDisplayName(displayName);
+  const trimmedEmail = (typeof email === 'string' && email.trim()) || null;
+  if (trimmedEmail) validateEmail(trimmedEmail);
 
   const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
   const userId = generateUuid();
   let result: import('../db.js').QueryResult<Record<string, unknown>>;
   try {
     result = await query(
-      `INSERT INTO users (id, username, password_hash, display_name, plan, sub_status, active_until)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, username, display_name, created_at`,
+      `INSERT INTO users (id, username, password_hash, display_name, email, plan, sub_status, active_until)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, username, display_name, email, created_at, active_until`,
       [
         userId,
         username.toLowerCase(),
         passwordHash,
         displayName || username,
+        trimmedEmail,
         Plan.PRO,
         isSelfHosted() ? SubStatus.ACTIVE : SubStatus.TRIAL,
         isSelfHosted()
           ? new Date(Date.now() + 1000 * 365 * 24 * 60 * 60 * 1000).toISOString()  // +1000 years
-          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),           // +7 days
+          : new Date(Date.now() + config.trialPeriodDays * 24 * 60 * 60 * 1000).toISOString(),
       ]
     );
   } catch (err: unknown) {
-    const sqliteErr = err as { code?: string };
+    const sqliteErr = err as { code?: string; message?: string };
     if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      if (sqliteErr.message?.includes('idx_users_email_unique')) {
+        throw new ConflictError('An account with this email already exists');
+      }
       throw new ConflictError('Username already taken');
     }
     throw err;
   }
 
-  const user = result.rows[0] as { id: string; username: string; display_name: string; created_at: string };
+  const user = result.rows[0] as { id: string; username: string; display_name: string; email: string | null; created_at: string; active_until: string };
 
   // Auto-join location if invite code was valid
   if (locationToJoin) {
@@ -170,22 +183,39 @@ router.post('/register', asyncHandler(async (req, res) => {
     await query('UPDATE users SET active_location_id = $1 WHERE id = $2', [locationToJoin.id, user.id]);
   }
 
-  const token = signToken({ id: user.id, username: user.username });
+  const token = await signToken({ id: user.id, username: user.username });
   const refresh = await createRefreshToken(user.id);
 
   setAccessTokenCookie(res, token);
   setRefreshTokenCookie(res, refresh.rawToken);
+
+  log.info(`New user registered: ${user.username}`);
 
   res.status(201).json({
     user: {
       id: user.id,
       username: user.username,
       displayName: user.display_name,
-      email: null,
+      email: user.email || null,
       avatarUrl: null,
       createdAt: user.created_at,
     },
   });
+
+  // Notify Manager service of new cloud registration (fire-and-forget)
+  notifyManagerNewUser({
+    userId: user.id,
+    email: user.email,
+    username: user.username,
+    activeUntil: user.active_until,
+    status: 'trial',
+  });
+
+  // Fire welcome email if email was provided (cloud mode only)
+  if (user.email && !isSelfHosted()) {
+    const { fireWelcomeEmail } = await import('../lib/emailSender.js');
+    fireWelcomeEmail(user.id, user.email, user.display_name);
+  }
 }));
 
 // POST /api/auth/login
@@ -197,23 +227,29 @@ router.post('/login', asyncHandler(async (req, res) => {
   }
 
   const result = await query(
-    'SELECT id, username, password_hash, display_name, email, avatar_path, active_location_id FROM users WHERE username = $1',
+    'SELECT id, username, password_hash, display_name, email, avatar_path, active_location_id, deleted_at, is_admin FROM users WHERE username = $1',
     [username.toLowerCase()]
   );
 
   if (result.rows.length === 0) {
     // Constant-time rejection — prevent timing-based username enumeration
     await bcrypt.compare(password, '$2b$12$000000000000000000000uVjKPCGJcotDu8bMahKn7VoPxpL0Wi');
+    log.warn(`Login failed: unknown user "${username}"`);
     throw new UnauthorizedError('Invalid username or password');
   }
 
   const user = result.rows[0];
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
+    log.warn(`Login failed: bad password for user "${username}"`);
+    throw new UnauthorizedError('Invalid username or password');
+  }
+  if (user.deleted_at) {
+    log.warn(`Login failed: deleted user "${username}"`);
     throw new UnauthorizedError('Invalid username or password');
   }
 
-  const token = signToken({ id: user.id, username: user.username });
+  const token = await signToken({ id: user.id, username: user.username });
   const refresh = await createRefreshToken(user.id);
 
   setAccessTokenCookie(res, token);
@@ -246,6 +282,8 @@ router.post('/login', asyncHandler(async (req, res) => {
     }
   }
 
+  log.info(`User "${user.username}" logged in`);
+
   res.json({
     user: {
       id: user.id,
@@ -253,6 +291,7 @@ router.post('/login', asyncHandler(async (req, res) => {
       displayName: user.display_name,
       email: user.email || null,
       avatarUrl: user.avatar_path ? `/api/auth/avatar/${user.id}` : null,
+      isAdmin: user.is_admin === 1,
     },
     activeLocationId,
   });
@@ -273,18 +312,18 @@ router.post('/refresh', asyncHandler(async (req, res) => {
     throw new UnauthorizedError('Invalid or expired refresh token');
   }
 
-  // Look up user for new access token
-  const userResult = await query<{ id: string; username: string }>(
-    'SELECT id, username FROM users WHERE id = $1',
+  // Look up user for new access token (reject soft-deleted users)
+  const userResult = await query<{ id: string; username: string; deleted_at: string | null }>(
+    'SELECT id, username, deleted_at FROM users WHERE id = $1',
     [rotated.userId],
   );
-  if (userResult.rows.length === 0) {
+  if (userResult.rows.length === 0 || userResult.rows[0].deleted_at !== null) {
     clearAuthCookies(res);
     throw new UnauthorizedError('User not found');
   }
 
   const user = userResult.rows[0];
-  const accessToken = signToken({ id: user.id, username: user.username });
+  const accessToken = await signToken({ id: user.id, username: user.username });
 
   setAccessTokenCookie(res, accessToken);
   setRefreshTokenCookie(res, rotated.rawToken);
@@ -312,7 +351,7 @@ router.post('/logout-all', authenticate, asyncHandler(async (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
-    'SELECT id, username, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until FROM users WHERE id = $1',
+    'SELECT id, username, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until, is_admin FROM users WHERE id = $1',
     [req.user!.id]
   );
 
@@ -348,6 +387,7 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
     plan: planLabel(user.plan),
     subscriptionStatus: subStatusLabel(user.sub_status),
     activeUntil: user.active_until || null,
+    isAdmin: user.is_admin === 1,
   });
 }));
 
@@ -362,6 +402,10 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
   if (email !== undefined && email !== null && email !== '') {
     validateEmail(email);
   }
+
+  // Check if user currently has no email (for welcome email trigger)
+  const existingUser = email ? (await query('SELECT email FROM users WHERE id = $1', [req.user!.id])).rows[0] : null;
+  const isFirstEmail = existingUser && !existingUser.email && email && email !== '';
 
   const updates: string[] = [];
   const values: unknown[] = [];
@@ -383,12 +427,21 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
   updates.push(`updated_at = datetime('now')`);
   values.push(req.user!.id);
 
-  const result = await query(
-    `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, username, display_name, email, avatar_path, created_at, updated_at`,
-    values
-  );
+  let result: import('../db.js').QueryResult<Record<string, unknown>>;
+  try {
+    result = await query(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, username, display_name, email, avatar_path, created_at, updated_at`,
+      values
+    );
+  } catch (err: unknown) {
+    const sqliteErr = err as { code?: string; message?: string };
+    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && sqliteErr.message?.includes('idx_users_email_unique')) {
+      throw new ConflictError('An account with this email already exists');
+    }
+    throw err;
+  }
 
-  const user = result.rows[0];
+  const user = result.rows[0] as { id: string; username: string; display_name: string; email: string | null; avatar_path: string | null; created_at: string; updated_at: string };
   res.json({
     id: user.id,
     username: user.username,
@@ -398,6 +451,12 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
     createdAt: user.created_at,
     updatedAt: user.updated_at,
   });
+
+  // Fire welcome email when user sets email for the first time (cloud mode)
+  if (isFirstEmail && user.email && !isSelfHosted()) {
+    const { fireWelcomeEmail } = await import('../lib/emailSender.js');
+    fireWelcomeEmail(user.id, user.email, user.display_name);
+  }
 }));
 
 // PUT /api/auth/active-location — persist active location selection
@@ -448,6 +507,7 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
   await revokeAllUserTokens(req.user!.id);
   clearAuthCookies(res);
 
+  log.info(`User ${req.user!.username} changed password`);
   res.json({ message: 'Password updated successfully' });
 }));
 
@@ -461,7 +521,7 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
   const userId = req.user!.id;
 
   // Verify password
-  const userResult = await query('SELECT password_hash, avatar_path FROM users WHERE id = $1', [userId]);
+  const userResult = await query('SELECT password_hash, avatar_path, is_admin FROM users WHERE id = $1', [userId]);
   if (userResult.rows.length === 0) {
     throw new NotFoundError('User not found');
   }
@@ -472,6 +532,13 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
   }
 
   const avatarPath = userResult.rows[0].avatar_path;
+
+  if (userResult.rows[0].is_admin === 1) {
+    const adminCountResult = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM users WHERE is_admin = 1', []);
+    if (adminCountResult.rows[0].cnt <= 1) {
+      throw new ForbiddenError('Cannot delete the only admin account');
+    }
+  }
 
   // Find locations where user is a member
   const locationsResult = await query(
@@ -516,11 +583,46 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
     try { fs.unlinkSync(avatarPath); } catch { /* ignore */ }
   }
 
-  // Delete user — cascades location_members, refresh_tokens, sets NULL on bins/photos/locations created_by
+  deleteUserData(userId);
+
   await query('DELETE FROM users WHERE id = $1', [userId]);
+
+  notifyManagerUserUpdate({ userId, action: 'delete_user' });
+
   clearAuthCookies(res);
 
+  log.info(`User ${req.user!.username} deleted their account`);
+
   res.json({ message: 'Account deleted' });
+}));
+
+// POST /api/auth/forgot-password — request a password reset email (no auth)
+router.post('/forgot-password', asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email || typeof email !== 'string') {
+    throw new ValidationError('Email is required');
+  }
+  validateEmail(email.trim());
+
+  const result = await query<{ id: string; display_name: string; email: string }>(
+    'SELECT id, display_name, email FROM users WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL',
+    [email.trim()],
+  );
+
+  if (result.rows.length > 0) {
+    if (config.baseUrl) {
+      const user = result.rows[0];
+      const { rawToken } = await createPasswordResetToken(user.id, null);
+      const resetUrl = `${config.baseUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
+      const { firePasswordResetEmail } = await import('../lib/emailSender.js');
+      firePasswordResetEmail(user.id, user.email, user.display_name, resetUrl);
+    } else {
+      log.warn('forgot-password: BASE_URL is not set, reset email not sent');
+    }
+  }
+
+  res.json({ message: 'If an account with that email exists, a reset link has been sent.' });
 }));
 
 // POST /api/auth/reset-password — consume reset token and set new password (no auth)
@@ -536,6 +638,7 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
 
   await consumeResetToken(token, newPassword);
 
+  log.info('Password reset completed via token');
   res.json({ message: 'Password has been reset successfully' });
 }));
 

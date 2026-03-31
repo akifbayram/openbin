@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Multi-user web app for organizing physical storage bins with QR codes. Data persists in SQLite via Express API. Flat material design system.
+Inventory with intelligence. Multi-user web app for organizing physical storage bins with QR codes and photo recognition. Data persists in SQLite via Express API. Flat material design system.
 
 **Core flows**: Register/login -> Create/join location -> Create bin -> Print QR label -> Scan to find contents.
 

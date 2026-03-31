@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
+import { getErrorMessage } from '@/lib/utils';
 import {
   addCustomField,
   deleteCustomField,
@@ -46,7 +47,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
       await addCustomField(locationId, newName.trim());
       setNewName('');
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to add field', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to add field'), variant: 'error' });
     } finally {
       setAdding(false);
     }
@@ -58,7 +59,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
       await updateCustomField(locationId, fieldId, { name: editName.trim() });
       setEditingId(null);
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to rename field', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to rename field'), variant: 'error' });
     }
   }
 
@@ -68,7 +69,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
       await deleteCustomField(locationId, fieldId);
       showToast({ message: `Deleted "${fieldName}"`, variant: 'success' });
     } catch (err) {
-      showToast({ message: err instanceof Error ? err.message : 'Failed to delete field', variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to delete field'), variant: 'error' });
     }
   }
 
