@@ -117,13 +117,13 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto, selectedBin
         <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
 
         {scopeInfo.isScoped && !photoMode && (
-          <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] bg-[var(--bg-secondary)] border border-[var(--border-primary)] px-3 py-2 text-[13px]">
+          <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 border border-[var(--ai-accent)]/20 px-3 py-2 text-[13px]">
             <span className="text-[var(--text-secondary)]">
               Focused on {scopeInfo.binCount} selected {scopeInfo.binCount === 1 ? t.bin : t.bins}
             </span>
             <button
               type="button"
-              className="text-[var(--accent)] hover:underline whitespace-nowrap"
+              className="text-[var(--ai-accent)] hover:underline whitespace-nowrap transition-colors"
               onClick={scopeInfo.clearScope}
             >
               Use all {t.bins} instead
