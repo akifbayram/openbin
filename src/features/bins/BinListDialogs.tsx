@@ -38,6 +38,7 @@ interface BinListDialogsProps {
   bulk: { isOpen: (d: BulkDialog) => boolean; open: (d: BulkDialog) => void; close: () => void };
   selectedIds: Set<string>;
   clearSelection: () => void;
+  selectedBinIds?: string[];
 }
 
 export function BinListDialogs({
@@ -48,7 +49,7 @@ export function BinListDialogs({
   aiEnabled, allTags, areas,
   filters, setFilters,
   sort, setSort, sortDir, setSortDir, search,
-  bulk, selectedIds, clearSelection,
+  bulk, selectedIds, clearSelection, selectedBinIds,
 }: BinListDialogsProps) {
   const commandMounted = useRef(false);
   if (commandOpen) commandMounted.current = true;
@@ -122,7 +123,7 @@ export function BinListDialogs({
       />
       {aiEnabled && commandMounted.current && (
         <Suspense fallback={null}>
-          <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />
+          <CommandInput open={commandOpen} onOpenChange={setCommandOpen} selectedBinIds={selectedBinIds} />
         </Suspense>
       )}
     </>
