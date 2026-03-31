@@ -21,11 +21,12 @@ RUN npm run build
 
 # ── Stage 3: Runtime ─────────────────────────
 FROM node:22-alpine
+RUN apk add --no-cache postgresql-client
 WORKDIR /app
 COPY --chown=node:node --from=server-builder /app/package.json /app/package-lock.json* ./
 COPY --chown=node:node --from=server-builder /app/node_modules ./node_modules
 COPY --chown=node:node --from=server-builder /app/dist ./dist
-COPY --chown=node:node server/schema.sql ./schema.sql
+COPY --chown=node:node server/schema.sqlite.sql server/schema.pg.sql ./
 COPY --chown=node:node --from=frontend-builder /app/dist ./public
 RUN mkdir -p /data/photos /data/backups && chown -R node:node /data
 USER node
