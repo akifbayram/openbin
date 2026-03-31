@@ -5,13 +5,14 @@ process.env.DATABASE_PATH = ':memory:';
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret';
 process.env.PHOTO_STORAGE_PATH = '/tmp/openbin-test-photos';
+// Ensure SQLite mode in tests (no DATABASE_URL)
+delete process.env.DATABASE_URL;
 
-// Now import db (triggers DB creation with :memory: and runs schema.sql)
-const { getDb } = await import('../db.js');
+const { initialize } = await import('../db/init.js');
+const { getSqliteDb } = await import('../db/sqlite.js');
 
-beforeAll(() => {
-  // Schema already applied by db.ts on import
-  getDb();
+beforeAll(async () => {
+  await initialize();
 });
 
 const TABLES = [
@@ -26,17 +27,26 @@ const TABLES = [
   'pinned_bins',
   'activity_log',
   'photos',
+  'bin_custom_field_values',
   'bin_items',
+  'bin_shares',
   'bins',
   'areas',
   'tag_colors',
+  'location_custom_fields',
   'location_members',
   'locations',
   'users',
+  'password_reset_tokens',
+  'api_key_daily_usage',
+  'ai_usage',
+  'settings',
+  'webhook_outbox',
+  'job_locks',
 ];
 
 afterEach(() => {
-  const db = getDb();
+  const db = getSqliteDb();
   db.pragma('foreign_keys = OFF');
   for (const table of TABLES) {
     db.exec(`DELETE FROM ${table}`);
@@ -44,7 +54,7 @@ afterEach(() => {
   db.pragma('foreign_keys = ON');
 });
 
-afterAll(() => {
-  const db = getDb();
-  db.close();
+afterAll(async () => {
+  const { getEngine } = await import('../db/init.js');
+  await getEngine().close();
 });
