@@ -1,3 +1,4 @@
+import { initialize } from './db.js';
 import { createApp } from './index.js';
 import { startBackupScheduler } from './lib/backup.js';
 import { config } from './lib/config.js';
@@ -11,6 +12,10 @@ import { startUserCleanupJob } from './lib/userCleanup.js';
 import { startWebhookOutboxProcessor } from './lib/webhookOutbox.js';
 
 const log = createLogger('startup');
+
+// Initialize the database engine before anything touches the DB
+await initialize();
+
 const app = createApp();
 
 if (!config.aiEncryptionKey) {

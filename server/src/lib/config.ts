@@ -35,6 +35,8 @@ function resolveJwtSecret(): string {
 export const config = Object.freeze({
   // Database & storage
   databasePath: process.env.DATABASE_PATH || './data/openbin.db',
+  databaseUrl: process.env.DATABASE_URL || null,
+  dbEngine: (process.env.DATABASE_URL ? 'postgres' : 'sqlite') as 'sqlite' | 'postgres',
   photoStoragePath,
   port: parseInt(process.env.PORT || '1453', 10),
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
