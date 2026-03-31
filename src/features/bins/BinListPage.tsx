@@ -346,6 +346,7 @@ export function BinListPage() {
         bulk={bulk}
         selectedIds={selectedIds}
         clearSelection={clearSelection}
+        selectedBinIds={selectedIds.size > 0 ? [...selectedIds] : undefined}
       />
 
       <DeleteBinDialog
@@ -375,6 +376,9 @@ export function BinListPage() {
           onPasteStyle={handlePasteStyle}
           canCopyStyle={selectedIds.size === 1}
           canPasteStyle={copiedStyle !== null}
+          aiEnabled={aiEnabled}
+          onAskAi={() => setCommandOpen(true)}
+          onReorganize={() => navigate(`/reorganize?ids=${[...selectedIds].join(',')}`)}
         />
       )}
     </div>
