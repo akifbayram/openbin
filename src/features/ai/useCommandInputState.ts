@@ -40,6 +40,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void, sele
     };
   }, [selectedBinIds, scopeOverride]);
 
+  const effectiveBinIds = scopeInfo.isScoped ? selectedBinIds : undefined;
   const isAiReady = settings !== null;
 
   // Derive querying state from streaming + query result
@@ -87,7 +88,6 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void, sele
     setQueryResult(null);
 
     try {
-      const effectiveBinIds = scopeInfo.isScoped ? selectedBinIds : undefined;
       const result = await ask({ text: text.trim(), locationId: activeLocationId, binIds: effectiveBinIds });
       if (result) applyAskResult(result);
     } catch (err) {

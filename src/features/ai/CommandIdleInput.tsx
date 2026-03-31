@@ -1,5 +1,5 @@
 import { Camera, ChevronDown, ImagePlus, Sparkles } from 'lucide-react';
-import type { Dispatch, SetStateAction } from 'react';
+import { type Dispatch, type SetStateAction, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTerminology } from '@/lib/terminology';
@@ -32,7 +32,13 @@ export function CommandIdleInput({
 }: CommandIdleInputProps) {
   const t = useTerminology();
 
-  const defaultExamples = [
+  const examples = useMemo(() => isScoped ? [
+    { label: 'Auto-tag', example: 'Auto-tag these based on their contents' },
+    { label: 'Find common', example: 'What do these have in common?' },
+    { label: 'Organize', example: `Move all of these to the Garage ${t.area}` },
+    { label: 'Rename', example: 'Suggest better names for these' },
+    { label: 'Search', example: 'Which of these contain electronics?' },
+  ] : [
     { label: 'Add/remove items', example: 'Add screwdriver to the tools bin' },
     { label: 'Organize', example: 'Move batteries from kitchen to garage' },
     { label: `Manage ${t.bins}`, example: `Create a ${t.bin} called Holiday Decorations in the attic` },
@@ -40,17 +46,7 @@ export function CommandIdleInput({
     { label: `Manage ${t.areas}`, example: `Rename the garage ${t.area} to workshop` },
     { label: 'Find things', example: 'Where is the glass cleaner?' },
     { label: 'Search trash', example: "What's in my trash?" },
-  ];
-
-  const scopedExamples = [
-    { label: 'Auto-tag', example: 'Auto-tag these based on their contents' },
-    { label: 'Find common', example: 'What do these have in common?' },
-    { label: 'Organize', example: `Move all of these to the Garage ${t.area}` },
-    { label: 'Rename', example: 'Suggest better names for these' },
-    { label: 'Search', example: 'Which of these contain electronics?' },
-  ];
-
-  const examples = isScoped ? scopedExamples : defaultExamples;
+  ], [isScoped, t]);
 
   return (
     <div className="space-y-3">

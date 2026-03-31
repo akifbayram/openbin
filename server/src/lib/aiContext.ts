@@ -11,8 +11,12 @@ export const AVAILABLE_ICONS = [
 ];
 
 /** Fetch bins, areas, trash, and custom field data for a location. */
+function appendInClause(sql: string, column: string, startIndex: number, ids: string[]): { sql: string; params: string[] } {
+  const placeholders = ids.map((_, i) => `$${startIndex + i}`).join(', ');
+  return { sql: `${sql} AND ${column} IN (${placeholders})`, params: ids };
+}
+
 async function fetchLocationData(locationId: string, userId: string, binIds?: string[]) {
-  // Build bins query — optionally scoped to specific bin IDs
   let binsSql = `SELECT b.id, b.name,
         COALESCE((SELECT json_group_array(json_object('id', bi.id, 'name', bi.name, 'quantity', bi.quantity)) FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
         b.tags, b.area_id, COALESCE(a.name, '') AS area_name, b.notes, b.icon, b.color,
@@ -25,11 +29,11 @@ async function fetchLocationData(locationId: string, userId: string, binIds?: st
        WHERE b.location_id = $1 AND b.deleted_at IS NULL`;
   const binsParams: string[] = [locationId, userId];
   if (binIds?.length) {
-    binsSql += ` AND b.id IN (${binIds.map((_, i) => `$${3 + i}`).join(', ')})`;
-    binsParams.push(...binIds);
+    const inClause = appendInClause(binsSql, 'b.id', 3, binIds);
+    binsSql = inClause.sql;
+    binsParams.push(...inClause.params);
   }
 
-  // Build custom fields query — scoped to same bins when filtering
   let cfSql = `SELECT v.bin_id, f.name AS field_name, v.value
        FROM bin_custom_field_values v
        JOIN location_custom_fields f ON f.id = v.field_id
@@ -37,8 +41,9 @@ async function fetchLocationData(locationId: string, userId: string, binIds?: st
        WHERE f.location_id = $1 AND b.deleted_at IS NULL`;
   const cfParams: string[] = [locationId];
   if (binIds?.length) {
-    cfSql += ` AND v.bin_id IN (${binIds.map((_, i) => `$${2 + i}`).join(', ')})`;
-    cfParams.push(...binIds);
+    const inClause = appendInClause(cfSql, 'v.bin_id', 2, binIds);
+    cfSql = inClause.sql;
+    cfParams.push(...inClause.params);
   }
 
   const [binsResult, areasResult, trashResult, cfResult] = await Promise.all([
