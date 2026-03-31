@@ -117,7 +117,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto, selectedBin
         <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
 
         {scopeInfo.isScoped && !photoMode && (
-          <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 border border-[var(--ai-accent)]/20 px-3 py-2 text-[13px]">
+          <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 border border-[var(--ai-accent)]/20 px-3 py-2 mb-1 text-[13px]">
             <span className="text-[var(--text-secondary)]">
               Focused on {scopeInfo.binCount} selected {scopeInfo.binCount === 1 ? t.bin : t.bins}
             </span>
