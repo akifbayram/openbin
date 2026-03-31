@@ -44,6 +44,14 @@ const ResetPasswordPage = lazyWithRetry(() =>
   import('@/features/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage }))
 );
 
+const TermsPage = lazyWithRetry(() =>
+  import('@/features/legal/TermsPage').then((m) => ({ default: m.TermsPage }))
+);
+
+const PrivacyPage = lazyWithRetry(() =>
+  import('@/features/legal/PrivacyPage').then((m) => ({ default: m.PrivacyPage }))
+);
+
 const PrintPage = lazyWithRetry(() =>
   import('@/features/print/PrintPage').then((m) => ({ default: m.PrintPage }))
 );
@@ -279,6 +287,22 @@ export default function App() {
                 element={
                   <Suspense fallback={<LoadingFallback />}>
                     <ResetPasswordPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/terms"
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <TermsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/privacy"
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <PrivacyPage />
                   </Suspense>
                 }
               />

@@ -39,7 +39,7 @@ export function SortHeader<C extends string>({
       onClick={handleClick}
       aria-label={active ? `${label}, sorted ${currentDirection === 'asc' ? 'ascending' : 'descending'}` : `Sort by ${label}`}
       className={cn(
-        'flex items-center gap-0.5 text-[12px] font-medium uppercase tracking-wide transition-colors py-1.5 -my-1.5',
+        'flex items-center gap-0.5 text-[12px] font-medium uppercase tracking-wide transition-colors min-h-[44px] -my-2',
         active ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]',
         className,
       )}

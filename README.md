@@ -104,19 +104,12 @@ All settings are optional. Set environment variables or create a `.env` file to 
 | `AI_RATE_LIMIT` | Max AI requests per hour per user | `30` |
 | `AI_RATE_LIMIT_API_KEY` | Max AI requests per hour per API key | `1000` |
 | `DISABLE_RATE_LIMIT` | Set `true` to disable all rate limiters (dev only) | `false` |
-| **Demo** | | |
-| `DEMO_MODE` | Auto-login visitors with pre-populated sample data; resets on restart | `false` |
-| `DEMO_USERNAMES` | Comma-separated usernames blocked from AI API key access | — |
-| `AI_MOCK` | Return fake AI responses without an API key (testing only) | `false` |
-| `DEMO_AI_RATE_LIMIT` | Max AI tokens per hour for demo users | `10` |
-| `DEMO_AI_MAX_PHOTOS_PER_REQUEST` | Max photos per AI request for demo users | `3` |
-| `DEMO_AI_DAILY_BUDGET` | Max AI tokens per day for demo users | `100` |
 
 </details>
 
 ## Architecture
 
-Single Node.js process. All data lives in one SQLite file and a photos directory. No external services, no background workers, no telemetry, no phoning home. The app never makes outbound network requests unless you explicitly configure AI features.
+Single Node.js process. All data lives in one SQLite file and a photos directory.
 
 | Layer | Technology |
 |-------|------------|

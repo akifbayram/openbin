@@ -65,7 +65,7 @@ export function LabelSheet({ bins, format, labelDirection, showColorSwatch, icon
     };
   }, [bins, qrPixelSize, binColorKey, qrStyleKey, useStyled]);
 
-  if (loading) {
+  if (loading || (bins.length > 0 && qrMap.size === 0)) {
     return (
       <div className="flex items-center justify-center py-8 text-[var(--text-tertiary)] text-[13px]">
         Generating labels…

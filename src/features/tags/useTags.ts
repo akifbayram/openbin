@@ -1,5 +1,6 @@
+import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { Events } from '@/lib/eventBus';
+import { Events, notify } from '@/lib/eventBus';
 import { usePaginatedList } from '@/lib/usePaginatedList';
 
 export interface TagEntry {
@@ -35,4 +36,27 @@ export function usePaginatedTagList(search?: string, sort?: string, order?: 'asc
     hasMore: result.hasMore,
     loadMore: result.loadMore,
   };
+}
+
+function notifyTagsChanged() {
+  notify(Events.BINS);
+  notify(Events.TAG_COLORS);
+}
+
+export async function renameTag(locationId: string, oldTag: string, newTag: string): Promise<{ binsUpdated: number }> {
+  const result = await apiFetch<{ binsUpdated: number }>('/api/tags/rename', {
+    method: 'PUT',
+    body: { locationId, oldTag, newTag },
+  });
+  notifyTagsChanged();
+  return result;
+}
+
+export async function deleteTag(locationId: string, tag: string): Promise<{ binsUpdated: number }> {
+  const result = await apiFetch<{ binsUpdated: number }>(
+    `/api/tags/${encodeURIComponent(tag)}?location_id=${encodeURIComponent(locationId)}`,
+    { method: 'DELETE' },
+  );
+  notifyTagsChanged();
+  return result;
 }

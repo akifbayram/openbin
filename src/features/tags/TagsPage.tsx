@@ -1,50 +1,91 @@
-import { Tags as TagsIcon } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { PackageOpen, Tags as TagsIcon } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
-import type { SortDirection } from '@/components/ui/sort-header';
+import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
-import { resolveColor } from '@/lib/colorPalette';
 import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';
+import { usePermissions } from '@/lib/usePermissions';
+import { useTableSearchParams } from '@/lib/useTableSearchParams';
 import { useTagColorsContext } from './TagColorsContext';
 import { type TagSortColumn, TagTableView } from './TagTableView';
 import { setTagColor } from './useTagColors';
-import { usePaginatedTagList } from './useTags';
+import { useTagStyle } from './useTagStyle';
+import { deleteTag, renameTag, usePaginatedTagList } from './useTags';
 
 export function TagsPage() {
-  const [search, setSearch] = useState('');
-  const [sortColumn, setSortColumn] = useState<TagSortColumn>('alpha');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const { search, sortColumn, sortDirection, setSearch, setSort } = useTableSearchParams<TagSortColumn>('alpha');
   const debouncedSearch = useDebounce(search, 300);
   const { activeLocationId } = useAuth();
   const t = useTerminology();
+  const { canWrite } = usePermissions();
+  const { showToast } = useToast();
   const { tags, totalCount, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedTagList(debouncedSearch, sortColumn, sortDirection);
   const { tagColors } = useTagColorsContext();
+  const getTagBadgeStyle = useTagStyle();
 
-  const handleSortChange = useCallback((column: TagSortColumn, direction: SortDirection) => {
-    setSortColumn(column);
-    setSortDirection(direction);
-  }, []);
+  // Rename dialog state
+  const [renameTarget, setRenameTarget] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [renameLoading, setRenameLoading] = useState(false);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // Delete dialog state
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   function handleColorChange(tag: string, color: string) {
     if (!activeLocationId) return;
     setTagColor(activeLocationId, tag, color);
   }
 
-  function getTagBadgeStyle(tag: string) {
-    const colorKey = tagColors.get(tag);
-    if (!colorKey) return undefined;
-    const preset = resolveColor(colorKey);
-    if (!preset) return undefined;
-    return {
-      backgroundColor: preset.bgCss,
-      color: 'var(--tag-text-on-color)',
-    };
+  function handleRenameOpen(tag: string) {
+    setRenameTarget(tag);
+    setRenameValue(tag);
+    requestAnimationFrame(() => renameInputRef.current?.select());
+  }
+
+  async function handleRenameSubmit() {
+    if (!activeLocationId || !renameTarget) return;
+    const trimmed = renameValue.trim().toLowerCase();
+    if (!trimmed || trimmed === renameTarget) {
+      setRenameTarget(null);
+      return;
+    }
+    setRenameLoading(true);
+    try {
+      const { binsUpdated } = await renameTag(activeLocationId, renameTarget, trimmed);
+      showToast({ message: `Renamed "${renameTarget}" → "${trimmed}" in ${binsUpdated} ${binsUpdated === 1 ? t.bin : t.bins}` });
+      setRenameTarget(null);
+    } catch {
+      showToast({ message: 'Failed to rename tag', variant: 'error' });
+    } finally {
+      setRenameLoading(false);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!activeLocationId || !deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      const { binsUpdated } = await deleteTag(activeLocationId, deleteTarget);
+      showToast({ message: `Removed "${deleteTarget}" from ${binsUpdated} ${binsUpdated === 1 ? t.bin : t.bins}` });
+      setDeleteTarget(null);
+    } catch {
+      showToast({ message: 'Failed to delete tag', variant: 'error' });
+    } finally {
+      setDeleteLoading(false);
+    }
   }
 
   return (
@@ -55,6 +96,7 @@ export function TagsPage() {
         <SearchInput
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onClear={search ? () => setSearch('') : undefined}
           placeholder="Search tags..."
         />
       )}
@@ -81,27 +123,83 @@ export function TagsPage() {
       >
         {tags.length === 0 ? (
           <EmptyState
-            icon={TagsIcon}
+            icon={search ? TagsIcon : PackageOpen}
             title={search ? 'No tags match your search' : 'No tags yet'}
             subtitle={search ? 'Try a different search term' : `Tags added to ${t.bins} will appear here`}
             variant={search ? 'search' : undefined}
-          />
+          >
+            {!search && (
+              <Link to="/bins">
+                <Button variant="secondary" size="sm">Browse {t.bins}</Button>
+              </Link>
+            )}
+          </EmptyState>
         ) : (
           <TagTableView
             tags={tags}
             sortColumn={sortColumn}
             sortDirection={sortDirection}
-            onSortChange={handleSortChange}
+            onSortChange={setSort}
             searchQuery={debouncedSearch}
             tagColors={tagColors}
             getTagBadgeStyle={getTagBadgeStyle}
             onColorChange={handleColorChange}
+            onRename={canWrite ? handleRenameOpen : undefined}
+            onDelete={canWrite ? (tag) => setDeleteTarget(tag) : undefined}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
             loadMore={loadMore}
           />
         )}
       </Crossfade>
+
+      {/* Rename dialog */}
+      <Dialog open={renameTarget !== null} onOpenChange={(open) => { if (!open) setRenameTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename tag</DialogTitle>
+            <DialogDescription>
+              This will rename &ldquo;{renameTarget}&rdquo; across all {t.bins} in this {t.location}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="rename-tag-input">New name</Label>
+            <Input
+              ref={renameInputRef}
+              id="rename-tag-input"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleRenameSubmit(); }}
+              maxLength={100}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setRenameTarget(null)} disabled={renameLoading}>Cancel</Button>
+            <Button onClick={handleRenameSubmit} disabled={renameLoading || !renameValue.trim()}>
+              {renameLoading ? 'Renaming…' : 'Rename'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete tag</DialogTitle>
+            <DialogDescription>
+              This will remove &ldquo;{deleteTarget}&rdquo; from all {t.bins} in this {t.location}. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={deleteLoading}>
+              {deleteLoading ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

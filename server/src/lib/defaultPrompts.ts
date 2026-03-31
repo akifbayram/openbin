@@ -8,7 +8,7 @@ You may receive 1–5 photos of the same bin from different angles. Cross-refere
 
 "tags" — 2–5 lowercase single-word category labels for filtering. Each tag MUST be a single word (never multi-word). Use plural nouns: "tools", "cables", "batteries". Start broad, then add 1–2 specific subcategories: ["tools", "screwdrivers"] or ["electronics", "cables", "usb"]. Strongly prefer reusing tags already in the inventory over inventing new ones. Preferred standard terms: tools, electronics, hardware, office, kitchen, craft, seasonal, automotive, outdoor, clothing, toys, cleaning, medical, plumbing, electrical, cables, batteries, fasteners, adhesives, paint, garden, sports, storage, lighting, sewing.
 
-"notes" — One sentence on organization or condition. Mention: how contents are arranged (sorted by size, loosely mixed, in original packaging), condition (new, used, worn), or any notable labels/markings. Use empty string "" if nothing notable.
+"notes" — Use empty string "" by default. Only add a note when there is genuinely useful information NOT captured by the name, items, or tags. Valid reasons: safety hazards ("contains sharp blades"), expiration/dates ("expires 2025-03"), storage requirements ("keep dry"), known defects ("missing lid"), important labels/model numbers not in item names, or partial quantities ("half roll remaining"). Do NOT describe how items are physically arranged, stored, or packaged — that adds no retrieval value.
 
 Respond with ONLY valid JSON, no markdown fences, no extra text.
 

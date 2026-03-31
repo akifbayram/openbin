@@ -15,6 +15,18 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+// Pre-schema migrations: add columns that schema.sql indexes depend on (must run BEFORE schema)
+for (const col of [
+  'plan INTEGER NOT NULL DEFAULT 1',
+  'sub_status INTEGER NOT NULL DEFAULT 1',
+  'active_until TEXT',
+  'previous_sub_status INTEGER',
+  'is_admin INTEGER NOT NULL DEFAULT 0',
+  'deleted_at TEXT',
+]) {
+  try { db.exec(`ALTER TABLE users ADD COLUMN ${col}`); } catch { /* column already exists or table missing */ }
+}
+
 // Initialize schema (all CREATE IF NOT EXISTS — safe to run on every start)
 const schemaPath = path.join(__dirname, '..', 'schema.sql');
 if (fs.existsSync(schemaPath)) {
@@ -105,18 +117,6 @@ db.exec([
   }
 }
 
-// Cloud tier: plan and subscription columns for users
-try { db.exec('ALTER TABLE users ADD COLUMN plan INTEGER NOT NULL DEFAULT 1'); } catch { /* column already exists */ }
-try { db.exec('ALTER TABLE users ADD COLUMN sub_status INTEGER NOT NULL DEFAULT 1'); } catch { /* column already exists */ }
-try { db.exec('ALTER TABLE users ADD COLUMN active_until TEXT'); } catch { /* column already exists */ }
-try { db.exec('ALTER TABLE users ADD COLUMN previous_sub_status INTEGER'); } catch { /* column already exists */ }
-db.exec('CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status)');
-
-// Global admin role
-try { db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0'); } catch { /* column already exists */ }
-
-// Soft delete for users
-try { db.exec('ALTER TABLE users ADD COLUMN deleted_at TEXT'); } catch { /* column already exists */ }
 
 /** Try to create a unique index; if duplicates exist, run dedupSql first then retry. */
 function createUniqueIndexWithDedup(indexDdl: string, dedupSql: string): void {

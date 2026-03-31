@@ -275,6 +275,12 @@ export function getApproxBgHex(preset: ColorPreset, theme: 'light' | 'dark'): st
   return theme === 'dark' ? preset.bgDark : preset.bg;
 }
 
+/** Return a contrast-safe text color for a tag with the given preset and theme. */
+export function getTagTextColor(preset: ColorPreset, theme: 'light' | 'dark'): string {
+  const bg = getApproxBgHex(preset, theme);
+  return needsLightText(bg) ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)';
+}
+
 export function getHueRange(colorKey: string): string | null {
   if (!colorKey) return null;
 

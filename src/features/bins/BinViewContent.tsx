@@ -7,8 +7,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Label } from '@/components/ui/label';
 import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
-import { useTagColorsContext } from '@/features/tags/TagColorsContext';
-import { resolveColor } from '@/lib/colorPalette';
+import { useTagStyle } from '@/features/tags/useTagStyle';
 import { useTerminology } from '@/lib/terminology';
 import { disclosureSectionLabel } from '@/lib/utils';
 import type { AiSuggestions, Bin, CustomField } from '@/types';
@@ -53,7 +52,7 @@ export function BinViewContent({
   onClearSuggestions,
 }: BinViewContentProps) {
   const navigate = useNavigate();
-  const { tagColors } = useTagColorsContext();
+  const getTagStyle = useTagStyle();
   const t = useTerminology();
 
   return (
@@ -122,26 +121,16 @@ export function BinViewContent({
               <div>
                 <Label>Tags</Label>
                 <div className="flex flex-wrap gap-2 mt-2.5">
-                  {bin.tags.map((tag) => {
-                    const tagColorKey = tagColors.get(tag);
-                    const tagPreset = tagColorKey ? resolveColor(tagColorKey) : undefined;
-                    const tagStyle = tagPreset
-                      ? {
-                          backgroundColor: tagPreset.bgCss,
-                          color: 'var(--tag-text-on-color)',
-                        }
-                      : undefined;
-                    return (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        style={tagStyle}
-                        onClick={() => navigate(`/bins?tags=${encodeURIComponent(tag)}`)}
-                      >
-                        {tag}
-                      </Badge>
-                    );
-                  })}
+                  {bin.tags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      style={getTagStyle(tag)}
+                      onClick={() => navigate(`/bins?tags=${encodeURIComponent(tag)}`)}
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
                 </div>
               </div>
             )}

@@ -1,17 +1,18 @@
 import { LogIn, Monitor, Moon, Sun } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BrandIcon } from '@/components/BrandIcon';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { useToast } from '@/components/ui/toast';
 import { apiFetch } from '@/lib/api';
 import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
-import { getErrorMessage } from '@/lib/utils';
+import { cn, focusRing, getErrorMessage } from '@/lib/utils';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -26,6 +27,9 @@ export function LoginPage() {
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
   const [demoMode, setDemoMode] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [formError, setFormError] = useState('');
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/auth/status')
@@ -63,39 +67,48 @@ export function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!username.trim() || !password) return;
+    setFormError('');
+    if (!username.trim()) {
+      usernameRef.current?.focus();
+      return;
+    }
+    if (!password) {
+      passwordRef.current?.focus();
+      return;
+    }
     setLoading(true);
     try {
       await login(username.trim(), password);
       navigate('/');
     } catch (err) {
-      showToast({
-        message: getErrorMessage(err, 'Login failed'),
-        variant: 'error',
-      });
+      setFormError(getErrorMessage(err, 'Invalid username or password'));
+      usernameRef.current?.focus();
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="auth-pattern min-h-dvh flex flex-col items-center justify-center px-6 bg-[var(--bg-base)]">
+    <div className="auth-pattern min-h-dvh flex flex-col items-center justify-center px-6 py-8 bg-[var(--bg-base)]">
       <button
         type="button"
         onClick={() => setThemePreference(cycleThemePreference(preference))}
         aria-label={`Switch theme, currently ${preference}`}
-        className="absolute top-4 right-4 z-10 p-2.5 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
+        className={cn(
+          'absolute top-4 right-4 z-10 p-3 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors',
+          focusRing
+        )}
       >
         <ThemeIcon className="h-5 w-5" />
       </button>
-      <div className="relative z-[1] w-full max-w-sm space-y-8">
+      <div className="relative z-[1] w-full max-w-sm space-y-8 animate-auth-enter">
         <div className="text-center space-y-1">
-          <BrandIcon className="h-12 w-12 mx-auto text-[var(--accent)] mb-3" />
+          <BrandIcon className="h-16 w-16 mx-auto text-[var(--accent)] mb-3" />
           <h1 className="font-heading text-[28px] font-bold text-[var(--text-primary)] tracking-tight">
             {settings.appName}
           </h1>
           <p className="text-[14px] text-[var(--text-tertiary)]">
-            Organize your physical world
+            QR-coded storage, organized
           </p>
         </div>
 
@@ -108,40 +121,49 @@ export function LoginPage() {
           <>
             <Card>
               <CardContent className="py-6">
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+                  {formError && (
+                    <p role="alert" className="text-[13px] text-[var(--destructive)] bg-[var(--destructive-soft)] px-3.5 py-2.5 rounded-[var(--radius-sm)]">
+                      {formError}
+                    </p>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="login-username">Username</Label>
                     <Input
+                      ref={usernameRef}
                       id="login-username"
                       value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      onChange={(e) => { setUsername(e.target.value); if (formError) setFormError(''); }}
                       placeholder="Enter username"
                       autoComplete="username"
+                      autoCapitalize="none"
                       autoFocus
                       required
+                      enterKeyHint="next"
                     />
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <Label htmlFor="login-password">Password</Label>
-                      <Link to="/forgot-password" className="text-[13px] text-[var(--accent)] hover:underline">
+                      <Link to="/forgot-password" className="text-[13px] text-[var(--accent)] hover:underline focus-visible:underline focus-visible:outline-none shrink-0">
                         Forgot password?
                       </Link>
                     </div>
-                    <Input
+                    <PasswordInput
+                      ref={passwordRef}
                       id="login-password"
-                      type="password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => { setPassword(e.target.value); if (formError) setFormError(''); }}
                       placeholder="Enter password"
                       autoComplete="current-password"
                       required
+                      enterKeyHint="done"
                     />
                   </div>
                   <Button
                     type="submit"
                     disabled={!username.trim() || !password || loading}
-                    className="w-full rounded-[var(--radius-md)] h-11 text-[15px]"
+                    fullWidth
                   >
                     <LogIn className="h-4 w-4 mr-2" />
                     {loading ? 'Signing in...' : 'Sign In'}
@@ -153,7 +175,7 @@ export function LoginPage() {
             {registrationEnabled && (
               <p className="text-center text-[14px] text-[var(--text-secondary)]">
                 Don't have an account?{' '}
-                <Link to="/register" className="text-[var(--accent)] font-medium hover:underline">
+                <Link to="/register" className="text-[var(--accent)] font-medium hover:underline focus-visible:underline focus-visible:outline-none">
                   Create one
                 </Link>
               </p>

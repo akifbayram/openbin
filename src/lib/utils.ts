@@ -34,11 +34,11 @@ export const focusRingInset =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]';
 
 /** Shared disabled styling for interactive elements. */
-export const disabledClasses = 'disabled:cursor-not-allowed disabled:opacity-40';
+export const disabledClasses = 'disabled:cursor-not-allowed disabled:opacity-50';
 
 /** Base classes shared by Input, Textarea, and similar form controls. */
 export const inputBase =
-  'w-full rounded-[var(--radius-sm)] bg-[var(--bg-input)] border border-[var(--border-flat)] px-3.5 py-2.5 text-base text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] transition-all duration-200 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40';
+  'w-full rounded-[var(--radius-sm)] bg-[var(--bg-input)] border border-[var(--border-flat)] px-3.5 py-2.5 text-base text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] transition-all duration-200 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
 /** Flat card base — shared by Card, Table, ListItem. */
 export const flatCard = 'flat-card rounded-[var(--radius-lg)]';
