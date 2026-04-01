@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getDb, query, querySync } from '../db.js';
+import { d, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireMemberOrAbove, verifyLocationMembership } from '../lib/binAccess.js';
 import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
@@ -34,7 +34,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
   const baseQuery = `
     SELECT jt.value AS tag, COUNT(DISTINCT b.id) AS count
-    FROM bins b, json_each(b.tags) jt
+    FROM bins b, ${d.jsonEachFrom('b.tags', 'jt')}
     WHERE b.location_id = $1
       AND b.deleted_at IS NULL
       AND (b.visibility = 'location' OR b.created_by = $2)
@@ -53,8 +53,8 @@ router.get('/', asyncHandler(async (req, res) => {
   const orderParam = req.query.sort_dir as string | undefined;
   const desc = orderParam === 'desc';
   const orderBy = sortParam === 'count'
-    ? `count ${desc ? 'DESC' : 'ASC'}, jt.value COLLATE NOCASE ASC`
-    : `jt.value COLLATE NOCASE ${desc ? 'DESC' : 'ASC'}`;
+    ? `count ${desc ? 'DESC' : 'ASC'}, jt.value ${d.nocase()} ASC`
+    : `jt.value ${d.nocase()} ${desc ? 'DESC' : 'ASC'}`;
 
   // Data query with sort, limit, offset
   params.push(limit, offset);
@@ -87,32 +87,31 @@ router.put('/rename', asyncHandler(async (req, res) => {
 
   await requireMemberOrAbove(locationId, req.user!.id, 'rename tags');
 
-  const db = getDb();
-  const { binsUpdated } = db.transaction(() => {
-    const result = querySync<{ updated: number }>(
+  const { binsUpdated } = await withTransaction(async (txQuery) => {
+    const result = await txQuery<{ updated: number }>(
       `UPDATE bins
        SET tags = (
-         SELECT json_group_array(tag) FROM (
+         SELECT ${d.jsonGroupArray('tag')} FROM (
            SELECT DISTINCT CASE WHEN jt.value = $2 THEN $3 ELSE jt.value END AS tag
-           FROM json_each(bins.tags) jt
+           FROM ${d.jsonEachFrom('bins.tags', 'jt')}
          )
        ),
-       updated_at = datetime('now')
+       updated_at = ${d.now()}
        WHERE location_id = $1
          AND deleted_at IS NULL
-         AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = $2)
+         AND EXISTS (SELECT 1 FROM ${d.jsonEachFrom('tags', 'jt2')} WHERE jt2.value = $2)
        RETURNING 1 AS updated`,
       [locationId, oldTag, trimmed],
     );
 
-    querySync(
-      `UPDATE tag_colors SET tag = $1, updated_at = datetime('now')
+    await txQuery(
+      `UPDATE tag_colors SET tag = $1, updated_at = ${d.now()}
        WHERE location_id = $2 AND tag = $3`,
       [trimmed, locationId, oldTag],
     );
 
     return { binsUpdated: result.rows.length };
-  })();
+  });
 
   res.json({ renamed: true, binsUpdated });
 }));
@@ -128,30 +127,29 @@ router.delete('/:tag', asyncHandler(async (req, res) => {
 
   await requireMemberOrAbove(locationId, req.user!.id, 'delete tags');
 
-  const db = getDb();
-  const { binsUpdated } = db.transaction(() => {
-    const result = querySync<{ updated: number }>(
+  const { binsUpdated } = await withTransaction(async (txQuery) => {
+    const result = await txQuery<{ updated: number }>(
       `UPDATE bins
        SET tags = (
-         SELECT json_group_array(jt.value)
-         FROM json_each(bins.tags) jt
+         SELECT ${d.jsonGroupArray('jt.value')}
+         FROM ${d.jsonEachFrom('bins.tags', 'jt')}
          WHERE jt.value != $2
        ),
-       updated_at = datetime('now')
+       updated_at = ${d.now()}
        WHERE location_id = $1
          AND deleted_at IS NULL
-         AND EXISTS (SELECT 1 FROM json_each(tags) WHERE value = $2)
+         AND EXISTS (SELECT 1 FROM ${d.jsonEachFrom('tags', 'jt2')} WHERE jt2.value = $2)
        RETURNING 1 AS updated`,
       [locationId, tag],
     );
 
-    querySync(
+    await txQuery(
       'DELETE FROM tag_colors WHERE location_id = $1 AND tag = $2',
       [locationId, tag],
     );
 
     return { binsUpdated: result.rows.length };
-  })();
+  });
 
   res.json({ deleted: true, binsUpdated });
 }));

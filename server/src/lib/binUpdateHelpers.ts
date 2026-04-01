@@ -1,7 +1,7 @@
-import { generateUuid, getDb, query, querySync } from '../db.js';
+import { d, generateUuid, isUniqueViolation, query, withTransaction } from '../db.js';
 import { computeChanges } from './activityLog.js';
 import { fetchBinById } from './binQueries.js';
-import { replaceCustomFieldValuesSync } from './customFieldHelpers.js';
+import { replaceCustomFieldValues } from './customFieldHelpers.js';
 import { generateShortCode } from './shortCode.js';
 
 export function buildBinSetClauses(fields: {
@@ -14,7 +14,7 @@ export function buildBinSetClauses(fields: {
   cardStyle?: unknown;
   visibility?: unknown;
 }): { setClauses: string[]; params: unknown[]; nextParamIdx: number } {
-  const setClauses: string[] = ["updated_at = datetime('now')"];
+  const setClauses: string[] = [`updated_at = ${d.now()}`];
   const params: unknown[] = [];
   let paramIdx = 1;
 
@@ -66,20 +66,19 @@ export async function replaceBinItems(binId: string, newItems: unknown[]): Promi
   );
   const oldItemNames = oldItemsResult.rows.map((r) => r.name);
 
-  const db = getDb();
-  const deleteStmt = db.prepare('DELETE FROM bin_items WHERE bin_id = ?');
-  const insertStmt = db.prepare('INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES (?, ?, ?, ?, ?)');
-  const runReplace = db.transaction(() => {
-    deleteStmt.run(binId);
+  await withTransaction(async (tx) => {
+    await tx('DELETE FROM bin_items WHERE bin_id = $1', [binId]);
     for (let i = 0; i < newItems.length; i++) {
       const item = newItems[i];
       const itemName = typeof item === 'string' ? item : (item as { name: string }).name;
       const itemQty = typeof item === 'object' && item !== null ? ((item as { quantity?: number | null }).quantity ?? null) : null;
       if (!itemName) continue;
-      insertStmt.run(generateUuid(), binId, itemName, itemQty, i);
+      await tx(
+        'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, $4, $5)',
+        [generateUuid(), binId, itemName, itemQty, i],
+      );
     }
   });
-  runReplace();
 
   const newItemNames = newItems.map((item) =>
     typeof item === 'string' ? item : (item as { name: string }).name
@@ -172,9 +171,8 @@ export async function insertBinWithItems(fields: InsertBinFields): Promise<Recor
     const binId = attempt === 0 ? sc : generateShortCode(fields.name);
 
     try {
-      const db = getDb();
-      db.transaction(() => {
-        querySync(
+      await withTransaction(async (tx) => {
+        await tx(
           `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
           [binId, fields.locationId, fields.name.trim(), fields.areaId, fields.notes, fields.tags, fields.icon, fields.color, fields.cardStyle, fields.createdBy, fields.visibility]
@@ -185,7 +183,7 @@ export async function insertBinWithItems(fields: InsertBinFields): Promise<Recor
           const item = fields.items[i];
           const itemName = typeof item === 'string' ? item : (item as { name: string })?.name;
           if (!itemName) continue;
-          querySync(
+          await tx(
             'INSERT INTO bin_items (id, bin_id, name, quantity, position) VALUES ($1, $2, $3, NULL, $4)',
             [generateUuid(), binId, itemName, i]
           );
@@ -193,14 +191,13 @@ export async function insertBinWithItems(fields: InsertBinFields): Promise<Recor
 
         // Insert custom field values
         if (fields.customFields && Object.keys(fields.customFields).length > 0) {
-          replaceCustomFieldValuesSync(binId, fields.customFields, fields.locationId);
+          await replaceCustomFieldValues(binId, fields.customFields, fields.locationId, tx);
         }
-      })();
+      });
 
       return (await fetchBinById(binId))!;
     } catch (err: unknown) {
-      const sqliteErr = err as { code?: string };
-      if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && attempt < maxRetries) {
+      if (isUniqueViolation(err) && attempt < maxRetries) {
         continue;
       }
       throw err;

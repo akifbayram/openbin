@@ -1,3 +1,4 @@
+import { initialize } from './db.js';
 import { createApp } from './index.js';
 import { startBackupScheduler } from './lib/backup.js';
 import { config } from './lib/config.js';
@@ -11,6 +12,10 @@ import { startUserCleanupJob } from './lib/userCleanup.js';
 import { startWebhookOutboxProcessor } from './lib/webhookOutbox.js';
 
 const log = createLogger('startup');
+
+// Initialize the database engine before anything touches the DB
+await initialize();
+
 const app = createApp();
 
 if (!config.aiEncryptionKey) {
@@ -30,7 +35,7 @@ if (!config.selfHosted && !config.trustProxy) {
 }
 
 if (config.demoMode) {
-  seedDemoData();
+  seedDemoData().catch((err) => log.error('Demo seed failed:', err instanceof Error ? err.message : err));
 }
 
 app.listen(config.port, () => {
@@ -48,7 +53,7 @@ app.listen(config.port, () => {
 
   // Orphan photo cleanup — 30s after startup, then every 6 hours
   setTimeout(() => {
-    cleanupOrphanPhotos();
-    setInterval(() => cleanupOrphanPhotos(), 6 * 60 * 60 * 1000);
+    cleanupOrphanPhotos().catch(() => {});
+    setInterval(() => cleanupOrphanPhotos().catch(() => {}), 6 * 60 * 60 * 1000);
   }, 30_000);
 });

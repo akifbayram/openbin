@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as jose from 'jose';
-import { query } from '../db.js';
+import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
@@ -72,7 +72,7 @@ router.post('/callback', asyncHandler(async (req, res) => {
   const result = await query(
     `UPDATE users SET plan = $1, sub_status = $2, active_until = $3,
      previous_sub_status = CASE WHEN $2 = ${SubStatus.INACTIVE} THEN sub_status ELSE NULL END,
-     updated_at = datetime('now') WHERE id = $4`,
+     updated_at = ${d.now()} WHERE id = $4`,
     [plan, status, activeUntil || null, userId],
   );
 

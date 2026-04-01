@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
-import { generateUuid, query } from '../db.js';
+import { d, generateUuid, query } from '../db.js';
 import { config } from './config.js';
 import { UnauthorizedError } from './httpErrors.js';
 import { hashToken, revokeAllUserTokens } from './refreshTokens.js';
@@ -20,7 +20,7 @@ export async function createPasswordResetToken(
 ): Promise<ResetTokenResult> {
   // Invalidate any existing unused tokens for this user
   await query(
-    `UPDATE password_reset_tokens SET used_at = datetime('now')
+    `UPDATE password_reset_tokens SET used_at = ${d.now()}
      WHERE user_id = $1 AND used_at IS NULL`,
     [userId],
   );
@@ -77,13 +77,13 @@ export async function consumeResetToken(
   // Hash new password and update user
   const passwordHash = await bcrypt.hash(newPassword, config.bcryptRounds);
   await query(
-    `UPDATE users SET password_hash = $1, updated_at = datetime('now') WHERE id = $2`,
+    `UPDATE users SET password_hash = $1, updated_at = ${d.now()} WHERE id = $2`,
     [passwordHash, token.user_id],
   );
 
   // Mark token as used
   await query(
-    `UPDATE password_reset_tokens SET used_at = datetime('now') WHERE id = $1`,
+    `UPDATE password_reset_tokens SET used_at = ${d.now()} WHERE id = $1`,
     [token.id],
   );
 

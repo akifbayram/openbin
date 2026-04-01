@@ -1,3 +1,4 @@
+import type { TxQueryFn } from '../../db.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
 
@@ -23,4 +24,4 @@ export interface PendingActivity {
   apiKeyId?: string;
 }
 
-export type ActionHandler = (action: CommandAction, ctx: ActionContext) => ActionResult;
+export type ActionHandler = (action: CommandAction, ctx: ActionContext, tx: TxQueryFn) => Promise<ActionResult>;

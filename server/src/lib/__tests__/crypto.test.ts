@@ -81,7 +81,7 @@ describe('crypto', () => {
       const result = await resolveMaskedApiKey('****', 'user1');
       expect(result).toBe('sk-secret');
       expect(mockQuery).toHaveBeenCalledWith(
-        'SELECT api_key FROM user_ai_settings WHERE user_id = $1 AND is_active = 1',
+        'SELECT api_key FROM user_ai_settings WHERE user_id = $1 AND is_active = TRUE',
         ['user1'],
       );
     });

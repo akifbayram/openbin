@@ -1,11 +1,12 @@
-import { generateUuid, querySync } from '../../db.js';
+import type { TxQueryFn } from '../../db.js';
+import { d, generateUuid } from '../../db.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
-import { replaceCustomFieldValuesSync } from '../customFieldHelpers.js';
+import { replaceCustomFieldValues } from '../customFieldHelpers.js';
 import type { ActionContext } from './types.js';
 
-export function handleUpdateBin(action: Extract<CommandAction, { type: 'update_bin' }>, ctx: ActionContext): ActionResult {
-  const bin = querySync<{ id: string; name: string; notes: string; tags: string[]; area_id: string | null; icon: string; color: string; card_style: string; visibility: string }>(
+export async function handleUpdateBin(action: Extract<CommandAction, { type: 'update_bin' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
+  const bin = await tx<{ id: string; name: string; notes: string; tags: string[]; area_id: string | null; icon: string; color: string; card_style: string; visibility: string }>(
     'SELECT id, name, notes, tags, area_id, icon, color, card_style, visibility FROM bins WHERE id = $1 AND deleted_at IS NULL',
     [action.bin_id]
   );
@@ -57,7 +58,7 @@ export function handleUpdateBin(action: Extract<CommandAction, { type: 'update_b
   if (action.area_name !== undefined) {
     let areaId: string | null = null;
     if (action.area_name) {
-      const area = querySync(
+      const area = await tx(
         'SELECT id FROM areas WHERE location_id = $1 AND LOWER(name) = LOWER($2)',
         [ctx.locationId, action.area_name]
       );
@@ -65,7 +66,7 @@ export function handleUpdateBin(action: Extract<CommandAction, { type: 'update_b
         areaId = area.rows[0].id as string;
       } else {
         const newAreaId = generateUuid();
-        querySync(
+        await tx(
           'INSERT INTO areas (id, location_id, name, created_by) VALUES ($1, $2, $3, $4)',
           [newAreaId, ctx.locationId, action.area_name, ctx.userId]
         );
@@ -82,7 +83,7 @@ export function handleUpdateBin(action: Extract<CommandAction, { type: 'update_b
       // Resolve old area name for change tracking
       let oldAreaName = '';
       if (old.area_id) {
-        const oldArea = querySync<{ name: string }>('SELECT name FROM areas WHERE id = $1', [old.area_id]);
+        const oldArea = await tx<{ name: string }>('SELECT name FROM areas WHERE id = $1', [old.area_id]);
         oldAreaName = oldArea.rows[0]?.name ?? '';
       }
       changes.area = { old: oldAreaName || null, new: action.area_name || null };
@@ -90,14 +91,14 @@ export function handleUpdateBin(action: Extract<CommandAction, { type: 'update_b
   }
 
   if (updates.length > 0) {
-    updates.push(`updated_at = datetime('now')`);
+    updates.push(`updated_at = ${d.now()}`);
     params.push(action.bin_id);
-    querySync(`UPDATE bins SET ${updates.join(', ')} WHERE id = $${paramIdx}`, params);
+    await tx(`UPDATE bins SET ${updates.join(', ')} WHERE id = $${paramIdx}`, params);
   }
 
   // Handle custom fields
   if (action.custom_fields && typeof action.custom_fields === 'object') {
-    replaceCustomFieldValuesSync(action.bin_id, action.custom_fields as Record<string, string>, ctx.locationId);
+    await replaceCustomFieldValues(action.bin_id, action.custom_fields as Record<string, string>, ctx.locationId, tx);
   }
 
   if (Object.keys(changes).length > 0) {

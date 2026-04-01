@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { querySync } from '../db.js';
+import { query } from '../db.js';
 import { config } from './config.js';
 import { createLogger } from './logger.js';
 import { safePath } from './pathSafety.js';
@@ -38,12 +38,12 @@ export async function cleanupBinPhotos(
 }
 
 /** Scan PHOTO_STORAGE_PATH and delete files with no matching photos row. Local storage only. */
-export function cleanupOrphanPhotos(): void {
+export async function cleanupOrphanPhotos(): Promise<void> {
   if (config.storageBackend === 's3') return;
   if (!fs.existsSync(PHOTO_STORAGE_PATH)) return;
 
   // Collect all known paths from DB
-  const result = querySync<{ storage_path: string; thumb_path: string | null }>(
+  const result = await query<{ storage_path: string; thumb_path: string | null }>(
     'SELECT storage_path, thumb_path FROM photos',
   );
   const knownPaths = new Set<string>();

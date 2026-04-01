@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { generateUuid, query } from '../db.js';
+import { d, generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { isLocationAdmin, requireMemberOrAbove, verifyBinAccess } from '../lib/binAccess.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
@@ -57,7 +57,7 @@ router.post('/:id/items', asyncHandler(async (req, res) => {
     newItems.push({ id: itemId, name: name.trim(), quantity: qty });
   }
 
-  await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
+  await query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [id]);
 
   // Get bin name for activity log
   const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
@@ -90,7 +90,7 @@ router.delete('/:id/items/:itemId', asyncHandler(async (req, res) => {
 
   const itemName = itemResult.rows[0].name;
   await query('DELETE FROM bin_items WHERE id = $1 AND bin_id = $2', [itemId, id]);
-  await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
+  await query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [id]);
 
   const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
   logRouteActivity(req, {
@@ -152,10 +152,10 @@ router.put('/:id/items/:itemId', asyncHandler(async (req, res) => {
   const newQuantity = quantity === null ? null : (typeof quantity === 'number' ? Math.max(1, Math.floor(quantity)) : oldQuantity);
 
   await query(
-    "UPDATE bin_items SET name = $1, quantity = $2, updated_at = datetime('now') WHERE id = $3 AND bin_id = $4",
+    `UPDATE bin_items SET name = $1, quantity = $2, updated_at = ${d.now()} WHERE id = $3 AND bin_id = $4`,
     [name.trim(), newQuantity, itemId, id]
   );
-  await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
+  await query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [id]);
 
   const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
   const changes: Record<string, { old: unknown; new: unknown }> = {};
@@ -207,7 +207,7 @@ router.patch('/:id/items/:itemId/quantity', asyncHandler(async (req, res) => {
   if (newQuantity <= 0) {
     // Remove item
     await query('DELETE FROM bin_items WHERE id = $1 AND bin_id = $2', [itemId, id]);
-    await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
+    await query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [id]);
 
     const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
     logRouteActivity(req, {
@@ -224,10 +224,10 @@ router.patch('/:id/items/:itemId/quantity', asyncHandler(async (req, res) => {
   }
 
   await query(
-    "UPDATE bin_items SET quantity = $1, updated_at = datetime('now') WHERE id = $2 AND bin_id = $3",
+    `UPDATE bin_items SET quantity = $1, updated_at = ${d.now()} WHERE id = $2 AND bin_id = $3`,
     [newQuantity, itemId, id]
   );
-  await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [id]);
+  await query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [id]);
 
   const binResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [id]);
   logRouteActivity(req, {

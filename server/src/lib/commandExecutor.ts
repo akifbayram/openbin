@@ -1,4 +1,4 @@
-import { getDb } from '../db.js';
+import { withTransaction } from '../db.js';
 import { logActivity } from './activityLog.js';
 import { handlers } from './commandHandlers/index.js';
 import type { ActionContext, PendingActivity } from './commandHandlers/types.js';
@@ -41,23 +41,28 @@ export async function executeActions(
 
   const ctx: ActionContext = { locationId, userId, userName, pendingActivities, authMethod, apiKeyId };
 
-  const db = getDb();
-  const transaction = db.transaction(() => {
-    for (const action of actions) {
+  await withTransaction(async (tx) => {
+    for (let i = 0; i < actions.length; i++) {
+      const action = actions[i];
+      const handler = handlers[action.type];
+      if (!handler) {
+        executed.push({
+          type: action.type,
+          success: false,
+          details: 'Unknown action type',
+          error: 'Unknown action type',
+        });
+        continue;
+      }
+
+      const savepointName = `action_${i}`;
       try {
-        const handler = handlers[action.type];
-        if (!handler) {
-          executed.push({
-            type: action.type,
-            success: false,
-            details: 'Unknown action type',
-            error: 'Unknown action type',
-          });
-          continue;
-        }
-        const result = handler(action, ctx);
+        await tx(`SAVEPOINT ${savepointName}`);
+        const result = await handler(action, ctx, tx);
+        await tx(`RELEASE SAVEPOINT ${savepointName}`);
         executed.push(result);
       } catch (err) {
+        await tx(`ROLLBACK TO SAVEPOINT ${savepointName}`);
         const msg = err instanceof Error ? err.message : 'Unknown error';
         errors.push(`${action.type}: ${msg}`);
         executed.push({
@@ -69,8 +74,6 @@ export async function executeActions(
       }
     }
   });
-
-  transaction();
 
   // Fire-and-forget activity log entries after transaction commits
   for (const activity of pendingActivities) {

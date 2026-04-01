@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { query } from '../db.js';
+import { d, query } from '../db.js';
 import { config } from './config.js';
 import { createLogger } from './logger.js';
 import { safePath } from './pathSafety.js';
@@ -20,7 +20,7 @@ export async function purgeExpiredTrash(locationId: string): Promise<void> {
        JOIN locations l ON l.id = b.location_id
        WHERE b.location_id = $1
          AND b.deleted_at IS NOT NULL
-         AND b.deleted_at < datetime('now', '-' || l.trash_retention_days || ' days')`,
+         AND b.deleted_at < ${d.intervalDaysAgo('l.trash_retention_days')}`,
       [locationId]
     );
 

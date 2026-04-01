@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
-import { query } from '../db.js';
+import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { isPathSafe } from '../lib/pathSafety.js';
@@ -35,7 +35,7 @@ router.post('/avatar', avatarUpload.single('avatar'), requireCleanFile, asyncHan
 
   // Store only the filename (relative path), not the absolute filesystem path
   const storagePath = path.basename(req.file.path);
-  await query(`UPDATE users SET avatar_path = $1, updated_at = datetime('now') WHERE id = $2`, [storagePath, req.user!.id]);
+  await query(`UPDATE users SET avatar_path = $1, updated_at = ${d.now()} WHERE id = $2`, [storagePath, req.user!.id]);
 
   res.json({ avatarUrl: `/api/auth/avatar/${req.user!.id}` });
 }));
@@ -50,7 +50,7 @@ router.delete('/avatar', asyncHandler(async (req, res) => {
     try { fs.unlinkSync(fullPath); } catch { /* ignore */ }
   }
 
-  await query(`UPDATE users SET avatar_path = NULL, updated_at = datetime('now') WHERE id = $1`, [req.user!.id]);
+  await query(`UPDATE users SET avatar_path = NULL, updated_at = ${d.now()} WHERE id = $1`, [req.user!.id]);
 
   res.json({ message: 'Avatar removed' });
 }));

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db.js';
+import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getUserFeatures } from '../lib/planGate.js';
 import { authenticate } from '../middleware/auth.js';
@@ -23,8 +23,7 @@ router.get('/:locationId/activity', requireLocationMember('locationId'), asyncHa
 
   const features = await getUserFeatures(req.user!.id);
   if (features.activityRetentionDays !== null) {
-    whereClause += ` AND al.created_at >= datetime('now', $${paramIdx++})`;
-    params.push(`-${features.activityRetentionDays} days`);
+    whereClause += ` AND al.created_at >= ${d.intervalDaysAgo(String(features.activityRetentionDays))}`;
   }
 
   if (entityType) {

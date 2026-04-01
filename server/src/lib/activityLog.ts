@@ -1,4 +1,4 @@
-import { generateUuid, query, querySync } from '../db.js';
+import { d, generateUuid, query } from '../db.js';
 import { createLogger } from './logger.js';
 
 const log = createLogger('activity');
@@ -31,14 +31,14 @@ function isMergeableChanges(changes: Record<string, { old: unknown; new: unknown
  * Try to merge a new activity entry into a recent existing one.
  * Returns true if merged (caller should skip INSERT).
  */
-function tryMerge(opts: LogActivityOptions): boolean {
+async function tryMerge(opts: LogActivityOptions): Promise<boolean> {
   if (!opts.changes || !isMergeableChanges(opts.changes)) return false;
 
-  const result = querySync<{ id: string; changes: Record<string, { old: unknown; new: unknown }> }>(
+  const result = await query<{ id: string; changes: Record<string, { old: unknown; new: unknown }> }>(
     `SELECT id, changes FROM activity_log
      WHERE user_id = $1 AND action = $2 AND entity_type = $3 AND entity_id = $4
-       AND location_id = $5 AND auth_method IS $6
-       AND created_at > datetime('now', '-${MERGE_WINDOW_SECONDS} seconds')
+       AND location_id = $5 AND ${d.nullableEq('auth_method', '$6')}
+       AND created_at > ${d.secondsAgo(MERGE_WINDOW_SECONDS)}
      ORDER BY created_at DESC LIMIT 1`,
     [opts.userId, opts.action, opts.entityType, opts.entityId ?? null, opts.locationId, opts.authMethod ?? null]
   );
@@ -62,8 +62,8 @@ function tryMerge(opts: LogActivityOptions): boolean {
     }
   }
 
-  querySync(
-    `UPDATE activity_log SET changes = $1, created_at = datetime('now'), entity_name = $2 WHERE id = $3`,
+  await query(
+    `UPDATE activity_log SET changes = $1, created_at = ${d.now()}, entity_name = $2 WHERE id = $3`,
     [JSON.stringify(merged), opts.entityName ?? null, existing.id]
   );
 
@@ -79,7 +79,7 @@ function tryMerge(opts: LogActivityOptions): boolean {
  */
 export async function logActivity(opts: LogActivityOptions): Promise<void> {
   try {
-    if (tryMerge(opts)) {
+    if (await tryMerge(opts)) {
       // Merged into existing entry — skip INSERT, still prune
     } else {
       await query(
@@ -105,7 +105,7 @@ export async function logActivity(opts: LogActivityOptions): Promise<void> {
     query(
       `DELETE FROM activity_log
        WHERE location_id = $1
-         AND created_at < datetime('now', '-' || (SELECT activity_retention_days FROM locations WHERE id = $1) || ' days')`,
+         AND created_at < ${d.intervalDaysAgo('(SELECT activity_retention_days FROM locations WHERE id = $1)')}`,
       [opts.locationId]
     ).catch(() => { /* ignore prune errors */ });
   } catch (err) {

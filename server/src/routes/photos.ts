@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { Router } from 'express';
 import sharp from 'sharp';
-import { query } from '../db.js';
+import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
@@ -176,7 +176,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
     await storage.delete(thumbPath).catch(() => {});
   }
 
-  await query(`UPDATE bins SET updated_at = datetime('now') WHERE id = $1`, [access.binId]);
+  await query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [access.binId]);
 
   // Get bin name for activity log
   const binResult = await query('SELECT name FROM bins WHERE id = $1', [access.binId]);

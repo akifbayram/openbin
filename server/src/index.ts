@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 import multer from 'multer';
-import { getDb } from './db.js';
+import { query } from './db.js';
 import { config } from './lib/config.js';
 import { HttpError, OverLimitError, PlanRestrictedError } from './lib/httpErrors.js';
 import { pushLog } from './lib/logBuffer.js';
@@ -90,11 +90,10 @@ export function createApp(): express.Express {
   app.use(requestLogger);
 
   // Health check (no auth, no rate limit)
-  app.get('/api/health', (_req, res) => {
+  app.get('/api/health', async (_req, res) => {
     try {
-      const db = getDb();
-      const row = db.prepare('SELECT 1 AS ok').get() as { ok: number } | undefined;
-      if (row?.ok === 1) {
+      const result = await query<{ ok: number }>('SELECT 1 AS ok');
+      if (result.rows[0]?.ok === 1) {
         res.json({ status: 'ok' });
       } else {
         res.status(503).json({ status: 'error', message: 'Database check failed' });

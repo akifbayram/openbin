@@ -1,4 +1,5 @@
-import { getDb, querySync } from '../db.js';
+import type { TxQueryFn } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import {
   type ExportArea,
   type ExportBin,
@@ -6,20 +7,20 @@ import {
   type ExportMember,
   type ExportPinnedBin,
   type ExportSavedView,
-  importAreasSync,
-  importLocationSettingsSync,
-  importMembersSync,
-  importPhotosSync,
-  importPinnedBinsSync,
-  importSavedViewsSync,
-  importTagColorsSync,
-  insertBinItemsSync,
+  importAreas,
+  importLocationSettings,
+  importMembers,
+  importPhotos,
+  importPinnedBins,
+  importSavedViews,
+  importTagColors,
+  insertBinItems,
   insertBinWithShortCode,
   mapCustomFieldsToIds,
-  replaceCleanupSync,
-  resolveAreaSync,
-  resolveCreatedBySync,
-  resolveCustomFieldDefsSync,
+  replaceCleanup,
+  resolveArea,
+  resolveCreatedBy,
+  resolveCustomFieldDefs,
 } from './exportHelpers.js';
 
 // ---------------------------------------------------------------------------
@@ -65,7 +66,7 @@ export interface FullImportResult {
 // Dry-run preview (no mutations)
 // ---------------------------------------------------------------------------
 
-export function buildDryRunPreview(
+export async function buildDryRunPreview(
   bins: DryRunBin[],
   importMode: 'merge' | 'replace',
 ) {
@@ -79,7 +80,7 @@ export function buildDryRunPreview(
     const ids = bins.map(b => b.id).filter((id): id is string => !!id);
     if (ids.length > 0) {
       const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
-      const rows = querySync<{ id: string }>(
+      const rows = await query<{ id: string }>(
         `SELECT id FROM bins WHERE id IN (${placeholders})`,
         ids,
       );
@@ -108,7 +109,7 @@ export function buildDryRunPreview(
 // Query-only area lookup (no creation) — used for CSV dry-run
 // ---------------------------------------------------------------------------
 
-export function lookupAreaSync(locationId: string, areaPath: string): string | null {
+export async function lookupArea(locationId: string, areaPath: string): Promise<string | null> {
   const parts = areaPath.trim().split('/').map(p => p.trim()).filter(Boolean);
   if (parts.length === 0) return null;
 
@@ -120,7 +121,7 @@ export function lookupAreaSync(locationId: string, areaPath: string): string | n
       ? 'SELECT id FROM areas WHERE location_id = $1 AND name = $2 AND parent_id IS NULL'
       : 'SELECT id FROM areas WHERE location_id = $1 AND name = $2 AND parent_id = $3';
     const params = parentId === null ? [locationId, part] : [locationId, part, parentId];
-    const found = querySync(q, params);
+    const found = await query(q, params);
     if (found.rows.length > 0) {
       lastId = found.rows[0].id as string;
       parentId = lastId;
@@ -136,66 +137,66 @@ export function lookupAreaSync(locationId: string, areaPath: string): string | n
 // Unified full import transaction (JSON and ZIP)
 // ---------------------------------------------------------------------------
 
-export function executeFullImportTransaction(params: FullImportParams): FullImportResult {
+export async function executeFullImportTransaction(params: FullImportParams): Promise<FullImportResult> {
   const {
     locationId, userId, isAdmin, importMode,
     bins, trashedBins, tagColors, customFieldDefinitions,
     locationSettings, areas, pinnedBins, savedViews, members,
   } = params;
 
-  const doImport = getDb().transaction(() => {
+  return withTransaction(async (tx: TxQueryFn) => {
     // 1. Replace-mode cleanup
     if (importMode === 'replace') {
-      replaceCleanupSync(locationId);
+      await replaceCleanup(locationId, tx);
     }
 
     // 2. Location settings (replace mode only, admin only)
     let settingsApplied = false;
     if (locationSettings && importMode === 'replace' && isAdmin) {
-      importLocationSettingsSync(locationId, locationSettings);
+      await importLocationSettings(locationId, locationSettings, tx);
       settingsApplied = true;
     }
 
     // 3. Members (admin only)
     let membersImported = 0;
     if (members && Array.isArray(members) && isAdmin) {
-      membersImported = importMembersSync(locationId, members);
+      membersImported = await importMembers(locationId, members, tx);
     }
 
     // 4. Tag colors
     if (tagColors && Array.isArray(tagColors)) {
-      importTagColorsSync(locationId, tagColors);
+      await importTagColors(locationId, tagColors, tx);
     }
 
     // 5. Custom field definitions
     let fieldNameToId: Map<string, string> | undefined;
     if (customFieldDefinitions && Array.isArray(customFieldDefinitions)) {
-      fieldNameToId = resolveCustomFieldDefsSync(locationId, customFieldDefinitions);
+      fieldNameToId = await resolveCustomFieldDefs(locationId, customFieldDefinitions, tx);
     }
 
     // 6. Areas (before bins so paths exist)
     let areasImported = 0;
     if (areas && Array.isArray(areas)) {
-      areasImported = importAreasSync(locationId, areas, userId);
+      areasImported = await importAreas(locationId, areas, userId, tx);
     }
 
     // Helper to import a single bin
     const oldToNewBinId = new Map<string, string>();
 
-    function importSingleBin(bin: ExportBin, opts?: { deletedAt?: string | null }): boolean {
+    async function importSingleBin(bin: ExportBin, opts?: { deletedAt?: string | null }): Promise<boolean> {
       if (importMode === 'merge') {
-        const existing = querySync('SELECT id FROM bins WHERE id = $1', [bin.id]);
+        const existing = await tx('SELECT id FROM bins WHERE id = $1', [bin.id]);
         if (existing.rows.length > 0) return false;
       }
 
-      const areaId = resolveAreaSync(locationId, bin.location || '', userId);
+      const areaId = await resolveArea(locationId, bin.location || '', userId, tx);
       let resolvedCustomFields = bin.customFields;
       if (resolvedCustomFields && fieldNameToId && fieldNameToId.size > 0) {
         resolvedCustomFields = mapCustomFieldsToIds(resolvedCustomFields, fieldNameToId);
       }
 
-      const resolvedCreatedBy = resolveCreatedBySync(bin.createdBy, userId);
-      const binId = insertBinWithShortCode('', locationId, {
+      const resolvedCreatedBy = await resolveCreatedBy(bin.createdBy, userId, tx);
+      const binId = await insertBinWithShortCode('', locationId, {
         name: bin.name,
         notes: bin.notes || '',
         tags: bin.tags || [],
@@ -208,10 +209,10 @@ export function executeFullImportTransaction(params: FullImportParams): FullImpo
         deletedAt: opts?.deletedAt,
         createdAt: bin.createdAt || new Date().toISOString(),
         updatedAt: bin.updatedAt || new Date().toISOString(),
-      }, areaId, resolvedCreatedBy);
+      }, areaId, resolvedCreatedBy, tx);
 
       oldToNewBinId.set(bin.id, binId);
-      insertBinItemsSync(binId, bin.items || []);
+      await insertBinItems(binId, bin.items || [], tx);
       return true;
     }
 
@@ -221,10 +222,10 @@ export function executeFullImportTransaction(params: FullImportParams): FullImpo
     let photosImported = 0;
 
     for (const bin of bins) {
-      if (importSingleBin(bin)) {
+      if (await importSingleBin(bin)) {
         const newBinId = oldToNewBinId.get(bin.id)!;
         if (bin.photos && Array.isArray(bin.photos)) {
-          photosImported += importPhotosSync(newBinId, bin.photos, userId);
+          photosImported += await importPhotos(newBinId, bin.photos, userId, tx);
         }
         binsImported++;
       } else {
@@ -236,10 +237,10 @@ export function executeFullImportTransaction(params: FullImportParams): FullImpo
     let trashedBinsImported = 0;
     if (trashedBins && Array.isArray(trashedBins)) {
       for (const bin of trashedBins) {
-        if (importSingleBin(bin, { deletedAt: bin.deletedAt })) {
+        if (await importSingleBin(bin, { deletedAt: bin.deletedAt })) {
           const newBinId = oldToNewBinId.get(bin.id)!;
           if (bin.photos && Array.isArray(bin.photos)) {
-            photosImported += importPhotosSync(newBinId, bin.photos, userId);
+            photosImported += await importPhotos(newBinId, bin.photos, userId, tx);
           }
           trashedBinsImported++;
         }
@@ -249,17 +250,15 @@ export function executeFullImportTransaction(params: FullImportParams): FullImpo
     // 9. Pinned bins (after all bins are imported)
     let pinsImported = 0;
     if (pinnedBins && Array.isArray(pinnedBins)) {
-      pinsImported = importPinnedBinsSync(pinnedBins, oldToNewBinId);
+      pinsImported = await importPinnedBins(pinnedBins, oldToNewBinId, tx);
     }
 
     // 10. Saved views
     let viewsImported = 0;
     if (savedViews && Array.isArray(savedViews)) {
-      viewsImported = importSavedViewsSync(savedViews);
+      viewsImported = await importSavedViews(savedViews, tx);
     }
 
     return { binsImported, binsSkipped, trashedBinsImported, photosImported, areasImported, pinsImported, viewsImported, membersImported, settingsApplied };
   });
-
-  return doImport();
 }

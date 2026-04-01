@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 import sharp from 'sharp';
-import { getDb, query } from '../db.js';
+import { d, getDialect, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isBinCreator, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
@@ -114,7 +114,7 @@ router.get('/', asyncHandler(async (req, res) => {
     const limitIdx = params.length + 1;
     const offsetIdx = params.length + 2;
     const result = await query(
-      `${ctePrefix}SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
+      `${ctePrefix}SELECT ${BIN_SELECT_COLS()}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
        LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
        WHERE ${whereSQL} ORDER BY ${orderClause} LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
@@ -124,7 +124,7 @@ router.get('/', asyncHandler(async (req, res) => {
     res.json({ results: result.rows, count: total });
   } else {
     const result = await query(
-      `${ctePrefix}SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
+      `${ctePrefix}SELECT ${BIN_SELECT_COLS()}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
        FROM bins b LEFT JOIN areas a ON a.id = b.area_id
        LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
        WHERE ${whereSQL} ORDER BY ${orderClause}`,
@@ -151,7 +151,7 @@ router.get('/trash', asyncHandler(async (req, res) => {
   purgeExpiredTrash(locationId).catch(() => {});
 
   const result = await query(
-    `SELECT ${BIN_SELECT_COLS}, b.deleted_at
+    `SELECT ${BIN_SELECT_COLS()}, b.deleted_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
      WHERE b.location_id = $1 AND b.deleted_at IS NOT NULL AND (b.visibility = 'location' OR b.created_by = $2) ORDER BY b.deleted_at DESC`,
     [locationId, req.user!.id]
@@ -165,7 +165,7 @@ router.get('/lookup/:shortCode', asyncHandler(async (req, res) => {
   const code = req.params.shortCode.toUpperCase();
 
   const result = await query(
-    `SELECT ${BIN_SELECT_COLS}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
+    `SELECT ${BIN_SELECT_COLS()}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
      FROM bins b
      LEFT JOIN areas a ON a.id = b.area_id
      LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
@@ -227,40 +227,34 @@ router.post('/:id/change-code', sensitiveAuthLimiter, asyncHandler(async (req, r
     existingPhotos = photosResult.rows;
   }
 
-  // Run the transaction (better-sqlite3 is synchronous)
-  const db = getDb();
-  const stmts = {
-    deleteBin: db.prepare('DELETE FROM bins WHERE id = ?'),
-    updateItems: db.prepare('UPDATE bin_items SET bin_id = ? WHERE bin_id = ?'),
-    updatePhotos: db.prepare('UPDATE photos SET bin_id = ? WHERE bin_id = ?'),
-    updateCustomFields: db.prepare('UPDATE bin_custom_field_values SET bin_id = ? WHERE bin_id = ?'),
-    updatePins: db.prepare('UPDATE pinned_bins SET bin_id = ? WHERE bin_id = ?'),
-    updateScans: db.prepare('UPDATE scan_history SET bin_id = ? WHERE bin_id = ?'),
-    updatePhotoPaths: db.prepare(`UPDATE photos SET
-      storage_path = replace(storage_path, ? || '/', ? || '/'),
-      thumb_path = CASE WHEN thumb_path IS NOT NULL
-        THEN replace(thumb_path, ? || '/', ? || '/')
-        ELSE NULL END
-      WHERE bin_id = ?`),
-    updateActivityLog: db.prepare("UPDATE activity_log SET entity_id = ? WHERE entity_id = ? AND entity_type = 'bin'"),
-    renameBin: db.prepare("UPDATE bins SET id = ?, updated_at = datetime('now') WHERE id = ?"),
-  };
-
-  db.transaction(() => {
+  // Run the transaction
+  await withTransaction(async (tx) => {
     // defer_foreign_keys is required because steps below update child rows
     // to reference newCode before the parent row with that ID exists.
-    db.pragma('defer_foreign_keys = ON');
+    if (getDialect() === 'sqlite') {
+      await tx('PRAGMA defer_foreign_keys = ON');
+    } else {
+      await tx('SET CONSTRAINTS ALL DEFERRED');
+    }
 
-    stmts.deleteBin.run(newCode);
-    stmts.updateItems.run(newCode, id);
-    stmts.updatePhotos.run(newCode, id);
-    stmts.updateCustomFields.run(newCode, id);
-    stmts.updatePins.run(newCode, id);
-    stmts.updateScans.run(newCode, id);
-    stmts.updatePhotoPaths.run(id, newCode, id, newCode, newCode);
-    stmts.updateActivityLog.run(newCode, id);
-    stmts.renameBin.run(newCode, id);
-  })();
+    await tx('DELETE FROM bins WHERE id = $1', [newCode]);
+    await tx('UPDATE bin_items SET bin_id = $1 WHERE bin_id = $2', [newCode, id]);
+    await tx('UPDATE photos SET bin_id = $1 WHERE bin_id = $2', [newCode, id]);
+    await tx('UPDATE bin_custom_field_values SET bin_id = $1 WHERE bin_id = $2', [newCode, id]);
+    await tx('UPDATE pinned_bins SET bin_id = $1 WHERE bin_id = $2', [newCode, id]);
+    await tx('UPDATE scan_history SET bin_id = $1 WHERE bin_id = $2', [newCode, id]);
+    await tx(
+      `UPDATE photos SET
+        storage_path = replace(storage_path, $1 || '/', $2 || '/'),
+        thumb_path = CASE WHEN thumb_path IS NOT NULL
+          THEN replace(thumb_path, $3 || '/', $4 || '/')
+          ELSE NULL END
+        WHERE bin_id = $5`,
+      [id, newCode, id, newCode, newCode],
+    );
+    await tx("UPDATE activity_log SET entity_id = $1 WHERE entity_id = $2 AND entity_type = 'bin'", [newCode, id]);
+    await tx(`UPDATE bins SET id = $1, updated_at = ${d.now()} WHERE id = $2`, [newCode, id]);
+  });
 
   // Post-transaction: clean up deleted bin's photos from storage
   if (existingPhotos.length > 0) {
@@ -447,7 +441,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   }
 
   // Soft delete
-  await query("UPDATE bins SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = $1", [id]);
+  await query(`UPDATE bins SET deleted_at = ${d.now()}, updated_at = ${d.now()} WHERE id = $1`, [id]);
 
   logRouteActivity(req, { entityType: 'bin', locationId: access.locationId, action: 'delete', entityId: id, entityName: bin.name });
 
@@ -467,7 +461,7 @@ router.post('/:id/restore', asyncHandler(async (req, res) => {
   await requireAdmin(locationId, req.user!.id, 'restore bins');
 
   await query(
-    `UPDATE bins SET deleted_at = NULL, updated_at = datetime('now') WHERE id = $1`,
+    `UPDATE bins SET deleted_at = NULL, updated_at = ${d.now()} WHERE id = $1`,
     [id]
   );
 
@@ -614,7 +608,7 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
     [photoId, binId, path.basename(file.originalname).slice(0, 255), file.mimetype, file.size, storagePath, thumbPath, req.user!.id]
   );
 
-  await query("UPDATE bins SET updated_at = datetime('now') WHERE id = $1", [binId]);
+  await query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [binId]);
 
   invalidateOverLimitCache(req.user!.id);
 
@@ -662,12 +656,13 @@ router.post('/:id/move', asyncHandler(async (req, res) => {
   const skipFieldCreation = targetRole !== 'admin';
 
   // Move bin: update location, clear area, remap custom fields (all in one transaction)
-  const db = getDb();
-  db.transaction(() => {
-    db.prepare(`UPDATE bins SET location_id = ?, area_id = NULL, updated_at = datetime('now') WHERE id = ?`)
-      .run(targetLocationId, id);
-    remapCustomFieldsForMove(id, access.locationId, targetLocationId, skipFieldCreation);
-  })();
+  await withTransaction(async (tx) => {
+    await tx(
+      `UPDATE bins SET location_id = $1, area_id = NULL, updated_at = ${d.now()} WHERE id = $2`,
+      [targetLocationId, id],
+    );
+    await remapCustomFieldsForMove(id, access.locationId, targetLocationId, skipFieldCreation, tx);
+  });
 
   // Re-fetch updated bin
   const bin = (await fetchBinById(id))!;
@@ -779,7 +774,7 @@ router.put('/:id/add-tags', asyncHandler(async (req, res) => {
   }
 
   const result = await query(
-    `UPDATE bins SET tags = $1, updated_at = datetime('now')
+    `UPDATE bins SET tags = $1, updated_at = ${d.now()}
      WHERE id = $2 AND deleted_at IS NULL
      RETURNING id, tags`,
     [mergedTags, id]

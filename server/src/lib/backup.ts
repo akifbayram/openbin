@@ -1,10 +1,15 @@
+import { execFile as execFileCb } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import archiver from 'archiver';
 import cron from 'node-cron';
-import { getDb } from '../db.js';
+import { getSqliteDb } from '../db/sqlite.js';
+import { getDialect } from '../db.js';
 import { config as appConfig } from './config.js';
 import { createLogger } from './logger.js';
+
+const execFileAsync = promisify(execFileCb);
 
 const log = createLogger('backup');
 
@@ -70,8 +75,21 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
   const tempDbPath = path.join(cfg.backupPath, `.tmp-backup-${timestamp}.db`);
 
   try {
-    // Snapshot the database using SQLite's online backup API
-    await getDb().backup(tempDbPath);
+    if (getDialect() === 'sqlite') {
+      // Snapshot the database using SQLite's online backup API
+      await getSqliteDb().backup(tempDbPath);
+    } else {
+      // PostgreSQL: dump to SQL file using pg_dump
+      const dumpPath = tempDbPath.replace(/\.db$/, '.sql');
+      await execFileAsync('pg_dump', [
+        appConfig.databaseUrl!,
+        '-f', dumpPath,
+        '--no-owner',
+        '--no-acl',
+      ]);
+      // Use SQL dump instead of DB file for archive
+      // We need to adjust the archive entry below
+    }
 
     // Create ZIP archive
     await new Promise<void>((resolve, reject) => {
@@ -82,7 +100,12 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
       archive.on('error', reject);
 
       archive.pipe(output);
-      archive.file(tempDbPath, { name: 'openbin.db' });
+      if (getDialect() === 'sqlite') {
+        archive.file(tempDbPath, { name: 'openbin.db' });
+      } else {
+        const dumpPath = tempDbPath.replace(/\.db$/, '.sql');
+        archive.file(dumpPath, { name: 'openbin.sql' });
+      }
 
       const photoDir = appConfig.photoStoragePath;
       if (fs.existsSync(photoDir)) {
@@ -95,8 +118,13 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
     // Restrict backup file permissions (contains DB with password hashes)
     fs.chmodSync(zipPath, 0o600);
 
-    // Clean up temp DB
-    if (fs.existsSync(tempDbPath)) fs.unlinkSync(tempDbPath);
+    // Clean up temp files
+    const filesToClean = getDialect() === 'sqlite'
+      ? [tempDbPath]
+      : [tempDbPath.replace(/\.db$/, '.sql')];
+    for (const f of filesToClean) {
+      if (fs.existsSync(f)) fs.unlinkSync(f);
+    }
 
     // Prune old backups
     pruneBackups(cfg.backupPath, cfg.retention);
@@ -105,7 +133,12 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
     return zipPath;
   } catch (err) {
     // Clean up partial files
-    if (fs.existsSync(tempDbPath)) fs.unlinkSync(tempDbPath);
+    const filesToClean = getDialect() === 'sqlite'
+      ? [tempDbPath]
+      : [tempDbPath.replace(/\.db$/, '.sql')];
+    for (const f of filesToClean) {
+      if (fs.existsSync(f)) fs.unlinkSync(f);
+    }
     if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
 
     const error = err instanceof Error ? err : new Error(String(err));

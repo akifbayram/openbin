@@ -1,4 +1,4 @@
-import { getDb } from '../db.js';
+import { query } from '../db.js';
 import { config } from './config.js';
 import { createLogger } from './logger.js';
 import { enqueueWebhook } from './webhookOutbox.js';
@@ -45,11 +45,10 @@ export function notifyManagerUserUpdate(payload: UserUpdatePayload): void {
   sendManagerRequest('/api/v1/users/update', { ...payload }, `Failed to notify Manager (${payload.action})`);
 }
 
-export function deleteUserData(userId: string): void {
-  const db = getDb();
-  db.prepare('DELETE FROM api_key_daily_usage WHERE api_key_id IN (SELECT id FROM api_keys WHERE user_id = ?)').run(userId);
-  db.prepare('DELETE FROM api_keys WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM email_log WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM ai_usage WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM bin_shares WHERE created_by = ?').run(userId);
+export async function deleteUserData(userId: string): Promise<void> {
+  await query('DELETE FROM api_key_daily_usage WHERE api_key_id IN (SELECT id FROM api_keys WHERE user_id = $1)', [userId]);
+  await query('DELETE FROM api_keys WHERE user_id = $1', [userId]);
+  await query('DELETE FROM email_log WHERE user_id = $1', [userId]);
+  await query('DELETE FROM ai_usage WHERE user_id = $1', [userId]);
+  await query('DELETE FROM bin_shares WHERE created_by = $1', [userId]);
 }

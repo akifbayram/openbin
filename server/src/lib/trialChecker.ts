@@ -1,4 +1,4 @@
-import { query } from '../db.js';
+import { d, query } from '../db.js';
 import { config } from './config.js';
 import { fireExploreFeaturesEmail, firePostTrialEarlyEmail, firePostTrialLateEmail, fireSubscriptionExpiringEmail, fireTrialExpiredEmail, fireTrialExpiringEmail } from './emailSender.js';
 import { acquireJobLock, releaseJobLock } from './jobLock.js';
@@ -17,13 +17,13 @@ interface TrialUser {
 }
 
 async function checkTrials(): Promise<void> {
-  if (!acquireJobLock('trial_checker', 7200)) return;
+  if (!(await acquireJobLock('trial_checker', 7200))) return;
   try {
     // Trial expiring in 3 days
     const expiring = await query<TrialUser>(
       `SELECT id, email, display_name, active_until FROM users
        WHERE sub_status = $1 AND active_until IS NOT NULL
-       AND active_until > datetime('now') AND active_until <= datetime('now', '+3 days')
+       AND active_until > ${d.now()} AND active_until <= ${d.daysFromNow(3)}
        AND email IS NOT NULL`,
       [SubStatus.TRIAL],
     );
@@ -35,7 +35,7 @@ async function checkTrials(): Promise<void> {
     const subExpiring = await query<TrialUser>(
       `SELECT id, email, display_name, active_until FROM users
        WHERE sub_status = $1 AND active_until IS NOT NULL
-       AND active_until > datetime('now') AND active_until <= datetime('now', '+3 days')
+       AND active_until > ${d.now()} AND active_until <= ${d.daysFromNow(3)}
        AND email IS NOT NULL`,
       [SubStatus.ACTIVE],
     );
@@ -47,14 +47,14 @@ async function checkTrials(): Promise<void> {
     const expired = await query<TrialUser>(
       `SELECT id, email, display_name, active_until FROM users
        WHERE sub_status = $1 AND active_until IS NOT NULL
-       AND active_until <= datetime('now')
+       AND active_until <= ${d.now()}
        AND email IS NOT NULL`,
       [SubStatus.TRIAL],
     );
     for (const user of expired.rows) {
       fireTrialExpiredEmail(user.id, user.email, user.display_name);
       await query(
-        "UPDATE users SET sub_status = $1, previous_sub_status = $2, updated_at = datetime('now') WHERE id = $3",
+        `UPDATE users SET sub_status = $1, previous_sub_status = $2, updated_at = ${d.now()} WHERE id = $3`,
         [SubStatus.INACTIVE, SubStatus.TRIAL, user.id],
       );
     }
@@ -63,8 +63,8 @@ async function checkTrials(): Promise<void> {
     const exploreUsers = await query<TrialUser>(
       `SELECT id, email, display_name, active_until FROM users
        WHERE sub_status IN ($1, $2)
-       AND created_at <= datetime('now', '-2 days')
-       AND created_at > datetime('now', '-3 days')
+       AND created_at <= ${d.daysAgo(2)}
+       AND created_at > ${d.daysAgo(3)}
        AND email IS NOT NULL`,
       [SubStatus.TRIAL, SubStatus.ACTIVE],
     );
@@ -76,8 +76,8 @@ async function checkTrials(): Promise<void> {
     const postTrialEarly = await query<TrialUser>(
       `SELECT id, email, display_name, active_until FROM users
        WHERE sub_status = $1 AND active_until IS NOT NULL
-       AND active_until <= datetime('now', '-2 days')
-       AND active_until > datetime('now', '-3 days')
+       AND active_until <= ${d.daysAgo(2)}
+       AND active_until > ${d.daysAgo(3)}
        AND email IS NOT NULL`,
       [SubStatus.INACTIVE],
     );
@@ -89,8 +89,8 @@ async function checkTrials(): Promise<void> {
     const postTrialLate = await query<TrialUser>(
       `SELECT id, email, display_name, active_until FROM users
        WHERE sub_status = $1 AND active_until IS NOT NULL
-       AND active_until <= datetime('now', '-7 days')
-       AND active_until > datetime('now', '-8 days')
+       AND active_until <= ${d.daysAgo(7)}
+       AND active_until > ${d.daysAgo(8)}
        AND email IS NOT NULL`,
       [SubStatus.INACTIVE],
     );
@@ -100,7 +100,7 @@ async function checkTrials(): Promise<void> {
   } catch (err) {
     log.error('Trial check failed:', err instanceof Error ? err.message : err);
   } finally {
-    releaseJobLock('trial_checker');
+    await releaseJobLock('trial_checker');
   }
 }
 
