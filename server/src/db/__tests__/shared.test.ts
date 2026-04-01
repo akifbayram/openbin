@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { JSON_COLUMNS, deserializeRow, isUniqueViolation } from '../shared.js';
+import { deserializeRow, isUniqueViolation, JSON_COLUMNS } from '../shared.js';
 
 describe('JSON_COLUMNS', () => {
   it('contains exactly the expected columns', () => {

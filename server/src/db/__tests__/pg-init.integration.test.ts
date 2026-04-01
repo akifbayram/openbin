@@ -1,6 +1,6 @@
 import type pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PG_CONNECTION_STRING, TABLES, teardownPgTestDb } from './pg-setup.js';
+import { PG_CONNECTION_STRING, TABLES, } from './pg-setup.js';
 
 let pool: pg.Pool;
 

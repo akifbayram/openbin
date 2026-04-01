@@ -1,10 +1,10 @@
 import crypto from 'node:crypto';
 import type pg from 'pg';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { d, setDialect } from '../dialect.js';
 import { createPostgresEngine } from '../postgres.js';
 import type { DatabaseEngine } from '../types.js';
-import { setupPgTestDb, teardownPgTestDb, truncateAllPgTables } from './pg-setup.js';
+import { setupPgTestDb, teardownPgTestDb, } from './pg-setup.js';
 
 let pool: pg.Pool;
 let engine: DatabaseEngine;
@@ -283,7 +283,7 @@ describe('pg-queries: other PG-specific SQL', () => {
   });
 
   it('d.insertOrIgnore() silently skips on duplicate key', async () => {
-    const id = crypto.randomUUID();
+    const _id = crypto.randomUUID();
     await engine.query(
       `INSERT INTO settings (key, value) VALUES ($1, $2)`,
       ['test_key', 'val1'],

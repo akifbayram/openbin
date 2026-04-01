@@ -1,8 +1,8 @@
 import crypto from 'node:crypto';
 import type pg from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { isUniqueViolation } from '../shared.js';
 import { createPostgresEngine } from '../postgres.js';
+import { isUniqueViolation } from '../shared.js';
 import type { DatabaseEngine } from '../types.js';
 import { setupPgTestDb, teardownPgTestDb, truncateAllPgTables } from './pg-setup.js';
 

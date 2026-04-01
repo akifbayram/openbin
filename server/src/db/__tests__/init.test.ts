@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks
@@ -30,7 +30,7 @@ const h = vi.hoisted(() => {
 // Mock pg module (needed by postgres.ts import chain)
 vi.mock('pg', () => ({
   default: {
-    Pool: vi.fn(function () { return h.mockPgPool; }),
+    Pool: vi.fn(() => h.mockPgPool),
     types: { setTypeParser: vi.fn() },
   },
 }));

@@ -11,13 +11,11 @@ const mocks = vi.hoisted(() => {
   const mockEnd = vi.fn();
   const mockPoolQuery = vi.fn();
   // Must be a regular function (not arrow) so it can be called with `new`
-  const MockPool = vi.fn(function () {
-    return {
+  const MockPool = vi.fn(() => ({
       query: mockPoolQuery,
       connect: mockConnect,
       end: mockEnd,
-    };
-  });
+    }));
   return { mockClientQuery, mockRelease, mockConnect, mockEnd, mockPoolQuery, MockPool };
 });
 
