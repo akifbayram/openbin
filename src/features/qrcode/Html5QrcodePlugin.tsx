@@ -36,6 +36,12 @@ export function Html5QrcodePlugin({ paused, onScanSuccess, onScanFailure }: Html
             onScanFailure?.(errorMessage);
           }
         )
+        .then(() => {
+          // Component unmounted while start() was pending — stop now
+          if (cancelled && scanner.isScanning) {
+            scanner.stop().catch(() => {});
+          }
+        })
         .catch((err) => {
           if (!cancelled) {
             setError(getErrorMessage(err, 'Failed to start camera'));
