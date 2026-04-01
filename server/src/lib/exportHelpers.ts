@@ -640,16 +640,14 @@ export async function isLocationAdminCheck(locationId: string, userId: string): 
   return row.rows.length > 0 && row.rows[0].role === 'admin';
 }
 
-/** Check magic bytes to verify buffer is an allowed image type (JPEG, PNG, WebP). */
+/** Check magic bytes to verify buffer is an allowed image type (JPEG, PNG, WebP, GIF). */
 function isAllowedImageBuffer(buf: Buffer): boolean {
   if (buf.length < 12) return false;
-  // JPEG: FF D8 FF
-  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return true;
-  // PNG: 89 50 4E 47
-  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return true;
-  // WebP: RIFF....WEBP
+  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return true; // JPEG
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return true; // PNG
   if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46
-    && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) return true;
+    && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) return true; // WebP
+  if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38) return true; // GIF
   return false;
 }
 

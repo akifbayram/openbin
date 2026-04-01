@@ -580,7 +580,7 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
 // POST /api/locations/:id/import/zip — import from ZIP backup
 const zipUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 200 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
 }).single('file');
 
 router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asyncHandler(async (req, res) => {
@@ -594,6 +594,16 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
   }
 
   const files = unzipSync(new Uint8Array(req.file.buffer));
+
+  // Best-effort ZIP bomb guard: fflate decompresses synchronously so the data is already
+  // in memory by this point. The 25 MB upload limit caps worst-case memory at ~500 MB.
+  let totalDecompressed = 0;
+  for (const data of Object.values(files)) {
+    totalDecompressed += (data as Uint8Array).length;
+  }
+  if (totalDecompressed > 500 * 1024 * 1024) {
+    throw new ValidationError('ZIP content exceeds 500 MB decompressed limit');
+  }
 
   // Read and validate manifest
   const manifestData = files['manifest.json'];
