@@ -14,11 +14,11 @@ export function usePaginatedActivityLog(entityTypeFilter?: EntityTypeFilter, pag
     }
   }
 
-  const { items, totalCount, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedList<ActivityLogEntry>(
+  const { items, totalCount, isLoading, isLoadingMore, hasMore, error, loadMore } = usePaginatedList<ActivityLogEntry>(
     basePath,
     [],
     pageSize,
   );
 
-  return { entries: items, totalCount, isLoading, isLoadingMore, hasMore, loadMore };
+  return { entries: items, totalCount, isLoading, isLoadingMore, hasMore, error, loadMore };
 }

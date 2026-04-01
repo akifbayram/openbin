@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   MapPin,
   PackageOpen,
   Plus,
@@ -78,7 +79,7 @@ export function BinListPage() {
   const { isAdmin, canWrite, canCreateBin } = usePermissions();
   const resetPage = useCallback(() => setPage(1), [setPage]);
   const { pageSize, setPageSize, pageSizeOptions } = usePageSize(resetPage);
-  const { bins, totalCount, totalPages, isLoading } = usePaginatedBinList(debouncedSearch, sort, sortDir, filters, page, pageSize, setPage);
+  const { bins, totalCount, totalPages, isLoading, error } = usePaginatedBinList(debouncedSearch, sort, sortDir, filters, page, pageSize, setPage);
   const allTags = useAllTags();
   const activeCount = countActiveFilters(filters);
   const { areas } = useAreaList(activeLocationId);
@@ -228,7 +229,13 @@ export function BinListPage() {
             isLoading={isLoading && bins.length === 0}
             skeleton={<BinListSkeleton viewMode={viewMode} />}
           >
-          {bins.length === 0 ? (
+          {error ? (
+              <EmptyState
+                icon={AlertTriangle}
+                title={`Failed to load ${t.bins}`}
+                subtitle={error}
+              />
+          ) : bins.length === 0 ? (
             search || activeCount > 0 ? (
               <EmptyState
                 icon={PackageOpen}

@@ -1,4 +1,4 @@
-import { Clock } from 'lucide-react';
+import { AlertTriangle, Clock } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Crossfade } from '@/components/ui/crossfade';
@@ -22,7 +22,7 @@ export function ActivityPage() {
     () => ENTITY_TYPE_FILTERS.map((f) => ({ key: f.value, label: f.tKey ? t[f.tKey] : f.label })),
     [t],
   );
-  const { entries, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedActivityLog(entityTypeFilter, 50);
+  const { entries, isLoading, isLoadingMore, hasMore, error, loadMore } = usePaginatedActivityLog(entityTypeFilter, 50);
 
   useEffect(() => {
     if (!permissionsLoading && !isAdmin) {
@@ -71,7 +71,13 @@ export function ActivityPage() {
           </div>
         }
       >
-        {entries.length === 0 ? (
+        {error ? (
+          <EmptyState
+            icon={AlertTriangle}
+            title="Failed to load activity"
+            subtitle={error}
+          />
+        ) : entries.length === 0 ? (
           <EmptyState
             icon={Clock}
             title={entityTypeFilter ? 'No matching activity' : 'No activity yet'}

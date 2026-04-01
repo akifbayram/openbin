@@ -12,17 +12,18 @@ function notifyLocationsChanged() {
 interface LocationsContextValue {
   locations: Location[];
   isLoading: boolean;
+  error: string | null;
 }
 
 export const LocationsContext = createContext<LocationsContextValue | null>(null);
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
-  const { data: locations, isLoading } = useListData<Location>(
+  const { data: locations, isLoading, error } = useListData<Location>(
     token ? '/api/locations' : null,
     [Events.LOCATIONS],
   );
-  const value = useMemo(() => ({ locations, isLoading }), [locations, isLoading]);
+  const value = useMemo(() => ({ locations, isLoading, error }), [locations, isLoading, error]);
   return <LocationsContext.Provider value={value}>{children}</LocationsContext.Provider>;
 }
 
