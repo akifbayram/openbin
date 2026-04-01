@@ -94,6 +94,7 @@ export const config = Object.freeze({
   emailTemplateDir: process.env.EMAIL_TEMPLATE_DIR || null,
 
   demoMode: parseBool(process.env.DEMO_MODE, false),
+  demoSeedPath: process.env.DEMO_SEED_PATH || null,
   aiMock: parseBool(process.env.AI_MOCK, false),
   demoUsernames: new Set(
     (process.env.DEMO_USERNAMES || '')
