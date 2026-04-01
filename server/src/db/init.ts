@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import bcrypt from 'bcrypt';
 import { config } from '../lib/config.js';
 import { createLogger } from '../lib/logger.js';
 import { setDialect } from './dialect.js';
@@ -18,17 +19,25 @@ let engine: DatabaseEngine | null = null;
 // Admin seed helper
 // ---------------------------------------------------------------------------
 
-const ADMIN_PASSWORD_HASH = '$2b$12$3s7vHxqe3VFONH86Xb5dm.Sqq6ZRWIkFNWPmfAkmx.PH.a0VCwJ1G';
 const ADMIN_ACTIVE_UNTIL_MS = 1000 * 365 * 24 * 60 * 60 * 1000;
 
 async function seedAdminUser(eng: DatabaseEngine): Promise<void> {
   const { rows } = await eng.query("SELECT 1 FROM users WHERE username = 'admin'");
   if (rows.length === 0) {
+    const plaintext = config.adminPassword || crypto.randomBytes(12).toString('base64url');
+    const hash = await bcrypt.hash(plaintext, config.bcryptRounds);
+
     await eng.query(
       `INSERT INTO users (id, username, password_hash, display_name, is_admin, plan, sub_status, active_until)
        VALUES ($1, 'admin', $2, 'Admin', TRUE, 1, 1, $3)`,
-      [crypto.randomUUID(), ADMIN_PASSWORD_HASH, new Date(Date.now() + ADMIN_ACTIVE_UNTIL_MS).toISOString()],
+      [crypto.randomUUID(), hash, new Date(Date.now() + ADMIN_ACTIVE_UNTIL_MS).toISOString()],
     );
+
+    console.log('========================================');
+    console.log('  Initial admin credentials:');
+    console.log('    Username: admin');
+    console.log(`    Password: ${plaintext}`);
+    console.log('========================================');
   }
 }
 
@@ -65,6 +74,18 @@ export function getEngine(): DatabaseEngine {
   return engine;
 }
 
+/**
+ * Close the current engine and re-initialize from scratch.
+ * Used by backup restore to swap the database file at runtime.
+ */
+export async function reinitialize(): Promise<DatabaseEngine> {
+  if (engine) {
+    await engine.close();
+    engine = null;
+  }
+  return initialize();
+}
+
 // ---------------------------------------------------------------------------
 // SQLite initialization (all migrations from the original db.ts)
 // ---------------------------------------------------------------------------
@@ -88,6 +109,7 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
   // Column migrations for existing databases
   // (ALTER TABLE ADD COLUMN errors if column already exists)
   // ------------------------------------------------------------------
+  try {
 
   // AI settings columns
   const aiSettingsMigrations = [
@@ -111,9 +133,10 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
   {
     const areaTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='areas'").get() as { sql: string } | undefined;
     if (areaTableInfo?.sql && !areaTableInfo.sql.includes('parent_id, name')) {
-      db.exec(`
-        DROP TABLE IF EXISTS areas_new;
-        CREATE TABLE areas_new (
+      db.exec('BEGIN');
+      try {
+        db.exec('DROP TABLE IF EXISTS areas_new');
+        db.exec(`CREATE TABLE areas_new (
           id            TEXT PRIMARY KEY,
           location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
           name          TEXT NOT NULL,
@@ -122,14 +145,18 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
           created_at    TEXT NOT NULL DEFAULT (datetime('now')),
           updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
           UNIQUE(location_id, parent_id, name)
-        );
-        INSERT INTO areas_new (id, location_id, name, parent_id, created_by, created_at, updated_at)
-          SELECT id, location_id, name, parent_id, created_by, created_at, updated_at FROM areas;
-        DROP TABLE areas;
-        ALTER TABLE areas_new RENAME TO areas;
-        CREATE INDEX IF NOT EXISTS idx_areas_location_id ON areas(location_id);
-        CREATE INDEX IF NOT EXISTS idx_areas_parent_id ON areas(parent_id);
-      `);
+        )`);
+        db.exec(`INSERT INTO areas_new (id, location_id, name, parent_id, created_by, created_at, updated_at)
+          SELECT id, location_id, name, parent_id, created_by, created_at, updated_at FROM areas`);
+        db.exec('DROP TABLE areas');
+        db.exec('ALTER TABLE areas_new RENAME TO areas');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_areas_location_id ON areas(location_id)');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_areas_parent_id ON areas(parent_id)');
+        db.exec('COMMIT');
+      } catch (e) {
+        db.exec('ROLLBACK');
+        throw e;
+      }
     }
   }
 
@@ -154,22 +181,27 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
   {
     const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='location_members'").get() as { sql: string } | undefined;
     if (tableInfo?.sql && !tableInfo.sql.includes("'viewer'")) {
-      db.exec(`
-        DROP TABLE IF EXISTS location_members_new;
-        CREATE TABLE location_members_new (
+      db.exec('BEGIN');
+      try {
+        db.exec('DROP TABLE IF EXISTS location_members_new');
+        db.exec(`CREATE TABLE location_members_new (
           id            TEXT PRIMARY KEY,
           location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
           user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           role          TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member', 'viewer')),
           joined_at     TEXT NOT NULL DEFAULT (datetime('now')),
           UNIQUE(location_id, user_id)
-        );
-        INSERT INTO location_members_new SELECT * FROM location_members;
-        DROP TABLE location_members;
-        ALTER TABLE location_members_new RENAME TO location_members;
-        CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id);
-        CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id);
-      `);
+        )`);
+        db.exec('INSERT INTO location_members_new SELECT * FROM location_members');
+        db.exec('DROP TABLE location_members');
+        db.exec('ALTER TABLE location_members_new RENAME TO location_members');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_location_members_user ON location_members(user_id)');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_location_members_location ON location_members(location_id)');
+        db.exec('COMMIT');
+      } catch (e) {
+        db.exec('ROLLBACK');
+        throw e;
+      }
     }
   }
 
@@ -291,9 +323,14 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
      )`,
   );
 
+  } catch (e) {
+    log.error('Migration failed — exiting to prevent corrupt state:', e instanceof Error ? e.message : e);
+    process.exit(1);
+  }
+
   const sqliteEngine = createSqliteEngine();
 
-  // Seed default admin account (admin/admin) — idempotent
+  // Seed default admin account — idempotent
   await seedAdminUser(sqliteEngine);
 
   return sqliteEngine;

@@ -42,6 +42,7 @@ export const config = Object.freeze({
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
 
   // Auth
+  adminPassword: process.env.ADMIN_PASSWORD || null,
   jwtSecret: resolveJwtSecret(),
   accessTokenExpiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '15m',
   refreshTokenMaxDays: clamp(parseInt(process.env.REFRESH_TOKEN_MAX_DAYS || '7', 10), 1, 90, 7),

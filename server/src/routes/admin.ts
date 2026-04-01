@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import bcrypt from 'bcrypt';
 import { Router } from 'express';
+import multer from 'multer';
 import { d, generateUuid, isUniqueViolation, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
@@ -12,6 +14,7 @@ import { getCloudMetrics } from '../lib/metrics.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
 import { invalidatePlanRateLimit, metricsLimiter } from '../lib/rateLimiters.js';
+import { restoreBackup } from '../lib/restore.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, invalidateDeletedCache } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
@@ -491,5 +494,36 @@ export async function getRegistrationMode(): Promise<string> {
   const result = await query<{ value: string }>("SELECT value FROM settings WHERE key = 'registration_mode'");
   return result.rows[0]?.value || 'open';
 }
+
+// POST /api/admin/restore — restore from backup ZIP
+const restoreUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      fs.mkdirSync(config.backupPath, { recursive: true });
+      cb(null, config.backupPath);
+    },
+    filename: (_req, _file, cb) => cb(null, `.restore-upload-${Date.now()}.zip`),
+  }),
+  limits: { fileSize: 200 * 1024 * 1024 },
+}).single('file');
+
+router.post('/restore', restoreUpload, asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new ValidationError('ZIP file is required');
+  }
+
+  const result = await restoreBackup(req.file.path);
+
+  // Clean up the uploaded file
+  try { fs.unlinkSync(req.file.path); } catch { /* best effort */ }
+
+  if (!result.success) {
+    res.status(500).json({ error: 'RESTORE_FAILED', message: result.error });
+    return;
+  }
+
+  log.info(`Backup restored by ${req.user!.username}`);
+  res.json({ message: 'Backup restored successfully' });
+}));
 
 export { router as adminRoutes };

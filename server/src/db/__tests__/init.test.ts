@@ -56,11 +56,17 @@ vi.mock('../dialect.js', () => ({
   getDialect: vi.fn(() => 'sqlite'),
 }));
 
+vi.mock('bcrypt', () => ({
+  default: { hash: vi.fn().mockResolvedValue('$2b$12$mockhash') },
+}));
+
 vi.mock('../../lib/config.js', () => ({
   config: {
     dbEngine: 'sqlite' as 'sqlite' | 'postgres',
     databasePath: ':memory:',
     databaseUrl: null as string | null,
+    adminPassword: null as string | null,
+    bcryptRounds: 12,
   },
 }));
 

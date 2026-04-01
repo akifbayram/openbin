@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   useDialogPortal,
@@ -20,6 +21,7 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/lib/auth';
 import { usePopover } from '@/lib/usePopover';
 import { cn, getErrorMessage } from '@/lib/utils';
+import type { LocationMember } from '@/types';
 import { changeMemberRole, leaveLocation, regenerateInvite, removeMember, resetMemberPassword, useLocationList, useLocationMembers } from './useLocations';
 
 interface LocationMembersDialogProps {
@@ -38,6 +40,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   const [resetToken, setResetToken] = useState<{ token: string; userId: string } | null>(null);
   const [resetCopied, setResetCopied] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
+  const [memberToRemove, setMemberToRemove] = useState<LocationMember | null>(null);
 
   const location = locations.find((h) => h.id === locationId);
   const isAdmin = location?.role === 'admin';
@@ -74,9 +77,11 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
     }
   }
 
-  async function handleRemoveMember(userId: string) {
+  async function handleRemoveConfirmed() {
+    if (!memberToRemove) return;
     try {
-      await removeMember(locationId, userId);
+      await removeMember(locationId, memberToRemove.user_id);
+      setMemberToRemove(null);
       showToast({ message: 'Member removed', variant: 'success' });
     } catch (err) {
       showToast({ message: getErrorMessage(err, 'Failed to remove member'), variant: 'error' });
@@ -134,7 +139,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { setResetToken(null); setMemberSearch(''); } onOpenChange(v); }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) { setResetToken(null); setMemberSearch(''); setMemberToRemove(null); } onOpenChange(v); }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{location?.name ?? 'Location'} Members</DialogTitle>
@@ -230,7 +235,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                   {isAdmin && !isSelf && (
                     <MemberActionMenu
                       onResetPassword={() => handleResetPassword(member.user_id)}
-                      onRemove={() => handleRemoveMember(member.user_id)}
+                      onRemove={() => setMemberToRemove(member)}
                     />
                   )}
                 </div>
@@ -288,6 +293,26 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
           </div>
         )}
       </DialogContent>
+
+      {/* Remove member confirmation dialog */}
+      <Dialog open={memberToRemove !== null} onOpenChange={(v) => { if (!v) setMemberToRemove(null); }}>
+        <DialogContent className="flat-popover">
+          <DialogHeader>
+            <DialogTitle>Remove member</DialogTitle>
+            <DialogDescription>
+              Remove {memberToRemove?.display_name || memberToRemove?.username || 'this member'} from {location?.name ?? 'this location'}? They will lose access to all bins in this location.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setMemberToRemove(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRemoveConfirmed}>
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

@@ -11,6 +11,7 @@ import { HttpError, OverLimitError, PlanRestrictedError } from './lib/httpErrors
 import { pushLog } from './lib/logBuffer.js';
 import { createLogger } from './lib/logger.js';
 import { apiLimiter, authLimiter, joinLimiter, planApiLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
+import { isRestoreInProgress } from './lib/restore.js';
 import { tryAuthenticate } from './middleware/auth.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { requireActiveSubscription } from './middleware/requirePlan.js';
@@ -101,6 +102,15 @@ export function createApp(): express.Express {
     } catch {
       res.status(503).json({ status: 'error', message: 'Database unreachable' });
     }
+  });
+
+  // Block requests during restore
+  app.use('/api', (_req, res, next) => {
+    if (isRestoreInProgress()) {
+      res.status(503).json({ error: 'SERVICE_UNAVAILABLE', message: 'Restore in progress' });
+      return;
+    }
+    next();
   });
 
   // Routes

@@ -1,15 +1,16 @@
+import { getEngine } from './db/init.js';
 import { initialize } from './db.js';
 import { createApp } from './index.js';
-import { startBackupScheduler } from './lib/backup.js';
+import { startBackupScheduler, stopBackupScheduler } from './lib/backup.js';
 import { config } from './lib/config.js';
 import { seedDemoData } from './lib/demoSeed.js';
 import { pushLog } from './lib/logBuffer.js';
 import { createLogger } from './lib/logger.js';
 import { cleanupOrphanPhotos } from './lib/photoCleanup.js';
 import { purgeExpiredRefreshTokens } from './lib/refreshTokens.js';
-import { startTrialChecker } from './lib/trialChecker.js';
-import { startUserCleanupJob } from './lib/userCleanup.js';
-import { startWebhookOutboxProcessor } from './lib/webhookOutbox.js';
+import { startTrialChecker, stopTrialChecker } from './lib/trialChecker.js';
+import { startUserCleanupJob, stopUserCleanupJob } from './lib/userCleanup.js';
+import { startWebhookOutboxProcessor, stopWebhookOutboxProcessor } from './lib/webhookOutbox.js';
 
 const log = createLogger('startup');
 
@@ -38,22 +39,61 @@ if (config.demoMode) {
   seedDemoData().catch((err) => log.error('Demo seed failed:', err instanceof Error ? err.message : err));
 }
 
-app.listen(config.port, () => {
+// Track timer handles for cleanup during shutdown
+const timers: { timeouts: NodeJS.Timeout[]; intervals: NodeJS.Timeout[] } = { timeouts: [], intervals: [] };
+
+const server = app.listen(config.port, () => {
   log.info(`API server listening on port ${config.port}`);
   pushLog({ level: 'info', message: `Server started on port ${config.port}` });
   startBackupScheduler();
 
   // Purge expired refresh tokens on startup and every 24 hours
   purgeExpiredRefreshTokens().catch((err) => log.error('Token purge failed:', err instanceof Error ? err.message : err));
-  setInterval(() => purgeExpiredRefreshTokens().catch((err) => log.error('Token purge failed:', err instanceof Error ? err.message : err)), 24 * 60 * 60 * 1000);
+  timers.intervals.push(
+    setInterval(() => purgeExpiredRefreshTokens().catch((err) => log.error('Token purge failed:', err instanceof Error ? err.message : err)), 24 * 60 * 60 * 1000),
+  );
 
   startTrialChecker();
   startUserCleanupJob();
   startWebhookOutboxProcessor();
 
   // Orphan photo cleanup — 30s after startup, then every 6 hours
-  setTimeout(() => {
+  timers.timeouts.push(setTimeout(() => {
     cleanupOrphanPhotos().catch(() => {});
-    setInterval(() => cleanupOrphanPhotos().catch(() => {}), 6 * 60 * 60 * 1000);
-  }, 30_000);
+    timers.intervals.push(
+      setInterval(() => cleanupOrphanPhotos().catch(() => {}), 6 * 60 * 60 * 1000),
+    );
+  }, 30_000));
 });
+
+// ---------------------------------------------------------------------------
+// Graceful shutdown
+// ---------------------------------------------------------------------------
+
+const shutdown = () => {
+  log.info('Shutting down gracefully...');
+  server.close(() => {
+    // Stop all scheduled jobs
+    stopBackupScheduler();
+    stopTrialChecker();
+    stopUserCleanupJob();
+    stopWebhookOutboxProcessor();
+    for (const id of timers.timeouts) clearTimeout(id);
+    for (const id of timers.intervals) clearInterval(id);
+
+    // Close the database connection
+    getEngine().close().catch(() => {});
+
+    log.info('Shutdown complete');
+    process.exit(0);
+  });
+
+  // Force exit after 10 seconds if graceful shutdown hangs
+  setTimeout(() => {
+    log.warn('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10_000).unref();
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
