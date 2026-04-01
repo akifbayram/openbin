@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { d, query } from '../db.js';
+import { d, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { verifyLocationMembership } from '../lib/binAccess.js';
+import { requireMemberOrAbove, verifyLocationMembership } from '../lib/binAccess.js';
 import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -66,6 +66,92 @@ router.get('/', asyncHandler(async (req, res) => {
   );
 
   res.json({ results: dataResult.rows, count: total });
+}));
+
+// PUT /api/tags/rename — rename a tag across all bins in a location
+router.put('/rename', asyncHandler(async (req, res) => {
+  const { locationId, oldTag, newTag } = req.body;
+
+  if (!locationId || !oldTag || !newTag) {
+    throw new ValidationError('locationId, oldTag, and newTag are required');
+  }
+
+  const trimmed = String(newTag).trim().toLowerCase();
+  if (!trimmed || trimmed.length > 100) {
+    throw new ValidationError('Tag must be 1-100 characters');
+  }
+  if (trimmed === String(oldTag).trim().toLowerCase()) {
+    res.json({ renamed: true, binsUpdated: 0 });
+    return;
+  }
+
+  await requireMemberOrAbove(locationId, req.user!.id, 'rename tags');
+
+  const { binsUpdated } = await withTransaction(async (txQuery) => {
+    const result = await txQuery<{ updated: number }>(
+      `UPDATE bins
+       SET tags = (
+         SELECT ${d.jsonGroupArray('tag')} FROM (
+           SELECT DISTINCT CASE WHEN jt.value = $2 THEN $3 ELSE jt.value END AS tag
+           FROM ${d.jsonEachFrom('bins.tags', 'jt')}
+         )
+       ),
+       updated_at = ${d.now()}
+       WHERE location_id = $1
+         AND deleted_at IS NULL
+         AND EXISTS (SELECT 1 FROM ${d.jsonEachFrom('tags', 'jt2')} WHERE jt2.value = $2)
+       RETURNING 1 AS updated`,
+      [locationId, oldTag, trimmed],
+    );
+
+    await txQuery(
+      `UPDATE tag_colors SET tag = $1, updated_at = ${d.now()}
+       WHERE location_id = $2 AND tag = $3`,
+      [trimmed, locationId, oldTag],
+    );
+
+    return { binsUpdated: result.rows.length };
+  });
+
+  res.json({ renamed: true, binsUpdated });
+}));
+
+// DELETE /api/tags/:tag?location_id=X — remove a tag from all bins in a location
+router.delete('/:tag', asyncHandler(async (req, res) => {
+  const tag = decodeURIComponent(req.params.tag);
+  const locationId = req.query.location_id as string;
+
+  if (!locationId) {
+    throw new ValidationError('location_id query parameter is required');
+  }
+
+  await requireMemberOrAbove(locationId, req.user!.id, 'delete tags');
+
+  const { binsUpdated } = await withTransaction(async (txQuery) => {
+    const result = await txQuery<{ updated: number }>(
+      `UPDATE bins
+       SET tags = (
+         SELECT ${d.jsonGroupArray('jt.value')}
+         FROM ${d.jsonEachFrom('bins.tags', 'jt')}
+         WHERE jt.value != $2
+       ),
+       updated_at = ${d.now()}
+       WHERE location_id = $1
+         AND deleted_at IS NULL
+         AND EXISTS (SELECT 1 FROM ${d.jsonEachFrom('tags', 'jt2')} WHERE jt2.value = $2)
+       RETURNING 1 AS updated`,
+      [locationId, tag],
+    );
+
+    await txQuery(
+      'DELETE FROM tag_colors WHERE location_id = $1 AND tag = $2',
+      [locationId, tag],
+    );
+
+    return { binsUpdated: result.rows.length };
+  });
+
+  res.json({ deleted: true, binsUpdated });
 }));
 
 export default router;

@@ -5,7 +5,7 @@ import {
   ScanLine,
   Sparkles,
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -98,6 +98,7 @@ export function BinListPage() {
   const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(bins, [debouncedSearch, sort, sortDir, filters]);
   const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(bins, selectedIds, clearSelection, showToast, t);
 
+  const selectedBinIds = useMemo(() => selectedIds.size > 0 ? [...selectedIds] : undefined, [selectedIds]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [copiedStyle, setCopiedStyle] = useState<{ icon: string; color: string; card_style: string } | null>(null);
 
@@ -346,6 +347,7 @@ export function BinListPage() {
         bulk={bulk}
         selectedIds={selectedIds}
         clearSelection={clearSelection}
+        selectedBinIds={selectedBinIds}
       />
 
       <DeleteBinDialog
@@ -375,6 +377,9 @@ export function BinListPage() {
           onPasteStyle={handlePasteStyle}
           canCopyStyle={selectedIds.size === 1}
           canPasteStyle={copiedStyle !== null}
+          aiEnabled={aiEnabled}
+          onAskAi={() => setCommandOpen(true)}
+          onReorganize={() => navigate(`/reorganize?ids=${[...selectedIds].join(',')}`)}
         />
       )}
     </div>

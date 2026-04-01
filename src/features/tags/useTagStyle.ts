@@ -1,10 +1,12 @@
 import type { CSSProperties } from 'react';
 import { useCallback } from 'react';
-import { resolveColor } from '@/lib/colorPalette';
+import { getTagTextColor, resolveColor } from '@/lib/colorPalette';
+import { useTheme } from '@/lib/theme';
 import { useTagColorsContext } from './TagColorsContext';
 
 export function useTagStyle(): (tag: string) => CSSProperties | undefined {
   const { tagColors } = useTagColorsContext();
+  const { theme } = useTheme();
 
   return useCallback(
     (tag: string): CSSProperties | undefined => {
@@ -13,9 +15,9 @@ export function useTagStyle(): (tag: string) => CSSProperties | undefined {
       if (!preset) return undefined;
       return {
         backgroundColor: preset.bgCss,
-        color: 'var(--tag-text-on-color)',
+        color: getTagTextColor(preset, theme),
       };
     },
-    [tagColors],
+    [tagColors, theme],
   );
 }

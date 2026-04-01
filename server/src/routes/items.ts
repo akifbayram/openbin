@@ -52,21 +52,28 @@ router.get('/', asyncHandler(async (req, res) => {
   const orderParam = req.query.sort_dir as string | undefined;
   const desc = orderParam === 'desc';
   const dir = desc ? 'DESC' : 'ASC';
-  const orderBy = sortParam === 'bin'
-    ? `b.name ${d.nocase()} ${dir}, bi.name ${d.nocase()} ${dir}`
-    : `bi.name ${d.nocase()} ${dir}`;
+  let orderBy: string;
+  if (sortParam === 'bin') {
+    orderBy = `b.name ${d.nocase()} ${dir}, bi.name ${d.nocase()} ${dir}`;
+  } else if (sortParam === 'qty') {
+    // NULLs sort last regardless of direction
+    orderBy = `CASE WHEN bi.quantity IS NULL THEN 1 ELSE 0 END, bi.quantity ${dir}, bi.name ${d.nocase()} ASC`;
+  } else {
+    orderBy = `bi.name ${d.nocase()} ${dir}`;
+  }
 
   // Data query
   params.push(limit, offset);
   const dataResult = await query<{
     id: string;
     name: string;
+    quantity: number | null;
     bin_id: string;
     bin_name: string;
     bin_icon: string;
     bin_color: string;
   }>(
-    `SELECT bi.id, bi.name, bi.bin_id, b.name AS bin_name, b.icon AS bin_icon, b.color AS bin_color
+    `SELECT bi.id, bi.name, bi.quantity, bi.bin_id, b.name AS bin_name, b.icon AS bin_icon, b.color AS bin_color
      ${baseQuery}
      ORDER BY ${orderBy}
      LIMIT $${params.length - 1} OFFSET $${params.length}`,

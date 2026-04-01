@@ -138,6 +138,9 @@ router.post('/register', asyncHandler(async (req, res) => {
   validatePassword(password);
   if (displayName !== undefined) validateDisplayName(displayName);
   const trimmedEmail = (typeof email === 'string' && email.trim()) || null;
+  if (!isSelfHosted() && !trimmedEmail) {
+    throw new ValidationError('Email is required');
+  }
   if (trimmedEmail) validateEmail(trimmedEmail);
 
   const passwordHash = await bcrypt.hash(password, config.bcryptRounds);

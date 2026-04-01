@@ -1,5 +1,6 @@
 import { Check } from 'lucide-react';
 import { PASSWORD_CHECKS, type PasswordCheckResult } from '@/lib/passwordStrength';
+import { cn } from '@/lib/utils';
 
 interface PasswordChecklistProps {
   checks: PasswordCheckResult;
@@ -15,11 +16,14 @@ export function PasswordChecklist({ checks }: PasswordChecklistProps) {
           aria-label={`${label} — ${checks[key] ? 'met' : 'not met'}`}
         >
           {checks[key] ? (
-            <Check className="h-3.5 w-3.5 text-[var(--accent)] shrink-0" aria-hidden="true" />
+            <Check className="h-3.5 w-3.5 text-[var(--accent)] shrink-0 animate-check-pop" aria-hidden="true" />
           ) : (
             <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--border-flat)]" aria-hidden="true" />
           )}
-          <span className={checks[key] ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'}>
+          <span className={cn(
+            'transition-colors duration-200',
+            checks[key] ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'
+          )}>
             {label}
           </span>
         </li>

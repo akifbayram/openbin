@@ -10,11 +10,14 @@ export const AVAILABLE_ICONS = [
   'Scissors', 'Hammer', 'Paintbrush', 'Leaf', 'Apple', 'Coffee', 'Wine', 'Baby', 'Dog', 'Cat',
 ];
 
+function appendInClause(sql: string, column: string, startIndex: number, ids: string[]): { sql: string; params: string[] } {
+  const placeholders = ids.map((_, i) => `$${startIndex + i}`).join(', ');
+  return { sql: `${sql} AND ${column} IN (${placeholders})`, params: ids };
+}
+
 /** Fetch bins, areas, trash, and custom field data for a location. */
-async function fetchLocationData(locationId: string, userId: string) {
-  const [binsResult, areasResult, trashResult, cfResult] = await Promise.all([
-    query(
-      `SELECT b.id, b.name,
+async function fetchLocationData(locationId: string, userId: string, binIds?: string[]) {
+  let binsSql = `SELECT b.id, b.name,
         COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))} FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
         b.tags, b.area_id, COALESCE(a.name, '') AS area_name, b.notes, b.icon, b.color,
         b.visibility,
@@ -23,9 +26,28 @@ async function fetchLocationData(locationId: string, userId: string) {
        FROM bins b
        LEFT JOIN areas a ON a.id = b.area_id
        LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
-       WHERE b.location_id = $1 AND b.deleted_at IS NULL`,
-      [locationId, userId]
-    ),
+       WHERE b.location_id = $1 AND b.deleted_at IS NULL`;
+  const binsParams: string[] = [locationId, userId];
+  if (binIds?.length) {
+    const inClause = appendInClause(binsSql, 'b.id', 3, binIds);
+    binsSql = inClause.sql;
+    binsParams.push(...inClause.params);
+  }
+
+  let cfSql = `SELECT v.bin_id, f.name AS field_name, v.value
+       FROM bin_custom_field_values v
+       JOIN location_custom_fields f ON f.id = v.field_id
+       JOIN bins b ON b.id = v.bin_id
+       WHERE f.location_id = $1 AND b.deleted_at IS NULL`;
+  const cfParams: string[] = [locationId];
+  if (binIds?.length) {
+    const inClause = appendInClause(cfSql, 'v.bin_id', 2, binIds);
+    cfSql = inClause.sql;
+    cfParams.push(...inClause.params);
+  }
+
+  const [binsResult, areasResult, trashResult, cfResult] = await Promise.all([
+    query(binsSql, binsParams),
     query(
       'SELECT id, name FROM areas WHERE location_id = $1',
       [locationId]
@@ -34,14 +56,7 @@ async function fetchLocationData(locationId: string, userId: string) {
       'SELECT id, name FROM bins WHERE location_id = $1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 20',
       [locationId]
     ),
-    query<{ bin_id: string; field_name: string; value: string }>(
-      `SELECT v.bin_id, f.name AS field_name, v.value
-       FROM bin_custom_field_values v
-       JOIN location_custom_fields f ON f.id = v.field_id
-       JOIN bins b ON b.id = v.bin_id
-       WHERE f.location_id = $1 AND b.deleted_at IS NULL`,
-      [locationId]
-    ),
+    query<{ bin_id: string; field_name: string; value: string }>(cfSql, cfParams),
   ]);
 
   // Build a map: binId -> Record<fieldName, value>
@@ -61,8 +76,8 @@ function truncateNotes(notes: unknown): string {
 }
 
 /** Build context for command/execute endpoints. */
-export async function buildCommandContext(locationId: string, userId: string): Promise<CommandRequest['context']> {
-  const { binsResult, areasResult, trashResult, customFieldsByBin } = await fetchLocationData(locationId, userId);
+export async function buildCommandContext(locationId: string, userId: string, binIds?: string[]): Promise<CommandRequest['context']> {
+  const { binsResult, areasResult, trashResult, customFieldsByBin } = await fetchLocationData(locationId, userId, binIds);
 
   const bins = binsResult.rows.map((r) => {
     const binId = r.id as string;
@@ -98,8 +113,8 @@ export async function buildCommandContext(locationId: string, userId: string): P
 }
 
 /** Build context for the query (read-only) endpoint. */
-export async function buildInventoryContext(locationId: string, userId: string): Promise<InventoryContext> {
-  const { binsResult, areasResult, trashResult, customFieldsByBin } = await fetchLocationData(locationId, userId);
+export async function buildInventoryContext(locationId: string, userId: string, binIds?: string[]): Promise<InventoryContext> {
+  const { binsResult, areasResult, trashResult, customFieldsByBin } = await fetchLocationData(locationId, userId, binIds);
 
   return {
     bins: binsResult.rows.map((r) => {

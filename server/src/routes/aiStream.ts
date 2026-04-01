@@ -70,6 +70,16 @@ function streamOpts(settings: UserAiSettings, overrides?: { maxTokens?: number; 
   };
 }
 
+/** Validate and sanitize optional binIds from request body. */
+function validateBinIds(binIds: unknown): string[] | undefined {
+  if (!binIds) return undefined;
+  if (!Array.isArray(binIds)) return undefined;
+  const valid = binIds
+    .filter((id): id is string => typeof id === 'string' && /^[a-zA-Z0-9]{1,10}$/.test(id))
+    .slice(0, 100);
+  return valid.length > 0 ? valid : undefined;
+}
+
 // POST /api/ai/query/stream
 streamRouter.post('/query/stream', aiLimiter, requirePro(), requireLocationMember(), aiRouteHandler('stream query', async (req, res) => {
   const question = validateTextInput(req.body.question, 'question');
@@ -110,15 +120,24 @@ streamRouter.post('/command/stream', aiLimiter, requirePro(), requireLocationMem
 // POST /api/ai/ask/stream — unified command+query endpoint
 streamRouter.post('/ask/stream', aiLimiter, requirePro(), requireLocationMember(), aiRouteHandler('stream ask', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
-  const { locationId } = req.body;
+  const { locationId, binIds: rawBinIds } = req.body;
+  const binIds = validateBinIds(rawBinIds);
+
   const [{ settings, model }, context] = await Promise.all([
     resolveUserModel(req.user!.id, 'command', isDemoUser(req)),
-    buildCommandContext(locationId, req.user!.id),
+    buildCommandContext(locationId, req.user!.id, binIds),
   ]);
+
+  if (binIds?.length && context.bins.length === 0) {
+    const { ValidationError } = await import('../lib/httpErrors.js');
+    throw new ValidationError('No matching bins found for the provided IDs');
+  }
+
+  const isScoped = (binIds?.length ?? 0) > 0;
   const request: CommandRequest = { text, context };
 
   await pipeAiStreamToResponse(res, model, {
-    system: buildUnifiedSystemPrompt(request, settings.command_prompt ?? undefined, settings.query_prompt ?? undefined, isDemoUser(req)),
+    system: buildUnifiedSystemPrompt(request, settings.command_prompt ?? undefined, settings.query_prompt ?? undefined, isDemoUser(req), isScoped),
     userContent: buildCommandUserMsg(request),
     ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
   });

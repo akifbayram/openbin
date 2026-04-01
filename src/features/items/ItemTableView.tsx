@@ -8,7 +8,7 @@ import { resolveIcon } from '@/lib/iconMap';
 import { useTerminology } from '@/lib/terminology';
 import type { ItemEntry } from './useItems';
 
-export type ItemSortColumn = 'alpha' | 'bin';
+export type ItemSortColumn = 'alpha' | 'bin' | 'qty';
 
 interface ItemTableViewProps {
   items: ItemEntry[];
@@ -40,6 +40,7 @@ export function ItemTableView({
         {/* Header */}
         <TableHeader>
           <SortHeader label="Item" column="alpha" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="flex-[2]" />
+          <SortHeader label="Qty" column="qty" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} defaultDirection="desc" className="w-14 justify-end" />
           <SortHeader label={t.Bin} column="bin" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="flex-1" />
         </TableHeader>
 
@@ -53,7 +54,7 @@ export function ItemTableView({
               key={entry.id}
               tabIndex={0}
               role="button"
-              aria-label={`${entry.name} in ${entry.bin_name}`}
+              aria-label={`${entry.name}${entry.quantity != null ? ` (${entry.quantity})` : ''} in ${entry.bin_name}`}
               onClick={() => navigate(`/bin/${entry.bin_id}`, { state: { backLabel: 'Items', backPath: '/items' } })}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') navigate(`/bin/${entry.bin_id}`, { state: { backLabel: 'Items', backPath: '/items' } });
@@ -64,9 +65,12 @@ export function ItemTableView({
                   <Highlight text={entry.name} query={searchQuery} />
                 </span>
               </div>
+              <span className="w-14 shrink-0 text-[13px] tabular-nums text-[var(--text-tertiary)] text-right">
+                {entry.quantity != null ? entry.quantity : '\u2014'}
+              </span>
               <div className="flex-1 min-w-0 row">
                 <div
-                  className="hidden sm:block h-2 w-2 rounded-full shrink-0"
+                  className="h-2 w-2 rounded-full shrink-0"
                   style={colorPreset ? { backgroundColor: colorPreset.dot } : { backgroundColor: 'var(--text-tertiary)' }}
                 />
                 <BinIcon className="hidden sm:block h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />

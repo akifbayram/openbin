@@ -5,6 +5,7 @@ import { usePaginatedList } from '@/lib/usePaginatedList';
 export interface ItemEntry {
   id: string;
   name: string;
+  quantity: number | null;
   bin_id: string;
   bin_name: string;
   bin_icon: string;

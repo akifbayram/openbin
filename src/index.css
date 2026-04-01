@@ -36,12 +36,12 @@
   --border-subtle: #ececec;
   --text-primary: #1c1c1e;
   --text-secondary: #3c3c43;
-  --text-tertiary: #6d6d72;
+  --text-tertiary: #636368;
   --text-on-accent: #ffffff;
   --accent: #5e2fe0;
   --accent-hover: #4e1fd0;
-  --destructive: #ff3b30;
-  --destructive-hover: #d63028;
+  --destructive: #db2b2b;
+  --destructive-hover: #c42020;
   --shadow-flat: none;
   --shadow-elevated: none;
   --radius-xs: 4px;
@@ -62,7 +62,7 @@
   --ai-accent: #5e2fe0;
   --ai-accent-hover: #4e1fd0;
   --accent-active: #4520b8;
-  --destructive-active: #b52a22;
+  --destructive-active: #a81b1b;
   --color-success: #34c759;
   --color-success-soft: rgba(52, 199, 89, 0.12);
   --color-success-ring: rgba(52, 199, 89, 0.25);
@@ -71,7 +71,7 @@
   --color-warning-ring: rgba(245, 158, 11, 0.25);
   --color-warning-border: rgba(245, 158, 11, 0.5);
   --color-info: #3b82f6;
-  --destructive-soft: rgba(255, 59, 48, 0.10);
+  --destructive-soft: rgba(219, 43, 43, 0.10);
   --tag-text-on-color: rgba(0, 0, 0, 0.75);
   --border-preview: rgba(0, 0, 0, 0.08);
   --bg-print-surface: #e0e0e0;
@@ -88,8 +88,8 @@
   --bg-input: #2a2a2a;
   --bg-hover: #2f2f2f;
   --bg-active: #383838;
-  --border-flat: #333333;
-  --border-subtle: #2a2a2a;
+  --border-flat: #3d3d3d;
+  --border-subtle: #333333;
   --text-primary: #f5f5f7;
   --text-secondary: #ebebf0;
   --text-tertiary: #98989d;
@@ -247,6 +247,18 @@ body {
   mask-image: radial-gradient(ellipse 50% 50% at 50% 45%, black 10%, transparent 70%);
   -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 45%, black 10%, transparent 70%);
   pointer-events: none;
+}
+
+/* ─── Auth Card Entrance ─── */
+@keyframes auth-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-auth-enter {
+  animation: auth-enter 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-auth-enter { animation: none !important; }
 }
 
 /* ─── Page Content Wrapper ─── */

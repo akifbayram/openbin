@@ -1,4 +1,4 @@
-import { ArrowRightLeft, CheckCircle2, Clipboard, ClipboardPaste, Copy, Eye, List, MapPin, MoreHorizontal, Paintbrush, Pin, Tag, Trash2, X } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle2, Clipboard, ClipboardPaste, Copy, Eye, List, MapPin, MoreHorizontal, Paintbrush, Pin, Shuffle, Sparkles, Tag, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -24,9 +24,12 @@ interface BulkActionBarProps {
   onCustomFields?: () => void;
   canCopyStyle?: boolean;
   canPasteStyle?: boolean;
+  aiEnabled?: boolean;
+  onAskAi?: () => void;
+  onReorganize?: () => void;
 }
 
-export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel, onCustomFields, onCopyStyle, onPasteStyle, canCopyStyle, canPasteStyle }: BulkActionBarProps) {
+export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel, onCustomFields, onCopyStyle, onPasteStyle, canCopyStyle, canPasteStyle, aiEnabled, onAskAi, onReorganize }: BulkActionBarProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -98,6 +101,20 @@ export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, 
           </Button>
         </Tooltip>
       )}
+      {aiEnabled && canWrite && onAskAi && (
+        <Tooltip content="AI" side="top">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 sm:px-3"
+            onClick={onAskAi}
+            aria-label="AI"
+          >
+            <Sparkles className="h-3.5 w-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">AI</span>
+          </Button>
+        </Tooltip>
+      )}
       {isAdmin && (
         <div className="relative" ref={moreRef}>
           <Tooltip content="More actions" side="top">
@@ -153,6 +170,16 @@ export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, 
                 <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
                 Duplicate
               </button>
+              {aiEnabled && onReorganize && (
+                <button
+                  type="button"
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  onClick={() => handleMoreAction(onReorganize)}
+                >
+                  <Shuffle className="h-4 w-4 text-[var(--text-tertiary)]" />
+                  Reorganize
+                </button>
+              )}
               {onCustomFields && (
                 <button
                   type="button"
