@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
@@ -12,7 +12,7 @@ import { useStreamingAsk } from './useStreamingAsk';
 
 type State = 'idle' | 'parsing' | 'preview' | 'executing' | 'querying' | 'query-result' | 'success';
 
-export function useCommandInputState(onOpenChange: (open: boolean) => void) {
+export function useCommandInputState(onOpenChange: (open: boolean) => void, selectedBinIds?: string[]) {
   const t = useTerminology();
   const { activeLocationId } = useAuth();
   const navigate = useNavigate();
@@ -29,7 +29,18 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [scopeOverride, setScopeOverride] = useState(false);
 
+  const scopeInfo = useMemo(() => {
+    const isScoped = !scopeOverride && (selectedBinIds?.length ?? 0) > 0;
+    return {
+      binCount: selectedBinIds?.length ?? 0,
+      isScoped,
+      clearScope: () => setScopeOverride(true),
+    };
+  }, [selectedBinIds, scopeOverride]);
+
+  const effectiveBinIds = scopeInfo.isScoped ? selectedBinIds : undefined;
   const isAiReady = settings !== null;
 
   // Derive querying state from streaming + query result
@@ -77,7 +88,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     setQueryResult(null);
 
     try {
-      const result = await ask({ text: text.trim(), locationId: activeLocationId });
+      const result = await ask({ text: text.trim(), locationId: activeLocationId, binIds: effectiveBinIds });
       if (result) applyAskResult(result);
     } catch (err) {
       showToast({ message: mapAiError(err, 'Request failed') });
@@ -114,6 +125,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
       setExecutionResult(null);
       setPhotoMode(false);
       setInitialFiles([]);
+      setScopeOverride(false);
     }
     onOpenChange(v);
   }
@@ -164,7 +176,8 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     setText(followUpText);
 
     try {
-      const result = await ask({ text: contextPrefix + followUpText, locationId: activeLocationId });
+      const effectiveBinIds = scopeInfo.isScoped ? selectedBinIds : undefined;
+      const result = await ask({ text: contextPrefix + followUpText, locationId: activeLocationId, binIds: effectiveBinIds });
       if (result) applyAskResult(result);
     } catch (err) {
       showToast({ message: mapAiError(err, 'Request failed') });
@@ -214,6 +227,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void) {
     handleExecuteComplete,
     handleAskAnother,
     handleFollowUp,
+    scopeInfo,
   };
 }
 

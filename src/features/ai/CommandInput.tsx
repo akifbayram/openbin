@@ -4,6 +4,7 @@ import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { takeCapturedPhotos } from '@/features/capture/capturedPhotos';
+import { useTerminology } from '@/lib/terminology';
 import { CommandActionPreview } from './CommandActionPreview';
 import { CommandIdleInput } from './CommandIdleInput';
 import { CommandSuccess } from './CommandSuccess';
@@ -17,10 +18,12 @@ interface CommandInputProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   autoTriggerPhoto?: boolean;
+  selectedBinIds?: string[];
 }
 
-export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandInputProps) {
+export function CommandInput({ open, onOpenChange, autoTriggerPhoto, selectedBinIds }: CommandInputProps) {
   const navigate = useNavigate();
+  const t = useTerminology();
 
   const {
     text, setText,
@@ -38,7 +41,8 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
     handleParse, handleBack, toggleAction,
     handleClose, handlePhotoSelect, handleBinClick,
     handleExecuteComplete, handleAskAnother, handleFollowUp,
-  } = useCommandInputState(onOpenChange);
+    scopeInfo,
+  } = useCommandInputState(onOpenChange, selectedBinIds);
 
   const { isExecuting, executingProgress, executeActions } = useActionExecutor({
     actions,
@@ -111,6 +115,21 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
         </DialogHeader>
 
         <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
+
+        {scopeInfo.isScoped && !photoMode && (
+          <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 border border-[var(--ai-accent)]/20 px-3 py-2 mb-1 text-[13px]">
+            <span className="text-[var(--text-secondary)]">
+              Focused on {scopeInfo.binCount} selected {scopeInfo.binCount === 1 ? t.bin : t.bins}
+            </span>
+            <button
+              type="button"
+              className="text-[var(--ai-accent)] hover:underline whitespace-nowrap transition-colors"
+              onClick={scopeInfo.clearScope}
+            >
+              Use all {t.bins} instead
+            </button>
+          </div>
+        )}
 
         {photoMode ? (
           <div key="photo" className="ai-content-enter">
@@ -188,6 +207,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
               onParse={handleParse}
               onPhotoClick={() => fileInputRef.current?.click()}
               onCameraClick={handleCameraClick}
+              isScoped={scopeInfo.isScoped}
             />
           </div>
         )}

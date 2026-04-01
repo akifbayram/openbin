@@ -120,7 +120,7 @@ ${JSON.stringify({ bins, areas, trash_bins })}
  * Build a unified system prompt that handles both commands AND queries.
  * The AI returns `{ actions, interpretation }` for commands or `{ answer, matches }` for queries.
  */
-export function buildUnifiedSystemPrompt(request: CommandRequest, customCommandPrompt?: string, customQueryPrompt?: string, isDemoUser?: boolean): string {
+export function buildUnifiedSystemPrompt(request: CommandRequest, customCommandPrompt?: string, customQueryPrompt?: string, isDemoUser?: boolean, isScoped?: boolean): string {
   // Build the command half (action types, rules, examples)
   const commandPrompt = buildSystemPrompt(request, customCommandPrompt, isDemoUser);
 
@@ -145,7 +145,12 @@ Query rules:
 - When including trash bins in matches, set "is_trashed": true so the UI can link to the trash page instead of the bin detail page.
 
 ---
-
+${isScoped ? `
+SELECTION SCOPE:
+The user has selected specific bins to focus on. The inventory context below contains ONLY these selected bins.
+- For commands: apply actions only to these bins unless the user explicitly references other bins by name.
+- For questions: answer based only on the bins provided below.
+` : ''}
 RESPONSE FORMAT:
 - If the user input is a COMMAND (create, move, add, delete, rename, etc.), respond with: {"actions":[...],"interpretation":"..."}
 - If the user input is a QUESTION (where is, what's in, how many, do I have, etc.), respond with: {"answer":"...","matches":[{"bin_id":"...","name":"...","area_name":"...","items":["..."],"tags":["..."],"relevance":"...","is_trashed":false}]}
