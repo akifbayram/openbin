@@ -91,6 +91,7 @@ export const config = Object.freeze({
   emailEnabled: parseBool(process.env.EMAIL_ENABLED, false),
   emailFrom: process.env.EMAIL_FROM || 'OpenBin <noreply@openbin.app>',
   resendApiKey: process.env.RESEND_API_KEY || null,
+  emailTemplateDir: process.env.EMAIL_TEMPLATE_DIR || null,
 
   demoMode: parseBool(process.env.DEMO_MODE, false),
   aiMock: parseBool(process.env.AI_MOCK, false),
