@@ -100,20 +100,21 @@ const UNRESTRICTED: PlanFeatures = {
 
 export function getFeatureMap(plan: PlanTier): PlanFeatures {
   if (config.selfHosted) return UNRESTRICTED;
+  const pl = config.planLimits;
   if (plan === Plan.PRO) {
-    return { ...UNRESTRICTED, maxPhotoStorageMb: 5000, activityRetentionDays: 90 };
+    return { ...UNRESTRICTED, maxPhotoStorageMb: pl.proMaxStorageMb, activityRetentionDays: pl.proActivityRetentionDays };
   }
   return {
-    ai: false,
-    apiKeys: false,
-    customFields: false,
-    fullExport: false,
-    reorganize: false,
-    binSharing: false,
-    maxLocations: 1,
-    maxPhotoStorageMb: 100,
-    maxMembersPerLocation: 1,
-    activityRetentionDays: 30,
+    ai: pl.liteAi,
+    apiKeys: pl.liteApiKeys,
+    customFields: pl.liteCustomFields,
+    fullExport: pl.liteFullExport,
+    reorganize: pl.liteReorganize,
+    binSharing: pl.liteBinSharing,
+    maxLocations: pl.liteMaxLocations,
+    maxPhotoStorageMb: pl.liteMaxStorageMb,
+    maxMembersPerLocation: pl.liteMaxMembers,
+    activityRetentionDays: pl.liteActivityRetentionDays,
   };
 }
 
