@@ -72,7 +72,6 @@ export const config = Object.freeze({
   subscriptionJwtSecret: process.env.SUBSCRIPTION_JWT_SECRET || null,
   subscriptionWebhookSecret: process.env.SUBSCRIPTION_WEBHOOK_SECRET || null,
   trialPeriodDays: clamp(parseInt(process.env.TRIAL_PERIOD_DAYS || '7', 10), 1, 90, 7),
-  // Plan limits (overridable for cloud deployments)
   planLimits: Object.freeze({
     liteAi: parseBool(process.env.PLAN_LITE_AI, false),
     liteApiKeys: parseBool(process.env.PLAN_LITE_API_KEYS, false),
