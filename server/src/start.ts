@@ -4,6 +4,7 @@ import { createApp } from './index.js';
 import { startBackupScheduler, stopBackupScheduler } from './lib/backup.js';
 import { config } from './lib/config.js';
 import { seedDemoData } from './lib/demoSeed.js';
+import { loadEmailTemplates } from './lib/emailTemplateLoader.js';
 import { pushLog } from './lib/logBuffer.js';
 import { createLogger } from './lib/logger.js';
 import { cleanupOrphanPhotos } from './lib/photoCleanup.js';
@@ -16,6 +17,7 @@ const log = createLogger('startup');
 
 // Initialize the database engine before anything touches the DB
 await initialize();
+loadEmailTemplates();
 
 const app = createApp();
 
