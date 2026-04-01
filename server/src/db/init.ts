@@ -75,14 +75,22 @@ export function getEngine(): DatabaseEngine {
 }
 
 /**
- * Close the current engine and re-initialize from scratch.
- * Used by backup restore to swap the database file at runtime.
+ * Close the database engine without re-initializing.
+ * Used by backup restore to release the file before overwriting it.
  */
-export async function reinitialize(): Promise<DatabaseEngine> {
+export async function closeDb(): Promise<void> {
   if (engine) {
     await engine.close();
     engine = null;
   }
+}
+
+/**
+ * Close the current engine and re-initialize from scratch.
+ * Used by backup restore to swap the database file at runtime.
+ */
+export async function reinitialize(): Promise<DatabaseEngine> {
+  await closeDb();
   return initialize();
 }
 

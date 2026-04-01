@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
-import { reinitialize } from '../db.js';
+import { closeDb, reinitialize } from '../db.js';
 import { config } from './config.js';
 import { createLogger } from './logger.js';
 
@@ -58,6 +58,9 @@ export async function restoreBackup(zipPath: string): Promise<RestoreResult> {
       }
     }
 
+    // Close database connection before overwriting the file
+    await closeDb();
+
     // Replace DB file
     fs.writeFileSync(dbPath, dbEntry);
     // Remove stale WAL/SHM from previous DB
@@ -86,6 +89,10 @@ export async function restoreBackup(zipPath: string): Promise<RestoreResult> {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     log.error('Restore failed:', message);
+    // Attempt to re-open the database so the server remains functional
+    try { await reinitialize(); } catch (reinitErr) {
+      log.error('Failed to reinitialize DB after restore failure:', reinitErr instanceof Error ? reinitErr.message : reinitErr);
+    }
     return { success: false, error: message };
   } finally {
     restoreInProgress = false;

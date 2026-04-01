@@ -108,7 +108,9 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
       }
 
       const photoDir = appConfig.photoStoragePath;
-      if (fs.existsSync(photoDir)) {
+      if (appConfig.storageBackend === 's3') {
+        log.warn('Photos stored in S3 are not included in local backups — use S3 versioning or cross-region replication');
+      } else if (fs.existsSync(photoDir)) {
         archive.directory(photoDir, 'photos');
       }
 

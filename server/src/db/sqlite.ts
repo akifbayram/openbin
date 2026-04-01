@@ -74,6 +74,7 @@ export function initSqlite(dbPath: string): Database.Database {
   const instance = new Database(dbPath);
   instance.pragma('journal_mode = WAL');
   instance.pragma('foreign_keys = ON');
+  instance.pragma('busy_timeout = 5000');
   registerFuzzyMatch(instance);
   db = instance;
   return instance;
