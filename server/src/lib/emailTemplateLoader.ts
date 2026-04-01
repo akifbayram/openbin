@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
 import { createLogger } from './logger.js';
+import { safePath } from './pathSafety.js';
 
 const log = createLogger('emailTemplateLoader');
 
@@ -13,12 +14,16 @@ interface RawTemplate {
 
 const overrides = new Map<string, RawTemplate>();
 
-const VALID_TYPES = new Set([
+export const EMAIL_TYPES = [
   'welcome', 'trial_expiring', 'trial_expired',
   'subscription_confirmed', 'subscription_expired', 'subscription_expiring',
   'explore_features', 'post_trial_early', 'post_trial_late',
   'password_reset', 'downgrade_impact',
-]);
+] as const;
+
+export type EmailType = (typeof EMAIL_TYPES)[number];
+
+const VALID_TYPES: ReadonlySet<string> = new Set(EMAIL_TYPES);
 
 export function loadEmailTemplates(): void {
   overrides.clear();
@@ -39,8 +44,13 @@ export function loadEmailTemplates(): void {
       log.warn(`Skipping unknown email template type: ${file}`);
       continue;
     }
+    const filePath = safePath(dir, file);
+    if (!filePath) {
+      log.warn(`Skipping email template with unsafe path: ${file}`);
+      continue;
+    }
     try {
-      const raw = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf-8')) as Record<string, unknown>;
+      const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<string, unknown>;
       if (typeof raw.subject !== 'string' || typeof raw.html !== 'string' || typeof raw.text !== 'string') {
         log.warn(`Email template "${file}" missing required fields (subject, html, text), skipping`);
         continue;

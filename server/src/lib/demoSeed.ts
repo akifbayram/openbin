@@ -27,6 +27,8 @@ import { pushLog } from './logBuffer.js';
 import { createLogger } from './logger.js';
 import { generateShortCode } from './shortCode.js';
 
+const log = createLogger('demoSeed');
+
 interface ExternalDemoData {
   users: Record<string, string>;
   locations: { home: string; storage: string };
@@ -61,7 +63,6 @@ function loadExternalDemoData(): ExternalDemoData | null {
   const filePath = config.demoSeedPath;
   if (!filePath) return null;
 
-  const log = createLogger('demoSeed');
   try {
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<string, unknown>;
     for (const key of REQUIRED_KEYS) {
@@ -482,11 +483,9 @@ export async function seedDemoData(): Promise<void> {
     const storageBins = bins.filter((b) => b.location === 'storage').length;
     const totalAreas = homeAreaNames.length + Object.values(nestedAreaDefs).flat().length + storageAreaNames.length;
     const message = `Demo data seeded in ${elapsed}ms (${usernames.length} users, ${homeBins} + ${storageBins} bins, ${trashedBinsList.length} trashed, ${totalAreas} areas, ${cfDefs.length} custom fields, ${activityEntries.length} activity log entries across 2 locations)`;
-    const log = createLogger('demoSeed');
     log.info(message);
     pushLog({ level: 'info', message });
   } catch (err) {
-    const log = createLogger('demoSeed');
     log.error('Failed to seed demo data:', err instanceof Error ? err.message : err);
     pushLog({ level: 'error', message: `Demo seed failed: ${err}` });
     throw err;

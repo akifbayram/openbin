@@ -1,7 +1,7 @@
 import { generateUuid, isUniqueViolation, query } from '../db.js';
 import { config } from './config.js';
 import { sendEmail } from './email.js';
-import { getTemplateOverride } from './emailTemplateLoader.js';
+import { type EmailType, getTemplateOverride } from './emailTemplateLoader.js';
 import {
   type DowngradeImpact,
   downgradeImpactEmail,
@@ -18,8 +18,6 @@ import {
 } from './emailTemplates.js';
 import { createLogger } from './logger.js';
 import { generateUpgradeUrl, type PlanTier, planLabel } from './planGate.js';
-
-type EmailType = 'welcome' | 'trial_expiring' | 'trial_expired' | 'subscription_confirmed' | 'subscription_expired' | 'subscription_expiring' | 'downgrade_impact' | 'explore_features' | 'post_trial_early' | 'post_trial_late' | 'password_reset';
 
 const log = createLogger('email');
 const SKIP_DEDUP: ReadonlySet<EmailType> = new Set(['welcome', 'password_reset']);
