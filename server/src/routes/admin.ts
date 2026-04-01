@@ -7,7 +7,7 @@ import { d, generateUuid, isUniqueViolation, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { firePasswordResetEmail } from '../lib/emailSender.js';
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { ConflictError, ForbiddenError, HttpError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { createLogger } from '../lib/logger.js';
 import { notifyManagerUserUpdate } from '../lib/managerWebhook.js';
 import { getCloudMetrics } from '../lib/metrics.js';
@@ -518,8 +518,7 @@ router.post('/restore', restoreUpload, asyncHandler(async (req, res) => {
   try { fs.unlinkSync(req.file.path); } catch { /* best effort */ }
 
   if (!result.success) {
-    res.status(500).json({ error: 'RESTORE_FAILED', message: result.error });
-    return;
+    throw new HttpError(500, 'RESTORE_FAILED', result.error || 'Unknown restore error');
   }
 
   log.info(`Backup restored by ${req.user!.username}`);

@@ -593,7 +593,7 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
     throw new ValidationError('ZIP file is required');
   }
 
-  const files = unzipSync(new Uint8Array(req.file.buffer));
+  const files = unzipSync(req.file.buffer);
 
   // Best-effort ZIP bomb guard: fflate decompresses synchronously so the data is already
   // in memory by this point. The 25 MB upload limit caps worst-case memory at ~500 MB.

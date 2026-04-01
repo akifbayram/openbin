@@ -9,7 +9,8 @@ Inventory with intelligence. Multi-user web app for organizing physical storage 
 ## Architecture
 
 - **Client**: React 18 + TypeScript 5 (strict) + Vite 6, Tailwind CSS 4, react-router-dom 6 (BrowserRouter)
-- **Server**: Express 4, SQLite (better-sqlite3), JWT auth, express-rate-limit
+- **Server**: Express 4, SQLite (better-sqlite3) or PostgreSQL (pg), JWT auth, express-rate-limit
+- **Database engine**: Set `DATABASE_URL` env var for PostgreSQL; omit for SQLite. Engine is locked after first init (cannot switch). Dialect abstraction in `server/src/db/dialect.ts` (`d` object) handles SQL differences.
 - **Docker**: Single container (Express serves static frontend + API), reverse proxy optional
 - Features live in `src/features/`, server code in `server/src/`, shared types in @src/types.ts
 - No ESLint or Prettier — single root `biome.json` covers both `src/` and `server/src/`.
@@ -41,6 +42,10 @@ OpenAPI spec at `server/openapi.yaml`.
 - **Env var reference**: See @.env.example for all env vars (backup, auth, AI, uploads, rate limiting).
 - **Route mounting**: Photos upload on bins router (`POST /api/bins/:id/photos`). Export at `/api`. Areas at `/api/locations`.
 - **Server config**: All env vars parsed and validated in `server/src/lib/config.ts` with safe defaults. See `.env.example` for the full list.
+- **Docker volume permissions**: Container runs as `node` (uid 1000). Volume-mounted dirs must be owned by 1000:1000 or the app will crash with EACCES.
+- **`DATABASE_PATH`**: Must be set to `/data/openbin.db` in Docker even when using PostgreSQL — the db init code creates this directory unconditionally at import time.
+- **`JWT_SECRET`**: Set explicitly in Docker. Auto-generation writes to `data/.jwt_secret` which fails if the data dir isn't writable yet at config load time.
+- **`CORS_ORIGIN`**: Defaults to `http://localhost:5173`. Must be set to the production URL (e.g. `https://cloud.openbin.app`) in deployment — otherwise the dev origin leaks into production ACAO headers.
 
 ## Security (non-obvious)
 
@@ -74,6 +79,7 @@ cd server && npx tsc --noEmit # Server type check
 docker compose up -d          # Full stack
 ```
 
+- **Docker image publish**: Push a `v*` tag to trigger `.github/workflows/docker-publish.yml` → builds multi-arch image to `ghcr.io/akifbayram/openbin`.
 - **Commit messages**: No parentheses in commit prefixes — use `feat: description` not `feat(area): description`.
 - Run `npx biome check .` and `npx tsc --noEmit` before committing. Run `npx vitest run path/to/test` for targeted tests over the full suite.
 - When compacting context, preserve the full list of modified files and any failing test output.

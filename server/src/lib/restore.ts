@@ -4,6 +4,7 @@ import { unzipSync } from 'fflate';
 import { closeDb, reinitialize } from '../db.js';
 import { config } from './config.js';
 import { createLogger } from './logger.js';
+import { safePath } from './pathSafety.js';
 
 const log = createLogger('restore');
 
@@ -26,7 +27,7 @@ export async function restoreBackup(zipPath: string): Promise<RestoreResult> {
   try {
     // Read and decompress ZIP
     const zipBuffer = fs.readFileSync(zipPath);
-    const files = unzipSync(new Uint8Array(zipBuffer));
+    const files = unzipSync(zipBuffer);
 
     // Validate: must contain openbin.db
     const dbEntry = files['openbin.db'];
@@ -76,13 +77,17 @@ export async function restoreBackup(zipPath: string): Promise<RestoreResult> {
     for (const [name, data] of Object.entries(files)) {
       if (!name.startsWith(photoPrefix) || name === photoPrefix) continue;
       const relativePath = name.slice(photoPrefix.length);
-      const destPath = path.join(photoDir, relativePath);
+      const destPath = safePath(photoDir, relativePath);
+      if (!destPath) continue; // skip path traversal attempts
       fs.mkdirSync(path.dirname(destPath), { recursive: true });
       fs.writeFileSync(destPath, data);
     }
 
     // Re-initialize database connection
     await reinitialize();
+
+    // Clean up safety backup after successful restore
+    fs.rmSync(safetyDir, { recursive: true, force: true });
 
     log.info('Backup restored successfully');
     return { success: true };

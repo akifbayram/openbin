@@ -8,7 +8,7 @@ on:
 
 jobs:
   check:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -54,19 +54,3 @@ jobs:
       - name: Build server
         run: npm run build
         working-directory: server
-
-  deploy:
-    runs-on: self-hosted
-    needs: check
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Pull latest code
-        run: |
-          git -C /opt/openbin fetch origin main
-          git -C /opt/openbin reset --hard origin/main
-
-      - name: Deploy with Docker Compose
-        run: |
-          cd /opt/openbin
-          docker compose down --remove-orphans
-          docker compose up -d --build

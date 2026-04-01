@@ -45,3 +45,24 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /opt/openbin
+            docker compose pull openbin openbin-demo
+            docker compose up -d openbin openbin-demo
+
+      - name: Health check
+        run: |
+          sleep 15
+          curl -sf https://cloud.openbin.app/api/health || exit 1
+          curl -sf https://demo.openbin.app/api/health || exit 1
