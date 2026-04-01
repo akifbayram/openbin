@@ -8,6 +8,20 @@ vi.mock('../lib/config.js', () => ({
     managerUrl: null as string | null,
     subscriptionJwtSecret: null as string | null,
     jwtSecret: 'test-jwt-secret',
+    planLimits: {
+      liteAi: false,
+      liteApiKeys: false,
+      liteCustomFields: false,
+      liteFullExport: false,
+      liteReorganize: false,
+      liteBinSharing: false,
+      liteMaxLocations: 1,
+      liteMaxStorageMb: 100,
+      liteMaxMembers: 1,
+      liteActivityRetentionDays: 30,
+      proMaxStorageMb: 5000,
+      proActivityRetentionDays: 90,
+    },
   },
 }));
 
@@ -35,6 +49,22 @@ import {
   Plan,
   SubStatus,
 } from '../lib/planGate.js';
+
+// Default plan limits matching config.ts defaults
+const DEFAULT_PLAN_LIMITS = {
+  liteAi: false,
+  liteApiKeys: false,
+  liteCustomFields: false,
+  liteFullExport: false,
+  liteReorganize: false,
+  liteBinSharing: false,
+  liteMaxLocations: 1,
+  liteMaxStorageMb: 100,
+  liteMaxMembers: 1,
+  liteActivityRetentionDays: 30,
+  proMaxStorageMb: 5000,
+  proActivityRetentionDays: 90,
+};
 
 // Helper to set config values for tests
 function setConfig(overrides: Partial<typeof config>) {
@@ -192,6 +222,86 @@ describe('getFeatureMap()', () => {
   });
 });
 
+describe('getFeatureMap() with custom plan limits', () => {
+  it('uses custom Lite limits from config', () => {
+    setConfig({
+      selfHosted: false,
+      planLimits: {
+        liteAi: true,
+        liteApiKeys: true,
+        liteCustomFields: false,
+        liteFullExport: false,
+        liteReorganize: false,
+        liteBinSharing: false,
+        liteMaxLocations: 3,
+        liteMaxStorageMb: 500,
+        liteMaxMembers: 5,
+        liteActivityRetentionDays: 60,
+        proMaxStorageMb: 5000,
+        proActivityRetentionDays: 90,
+      },
+    });
+    const features = getFeatureMap(Plan.LITE);
+    expect(features.ai).toBe(true);
+    expect(features.apiKeys).toBe(true);
+    expect(features.customFields).toBe(false);
+    expect(features.maxLocations).toBe(3);
+    expect(features.maxPhotoStorageMb).toBe(500);
+    expect(features.maxMembersPerLocation).toBe(5);
+    expect(features.activityRetentionDays).toBe(60);
+  });
+
+  it('uses custom Pro limits from config', () => {
+    setConfig({
+      selfHosted: false,
+      planLimits: {
+        liteAi: false,
+        liteApiKeys: false,
+        liteCustomFields: false,
+        liteFullExport: false,
+        liteReorganize: false,
+        liteBinSharing: false,
+        liteMaxLocations: 1,
+        liteMaxStorageMb: 100,
+        liteMaxMembers: 1,
+        liteActivityRetentionDays: 30,
+        proMaxStorageMb: 10000,
+        proActivityRetentionDays: 365,
+      },
+    });
+    const features = getFeatureMap(Plan.PRO);
+    expect(features.maxPhotoStorageMb).toBe(10000);
+    expect(features.activityRetentionDays).toBe(365);
+    expect(features.maxLocations).toBe(null);
+    expect(features.ai).toBe(true);
+  });
+
+  it('null plan limits mean unlimited', () => {
+    setConfig({
+      selfHosted: false,
+      planLimits: {
+        liteAi: false,
+        liteApiKeys: false,
+        liteCustomFields: false,
+        liteFullExport: false,
+        liteReorganize: false,
+        liteBinSharing: false,
+        liteMaxLocations: null,
+        liteMaxStorageMb: null,
+        liteMaxMembers: null,
+        liteActivityRetentionDays: null,
+        proMaxStorageMb: null,
+        proActivityRetentionDays: null,
+      },
+    });
+    const features = getFeatureMap(Plan.LITE);
+    expect(features.maxLocations).toBe(null);
+    expect(features.maxPhotoStorageMb).toBe(null);
+    expect(features.maxMembersPerLocation).toBe(null);
+    expect(features.activityRetentionDays).toBe(null);
+  });
+});
+
 describe('getUserPlanInfo()', () => {
   beforeEach(() => {
     vi.mocked(query).mockReset();
@@ -294,8 +404,11 @@ describe('generateUpgradeUrl()', () => {
 });
 
 describe('computeOverLimits()', () => {
+  beforeEach(() => {
+    setConfig({ selfHosted: false, planLimits: { ...DEFAULT_PLAN_LIMITS } });
+  });
+
   it('returns all false when under limits', () => {
-    setConfig({ selfHosted: false });
     const result = computeOverLimits(
       { locationCount: 1, photoStorageMb: 50, memberCounts: { loc1: 1 } },
       { ...getFeatureMap(Plan.LITE) },
@@ -304,7 +417,6 @@ describe('computeOverLimits()', () => {
   });
 
   it('returns locations=true when over location limit', () => {
-    setConfig({ selfHosted: false });
     const result = computeOverLimits(
       { locationCount: 3, photoStorageMb: 50, memberCounts: {} },
       { ...getFeatureMap(Plan.LITE) },
@@ -313,7 +425,6 @@ describe('computeOverLimits()', () => {
   });
 
   it('returns photos=true when over photo storage limit', () => {
-    setConfig({ selfHosted: false });
     const result = computeOverLimits(
       { locationCount: 1, photoStorageMb: 200, memberCounts: {} },
       { ...getFeatureMap(Plan.LITE) },
@@ -322,7 +433,6 @@ describe('computeOverLimits()', () => {
   });
 
   it('returns member locationIds when over member limit', () => {
-    setConfig({ selfHosted: false });
     const result = computeOverLimits(
       { locationCount: 1, photoStorageMb: 50, memberCounts: { loc1: 5, loc2: 1 } },
       { ...getFeatureMap(Plan.LITE) },
@@ -331,7 +441,6 @@ describe('computeOverLimits()', () => {
   });
 
   it('returns all false when limits are null (unlimited)', () => {
-    setConfig({ selfHosted: false });
     const result = computeOverLimits(
       { locationCount: 100, photoStorageMb: 9999, memberCounts: { loc1: 999 } },
       { ...getFeatureMap(Plan.PRO), maxPhotoStorageMb: null },
@@ -342,7 +451,7 @@ describe('computeOverLimits()', () => {
 
 describe('getUserOverLimits() with cache', () => {
   beforeEach(() => {
-    setConfig({ selfHosted: false });
+    setConfig({ selfHosted: false, planLimits: { ...DEFAULT_PLAN_LIMITS } });
     invalidateOverLimitCache('user1');
     vi.mocked(query).mockReset();
   });
@@ -381,7 +490,7 @@ describe('getUserOverLimits() with cache', () => {
 
 describe('checkLocationWritable()', () => {
   beforeEach(() => {
-    setConfig({ selfHosted: false });
+    setConfig({ selfHosted: false, planLimits: { ...DEFAULT_PLAN_LIMITS } });
     invalidateOverLimitCache('owner1');
     vi.mocked(query).mockReset();
   });
@@ -418,7 +527,7 @@ describe('checkLocationWritable()', () => {
 
 describe('getEffectiveMemberRole()', () => {
   beforeEach(() => {
-    setConfig({ selfHosted: false });
+    setConfig({ selfHosted: false, planLimits: { ...DEFAULT_PLAN_LIMITS } });
     invalidateOverLimitCache('owner1');
     vi.mocked(query).mockReset();
   });

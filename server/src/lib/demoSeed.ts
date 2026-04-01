@@ -1,15 +1,15 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import bcrypt from 'bcrypt';
 import type { TxQueryFn } from '../db.js';
 import { d, generateUuid, withTransaction } from '../db.js';
 import { config } from './config.js';
-import type { DemoMember } from './demoSeedData.js';
+import type { DemoActivityEntry, DemoBin, DemoMember } from './demoSeedData.js';
 import {
   CUSTOM_FIELD_DEFINITIONS,
   CUSTOM_FIELD_VALUES,
   DEMO_ACTIVITY_ENTRIES,
   DEMO_BINS,
-  DEMO_USERNAMES,
   DEMO_USERS,
   HOME_AREAS,
   NESTED_AREAS,
@@ -27,6 +27,57 @@ import { pushLog } from './logBuffer.js';
 import { createLogger } from './logger.js';
 import { generateShortCode } from './shortCode.js';
 
+const log = createLogger('demoSeed');
+
+interface ExternalDemoData {
+  users: Record<string, string>;
+  locations: { home: string; storage: string };
+  homeAreas: string[];
+  nestedAreas: Record<string, string[]>;
+  storageAreas: string[];
+  bins: DemoBin[];
+  trashedBins: DemoBin[];
+  tagColors: Record<string, string>;
+  pinnedBinNames: string[];
+  pinnedBinNamesPat: string[];
+  scannedBinNames: Record<string, string[]>;
+  customFieldDefinitions: Array<{ name: string; position: number }>;
+  customFieldValues: Record<string, Record<string, string>>;
+  activityEntries: Array<{
+    user: DemoMember;
+    location: 'home' | 'storage';
+    action: string;
+    entityType: string;
+    entityName?: string;
+    binName?: string;
+    changes?: Record<string, { old: unknown; new: unknown }>;
+    daysAgo: number;
+  }>;
+}
+
+const REQUIRED_KEYS: (keyof ExternalDemoData)[] = [
+  'users', 'locations', 'homeAreas', 'storageAreas', 'bins',
+];
+
+function loadExternalDemoData(): ExternalDemoData | null {
+  const filePath = config.demoSeedPath;
+  if (!filePath) return null;
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<string, unknown>;
+    for (const key of REQUIRED_KEYS) {
+      if (!(key in raw)) {
+        log.error(`Demo seed file missing required key: "${key}"`);
+        return null;
+      }
+    }
+    return raw as unknown as ExternalDemoData;
+  } catch (err) {
+    log.error(`Failed to load demo seed file "${filePath}":`, err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
 async function createLocation(tx: TxQueryFn, userId: string, name: string): Promise<string> {
   const locationId = generateUuid();
   const inviteCode = crypto.randomBytes(16).toString('hex');
@@ -43,8 +94,8 @@ async function createLocation(tx: TxQueryFn, userId: string, name: string): Prom
   return locationId;
 }
 
-async function cleanupExistingDemoUsers(tx: TxQueryFn): Promise<void> {
-  for (const username of DEMO_USERNAMES) {
+async function cleanupExistingDemoUsers(tx: TxQueryFn, usernames: string[]): Promise<void> {
+  for (const username of usernames) {
     const existing = await tx<{ id: string }>(
       'SELECT id FROM users WHERE username = $1',
       [username],
@@ -56,9 +107,9 @@ async function cleanupExistingDemoUsers(tx: TxQueryFn): Promise<void> {
   }
 }
 
-async function createDemoUsers(tx: TxQueryFn, passwordHash: string): Promise<Map<DemoMember, string>> {
+async function createDemoUsers(tx: TxQueryFn, passwordHash: string, users: Record<string, string>): Promise<Map<DemoMember, string>> {
   const userIdMap = new Map<DemoMember, string>();
-  for (const [username, displayName] of Object.entries(DEMO_USERS)) {
+  for (const [username, displayName] of Object.entries(users)) {
     const id = generateUuid();
     userIdMap.set(username as DemoMember, id);
     await tx(
@@ -69,10 +120,10 @@ async function createDemoUsers(tx: TxQueryFn, passwordHash: string): Promise<Map
   return userIdMap;
 }
 
-async function setupLocations(tx: TxQueryFn, userId: string): Promise<{ homeLocationId: string; storageLocationId: string }> {
+async function setupLocations(tx: TxQueryFn, userId: string, locationNames: { home: string; storage: string }): Promise<{ homeLocationId: string; storageLocationId: string }> {
   return {
-    homeLocationId: await createLocation(tx, userId, 'Our House'),
-    storageLocationId: await createLocation(tx, userId, 'Self Storage Unit'),
+    homeLocationId: await createLocation(tx, userId, locationNames.home),
+    storageLocationId: await createLocation(tx, userId, locationNames.storage),
   };
 }
 
@@ -118,11 +169,14 @@ async function createAreas(
   homeLocationId: string,
   storageLocationId: string,
   userId: string,
+  homeAreas: string[],
+  nestedAreas: Record<string, string[]>,
+  storageAreas: string[],
 ): Promise<Map<string, string>> {
   const areaMap = new Map<string, string>();
 
   // Home parent areas
-  for (const areaName of HOME_AREAS) {
+  for (const areaName of homeAreas) {
     const areaId = generateUuid();
     areaMap.set(areaName, areaId);
     await tx(
@@ -132,7 +186,7 @@ async function createAreas(
   }
 
   // Nested child areas under home areas
-  for (const [parentName, children] of Object.entries(NESTED_AREAS)) {
+  for (const [parentName, children] of Object.entries(nestedAreas)) {
     const parentId = areaMap.get(parentName);
     if (!parentId) continue;
     for (const childName of children) {
@@ -146,7 +200,7 @@ async function createAreas(
   }
 
   // Storage location areas
-  for (const areaName of STORAGE_AREAS) {
+  for (const areaName of storageAreas) {
     const areaId = generateUuid();
     areaMap.set(areaName, areaId);
     await tx(
@@ -164,10 +218,11 @@ async function createBins(
   storageLocationId: string,
   areaMap: Map<string, string>,
   userIdMap: Map<DemoMember, string>,
+  binList: DemoBin[],
 ): Promise<Map<string, string>> {
   const binIdMap = new Map<string, string>();
 
-  for (const bin of DEMO_BINS) {
+  for (const bin of binList) {
     const binId = generateShortCode(bin.name);
     binIdMap.set(bin.name, binId);
     const locationId = bin.location === 'home' ? homeLocationId : storageLocationId;
@@ -202,9 +257,10 @@ async function createTrashedBins(
   areaMap: Map<string, string>,
   userIdMap: Map<DemoMember, string>,
   binIdMap: Map<string, string>,
+  trashedBinList: DemoBin[],
 ): Promise<void> {
-  for (let i = 0; i < TRASHED_BINS.length; i++) {
-    const bin = TRASHED_BINS[i];
+  for (let i = 0; i < trashedBinList.length; i++) {
+    const bin = trashedBinList[i];
     const binId = generateShortCode(bin.name);
     binIdMap.set(bin.name, binId);
     const locationId = bin.location === 'home' ? homeLocationId : storageLocationId;
@@ -230,9 +286,9 @@ async function createTrashedBins(
   }
 }
 
-async function seedTagColors(tx: TxQueryFn, homeLocationId: string, storageLocationId: string): Promise<void> {
+async function seedTagColors(tx: TxQueryFn, homeLocationId: string, storageLocationId: string, tagColors: Record<string, string>): Promise<void> {
   for (const locId of [homeLocationId, storageLocationId]) {
-    for (const [tag, color] of Object.entries(TAG_COLORS)) {
+    for (const [tag, color] of Object.entries(tagColors)) {
       await tx(
         'INSERT INTO tag_colors (id, location_id, tag, color) VALUES ($1, $2, $3, $4)',
         [generateUuid(), locId, tag, color],
@@ -241,9 +297,9 @@ async function seedTagColors(tx: TxQueryFn, homeLocationId: string, storageLocat
   }
 }
 
-async function seedPins(tx: TxQueryFn, userId: string, patUserId: string, binIdMap: Map<string, string>): Promise<void> {
-  for (let i = 0; i < PINNED_BIN_NAMES.length; i++) {
-    const binId = binIdMap.get(PINNED_BIN_NAMES[i]);
+async function seedPins(tx: TxQueryFn, userId: string, patUserId: string, binIdMap: Map<string, string>, pinnedNames: string[], pinnedNamesPat: string[]): Promise<void> {
+  for (let i = 0; i < pinnedNames.length; i++) {
+    const binId = binIdMap.get(pinnedNames[i]);
     if (binId) {
       await tx(
         'INSERT INTO pinned_bins (user_id, bin_id, position) VALUES ($1, $2, $3)',
@@ -251,8 +307,8 @@ async function seedPins(tx: TxQueryFn, userId: string, patUserId: string, binIdM
       );
     }
   }
-  for (let i = 0; i < PINNED_BIN_NAMES_PAT.length; i++) {
-    const binId = binIdMap.get(PINNED_BIN_NAMES_PAT[i]);
+  for (let i = 0; i < pinnedNamesPat.length; i++) {
+    const binId = binIdMap.get(pinnedNamesPat[i]);
     if (binId) {
       await tx(
         'INSERT INTO pinned_bins (user_id, bin_id, position) VALUES ($1, $2, $3)',
@@ -289,16 +345,9 @@ async function seedSavedViews(tx: TxQueryFn, userId: string, sarahUserId: string
   }
 }
 
-async function seedScanHistory(tx: TxQueryFn, userIdMap: Map<DemoMember, string>, binIdMap: Map<string, string>): Promise<void> {
-  const scanEntries: [DemoMember, string[]][] = [
-    ['demo', SCANNED_BIN_NAMES],
-    ['sarah', SCANNED_BIN_NAMES_SARAH],
-    ['alex', SCANNED_BIN_NAMES_ALEX],
-    ['pat', SCANNED_BIN_NAMES_PAT],
-  ];
-
-  for (const [member, binNames] of scanEntries) {
-    const userId = userIdMap.get(member)!;
+async function seedScanHistory(tx: TxQueryFn, userIdMap: Map<DemoMember, string>, binIdMap: Map<string, string>, scannedNames: Record<string, string[]>): Promise<void> {
+  for (const [member, binNames] of Object.entries(scannedNames)) {
+    const userId = userIdMap.get(member as DemoMember)!;
     for (const name of binNames) {
       const binId = binIdMap.get(name);
       if (binId) {
@@ -323,10 +372,16 @@ async function seedOnboardingPrefs(tx: TxQueryFn, userIdMap: Map<DemoMember, str
   }
 }
 
-async function seedCustomFields(tx: TxQueryFn, homeLocationId: string, binIdMap: Map<string, string>): Promise<void> {
+async function seedCustomFields(
+  tx: TxQueryFn,
+  homeLocationId: string,
+  binIdMap: Map<string, string>,
+  defs: Array<{ name: string; position: number }>,
+  values: Record<string, Record<string, string>>,
+): Promise<void> {
   const fieldIdMap = new Map<string, string>();
 
-  for (const field of CUSTOM_FIELD_DEFINITIONS) {
+  for (const field of defs) {
     const fieldId = generateUuid();
     fieldIdMap.set(field.name, fieldId);
     await tx(
@@ -335,7 +390,7 @@ async function seedCustomFields(tx: TxQueryFn, homeLocationId: string, binIdMap:
     );
   }
 
-  for (const [binName, fields] of Object.entries(CUSTOM_FIELD_VALUES)) {
+  for (const [binName, fields] of Object.entries(values)) {
     const binId = binIdMap.get(binName);
     if (!binId) continue;
     for (const [fieldName, value] of Object.entries(fields)) {
@@ -355,8 +410,9 @@ async function seedActivityLog(
   storageLocationId: string,
   userIdMap: Map<DemoMember, string>,
   binIdMap: Map<string, string>,
+  entries: DemoActivityEntry[],
 ): Promise<void> {
-  for (const entry of DEMO_ACTIVITY_ENTRIES) {
+  for (const entry of entries) {
     const locationId = entry.location === 'home' ? homeLocationId : storageLocationId;
     const userId = userIdMap.get(entry.user)!;
     const entityId = entry.binName ? (binIdMap.get(entry.binName) ?? null) : null;
@@ -374,42 +430,62 @@ async function seedActivityLog(
 export async function seedDemoData(): Promise<void> {
   if (!config.demoMode) return;
 
+  const external = loadExternalDemoData();
+  const users = external?.users ?? DEMO_USERS;
+  const usernames = Object.keys(users);
+  const locationNames = external?.locations ?? { home: 'Our House', storage: 'Self Storage Unit' };
+  const homeAreaNames = external?.homeAreas ?? HOME_AREAS;
+  const nestedAreaDefs = external?.nestedAreas ?? NESTED_AREAS;
+  const storageAreaNames = external?.storageAreas ?? STORAGE_AREAS;
+  const bins = external?.bins ?? DEMO_BINS;
+  const trashedBinsList = external?.trashedBins ?? TRASHED_BINS;
+  const tagColorDefs = external?.tagColors ?? TAG_COLORS;
+  const pinnedNames = external?.pinnedBinNames ?? PINNED_BIN_NAMES;
+  const pinnedNamesPat = external?.pinnedBinNamesPat ?? PINNED_BIN_NAMES_PAT;
+  const scannedNames = external?.scannedBinNames ?? {
+    demo: SCANNED_BIN_NAMES,
+    sarah: SCANNED_BIN_NAMES_SARAH,
+    alex: SCANNED_BIN_NAMES_ALEX,
+    pat: SCANNED_BIN_NAMES_PAT,
+  };
+  const cfDefs = external?.customFieldDefinitions ?? CUSTOM_FIELD_DEFINITIONS;
+  const cfValues = external?.customFieldValues ?? CUSTOM_FIELD_VALUES;
+  const activityEntries = external?.activityEntries ?? DEMO_ACTIVITY_ENTRIES;
+
   const startTime = Date.now();
 
   try {
     await withTransaction(async (tx) => {
-      await cleanupExistingDemoUsers(tx);
+      await cleanupExistingDemoUsers(tx, usernames);
 
       const randomPassword = crypto.randomBytes(32).toString('hex');
       const passwordHash = bcrypt.hashSync(randomPassword, 10);
-      const userIdMap = await createDemoUsers(tx, passwordHash);
+      const userIdMap = await createDemoUsers(tx, passwordHash, users);
       const userId = userIdMap.get('demo')!;
 
-      const { homeLocationId, storageLocationId } = await setupLocations(tx, userId);
+      const { homeLocationId, storageLocationId } = await setupLocations(tx, userId, locationNames);
       await assignMemberships(tx, homeLocationId, storageLocationId, userIdMap);
-      const areaMap = await createAreas(tx, homeLocationId, storageLocationId, userId);
-      const binIdMap = await createBins(tx, homeLocationId, storageLocationId, areaMap, userIdMap);
-      await createTrashedBins(tx, homeLocationId, storageLocationId, areaMap, userIdMap, binIdMap);
+      const areaMap = await createAreas(tx, homeLocationId, storageLocationId, userId, homeAreaNames, nestedAreaDefs, storageAreaNames);
+      const binIdMap = await createBins(tx, homeLocationId, storageLocationId, areaMap, userIdMap, bins);
+      await createTrashedBins(tx, homeLocationId, storageLocationId, areaMap, userIdMap, binIdMap, trashedBinsList);
 
-      await seedTagColors(tx, homeLocationId, storageLocationId);
-      await seedPins(tx, userId, userIdMap.get('pat')!, binIdMap);
+      await seedTagColors(tx, homeLocationId, storageLocationId, tagColorDefs);
+      await seedPins(tx, userId, userIdMap.get('pat')!, binIdMap, pinnedNames, pinnedNamesPat);
       await seedSavedViews(tx, userId, userIdMap.get('sarah')!, areaMap);
-      await seedScanHistory(tx, userIdMap, binIdMap);
+      await seedScanHistory(tx, userIdMap, binIdMap, scannedNames);
       await seedOnboardingPrefs(tx, userIdMap);
-      await seedCustomFields(tx, homeLocationId, binIdMap);
-      await seedActivityLog(tx, homeLocationId, storageLocationId, userIdMap, binIdMap);
+      await seedCustomFields(tx, homeLocationId, binIdMap, cfDefs, cfValues);
+      await seedActivityLog(tx, homeLocationId, storageLocationId, userIdMap, binIdMap, activityEntries);
     });
 
     const elapsed = Date.now() - startTime;
-    const homeBins = DEMO_BINS.filter((b) => b.location === 'home').length;
-    const storageBins = DEMO_BINS.filter((b) => b.location === 'storage').length;
-    const totalAreas = HOME_AREAS.length + Object.values(NESTED_AREAS).flat().length + STORAGE_AREAS.length;
-    const message = `Demo data seeded in ${elapsed}ms (${DEMO_USERNAMES.length} users, ${homeBins} + ${storageBins} bins, ${TRASHED_BINS.length} trashed, ${totalAreas} areas, ${CUSTOM_FIELD_DEFINITIONS.length} custom fields, ${DEMO_ACTIVITY_ENTRIES.length} activity log entries across 2 locations)`;
-    const log = createLogger('demoSeed');
+    const homeBins = bins.filter((b) => b.location === 'home').length;
+    const storageBins = bins.filter((b) => b.location === 'storage').length;
+    const totalAreas = homeAreaNames.length + Object.values(nestedAreaDefs).flat().length + storageAreaNames.length;
+    const message = `Demo data seeded in ${elapsed}ms (${usernames.length} users, ${homeBins} + ${storageBins} bins, ${trashedBinsList.length} trashed, ${totalAreas} areas, ${cfDefs.length} custom fields, ${activityEntries.length} activity log entries across 2 locations)`;
     log.info(message);
     pushLog({ level: 'info', message });
   } catch (err) {
-    const log = createLogger('demoSeed');
     log.error('Failed to seed demo data:', err instanceof Error ? err.message : err);
     pushLog({ level: 'error', message: `Demo seed failed: ${err}` });
     throw err;

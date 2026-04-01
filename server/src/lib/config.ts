@@ -8,6 +8,14 @@ function parseBool(value: string | undefined, fallback: boolean): boolean {
   return value === 'true' || value === '1';
 }
 
+function parseNullableInt(value: string | undefined, fallback: number | null): number | null {
+  if (value === undefined || value === '') return fallback;
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n)) return fallback;
+  if (n === 0) return null; // 0 means unlimited
+  return n;
+}
+
 function clamp(value: number, min: number, max: number, fallback: number): number {
   if (!Number.isFinite(value)) return fallback;
   return Math.min(Math.max(value, min), max);
@@ -64,12 +72,28 @@ export const config = Object.freeze({
   subscriptionJwtSecret: process.env.SUBSCRIPTION_JWT_SECRET || null,
   subscriptionWebhookSecret: process.env.SUBSCRIPTION_WEBHOOK_SECRET || null,
   trialPeriodDays: clamp(parseInt(process.env.TRIAL_PERIOD_DAYS || '7', 10), 1, 90, 7),
+  planLimits: Object.freeze({
+    liteAi: parseBool(process.env.PLAN_LITE_AI, false),
+    liteApiKeys: parseBool(process.env.PLAN_LITE_API_KEYS, false),
+    liteCustomFields: parseBool(process.env.PLAN_LITE_CUSTOM_FIELDS, false),
+    liteFullExport: parseBool(process.env.PLAN_LITE_FULL_EXPORT, false),
+    liteReorganize: parseBool(process.env.PLAN_LITE_REORGANIZE, false),
+    liteBinSharing: parseBool(process.env.PLAN_LITE_BIN_SHARING, false),
+    liteMaxLocations: parseNullableInt(process.env.PLAN_LITE_MAX_LOCATIONS, 1),
+    liteMaxStorageMb: parseNullableInt(process.env.PLAN_LITE_MAX_STORAGE_MB, 100),
+    liteMaxMembers: parseNullableInt(process.env.PLAN_LITE_MAX_MEMBERS, 1),
+    liteActivityRetentionDays: parseNullableInt(process.env.PLAN_LITE_ACTIVITY_RETENTION_DAYS, 30),
+    proMaxStorageMb: parseNullableInt(process.env.PLAN_PRO_MAX_STORAGE_MB, 5000),
+    proActivityRetentionDays: parseNullableInt(process.env.PLAN_PRO_ACTIVITY_RETENTION_DAYS, 90),
+  }),
   // Email (Resend)
   emailEnabled: parseBool(process.env.EMAIL_ENABLED, false),
   emailFrom: process.env.EMAIL_FROM || 'OpenBin <noreply@openbin.app>',
   resendApiKey: process.env.RESEND_API_KEY || null,
+  emailTemplateDir: process.env.EMAIL_TEMPLATE_DIR || null,
 
   demoMode: parseBool(process.env.DEMO_MODE, false),
+  demoSeedPath: process.env.DEMO_SEED_PATH || null,
   aiMock: parseBool(process.env.AI_MOCK, false),
   demoUsernames: new Set(
     (process.env.DEMO_USERNAMES || '')
