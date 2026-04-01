@@ -108,27 +108,27 @@ describe('dialect helpers - postgres', () => {
 
   it('now()', () => {
     setDialect('postgres');
-    expect(d.now()).toBe('NOW()');
+    expect(d.now()).toBe('NOW()::text');
   });
 
   it('today()', () => {
     setDialect('postgres');
-    expect(d.today()).toBe('CURRENT_DATE');
+    expect(d.today()).toBe('CURRENT_DATE::text');
   });
 
   it('dateOf(col)', () => {
     setDialect('postgres');
-    expect(d.dateOf('created_at')).toBe('created_at::date');
+    expect(d.dateOf('created_at')).toBe('(created_at)::date');
   });
 
   it('intervalSeconds(param)', () => {
     setDialect('postgres');
-    expect(d.intervalSeconds('$1')).toBe('NOW() + make_interval(secs => $1::int)');
+    expect(d.intervalSeconds('$1')).toBe('(NOW() + make_interval(secs => $1::int))::text');
   });
 
   it('intervalDaysAgo(daysExpr)', () => {
     setDialect('postgres');
-    expect(d.intervalDaysAgo('30')).toBe("NOW() - (30 || ' days')::interval");
+    expect(d.intervalDaysAgo('30')).toBe("(NOW() - (30 || ' days')::interval)::text");
   });
 
   it('fuzzyMatch(col, param)', () => {
@@ -179,16 +179,16 @@ describe('dialect helpers - postgres', () => {
 
   it('secondsAgo(n)', () => {
     setDialect('postgres');
-    expect(d.secondsAgo(30)).toBe("NOW() - interval '30 seconds'");
+    expect(d.secondsAgo(30)).toBe("(NOW() - interval '30 seconds')::text");
   });
 
   it('hoursAgo(n)', () => {
     setDialect('postgres');
-    expect(d.hoursAgo(2)).toBe("NOW() - interval '2 hours'");
+    expect(d.hoursAgo(2)).toBe("(NOW() - interval '2 hours')::text");
   });
 
   it('daysAgo(n)', () => {
     setDialect('postgres');
-    expect(d.daysAgo(7)).toBe("NOW() - interval '7 days'");
+    expect(d.daysAgo(7)).toBe("(NOW() - interval '7 days')::text");
   });
 });

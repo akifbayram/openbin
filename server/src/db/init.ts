@@ -26,7 +26,7 @@ async function seedAdminUser(eng: DatabaseEngine): Promise<void> {
   if (rows.length === 0) {
     await eng.query(
       `INSERT INTO users (id, username, password_hash, display_name, is_admin, plan, sub_status, active_until)
-       VALUES ($1, 'admin', $2, 'Admin', 1, 1, 1, $3)`,
+       VALUES ($1, 'admin', $2, 'Admin', TRUE, 1, 1, $3)`,
       [crypto.randomUUID(), ADMIN_PASSWORD_HASH, new Date(Date.now() + ADMIN_ACTIVE_UNTIL_MS).toISOString()],
     );
   }
@@ -347,6 +347,14 @@ async function runPostgresInit(): Promise<DatabaseEngine> {
       key   TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+  `);
+
+  // Unique indexes (PG equivalent of SQLite dedup-then-create migrations)
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_scan_history_user_bin ON scan_history(user_id, bin_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_bin_shares_active ON bin_shares(bin_id) WHERE revoked_at IS NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_email_log_daily ON email_log(user_id, email_type, (left(sent_at, 10)));
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(LOWER(email)) WHERE email IS NOT NULL;
   `);
 
   const pgEngine = createPostgresEngine();

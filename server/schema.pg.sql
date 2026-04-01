@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   display_name       TEXT NOT NULL DEFAULT '',
   email              TEXT,
   avatar_path        TEXT,
-  active_location_id TEXT REFERENCES locations(id) ON DELETE SET NULL,
+  active_location_id TEXT,
   plan               INTEGER NOT NULL DEFAULT 1,
   sub_status         INTEGER NOT NULL DEFAULT 1,
   active_until       TEXT,
@@ -31,6 +31,17 @@ CREATE TABLE IF NOT EXISTS locations (
   created_at              TEXT NOT NULL DEFAULT (NOW()),
   updated_at              TEXT NOT NULL DEFAULT (NOW())
 );
+
+-- Deferred FK: users.active_location_id -> locations (circular dependency)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'fk_users_active_location' AND table_name = 'users'
+  ) THEN
+    ALTER TABLE users ADD CONSTRAINT fk_users_active_location
+      FOREIGN KEY (active_location_id) REFERENCES locations(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS location_members (
   id            TEXT PRIMARY KEY,
@@ -120,6 +131,7 @@ CREATE TABLE IF NOT EXISTS user_ai_settings (
   max_tokens      INTEGER,
   top_p           REAL,
   request_timeout INTEGER,
+  task_model_overrides TEXT,
   is_active       BOOLEAN NOT NULL DEFAULT FALSE,
   created_at      TEXT NOT NULL DEFAULT (NOW()),
   updated_at      TEXT NOT NULL DEFAULT (NOW()),
@@ -135,6 +147,18 @@ CREATE TABLE IF NOT EXISTS user_print_settings (
   updated_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_user_print_settings_user ON user_print_settings(user_id);
+
+CREATE TABLE IF NOT EXISTS api_keys (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  key_hash TEXT NOT NULL UNIQUE,
+  key_prefix TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (NOW()),
+  last_used_at TEXT,
+  revoked_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id);
 
 CREATE TABLE IF NOT EXISTS activity_log (
   id          TEXT PRIMARY KEY,
@@ -152,18 +176,6 @@ CREATE TABLE IF NOT EXISTS activity_log (
 );
 CREATE INDEX IF NOT EXISTS idx_activity_log_location ON activity_log(location_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, entity_id);
-
-CREATE TABLE IF NOT EXISTS api_keys (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  key_hash TEXT NOT NULL UNIQUE,
-  key_prefix TEXT NOT NULL,
-  name TEXT NOT NULL DEFAULT '',
-  created_at TEXT NOT NULL DEFAULT (NOW()),
-  last_used_at TEXT,
-  revoked_at TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id);
 
 CREATE TABLE IF NOT EXISTS pinned_bins (
   user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

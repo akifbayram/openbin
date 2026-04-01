@@ -12,27 +12,27 @@ export function getDialect(): Dialect {
 
 export const d = {
   now(): string {
-    return currentDialect === 'sqlite' ? "datetime('now')" : 'NOW()';
+    return currentDialect === 'sqlite' ? "datetime('now')" : 'NOW()::text';
   },
 
   today(): string {
-    return currentDialect === 'sqlite' ? "date('now')" : 'CURRENT_DATE';
+    return currentDialect === 'sqlite' ? "date('now')" : 'CURRENT_DATE::text';
   },
 
   dateOf(col: string): string {
-    return currentDialect === 'sqlite' ? `date(${col})` : `${col}::date`;
+    return currentDialect === 'sqlite' ? `date(${col})` : `(${col})::date`;
   },
 
   intervalSeconds(param: string): string {
     return currentDialect === 'sqlite'
       ? `datetime('now', '+' || ${param} || ' seconds')`
-      : `NOW() + make_interval(secs => ${param}::int)`;
+      : `(NOW() + make_interval(secs => ${param}::int))::text`;
   },
 
   intervalDaysAgo(daysExpr: string): string {
     return currentDialect === 'sqlite'
       ? `datetime('now', '-' || ${daysExpr} || ' days')`
-      : `NOW() - (${daysExpr} || ' days')::interval`;
+      : `(NOW() - (${daysExpr} || ' days')::interval)::text`;
   },
 
   fuzzyMatch(col: string, param: string): string {
@@ -86,24 +86,30 @@ export const d = {
   secondsAgo(n: number): string {
     return currentDialect === 'sqlite'
       ? `datetime('now', '-${n} seconds')`
-      : `NOW() - interval '${n} seconds'`;
+      : `(NOW() - interval '${n} seconds')::text`;
   },
 
   hoursAgo(n: number): string {
     return currentDialect === 'sqlite'
       ? `datetime('now', '-${n} hours')`
-      : `NOW() - interval '${n} hours'`;
+      : `(NOW() - interval '${n} hours')::text`;
   },
 
   daysAgo(n: number): string {
     return currentDialect === 'sqlite'
       ? `datetime('now', '-${n} days')`
-      : `NOW() - interval '${n} days'`;
+      : `(NOW() - interval '${n} days')::text`;
   },
 
   daysFromNow(n: number): string {
     return currentDialect === 'sqlite'
       ? `datetime('now', '+${n} days')`
-      : `NOW() + interval '${n} days'`;
+      : `(NOW() + interval '${n} days')::text`;
+  },
+
+  nullableEq(col: string, param: string): string {
+    return currentDialect === 'sqlite'
+      ? `${col} IS ${param}`
+      : `${col} IS NOT DISTINCT FROM ${param}`;
   },
 };

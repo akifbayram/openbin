@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 import type { TxQueryFn } from '../db.js';
-import { d, generateUuid, query } from '../db.js';
+import { d, generateUuid, isUniqueViolation, query } from '../db.js';
 import { config } from './config.js';
 import { replaceCustomFieldValues } from './customFieldHelpers.js';
 import { createLogger } from './logger.js';
@@ -290,8 +290,7 @@ export async function insertBinWithShortCode(
       }
       return id;
     } catch (err: unknown) {
-      const errObj = err as { code?: string };
-      if ((errObj.code === 'SQLITE_CONSTRAINT_UNIQUE' || errObj.code === '23505') && attempt < 10) {
+      if (isUniqueViolation(err) && attempt < 10) {
         continue;
       }
       throw err;

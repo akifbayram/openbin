@@ -86,7 +86,7 @@ router.get('/settings', requirePro(), aiRouteHandler('get AI settings', async (r
     return;
   }
 
-  const activeRow = result.rows.find((r: any) => r.is_active === 1) || result.rows[0];
+  const activeRow = result.rows.find((r: any) => !!r.is_active) || result.rows[0];
 
   // Build providerConfigs from all rows
   const providerConfigs: Record<string, { apiKey: string; model: string; endpointUrl: string | null }> = {};
@@ -208,7 +208,7 @@ router.put('/settings', requirePro(), aiRouteHandler('save AI settings', async (
 
   // Deactivate all other rows for this user
   await query(
-    `UPDATE user_ai_settings SET is_active = 0, updated_at = ${d.now()} WHERE user_id = $1`,
+    `UPDATE user_ai_settings SET is_active = FALSE, updated_at = ${d.now()} WHERE user_id = $1`,
     [req.user!.id]
   );
 
@@ -216,9 +216,9 @@ router.put('/settings', requirePro(), aiRouteHandler('save AI settings', async (
   const newId = generateUuid();
   const result = await query(
     `INSERT INTO user_ai_settings (id, user_id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides, is_active)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 1)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, TRUE)
      ON CONFLICT (user_id, provider) DO UPDATE SET
-       api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, reorganization_prompt = $11, temperature = $12, max_tokens = $13, top_p = $14, request_timeout = $15, task_model_overrides = $16, is_active = 1, updated_at = ${d.now()}
+       api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, reorganization_prompt = $11, temperature = $12, max_tokens = $13, top_p = $14, request_timeout = $15, task_model_overrides = $16, is_active = TRUE, updated_at = ${d.now()}
      RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides`,
     [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt, finalReorganizationPrompt, finalTemperature, finalMaxTokens, finalTopP, finalTimeout, finalOverrides]
   );

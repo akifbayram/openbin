@@ -65,7 +65,7 @@ async function processOutbox(): Promise<void> {
     );
 
     for (const row of pending.rows) {
-      const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+      const payload = (typeof row.payload_json === 'string' ? JSON.parse(row.payload_json) : row.payload_json) as Record<string, unknown>;
       const token = await new jose.SignJWT(payload as jose.JWTPayload)
         .setProtectedHeader({ alg: 'HS256' })
         .setExpirationTime('5m')

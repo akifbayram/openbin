@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { Router } from 'express';
-import { d, generateUuid, query } from '../db.js';
+import { d, generateUuid, isUniqueViolation, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { firePasswordResetEmail } from '../lib/emailSender.js';
@@ -20,7 +20,7 @@ const log = createLogger('admin');
 const router = Router();
 
 async function getAdminCount(): Promise<number> {
-  const result = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM users WHERE is_admin = 1');
+  const result = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM users WHERE is_admin = TRUE');
   return result.rows[0].cnt;
 }
 
@@ -79,7 +79,7 @@ router.get('/users', asyncHandler(async (req, res) => {
     username: u.username,
     displayName: u.display_name,
     email: u.email || null,
-    isAdmin: u.is_admin === 1,
+    isAdmin: !!u.is_admin,
     plan: planLabel(u.plan),
     status: subStatusLabel(u.sub_status),
     activeUntil: u.active_until || null,
@@ -109,7 +109,7 @@ router.post('/users', asyncHandler(async (req, res) => {
   try {
     result = await query(
       `INSERT INTO users (id, username, password_hash, display_name, email, is_admin, plan, sub_status, active_until)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       VALUES ($1, $2, $3, $4, $5, ${isAdmin ? 'TRUE' : 'FALSE'}, $6, $7, $8)
        RETURNING id, username, display_name, email, is_admin, plan, sub_status, created_at`,
       [
         userId,
@@ -117,7 +117,6 @@ router.post('/users', asyncHandler(async (req, res) => {
         passwordHash,
         displayName || username,
         email || null,
-        isAdmin ? 1 : 0,
         Plan.PRO,
         isSelfHosted() ? SubStatus.ACTIVE : SubStatus.TRIAL,
         isSelfHosted()
@@ -126,8 +125,7 @@ router.post('/users', asyncHandler(async (req, res) => {
       ]
     );
   } catch (err: unknown) {
-    const sqliteErr = err as { code?: string };
-    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (isUniqueViolation(err)) {
       throw new ConflictError('Username already taken');
     }
     throw err;
@@ -145,7 +143,7 @@ router.post('/users', asyncHandler(async (req, res) => {
     username: user.username,
     displayName: user.display_name,
     email: user.email,
-    isAdmin: user.is_admin === 1,
+    isAdmin: !!user.is_admin,
     plan: planLabel(user.plan),
     status: subStatusLabel(user.sub_status),
     createdAt: user.created_at,
@@ -182,7 +180,7 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
     username: row.username,
     displayName: row.display_name,
     email: row.email,
-    isAdmin: row.is_admin === 1,
+    isAdmin: !!row.is_admin,
     plan: planLabel(row.plan),
     status: subStatusLabel(row.sub_status),
     activeUntil: row.active_until || null,
@@ -223,7 +221,7 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   }
 
   // Last-admin protection (single query for both checks)
-  if (target.is_admin === 1) {
+  if (target.is_admin) {
     const isLastAdmin = (await getAdminCount()) <= 1;
     if (isAdmin === false && isLastAdmin) {
       throw new ForbiddenError('Cannot remove the only admin');
@@ -258,8 +256,7 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   const nextParam = () => `$${++paramIdx}`;
 
   if (isAdmin !== undefined) {
-    updates.push(`is_admin = ${nextParam()}`);
-    updateParams.push(isAdmin ? 1 : 0);
+    updates.push(`is_admin = ${isAdmin ? 'TRUE' : 'FALSE'}`);
   }
   if (typeof subStatus === 'number') {
     updates.push(`sub_status = ${nextParam()}`);
@@ -308,8 +305,7 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
       updateParams,
     );
   } catch (err: unknown) {
-    const sqliteErr = err as { code?: string };
-    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (isUniqueViolation(err)) {
       throw new ConflictError('Email already in use');
     }
     throw err;
@@ -372,7 +368,7 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
   if (!target) throw new NotFoundError('User not found');
 
   // Last-admin protection
-  if (target.is_admin === 1 && (await getAdminCount()) <= 1) {
+  if (target.is_admin && (await getAdminCount()) <= 1) {
     throw new ForbiddenError('Cannot delete the only admin');
   }
 

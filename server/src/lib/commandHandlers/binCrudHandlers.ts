@@ -1,5 +1,5 @@
 import type { TxQueryFn } from '../../db.js';
-import { d, generateUuid } from '../../db.js';
+import { d, generateUuid, isUniqueViolation } from '../../db.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
 import { replaceCustomFieldValues } from '../customFieldHelpers.js';
@@ -48,8 +48,7 @@ export async function handleCreateBin(action: Extract<CommandAction, { type: 'cr
       binId = code;
       break;
     } catch (err: unknown) {
-      const errObj = err as { code?: string };
-      if ((errObj.code === 'SQLITE_CONSTRAINT_UNIQUE' || errObj.code === '23505') && attempt < maxRetries) continue;
+      if (isUniqueViolation(err) && attempt < maxRetries) continue;
       throw err;
     }
   }
@@ -120,8 +119,7 @@ export async function handleDuplicateBin(action: Extract<CommandAction, { type: 
       binId = code;
       break;
     } catch (err: unknown) {
-      const errObj = err as { code?: string };
-      if ((errObj.code === 'SQLITE_CONSTRAINT_UNIQUE' || errObj.code === '23505') && attempt < maxRetries) continue;
+      if (isUniqueViolation(err) && attempt < maxRetries) continue;
       throw err;
     }
   }

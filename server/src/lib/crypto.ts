@@ -119,7 +119,7 @@ export async function resolveMaskedApiKey(apiKey: string, userId: string, provid
         [userId, provider]
       )
     : await query(
-        'SELECT api_key FROM user_ai_settings WHERE user_id = $1 AND is_active = 1',
+        'SELECT api_key FROM user_ai_settings WHERE user_id = $1 AND is_active = TRUE',
         [userId]
       );
   if (existing.rows.length === 0) {

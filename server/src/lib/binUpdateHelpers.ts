@@ -1,4 +1,4 @@
-import { d, generateUuid, query, withTransaction } from '../db.js';
+import { d, generateUuid, isUniqueViolation, query, withTransaction } from '../db.js';
 import { computeChanges } from './activityLog.js';
 import { fetchBinById } from './binQueries.js';
 import { replaceCustomFieldValues } from './customFieldHelpers.js';
@@ -197,9 +197,7 @@ export async function insertBinWithItems(fields: InsertBinFields): Promise<Recor
 
       return (await fetchBinById(binId))!;
     } catch (err: unknown) {
-      const errObj = err as { code?: string };
-      // Handle unique constraint errors from both SQLite and PostgreSQL
-      if ((errObj.code === 'SQLITE_CONSTRAINT_UNIQUE' || errObj.code === '23505') && attempt < maxRetries) {
+      if (isUniqueViolation(err) && attempt < maxRetries) {
         continue;
       }
       throw err;

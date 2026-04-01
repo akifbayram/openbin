@@ -37,7 +37,7 @@ async function tryMerge(opts: LogActivityOptions): Promise<boolean> {
   const result = await query<{ id: string; changes: Record<string, { old: unknown; new: unknown }> }>(
     `SELECT id, changes FROM activity_log
      WHERE user_id = $1 AND action = $2 AND entity_type = $3 AND entity_id = $4
-       AND location_id = $5 AND auth_method IS $6
+       AND location_id = $5 AND ${d.nullableEq('auth_method', '$6')}
        AND created_at > ${d.secondsAgo(MERGE_WINDOW_SECONDS)}
      ORDER BY created_at DESC LIMIT 1`,
     [opts.userId, opts.action, opts.entityType, opts.entityId ?? null, opts.locationId, opts.authMethod ?? null]

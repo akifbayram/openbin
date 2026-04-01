@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import bcrypt from 'bcrypt';
 import { Router } from 'express';
-import { d, generateUuid, query } from '../db.js';
+import { d, generateUuid, isUniqueViolation, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '../lib/cookies.js';
@@ -162,11 +162,10 @@ router.post('/register', asyncHandler(async (req, res) => {
       ]
     );
   } catch (err: unknown) {
-    const sqliteErr = err as { code?: string; message?: string };
-    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      if (sqliteErr.message?.includes('idx_users_email_unique')) {
-        throw new ConflictError('An account with this email already exists');
-      }
+    if (isUniqueViolation(err, 'idx_users_email_unique')) {
+      throw new ConflictError('An account with this email already exists');
+    }
+    if (isUniqueViolation(err)) {
       throw new ConflictError('Username already taken');
     }
     throw err;
@@ -291,7 +290,7 @@ router.post('/login', asyncHandler(async (req, res) => {
       displayName: user.display_name,
       email: user.email || null,
       avatarUrl: user.avatar_path ? `/api/auth/avatar/${user.id}` : null,
-      isAdmin: user.is_admin === 1,
+      isAdmin: !!user.is_admin,
     },
     activeLocationId,
   });
@@ -387,7 +386,7 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
     plan: planLabel(user.plan),
     subscriptionStatus: subStatusLabel(user.sub_status),
     activeUntil: user.active_until || null,
-    isAdmin: user.is_admin === 1,
+    isAdmin: !!user.is_admin,
   });
 }));
 
@@ -434,8 +433,7 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
       values
     );
   } catch (err: unknown) {
-    const sqliteErr = err as { code?: string; message?: string };
-    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE' && sqliteErr.message?.includes('idx_users_email_unique')) {
+    if (isUniqueViolation(err, 'idx_users_email_unique')) {
       throw new ConflictError('An account with this email already exists');
     }
     throw err;
@@ -533,8 +531,8 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
 
   const avatarPath = userResult.rows[0].avatar_path;
 
-  if (userResult.rows[0].is_admin === 1) {
-    const adminCountResult = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM users WHERE is_admin = 1', []);
+  if (userResult.rows[0].is_admin) {
+    const adminCountResult = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM users WHERE is_admin = TRUE', []);
     if (adminCountResult.rows[0].cnt <= 1) {
       throw new ForbiddenError('Cannot delete the only admin account');
     }

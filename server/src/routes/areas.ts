@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { d, generateUuid, query } from '../db.js';
+import { d, generateUuid, isUniqueViolation, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { ConflictError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
@@ -94,8 +94,7 @@ router.post('/:locationId/areas', requireLocationAdmin('locationId'), asyncHandl
 
     res.status(201).json(area);
   } catch (err: unknown) {
-    const sqliteErr = err as { code?: string };
-    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (isUniqueViolation(err)) {
       throw new ConflictError('An area with this name already exists');
     }
     throw err;
@@ -142,8 +141,7 @@ router.put('/:locationId/areas/:areaId', requireLocationAdmin('locationId'), asy
 
     res.json(area);
   } catch (err: unknown) {
-    const sqliteErr = err as { code?: string };
-    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (isUniqueViolation(err)) {
       throw new ConflictError('An area with this name already exists');
     }
     throw err;

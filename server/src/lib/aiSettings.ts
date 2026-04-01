@@ -50,7 +50,7 @@ export function getConfigForTask(settings: UserAiSettings, task: TaskType): AiPr
 /** Load and decrypt a user's AI settings. Falls back to env config. Throws NoAiSettingsError if neither exist. */
 export async function getUserAiSettings(userId: string): Promise<UserAiSettings> {
   const result = await query(
-    'SELECT provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides FROM user_ai_settings WHERE user_id = $1 AND is_active = 1',
+    'SELECT provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides FROM user_ai_settings WHERE user_id = $1 AND is_active = TRUE',
     [userId]
   );
   if (result.rows.length === 0) {

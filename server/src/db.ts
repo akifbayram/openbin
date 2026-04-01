@@ -7,6 +7,7 @@ import type { QueryResult, TxQueryFn } from './db/types.js';
 export type { QueryResult, TxQueryFn };
 export { d, getDialect } from './db/dialect.js';
 export { initialize } from './db/init.js';
+export { isUniqueViolation } from './db/shared.js';
 
 export async function query<T = Record<string, any>>(
   text: string,

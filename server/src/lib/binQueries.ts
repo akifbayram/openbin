@@ -1,4 +1,4 @@
-import { d, query } from '../db.js';
+import { d, getDialect, query } from '../db.js';
 
 /** Shared SELECT columns for bin queries (requires b alias for bins, a alias for areas). */
 export function BIN_SELECT_COLS(): string {
@@ -137,7 +137,8 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   }
 
   if (filters.needsOrganizing === 'true') {
-    whereClauses.push(`(b.tags = '[]' OR b.tags = '') AND b.area_id IS NULL AND NOT EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id)`);
+    const emptyTags = getDialect() === 'sqlite' ? "(b.tags = '[]' OR b.tags = '')" : "b.tags = '[]'::jsonb";
+    whereClauses.push(`${emptyTags} AND b.area_id IS NULL AND NOT EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id)`);
   }
 
   const validSorts: Record<string, string> = {

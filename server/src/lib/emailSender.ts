@@ -1,4 +1,4 @@
-import { generateUuid, query } from '../db.js';
+import { generateUuid, isUniqueViolation, query } from '../db.js';
 import { config } from './config.js';
 import { sendEmail } from './email.js';
 import {
@@ -37,8 +37,7 @@ async function claimEmailSlot(userId: string, emailType: EmailType, skipDedup: b
     );
     return true;
   } catch (err: unknown) {
-    const sqliteErr = err as { code?: string };
-    if (sqliteErr.code === 'SQLITE_CONSTRAINT_UNIQUE') return false;
+    if (isUniqueViolation(err)) return false;
     throw err;
   }
 }
