@@ -30,7 +30,6 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
   const { suggestions, isAnalyzing, error: aiError, analyzeMultiple, reanalyzeMultiple, clearSuggestions } = useAiAnalysis();
   const [lastSuggestions, setLastSuggestions] = useState<AiSuggestions | null>(null);
 
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [aiSetupOpen, setAiSetupOpen] = useState(false);
   const [changeCodeOpen, setChangeCodeOpen] = useState(false);
@@ -52,6 +51,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
       navigate('/bins');
       showToast({
         message: `Deleted "${snapshot.name}"`,
+        duration: 8000,
         action: {
           label: 'Undo',
           onClick: () => restoreBin(snapshot),
@@ -195,7 +195,6 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     aiGated,
     activeLocationId,
     // Dialog state
-    deleteOpen, setDeleteOpen,
     moveOpen, setMoveOpen,
     aiSetupOpen, setAiSetupOpen,
     changeCodeOpen, setChangeCodeOpen,

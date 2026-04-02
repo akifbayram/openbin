@@ -19,7 +19,6 @@ import { BinDetailToolbar } from './BinDetailToolbar';
 import { BinEditContent } from './BinEditContent';
 import { BinViewContent } from './BinViewContent';
 import { ChangeCodeDialog } from './ChangeCodeDialog';
-import { DeleteBinDialog } from './DeleteBinDialog';
 import { MoveBinDialog } from './MoveBinDialog';
 import { ShareBinDialog } from './ShareBinDialog';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
@@ -203,7 +202,7 @@ export function BinDetailPage() {
             actions.setMoveOpen(true);
           }
         }}
-        onDelete={() => actions.setDeleteOpen(true)}
+        onDelete={actions.handleDelete}
         isAdmin={actions.isAdmin}
         onChangeCode={() => actions.setChangeCodeOpen(true)}
         onShare={() => setShareOpen(true)}
@@ -242,13 +241,6 @@ export function BinDetailPage() {
           onClearSuggestions={actions.clearSuggestions}
         />
       )}
-
-      <DeleteBinDialog
-        open={actions.deleteOpen}
-        onOpenChange={actions.setDeleteOpen}
-        binName={bin.name}
-        onConfirm={actions.handleDelete}
-      />
 
       <MoveBinDialog
         open={actions.moveOpen}
