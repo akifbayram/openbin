@@ -1,6 +1,4 @@
-import { lazy, Suspense, useRef } from 'react';
 import type { SortDirection } from '@/components/ui/sort-header';
-import { useAutoOpenOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import type { Area } from '@/types';
 import { BinCreateDialog } from './BinCreateDialog';
 import { BinFilterDialog } from './BinFilterDialog';
@@ -14,8 +12,6 @@ import { SaveViewDialog } from './SaveViewDialog';
 import type { BinFilters, SortOption } from './useBins';
 import type { BulkDialog } from './useBulkDialogs';
 
-const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
-
 interface BinListDialogsProps {
   createOpen: boolean;
   setCreateOpen: (v: boolean) => void;
@@ -23,9 +19,6 @@ interface BinListDialogsProps {
   setFilterOpen: (v: boolean) => void;
   saveViewOpen: boolean;
   setSaveViewOpen: (v: boolean) => void;
-  commandOpen: boolean;
-  setCommandOpen: (v: boolean) => void;
-  aiEnabled: boolean;
   allTags: string[];
   areas: Area[];
   filters: BinFilters;
@@ -38,24 +31,17 @@ interface BinListDialogsProps {
   bulk: { isOpen: (d: BulkDialog) => boolean; open: (d: BulkDialog) => void; close: () => void };
   selectedIds: Set<string>;
   clearSelection: () => void;
-  selectedBinIds?: string[];
 }
 
 export function BinListDialogs({
   createOpen, setCreateOpen,
   filterOpen, setFilterOpen,
   saveViewOpen, setSaveViewOpen,
-  commandOpen, setCommandOpen,
-  aiEnabled, allTags, areas,
+  allTags, areas,
   filters, setFilters,
   sort, setSort, sortDir, setSortDir, search,
-  bulk, selectedIds, clearSelection, selectedBinIds,
+  bulk, selectedIds, clearSelection,
 }: BinListDialogsProps) {
-  const commandMounted = useRef(false);
-  if (commandOpen) commandMounted.current = true;
-
-  useAutoOpenOnCapture(aiEnabled, setCommandOpen);
-
   return (
     <>
       <BinCreateDialog
@@ -121,11 +107,6 @@ export function BinListDialogs({
         sort={sort}
         filters={filters}
       />
-      {aiEnabled && commandMounted.current && (
-        <Suspense fallback={null}>
-          <CommandInput open={commandOpen} onOpenChange={setCommandOpen} selectedBinIds={selectedBinIds} />
-        </Suspense>
-      )}
     </>
   );
 }

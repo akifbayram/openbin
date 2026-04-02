@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import type { BinVisibility } from '@/types';
+import type { BinItem, BinVisibility } from '@/types';
 
 export interface BinFormFields {
   name: string; setName: (v: string) => void;
   areaId: string | null; setAreaId: (v: string | null) => void;
-  items: string[]; setItems: (v: string[]) => void;
+  items: BinItem[]; setItems: (v: BinItem[]) => void;
   notes: string; setNotes: (v: string) => void;
   tags: string[]; setTags: (v: string[]) => void;
   icon: string; setIcon: (v: string) => void;
@@ -21,7 +21,7 @@ interface UseBinFormFieldsOptions {
 export function useBinFormFields(options?: UseBinFormFieldsOptions): BinFormFields {
   const [name, setName] = useState(options?.initialName ?? '');
   const [areaId, setAreaId] = useState<string | null>(null);
-  const [items, setItems] = useState<string[]>([]);
+  const [items, setItems] = useState<BinItem[]>([]);
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [icon, setIcon] = useState('');

@@ -16,7 +16,6 @@ function photo(overrides?: Partial<BulkAddPhoto>): BulkAddPhoto {
     status: 'pending',
     name: '',
     items: [],
-    itemQuantities: {},
     notes: '',
     tags: [],
     areaId: null,
@@ -171,14 +170,13 @@ describe('bulkAddReducer', () => {
         type: 'SET_ANALYZE_RESULT',
         id: 'p1',
         name: 'Cables',
-        items: ['USB-C', 'HDMI'],
-        itemQuantities: {},
+        items: [{ id: '1', name: 'USB-C', quantity: null }, { id: '2', name: 'HDMI', quantity: null }],
         tags: ['electronics'],
         notes: 'Mixed cables',
       });
       expect(result.photos[0].status).toBe('reviewed');
       expect(result.photos[0].name).toBe('Cables');
-      expect(result.photos[0].items).toEqual(['USB-C', 'HDMI']);
+      expect(result.photos[0].items).toEqual([{ id: '1', name: 'USB-C', quantity: null }, { id: '2', name: 'HDMI', quantity: null }]);
       expect(result.photos[0].tags).toEqual(['electronics']);
       expect(result.photos[0].notes).toBe('Mixed cables');
     });

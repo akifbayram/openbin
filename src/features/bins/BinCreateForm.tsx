@@ -12,21 +12,23 @@ import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
-import { buildQuantityMap, mergeItemQuantities } from '@/lib/itemQuantities';
+import { aiItemsToBinItems, binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
-import type { AiSuggestedItem, BinVisibility } from '@/types';
+import type { AiSuggestedItem, BinItem, BinVisibility } from '@/types';
 import { BinPreviewCard } from './BinPreviewCard';
 import { ColorPicker } from './ColorPicker';
 import { CustomFieldsEditCard } from './CustomFieldsEditCard';
 import { IconPicker } from './IconPicker';
-import { ItemsInput } from './ItemsInput';
+import { ItemList } from './ItemList';
 import { PhotoUploadSection } from './PhotoUploadSection';
+import { QuickAddWidget } from './QuickAddWidget';
 import { StylePicker } from './StylePicker';
 import { TagInput } from './TagInput';
 import { useBinFormFields } from './useBinFormFields';
 import { useCustomFields } from './useCustomFields';
 import { usePhotoAnalysis } from './usePhotoAnalysis';
+import { useQuickAdd } from './useQuickAdd';
 import { VisibilityPicker } from './VisibilityPicker';
 
 export interface BinCreateFormData {
@@ -54,7 +56,7 @@ interface BinCreateFormProps {
   onAiSetupRedirect?: () => void;
   prefillName?: string;
   allTags?: string[];
-  header?: React.ReactNode | ((state: { name: string; color: string; items: string[]; tags: string[]; icon: string; cardStyle: string; areaName: string }) => React.ReactNode);
+  header?: React.ReactNode | ((state: { name: string; color: string; items: BinItem[]; tags: string[]; icon: string; cardStyle: string; areaName: string }) => React.ReactNode);
   className?: string;
 }
 
@@ -92,11 +94,9 @@ export function BinCreateForm({
   } = useBinFormFields({ initialName: prefillName });
 
   const { fields: customFieldDefs } = useCustomFields(locationId);
-  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
 
   function applyAiItems(aiItems: AiSuggestedItem[]) {
-    setItems(aiItems.map((i) => i.name));
-    setItemQuantities(buildQuantityMap(aiItems));
+    setItems(aiItemsToBinItems(aiItems));
   }
 
   // Onboarding-specific: inline AI setup
@@ -152,10 +152,9 @@ export function BinCreateForm({
   function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    const itemsWithQty = mergeItemQuantities(items, itemQuantities);
     onSubmit({
       name: name.trim(),
-      items: itemsWithQty,
+      items: binItemsToPayload(items),
       notes: notes.trim(),
       tags,
       areaId,
@@ -171,7 +170,6 @@ export function BinCreateForm({
   const isFull = mode === 'full';
   const compactLabel = 'text-[13px] text-[var(--text-tertiary)] mb-1.5 block';
 
-  // Determine AI "configured" and "enabled" for ItemsInput
   const aiReady = isFull ? (aiEnabled && !!aiSettings) : aiConfiguredInline;
   const showAi = isFull ? aiEnabled : true;
 
@@ -182,6 +180,15 @@ export function BinCreateForm({
       setAiExpanded(true);
     }
   };
+
+  const quickAdd = useQuickAdd({
+    binName: name,
+    existingItems: items.map((i) => i.name),
+    activeLocationId: locationId,
+    aiConfigured: aiReady,
+    onNavigateAiSetup: handleAiSetupNeeded,
+    onAdd: (newItems) => setItems([...items, ...newItems]),
+  });
 
   const areaName = areas.find(a => a.id === areaId)?.name ?? '';
   const secondaryInfo = getSecondaryColorInfo(cardStyle);
@@ -208,15 +215,8 @@ export function BinCreateForm({
 
       {/* Items */}
       <div className={isFull ? 'space-y-2' : 'text-left'}>
-        <ItemsInput
-          items={items}
-          onChange={setItems}
-          showAi={showAi}
-          aiConfigured={aiReady}
-          onAiSetupNeeded={handleAiSetupNeeded}
-          binName={name}
-          locationId={locationId}
-        />
+        <ItemList items={items} onItemsChange={setItems} />
+        <QuickAddWidget quickAdd={quickAdd} aiEnabled={showAi} />
       </div>
 
       {/* Notes (full mode only) */}
@@ -267,7 +267,7 @@ export function BinCreateForm({
           <AiSuggestionsPanel
             suggestions={suggestions}
             currentName={name}
-            currentItems={items.map((name, i) => ({ id: String(i), name, quantity: null }))}
+            currentItems={items}
             currentTags={tags}
             currentNotes={notes}
             customFieldDefs={customFieldDefs}
@@ -299,7 +299,7 @@ export function BinCreateForm({
           <BinPreviewCard
             name={name}
             color={color}
-            items={items}
+            items={items.map((i) => i.name)}
             tags={tags}
             icon={icon}
             cardStyle={cardStyle}

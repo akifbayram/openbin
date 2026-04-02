@@ -58,7 +58,7 @@ export function DashboardChecklist({ totalBins, totalItems, onDismiss }: Dashboa
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss checklist"
-          className="p-1 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+          className="p-2 -m-1 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
         >
           <X className="h-4 w-4" />
         </button>
@@ -66,7 +66,7 @@ export function DashboardChecklist({ totalBins, totalItems, onDismiss }: Dashboa
       {/* Progress bar */}
       <div className="h-1 rounded-full bg-[var(--bg-input)] mb-3">
         <div
-          className="h-1 rounded-full bg-[var(--accent)] transition-all duration-300"
+          className="h-1 rounded-full bg-[var(--accent)] transition-all duration-300 motion-reduce:transition-none"
           style={{ width: `${(completedCount / items.length) * 100}%` }}
         />
       </div>

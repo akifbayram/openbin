@@ -1,4 +1,3 @@
-import '@/components/ui/animations.css';
 import { PackageOpen } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';

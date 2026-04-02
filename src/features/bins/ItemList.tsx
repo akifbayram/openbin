@@ -14,8 +14,9 @@ import { useCollapsibleList } from './useCollapsibleList';
 
 interface ItemListProps {
   items: BinItem[];
-  binId: string;
+  binId?: string;
   readOnly?: boolean;
+  onItemsChange?: (items: BinItem[]) => void;
 }
 
 type SortMode = 'manual' | 'az' | 'za' | 'qty-desc' | 'qty-asc';
@@ -45,14 +46,21 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
   const [swipeX, setSwipeX] = useState(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const swipingRef = useRef(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
 
   function handleStartEdit() {
     setEditValue(text);
     setEditQuantity(quantity != null ? String(quantity) : '');
     onStartEdit();
-    requestAnimationFrame(() => inputRef.current?.focus());
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (el) {
+        el.focus();
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+      }
+    });
   }
 
   function handleSave() {
@@ -160,16 +168,21 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
 
         {isEditing ? (
           <div className="flex-1 min-w-0">
-            <input
+            <textarea
               ref={inputRef}
+              rows={1}
               value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
+              onChange={(e) => {
+                setEditValue(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSave(); }
                 else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
               }}
               onBlur={() => { requestAnimationFrame(() => { if (!rowRef.current?.contains(document.activeElement)) handleSave(); }); }}
-              className="w-full bg-transparent text-[15px] text-[var(--text-primary)] leading-relaxed outline-none"
+              className="w-full bg-transparent text-[15px] text-[var(--text-primary)] leading-relaxed outline-none resize-none"
             />
           </div>
         ) : (
@@ -203,7 +216,7 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
   );
 }
 
-export function ItemList({ items, binId, readOnly }: ItemListProps) {
+export function ItemList({ items, binId, readOnly, onItemsChange }: ItemListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('manual');
   const { showToast } = useToast();
@@ -239,12 +252,17 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
         return diff !== 0 ? diff : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
       });
     }
+    if (onItemsChange) {
+      onItemsChange(sorted);
+      return;
+    }
     try {
+      if (!binId) return;
       await reorderItems(binId, sorted.map((i) => i.id));
     } catch {
       showToast({ message: 'Failed to sort items', variant: 'error' });
     }
-  }, [items, binId, showToast]);
+  }, [items, binId, onItemsChange, showToast]);
 
   const { visible: sortOpen, animating: sortAnimating, close: sortClose, toggle: sortToggle } = usePopover();
   const sortWrapperRef = useRef<HTMLDivElement>(null);
@@ -253,28 +271,44 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
 
   async function handleSaveEdit(itemId: string, value: string, quantity: number | null) {
     setEditingId(null);
+    if (onItemsChange) {
+      onItemsChange(items.map((i) => (i.id === itemId ? { ...i, name: value, quantity } : i)));
+      return;
+    }
     try {
+      if (!binId) return;
       await renameItem(binId, itemId, value, quantity);
     } catch {
       showToast({ message: 'Failed to update item', variant: 'error' });
     }
   }
 
+  // Refs so timers and cleanup read current values, not stale closures
+  const onItemsChangeRef = useRef(onItemsChange);
+  onItemsChangeRef.current = onItemsChange;
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
   function handleDelete(itemId: string) {
     if (pendingDeleteIds.has(itemId)) return;
 
     setPendingDeleteIds((prev) => new Set(prev).add(itemId));
 
-    const timerId = setTimeout(async () => {
+    const commitDelete = () => {
       pendingDeletesRef.current.delete(itemId);
-      try {
-        await removeItemFromBin(binId, itemId);
-      } catch {
-        setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
-        showToast({ message: 'Failed to delete item', variant: 'error' });
+      if (onItemsChangeRef.current) {
+        onItemsChangeRef.current(itemsRef.current.filter((i) => i.id !== itemId));
+      } else {
+        if (binId) {
+          removeItemFromBin(binId, itemId).catch(() => {
+            setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
+            showToast({ message: 'Failed to delete item', variant: 'error' });
+          });
+        }
       }
-    }, 5000);
+    };
 
+    const timerId = setTimeout(commitDelete, 5000);
     pendingDeletesRef.current.set(itemId, timerId);
 
     showToast({
@@ -300,7 +334,15 @@ export function ItemList({ items, binId, readOnly }: ItemListProps) {
     return () => {
       for (const [itemId, timerId] of ref.current) {
         clearTimeout(timerId);
-        removeItemFromBin(binId, itemId).catch(() => {});
+        if (onItemsChangeRef.current) {
+          // handled below in batch
+        } else {
+          if (binId) removeItemFromBin(binId, itemId).catch(() => {});
+        }
+      }
+      if (onItemsChangeRef.current && ref.current.size > 0) {
+        const ids = new Set(ref.current.keys());
+        onItemsChangeRef.current(itemsRef.current.filter((i) => !ids.has(i.id)));
       }
       ref.current.clear();
     };

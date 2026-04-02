@@ -8,6 +8,7 @@ import { useTerminology } from '@/lib/terminology';
 import { CommandActionPreview } from './CommandActionPreview';
 import { CommandIdleInput } from './CommandIdleInput';
 import { CommandSuccess } from './CommandSuccess';
+import { getCommandSelectedBinIds } from './commandSelectedBins';
 import { AiSetupView } from './InlineAiSetup';
 import { InventoryQueryResult } from './InventoryQueryResult';
 import { PhotoBulkAdd } from './PhotoBulkAdd';
@@ -18,10 +19,10 @@ interface CommandInputProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   autoTriggerPhoto?: boolean;
-  selectedBinIds?: string[];
 }
 
-export function CommandInput({ open, onOpenChange, autoTriggerPhoto, selectedBinIds }: CommandInputProps) {
+export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandInputProps) {
+  const selectedBinIds = getCommandSelectedBinIds();
   const navigate = useNavigate();
   const t = useTerminology();
 
@@ -52,6 +53,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto, selectedBin
 
   // Auto-trigger photo picker when opened via "Scan more"
   const autoTriggeredRef = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fileInputRef is a stable ref — .current must not be a dep
   useEffect(() => {
     if (open && autoTriggerPhoto && !autoTriggeredRef.current) {
       autoTriggeredRef.current = true;

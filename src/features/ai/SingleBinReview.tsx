@@ -11,18 +11,20 @@ import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
 import { BinCreateSuccess } from '@/features/bins/BinCreateSuccess';
 import { ColorPicker } from '@/features/bins/ColorPicker';
 import { IconPicker } from '@/features/bins/IconPicker';
-import { ItemsInput } from '@/features/bins/ItemsInput';
+import { ItemList } from '@/features/bins/ItemList';
+import { QuickAddWidget } from '@/features/bins/QuickAddWidget';
 import { TagInput } from '@/features/bins/TagInput';
 import { addBin, notifyBinsChanged, useAllTags } from '@/features/bins/useBins';
+import { useQuickAdd } from '@/features/bins/useQuickAdd';
 import { BULK_ADD_STEPS } from '@/features/bulk-add/useBulkAdd';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
-import { buildQuantityMap, mergeItemQuantities } from '@/lib/itemQuantities';
+import { aiItemsToBinItems, binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
-import type { AiSuggestions } from '@/types';
+import type { AiSuggestions, BinItem } from '@/types';
 import { AiSettingsSection } from './AiSettingsSection';
 import { AiAnalyzeError, AiStreamingPreview } from './AiStreamingPreview';
 
@@ -49,8 +51,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   const { showToast } = useToast();
 
   const [name, setName] = useState('');
-  const [items, setItems] = useState<string[]>([]);
-  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
+  const [items, setItems] = useState<BinItem[]>([]);
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [areaId, setAreaId] = useState<string | null>(sharedAreaId);
@@ -61,6 +62,13 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   const [correctionText, setCorrectionText] = useState('');
   const [correctionCount, setCorrectionCount] = useState(0);
   const MAX_CORRECTIONS = 3;
+
+  const reviewQuickAdd = useQuickAdd({
+    binName: name,
+    existingItems: items.map((i) => i.name),
+    activeLocationId: activeLocationId ?? undefined,
+    onAdd: (newItems) => setItems((prev) => [...prev, ...newItems]),
+  });
 
   const {
     isStreaming: isAnalyzing,
@@ -124,8 +132,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     const result = await streamAnalyze(formData);
     if (result) {
       setName(result.name);
-      setItems(result.items.map((i) => i.name));
-      setItemQuantities(buildQuantityMap(result.items));
+      setItems(aiItemsToBinItems(result.items));
       setTags(result.tags);
       setNotes(result.notes);
     }
@@ -147,7 +154,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
     const previousResult = {
       name,
-      items: items.map((itemName) => ({ name: itemName })),
+      items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
       tags,
       notes,
     };
@@ -164,8 +171,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     const result = await streamReanalyze(formData);
     if (result) {
       setName(result.name);
-      setItems(result.items.map((i) => i.name));
-      setItemQuantities(buildQuantityMap(result.items));
+      setItems(aiItemsToBinItems(result.items));
       setTags(result.tags);
       setNotes(result.notes);
     }
@@ -180,8 +186,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     });
     if (result) {
       setName(result.name);
-      setItems(result.items.map((i) => i.name));
-      setItemQuantities(buildQuantityMap(result.items));
+      setItems(aiItemsToBinItems(result.items));
       setTags(result.tags);
       setNotes(result.notes);
       setCorrectionCount((c) => c + 1);
@@ -227,11 +232,10 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     if (!name.trim() || !activeLocationId) return;
     setIsCreating(true);
     try {
-      const itemsWithQty = mergeItemQuantities(items, itemQuantities);
       const createdBin = await addBin({
         name: name.trim(),
         locationId: activeLocationId,
-        items: itemsWithQty,
+        items: binItemsToPayload(items),
         notes: notes.trim(),
         tags,
         areaId,
@@ -407,7 +411,8 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             </div>
 
             <div className="space-y-2">
-              <ItemsInput items={items} onChange={setItems} />
+              <ItemList items={items} onItemsChange={setItems} />
+              <QuickAddWidget quickAdd={reviewQuickAdd} aiEnabled={false} />
             </div>
 
             <div className="space-y-2">

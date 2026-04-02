@@ -9,6 +9,7 @@ import { pushLog } from './lib/logBuffer.js';
 import { createLogger } from './lib/logger.js';
 import { cleanupOrphanPhotos } from './lib/photoCleanup.js';
 import { purgeExpiredRefreshTokens } from './lib/refreshTokens.js';
+import { closeThumbnailPool } from './lib/thumbnailPool.js';
 import { startTrialChecker, stopTrialChecker } from './lib/trialChecker.js';
 import { startUserCleanupJob, stopUserCleanupJob } from './lib/userCleanup.js';
 import { startWebhookOutboxProcessor, stopWebhookOutboxProcessor } from './lib/webhookOutbox.js';
@@ -83,8 +84,10 @@ const shutdown = () => {
     for (const id of timers.timeouts) clearTimeout(id);
     for (const id of timers.intervals) clearInterval(id);
 
-    // Close the database connection
-    getEngine().close().catch(() => {});
+    // Drain thumbnail worker pool, then close the database connection
+    closeThumbnailPool()
+      .catch(() => {})
+      .finally(() => getEngine().close().catch(() => {}));
 
     log.info('Shutdown complete');
     process.exit(0);

@@ -1,11 +1,12 @@
+import type { BinItem } from '@/types';
+
 export interface BulkAddPhoto {
   id: string;
   file: File;
   previewUrl: string;
   status: 'pending' | 'analyzing' | 'reviewed' | 'skipped' | 'creating' | 'created' | 'failed';
   name: string;
-  items: string[];
-  itemQuantities: Record<string, number>;
+  items: BinItem[];
   notes: string;
   tags: string[];
   areaId: string | null;
@@ -42,7 +43,7 @@ export type BulkAddAction =
   | { type: 'UPDATE_PHOTO'; id: string; changes: Partial<BulkAddPhoto> }
   | { type: 'SET_ANALYZING'; id: string }
   | { type: 'UPDATE_STREAM'; id: string; name: string; items: string[] }
-  | { type: 'SET_ANALYZE_RESULT'; id: string; name: string; items: string[]; itemQuantities: Record<string, number>; tags: string[]; notes: string }
+  | { type: 'SET_ANALYZE_RESULT'; id: string; name: string; items: BinItem[]; tags: string[]; notes: string }
   | { type: 'SET_ANALYZE_ERROR'; id: string; error: string }
   | { type: 'SKIP_PHOTO'; id: string }
   | { type: 'UNSKIP_PHOTO'; id: string }
@@ -131,7 +132,7 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
         ...state,
         photos: state.photos.map((p) =>
           p.id === action.id
-            ? { ...p, status: 'reviewed', name: action.name, items: action.items, itemQuantities: action.itemQuantities, tags: action.tags, notes: action.notes, analyzeError: null, streamedItems: [], streamedName: '' }
+            ? { ...p, status: 'reviewed', name: action.name, items: action.items, tags: action.tags, notes: action.notes, analyzeError: null, streamedItems: [], streamedName: '' }
             : p
         ),
       };
@@ -236,7 +237,6 @@ export function createBulkAddPhoto(file: File, sharedAreaId: string | null): Bul
     status: 'pending',
     name: '',
     items: [],
-    itemQuantities: {},
     notes: '',
     tags: [],
     areaId: sharedAreaId,

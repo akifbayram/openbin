@@ -5,9 +5,10 @@ import { createArea } from '@/features/areas/useAreas';
 import { addBin } from '@/features/bins/useBins';
 import { createLocation } from '@/features/locations/useLocations';
 import { useAuth } from '@/lib/auth';
+import { binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { getErrorMessage } from '@/lib/utils';
-import type { Bin } from '@/types';
+import type { Bin, BinItem } from '@/types';
 import type { OnboardingActions } from './onboardingConstants';
 
 export interface OnboardingState {
@@ -24,8 +25,8 @@ export interface OnboardingState {
   // Step 1 state
   binName: string;
   setBinName: (v: string) => void;
-  binItems: string[];
-  setBinItems: (v: string[]) => void;
+  binItems: BinItem[];
+  setBinItems: (v: BinItem[]) => void;
   binAreaId: string | null;
   setBinAreaId: (v: string | null) => void;
   // Loading & created bin
@@ -56,7 +57,7 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
   const [showAreaInput, setShowAreaInput] = useState(false);
   // Step 1 state
   const [binName, setBinName] = useState('');
-  const [binItems, setBinItems] = useState<string[]>([]);
+  const [binItems, setBinItems] = useState<BinItem[]>([]);
   const [binAreaId, setBinAreaId] = useState<string | null>(null);
   // Loading
   const [loading, setLoading] = useState(false);
@@ -124,7 +125,7 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
       const bin = await addBin({
         name: binName.trim(),
         locationId,
-        items: binItems.length > 0 ? binItems : undefined,
+        items: binItems.length > 0 ? binItemsToPayload(binItems) : undefined,
         areaId: binAreaId,
       });
       setCreatedBin(bin);

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 import { BulkActionBar } from '@/features/bins/BulkActionBar';
@@ -11,18 +11,12 @@ import { BulkVisibilityDialog } from '@/features/bins/BulkVisibilityDialog';
 import { DeleteBinDialog } from '@/features/bins/DeleteBinDialog';
 import { updateBin } from '@/features/bins/useBins';
 import type { BulkDialog } from '@/features/bins/useBulkDialogs';
-import { useAutoOpenOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import type { Terminology } from '@/lib/terminology';
 import type { Bin } from '@/types';
-
-const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 
 interface DashboardDialogsProps {
   createOpen: boolean;
   setCreateOpen: (v: boolean) => void;
-  commandOpen: boolean;
-  setCommandOpen: (v: boolean) => void;
-  aiEnabled: boolean;
   bulk: { isOpen: (d: BulkDialog) => boolean; open: (d: BulkDialog) => void; close: () => void };
   selectedIds: Set<string>;
   clearSelection: () => void;
@@ -40,8 +34,6 @@ interface DashboardDialogsProps {
 
 export function DashboardDialogs({
   createOpen, setCreateOpen,
-  commandOpen, setCommandOpen,
-  aiEnabled,
   bulk, selectedIds, clearSelection,
   allTags, selectable, isAdmin, canWrite,
   bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel,
@@ -50,11 +42,6 @@ export function DashboardDialogs({
   const { showToast } = useToast();
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [copiedStyle, setCopiedStyle] = useState<{ icon: string; color: string; card_style: string } | null>(null);
-
-  const commandMounted = useRef(false);
-  if (commandOpen) commandMounted.current = true;
-
-  useAutoOpenOnCapture(aiEnabled, setCommandOpen);
 
   const handleCopyStyle = useCallback(() => {
     const [id] = selectedIds;
@@ -76,11 +63,6 @@ export function DashboardDialogs({
   return (
     <>
       <BinCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
-      {aiEnabled && commandMounted.current && (
-        <Suspense fallback={null}>
-          <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />
-        </Suspense>
-      )}
 
       {selectable && (
         <BulkActionBar

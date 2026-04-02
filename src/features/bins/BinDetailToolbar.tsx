@@ -2,7 +2,6 @@ import type { LucideIcon } from 'lucide-react';
 import { ArrowRightLeft, Check, ChevronLeft, ChevronRight, Copy, Loader2, Lock, MoreHorizontal, Pencil, Pin, Printer, QrCode, Save, Share2, Sparkles, Trash2, X } from 'lucide-react';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { MenuButton } from '@/components/ui/menu-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
 import { useClickOutside } from '@/lib/useClickOutside';
@@ -91,7 +90,6 @@ export function BinDetailToolbar({
 
   return (
     <div className="flex items-center gap-0.5 lg:gap-2">
-      <MenuButton />
       {/* Desktop: nav arrows on the left */}
       {!editing && hasBinListContext && (
         <div className="hidden lg:flex gap-1.5 shrink-0">
@@ -119,7 +117,7 @@ export function BinDetailToolbar({
           </Tooltip>
         </div>
       )}
-      <div className="min-w-0 flex-1 flex justify-center">
+      <div className="min-w-0 flex-1 flex lg:justify-center">
         {editing ? (
           <input
             id="edit-name"
@@ -333,6 +331,7 @@ export function BinDetailToolbar({
               size="icon"
               onClick={onClose}
               aria-label="Close"
+              className="bg-[var(--bg-input)]"
             >
               <X className="h-[18px] w-[18px]" />
             </Button>

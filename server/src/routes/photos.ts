@@ -1,6 +1,5 @@
 import path from 'node:path';
 import { Router } from 'express';
-import sharp from 'sharp';
 import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
@@ -8,6 +7,7 @@ import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpError
 import { invalidateOverLimitCache } from '../lib/planGate.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { storage } from '../lib/storage.js';
+import { generateThumbnailBuffer } from '../lib/thumbnailPool.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -114,10 +114,7 @@ router.get('/:id/thumb', asyncHandler(async (req, res) => {
     if (config.storageBackend === 's3') {
       // S3: generate thumbnail in memory
       const originalBuffer = await storage.read(photo.storage_path);
-      const thumbBuffer = await sharp(originalBuffer)
-        .resize(600, undefined, { withoutEnlargement: true })
-        .webp({ quality: 70 })
-        .toBuffer();
+      const thumbBuffer = await generateThumbnailBuffer(originalBuffer);
       await storage.upload(thumbStoragePath, thumbBuffer, 'image/webp');
 
       await query('UPDATE photos SET thumb_path = $1 WHERE id = $2', [thumbStoragePath, id]);

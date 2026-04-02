@@ -1,5 +1,5 @@
 import { ArrowUpRight, Download, X } from 'lucide-react';
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { PageTransition } from '@/components/page-transition';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { CommandPalette } from '@/components/ui/command-palette';
 import { ShortcutsHelp } from '@/components/ui/shortcuts-help';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useBinList } from '@/features/bins/useBins';
+import { useAutoOpenOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useLocationList } from '@/features/locations/useLocations';
 import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay';
 import { useOnboarding } from '@/features/onboarding/useOnboarding';
@@ -36,6 +37,8 @@ import { Sidebar, SidebarContent } from './Sidebar';
 const ScanDialog = React.lazy(() =>
   import('@/features/qrcode/ScanDialog').then((m) => ({ default: m.ScanDialog })),
 );
+
+const CommandInput = lazy(() => import('@/features/ai/CommandInput').then((m) => ({ default: m.CommandInput })));
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -67,6 +70,18 @@ export function AppLayout() {
   const { bins } = useBinList();
   const firstBinId = bins.length > 0 ? bins[0].id : null;
   const [isMobile] = useState(() => !window.matchMedia('(min-width: 1024px)').matches);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const commandMounted = useRef(false);
+  if (commandOpen) commandMounted.current = true;
+  const aiEnabled = !!aiSettings && (isSelfHosted || planInfo.plan === 'pro');
+  // Register directly on the module-level ref (can't use useRegisterCommandInput here
+  // because AppLayout is *above* TourProvider, so useTourContext() would return null).
+  useEffect(() => {
+    const ref = getCommandInputRef();
+    ref.current = { open: () => setCommandOpen(true), close: () => setCommandOpen(false) };
+    return () => { ref.current = null; };
+  }, []);
+  useAutoOpenOnCapture(aiEnabled, setCommandOpen);
 
   const tourContext = useMemo<TourContext>(() => ({
     canWrite,
@@ -90,6 +105,7 @@ export function AppLayout() {
   const tour = useTour({ context: tourContext, navigate, updatePreferences });
 
   // Close drawer on route change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: location.pathname triggers drawer close on navigation
   useEffect(() => {
     setDrawerOpen(false);
   }, [location.pathname]);
@@ -129,7 +145,7 @@ export function AppLayout() {
     if (!demoMode && locations.length > 0 && onboarding.isOnboarding && onboarding.step === 0) {
       onboarding.complete();
     }
-  }, [locationsLoading, locations.length, onboarding, onboarding.isLoading]);
+  }, [locationsLoading, locations.length, onboarding, onboarding.isLoading, demoMode]);
 
   // Auto-select first location when none is active or active location no longer exists
   useEffect(() => {
@@ -191,11 +207,14 @@ export function AppLayout() {
         />
       </MobileDrawer>
 
-      <BottomNav
-        onNavigate={navigate}
-        onScanClick={openScanDialog}
-        onMoreClick={() => setDrawerOpen(true)}
-      />
+      {!onboarding.isOnboarding && (
+        <BottomNav
+          onNavigate={navigate}
+          onScanClick={openScanDialog}
+          onMoreClick={() => setDrawerOpen(true)}
+          onAskAi={aiEnabled ? () => getCommandInputRef().current?.open() : undefined}
+        />
+      )}
 
       <ScanDialogContext.Provider value={{ openScanDialog }}>
       <DrawerProvider isOnboarding={onboarding.isOnboarding} onOpen={() => setDrawerOpen(true)}>
@@ -249,6 +268,11 @@ export function AppLayout() {
       {scanMounted.current && (
         <Suspense fallback={null}>
           <ScanDialog open={scanDialogOpen} onOpenChange={setScanDialogOpen} />
+        </Suspense>
+      )}
+      {aiEnabled && commandMounted.current && (
+        <Suspense fallback={null}>
+          <CommandInput open={commandOpen} onOpenChange={setCommandOpen} />
         </Suspense>
       )}
       {/* PWA install toast — fixed bottom-left (mobile) / bottom-right (desktop) */}

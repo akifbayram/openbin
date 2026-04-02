@@ -1,7 +1,6 @@
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { MenuButton } from '@/components/ui/menu-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
@@ -20,7 +19,6 @@ export function PageHeader({ title, actions, back, backTo, className }: PageHead
   return (
     <div className={cn(actions ? 'flex items-center justify-between' : 'flex items-center gap-2', className)}>
       <div className="flex items-center gap-2">
-        <MenuButton />
         {backTo ? (
           <Tooltip content="Go back" side="bottom">
             <Button

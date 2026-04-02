@@ -18,11 +18,11 @@ import type { SortDirection } from '@/components/ui/sort-header';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { UpgradeDialog } from '@/components/ui/upgrade-dialog';
+import { setCommandSelectedBinIds } from '@/features/ai/commandSelectedBins';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { useTagStyle } from '@/features/tags/useTagStyle';
-import { useTourContext } from '@/features/tour/TourProvider';
-import { useRegisterCommandInput } from '@/features/tour/useRegisterCommandInput';
+import { getCommandInputRef, useTourContext } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
@@ -35,7 +35,6 @@ import { BinListSkeleton } from './BinListSkeleton';
 import { BinSearchBar } from './BinSearchBar';
 import { BinTableView } from './BinTableView';
 import { BulkActionBar } from './BulkActionBar';
-import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
 import { DeleteBinDialog } from './DeleteBinDialog';
 import { SearchBarOverflowMenu } from './SearchBarOverflowMenu';
 import { useBinSearchParams } from './useBinSearchParams';
@@ -46,7 +45,6 @@ import { useBulkSelection } from './useBulkSelection';
 import { useColumnVisibility } from './useColumnVisibility';
 import { usePageSize } from './usePageSize';
 import { useViewMode } from './useViewMode';
-import { ViewModeToggle } from './ViewModeToggle';
 
 export function BinListPage() {
   const t = useTerminology();
@@ -88,9 +86,7 @@ export function BinListPage() {
   const navigate = useNavigate();
   const { openScanDialog } = useScanDialog();
   const { aiEnabled, aiGated } = useAiEnabled();
-  const [commandOpen, setCommandOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-  useRegisterCommandInput(setCommandOpen);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const getTagStyle = useTagStyle();
   const { viewMode, setViewMode } = useViewMode();
@@ -102,6 +98,10 @@ export function BinListPage() {
   const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(bins, selectedIds, clearSelection, showToast, t);
 
   const selectedBinIds = useMemo(() => selectedIds.size > 0 ? [...selectedIds] : undefined, [selectedIds]);
+  useEffect(() => {
+    setCommandSelectedBinIds(selectedBinIds);
+    return () => setCommandSelectedBinIds(undefined);
+  }, [selectedBinIds]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [copiedStyle, setCopiedStyle] = useState<{ icon: string; color: string; card_style: string } | null>(null);
 
@@ -142,12 +142,19 @@ export function BinListPage() {
         actions={activeLocationId ? (
           <div className="row">
             <div className="flex items-center">
+              <SearchBarOverflowMenu
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                applicableFields={applicableFields}
+                visibility={visibility}
+                onColumnToggle={toggleField}
+              />
               <Tooltip content="Scan QR code" side="bottom">
                 <Button
                   onClick={() => openScanDialog()}
                   size="icon"
                   variant="ghost"
-                  className="h-10 w-10 rounded-[var(--radius-sm)]"
+                  className="hidden lg:inline-flex h-10 w-10 rounded-[var(--radius-sm)]"
                   aria-label="Scan QR code"
                 >
                   <ScanLine className="h-5 w-5" />
@@ -156,10 +163,10 @@ export function BinListPage() {
               {(aiEnabled || aiGated) && (
                 <Tooltip content="Ask AI" side="bottom">
                   <Button
-                    onClick={() => aiGated ? setUpgradeOpen(true) : setCommandOpen(true)}
+                    onClick={() => aiGated ? setUpgradeOpen(true) : getCommandInputRef().current?.open()}
                     size="icon"
                     variant="ghost"
-                    className="h-10 w-10 rounded-[var(--radius-sm)]"
+                    className="hidden lg:inline-flex h-10 w-10 rounded-[var(--radius-sm)]"
                     aria-label="Ask AI"
                   >
                     <Sparkles className="h-5 w-5" />
@@ -197,17 +204,6 @@ export function BinListPage() {
           hasBadges={hasBadges}
           onOpenFilter={() => setFilterOpen(true)}
           t={t}
-          viewToggle={<ViewModeToggle value={viewMode} onChange={setViewMode} />}
-          columnPicker={<ColumnVisibilityMenu applicableFields={applicableFields} visibility={visibility} onToggle={toggleField} />}
-          overflowMenu={
-            <SearchBarOverflowMenu
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              applicableFields={applicableFields}
-              visibility={visibility}
-              onColumnToggle={toggleField}
-            />
-          }
         />
       )}
 
@@ -345,8 +341,6 @@ export function BinListPage() {
         createOpen={createOpen} setCreateOpen={setCreateOpen}
         filterOpen={filterOpen} setFilterOpen={setFilterOpen}
         saveViewOpen={saveViewOpen} setSaveViewOpen={setSaveViewOpen}
-        commandOpen={commandOpen} setCommandOpen={setCommandOpen}
-        aiEnabled={aiEnabled}
         allTags={allTags}
         areas={areas}
         filters={filters} setFilters={setFilters}
@@ -356,7 +350,6 @@ export function BinListPage() {
         bulk={bulk}
         selectedIds={selectedIds}
         clearSelection={clearSelection}
-        selectedBinIds={selectedBinIds}
       />
 
       <DeleteBinDialog
@@ -388,7 +381,7 @@ export function BinListPage() {
           canPasteStyle={copiedStyle !== null}
           aiEnabled={aiEnabled}
           aiGated={aiGated}
-          onAskAi={() => aiGated ? setUpgradeOpen(true) : setCommandOpen(true)}
+          onAskAi={() => aiGated ? setUpgradeOpen(true) : getCommandInputRef().current?.open()}
           onReorganize={() => navigate(`/reorganize?ids=${[...selectedIds].join(',')}`)}
         />
       )}

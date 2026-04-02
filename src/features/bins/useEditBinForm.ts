@@ -1,14 +1,14 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { useWarnOnUnload } from '@/lib/useWarnOnUnload';
-import type { Bin, BinVisibility } from '@/types';
+import type { Bin, BinItem, BinVisibility } from '@/types';
 import { useBinFormFields } from './useBinFormFields';
 import { updateBin } from './useBins';
 
 interface OriginalSnapshot {
   name: string;
   areaId: string | null;
-  items: string[];
+  items: BinItem[];
   notes: string;
   tags: string[];
   icon: string;
@@ -23,6 +23,11 @@ function arraysEqual(a: string[], b: string[]): boolean {
   const sortedA = [...a].sort();
   const sortedB = [...b].sort();
   return sortedA.every((v, i) => v === sortedB[i]);
+}
+
+function binItemsEqual(a: BinItem[], b: BinItem[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((item, i) => item.name === b[i].name && item.quantity === b[i].quantity);
 }
 
 function recordsEqual(a: Record<string, string>, b: Record<string, string>): boolean {
@@ -47,8 +52,6 @@ export function useEditBinForm(id: string | undefined) {
     visibility, setVisibility,
     customFields, setCustomFields,
   } = useBinFormFields();
-  const [quantities, setQuantities] = useState<(number | null)[]>([]);
-  const itemsRef = useRef<string[]>([]);
   const originalRef = useRef<OriginalSnapshot | null>(null);
 
   const isDirty = useMemo(() => {
@@ -57,7 +60,7 @@ export function useEditBinForm(id: string | undefined) {
     return (
       name !== o.name ||
       areaId !== o.areaId ||
-      !arraysEqual(items, o.items) ||
+      !binItemsEqual(items, o.items) ||
       notes !== o.notes ||
       !arraysEqual(tags, o.tags) ||
       icon !== o.icon ||
@@ -70,37 +73,10 @@ export function useEditBinForm(id: string | undefined) {
 
   useWarnOnUnload(editing && isDirty);
 
-  // Wrap setItems to keep quantities in sync
-  const setItemsWithQuantities = useCallback((newItems: string[]) => {
-    const prevItems = itemsRef.current;
-    setItems(newItems);
-    itemsRef.current = newItems;
-    setQuantities((prev) => {
-      if (newItems.length > prev.length) {
-        return [...prev, ...Array<null>(newItems.length - prev.length).fill(null)];
-      }
-      if (newItems.length < prev.length && prevItems.length === prev.length) {
-        // Detect which index was removed by comparing old and new item arrays
-        for (let i = 0; i < prevItems.length; i++) {
-          if (newItems[i] !== prevItems[i]) {
-            return [...prev.slice(0, i), ...prev.slice(i + 1)];
-          }
-        }
-        // Last item was removed
-        return prev.slice(0, newItems.length);
-      }
-      return prev.slice(0, newItems.length);
-    });
-  }, [setItems]);
-
   function startEdit(bin: Bin) {
-    const itemNames = bin.items.map((i) => i.name);
-    const itemQuantities = bin.items.map((i) => i.quantity);
     setName(bin.name);
     setAreaId(bin.area_id);
-    setItems(itemNames);
-    itemsRef.current = itemNames;
-    setQuantities(itemQuantities);
+    setItems(bin.items.map((i) => ({ ...i })));
     setNotes(bin.notes);
     setTags([...bin.tags]);
     setIcon(bin.icon);
@@ -111,7 +87,7 @@ export function useEditBinForm(id: string | undefined) {
     originalRef.current = {
       name: bin.name,
       areaId: bin.area_id,
-      items: itemNames,
+      items: bin.items.map((i) => ({ ...i })),
       notes: bin.notes,
       tags: [...bin.tags],
       icon: bin.icon,
@@ -127,11 +103,10 @@ export function useEditBinForm(id: string | undefined) {
     if (!id || !name.trim() || isSaving) return;
     setIsSaving(true);
     try {
-      const itemsWithQty = items.map((name, i) => ({ name, quantity: quantities[i] ?? null }));
       await updateBin(id, {
         name: name.trim(),
         areaId,
-        items: itemsWithQty,
+        items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
         notes: notes.trim(),
         tags,
         icon,
@@ -155,21 +130,13 @@ export function useEditBinForm(id: string | undefined) {
     originalRef.current = null;
   }
 
-  const setQuantity = useCallback((index: number, quantity: number | null) => {
-    setQuantities((prev) => {
-      const next = [...prev];
-      next[index] = quantity;
-      return next;
-    });
-  }, []);
-
   return {
     editing,
     isSaving,
     isDirty,
     name, setName,
     areaId, setAreaId,
-    items, setItems: setItemsWithQuantities, quantities, setQuantity,
+    items, setItems,
     notes, setNotes,
     tags, setTags,
     icon, setIcon,

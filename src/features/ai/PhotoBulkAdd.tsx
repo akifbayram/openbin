@@ -15,7 +15,7 @@ import { BULK_ADD_STEPS, bulkAddReducer, bulkAddStepIndex, createBulkAddPhoto, i
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { useAuth } from '@/lib/auth';
-import { mergeItemQuantities } from '@/lib/itemQuantities';
+import { binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { SingleBinReview } from './SingleBinReview';
 import { MAX_AI_PHOTOS } from './useAiAnalysis';
@@ -91,11 +91,10 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       for (const photo of toCreate) {
         dispatch({ type: 'SET_CREATING', id: photo.id });
         try {
-          const itemsWithQty = mergeItemQuantities(photo.items, photo.itemQuantities);
           const createdBin = await addBin({
             name: photo.name.trim(),
             locationId: activeLocationId,
-            items: itemsWithQty,
+            items: binItemsToPayload(photo.items),
             notes: photo.notes.trim(),
             tags: photo.tags,
             areaId: photo.areaId,

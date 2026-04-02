@@ -12,14 +12,14 @@ import { useAiStream } from '@/features/ai/useAiStream';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { ColorPicker } from '@/features/bins/ColorPicker';
 import { IconPicker } from '@/features/bins/IconPicker';
-import { ItemsInput } from '@/features/bins/ItemsInput';
+import { ItemList } from '@/features/bins/ItemList';
 import { TagInput } from '@/features/bins/TagInput';
 import { useAllTags } from '@/features/bins/useBins';
 import { compressImage } from '@/features/photos/compressImage';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { apiStream } from '@/lib/apiStream';
 import { useAuth } from '@/lib/auth';
-import { buildQuantityMap } from '@/lib/itemQuantities';
+import { aiItemsToBinItems } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 import type { AiSuggestions } from '@/types';
@@ -117,13 +117,11 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
       for await (const event of apiStream('/api/ai/analyze-image/stream', { body: formData, signal: controller.signal })) {
         if (event.type === 'done') {
           const result: AiSuggestions = JSON.parse(event.text);
-          const qtyMap = buildQuantityMap(result.items);
           dispatch({
             type: 'SET_ANALYZE_RESULT',
             id: target.id,
             name: result.name,
-            items: result.items.map((i) => i.name),
-            itemQuantities: qtyMap,
+            items: aiItemsToBinItems(result.items),
             tags: result.tags,
             notes: result.notes,
           });
@@ -157,7 +155,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
 
       const previousResult = {
         name: target.name,
-        items: target.items.map((name) => ({ name })),
+        items: target.items.map((i) => ({ name: i.name, quantity: i.quantity })),
         tags: target.tags,
         notes: target.notes,
       };
@@ -169,13 +167,11 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
 
       const result = await streamReanalyze(formData);
       if (result) {
-        const qtyMap = buildQuantityMap(result.items);
         dispatch({
           type: 'SET_ANALYZE_RESULT',
           id: target.id,
           name: result.name,
-          items: result.items.map((i) => i.name),
-          itemQuantities: qtyMap,
+          items: result.items.map((i, idx) => ({ id: `ai-${target.id}-${idx}`, name: i.name, quantity: i.quantity ?? null })),
           tags: result.tags,
           notes: result.notes,
         });
@@ -193,7 +189,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
 
     const previousResult = {
       name: target.name,
-      items: target.items,
+      items: target.items.map((i) => ({ name: i.name, quantity: i.quantity })),
       tags: target.tags,
       notes: target.notes,
     };
@@ -205,13 +201,11 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
     });
 
     if (result) {
-      const qtyMap = buildQuantityMap(result.items);
       dispatch({
         type: 'SET_ANALYZE_RESULT',
         id: target.id,
         name: result.name,
-        items: result.items.map((i) => i.name),
-        itemQuantities: qtyMap,
+        items: result.items.map((i, idx) => ({ id: `ai-${target.id}-${idx}`, name: i.name, quantity: i.quantity ?? null })),
         tags: result.tags,
         notes: result.notes,
       });
@@ -394,9 +388,9 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
             </div>
 
             <div className="space-y-2">
-              <ItemsInput
+              <ItemList
                 items={photo.items}
-                onChange={(items) =>
+                onItemsChange={(items) =>
                   dispatch({ type: 'UPDATE_PHOTO', id: photo.id, changes: { items } })
                 }
               />

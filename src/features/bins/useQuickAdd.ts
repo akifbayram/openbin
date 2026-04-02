@@ -1,22 +1,24 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
-import { parseItemQuantity, toItemPayload } from '@/lib/itemQuantities';
+import { clientItemId, parseItemQuantity, toItemPayload } from '@/lib/itemQuantities';
+import type { BinItem } from '@/types';
 import { addItemsToBin } from './useBins';
 
 type QuickAddState = 'input' | 'expanded' | 'processing' | 'preview';
 
 interface UseQuickAddOptions {
-  binId: string | undefined;
+  binId?: string;
   binName: string;
   existingItems: string[];
   activeLocationId: string | undefined;
-  aiConfigured: boolean;
-  onNavigateAiSetup: () => void;
+  aiConfigured?: boolean;
+  onNavigateAiSetup?: () => void;
+  onAdd?: (items: BinItem[]) => void;
 }
 
 export function useQuickAdd(options: UseQuickAddOptions) {
-  const { binId, binName, existingItems, activeLocationId, aiConfigured, onNavigateAiSetup } = options;
+  const { binId, binName, existingItems, activeLocationId, aiConfigured = false, onNavigateAiSetup = () => {}, onAdd } = options;
   const { showToast } = useToast();
 
   const [value, setValue] = useState('');
@@ -61,16 +63,22 @@ export function useQuickAdd(options: UseQuickAddOptions) {
 
   async function handleAdd() {
     const trimmed = value.trim();
-    if (!trimmed || !binId || saving) return;
+    if (!trimmed || (!binId && !onAdd) || saving) return;
     setSaving(true);
     try {
       const segments = trimmed.includes(',')
         ? trimmed.split(',').map((s) => s.trim()).filter(Boolean)
         : [trimmed];
-      const items = segments.map((s) => toItemPayload(parseItemQuantity(s)));
-      if (items.length > 0) {
-        await addItemsToBin(binId, items);
-        showToast({ message: `Added ${items.length} item${items.length !== 1 ? 's' : ''}` });
+      const parsed = segments.map((s) => parseItemQuantity(s));
+      if (onAdd) {
+        const binItems: BinItem[] = parsed.map((p) => ({ id: clientItemId(), name: p.name, quantity: p.quantity }));
+        onAdd(binItems);
+      } else {
+        const items = parsed.map((p) => toItemPayload(p));
+        if (items.length > 0 && binId) {
+          await addItemsToBin(binId, items);
+          showToast({ message: `Added ${items.length} item${items.length !== 1 ? 's' : ''}` });
+        }
       }
       setValue('');
     } catch {
@@ -82,15 +90,23 @@ export function useQuickAdd(options: UseQuickAddOptions) {
 
   async function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
     const text = e.clipboardData.getData('text');
-    if (!text.includes('\n') || !binId) return;
+    if (!text.includes('\n') || (!binId && !onAdd)) return;
     e.preventDefault();
     const lines = text.split('\n').map((s) => s.trim()).filter(Boolean);
     if (lines.length === 0) return;
-    const items = lines.map((s) => toItemPayload(parseItemQuantity(s)));
+    const parsed = lines.map((s) => parseItemQuantity(s));
     setSaving(true);
     try {
-      await addItemsToBin(binId, items);
-      showToast({ message: `Added ${items.length} items` });
+      if (onAdd) {
+        const binItems: BinItem[] = parsed.map((p) => ({ id: clientItemId(), name: p.name, quantity: p.quantity }));
+        onAdd(binItems);
+      } else {
+        const items = parsed.map((p) => toItemPayload(p));
+        if (binId) {
+          await addItemsToBin(binId, items);
+          showToast({ message: `Added ${items.length} items` });
+        }
+      }
       setValue('');
     } catch {
       showToast({ message: 'Failed to add items' });
@@ -141,14 +157,24 @@ export function useQuickAdd(options: UseQuickAddOptions) {
   }
 
   async function handleConfirmAdd() {
-    if (!structuredItems || !binId) return;
-    const selected = structuredItems
-      .filter((_, i) => checked.get(i) !== false)
-      .map((item) => item.quantity ? { name: item.name, quantity: item.quantity } : item.name);
+    if (!structuredItems || (!binId && !onAdd)) return;
+    const selected = structuredItems.filter((_, i) => checked.get(i) !== false);
     if (selected.length === 0) return;
     try {
-      await addItemsToBin(binId, selected);
-      showToast({ message: `Added ${selected.length} item${selected.length !== 1 ? 's' : ''}` });
+      if (onAdd) {
+        const binItems: BinItem[] = selected.map((item) => ({
+          id: clientItemId(),
+          name: item.name,
+          quantity: item.quantity ?? null,
+        }));
+        onAdd(binItems);
+      } else {
+        const items = selected.map((item) => item.quantity ? { name: item.name, quantity: item.quantity } : item.name);
+        if (binId) {
+          await addItemsToBin(binId, items);
+          showToast({ message: `Added ${selected.length} item${selected.length !== 1 ? 's' : ''}` });
+        }
+      }
     } catch {
       showToast({ message: 'Failed to add items' });
     }

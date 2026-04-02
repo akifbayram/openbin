@@ -1,6 +1,7 @@
-import { MoreHorizontal } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
@@ -25,17 +26,19 @@ export function SearchBarOverflowMenu({ viewMode, onViewModeChange, applicableFi
 
   return (
     <div ref={menuRef} className="relative">
-      <Button
-        variant="secondary"
-        size="icon"
-        onClick={toggle}
-        className="shrink-0 h-10 w-10 rounded-[var(--radius-sm)]"
-        aria-label="More options"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </Button>
+      <Tooltip content="View settings" side="bottom">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggle}
+          className="h-10 w-10 rounded-[var(--radius-sm)]"
+          aria-label="View settings"
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
+        >
+          <Settings2 className="h-5 w-5" />
+        </Button>
+      </Tooltip>
       {visible && (
         <div className={cn(
           animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',

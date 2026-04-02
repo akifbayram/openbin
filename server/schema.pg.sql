@@ -309,7 +309,7 @@ CREATE INDEX IF NOT EXISTS idx_email_log_dedup ON email_log(user_id, email_type,
 -- fresh install or manual table rebuild. This matches the project's migration pattern.
 
 CREATE TABLE IF NOT EXISTS api_key_daily_usage (
-  api_key_id    TEXT NOT NULL,
+  api_key_id    TEXT NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
   date          TEXT NOT NULL DEFAULT CURRENT_DATE,
   request_count INTEGER NOT NULL DEFAULT 1,
   PRIMARY KEY (api_key_id, date)

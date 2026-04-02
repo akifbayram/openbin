@@ -1,4 +1,21 @@
-import type { AiSuggestedItem } from '@/types';
+import type { AiSuggestedItem, BinItem } from '@/types';
+
+let nextItemId = 0;
+
+/** Generate a client-side ID for a BinItem (not persisted — server assigns real IDs). */
+export function clientItemId(): string {
+  return `tmp-${++nextItemId}`;
+}
+
+/** Convert BinItem[] to the API submission format. */
+export function binItemsToPayload(items: BinItem[]): (string | { name: string; quantity: number })[] {
+  return items.map((i) => toItemPayload(i));
+}
+
+/** Convert AiSuggestedItem[] to BinItem[] with client-side IDs. */
+export function aiItemsToBinItems(items: AiSuggestedItem[]): BinItem[] {
+  return items.map((i) => ({ id: clientItemId(), name: i.name, quantity: i.quantity ?? null }));
+}
 
 /** Parse human-typed quantity syntax from a single item string. */
 export function parseItemQuantity(raw: string): { name: string; quantity: number | null } {

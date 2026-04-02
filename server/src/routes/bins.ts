@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
-import sharp from 'sharp';
 import { d, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
@@ -18,6 +17,7 @@ import { assertLocationWritable, generateUpgradeUrl, getUserFeatures, getUserPla
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { storage } from '../lib/storage.js';
+import { generateThumbnailBuffer } from '../lib/thumbnailPool.js';
 import { purgeExpiredTrash } from '../lib/trashPurge.js';
 import { binPhotoUpload, MIME_TO_EXT, validateFileBuffer, validateFileType } from '../lib/uploadConfig.js';
 import { validateBinName } from '../lib/validation.js';
@@ -516,10 +516,7 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
 
   if (isS3) {
     // S3: upload original and generate thumbnail concurrently
-    const thumbPromise = sharp(file.buffer)
-      .resize(600, undefined, { withoutEnlargement: true })
-      .webp({ quality: 70 })
-      .toBuffer()
+    const thumbPromise = generateThumbnailBuffer(file.buffer)
       .then(async (thumbBuffer) => {
         const thumbStoragePath = path.join(binId, thumbFilename);
         await storage.upload(thumbStoragePath, thumbBuffer, 'image/webp');

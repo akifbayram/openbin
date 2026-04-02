@@ -321,6 +321,32 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
     expires_at TEXT NOT NULL
   )`);
 
+  // api_key_daily_usage: add FK on api_key_id -> api_keys(id) ON DELETE CASCADE
+  // SQLite can't add FK via ALTER TABLE, so rebuild the table if FK is missing
+  {
+    const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='api_key_daily_usage'").get() as { sql: string } | undefined;
+    if (tableInfo?.sql && !tableInfo.sql.includes('REFERENCES')) {
+      db.exec('BEGIN');
+      try {
+        db.exec('DELETE FROM api_key_daily_usage WHERE api_key_id NOT IN (SELECT id FROM api_keys)');
+        db.exec('DROP TABLE IF EXISTS api_key_daily_usage_new');
+        db.exec(`CREATE TABLE api_key_daily_usage_new (
+          api_key_id    TEXT NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
+          date          TEXT NOT NULL DEFAULT (date('now')),
+          request_count INTEGER NOT NULL DEFAULT 1,
+          PRIMARY KEY (api_key_id, date)
+        )`);
+        db.exec('INSERT INTO api_key_daily_usage_new SELECT * FROM api_key_daily_usage');
+        db.exec('DROP TABLE api_key_daily_usage');
+        db.exec('ALTER TABLE api_key_daily_usage_new RENAME TO api_key_daily_usage');
+        db.exec('COMMIT');
+      } catch (e) {
+        db.exec('ROLLBACK');
+        throw e;
+      }
+    }
+  }
+
   // Atomic email dedup: one email per type per user per day
   createUniqueIndexWithDedup(
     db,
@@ -400,6 +426,20 @@ async function runPostgresInit(): Promise<DatabaseEngine> {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_bin_shares_active ON bin_shares(bin_id) WHERE revoked_at IS NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_email_log_daily ON email_log(user_id, email_type, (left(sent_at, 10)));
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(LOWER(email)) WHERE email IS NOT NULL;
+  `);
+
+  // api_key_daily_usage: add FK on api_key_id if missing
+  await pool.query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_name = 'api_key_daily_usage' AND constraint_type = 'FOREIGN KEY'
+      ) THEN
+        DELETE FROM api_key_daily_usage WHERE api_key_id NOT IN (SELECT id FROM api_keys);
+        ALTER TABLE api_key_daily_usage ADD CONSTRAINT fk_api_key_daily_usage_key
+          FOREIGN KEY (api_key_id) REFERENCES api_keys(id) ON DELETE CASCADE;
+      END IF;
+    END $$;
   `);
 
   const pgEngine = createPostgresEngine();

@@ -44,10 +44,42 @@ describe('useEditBinForm', () => {
     expect(result.current.isDirty).toBe(true);
   });
 
+  it('items are BinItem[] after startEdit', () => {
+    const { result } = renderHook(() => useEditBinForm('abc123'));
+    act(() => result.current.startEdit(mockBin));
+    expect(result.current.items).toEqual([
+      { id: '1', name: 'Item A', quantity: 2 },
+      { id: '2', name: 'Item B', quantity: null },
+    ]);
+  });
+
   it('isDirty becomes true after changing items', () => {
     const { result } = renderHook(() => useEditBinForm('abc123'));
     act(() => result.current.startEdit(mockBin));
-    act(() => result.current.setItems(['Item A', 'Item B', 'Item C']));
+    act(() => result.current.setItems([
+      ...mockBin.items,
+      { id: 'new-1', name: 'Item C', quantity: null },
+    ]));
+    expect(result.current.isDirty).toBe(true);
+  });
+
+  it('isDirty detects item quantity change', () => {
+    const { result } = renderHook(() => useEditBinForm('abc123'));
+    act(() => result.current.startEdit(mockBin));
+    act(() => result.current.setItems([
+      { id: '1', name: 'Item A', quantity: 5 },
+      { id: '2', name: 'Item B', quantity: null },
+    ]));
+    expect(result.current.isDirty).toBe(true);
+  });
+
+  it('isDirty detects item name change', () => {
+    const { result } = renderHook(() => useEditBinForm('abc123'));
+    act(() => result.current.startEdit(mockBin));
+    act(() => result.current.setItems([
+      { id: '1', name: 'Renamed', quantity: 2 },
+      { id: '2', name: 'Item B', quantity: null },
+    ]));
     expect(result.current.isDirty).toBe(true);
   });
 
@@ -102,7 +134,7 @@ describe('useEditBinForm', () => {
     expect(result.current.editing).toBe(false);
   });
 
-  it('saveEdit calls updateBin with correct payload', async () => {
+  it('saveEdit calls updateBin with BinItem[] items', async () => {
     vi.mocked(updateBin).mockResolvedValue(undefined);
     const { result } = renderHook(() => useEditBinForm('abc123'));
     act(() => result.current.startEdit(mockBin));
@@ -133,21 +165,28 @@ describe('useEditBinForm', () => {
     expect(showToast).toHaveBeenCalledWith({ message: 'Failed to save changes' });
   });
 
-  it('setItems adding item grows quantities array', () => {
+  it('isDirty is false when items match original by content', () => {
     const { result } = renderHook(() => useEditBinForm('abc123'));
     act(() => result.current.startEdit(mockBin));
-    // quantities starts as [2, null]
-    expect(result.current.quantities).toEqual([2, null]);
-    act(() => result.current.setItems(['Item A', 'Item B', 'Item C']));
-    expect(result.current.quantities).toEqual([2, null, null]);
+    // Set items to same content but new object references
+    act(() => result.current.setItems([
+      { id: '1', name: 'Item A', quantity: 2 },
+      { id: '2', name: 'Item B', quantity: null },
+    ]));
+    expect(result.current.isDirty).toBe(false);
   });
 
-  it('setItems removing middle item removes corresponding quantity', () => {
+  it('saveEdit sends modified items correctly', async () => {
+    vi.mocked(updateBin).mockResolvedValue(undefined);
     const { result } = renderHook(() => useEditBinForm('abc123'));
     act(() => result.current.startEdit(mockBin));
-    expect(result.current.quantities).toEqual([2, null]);
-    // Remove 'Item A' (index 0)
-    act(() => result.current.setItems(['Item B']));
-    expect(result.current.quantities).toEqual([null]);
+    act(() => result.current.setItems([
+      { id: '1', name: 'Item A', quantity: 10 },
+      { id: 'new-1', name: 'Item C', quantity: 3 },
+    ]));
+    await act(() => result.current.saveEdit());
+    expect(updateBin).toHaveBeenCalledWith('abc123', expect.objectContaining({
+      items: [{ name: 'Item A', quantity: 10 }, { name: 'Item C', quantity: 3 }],
+    }));
   });
 });

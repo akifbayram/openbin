@@ -19,7 +19,7 @@ import { useBulkActions } from '@/features/bins/useBulkActions';
 import { useBulkDialogs } from '@/features/bins/useBulkDialogs';
 import { useBulkSelection } from '@/features/bins/useBulkSelection';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
-import { useRegisterCommandInput } from '@/features/tour/useRegisterCommandInput';
+import { getCommandInputRef } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
@@ -29,6 +29,7 @@ import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';
+import { useUserPreferences } from '@/lib/userPreferences';
 import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { DashboardChecklist } from './DashboardChecklist';
@@ -37,7 +38,6 @@ import { DashboardSettingsMenu } from './DashboardSettingsMenu';
 import { DashboardSkeleton } from './DashboardSkeleton';
 import { SectionHeader, StatCard } from './DashboardWidgets';
 import { useDashboard } from './useDashboard';
-import { useUserPreferences } from '@/lib/userPreferences';
 
 export function DashboardPage() {
   const t = useTerminology();
@@ -57,8 +57,6 @@ export function DashboardPage() {
   const debouncedSearch = useDebounce(search, 300);
   const { views: savedViews } = useSavedViews();
   const [createOpen, setCreateOpen] = useState(false);
-  const [commandOpen, setCommandOpen] = useState(false);
-  useRegisterCommandInput(setCommandOpen);
 
   // Bulk selection
   const allDashboardBins = useMemo(() => {
@@ -148,7 +146,7 @@ export function DashboardPage() {
                   onClick={() => openScanDialog()}
                   size="icon"
                   variant="ghost"
-                  className="h-10 w-10 rounded-[var(--radius-sm)]"
+                  className="hidden lg:inline-flex h-10 w-10 rounded-[var(--radius-sm)]"
                   aria-label="Scan QR code"
                 >
                   <ScanLine className="h-5 w-5" />
@@ -157,10 +155,10 @@ export function DashboardPage() {
               {(aiAvailable || aiGated) && (
                 <Tooltip content={`Ask AI (${/Mac|iPhone|iPad/.test(navigator.userAgent) ? '\u2318' : 'Ctrl+'}J)`} side="bottom">
                   <Button
-                    onClick={() => aiGated ? setUpgradeOpen(true) : setCommandOpen(true)}
+                    onClick={() => aiGated ? setUpgradeOpen(true) : getCommandInputRef().current?.open()}
                     size="icon"
                     variant="ghost"
-                    className="h-10 w-10 rounded-[var(--radius-sm)]"
+                    className="hidden lg:inline-flex h-10 w-10 rounded-[var(--radius-sm)]"
                     aria-label="Ask AI"
                   >
                     <Sparkles className="h-5 w-5" />
@@ -387,8 +385,6 @@ export function DashboardPage() {
 
       <DashboardDialogs
         createOpen={createOpen} setCreateOpen={setCreateOpen}
-        commandOpen={commandOpen} setCommandOpen={setCommandOpen}
-        aiEnabled={aiAvailable}
         bulk={bulk} selectedIds={selectedIds} clearSelection={clearSelection}
         allTags={allTags} selectable={selectable} isAdmin={isAdmin} canWrite={canWrite}
         bulkDelete={bulkDelete} bulkPinToggle={bulkPinToggle} bulkDuplicate={bulkDuplicate}

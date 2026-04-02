@@ -1,4 +1,3 @@
-import { MenuButton } from '@/components/ui/menu-button';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function BinDetailSkeleton() {
@@ -6,7 +5,6 @@ export function BinDetailSkeleton() {
     <div className="page-content">
       {/* Toolbar */}
       <div className="flex items-center gap-2">
-        <MenuButton />
         <Skeleton className="hidden lg:block h-5 w-5 rounded shrink-0" />
         <Skeleton className="h-5 w-40" />
         <div className="flex-1" />

@@ -105,12 +105,9 @@ router.get('/:token/photos/:photoId/thumb', asyncHandler(async (req, res) => {
   const thumbStoragePath = path.join(path.dirname(photo.storage_path), thumbFilename);
 
   if (config.storageBackend === 's3') {
-    const sharp = (await import('sharp')).default;
+    const { generateThumbnailBuffer } = await import('../lib/thumbnailPool.js');
     const originalBuffer = await storage.read(photo.storage_path);
-    const thumbBuffer = await sharp(originalBuffer)
-      .resize(600, undefined, { withoutEnlargement: true })
-      .webp({ quality: 70 })
-      .toBuffer();
+    const thumbBuffer = await generateThumbnailBuffer(originalBuffer);
     await storage.upload(thumbStoragePath, thumbBuffer, 'image/webp');
     await query('UPDATE photos SET thumb_path = $1 WHERE id = $2', [thumbStoragePath, req.params.photoId]);
 

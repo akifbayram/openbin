@@ -55,6 +55,8 @@ afterEach(() => {
 });
 
 afterAll(async () => {
+  const { closeThumbnailPool } = await import('../lib/thumbnailPool.js');
+  await closeThumbnailPool();
   const { getEngine } = await import('../db/init.js');
   await getEngine().close();
 });

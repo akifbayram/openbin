@@ -11,10 +11,12 @@ import { BinPreviewCard } from './BinPreviewCard';
 import { ColorPicker } from './ColorPicker';
 import { CustomFieldsEditCard } from './CustomFieldsEditCard';
 import { IconPicker } from './IconPicker';
-import { ItemsInput } from './ItemsInput';
+import { ItemList } from './ItemList';
+import { QuickAddWidget } from './QuickAddWidget';
 import { StylePicker } from './StylePicker';
 import { TagInput } from './TagInput';
 import type { useEditBinForm } from './useEditBinForm';
+import { useQuickAdd } from './useQuickAdd';
 import { VisibilityPicker } from './VisibilityPicker';
 
 interface BinEditContentProps {
@@ -46,29 +48,28 @@ export function BinEditContent({
   const { areas } = useAreaList(activeLocationId);
   const editAreaName = areas.find((a) => a.id === edit.areaId)?.name;
   const secondaryInfo = getSecondaryColorInfo(edit.cardStyle);
+  const quickAdd = useQuickAdd({
+    binName: edit.name,
+    existingItems: edit.items.map((i) => i.name),
+    activeLocationId,
+    aiConfigured: aiConfigured,
+    onNavigateAiSetup: onAiSetupNeeded,
+    onAdd: (newItems) => edit.setItems([...edit.items, ...newItems]),
+  });
 
   return (
-    <div className="fade-in-fast flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {/* Items */}
       <Card>
-        <CardContent>
-          <ItemsInput
-            items={edit.items}
-            onChange={edit.setItems}
-            quantities={edit.quantities}
-            onQuantityChange={edit.setQuantity}
-            showAi={aiEnabled}
-            aiConfigured={aiConfigured}
-            onAiSetupNeeded={onAiSetupNeeded}
-            binName={edit.name}
-            locationId={activeLocationId}
-          />
+        <CardContent className="pt-3 pb-4">
+          <ItemList items={edit.items} onItemsChange={edit.setItems} />
+          <QuickAddWidget quickAdd={quickAdd} aiEnabled={aiEnabled} />
         </CardContent>
       </Card>
 
       {/* Notes */}
       <Card>
-        <CardContent className="space-y-2 py-5">
+        <CardContent className="space-y-2 pt-3 pb-4">
           <Label htmlFor="edit-notes">Notes</Label>
           <Textarea
             id="edit-notes"
@@ -82,7 +83,7 @@ export function BinEditContent({
 
       {/* Organization: Area + Tags */}
       <Card>
-        <CardContent className="space-y-5 py-5">
+        <CardContent className="space-y-5 pt-3 pb-4">
           <div className="space-y-2">
             <Label>{t.Area}</Label>
             <AreaPicker locationId={activeLocationId} value={edit.areaId} onChange={edit.setAreaId} />
@@ -105,13 +106,13 @@ export function BinEditContent({
 
       {/* Appearance — icon, color, style */}
       <Card>
-        <CardContent className="space-y-5 py-5">
+        <CardContent className="space-y-5 pt-3 pb-4">
           <div className="space-y-3">
             <Label>Preview</Label>
             <BinPreviewCard
               name={edit.name}
               color={edit.color}
-              items={edit.items}
+              items={edit.items.map((i) => i.name)}
               tags={edit.tags}
               icon={edit.icon}
               cardStyle={edit.cardStyle}
@@ -142,7 +143,7 @@ export function BinEditContent({
       {/* Visibility */}
       {canChangeVisibility && (
         <Card>
-          <CardContent className="space-y-2 py-5">
+          <CardContent className="space-y-2 pt-3 pb-4">
             <Label>Visibility</Label>
             <VisibilityPicker value={edit.visibility} onChange={edit.setVisibility} />
           </CardContent>

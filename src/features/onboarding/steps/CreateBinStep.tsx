@@ -2,14 +2,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { BinPreviewCard } from '@/features/bins/BinPreviewCard';
-import { ItemsInput } from '@/features/bins/ItemsInput';
+import { ItemList } from '@/features/bins/ItemList';
+import { QuickAddWidget } from '@/features/bins/QuickAddWidget';
+import { useQuickAdd } from '@/features/bins/useQuickAdd';
+import type { BinItem } from '@/types';
 
 export interface CreateBinStepProps {
   locationId: string;
   binName: string;
   setBinName: (v: string) => void;
-  binItems: string[];
-  setBinItems: (v: string[]) => void;
+  binItems: BinItem[];
+  setBinItems: (v: BinItem[]) => void;
   binAreaId: string | null;
   setBinAreaId: (v: string | null) => void;
   areaNames: string[];
@@ -24,6 +27,13 @@ export function CreateBinStep({
   binAreaId, setBinAreaId,
   areaNames, handleCreateBin, loading, t,
 }: CreateBinStepProps) {
+  const quickAdd = useQuickAdd({
+    binName,
+    existingItems: binItems.map((i) => i.name),
+    activeLocationId: locationId,
+    onAdd: (newItems) => setBinItems([...binItems, ...newItems]),
+  });
+
   return (
     <div className="flex flex-col items-center text-center">
       <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-2">
@@ -35,7 +45,7 @@ export function CreateBinStep({
       <BinPreviewCard
         name={binName || `My ${t.Bin}`}
         color=""
-        items={binItems}
+        items={binItems.map((i) => i.name)}
         tags={[]}
         className="mb-5"
       />
@@ -56,11 +66,8 @@ export function CreateBinStep({
             onChange={setBinAreaId}
           />
         )}
-        <ItemsInput
-          items={binItems}
-          onChange={setBinItems}
-          showAi={false}
-        />
+        <ItemList items={binItems} onItemsChange={setBinItems} />
+        <QuickAddWidget quickAdd={quickAdd} aiEnabled={false} />
       </div>
       <Button
         type="button"

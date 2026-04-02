@@ -56,6 +56,9 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-bar-height: 56px;
+  --bottom-bar-bg: rgba(235, 235, 235, 0.92);
+  --bottom-bar-border: rgba(0, 0, 0, 0.06);
+  --tab-pill-bg: rgba(94, 47, 224, 0.12);
   --overlay-backdrop: rgba(0, 0, 0, 0.4);
   --overlay-heavy: rgba(0, 0, 0, 0.7);
   --overlay-button: rgba(0, 0, 0, 0.5);
@@ -101,6 +104,9 @@
   --destructive-hover: #ff6961;
   --shadow-flat: none;
   --shadow-elevated: none;
+  --bottom-bar-bg: rgba(26, 26, 26, 0.92);
+  --bottom-bar-border: rgba(255, 255, 255, 0.08);
+  --tab-pill-bg: rgba(123, 82, 245, 0.18);
   --overlay-backdrop: rgba(0, 0, 0, 0.5);
   --overlay-heavy: rgba(0, 0, 0, 0.8);
   --overlay-button: rgba(0, 0, 0, 0.5);

@@ -60,7 +60,7 @@ export function BinViewContent({
   const t = useTerminology();
 
   return (
-    <div className="fade-in-fast flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {/* AI error */}
       {aiError && (
         <Card className="border-t-2 border-t-[var(--destructive)]">
@@ -91,7 +91,7 @@ export function BinViewContent({
 
       {/* Items card */}
       <Card>
-        <CardContent>
+        <CardContent className="pt-3 pb-4">
           <ItemList items={bin.items} binId={bin.id} readOnly={!canEdit} />
           {canEdit && <QuickAddWidget quickAdd={quickAdd} aiEnabled={aiEnabled} aiGated={aiGated} onUpgrade={onUpgrade} />}
         </CardContent>
@@ -100,7 +100,7 @@ export function BinViewContent({
       {/* Notes card */}
       {hasNotes && (
         <Card>
-          <CardContent>
+          <CardContent className="pt-3 pb-4">
             <Label>Notes</Label>
             <p className="mt-2 text-[15px] text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
               {bin.notes}
@@ -112,7 +112,7 @@ export function BinViewContent({
       {/* Area & Tags card */}
       {(bin.area_name || hasTags) && (
         <Card>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-3 pb-4">
             {bin.area_name && (
               <div>
                 <Label>{t.Area}</Label>
