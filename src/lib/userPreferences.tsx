@@ -18,6 +18,7 @@ export interface UserPreferences {
   tour_completed: boolean;
   tour_version: number;
   keyboard_shortcuts_enabled: boolean;
+  checklist_dismissed: boolean;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -37,6 +38,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   tour_completed: false,
   tour_version: 0,
   keyboard_shortcuts_enabled: true,
+  checklist_dismissed: false,
 };
 
 const PREFERENCES_EVENT = 'user-preferences-changed';

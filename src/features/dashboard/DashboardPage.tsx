@@ -31,11 +31,13 @@ import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
 import type { Bin } from '@/types';
+import { DashboardChecklist } from './DashboardChecklist';
 import { DashboardDialogs } from './DashboardDialogs';
 import { DashboardSettingsMenu } from './DashboardSettingsMenu';
 import { DashboardSkeleton } from './DashboardSkeleton';
 import { SectionHeader, StatCard } from './DashboardWidgets';
 import { useDashboard } from './useDashboard';
+import { useUserPreferences } from '@/lib/userPreferences';
 
 export function DashboardPage() {
   const t = useTerminology();
@@ -50,6 +52,7 @@ export function DashboardPage() {
   const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, scanTimeMap, recentlyUpdated, pinnedBins, isLoading } =
     useDashboard();
   const { settings: dashSettings, updateSettings: updateDashSettings } = useDashboardSettings();
+  const { preferences, updatePreferences } = useUserPreferences();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const { views: savedViews } = useSavedViews();
@@ -75,6 +78,8 @@ export function DashboardPage() {
   const bulk = useBulkDialogs();
   const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(allDashboardBins, [activeLocationId]);
   const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(allDashboardBins, selectedIds, clearSelection, showToast, t);
+
+  const showChecklist = !preferences.checklist_dismissed && totalBins < 3 && totalBins > 0;
 
   const binIndexMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -193,6 +198,14 @@ export function DashboardPage() {
         isLoading={isLoading}
         skeleton={<DashboardSkeleton settings={dashSettings} />}
       >
+        {showChecklist && (
+          <DashboardChecklist
+            totalBins={totalBins}
+            totalItems={totalItems}
+            onDismiss={() => updatePreferences({ checklist_dismissed: true })}
+          />
+        )}
+
         {/* Stats */}
         {dashSettings.showStats && (
           <div className="flex gap-3">
