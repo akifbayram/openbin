@@ -26,6 +26,8 @@ interface BinViewContentProps {
   canEdit: boolean;
   quickAdd: ReturnType<typeof useQuickAdd>;
   aiEnabled: boolean;
+  aiGated?: boolean;
+  onUpgrade?: () => void;
   aiError: string | null;
   suggestions: AiSuggestions | null;
   previousResult: AiSuggestions | null;
@@ -42,6 +44,8 @@ export function BinViewContent({
   canEdit,
   quickAdd,
   aiEnabled,
+  aiGated,
+  onUpgrade,
   aiError,
   suggestions,
   previousResult,
@@ -89,7 +93,7 @@ export function BinViewContent({
       <Card>
         <CardContent>
           <ItemList items={bin.items} binId={bin.id} readOnly={!canEdit} />
-          {canEdit && <QuickAddWidget quickAdd={quickAdd} aiEnabled={aiEnabled} />}
+          {canEdit && <QuickAddWidget quickAdd={quickAdd} aiEnabled={aiEnabled} aiGated={aiGated} onUpgrade={onUpgrade} />}
         </CardContent>
       </Card>
 

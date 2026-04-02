@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { EmptyState } from '@/components/ui/empty-state';
+import { UpgradeDialog } from '@/components/ui/upgrade-dialog';
 import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { resolveIcon } from '@/lib/iconMap';
@@ -49,6 +50,7 @@ export function BinDetailPage() {
   const { fields: customFieldDefs } = useCustomFields(bin?.location_id);
   const { isLocked } = usePlan();
   const [shareOpen, setShareOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const showShareButton = actions.isAdmin && !isLocked;
 
   // Fetch the bin list matching the sort/search/filters the user had active
@@ -190,7 +192,7 @@ export function BinDetailPage() {
         onCancelEdit={() => guardedNavigate(() => edit.cancelEdit())}
         onSave={edit.saveEdit}
         onStartEdit={() => edit.startEdit(bin)}
-        onAnalyze={actions.handleAnalyzeClick}
+        onAnalyze={actions.aiGated ? () => setUpgradeOpen(true) : actions.handleAnalyzeClick}
         onTogglePin={actions.handleTogglePin}
         onPrint={() => navigate(`/print?ids=${id}`)}
         onDuplicate={actions.handleDuplicate}
@@ -228,6 +230,8 @@ export function BinDetailPage() {
           canEdit={actions.canEdit}
           quickAdd={actions.quickAdd}
           aiEnabled={actions.aiEnabled}
+          aiGated={actions.aiGated}
+          onUpgrade={() => setUpgradeOpen(true)}
           aiError={actions.aiError}
           suggestions={actions.suggestions}
           previousResult={actions.lastSuggestions}
@@ -255,6 +259,13 @@ export function BinDetailPage() {
       />
 
       <AiSetupDialog open={actions.aiSetupOpen} onOpenChange={actions.setAiSetupOpen} />
+
+      <UpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        feature="AI Features"
+        description="AI-powered analysis and suggestions are available on the Pro plan."
+      />
 
       <ChangeCodeDialog
         open={actions.changeCodeOpen}

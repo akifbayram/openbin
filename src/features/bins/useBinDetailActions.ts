@@ -19,7 +19,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
   const { showToast } = useToast();
   const { activeLocationId } = useAuth();
   const { isAdmin, canWrite, canEditBin, canChangeVisibility, canPin, canEditItems } = usePermissions();
-  const { aiEnabled } = useAiEnabled();
+  const { aiEnabled, aiGated } = useAiEnabled();
   const t = useTerminology();
 
   const { locations } = useLocationList();
@@ -156,7 +156,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
   const canEdit = bin ? canWrite : false;
   const canDelete = isAdmin;
   const canEditMeta = bin ? canEditBin(bin.created_by) : false;
-  const showAiButton = aiEnabled && photos.length > 0 && !editing;
+  const showAiButton = (aiEnabled || aiGated) && photos.length > 0 && !editing;
   const isReanalysis = !!(lastSuggestions || (bin && (bin.name || bin.items.length > 0 || bin.tags.length > 0)));
   const hasNotes = !!bin?.notes;
   const hasTags = (bin?.tags.length ?? 0) > 0;
@@ -192,6 +192,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     hasNotes,
     hasTags,
     aiEnabled,
+    aiGated,
     activeLocationId,
     // Dialog state
     deleteOpen, setDeleteOpen,

@@ -17,6 +17,7 @@ import { Pagination } from '@/components/ui/pagination';
 import type { SortDirection } from '@/components/ui/sort-header';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
+import { UpgradeDialog } from '@/components/ui/upgrade-dialog';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { useTagStyle } from '@/features/tags/useTagStyle';
@@ -86,8 +87,9 @@ export function BinListPage() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const { openScanDialog } = useScanDialog();
-  const { aiEnabled } = useAiEnabled();
+  const { aiEnabled, aiGated } = useAiEnabled();
   const [commandOpen, setCommandOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   useRegisterCommandInput(setCommandOpen);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const getTagStyle = useTagStyle();
@@ -151,10 +153,10 @@ export function BinListPage() {
                   <ScanLine className="h-5 w-5" />
                 </Button>
               </Tooltip>
-              {aiEnabled && (
+              {(aiEnabled || aiGated) && (
                 <Tooltip content="Ask AI" side="bottom">
                   <Button
-                    onClick={() => setCommandOpen(true)}
+                    onClick={() => aiGated ? setUpgradeOpen(true) : setCommandOpen(true)}
                     size="icon"
                     variant="ghost"
                     className="h-10 w-10 rounded-[var(--radius-sm)]"
@@ -385,10 +387,18 @@ export function BinListPage() {
           canCopyStyle={selectedIds.size === 1}
           canPasteStyle={copiedStyle !== null}
           aiEnabled={aiEnabled}
-          onAskAi={() => setCommandOpen(true)}
+          aiGated={aiGated}
+          onAskAi={() => aiGated ? setUpgradeOpen(true) : setCommandOpen(true)}
           onReorganize={() => navigate(`/reorganize?ids=${[...selectedIds].join(',')}`)}
         />
       )}
+
+      <UpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        feature="AI Features"
+        description="AI-powered commands, analysis, and suggestions are available on the Pro plan."
+      />
     </div>
   );
 }

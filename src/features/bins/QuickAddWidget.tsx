@@ -10,9 +10,11 @@ import type { useQuickAdd } from './useQuickAdd';
 interface QuickAddWidgetProps {
   quickAdd: ReturnType<typeof useQuickAdd>;
   aiEnabled: boolean;
+  aiGated?: boolean;
+  onUpgrade?: () => void;
 }
 
-export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
+export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade }: QuickAddWidgetProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div data-tour="quick-add" className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)] ">
@@ -47,11 +49,11 @@ export function QuickAddWidget({ quickAdd, aiEnabled }: QuickAddWidgetProps) {
               </button>
             </Tooltip>
           )}
-          {aiEnabled && (
+          {(aiEnabled || aiGated) && (
             <Tooltip content="Add with AI">
               <button
                 type="button"
-                onClick={quickAdd.handleAiClick}
+                onClick={aiGated ? onUpgrade : quickAdd.handleAiClick}
                 className="shrink-0 flex items-center justify-center size-9 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:bg-[var(--bg-active)] transition-colors"
                 aria-label="Add with AI"
               >

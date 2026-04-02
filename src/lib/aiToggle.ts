@@ -10,5 +10,5 @@ export function useAiEnabled() {
     (value: boolean) => updatePreferences({ ai_enabled: value }),
     [updatePreferences],
   );
-  return { aiEnabled: preferences.ai_enabled && !aiGated, setAiEnabled, isLoading };
+  return { aiEnabled: preferences.ai_enabled && !aiGated, aiGated, setAiEnabled, isLoading };
 }

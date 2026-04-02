@@ -25,11 +25,12 @@ interface BulkActionBarProps {
   canCopyStyle?: boolean;
   canPasteStyle?: boolean;
   aiEnabled?: boolean;
+  aiGated?: boolean;
   onAskAi?: () => void;
   onReorganize?: () => void;
 }
 
-export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel, onCustomFields, onCopyStyle, onPasteStyle, canCopyStyle, canPasteStyle, aiEnabled, onAskAi, onReorganize }: BulkActionBarProps) {
+export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel, onCustomFields, onCopyStyle, onPasteStyle, canCopyStyle, canPasteStyle, aiEnabled, aiGated, onAskAi, onReorganize }: BulkActionBarProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -101,7 +102,7 @@ export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, 
           </Button>
         </Tooltip>
       )}
-      {aiEnabled && canWrite && onAskAi && (
+      {(aiEnabled || aiGated) && canWrite && onAskAi && (
         <Tooltip content="AI" side="top">
           <Button
             variant="ghost"

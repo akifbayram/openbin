@@ -1,6 +1,6 @@
 import { ArrowUpRight } from 'lucide-react';
 import { usePlan } from '@/lib/usePlan';
-import { cn } from '@/lib/utils';
+import { cn, focusRing } from '@/lib/utils';
 
 interface UpgradePromptProps {
   feature: string;  // e.g. "AI Features", "API Keys"
@@ -15,17 +15,17 @@ export function UpgradePrompt({ feature, description, upgradeUrl, className }: U
 
   return (
     <div className={cn(
-      'flat-card flex items-center justify-between gap-4 p-4',
+      'flat-card rounded-[var(--radius-lg)] flex items-center justify-between gap-4 px-5 py-4',
       className
     )}>
       <div>
-        <p className="font-medium text-sm">
+        <p className="text-[15px] font-semibold text-[var(--text-primary)]">
           {isActiveLite
             ? `Upgrade to Pro to unlock ${feature}`
             : `${feature} requires a Pro plan`}
         </p>
         {description && (
-          <p className="text-xs text-[var(--text-secondary)] mt-1">{description}</p>
+          <p className="text-[13px] text-[var(--text-tertiary)] mt-1">{description}</p>
         )}
       </div>
       {upgradeUrl && (
@@ -33,7 +33,7 @@ export function UpgradePrompt({ feature, description, upgradeUrl, className }: U
           href={upgradeUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-[var(--text-on-accent)] hover:opacity-90 transition-opacity shrink-0"
+          className={cn('inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent)] h-10 px-4 text-[14px] font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] transition-colors shrink-0', focusRing)}
         >
           Upgrade
           <ArrowUpRight className="h-3 w-3" />

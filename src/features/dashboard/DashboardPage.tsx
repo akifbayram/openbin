@@ -11,6 +11,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
+import { UpgradeDialog } from '@/components/ui/upgrade-dialog';
 import { BinCard } from '@/features/bins/BinCard';
 import { buildViewSearchParams } from '@/features/bins/useBinSearchParams';
 import { useAllTags } from '@/features/bins/useBins';
@@ -41,9 +42,10 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { activeLocationId } = useAuth();
   const { openScanDialog } = useScanDialog();
-  const { aiEnabled } = useAiEnabled();
+  const { aiEnabled, aiGated } = useAiEnabled();
   const { isGated, isSelfHosted } = usePlan();
   const aiAvailable = aiEnabled && (isSelfHosted || !isGated('ai'));
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const { showToast } = useToast();
   const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, scanTimeMap, recentlyUpdated, pinnedBins, isLoading } =
     useDashboard();
@@ -147,10 +149,10 @@ export function DashboardPage() {
                   <ScanLine className="h-5 w-5" />
                 </Button>
               </Tooltip>
-              {aiAvailable && (
+              {(aiAvailable || aiGated) && (
                 <Tooltip content={`Ask AI (${/Mac|iPhone|iPad/.test(navigator.userAgent) ? '\u2318' : 'Ctrl+'}J)`} side="bottom">
                   <Button
-                    onClick={() => setCommandOpen(true)}
+                    onClick={() => aiGated ? setUpgradeOpen(true) : setCommandOpen(true)}
                     size="icon"
                     variant="ghost"
                     className="h-10 w-10 rounded-[var(--radius-sm)]"
@@ -378,6 +380,13 @@ export function DashboardPage() {
         allTags={allTags} selectable={selectable} isAdmin={isAdmin} canWrite={canWrite}
         bulkDelete={bulkDelete} bulkPinToggle={bulkPinToggle} bulkDuplicate={bulkDuplicate}
         pinLabel={pinLabel} bins={allDashboardBins} t={t}
+      />
+
+      <UpgradeDialog
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        feature="AI Features"
+        description="AI-powered commands, analysis, and suggestions are available on the Pro plan."
       />
     </div>
   );
