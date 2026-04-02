@@ -168,6 +168,18 @@ export function BinDetailToolbar({
         </div>
       ) : (
         <div className="flex gap-0.5 lg:gap-1.5 shrink-0">
+          {canEdit && (
+            <Tooltip content="Edit" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onStartEdit}
+                aria-label={`Edit ${t.bin}`}
+              >
+                <Pencil className="h-[18px] w-[18px]" />
+              </Button>
+            </Tooltip>
+          )}
           {/* Desktop-only action buttons */}
           <div className="hidden lg:flex gap-1.5">
             {showAiButton && (
@@ -196,18 +208,6 @@ export function BinDetailToolbar({
                   aria-label={bin.is_pinned ? `Unpin ${t.bin}` : `Pin ${t.bin}`}
                 >
                   <Pin className="h-[18px] w-[18px]" fill={bin.is_pinned ? 'currentColor' : 'none'} />
-                </Button>
-              </Tooltip>
-            )}
-            {canEdit && (
-              <Tooltip content="Edit" side="bottom">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onStartEdit}
-                  aria-label={`Edit ${t.bin}`}
-                >
-                  <Pencil className="h-[18px] w-[18px]" />
                 </Button>
               </Tooltip>
             )}
@@ -259,17 +259,7 @@ export function BinDetailToolbar({
                     {bin.is_pinned ? 'Unpin' : 'Pin'}
                   </button>
                 )}
-                {canEdit && (
-                  <button
-                    type="button"
-                    className="lg:hidden w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150"
-                    onClick={() => handleItem(onStartEdit)}
-                  >
-                    <Pencil className="h-4 w-4 text-[var(--text-tertiary)]" />
-                    Edit
-                  </button>
-                )}
-                {(showAiButton || canPin || canEdit) && (
+                {(showAiButton || canPin) && (
                   <div className="lg:hidden my-1 border-t border-[var(--border-flat)]" />
                 )}
                 {canEdit && (
