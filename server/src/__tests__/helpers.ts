@@ -14,14 +14,15 @@ function extractAccessToken(res: request.Response): string {
   throw new Error('openbin-access cookie not found in response');
 }
 
-export async function createTestUser(app: Express, overrides?: { username?: string; password?: string }) {
+export async function createTestUser(app: Express, overrides?: { username?: string; password?: string; email?: string }) {
   userCounter++;
   const username = overrides?.username ?? `testuser${userCounter}_${Date.now()}`;
   const password = overrides?.password ?? 'TestPass123!';
+  const email = overrides?.email ?? `${username}@test.local`;
 
   const res = await request(app)
     .post('/api/auth/register')
-    .send({ username, password });
+    .send({ username, password, email });
 
   return {
     token: extractAccessToken(res),

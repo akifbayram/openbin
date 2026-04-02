@@ -39,8 +39,8 @@ describe('pg-types: JSONB behavior', () => {
     const { userId, locationId } = await seedUserAndLocation(pool);
     const binId = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO bins (id, location_id, name, tags, created_by)
-       VALUES ($1, $2, 'Test Bin', '["tag1","tag2"]'::jsonb, $3)`,
+      `INSERT INTO bins (id, short_code, location_id, name, tags, created_by)
+       VALUES ($1, $1, $2, 'Test Bin', '["tag1","tag2"]'::jsonb, $3)`,
       [binId, locationId, userId],
     );
     const { rows } = await pool.query('SELECT tags FROM bins WHERE id = $1', [binId]);
@@ -53,8 +53,8 @@ describe('pg-types: JSONB behavior', () => {
     const { userId, locationId } = await seedUserAndLocation(pool);
     const binId = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO bins (id, location_id, name, tags, created_by)
-       VALUES ($1, $2, 'Empty Tags', '[]'::jsonb, $3)`,
+      `INSERT INTO bins (id, short_code, location_id, name, tags, created_by)
+       VALUES ($1, $1, $2, 'Empty Tags', '[]'::jsonb, $3)`,
       [binId, locationId, userId],
     );
     const { rows } = await pool.query('SELECT tags FROM bins WHERE id = $1', [binId]);
@@ -254,8 +254,8 @@ describe('pg-types: DEFERRABLE FK behavior', () => {
     const { userId, locationId } = await seedUserAndLocation(pool);
     const binId = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO bins (id, location_id, name, created_by)
-       VALUES ($1, $2, 'FK Test Bin', $3)`,
+      `INSERT INTO bins (id, short_code, location_id, name, created_by)
+       VALUES ($1, $1, $2, 'FK Test Bin', $3)`,
       [binId, locationId, userId],
     );
     const itemId = crypto.randomUUID();

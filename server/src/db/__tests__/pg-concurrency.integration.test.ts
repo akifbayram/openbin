@@ -41,13 +41,14 @@ async function seedUserAndLocation() {
 describe('pg-concurrency: parallel writes', () => {
   it('10 concurrent bin INSERTs all succeed', async () => {
     const { userId, locationId } = await seedUserAndLocation();
-    const inserts = Array.from({ length: 10 }, (_, i) =>
-      pool.query(
-        `INSERT INTO bins (id, location_id, name, created_by)
-         VALUES ($1, $2, $3, $4)`,
-        [crypto.randomUUID(), locationId, `Bin ${i}`, userId],
-      ),
-    );
+    const inserts = Array.from({ length: 10 }, (_, i) => {
+      const id = crypto.randomUUID();
+      return pool.query(
+        `INSERT INTO bins (id, short_code, location_id, name, created_by)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [id, id.slice(0, 6), locationId, `Bin ${i}`, userId],
+      );
+    });
     await Promise.all(inserts);
     const { rows } = await pool.query(
       'SELECT COUNT(*) AS count FROM bins WHERE location_id = $1',
@@ -103,11 +104,11 @@ describe('pg-concurrency: transaction isolation', () => {
 
     // Pre-create bins
     await pool.query(
-      `INSERT INTO bins (id, location_id, name, created_by) VALUES ($1, $2, 'B1', $3)`,
+      `INSERT INTO bins (id, short_code, location_id, name, created_by) VALUES ($1, $1, $2, 'B1', $3)`,
       [binId1, locationId, userId],
     );
     await pool.query(
-      `INSERT INTO bins (id, location_id, name, created_by) VALUES ($1, $2, 'B2', $3)`,
+      `INSERT INTO bins (id, short_code, location_id, name, created_by) VALUES ($1, $1, $2, 'B2', $3)`,
       [binId2, locationId, userId],
     );
 
@@ -133,7 +134,7 @@ describe('pg-concurrency: transaction isolation', () => {
     const { userId, locationId } = await seedUserAndLocation();
     const binId = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO bins (id, location_id, name, notes, created_by) VALUES ($1, $2, 'RC', 'original', $3)`,
+      `INSERT INTO bins (id, short_code, location_id, name, notes, created_by) VALUES ($1, $1, $2, 'RC', 'original', $3)`,
       [binId, locationId, userId],
     );
 
@@ -187,8 +188,8 @@ describe('pg-concurrency: DEFERRABLE FK in transaction', () => {
 
     await engine.withTransaction(async (txQuery) => {
       await txQuery(
-        `INSERT INTO bins (id, location_id, name, created_by)
-         VALUES ($1, $2, 'DeferBin', $3)`,
+        `INSERT INTO bins (id, short_code, location_id, name, created_by)
+         VALUES ($1, $1, $2, 'DeferBin', $3)`,
         [binId, locationId, userId],
       );
       await txQuery(

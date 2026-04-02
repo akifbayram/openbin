@@ -54,8 +54,8 @@ beforeAll(async () => {
     const binId = crypto.randomUUID();
     binIds.push(binId);
     await pool.query(
-      `INSERT INTO bins (id, location_id, name, tags, area_id, notes, created_by)
-       VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7)`,
+      `INSERT INTO bins (id, short_code, location_id, name, tags, area_id, notes, created_by)
+       VALUES ($1, $1, $2, $3, $4::jsonb, $5, $6, $7)`,
       [binId, locationId, bin.name, JSON.stringify(bin.tags), bin.area, bin.notes, userId],
     );
   }

@@ -179,8 +179,16 @@ describe('schema parity — SERIAL mapping', () => {
 // ---------------------------------------------------------------------------
 
 describe('schema parity — indexes', () => {
-  it('both schemas define the same set of indexes', () => {
-    const pgIndexes = parseIndexNames(pgSql);
+  // Trigram indexes (gist_trgm_ops) only exist in PG — SQLite has no equivalent
+  const PG_ONLY_INDEXES = new Set([
+    'idx_bins_name_trgm',
+    'idx_bins_notes_trgm',
+    'idx_bins_short_code_trgm',
+    'idx_bin_items_name_trgm',
+  ]);
+
+  it('both schemas define the same set of indexes (excluding PG-only trigram indexes)', () => {
+    const pgIndexes = parseIndexNames(pgSql).filter((n) => !PG_ONLY_INDEXES.has(n));
     const sqliteIndexes = parseIndexNames(sqliteSql);
     expect(pgIndexes).toEqual(sqliteIndexes);
   });

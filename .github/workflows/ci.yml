@@ -45,8 +45,12 @@ jobs:
         run: npx tsc --noEmit
         working-directory: server
 
-      - name: Test
+      - name: Test (client)
         run: npx vitest run
+
+      - name: Test (server)
+        run: npx vitest run
+        working-directory: server
 
       - name: Build client
         run: npx vite build

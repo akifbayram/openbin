@@ -5,7 +5,7 @@ import { Router } from 'express';
 import sharp from 'sharp';
 import { d, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { getMemberRole, isBinCreator, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
+import { getMemberRole, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
 import { buildBinSetClauses, buildBinUpdateDiff, insertBinWithItems, replaceBinItems } from '../lib/binUpdateHelpers.js';
 import { validateBinFields, validateCodeFormat } from '../lib/binValidation.js';
@@ -295,7 +295,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
     || cardStyle !== undefined || visibility !== undefined || customFields !== undefined;
 
   // Members can edit items on any bin, but metadata only on bins they created
-  if (role === 'member' && hasMetadataChanges && !await isBinCreator(id, req.user!.id)) {
+  if (role === 'member' && hasMetadataChanges && access.createdBy !== req.user!.id) {
     throw new ForbiddenError('Only admins or the bin creator can edit bin metadata');
   }
 

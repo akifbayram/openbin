@@ -106,8 +106,8 @@ describe('pg-engine: parameter serialization', () => {
     const binId = crypto.randomUUID();
     const tags = ['tag1', 'tag2'];
     await engine.query(
-      `INSERT INTO bins (id, location_id, name, tags, created_by)
-       VALUES ($1, $2, 'Arr Bin', $3::jsonb, $4)`,
+      `INSERT INTO bins (id, short_code, location_id, name, tags, created_by)
+       VALUES ($1, $1, $2, 'Arr Bin', $3::jsonb, $4)`,
       [binId, locationId, tags, userId],
     );
     const result = await engine.query<{ tags: string[] }>('SELECT tags FROM bins WHERE id = $1', [binId]);
@@ -240,8 +240,8 @@ describe('pg-engine: transactions', () => {
     const itemId = crypto.randomUUID();
     await engine.withTransaction(async (txQuery) => {
       await txQuery(
-        `INSERT INTO bins (id, location_id, name, created_by)
-         VALUES ($1, $2, 'TxBin', $3)`,
+        `INSERT INTO bins (id, short_code, location_id, name, created_by)
+         VALUES ($1, $1, $2, 'TxBin', $3)`,
         [binId, locationId, userId],
       );
       // This item references the bin we just inserted in the same transaction

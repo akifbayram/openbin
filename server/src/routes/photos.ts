@@ -15,9 +15,9 @@ const router = Router();
 router.use(authenticate);
 
 /** Verify user has access to a photo via photo -> bin -> location chain */
-async function verifyPhotoAccess(photoId: string, userId: string): Promise<{ binId: string; storagePath: string; locationId: string } | null> {
+async function verifyPhotoAccess(photoId: string, userId: string): Promise<{ binId: string; storagePath: string; locationId: string; mimeType: string } | null> {
   const result = await query(
-    `SELECT p.bin_id, p.storage_path, b.location_id, b.visibility, b.created_by FROM photos p
+    `SELECT p.bin_id, p.storage_path, p.mime_type, b.location_id, b.visibility, b.created_by FROM photos p
      JOIN bins b ON b.id = p.bin_id
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
      WHERE p.id = $1`,
@@ -26,7 +26,7 @@ async function verifyPhotoAccess(photoId: string, userId: string): Promise<{ bin
   if (result.rows.length === 0) return null;
   const row = result.rows[0];
   if (row.visibility === 'private' && row.created_by !== userId) return null;
-  return { binId: row.bin_id, storagePath: row.storage_path, locationId: row.location_id };
+  return { binId: row.bin_id, storagePath: row.storage_path, locationId: row.location_id, mimeType: row.mime_type };
 }
 
 // GET /api/photos — list photos for a bin
@@ -71,8 +71,7 @@ router.get('/:id/file', asyncHandler(async (req, res) => {
     throw new NotFoundError('Photo file not found');
   }
 
-  const photoResult = await query('SELECT mime_type FROM photos WHERE id = $1', [id]);
-  const mimeType = photoResult.rows[0]?.mime_type || 'application/octet-stream';
+  const mimeType = access.mimeType || 'application/octet-stream';
 
   res.setHeader('Content-Type', mimeType);
   res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');

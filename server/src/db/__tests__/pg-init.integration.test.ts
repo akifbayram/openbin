@@ -208,9 +208,10 @@ async function createLocation(userId: string): Promise<string> {
 
 async function createBin(locationId: string, userId: string): Promise<string> {
   const id = crypto.randomUUID();
+  const shortCode = id.slice(0, 6).toUpperCase();
   await pool.query(
-    `INSERT INTO bins (id, location_id, name, created_by) VALUES ($1, $2, 'Bin', $3)`,
-    [id, locationId, userId],
+    `INSERT INTO bins (id, short_code, location_id, name, created_by) VALUES ($1, $2, $3, 'Bin', $4)`,
+    [id, shortCode, locationId, userId],
   );
   return id;
 }

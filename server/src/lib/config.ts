@@ -54,7 +54,7 @@ export const config = Object.freeze({
   jwtSecret: resolveJwtSecret(),
   accessTokenExpiresIn: '15m',
   refreshTokenMaxDays: 7,
-  cookieSecure: process.env.NODE_ENV === 'production',
+  cookieSecure: process.env.NODE_ENV === 'production' || parseBool(process.env.TRUST_PROXY, false),
   bcryptRounds: 12,
   registrationMode: (() => {
     const mode = process.env.REGISTRATION_MODE;
