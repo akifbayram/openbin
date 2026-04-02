@@ -13,7 +13,7 @@ import { notifyManagerUserUpdate } from '../lib/managerWebhook.js';
 import { getCloudMetrics } from '../lib/metrics.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
-import { invalidatePlanRateLimit, metricsLimiter } from '../lib/rateLimiters.js';
+import { metricsLimiter } from '../lib/rateLimiters.js';
 import { restoreBackup } from '../lib/restore.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, invalidateDeletedCache } from '../middleware/auth.js';
@@ -315,7 +315,6 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   }
 
   if (plan !== undefined || typeof subStatus === 'number' || activeUntil !== undefined) {
-    invalidatePlanRateLimit(targetId);
     notifyManagerUserUpdate({
       userId: targetId,
       action: 'update_subscription',

@@ -6,7 +6,6 @@ import { config } from '../lib/config.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
 import { createLogger } from '../lib/logger.js';
 import { invalidateOverLimitCache, Plan, type PlanTier, SubStatus, type SubStatusType, validatePlanTransition } from '../lib/planGate.js';
-import { invalidatePlanRateLimit } from '../lib/rateLimiters.js';
 
 const router = Router();
 
@@ -80,7 +79,6 @@ router.post('/callback', asyncHandler(async (req, res) => {
     throw new NotFoundError('User not found');
   }
 
-  invalidatePlanRateLimit(userId);
   invalidateOverLimitCache(userId);
 
   res.json({ ok: true });

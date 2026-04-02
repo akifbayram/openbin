@@ -13,9 +13,6 @@ info:
     Error responses use `{ error: "CODE", message: "Human readable" }`.
 
     **Rate limiting**: All API endpoints share a global limit of 200 requests/minute.
-    In cloud mode, authenticated users are also subject to per-plan hourly limits:
-    Pro — 1000 requests/hour, Lite — 200 requests/hour.
-    Self-hosted instances are exempt from plan-based rate limiting.
 
 servers:
   - url: /api

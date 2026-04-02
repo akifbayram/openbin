@@ -275,6 +275,11 @@ CREATE INDEX IF NOT EXISTS idx_users_trial ON users(sub_status, created_at);
 CREATE INDEX IF NOT EXISTS idx_locations_created_by ON locations(created_by);
 CREATE INDEX IF NOT EXISTS idx_photos_created_by ON photos(created_by);
 
+-- Trigram indexes for fuzzy search (requires pg_trgm extension)
+CREATE INDEX IF NOT EXISTS idx_bins_name_trgm ON bins USING gist(name gist_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_bins_notes_trgm ON bins USING gist(notes gist_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_bin_items_name_trgm ON bin_items USING gist(name gist_trgm_ops);
+
 CREATE TABLE IF NOT EXISTS bin_shares (
   id          TEXT PRIMARY KEY,
   bin_id      TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE,

@@ -575,40 +575,49 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
   const storagePath = path.join(binId, photoFilename);
   const photoId = crypto.randomUUID();
 
-  // Upload to S3 storage
-  if (isS3) {
-    await storage.upload(storagePath, file.buffer, file.mimetype);
-  }
-
-  // Generate thumbnail
+  // Generate thumbnail + upload original in parallel
+  const thumbFilename = `${path.basename(photoFilename, path.extname(photoFilename))}_thumb.webp`;
   let thumbPath: string | null = null;
-  try {
-    const thumbFilename = `${path.basename(photoFilename, path.extname(photoFilename))}_thumb.webp`;
-    if (isS3) {
-      const thumbBuffer = await sharp(file.buffer)
-        .resize(600, undefined, { withoutEnlargement: true })
-        .webp({ quality: 70 })
-        .toBuffer();
-      const thumbStoragePath = path.join(binId, thumbFilename);
-      await storage.upload(thumbStoragePath, thumbBuffer, 'image/webp');
-      thumbPath = thumbStoragePath;
-    } else {
+
+  if (isS3) {
+    // S3: upload original and generate thumbnail concurrently
+    const thumbPromise = sharp(file.buffer)
+      .resize(600, undefined, { withoutEnlargement: true })
+      .webp({ quality: 70 })
+      .toBuffer()
+      .then(async (thumbBuffer) => {
+        const thumbStoragePath = path.join(binId, thumbFilename);
+        await storage.upload(thumbStoragePath, thumbBuffer, 'image/webp');
+        return thumbStoragePath;
+      })
+      .catch(() => null);
+
+    const [, resolvedThumbPath] = await Promise.all([
+      storage.upload(storagePath, file.buffer, file.mimetype),
+      thumbPromise,
+    ]);
+    thumbPath = resolvedThumbPath;
+  } else {
+    // Local: file already on disk from multer, just generate thumbnail
+    try {
       const thumbFullPath = path.join(path.dirname(file.path), thumbFilename);
       await generateThumbnail(file.path, thumbFullPath);
       thumbPath = path.join(binId, thumbFilename);
+    } catch {
+      // Thumbnail generation is non-critical
     }
-  } catch {
-    // Thumbnail generation is non-critical
   }
 
-  const result = await query(
-    `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, thumb_path, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     RETURNING id, bin_id, filename, mime_type, size, storage_path, thumb_path, created_by, created_at`,
-    [photoId, binId, path.basename(file.originalname).slice(0, 255), file.mimetype, file.size, storagePath, thumbPath, req.user!.id]
-  );
-
-  await query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [binId]);
+  // Insert photo record + update bin timestamp in parallel
+  const [result] = await Promise.all([
+    query(
+      `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, thumb_path, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, bin_id, filename, mime_type, size, storage_path, thumb_path, created_by, created_at`,
+      [photoId, binId, path.basename(file.originalname).slice(0, 255), file.mimetype, file.size, storagePath, thumbPath, req.user!.id]
+    ),
+    query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [binId]),
+  ]);
 
   invalidateOverLimitCache(req.user!.id);
 
