@@ -17,6 +17,7 @@ export const SHORTCUTS: ShortcutDef[] = [
   { id: 'go-settings', label: 'Go to Settings', category: 'navigation', keys: 'g e' },
   { id: 'new-bin', label: 'New Bin', category: 'action', keys: 'n' },
   { id: 'focus-search', label: 'Focus Search', category: 'action', keys: '/' },
+  { id: 'select-all', label: 'Select All', category: 'action', keys: 'mod+a' },
   { id: 'ask-ai', label: 'Ask AI', category: 'action', keys: 'mod+j' },
   { id: 'command-palette', label: 'Command Palette', category: 'general', keys: 'mod+k' },
   { id: 'toggle-sidebar', label: 'Toggle Sidebar', category: 'general', keys: '[' },

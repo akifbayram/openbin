@@ -16,11 +16,15 @@ export function useBulkSelection(bins: Bin[], resetDeps: unknown[]) {
   // Keyboard shortcuts: Escape to clear selection, Ctrl/Cmd+A to select all
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      // Don't hijack shortcuts inside inputs/textareas
+      const el = e.target as HTMLElement;
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable) return;
+
       if (e.key === 'Escape' && selectable) {
         setSelectedIds(new Set());
         lastSelectedIndex.current = null;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'a' && selectable) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'a' && bins.length > 0) {
         e.preventDefault();
         setSelectedIds(new Set(bins.map((b) => b.id)));
       }
