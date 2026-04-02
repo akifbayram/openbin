@@ -445,9 +445,14 @@ components:
       properties:
         id:
           type: string
-          description: 6-character alphanumeric short code (e.g. TBXABC)
+          format: uuid
+          description: UUID primary key
+        short_code:
+          type: string
+          description: Human-readable short code displayed on labels (e.g. TBXABC)
           minLength: 4
           maxLength: 8
+          pattern: '^[A-Z0-9]{4,8}$'
         location_id:
           type: string
           format: uuid
@@ -2834,16 +2839,16 @@ paths:
   /bins/lookup/{shortCode}:
     get:
       tags: [Bins]
-      summary: Look up a bin by ID (alias)
-      description: Legacy alias for GET /bins/{id}. Since bin IDs are now short codes, this endpoint is equivalent to fetching by ID.
+      summary: Look up a bin by short code
+      description: Look up a bin by its human-readable short code. Scoped to the authenticated user's locations.
       parameters:
         - name: shortCode
           in: path
           required: true
           schema:
             type: string
-            minLength: 6
-            maxLength: 6
+            minLength: 4
+            maxLength: 8
       responses:
         '200':
           description: Bin found

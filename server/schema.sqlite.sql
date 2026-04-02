@@ -56,6 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_areas_parent_id ON areas(parent_id);
 
 CREATE TABLE IF NOT EXISTS bins (
   id            TEXT PRIMARY KEY,
+  short_code    TEXT NOT NULL,
   location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
   name          TEXT NOT NULL,
   area_id       TEXT REFERENCES areas(id) ON DELETE SET NULL,
@@ -251,6 +252,7 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_bins_location_id ON bins(location_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bins_location_short_code ON bins(location_id, short_code);
 CREATE INDEX IF NOT EXISTS idx_bins_location_updated ON bins(location_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bins_area_id ON bins(area_id);
 CREATE INDEX IF NOT EXISTS idx_bins_deleted_at ON bins(location_id, deleted_at);

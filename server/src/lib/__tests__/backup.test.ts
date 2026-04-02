@@ -11,6 +11,19 @@ import {
   stopBackupScheduler,
 } from '../backup.js';
 
+vi.mock('../config.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../config.js')>();
+  return {
+    ...original,
+    config: { ...original.config },
+  };
+});
+
+async function setBackupConfig(overrides: Record<string, unknown>) {
+  const mod = await import('../config.js');
+  Object.assign(mod.config, overrides);
+}
+
 function makeTmpDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'openbin-backup-test-'));
 }
@@ -42,33 +55,23 @@ describe('resolveSchedule', () => {
 });
 
 describe('getConfig', () => {
-  const originalEnv = { ...process.env };
-
-  afterEach(() => {
-    process.env = { ...originalEnv };
-  });
-
-  it('returns defaults when env vars are unset', () => {
-    delete process.env.BACKUP_ENABLED;
-    delete process.env.BACKUP_INTERVAL;
-    delete process.env.BACKUP_RETENTION;
-    delete process.env.BACKUP_PATH;
-    delete process.env.BACKUP_WEBHOOK_URL;
-
+  it('returns defaults when config has defaults', () => {
     const cfg = getConfig();
     expect(cfg.enabled).toBe(false);
     expect(cfg.schedule).toBe('daily');
     expect(cfg.retention).toBe(7);
-    expect(cfg.backupPath).toBe('./data/backups');
+    expect(cfg.backupPath).toBe('backups');
     expect(cfg.webhookUrl).toBe('');
   });
 
-  it('reads env vars when set', () => {
-    process.env.BACKUP_ENABLED = 'true';
-    process.env.BACKUP_INTERVAL = 'hourly';
-    process.env.BACKUP_RETENTION = '3';
-    process.env.BACKUP_PATH = '/tmp/backups';
-    process.env.BACKUP_WEBHOOK_URL = 'https://example.com/hook';
+  it('reads values from config', async () => {
+    await setBackupConfig({
+      backupEnabled: true,
+      backupInterval: 'hourly',
+      backupRetention: 3,
+      backupPath: '/tmp/backups',
+      backupWebhookUrl: 'https://example.com/hook',
+    });
 
     const cfg = getConfig();
     expect(cfg.enabled).toBe(true);
@@ -76,14 +79,15 @@ describe('getConfig', () => {
     expect(cfg.retention).toBe(3);
     expect(cfg.backupPath).toBe('/tmp/backups');
     expect(cfg.webhookUrl).toBe('https://example.com/hook');
-  });
 
-  it('clamps retention to at least 1', () => {
-    process.env.BACKUP_RETENTION = '0';
-    expect(getConfig().retention).toBe(1);
-
-    process.env.BACKUP_RETENTION = '-5';
-    expect(getConfig().retention).toBe(1);
+    // Reset
+    await setBackupConfig({
+      backupEnabled: false,
+      backupInterval: 'daily',
+      backupRetention: 7,
+      backupPath: './data/backups',
+      backupWebhookUrl: '',
+    });
   });
 });
 
@@ -171,16 +175,19 @@ describe('pruneBackups', () => {
 });
 
 describe('startBackupScheduler', () => {
-  const originalEnv = { ...process.env };
-
-  afterEach(() => {
+  afterEach(async () => {
     stopBackupScheduler();
-    process.env = { ...originalEnv };
+    await setBackupConfig({
+      backupEnabled: false,
+      backupInterval: 'daily',
+      backupRetention: 7,
+      backupPath: './data/backups',
+      backupWebhookUrl: '',
+    });
   });
 
-  it('does not start when BACKUP_ENABLED is not true', () => {
+  it('does not start when backup is disabled', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    delete process.env.BACKUP_ENABLED;
 
     startBackupScheduler();
 
@@ -191,10 +198,9 @@ describe('startBackupScheduler', () => {
     logSpy.mockRestore();
   });
 
-  it('logs error for invalid schedule without throwing', () => {
+  it('logs error for invalid schedule without throwing', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    process.env.BACKUP_ENABLED = 'true';
-    process.env.BACKUP_INTERVAL = 'not-valid';
+    await setBackupConfig({ backupEnabled: true, backupInterval: 'not-valid' });
 
     expect(() => startBackupScheduler()).not.toThrow();
 
@@ -205,10 +211,9 @@ describe('startBackupScheduler', () => {
     errorSpy.mockRestore();
   });
 
-  it('starts successfully with a valid schedule', () => {
+  it('starts successfully with a valid schedule', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    process.env.BACKUP_ENABLED = 'true';
-    process.env.BACKUP_INTERVAL = 'daily';
+    await setBackupConfig({ backupEnabled: true, backupInterval: 'daily' });
 
     startBackupScheduler();
 

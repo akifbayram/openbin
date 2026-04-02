@@ -64,6 +64,7 @@ export async function createTestBin(
 
   return res.body as {
     id: string;
+    short_code: string;
     name: string;
     location_id: string;
     tags: string[];

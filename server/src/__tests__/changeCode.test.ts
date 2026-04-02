@@ -11,32 +11,24 @@ describe('validateCodeFormat', () => {
     expect(() => validateCodeFormat('ABCDEF')).not.toThrow();
   });
 
-  it('accepts 4-char codes', () => {
-    expect(() => validateCodeFormat('ABCD')).not.toThrow();
-  });
-
-  it('accepts 8-char codes', () => {
-    expect(() => validateCodeFormat('ABCD1234')).not.toThrow();
-  });
-
   it('accepts codes with digits', () => {
     expect(() => validateCodeFormat('ABC123')).not.toThrow();
   });
 
-  it('rejects codes shorter than 4 chars', () => {
-    expect(() => validateCodeFormat('ABC')).toThrow('Code must be 4-8 alphanumeric characters');
+  it('rejects codes shorter than 6 chars', () => {
+    expect(() => validateCodeFormat('ABCD')).toThrow('Code must be exactly 6 alphanumeric characters');
   });
 
-  it('rejects codes longer than 8 chars', () => {
-    expect(() => validateCodeFormat('ABCDEFGHI')).toThrow('Code must be 4-8 alphanumeric characters');
+  it('rejects codes longer than 6 chars', () => {
+    expect(() => validateCodeFormat('ABCDEFG')).toThrow('Code must be exactly 6 alphanumeric characters');
   });
 
   it('rejects codes with special characters', () => {
-    expect(() => validateCodeFormat('ABC-DE')).toThrow('Code must be 4-8 alphanumeric characters');
+    expect(() => validateCodeFormat('ABC-DE')).toThrow('Code must be exactly 6 alphanumeric characters');
   });
 
   it('rejects empty string', () => {
-    expect(() => validateCodeFormat('')).toThrow('Code must be 4-8 alphanumeric characters');
+    expect(() => validateCodeFormat('')).toThrow('Code must be exactly 6 alphanumeric characters');
   });
 });
 
@@ -55,37 +47,32 @@ describe('POST /api/bins/:id/change-code', () => {
       .send({ code: 'ZZZZZZ' });
 
     expect(res.status).toBe(200);
-    expect(res.body.id).toBe('ZZZZZZ');
+    // UUID stays the same; only short_code changes
+    expect(res.body.id).toBe(bin.id);
+    expect(res.body.short_code).toBe('ZZZZZZ');
     expect(res.body.name).toBe('My Bin');
 
-    // Old code should be gone
-    const old = await request(app)
+    // Bin is still accessible by its UUID
+    const lookup = await request(app)
       .get(`/api/bins/${bin.id}`)
       .set('Authorization', `Bearer ${token}`);
-    expect(old.status).toBe(404);
+    expect(lookup.status).toBe(200);
+    expect(lookup.body.short_code).toBe('ZZZZZZ');
   });
 
-  it('changes bin code to a claimed code and deletes the old bin', async () => {
+  it('rejects code already in use in same location', async () => {
     const { token } = await createTestUser(app);
     const loc = await createTestLocation(app, token);
     const binA = await createTestBin(app, token, loc.id, { name: 'Bin A', items: ['item1'] });
     const binB = await createTestBin(app, token, loc.id, { name: 'Bin B', items: ['item2'] });
 
-    // Bin A adopts Bin B's code
+    // Try to change Bin A's code to Bin B's short_code
     const res = await request(app)
       .post(`/api/bins/${binA.id}/change-code`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ code: binB.id });
+      .send({ code: binB.short_code });
 
-    expect(res.status).toBe(200);
-    expect(res.body.id).toBe(binB.id);
-    expect(res.body.name).toBe('Bin A');
-
-    // binB.id now points to Bin A's data
-    const lookup = await request(app)
-      .get(`/api/bins/${binB.id}`)
-      .set('Authorization', `Bearer ${token}`);
-    expect(lookup.body.name).toBe('Bin A');
+    expect(res.status).toBe(422);
   });
 
   it('preserves items after code change', async () => {
@@ -99,6 +86,8 @@ describe('POST /api/bins/:id/change-code', () => {
       .send({ code: 'TSTXYZ' });
 
     expect(res.status).toBe(200);
+    expect(res.body.id).toBe(bin.id);
+    expect(res.body.short_code).toBe('TSTXYZ');
     const itemNames = res.body.items.map((i: { name: string }) => i.name);
     expect(itemNames).toContain('wrench');
     expect(itemNames).toContain('hammer');
@@ -125,7 +114,7 @@ describe('POST /api/bins/:id/change-code', () => {
     const res = await request(app)
       .post(`/api/bins/${bin.id}/change-code`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ code: bin.id });
+      .send({ code: bin.short_code });
 
     expect(res.status).toBe(422);
   });
@@ -150,23 +139,23 @@ describe('POST /api/bins/:id/change-code', () => {
     expect(res.status).toBe(403);
   });
 
-  it('rejects cross-location change when user is not admin in other location', async () => {
-    const { token: adminToken } = await createTestUser(app);
-    const loc1 = await createTestLocation(app, adminToken);
-    const bin1 = await createTestBin(app, adminToken, loc1.id, { name: 'Bin in Loc1' });
+  it('allows same code in different locations', async () => {
+    const { token: user1Token } = await createTestUser(app);
+    const loc1 = await createTestLocation(app, user1Token);
+    const bin1 = await createTestBin(app, user1Token, loc1.id, { name: 'Bin in Loc1' });
 
-    // Create a second user who is admin of a different location
-    const { token: otherToken } = await createTestUser(app);
-    const loc2 = await createTestLocation(app, otherToken);
-    const bin2 = await createTestBin(app, otherToken, loc2.id, { name: 'Bin in Loc2' });
+    const { token: user2Token } = await createTestUser(app);
+    const loc2 = await createTestLocation(app, user2Token);
+    const bin2 = await createTestBin(app, user2Token, loc2.id, { name: 'Bin in Loc2' });
 
-    // admin of loc1 tries to adopt a code from loc2 (where they are NOT a member)
+    // Change bin1's code to match bin2's short_code (different location = no conflict)
     const res = await request(app)
       .post(`/api/bins/${bin1.id}/change-code`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ code: bin2.id });
+      .set('Authorization', `Bearer ${user1Token}`)
+      .send({ code: bin2.short_code });
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    expect(res.body.short_code).toBe(bin2.short_code);
   });
 
   it('returns 404 for non-existent bin', async () => {
@@ -174,7 +163,7 @@ describe('POST /api/bins/:id/change-code', () => {
     await createTestLocation(app, token);
 
     const res = await request(app)
-      .post('/api/bins/NOPE99/change-code')
+      .post('/api/bins/00000000-0000-0000-0000-000000000000/change-code')
       .set('Authorization', `Bearer ${token}`)
       .send({ code: 'ZZZZZZ' });
 

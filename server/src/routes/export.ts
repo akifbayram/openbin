@@ -327,7 +327,7 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
   const userId = req.user!.id;
 
   if (dryRun) {
-    res.json(await buildDryRunPreview(bins, importMode));
+    res.json(await buildDryRunPreview(bins, importMode, locationId));
     return;
   }
 
@@ -556,7 +556,7 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
         }
       }
 
-      const binId = await insertBinWithShortCode('', locationId, {
+      const binId = await insertBinWithShortCode(locationId, {
         name: bin.name,
         notes: '',
         tags: bin.tags,
@@ -687,11 +687,12 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
   if (dryRun) {
     const dryRunBins: DryRunBin[] = zipBins.map(b => ({
       id: b.id,
+      shortCode: b.shortCode,
       name: b.name,
       items: b.items,
       tags: b.tags,
     }));
-    res.json(await buildDryRunPreview(dryRunBins, importMode));
+    res.json(await buildDryRunPreview(dryRunBins, importMode, locationId));
     return;
   }
 
@@ -804,7 +805,7 @@ router.post('/import/legacy', asyncHandler(async (req, res) => {
     for (const bin of normalizedBins) {
       const areaId = await resolveArea(locationId, bin.location || '', userId, tx);
 
-      const binId = await insertBinWithShortCode('', locationId, {
+      const binId = await insertBinWithShortCode(locationId, {
         name: bin.name,
         notes: bin.notes,
         tags: bin.tags,

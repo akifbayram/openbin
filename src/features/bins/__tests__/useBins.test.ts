@@ -143,6 +143,7 @@ describe('restoreBin', () => {
 
     await restoreBin({
       id: 'restored-bin',
+      short_code: 'RSTBIN',
       location_id: 'location-1',
       name: 'Restored',
       area_id: 'area-1',

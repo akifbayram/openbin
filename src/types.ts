@@ -84,6 +84,7 @@ export interface BinItem {
 
 export interface Bin {
   id: string;
+  short_code: string;
   location_id: string;
   name: string;
   area_id: string | null;

@@ -52,15 +52,13 @@ export const config = Object.freeze({
   // Auth
   adminPassword: process.env.ADMIN_PASSWORD || null,
   jwtSecret: resolveJwtSecret(),
-  accessTokenExpiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '15m',
-  refreshTokenMaxDays: clamp(parseInt(process.env.REFRESH_TOKEN_MAX_DAYS || '7', 10), 1, 90, 7),
-  cookieSecure: parseBool(process.env.COOKIE_SECURE, process.env.NODE_ENV === 'production'),
-  bcryptRounds: clamp(parseInt(process.env.BCRYPT_ROUNDS || '12', 10), 10, 31, 12),
-  registrationEnabled: parseBool(process.env.REGISTRATION_ENABLED, true),
+  accessTokenExpiresIn: '15m',
+  refreshTokenMaxDays: 7,
+  cookieSecure: process.env.NODE_ENV === 'production',
+  bcryptRounds: 12,
   registrationMode: (() => {
     const mode = process.env.REGISTRATION_MODE;
-    if (mode === 'invite' || mode === 'closed') return mode;
-    if (!parseBool(process.env.REGISTRATION_ENABLED, true)) return 'closed' as const;
+    if (mode === 'open' || mode === 'invite' || mode === 'closed') return mode;
     return 'open' as const;
   })(),
   trustProxy: parseBool(process.env.TRUST_PROXY, false),
@@ -93,29 +91,24 @@ export const config = Object.freeze({
   emailTemplateDir: process.env.EMAIL_TEMPLATE_DIR || null,
 
   demoMode: parseBool(process.env.DEMO_MODE, false),
-  demoSeedPath: process.env.DEMO_SEED_PATH || null,
+  demoSeedPath: null as string | null,
   aiMock: parseBool(process.env.AI_MOCK, false),
-  demoUsernames: new Set(
-    (process.env.DEMO_USERNAMES || '')
-      .split(',')
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean),
-  ),
+  demoUsernames: new Set<string>(),
 
   // Encryption
   aiEncryptionKey: process.env.AI_ENCRYPTION_KEY || null,
 
   // ClamAV malware scanning (opt-in for cloud deployments)
   clamavHost: process.env.CLAMAV_HOST || null,
-  clamavPort: parseInt(process.env.CLAMAV_PORT || '3310', 10),
-  clamavTimeout: parseInt(process.env.CLAMAV_TIMEOUT || '30000', 10),
+  clamavPort: 3310,
+  clamavTimeout: 30_000,
 
   // Upload limits
   maxPhotoSizeMb: clamp(parseInt(process.env.MAX_PHOTO_SIZE_MB || '5', 10), 1, 50, 5),
-  maxAvatarSizeMb: clamp(parseInt(process.env.MAX_AVATAR_SIZE_MB || '2', 10), 1, 10, 2),
+  maxAvatarSizeMb: 2,
   maxPhotosPerBin: clamp(parseInt(process.env.MAX_PHOTOS_PER_BIN || '1', 10), 1, 100, 1),
-  uploadQuotaDemoMb: clamp(parseInt(process.env.UPLOAD_QUOTA_DEMO_MB || '5', 10), 1, 10000, 5),
-  uploadQuotaGlobalDemoMb: clamp(parseInt(process.env.UPLOAD_QUOTA_GLOBAL_DEMO_MB || '50', 10), 1, 100000, 50),
+  uploadQuotaDemoMb: 5,
+  uploadQuotaGlobalDemoMb: 50,
 
   // AI provider env var fallback
   aiProvider: (process.env.AI_PROVIDER as AiProviderType) || null,
@@ -127,7 +120,7 @@ export const config = Object.freeze({
   backupEnabled: parseBool(process.env.BACKUP_ENABLED, false),
   backupInterval: process.env.BACKUP_INTERVAL || 'daily',
   backupRetention: clamp(parseInt(process.env.BACKUP_RETENTION || '7', 10), 1, 365, 7),
-  backupPath: process.env.BACKUP_PATH || './data/backups',
+  backupPath: path.join(path.dirname(process.env.DATABASE_PATH || './data/openbin.db'), 'backups'),
   backupWebhookUrl: process.env.BACKUP_WEBHOOK_URL || '',
 
   // QR payload
@@ -153,13 +146,13 @@ export const config = Object.freeze({
 
   // Rate limiting
   disableRateLimit: process.env.NODE_ENV === 'test' || parseBool(process.env.DISABLE_RATE_LIMIT, false),
-  aiRateLimit: clamp(parseInt(process.env.AI_RATE_LIMIT || '30', 10), 1, 10000, 30),
-  aiRateLimitApiKey: clamp(parseInt(process.env.AI_RATE_LIMIT_API_KEY || '1000', 10), 1, 100000, 1000),
+  aiRateLimit: 30,
+  aiRateLimitApiKey: 1000,
 
   // Demo AI limits
-  demoAiRateLimit: clamp(parseInt(process.env.DEMO_AI_RATE_LIMIT ?? '', 10), 1, 1000, 10),
-  demoAiMaxPhotosPerRequest: clamp(parseInt(process.env.DEMO_AI_MAX_PHOTOS_PER_REQUEST ?? '', 10), 1, 10, 3),
-  demoAiDailyBudget: clamp(parseInt(process.env.DEMO_AI_DAILY_BUDGET ?? '', 10), 1, 10000, 100),
+  demoAiRateLimit: 10,
+  demoAiMaxPhotosPerRequest: 3,
+  demoAiDailyBudget: 100,
 
   // Storage backend
   storageBackend: (() => {

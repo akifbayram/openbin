@@ -75,14 +75,14 @@ describe('buildDryRunPreview', () => {
     // Insert a bin into DB so it exists
     const db = getDb();
     db.prepare(
-      'INSERT INTO bins (id, location_id, name, area_id, notes, icon, color, created_by) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)',
-    ).run('existid', LOCATION_ID, 'Existing', '', '', '', USER_ID);
+      'INSERT INTO bins (id, short_code, location_id, name, area_id, notes, icon, color, created_by) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?)',
+    ).run('existid', 'EXTBIN', LOCATION_ID, 'Existing', '', '', '', USER_ID);
 
     const bins = [
-      { name: 'Existing', id: 'existid', items: [], tags: [] },
-      { name: 'New Bin', id: 'newbin', items: [{ name: 'item1' }, { name: 'item2' }], tags: ['a'] },
+      { name: 'Existing', id: 'existid', shortCode: 'EXTBIN', items: [], tags: [] },
+      { name: 'New Bin', id: 'newbin', shortCode: 'NEWBIN', items: [{ name: 'item1' }, { name: 'item2' }], tags: ['a'] },
     ];
-    const result = await buildDryRunPreview(bins, 'merge');
+    const result = await buildDryRunPreview(bins, 'merge', LOCATION_ID);
     expect(result.toSkip).toHaveLength(1);
     expect(result.toSkip[0].name).toBe('Existing');
     expect(result.toSkip[0].reason).toBe('already exists');
@@ -162,8 +162,8 @@ describe('executeFullImportTransaction', () => {
   it('merge mode imports new bins and skips existing', async () => {
     const db = getDb();
     db.prepare(
-      'INSERT INTO bins (id, location_id, name, area_id, notes, icon, color, created_by) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)',
-    ).run('exist1', LOCATION_ID, 'Existing Bin', '', '', '', USER_ID);
+      'INSERT INTO bins (id, short_code, location_id, name, area_id, notes, icon, color, created_by) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?)',
+    ).run('exist1', 'EXT001', LOCATION_ID, 'Existing Bin', '', '', '', USER_ID);
 
     const result = await executeFullImportTransaction({
       locationId: LOCATION_ID,
@@ -171,7 +171,7 @@ describe('executeFullImportTransaction', () => {
       isAdmin: true,
       importMode: 'merge',
       bins: [
-        makeBin({ id: 'exist1', name: 'Existing Bin' }),
+        makeBin({ id: 'exist1', name: 'Existing Bin', shortCode: 'EXT001' }),
         makeBin({ id: 'new111', name: 'New Bin', items: ['screwdriver'] }),
       ],
     });
@@ -188,8 +188,8 @@ describe('executeFullImportTransaction', () => {
   it('replace mode clears existing bins and imports all', async () => {
     const db = getDb();
     db.prepare(
-      'INSERT INTO bins (id, location_id, name, area_id, notes, icon, color, created_by) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)',
-    ).run('old111', LOCATION_ID, 'Old Bin', '', '', '', USER_ID);
+      'INSERT INTO bins (id, short_code, location_id, name, area_id, notes, icon, color, created_by) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?)',
+    ).run('old111', 'OLD111', LOCATION_ID, 'Old Bin', '', '', '', USER_ID);
 
     const result = await executeFullImportTransaction({
       locationId: LOCATION_ID,
@@ -446,8 +446,8 @@ describe('executeFullImportTransaction', () => {
     const db = getDb();
     // Insert a bin so we can verify it survives a failed replace import
     db.prepare(
-      'INSERT INTO bins (id, location_id, name, area_id, notes, icon, color, created_by) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)',
-    ).run('keep11', LOCATION_ID, 'Keep Me', '', '', '', USER_ID);
+      'INSERT INTO bins (id, short_code, location_id, name, area_id, notes, icon, color, created_by) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?)',
+    ).run('keep11', 'KEP011', LOCATION_ID, 'Keep Me', '', '', '', USER_ID);
 
     // Create a bin with a name that will trigger an error inside the transaction
     // by making the DB throw (e.g., violate a NOT NULL constraint on a required field)

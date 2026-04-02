@@ -92,7 +92,7 @@ export async function generateNamePDF(params: GenerateNamePDFParams): Promise<Bl
       const contentW = cellW - 2 * padIn;
       const contentH = cellH - 2 * padIn;
 
-      const displayName = bin.name || bin.id;
+      const displayName = bin.name || bin.short_code;
       const colorPreset = nameCardOptions.showColor && bin.color ? resolveColor(bin.color) : undefined;
       const bgColor = colorPreset?.bg;
       const textColor = bgColor ? computeContrastFg(bgColor) : '#000000';

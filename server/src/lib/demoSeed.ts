@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import bcrypt from 'bcrypt';
 import type { TxQueryFn } from '../db.js';
-import { d, generateUuid, withTransaction } from '../db.js';
+import { d, generateUuid, isUniqueViolation, withTransaction } from '../db.js';
 import { config } from './config.js';
 import type { DemoActivityEntry, DemoBin, DemoMember } from './demoSeedData.js';
 import {
@@ -223,18 +223,27 @@ async function createBins(
   const binIdMap = new Map<string, string>();
 
   for (const bin of binList) {
-    const binId = generateShortCode(bin.name);
+    const binId = generateUuid();
     binIdMap.set(bin.name, binId);
     const locationId = bin.location === 'home' ? homeLocationId : storageLocationId;
     const areaId = bin.area ? (areaMap.get(bin.area) ?? null) : null;
     const creatorId = userIdMap.get(bin.createdBy ?? 'demo')!;
     const visibility = bin.visibility ?? 'location';
 
-    await tx(
-      `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [binId, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle, creatorId, visibility],
-    );
+    for (let attempt = 0; attempt <= 10; attempt++) {
+      const shortCode = generateShortCode(bin.name);
+      try {
+        await tx(
+          `INSERT INTO bins (id, short_code, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [binId, shortCode, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle, creatorId, visibility],
+        );
+        break;
+      } catch (err) {
+        if (isUniqueViolation(err) && attempt < 10) continue;
+        throw err;
+      }
+    }
 
     for (let i = 0; i < bin.items.length; i++) {
       const item = bin.items[i];
@@ -261,18 +270,27 @@ async function createTrashedBins(
 ): Promise<void> {
   for (let i = 0; i < trashedBinList.length; i++) {
     const bin = trashedBinList[i];
-    const binId = generateShortCode(bin.name);
+    const binId = generateUuid();
     binIdMap.set(bin.name, binId);
     const locationId = bin.location === 'home' ? homeLocationId : storageLocationId;
     const areaId = bin.area ? (areaMap.get(bin.area) ?? null) : null;
     const creatorId = userIdMap.get(bin.createdBy ?? 'demo')!;
     const daysAgo = 3 + i * 2;
 
-    await tx(
-      `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, deleted_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, ${d.daysAgo(daysAgo)})`,
-      [binId, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle, creatorId],
-    );
+    for (let attempt = 0; attempt <= 10; attempt++) {
+      const shortCode = generateShortCode(bin.name);
+      try {
+        await tx(
+          `INSERT INTO bins (id, short_code, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, deleted_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, ${d.daysAgo(daysAgo)})`,
+          [binId, shortCode, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle, creatorId],
+        );
+        break;
+      } catch (err) {
+        if (isUniqueViolation(err) && attempt < 10) continue;
+        throw err;
+      }
+    }
 
     for (let j = 0; j < bin.items.length; j++) {
       const item = bin.items[j];

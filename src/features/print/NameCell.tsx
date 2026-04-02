@@ -17,7 +17,7 @@ interface NameCellProps {
 }
 
 export function NameCell({ bin, format, showIcon, showColor, cellWPt, cellHPt, paddingPt, overrideFontSizePt }: NameCellProps) {
-  const displayName = bin.name || bin.id;
+  const displayName = bin.name || bin.short_code;
   const colorPreset = showColor && bin.color ? resolveColor(bin.color) : null;
   const bgColor = colorPreset?.bg;
   const textColor = bgColor ? computeContrastFg(bgColor) : '#000000';

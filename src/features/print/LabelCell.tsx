@@ -29,7 +29,7 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
     format,
     hasQrData: !!qrDataUrl,
     hasColor: !!bin.color,
-    hasCode: !!bin.id,
+    hasCode: !!bin.short_code,
     hasIcon: !!bin.icon,
     labelDirection,
     showQrCode,
@@ -70,7 +70,7 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
         className={cn('label-code font-mono font-bold', !layout.useColoredCard && 'text-[var(--text-primary)]')}
         style={{ fontSize: qrCodeFontSize }}
       >
-        {bin.id}
+        {bin.short_code}
       </div>
     ) : null;
 
@@ -112,9 +112,9 @@ export function LabelCell({ bin, qrDataUrl, format, labelDirection, showColorSwa
             style={{ height: barHeight, backgroundColor: colorPreset.bg, marginBottom: '1pt' }}
           />
         )}
-        {!layout.codeUnderQr && showBinCode && bin.id && (
+        {!layout.codeUnderQr && showBinCode && bin.short_code && (
           <div className="label-code text-[var(--text-primary)] font-mono font-bold" style={{ fontSize: codeFontSize }}>
-            {bin.id}
+            {bin.short_code}
           </div>
         )}
         {showBinName && (

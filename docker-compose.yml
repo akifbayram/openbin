@@ -9,7 +9,6 @@ services:
     environment:
       DATABASE_PATH: /data/openbin.db
       PHOTO_STORAGE_PATH: /data/photos
-      BACKUP_PATH: /data/backups
     volumes:
       - api_data:/data
 

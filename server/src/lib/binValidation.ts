@@ -1,10 +1,10 @@
 import { ValidationError } from './httpErrors.js';
 
-const CODE_REGEX = /^[A-Z0-9]{4,8}$/;
+const CODE_REGEX = /^[A-Z0-9]{6}$/;
 
 export function validateCodeFormat(code: string): void {
   if (!CODE_REGEX.test(code)) {
-    throw new ValidationError('Code must be 4-8 alphanumeric characters');
+    throw new ValidationError('Code must be exactly 6 alphanumeric characters');
   }
 }
 

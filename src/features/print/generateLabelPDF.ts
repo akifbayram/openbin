@@ -88,7 +88,7 @@ function drawQrBlock(
   }
 
   if (layout.codeUnderQr) {
-    drawCodeUnderQr(doc, p.bin.id, qrX, qrY + p.qrSize, p.qrSize, layout.qrCodeFontSizePt);
+    drawCodeUnderQr(doc, p.bin.short_code, qrX, qrY + p.qrSize, p.qrSize, layout.qrCodeFontSizePt);
   }
 }
 
@@ -142,7 +142,7 @@ export async function generateLabelPDF(params: GenerateLabelPDFParams): Promise<
         format,
         hasQrData: !!qrDataUrl,
         hasColor: !!bin.color,
-        hasCode: !!bin.id,
+        hasCode: !!bin.short_code,
         hasIcon: !!bin.icon,
         labelDirection: labelOptions.labelDirection,
         showQrCode: labelOptions.showQrCode,
@@ -191,9 +191,9 @@ interface DrawLabelParams {
 /** Measure the natural width of text column elements (inches). */
 function measureTextBlockWidth(doc: JsPDF, p: DrawLabelParams, layout: LabelLayoutResult, codeUnderQr: boolean): number {
   let maxW = 0;
-  if (p.labelOptions.showBinCode && p.bin.id && !codeUnderQr) {
+  if (p.labelOptions.showBinCode && p.bin.short_code && !codeUnderQr) {
     const cellWidthIn = (layout.codeFontSizePt * 0.8) / 72;
-    maxW = Math.max(maxW, p.bin.id.length * cellWidthIn);
+    maxW = Math.max(maxW, p.bin.short_code.length * cellWidthIn);
   }
   if (p.labelOptions.showBinName) {
     doc.setFont('helvetica', 'bold');
@@ -352,7 +352,7 @@ function drawTextColumn(
   const barHeightIn = layout.swatchBarHeightPt / 72;
   const elements: { type: 'swatch' | 'code' | 'name'; height: number }[] = [];
   if (layout.showSwatchBar && p.colorPreset) elements.push({ type: 'swatch', height: barHeightIn });
-  if (p.labelOptions.showBinCode && p.bin.id && !codeDrawnUnderQr) elements.push({ type: 'code', height: layout.codeFontSizePt / 72 });
+  if (p.labelOptions.showBinCode && p.bin.short_code && !codeDrawnUnderQr) elements.push({ type: 'code', height: layout.codeFontSizePt / 72 });
   if (p.labelOptions.showBinName) elements.push({ type: 'name', height: layout.nameFontSizePt / 72 });
 
   const lineGap = 1 / 72;
@@ -377,7 +377,7 @@ function drawTextColumn(
     } else if (el.type === 'code') {
       doc.setFont('courier', 'bold');
       doc.setFontSize(layout.codeFontSizePt);
-      const code = p.bin.id;
+      const code = p.bin.short_code;
       const cellWidthIn = (layout.codeFontSizePt * 0.8) / 72;
       const totalCodeW = code.length * cellWidthIn;
       const baselineY = curY + layout.codeFontSizePt / 72 * 0.8;

@@ -43,7 +43,7 @@ OpenAPI spec at `server/openapi.yaml`.
 - **Route mounting**: Photos upload on bins router (`POST /api/bins/:id/photos`). Export at `/api`. Areas at `/api/locations`.
 - **Server config**: All env vars parsed and validated in `server/src/lib/config.ts` with safe defaults. See `.env.example` for the full list.
 - **Docker volume permissions**: Container runs as `node` (uid 1000). Volume-mounted dirs must be owned by 1000:1000 or the app will crash with EACCES.
-- **`DATABASE_PATH`**: Must be set to `/data/openbin.db` in Docker even when using PostgreSQL — the db init code creates this directory unconditionally at import time.
+- **`DATABASE_PATH`**: Must be set to `/data/openbin.db` in Docker. The SQLite init code creates this directory; the path is also used by `resolveJwtSecret()` to locate `.jwt_secret`, so it matters even with PostgreSQL.
 - **`JWT_SECRET`**: Set explicitly in Docker. Auto-generation writes to `data/.jwt_secret` which fails if the data dir isn't writable yet at config load time.
 - **`CORS_ORIGIN`**: Defaults to `http://localhost:5173`. Must be set to the production URL (e.g. `https://cloud.openbin.app`) in deployment — otherwise the dev origin leaks into production ACAO headers.
 

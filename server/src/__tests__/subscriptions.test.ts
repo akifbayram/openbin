@@ -17,7 +17,6 @@ vi.mock('../lib/config.js', () => ({
     refreshTokenMaxDays: 7,
     cookieSecure: false,
     bcryptRounds: 10,
-    registrationEnabled: true,
     registrationMode: 'open',
     trustProxy: false,
     selfHosted: false,

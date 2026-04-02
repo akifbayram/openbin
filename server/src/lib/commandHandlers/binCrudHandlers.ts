@@ -34,18 +34,19 @@ export async function handleCreateBin(action: Extract<CommandAction, { type: 'cr
     }
   }
 
-  // Generate short code as ID with retry
-  let binId = generateShortCode(action.name);
+  // Generate UUID for ID and short code with retry
+  const binId = generateUuid();
+  let shortCode = generateShortCode(action.name);
   const maxRetries = 10;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const code = attempt === 0 ? binId : generateShortCode(action.name);
+    const code = attempt === 0 ? shortCode : generateShortCode(action.name);
     try {
       await tx(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [code, ctx.locationId, action.name, areaId, action.notes || '', action.tags || [], action.icon || '', action.color || '', action.card_style || '', ctx.userId]
+        `INSERT INTO bins (id, short_code, location_id, name, area_id, notes, tags, icon, color, card_style, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [binId, code, ctx.locationId, action.name, areaId, action.notes || '', action.tags || [], action.icon || '', action.color || '', action.card_style || '', ctx.userId]
       );
-      binId = code;
+      shortCode = code;
       break;
     } catch (err: unknown) {
       if (isUniqueViolation(err) && attempt < maxRetries) continue;
@@ -106,17 +107,18 @@ export async function handleDuplicateBin(action: Extract<CommandAction, { type: 
   const s = src.rows[0];
   const newName = action.new_name || `Copy of ${s.name}`;
 
-  let binId = generateShortCode(newName);
+  const binId = generateUuid();
+  let shortCode = generateShortCode(newName);
   const maxRetries = 10;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const code = attempt === 0 ? binId : generateShortCode(newName);
+    const code = attempt === 0 ? shortCode : generateShortCode(newName);
     try {
       await tx(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, visibility, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [code, ctx.locationId, newName, s.area_id, s.notes, s.tags, s.icon, s.color, s.card_style, s.visibility, ctx.userId]
+        `INSERT INTO bins (id, short_code, location_id, name, area_id, notes, tags, icon, color, card_style, visibility, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [binId, code, ctx.locationId, newName, s.area_id, s.notes, s.tags, s.icon, s.color, s.card_style, s.visibility, ctx.userId]
       );
-      binId = code;
+      shortCode = code;
       break;
     } catch (err: unknown) {
       if (isUniqueViolation(err) && attempt < maxRetries) continue;

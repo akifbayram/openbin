@@ -259,7 +259,7 @@ export function BinDetailPage() {
       <ChangeCodeDialog
         open={actions.changeCodeOpen}
         onOpenChange={actions.setChangeCodeOpen}
-        currentBin={{ id: bin.id, name: bin.name }}
+        currentBin={{ id: bin.id, short_code: bin.short_code, name: bin.name }}
       />
 
       {showShareButton && (

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 import sharp from 'sharp';
-import { d, getDialect, query, withTransaction } from '../db.js';
+import { d, query, withTransaction } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isBinCreator, requireAdmin, requireMemberOrAbove, verifyAreaInLocation, verifyBinAccess, verifyDeletedBinAccess, verifyLocationMembership } from '../lib/binAccess.js';
 import { BIN_SELECT_COLS, buildBinListQuery, fetchBinById } from '../lib/binQueries.js';
@@ -12,7 +12,6 @@ import { validateBinFields, validateCodeFormat } from '../lib/binValidation.js';
 import { config } from '../lib/config.js';
 import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/customFieldHelpers.js';
 import { ForbiddenError, GoneError, NotFoundError, OverLimitError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
-import { createLogger } from '../lib/logger.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
 import { assertLocationWritable, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache } from '../lib/planGate.js';
@@ -160,7 +159,7 @@ router.get('/trash', asyncHandler(async (req, res) => {
   res.json({ results: result.rows, count: result.rows.length });
 }));
 
-// GET /api/bins/lookup/:shortCode — lookup bin by short code (alias for GET /api/bins/:id)
+// GET /api/bins/lookup/:shortCode — lookup bin by short code
 router.get('/lookup/:shortCode', asyncHandler(async (req, res) => {
   const code = req.params.shortCode.toUpperCase();
 
@@ -170,7 +169,7 @@ router.get('/lookup/:shortCode', asyncHandler(async (req, res) => {
      LEFT JOIN areas a ON a.id = b.area_id
      LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
-     WHERE UPPER(b.id) = $1 AND b.deleted_at IS NULL AND (b.visibility = 'location' OR b.created_by = $2)`,
+     WHERE UPPER(b.short_code) = $1 AND b.deleted_at IS NULL AND (b.visibility = 'location' OR b.created_by = $2)`,
     [code, req.user!.id]
   );
 
@@ -181,7 +180,7 @@ router.get('/lookup/:shortCode', asyncHandler(async (req, res) => {
   res.json(result.rows[0]);
 }));
 
-// POST /api/bins/:id/change-code — change a bin's shortcode (admin only)
+// POST /api/bins/:id/change-code — change a bin's short code (admin only)
 router.post('/:id/change-code', sensitiveAuthLimiter, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { code } = req.body;
@@ -193,98 +192,34 @@ router.post('/:id/change-code', sensitiveAuthLimiter, asyncHandler(async (req, r
   const newCode = code.toUpperCase();
   validateCodeFormat(newCode);
 
-  if (newCode === id.toUpperCase()) {
-    throw new ValidationError('New code is the same as current code');
-  }
-
   // Verify access to target bin
   const access = await verifyBinAccess(id, req.user!.id);
   if (!access) {
     throw new NotFoundError('Bin not found');
   }
 
+  const currentResult = await query<{ short_code: string }>('SELECT short_code FROM bins WHERE id = $1', [id]);
+  if (currentResult.rows.length === 0) throw new NotFoundError('Bin not found');
+  const oldCode = currentResult.rows[0].short_code;
+
+  if (newCode === oldCode.toUpperCase()) {
+    throw new ValidationError('New code is the same as current code');
+  }
+
   await requireAdmin(access.locationId, req.user!.id, 'change bin code');
 
-  // Check if newCode belongs to an existing bin (including trashed)
-  const existingResult = await query<{ id: string; name: string; location_id: string }>(
-    'SELECT id, name, location_id FROM bins WHERE UPPER(id) = $1',
-    [newCode]
+  // Check uniqueness within location
+  const conflict = await query<{ id: string }>(
+    'SELECT id FROM bins WHERE location_id = $1 AND UPPER(short_code) = $2 AND id != $3',
+    [access.locationId, newCode, id]
   );
-  const existingBin = existingResult.rows[0] ?? null;
-
-  // Cross-location permission check
-  if (existingBin && existingBin.location_id !== access.locationId) {
-    await requireAdmin(existingBin.location_id, req.user!.id, 'change bin code');
+  if (conflict.rows.length > 0) {
+    throw new ValidationError('This code is already in use in this location');
   }
 
-  // Fetch photo paths before transaction (CASCADE will delete these rows)
-  let existingPhotos: { storage_path: string; thumb_path: string | null }[] = [];
-  if (existingBin) {
-    const photosResult = await query<{ storage_path: string; thumb_path: string | null }>(
-      'SELECT storage_path, thumb_path FROM photos WHERE bin_id = $1',
-      [existingBin.id]
-    );
-    existingPhotos = photosResult.rows;
-  }
+  await query(`UPDATE bins SET short_code = $1, updated_at = ${d.now()} WHERE id = $2`, [newCode, id]);
 
-  // Run the transaction
-  await withTransaction(async (tx) => {
-    // defer_foreign_keys is required because steps below update child rows
-    // to reference newCode before the parent row with that ID exists.
-    if (getDialect() === 'sqlite') {
-      await tx('PRAGMA defer_foreign_keys = ON');
-    } else {
-      await tx('SET CONSTRAINTS ALL DEFERRED');
-    }
-
-    await tx('DELETE FROM bins WHERE id = $1', [newCode]);
-    await tx('UPDATE bin_items SET bin_id = $1 WHERE bin_id = $2', [newCode, id]);
-    await tx('UPDATE photos SET bin_id = $1 WHERE bin_id = $2', [newCode, id]);
-    await tx('UPDATE bin_custom_field_values SET bin_id = $1 WHERE bin_id = $2', [newCode, id]);
-    await tx('UPDATE pinned_bins SET bin_id = $1 WHERE bin_id = $2', [newCode, id]);
-    await tx('UPDATE scan_history SET bin_id = $1 WHERE bin_id = $2', [newCode, id]);
-    await tx(
-      `UPDATE photos SET
-        storage_path = replace(storage_path, $1 || '/', $2 || '/'),
-        thumb_path = CASE WHEN thumb_path IS NOT NULL
-          THEN replace(thumb_path, $3 || '/', $4 || '/')
-          ELSE NULL END
-        WHERE bin_id = $5`,
-      [id, newCode, id, newCode, newCode],
-    );
-    await tx("UPDATE activity_log SET entity_id = $1 WHERE entity_id = $2 AND entity_type = 'bin'", [newCode, id]);
-    await tx(`UPDATE bins SET id = $1, updated_at = ${d.now()} WHERE id = $2`, [newCode, id]);
-  });
-
-  // Post-transaction: clean up deleted bin's photos from storage
-  if (existingPhotos.length > 0) {
-    await cleanupBinPhotos(newCode, existingPhotos);
-  }
-
-  // Rename target bin's photo directory
-  const oldDir = path.join(config.photoStoragePath, id);
-  const newDir = path.join(config.photoStoragePath, newCode);
-  try {
-    fs.renameSync(oldDir, newDir);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-      createLogger('bins').error(`Failed to rename photo directory ${oldDir} → ${newDir}:`, err);
-    }
-  }
-
-  // Activity logging (fire-and-forget, post-transaction)
-  if (existingBin) {
-    logRouteActivity(req, {
-      entityType: 'bin',
-      locationId: existingBin.location_id,
-      action: 'permanent_delete',
-      entityId: newCode,
-      entityName: existingBin.name,
-    });
-  }
-
-  // Return updated bin
-  const updatedBin = await fetchBinById(newCode, { userId: req.user!.id });
+  const updatedBin = await fetchBinById(id, { userId: req.user!.id });
   if (!updatedBin) {
     throw new NotFoundError('Bin not found after code change');
   }
@@ -293,9 +228,9 @@ router.post('/:id/change-code', sensitiveAuthLimiter, asyncHandler(async (req, r
     entityType: 'bin',
     locationId: access.locationId,
     action: 'code_changed',
-    entityId: newCode,
+    entityId: id,
     entityName: updatedBin.name,
-    changes: { code: { old: id, new: newCode } },
+    changes: { code: { old: oldCode, new: newCode } },
   });
 
   res.json(updatedBin);

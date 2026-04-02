@@ -29,6 +29,7 @@ import {
 
 export interface DryRunBin {
   id?: string;
+  shortCode?: string;
   name: string;
   items?: unknown[];
   tags?: string[];
@@ -69,24 +70,25 @@ export interface FullImportResult {
 export async function buildDryRunPreview(
   bins: DryRunBin[],
   importMode: 'merge' | 'replace',
+  locationId?: string,
 ) {
   const toCreate: { name: string; itemCount: number; tags: string[] }[] = [];
   const toSkip: { name: string; reason: string }[] = [];
   let totalItems = 0;
 
-  // Batch-fetch existing IDs in one query when merge mode
-  let existingIds: Set<string> | undefined;
-  if (importMode === 'merge') {
-    const ids = bins.map(b => b.id).filter((id): id is string => !!id);
-    if (ids.length > 0) {
-      const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
-      const rows = await query<{ id: string }>(
-        `SELECT id FROM bins WHERE id IN (${placeholders})`,
-        ids,
+  // Batch-fetch existing short codes within the target location when merge mode
+  let existingShortCodes: Set<string> | undefined;
+  if (importMode === 'merge' && locationId) {
+    const shortCodes = bins.map(b => b.shortCode).filter((sc): sc is string => !!sc);
+    if (shortCodes.length > 0) {
+      const placeholders = shortCodes.map((_, i) => `$${i + 2}`).join(', ');
+      const rows = await query<{ short_code: string }>(
+        `SELECT short_code FROM bins WHERE location_id = $1 AND short_code IN (${placeholders})`,
+        [locationId, ...shortCodes],
       );
-      existingIds = new Set(rows.rows.map(r => r.id));
+      existingShortCodes = new Set(rows.rows.map(r => r.short_code));
     } else {
-      existingIds = new Set();
+      existingShortCodes = new Set();
     }
   }
 
@@ -94,7 +96,7 @@ export async function buildDryRunPreview(
     const items = bin.items || [];
     totalItems += items.length;
 
-    if (existingIds && bin.id && existingIds.has(bin.id)) {
+    if (existingShortCodes && bin.shortCode && existingShortCodes.has(bin.shortCode)) {
       toSkip.push({ name: bin.name, reason: 'already exists' });
       continue;
     }
@@ -184,8 +186,8 @@ export async function executeFullImportTransaction(params: FullImportParams): Pr
     const oldToNewBinId = new Map<string, string>();
 
     async function importSingleBin(bin: ExportBin, opts?: { deletedAt?: string | null }): Promise<boolean> {
-      if (importMode === 'merge') {
-        const existing = await tx('SELECT id FROM bins WHERE id = $1', [bin.id]);
+      if (importMode === 'merge' && bin.shortCode) {
+        const existing = await tx('SELECT id FROM bins WHERE location_id = $1 AND short_code = $2', [locationId, bin.shortCode]);
         if (existing.rows.length > 0) return false;
       }
 
@@ -196,7 +198,7 @@ export async function executeFullImportTransaction(params: FullImportParams): Pr
       }
 
       const resolvedCreatedBy = await resolveCreatedBy(bin.createdBy, userId, tx);
-      const binId = await insertBinWithShortCode('', locationId, {
+      const binId = await insertBinWithShortCode(locationId, {
         name: bin.name,
         notes: bin.notes || '',
         tags: bin.tags || [],

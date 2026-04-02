@@ -20,7 +20,7 @@ export function binMatchesSearch(bin: Bin, regex: RegExp): boolean {
     (Array.isArray(bin.items) ? bin.items : []).some((item) => regex.test(item.name)) ||
     regex.test(bin.notes) ||
     (Array.isArray(bin.tags) ? bin.tags : []).some((tag: string) => regex.test(tag)) ||
-    regex.test(bin.id) ||
+    regex.test(bin.short_code) ||
     (bin.custom_fields != null && Object.values(bin.custom_fields).some((v) => regex.test(v)))
   );
 }
@@ -332,13 +332,13 @@ export async function moveBin(id: string, locationId: string): Promise<void> {
 }
 
 export async function lookupBinByCode(shortCode: string): Promise<Bin> {
-  return apiFetch<Bin>(`/api/bins/${encodeURIComponent(shortCode.toUpperCase())}`);
+  return apiFetch<Bin>(`/api/bins/lookup/${encodeURIComponent(shortCode.toUpperCase())}`);
 }
 
 /** Look up a bin by code. Returns the bin if found, null if not found / deleted / forbidden. */
 export async function lookupBinByCodeSafe(code: string): Promise<{ bin: Bin | null; status: 'found' | 'not_found' | 'deleted' | 'forbidden' }> {
   try {
-    const bin = await apiFetch<Bin>(`/api/bins/${encodeURIComponent(code.toUpperCase())}`);
+    const bin = await apiFetch<Bin>(`/api/bins/lookup/${encodeURIComponent(code.toUpperCase())}`);
     return { bin, status: 'found' };
   } catch (err) {
     if (err instanceof ApiError) {
@@ -356,8 +356,6 @@ export async function changeCode(binId: string, newCode: string): Promise<Bin> {
     body: { code: newCode.toUpperCase() },
   });
   notifyBinsChanged();
-  notify(Events.PINS);
-  notify(Events.SCAN_HISTORY);
   return result;
 }
 

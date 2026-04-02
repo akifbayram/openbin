@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChangeCodeDialog } from '../ChangeCodeDialog';
 
@@ -22,51 +21,27 @@ vi.mock('@/components/ui/toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }));
 
-const mockNavigate = vi.fn();
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return { ...actual, useNavigate: () => mockNavigate };
-});
-
 describe('ChangeCodeDialog', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('renders with Change Code title', () => {
     render(
-      <MemoryRouter>
-        <ChangeCodeDialog
-          open={true}
-          onOpenChange={() => {}}
-          currentBin={{ id: 'ABCDEF', name: 'My Bin' }}
-        />
-      </MemoryRouter>
+      <ChangeCodeDialog
+        open={true}
+        onOpenChange={() => {}}
+        currentBin={{ id: 'uuid-1', short_code: 'ABCDEF', name: 'My Bin' }}
+      />
     );
     expect(screen.getByText('Change Code')).toBeTruthy();
   });
 
-  it('shows mode selector with both options', () => {
-    render(
-      <MemoryRouter>
-        <ChangeCodeDialog
-          open={true}
-          onOpenChange={() => {}}
-          currentBin={{ id: 'ABCDEF', name: 'My Bin' }}
-        />
-      </MemoryRouter>
-    );
-    expect(screen.getByText('Use a new code')).toBeTruthy();
-    expect(screen.getByText('Give code away')).toBeTruthy();
-  });
-
   it('auto-uppercases manual input', () => {
     render(
-      <MemoryRouter>
-        <ChangeCodeDialog
-          open={true}
-          onOpenChange={() => {}}
-          currentBin={{ id: 'ABCDEF', name: 'My Bin' }}
-        />
-      </MemoryRouter>
+      <ChangeCodeDialog
+        open={true}
+        onOpenChange={() => {}}
+        currentBin={{ id: 'uuid-1', short_code: 'ABCDEF', name: 'My Bin' }}
+      />
     );
     const input = screen.getByPlaceholderText('Enter code...');
     fireEvent.change(input, { target: { value: 'abcxyz' } });
@@ -75,17 +50,28 @@ describe('ChangeCodeDialog', () => {
 
   it('disables lookup button for invalid codes', () => {
     render(
-      <MemoryRouter>
-        <ChangeCodeDialog
-          open={true}
-          onOpenChange={() => {}}
-          currentBin={{ id: 'ABCDEF', name: 'My Bin' }}
-        />
-      </MemoryRouter>
+      <ChangeCodeDialog
+        open={true}
+        onOpenChange={() => {}}
+        currentBin={{ id: 'uuid-1', short_code: 'ABCDEF', name: 'My Bin' }}
+      />
     );
     const input = screen.getByPlaceholderText('Enter code...');
     fireEvent.change(input, { target: { value: 'AB' } });
     const btn = screen.getByRole('button', { name: /look up/i });
     expect(btn).toBeDisabled();
+  });
+
+  it('shows same-code warning when entering current short_code', () => {
+    render(
+      <ChangeCodeDialog
+        open={true}
+        onOpenChange={() => {}}
+        currentBin={{ id: 'uuid-1', short_code: 'ABCDEF', name: 'My Bin' }}
+      />
+    );
+    const input = screen.getByPlaceholderText('Enter code...');
+    fireEvent.change(input, { target: { value: 'ABCDEF' } });
+    expect(screen.getByText("This is already this bin's code.")).toBeTruthy();
   });
 });

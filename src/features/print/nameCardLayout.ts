@@ -84,7 +84,7 @@ export function computeUniformFontSize(
 ): number {
   return Math.min(
     ...bins.map((bin) => {
-      const displayName = bin.name || bin.id;
+      const displayName = bin.name || bin.short_code;
       const hasIcon = showIcon && !!bin.icon;
       return computeNameFontSize({ cellWidthPt: cellWPt, cellHeightPt: cellHPt, paddingPt, name: displayName, hasIcon }).fontSizePt;
     }),

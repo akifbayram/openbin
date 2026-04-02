@@ -23,7 +23,7 @@ export function ItemSheet({ bins, showCheckboxes, showQuantity, showBinCode }: I
           <div className="item-sheet-header">
             <span className="item-sheet-bin-name">{bin.name}</span>
             {showBinCode && (
-              <span className="item-sheet-bin-code">{bin.id}</span>
+              <span className="item-sheet-bin-code">{bin.short_code}</span>
             )}
           </div>
           {bin.items.length === 0 ? (

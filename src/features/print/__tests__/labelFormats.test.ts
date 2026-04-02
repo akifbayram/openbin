@@ -271,6 +271,7 @@ describe('computeCodeFontSize', () => {
 describe('buildColorMap', () => {
   const makeBin = (id: string, color: string): Bin => ({
     id,
+    short_code: id.slice(0, 6).toUpperCase().padEnd(6, 'X'),
     location_id: 'loc1',
     name: `Bin ${id}`,
     area_id: null,

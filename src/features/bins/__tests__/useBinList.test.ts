@@ -28,6 +28,7 @@ const mockUseAuth = vi.mocked(useAuth);
 function makeBin(overrides: Partial<Bin> = {}): Bin {
   return {
     id: 'bin-1',
+    short_code: 'TSTBIN',
     location_id: 'loc-1',
     name: 'Test Bin',
     area_id: null,
@@ -107,7 +108,7 @@ describe('lookupBinByCode', () => {
     const result = await lookupBinByCode('a1b2c3');
 
     expect(result).toEqual(bin);
-    expect(mockApiFetch).toHaveBeenCalledWith('/api/bins/A1B2C3');
+    expect(mockApiFetch).toHaveBeenCalledWith('/api/bins/lookup/A1B2C3');
   });
 });
 
@@ -241,10 +242,10 @@ describe('useBinList', () => {
     expect(result.current.bins[0].id).toBe('1');
   });
 
-  it('search: filters by bin ID (short code)', async () => {
+  it('search: filters by short code', async () => {
     const bins = [
-      makeBin({ id: 'XY7Z9K', name: 'Bin A' }),
-      makeBin({ id: 'AB3CD4', name: 'Bin B' }),
+      makeBin({ id: 'uuid-1', short_code: 'XY7Z9K', name: 'Bin A' }),
+      makeBin({ id: 'uuid-2', short_code: 'AB3CD4', name: 'Bin B' }),
     ];
     mockApiFetch.mockResolvedValue({ results: bins, count: bins.length });
 
@@ -254,7 +255,7 @@ describe('useBinList', () => {
       expect(result.current.isLoading).toBe(false);
     });
     expect(result.current.bins).toHaveLength(1);
-    expect(result.current.bins[0].id).toBe('XY7Z9K');
+    expect(result.current.bins[0].short_code).toBe('XY7Z9K');
   });
 
   // -- filters --------------------------------------------------------------

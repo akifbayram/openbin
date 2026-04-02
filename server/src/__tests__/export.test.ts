@@ -170,12 +170,13 @@ describe('POST /api/locations/:id/import', () => {
     const location = await createTestLocation(app, token);
     const bin = await createTestBin(app, token, location.id, { name: 'Existing' });
 
+    // Merge mode now checks by shortCode within location, not by id
     const res = await request(app)
       .post(`/api/locations/${location.id}/import`)
       .set('Authorization', `Bearer ${token}`)
       .send({
         bins: [
-          { id: bin.id, name: 'Existing', items: [], notes: '', tags: [], icon: '', color: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), photos: [] },
+          { id: 'ignored-uuid', shortCode: bin.short_code, name: 'Existing', items: [], notes: '', tags: [], icon: '', color: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), photos: [] },
         ],
         mode: 'merge',
       });

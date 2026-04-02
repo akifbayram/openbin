@@ -12,7 +12,7 @@ const { updateBin } = await import('../useBins');
 const { useToast } = await import('@/components/ui/toast');
 
 const mockBin: Bin = {
-  id: 'abc123', location_id: 'loc-1', name: 'Test Bin', area_id: null, area_name: '',
+  id: 'abc123', short_code: 'ABC123', location_id: 'loc-1', name: 'Test Bin', area_id: null, area_name: '',
   items: [{ id: '1', name: 'Item A', quantity: 2 }, { id: '2', name: 'Item B', quantity: null }],
   notes: 'notes', tags: ['tag1'], icon: '', color: '', card_style: '', created_by: 'u1',
   created_by_name: 'User', visibility: 'location', custom_fields: { f1: 'val' },

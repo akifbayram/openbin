@@ -31,6 +31,7 @@ import { useBulkActions } from '../useBulkActions';
 
 function makeBin(overrides: Partial<Bin> & { id: string }): Bin {
   return {
+    short_code: 'TSTBIN',
     location_id: 'loc-1',
     name: 'Bin',
     area_id: null,

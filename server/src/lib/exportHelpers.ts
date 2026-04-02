@@ -111,7 +111,7 @@ export interface ExportData {
  */
 export async function fetchLocationBins(locationId: string) {
   const result = await query(
-    `SELECT b.id, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
+    `SELECT b.id, b.short_code, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
        COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))}
          FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
        b.notes, b.tags, b.icon, b.color, b.card_style, b.visibility,
@@ -268,7 +268,6 @@ export async function buildAreaPathMap(locationId: string): Promise<Map<string, 
  * Otherwise uses the top-level `query` function.
  */
 export async function insertBinWithShortCode(
-  _binId: string,
   locationId: string,
   bin: { name: string; notes: string; tags: string[]; icon: string; color: string; cardStyle?: string; visibility?: 'location' | 'private'; customFields?: Record<string, string>; shortCode?: string; deletedAt?: string | null; createdAt: string; updatedAt: string },
   areaId: string | null,
@@ -276,14 +275,15 @@ export async function insertBinWithShortCode(
   tx?: TxQueryFn,
 ): Promise<string> {
   const q = tx ?? query;
-  const validCode = bin.shortCode && /^[A-Z0-9]{6}$/.test(bin.shortCode) ? bin.shortCode : undefined;
+  const id = generateUuid();
+  const validCode = bin.shortCode && /^[A-Z0-9]{4,8}$/.test(bin.shortCode) ? bin.shortCode : undefined;
   for (let attempt = 0; attempt <= 10; attempt++) {
-    const id = attempt === 0 && validCode ? validCode : generateShortCode(bin.name);
+    const shortCode = attempt === 0 && validCode ? validCode : generateShortCode(bin.name);
     try {
       await q(
-        `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, visibility, created_by, created_at, updated_at, deleted_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-        [id, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle || '', bin.visibility || 'location', userId, bin.createdAt, bin.updatedAt, bin.deletedAt || null]
+        `INSERT INTO bins (id, short_code, location_id, name, area_id, notes, tags, icon, color, card_style, visibility, created_by, created_at, updated_at, deleted_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        [id, shortCode, locationId, bin.name, areaId, bin.notes, bin.tags, bin.icon, bin.color, bin.cardStyle || '', bin.visibility || 'location', userId, bin.createdAt, bin.updatedAt, bin.deletedAt || null]
       );
       if (bin.customFields && Object.keys(bin.customFields).length > 0) {
         await replaceCustomFieldValues(id, bin.customFields, locationId, tx);
@@ -425,7 +425,7 @@ export function mapCustomFieldsToIds(
  */
 export async function fetchTrashedBins(locationId: string) {
   const result = await query(
-    `SELECT b.id, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
+    `SELECT b.id, b.short_code, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
        COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))}
          FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items,
        b.notes, b.tags, b.icon, b.color, b.card_style, b.visibility,
@@ -726,7 +726,7 @@ export function buildExportBinEntry(
     cardStyle: (bin.card_style as string) || undefined,
     visibility: bin.visibility !== 'location' ? (bin.visibility as 'private') : undefined,
     customFields,
-    shortCode: bin.id as string,
+    shortCode: bin.short_code as string,
     createdBy: (bin.created_by as string) || undefined,
     deletedAt: opts?.includeTrashed ? (bin.deleted_at as string) : undefined,
     createdAt: bin.created_at as string,

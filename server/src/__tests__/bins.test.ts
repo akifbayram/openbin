@@ -29,7 +29,8 @@ describe('POST /api/bins', () => {
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('Electronics');
     expect(res.body.id).toBeDefined();
-    expect(res.body.id).toHaveLength(6);
+    expect(res.body.id).toHaveLength(36); // UUID
+    expect(res.body.short_code).toHaveLength(6);
     expect(res.body.tags).toEqual(['tech', 'office']);
     expect(res.body.notes).toBe('Spare parts');
   });
@@ -42,8 +43,9 @@ describe('POST /api/bins', () => {
     const bin2 = await createTestBin(app, token, location.id);
 
     expect(bin1.id).not.toBe(bin2.id);
-    expect(bin1.id).toHaveLength(6);
-    expect(bin2.id).toHaveLength(6);
+    expect(bin1.id).toHaveLength(36); // UUID
+    expect(bin1.short_code).toHaveLength(6);
+    expect(bin2.short_code).toHaveLength(6);
   });
 
   it('returns 403 for non-member', async () => {
@@ -422,7 +424,7 @@ describe('GET /api/bins/lookup/:shortCode', () => {
     const bin = await createTestBin(app, token, location.id, { name: 'Lookup Bin' });
 
     const res = await request(app)
-      .get(`/api/bins/lookup/${bin.id}`)
+      .get(`/api/bins/lookup/${bin.short_code}`)
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
@@ -560,7 +562,8 @@ describe('POST /api/bins/:id/duplicate', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.id).toBeDefined();
-    expect(res.body.id).toHaveLength(6);
+    expect(res.body.id).toHaveLength(36); // UUID
+    expect(res.body.short_code).toHaveLength(6);
     expect(res.body.id).not.toBe(original.id);
     expect(res.body.name).toBe('Copy of Electronics');
     expect(res.body.location_id).toBe(location.id);

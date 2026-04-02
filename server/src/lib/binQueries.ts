@@ -2,7 +2,7 @@ import { d, getDialect, query } from '../db.js';
 
 /** Shared SELECT columns for bin queries (requires b alias for bins, a alias for areas). */
 export function BIN_SELECT_COLS(): string {
-  return `b.id, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))} FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items, b.notes, b.tags, b.icon, b.color, b.card_style, b.created_by, COALESCE((SELECT COALESCE(u.display_name, u.username) FROM users u WHERE u.id = b.created_by), '') AS created_by_name, b.visibility, b.created_at, b.updated_at, COALESCE((SELECT ${d.jsonGroupObject('bcfv.field_id', 'bcfv.value')} FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields`;
+  return `b.id, b.short_code, b.location_id, b.name, b.area_id, COALESCE(a.name, '') AS area_name, COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))} FROM (SELECT id, name, quantity FROM bin_items bi WHERE bi.bin_id = b.id ORDER BY bi.position) bi), '[]') AS items, b.notes, b.tags, b.icon, b.color, b.card_style, b.created_by, COALESCE((SELECT COALESCE(u.display_name, u.username) FROM users u WHERE u.id = b.created_by), '') AS created_by_name, b.visibility, b.created_at, b.updated_at, COALESCE((SELECT ${d.jsonGroupObject('bcfv.field_id', 'bcfv.value')} FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields`;
 }
 
 /**
@@ -63,7 +63,7 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   if (filters.q?.trim()) {
     const searchTerm = filters.q.trim();
     whereClauses.push(
-      `(${d.fuzzyMatch('b.name', `$${paramIdx}`)} OR ${d.fuzzyMatch('b.notes', `$${paramIdx}`)} OR ${d.fuzzyMatch('b.id', `$${paramIdx}`)} OR ${d.fuzzyMatch("COALESCE(a.name, '')", `$${paramIdx}`)} OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND ${d.fuzzyMatch('bi.name', `$${paramIdx}`)}) OR EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE ${d.fuzzyMatch('value', `$${paramIdx}`)}) OR EXISTS (SELECT 1 FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id AND ${d.fuzzyMatch('bcfv.value', `$${paramIdx}`)}))`
+      `(${d.fuzzyMatch('b.name', `$${paramIdx}`)} OR ${d.fuzzyMatch('b.notes', `$${paramIdx}`)} OR ${d.fuzzyMatch('b.short_code', `$${paramIdx}`)} OR ${d.fuzzyMatch("COALESCE(a.name, '')", `$${paramIdx}`)} OR EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id AND ${d.fuzzyMatch('bi.name', `$${paramIdx}`)}) OR EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE ${d.fuzzyMatch('value', `$${paramIdx}`)}) OR EXISTS (SELECT 1 FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id AND ${d.fuzzyMatch('bcfv.value', `$${paramIdx}`)}))`
     );
     params.push(searchTerm);
     paramIdx++;

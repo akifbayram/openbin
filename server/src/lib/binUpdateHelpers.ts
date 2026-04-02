@@ -164,18 +164,18 @@ export interface InsertBinFields {
  * Used by both create and duplicate handlers.
  */
 export async function insertBinWithItems(fields: InsertBinFields): Promise<Record<string, any>> {
-  const sc = generateShortCode(fields.name);
+  const binId = generateUuid();
   const maxRetries = 10;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const binId = attempt === 0 ? sc : generateShortCode(fields.name);
+    const shortCode = generateShortCode(fields.name);
 
     try {
       await withTransaction(async (tx) => {
         await tx(
-          `INSERT INTO bins (id, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-          [binId, fields.locationId, fields.name.trim(), fields.areaId, fields.notes, fields.tags, fields.icon, fields.color, fields.cardStyle, fields.createdBy, fields.visibility]
+          `INSERT INTO bins (id, short_code, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [binId, shortCode, fields.locationId, fields.name.trim(), fields.areaId, fields.notes, fields.tags, fields.icon, fields.color, fields.cardStyle, fields.createdBy, fields.visibility]
         );
 
         // Insert items

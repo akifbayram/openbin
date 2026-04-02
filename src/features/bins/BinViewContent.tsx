@@ -160,7 +160,7 @@ export function BinViewContent({
                 <div className="mb-4">
                   <Label>Code</Label>
                   <p className="mt-1.5 text-[15px] font-mono tracking-widest text-[var(--text-primary)]">
-                    {bin.id}
+                    {bin.short_code}
                   </p>
                 </div>
                 {bin.created_by_name && (
