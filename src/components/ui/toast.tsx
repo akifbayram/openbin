@@ -53,7 +53,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <output aria-live="assertive" aria-atomic="true" className="fixed bottom-[calc(16px+var(--safe-bottom))] lg:bottom-8 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none print-hide">
+      <output aria-live="assertive" aria-atomic="true" className="fixed bottom-[calc(12px+var(--bottom-bar-height)+var(--safe-bottom))] lg:bottom-8 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none print-hide">
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} />
         ))}

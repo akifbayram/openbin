@@ -55,6 +55,7 @@
   --page-px: 20px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --bottom-bar-height: 56px;
   --overlay-backdrop: rgba(0, 0, 0, 0.4);
   --overlay-heavy: rgba(0, 0, 0, 0.7);
   --overlay-button: rgba(0, 0, 0, 0.5);

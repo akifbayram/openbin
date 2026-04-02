@@ -28,6 +28,7 @@ import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
 import { useUserPreferences } from '@/lib/userPreferences';
 import { toggleSidebarCollapsed, useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
 import { cn } from '@/lib/utils';
+import { BottomNav } from './BottomNav';
 import { DrawerProvider } from './DrawerContext';
 import { MobileDrawer } from './MobileDrawer';
 import { Sidebar, SidebarContent } from './Sidebar';
@@ -190,10 +191,16 @@ export function AppLayout() {
         />
       </MobileDrawer>
 
+      <BottomNav
+        onNavigate={navigate}
+        onScanClick={openScanDialog}
+        onMoreClick={() => setDrawerOpen(true)}
+      />
+
       <ScanDialogContext.Provider value={{ openScanDialog }}>
       <DrawerProvider isOnboarding={onboarding.isOnboarding} onOpen={() => setDrawerOpen(true)}>
       <main id="main-content" className={cn(
-        'pt-[var(--safe-top)] lg:pt-[var(--safe-top)] pb-[calc(16px+var(--safe-bottom))] lg:pb-8 transition-[margin-left] duration-200 ease-in-out',
+        'pt-[var(--safe-top)] lg:pt-[var(--safe-top)] pb-[calc(16px+var(--bottom-bar-height)+var(--safe-bottom))] lg:pb-8 transition-[margin-left] duration-200 ease-in-out',
         sidebarCollapsed ? 'lg:ml-[var(--sidebar-collapsed-width)]' : 'lg:ml-[var(--sidebar-width)]',
       )}>
         {(showLockedBanner || (!isLocked && isOverAnyLimit && !isSelfHosted)) && (
@@ -246,7 +253,7 @@ export function AppLayout() {
       )}
       {/* PWA install toast — fixed bottom-left (mobile) / bottom-right (desktop) */}
       {installPrompt && !dismissed && (
-        <div className="fixed z-40 bottom-[calc(16px+var(--safe-bottom))] lg:bottom-6 left-4 right-4 lg:left-auto lg:right-6 lg:w-[360px] flat-heavy rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 fade-in-fast">
+        <div className="fixed z-40 bottom-[calc(12px+var(--bottom-bar-height)+var(--safe-bottom))] lg:bottom-6 left-4 right-4 lg:left-auto lg:right-6 lg:w-[360px] flat-heavy rounded-[var(--radius-lg)] px-4 py-3 flex items-center gap-3 fade-in-fast">
           <Download className="h-5 w-5 text-[var(--accent)] shrink-0" />
           <p className="flex-1 text-[14px] text-[var(--text-primary)]">
             Install {settings.appName}
