@@ -169,7 +169,7 @@ export function BinListPage() {
                     className="hidden lg:inline-flex h-10 w-10 rounded-[var(--radius-sm)]"
                     aria-label="Ask AI"
                   >
-                    <Sparkles className="h-5 w-5" />
+                    <Sparkles className="h-5 w-5" stroke="url(#ai-icon-gradient)" />
                   </Button>
                 </Tooltip>
               )}
@@ -277,19 +277,20 @@ export function BinListPage() {
             <div className={cn(selectable && "pb-16")}>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {bins.map((bin, index) => (
-                  <BinCompactCard
-                    key={bin.id}
-                    bin={bin}
-                    index={index}
-                    onTagClick={handleTagClick}
-                    selectable={selectable}
-                    selected={selectedIds.has(bin.id)}
-                    onSelect={toggleSelect}
-                    searchQuery={debouncedSearch}
-                    sort={sort}
-                    filters={filters}
-                    isVisible={isVisible}
-                  />
+                  <div key={bin.id} className="animate-card-stagger" style={{ '--stagger-index': Math.min(index, 11) } as React.CSSProperties}>
+                    <BinCompactCard
+                      bin={bin}
+                      index={index}
+                      onTagClick={handleTagClick}
+                      selectable={selectable}
+                      selected={selectedIds.has(bin.id)}
+                      onSelect={toggleSelect}
+                      searchQuery={debouncedSearch}
+                      sort={sort}
+                      filters={filters}
+                      isVisible={isVisible}
+                    />
+                  </div>
                 ))}
               </div>
               <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalCount={totalCount} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={setPageSize} itemLabel={t.bins} />
@@ -315,19 +316,20 @@ export function BinListPage() {
             <div className={cn(selectable && "pb-16")}>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {bins.map((bin, index) => (
-                  <BinCard
-                    key={bin.id}
-                    bin={bin}
-                    index={index}
-                    onTagClick={handleTagClick}
-                    selectable={selectable}
-                    selected={selectedIds.has(bin.id)}
-                    onSelect={toggleSelect}
-                    searchQuery={debouncedSearch}
-                    sort={sort}
-                    filters={filters}
-                    isVisible={isVisible}
-                  />
+                  <div key={bin.id} className="animate-card-stagger" style={{ '--stagger-index': Math.min(index, 11) } as React.CSSProperties}>
+                    <BinCard
+                      bin={bin}
+                      index={index}
+                      onTagClick={handleTagClick}
+                      selectable={selectable}
+                      selected={selectedIds.has(bin.id)}
+                      onSelect={toggleSelect}
+                      searchQuery={debouncedSearch}
+                      sort={sort}
+                      filters={filters}
+                      isVisible={isVisible}
+                    />
+                  </div>
                 ))}
               </div>
               <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalCount={totalCount} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={setPageSize} itemLabel={t.bins} />

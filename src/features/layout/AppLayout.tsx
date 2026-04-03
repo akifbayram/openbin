@@ -189,6 +189,15 @@ export function AppLayout() {
     <TagColorsProvider>
     <TourProvider tour={tour}>
     <div className="min-h-dvh bg-[var(--bg-base)] text-[var(--text-primary)] transition-colors duration-300">
+      {/* Global SVG gradient for AI icon */}
+      <svg width="0" height="0" className="absolute" aria-hidden="true">
+        <defs>
+          <linearGradient id="ai-icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#8b5cf6" />
+            <stop offset="100%" stopColor="#d946ef" />
+          </linearGradient>
+        </defs>
+      </svg>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:focus:bg-[var(--accent)] focus:text-[var(--text-on-accent)] focus:text-[14px] focus:font-medium "

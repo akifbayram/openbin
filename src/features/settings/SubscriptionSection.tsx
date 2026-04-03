@@ -9,26 +9,6 @@ import { getLockedMessage, usePlan } from '@/lib/usePlan';
 import { cn, focusRing } from '@/lib/utils';
 import type { PlanUsage } from '@/types';
 
-function UsageBar({ label, current, max }: { label: string; current: number; max: number }) {
-  const pct = max > 0 ? Math.min((current / max) * 100, 100) : 0;
-  const isOver = current > max;
-  const color = isOver ? 'bg-[var(--destructive)]' : pct > 90 ? 'bg-[var(--destructive)]' : pct > 70 ? 'bg-[var(--color-warning)]' : 'bg-[var(--color-success)]';
-
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-[13px]">
-        <span className="text-[var(--text-secondary)]">{label}</span>
-        <span className={cn('text-[var(--text-tertiary)]', isOver && 'text-[var(--destructive)] font-semibold')}>
-          {current} / {max}{isOver && ' — Over limit'}
-        </span>
-      </div>
-      <div className="h-2 rounded-[var(--radius-xs)] bg-[var(--bg-input)] overflow-hidden" role="progressbar" aria-valuenow={current} aria-valuemin={0} aria-valuemax={max} aria-label={label}>
-        <div className={cn('h-full rounded-[var(--radius-xs)] transition-all', color)} style={{ width: `${Math.min(pct, 100)}%` }} />
-      </div>
-    </div>
-  );
-}
-
 export function SubscriptionSection() {
   const { planInfo, isPro, isLite, isSelfHosted, isLocked, refresh } = usePlan();
   const { showToast } = useToast();
@@ -196,22 +176,32 @@ export function SubscriptionSection() {
             <div className="space-y-2 pt-1">
               <p className="text-[13px] font-semibold text-[var(--text-primary)]">Usage</p>
               {planInfo.features.maxLocations !== null && (
-                <UsageBar label="Locations" current={usage.locationCount} max={planInfo.features.maxLocations} />
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-[var(--text-secondary)]">Locations</span>
+                  <span className={cn('tabular-nums text-[var(--text-tertiary)]', usage.locationCount > planInfo.features.maxLocations && 'text-[var(--destructive)] font-semibold')}>
+                    {usage.locationCount} / {planInfo.features.maxLocations}{usage.locationCount > planInfo.features.maxLocations && ' — Over limit'}
+                  </span>
+                </div>
               )}
               {planInfo.features.maxPhotoStorageMb !== null && (
-                <UsageBar
-                  label={`Photo Storage (${usage.photoStorageMb.toFixed(1)} MB / ${planInfo.features.maxPhotoStorageMb} MB)`}
-                  current={usage.photoStorageMb}
-                  max={planInfo.features.maxPhotoStorageMb}
-                />
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-[var(--text-secondary)]">Photo Storage</span>
+                  <span className={cn('tabular-nums text-[var(--text-tertiary)]', usage.photoStorageMb > planInfo.features.maxPhotoStorageMb && 'text-[var(--destructive)] font-semibold')}>
+                    {usage.photoStorageMb.toFixed(1)} MB / {planInfo.features.maxPhotoStorageMb} MB{usage.photoStorageMb > planInfo.features.maxPhotoStorageMb && ' — Over limit'}
+                  </span>
+                </div>
               )}
-              {planInfo.features.maxMembersPerLocation !== null && (
-                <UsageBar
-                  label="Members per location"
-                  current={Math.max(0, ...Object.values(usage.memberCounts))}
-                  max={planInfo.features.maxMembersPerLocation}
-                />
-              )}
+              {planInfo.features.maxMembersPerLocation !== null && (() => {
+                const maxMembers = Math.max(0, ...Object.values(usage.memberCounts));
+                return (
+                  <div className="flex items-center justify-between text-[13px]">
+                    <span className="text-[var(--text-secondary)]">Members per Location</span>
+                    <span className={cn('tabular-nums text-[var(--text-tertiary)]', maxMembers > planInfo.features.maxMembersPerLocation && 'text-[var(--destructive)] font-semibold')}>
+                      {maxMembers} / {planInfo.features.maxMembersPerLocation}{maxMembers > planInfo.features.maxMembersPerLocation && ' — Over limit'}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

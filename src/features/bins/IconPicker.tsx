@@ -20,14 +20,14 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-label={`Icon: ${displayName}`}
-        className="row w-full px-3 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors border border-[var(--border-subtle)]"
+        className="row w-full px-3.5 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors border border-[var(--border-flat)]"
       >
         <CurrentIcon className="h-5 w-5 text-[var(--text-tertiary)]" />
         <span className="flex-1 text-left">{displayName}</span>
         {open ? <ChevronUp className="h-4 w-4 text-[var(--text-tertiary)]" /> : <ChevronDown className="h-4 w-4 text-[var(--text-tertiary)]" />}
       </button>
       {open && (
-        <div className="grid grid-cols-6 gap-1.5 p-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+        <div className="grid grid-cols-6 gap-1.5 p-2 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-elevated)]">
           {ICON_NAMES.map((name) => {
             const Icon = ICON_MAP[name];
             const isSelected = (value || 'Package') === name;

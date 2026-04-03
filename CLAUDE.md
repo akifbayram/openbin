@@ -24,6 +24,8 @@ Inventory with intelligence. Multi-user web app for organizing physical storage 
 - **Soft deletes**: `DELETE /api/bins/:id` sets `deleted_at`. All bin queries filter `WHERE deleted_at IS NULL`.
 - **API response envelopes**: Lists return `{ results: T[], count }`. Errors return `{ error: "CODE", message }`. See `server/openapi.yaml` for details.
 - **CSS**: use `var(--token)` design tokens, not raw colors. Surface classes `flat-card`, `flat-nav`, `flat-heavy`, `flat-popover` provide opaque backgrounds with solid borders — no blur, no shadow. Use `cn()` from `lib/utils.ts` (clsx + tailwind-merge) for className composition. **Do not** add `backdrop-blur-*`, `shadow-*`, or `rounded-full` (except pills/avatars) — the design is deliberately flat.
+- **Border tokens**: `--border-flat` for structural/container borders (cards, inputs, pickers, panels). `--border-subtle` for internal separators (dividers between list items, section breaks within a card).
+- **Shared class constants** in `lib/utils.ts`: `inputBase` (form controls), `flatCard`, `focusRing`, `focusRingInset`, `categoryHeader`, `iconButton`, `rowAction`, `overlayBackdrop`, `disclosureSectionLabel`. Use these instead of hand-rolling the same patterns.
 - **Icons**: `lucide-react` — import named icons (e.g. `import { Plus } from 'lucide-react'`).
 - **Responsive**: mobile-first. Breakpoint `lg` (1024px).
 - **Server error handling**: Routes use `throw new ValidationError(...)` etc. from `server/src/lib/httpErrors.ts`, wrapped in `asyncHandler()` to forward to the global error handler.
@@ -81,7 +83,7 @@ docker compose up -d          # Full stack
 
 - **Docker image publish**: Push a `v*` tag to trigger `.github/workflows/docker-publish.yml` → builds multi-arch image to `ghcr.io/akifbayram/openbin`.
 - **Commit messages**: No parentheses in commit prefixes — use `feat: description` not `feat(area): description`.
-- Run `npx biome check .` and `npx tsc --noEmit` before committing. Run `npx vitest run path/to/test` for targeted tests over the full suite.
+- Run `npm run check` (frontend + server type check) and `npx biome check .` before committing. Run `npx vitest run path/to/test` for targeted tests over the full suite.
 - When compacting context, preserve the full list of modified files and any failing test output.
 
 ## Testing

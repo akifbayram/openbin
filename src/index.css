@@ -367,6 +367,29 @@ body {
   .animate-success-pulse { animation: none !important; }
 }
 
+/* ─── Item Save Flash ─── */
+@keyframes save-flash {
+  from { background-color: color-mix(in srgb, var(--accent) 12%, transparent); }
+  to { background-color: transparent; }
+}
+.animate-save-flash {
+  animation: save-flash 600ms ease-out;
+}
+
+/* ─── Item Expand Reveal ─── */
+@keyframes item-reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-item-reveal {
+  animation: item-reveal 200ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-save-flash { animation: none !important; }
+  .animate-item-reveal { animation: none !important; opacity: 1 !important; }
+}
+
 /* ─── Streaming Cursor Blink ─── */
 @keyframes cursor-blink {
   0%, 100% { opacity: 1; }
@@ -437,34 +460,11 @@ body {
 .ai-photo-shimmer-fast::after { animation-duration: 2.5s; }
 .ai-photo-shimmer-fast img { animation-duration: 2.5s; }
 
-.ai-item-reveal {
-  display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
-  animation: aiFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.ai-item-reveal > * {
-  overflow: hidden;
-}
-
-@keyframes aiFadeIn {
-  from {
-    grid-template-rows: 0fr;
-    opacity: 0;
-  }
-  to {
-    grid-template-rows: 1fr;
-    opacity: 1;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .ai-photo-shimmer::before { background: rgba(0, 0, 0, 0.25); }
   .ai-photo-shimmer::after { animation: none !important; opacity: 0 !important; }
   .ai-photo-shimmer img { animation: none !important; filter: none !important; }
   .ai-photo-shrink { transition: none !important; }
-  .ai-item-reveal { animation: none !important; opacity: 1 !important; grid-template-rows: 1fr !important; }
 }
 
 /* --- AI Progress Bar --- */
@@ -503,15 +503,6 @@ body {
   .ai-thinking-pulse { animation: none !important; }
 }
 
-/* --- AI Content Enter (dialog state transitions) --- */
-.ai-content-enter {
-  animation: aiContentEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-@keyframes aiContentEnter {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
 /* --- AI Stagger Item (list reveals with inline animationDelay) --- */
 .ai-stagger-item {
   opacity: 0;
@@ -548,7 +539,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ai-content-enter,
   .ai-stagger-item,
   .ai-check-pop { animation: none !important; opacity: 1 !important; }
   .ai-correction-enter {

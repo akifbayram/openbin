@@ -161,7 +161,7 @@ export function DashboardPage() {
                     className="hidden lg:inline-flex h-10 w-10 rounded-[var(--radius-sm)]"
                     aria-label="Ask AI"
                   >
-                    <Sparkles className="h-5 w-5" />
+                    <Sparkles className="h-5 w-5" stroke="url(#ai-icon-gradient)" />
                   </Button>
                 </Tooltip>
               )}

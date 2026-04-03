@@ -1,12 +1,9 @@
-import { ArrowUpDown, Check, Search, Trash2, X } from 'lucide-react';
+import { ChevronDown, Search, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
-import { useClickOutside } from '@/lib/useClickOutside';
-import { useMenuKeyboard } from '@/lib/useMenuKeyboard';
-import { usePopover } from '@/lib/usePopover';
 import { cn, rowAction } from '@/lib/utils';
 import type { BinItem } from '@/types';
 import { removeItemFromBin, renameItem, reorderItems } from './useBins';
@@ -16,15 +13,16 @@ interface ItemListProps {
   items: BinItem[];
   binId?: string;
   readOnly?: boolean;
+  hideWhenEmpty?: boolean;
+  collapsible?: boolean;
   onItemsChange?: (items: BinItem[]) => void;
 }
-
-type SortMode = 'manual' | 'az' | 'za' | 'qty-desc' | 'qty-asc';
 
 interface ItemRowProps {
   text: string;
   quantity: number | null;
   isEditing: boolean;
+  saved?: boolean;
   onStartEdit: () => void;
   onSave: (value: string, quantity: number | null) => void;
   onCancel: () => void;
@@ -33,7 +31,7 @@ interface ItemRowProps {
 
 const SWIPE_THRESHOLD = 80;
 
-function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onDelete }: ItemRowProps) {
+function ItemRow({ text, quantity, isEditing, saved, onStartEdit, onSave, onCancel, onDelete }: ItemRowProps) {
   const [editValue, setEditValue] = useState(text);
   const [editQuantity, setEditQuantity] = useState<string>(quantity != null ? String(quantity) : '');
   const [inlineQty, setInlineQty] = useState(quantity != null ? String(quantity) : '');
@@ -126,7 +124,8 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
         ref={rowRef}
         className={cn(
           'relative row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors touch-pan-y',
-          !isEditing && 'group'
+          !isEditing && 'group',
+          saved && 'animate-save-flash'
         )}
         style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 0.2s ease' : 'none' }}
         onTouchStart={handleTouchStart}
@@ -160,8 +159,11 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
                 if (finalQty !== quantity) onSave(text, finalQty);
               }
           }
-          placeholder="1"
-          className="shrink-0 w-8 text-center text-[13px] tabular-nums text-[var(--text-tertiary)] bg-transparent outline-none focus:text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)]"
+          placeholder="—"
+          className={cn(
+            'shrink-0 w-8 text-center text-[13px] tabular-nums bg-transparent outline-none focus:text-[var(--text-primary)] placeholder:text-[var(--text-quaternary)]',
+            (isEditing ? editQuantity : inlineQty).trim() ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'
+          )}
           inputMode="numeric"
           aria-label="Quantity"
         />
@@ -216,39 +218,74 @@ function ItemRow({ text, quantity, isEditing, onStartEdit, onSave, onCancel, onD
   );
 }
 
-export function ItemList({ items, binId, readOnly, onItemsChange }: ItemListProps) {
+export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, onItemsChange }: ItemListProps) {
+  const storageKey = collapsible && binId ? `openbin-items-collapsed-${binId}` : null;
+  const [collapsed, setCollapsed] = useState(() => storageKey ? localStorage.getItem(storageKey) === 'true' : false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [sortMode, setSortMode] = useState<SortMode>('manual');
+  const [sortColumn, setSortColumn] = useState<'' | 'name' | 'qty'>('');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { showToast } = useToast();
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
   const pendingDeletesRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const savedTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  function markSaved(itemId: string) {
+    setSavedIds(prev => new Set(prev).add(itemId));
+    const existing = savedTimersRef.current.get(itemId);
+    if (existing) clearTimeout(existing);
+    savedTimersRef.current.set(itemId, setTimeout(() => {
+      setSavedIds(prev => { const next = new Set(prev); next.delete(itemId); return next; });
+      savedTimersRef.current.delete(itemId);
+    }, 600));
+  }
+
+  const [revealFrom, setRevealFrom] = useState<number | null>(null);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Optimistic local state for view mode (binId without onItemsChange).
+  // Mutations update localItems immediately and call the API with quiet:true
+  // to skip the full bin refetch, cutting API calls roughly in half.
+  const viewMode = binId != null && !onItemsChange;
+  const [localItems, setLocalItems] = useState(items);
+  const prevItemsRef2 = useRef(items);
+  if (items !== prevItemsRef2.current) {
+    prevItemsRef2.current = items;
+    setLocalItems(items);
+  }
+  const effectiveItems = viewMode ? localItems : items;
+
+  // Debounce reorder persistence — rapid sort toggles only persist the final order
+  const reorderTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => { if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current); }, []);
+
   const displayItems = useMemo(
-    () => items.filter((item) => !pendingDeleteIds.has(item.id)),
-    [items, pendingDeleteIds],
+    () => effectiveItems.filter((item) => !pendingDeleteIds.has(item.id)),
+    [effectiveItems, pendingDeleteIds],
   );
 
   const { showFilter, filterQuery, setFilterQuery, filteredCount, visibleIndices, hiddenCount, expand, collapse, canCollapse } =
     useCollapsibleList(displayItems.length, (i) => displayItems[i].name);
 
-  const handleSort = useCallback(async (mode: SortMode) => {
-    setSortMode(mode);
-    if (mode === 'manual') return;
+  const handleHeaderSort = useCallback((column: string, direction: SortDirection) => {
+    setSortColumn(column as '' | 'name' | 'qty');
+    setSortDirection(direction);
+    const source = viewMode ? localItems : items;
     let sorted: BinItem[];
-    if (mode === 'az' || mode === 'za') {
-      sorted = [...items].sort((a, b) =>
-        mode === 'az'
+    if (column === 'name') {
+      sorted = [...source].sort((a, b) =>
+        direction === 'asc'
           ? a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
           : b.name.localeCompare(a.name, undefined, { sensitivity: 'base' })
       );
     } else {
-      sorted = [...items].sort((a, b) => {
+      sorted = [...source].sort((a, b) => {
         const aNull = a.quantity == null;
         const bNull = b.quantity == null;
         if (aNull && bNull) return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
         if (aNull) return 1;
         if (bNull) return -1;
-        const diff = mode === 'qty-desc' ? (b.quantity as number) - (a.quantity as number) : (a.quantity as number) - (b.quantity as number);
+        const diff = direction === 'desc' ? (b.quantity as number) - (a.quantity as number) : (a.quantity as number) - (b.quantity as number);
         return diff !== 0 ? diff : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
       });
     }
@@ -256,29 +293,33 @@ export function ItemList({ items, binId, readOnly, onItemsChange }: ItemListProp
       onItemsChange(sorted);
       return;
     }
-    try {
-      if (!binId) return;
-      await reorderItems(binId, sorted.map((i) => i.id));
-    } catch {
-      showToast({ message: 'Failed to sort items', variant: 'error' });
-    }
-  }, [items, binId, onItemsChange, showToast]);
-
-  const { visible: sortOpen, animating: sortAnimating, close: sortClose, toggle: sortToggle } = usePopover();
-  const sortWrapperRef = useRef<HTMLDivElement>(null);
-  useClickOutside(sortWrapperRef, sortClose);
-  const { menuRef: sortMenuRef, onKeyDown: sortKeyDown } = useMenuKeyboard(sortOpen, sortClose);
+    if (!binId) return;
+    // Optimistic: update UI immediately
+    setLocalItems(sorted);
+    // Debounce the API call so rapid sort toggles only persist once
+    if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current);
+    reorderTimerRef.current = setTimeout(() => {
+      reorderItems(binId, sorted.map((i) => i.id), { quiet: true }).catch(() => {
+        showToast({ message: 'Failed to sort items', variant: 'error' });
+      });
+    }, 500);
+  }, [items, localItems, viewMode, binId, onItemsChange, showToast]);
 
   async function handleSaveEdit(itemId: string, value: string, quantity: number | null) {
     setEditingId(null);
     if (onItemsChange) {
       onItemsChange(items.map((i) => (i.id === itemId ? { ...i, name: value, quantity } : i)));
+      markSaved(itemId);
       return;
     }
+    if (!binId) return;
+    // Optimistic update
+    setLocalItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, name: value, quantity } : i)));
     try {
-      if (!binId) return;
-      await renameItem(binId, itemId, value, quantity);
+      await renameItem(binId, itemId, value, quantity, { quiet: true });
+      markSaved(itemId);
     } catch {
+      setLocalItems(items); // revert on failure
       showToast({ message: 'Failed to update item', variant: 'error' });
     }
   }
@@ -299,8 +340,11 @@ export function ItemList({ items, binId, readOnly, onItemsChange }: ItemListProp
       if (onItemsChangeRef.current) {
         onItemsChangeRef.current(itemsRef.current.filter((i) => i.id !== itemId));
       } else {
+        // Remove from local state so the item stays hidden
+        setLocalItems((prev) => prev.filter((i) => i.id !== itemId));
         if (binId) {
-          removeItemFromBin(binId, itemId).catch(() => {
+          removeItemFromBin(binId, itemId, { quiet: true }).catch(() => {
+            setLocalItems(itemsRef.current);
             setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(itemId); return next; });
             showToast({ message: 'Failed to delete item', variant: 'error' });
           });
@@ -337,7 +381,7 @@ export function ItemList({ items, binId, readOnly, onItemsChange }: ItemListProp
         if (onItemsChangeRef.current) {
           // handled below in batch
         } else {
-          if (binId) removeItemFromBin(binId, itemId).catch(() => {});
+          if (binId) removeItemFromBin(binId, itemId, { quiet: true }).catch(() => {});
         }
       }
       if (onItemsChangeRef.current && ref.current.size > 0) {
@@ -348,14 +392,23 @@ export function ItemList({ items, binId, readOnly, onItemsChange }: ItemListProp
     };
   }, [binId]);
 
-  const sortOptions: { key: SortMode; label: string }[] = [
-    { key: 'manual', label: 'Default' },
-    { key: 'az', label: 'A–Z' },
-    { key: 'za', label: 'Z–A' },
-    { key: 'qty-desc', label: 'Qty: High → Low' },
-    { key: 'qty-asc', label: 'Qty: Low → High' },
-  ];
-  const sortLabel = sortOptions.find((o) => o.key === sortMode)?.label ?? 'Sort';
+  useEffect(() => {
+    const save = savedTimersRef;
+    const reveal = revealTimerRef;
+    return () => {
+      for (const t of save.current.values()) clearTimeout(t);
+      clearTimeout(reveal.current);
+    };
+  }, []);
+
+  function handleExpand() {
+    setRevealFrom(visibleIndices.length);
+    expand();
+    clearTimeout(revealTimerRef.current);
+    revealTimerRef.current = setTimeout(() => setRevealFrom(null), 1000);
+  }
+
+  if (hideWhenEmpty && items.length === 0) return null;
 
   return (
     <div>
@@ -365,45 +418,26 @@ export function ItemList({ items, binId, readOnly, onItemsChange }: ItemListProp
             ? `${filteredCount} of ${displayItems.length} ${displayItems.length === 1 ? 'Item' : 'Items'}`
             : `${displayItems.length} ${displayItems.length === 1 ? 'Item' : 'Items'}`}
         </Label>
-        {!readOnly && items.length >= 2 && (
-          <div ref={sortWrapperRef} className="relative">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={sortToggle}
-              className="shrink-0 gap-1.5 h-8 px-3"
-            >
-              <ArrowUpDown className="h-3.5 w-3.5" />
-              <span className="text-[13px]">{sortMode === 'manual' ? 'Sort' : sortLabel}</span>
-            </Button>
-            {sortOpen && (
-              <div
-                ref={sortMenuRef}
-                role="menu"
-                onKeyDown={sortKeyDown}
-                className={cn(
-                  sortAnimating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
-                  'absolute right-0 mt-1 w-48 rounded-[var(--radius-md)] flat-popover overflow-hidden z-20',
-                )}
-              >
-                {sortOptions.map((opt) => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => { handleSort(opt.key); sortClose(); }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-                  >
-                    <Check className={cn('h-4 w-4', sortMode === opt.key ? 'text-[var(--accent)]' : 'invisible')} />
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+        {collapsible && (
+          <button
+            type="button"
+            onClick={() => setCollapsed((v) => {
+              const next = !v;
+              if (storageKey) {
+                if (next) localStorage.setItem(storageKey, 'true');
+                else localStorage.removeItem(storageKey);
+              }
+              return next;
+            })}
+            aria-label="Toggle items"
+            className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', !collapsed && 'rotate-180')} />
+          </button>
         )}
       </div>
 
-      {showFilter && (
+      {!collapsed && showFilter && (
         <div className="relative mb-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-quaternary)]" />
           <input
@@ -425,7 +459,7 @@ export function ItemList({ items, binId, readOnly, onItemsChange }: ItemListProp
         </div>
       )}
 
-      {displayItems.length === 0 ? (
+      {collapsed ? null : displayItems.length === 0 ? (
         <p className="text-[14px] text-[var(--text-tertiary)] py-2">
           {readOnly ? 'No items' : 'No items yet — add one below'}
         </p>
@@ -433,8 +467,17 @@ export function ItemList({ items, binId, readOnly, onItemsChange }: ItemListProp
         <div className="rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden">
           {(!readOnly || displayItems.some((item) => item.quantity != null)) && (
             <div className="row-tight px-3.5 pt-1.5 pb-0.5">
-              <span className="shrink-0 w-8 text-center text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Qty</span>
-              <span className="flex-1 text-[11px] font-medium uppercase tracking-wider text-[var(--text-quaternary)]">Name</span>
+              {!readOnly && effectiveItems.length >= 2 ? (
+                <>
+                  <SortHeader label="Qty" column="qty" currentColumn={sortColumn} currentDirection={sortDirection} onSort={handleHeaderSort} defaultDirection="desc" className="shrink-0 w-8 justify-center" />
+                  <SortHeader label="Name" column="name" currentColumn={sortColumn} currentDirection={sortDirection} onSort={handleHeaderSort} className="flex-1" />
+                </>
+              ) : (
+                <>
+                  <span className="shrink-0 w-8 text-center text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Qty</span>
+                  <span className="flex-1 text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Name</span>
+                </>
+              )}
             </div>
           )}
           {visibleIndices.length === 0 && filterQuery ? (
@@ -444,32 +487,38 @@ export function ItemList({ items, binId, readOnly, onItemsChange }: ItemListProp
           ) : (
             visibleIndices.map((idx, i) => {
               const item = displayItems[idx];
-              return readOnly ? (
-                <div key={item.id}>
+              const isNewlyRevealed = revealFrom !== null && i >= revealFrom;
+              const staggerDelay = isNewlyRevealed ? Math.min((i - revealFrom) * 30, 500) : undefined;
+              return (
+                <div
+                  key={item.id}
+                  className={cn(isNewlyRevealed && 'animate-item-reveal')}
+                  style={staggerDelay != null ? { animationDelay: `${staggerDelay}ms` } : undefined}
+                >
                   {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-                  <div className="row-tight px-3.5 py-1">
-                    {item.quantity != null && (
-                      <span className="shrink-0 text-[13px] text-[var(--text-tertiary)] tabular-nums">
-                        {item.quantity}
+                  {readOnly ? (
+                    <div className={cn('row-tight px-3.5 py-1', savedIds.has(item.id) && 'animate-save-flash')}>
+                      {item.quantity != null && (
+                        <span className="shrink-0 w-8 text-center text-[13px] text-[var(--text-primary)] tabular-nums">
+                          {item.quantity}
+                        </span>
+                      )}
+                      <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
+                        {item.name}
                       </span>
-                    )}
-                    <span className="flex-1 min-w-0 text-[15px] text-[var(--text-primary)] leading-relaxed">
-                      {item.name}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div key={item.id}>
-                  {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-                  <ItemRow
-                    text={item.name}
-                    quantity={item.quantity}
-                    isEditing={editingId === item.id}
-                    onStartEdit={() => setEditingId(item.id)}
-                    onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
-                    onCancel={() => setEditingId(null)}
-                    onDelete={() => handleDelete(item.id)}
-                  />
+                    </div>
+                  ) : (
+                    <ItemRow
+                      text={item.name}
+                      quantity={item.quantity}
+                      isEditing={editingId === item.id}
+                      saved={savedIds.has(item.id)}
+                      onStartEdit={() => setEditingId(item.id)}
+                      onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
+                      onCancel={() => setEditingId(null)}
+                      onDelete={() => handleDelete(item.id)}
+                    />
+                  )}
                 </div>
               );
             })
@@ -479,7 +528,7 @@ export function ItemList({ items, binId, readOnly, onItemsChange }: ItemListProp
               <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />
               <button
                 type="button"
-                onClick={expand}
+                onClick={handleExpand}
                 className="w-full py-2.5 text-[13px] font-medium text-[var(--accent)] hover:bg-[var(--bg-hover)] transition-colors"
               >
                 Show {hiddenCount} more {hiddenCount === 1 ? 'item' : 'items'}

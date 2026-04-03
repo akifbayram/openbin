@@ -215,7 +215,7 @@ export function BinCreateForm({
 
       {/* Items */}
       <div className={isFull ? 'space-y-2' : 'text-left'}>
-        <ItemList items={items} onItemsChange={setItems} />
+        <ItemList items={items} onItemsChange={setItems} hideWhenEmpty />
         <QuickAddWidget quickAdd={quickAdd} aiEnabled={showAi} />
       </div>
 

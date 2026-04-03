@@ -1,4 +1,5 @@
-import { type ReactNode, useCallback, useLayoutEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useSlidingIndicator } from '@/lib/useSlidingIndicator';
 import { cn } from '@/lib/utils';
 
 export interface OptionGroupOption<K extends string> {
@@ -39,47 +40,7 @@ export function OptionGroup<K extends string>({
   const textSize = size === 'sm' ? 'text-[12px]' : 'text-[13px]';
   const padding = iconOnly ? 'p-2' : size === 'sm' ? 'px-2 py-1' : 'px-3 py-1.5';
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const buttonRefs = useRef(new Map<string, HTMLElement>());
-  const [hasMounted, setHasMounted] = useState(false);
-  const prefersReducedMotion = useRef(
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  );
-  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
-
-  const setButtonRef = useCallback(
-    (key: string) => (el: HTMLElement | null) => {
-      if (el) buttonRefs.current.set(key, el);
-      else buttonRefs.current.delete(key);
-    },
-    [],
-  );
-
-  const measure = useCallback(() => {
-    const container = containerRef.current;
-    const btn = buttonRefs.current.get(value);
-    if (!container || !btn) return;
-    const cr = container.getBoundingClientRect();
-    const br = btn.getBoundingClientRect();
-    setIndicator({ left: br.left - cr.left, width: br.width });
-  }, [value]);
-
-  useLayoutEffect(() => {
-    measure();
-    if (!hasMounted) {
-      requestAnimationFrame(() => setHasMounted(true));
-    }
-  }, [measure, hasMounted]);
-
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const ro = new ResizeObserver(measure);
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [measure]);
-
-  const animate = hasMounted && !prefersReducedMotion.current;
+  const { containerRef, setButtonRef, indicator, animate } = useSlidingIndicator(value);
 
   return (
     <div

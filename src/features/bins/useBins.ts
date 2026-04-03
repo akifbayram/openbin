@@ -272,19 +272,19 @@ export async function addItemsToBin(binId: string, items: (string | { name: stri
   return result.items;
 }
 
-export async function removeItemFromBin(binId: string, itemId: string): Promise<void> {
+export async function removeItemFromBin(binId: string, itemId: string, options?: { quiet?: boolean }): Promise<void> {
   await apiFetch(`/api/bins/${binId}/items/${itemId}`, { method: 'DELETE' });
-  notifyBinsChanged();
+  if (!options?.quiet) notifyBinsChanged();
 }
 
-export async function renameItem(binId: string, itemId: string, name: string, quantity?: number | null): Promise<void> {
+export async function renameItem(binId: string, itemId: string, name: string, quantity?: number | null, options?: { quiet?: boolean }): Promise<void> {
   const body: { name: string; quantity?: number | null } = { name };
   if (quantity !== undefined) body.quantity = quantity;
   await apiFetch(`/api/bins/${binId}/items/${itemId}`, {
     method: 'PUT',
     body,
   });
-  notifyBinsChanged();
+  if (!options?.quiet) notifyBinsChanged();
 }
 
 export async function updateItemQuantity(binId: string, itemId: string, quantity: number): Promise<{ id: string; quantity?: number; removed?: boolean }> {
@@ -296,12 +296,12 @@ export async function updateItemQuantity(binId: string, itemId: string, quantity
   return result;
 }
 
-export async function reorderItems(binId: string, itemIds: string[]): Promise<void> {
+export async function reorderItems(binId: string, itemIds: string[], options?: { quiet?: boolean }): Promise<void> {
   await apiFetch(`/api/bins/${binId}/items/reorder`, {
     method: 'PUT',
     body: { item_ids: itemIds },
   });
-  notifyBinsChanged();
+  if (!options?.quiet) notifyBinsChanged();
 }
 
 export async function deleteBin(id: string): Promise<Bin> {

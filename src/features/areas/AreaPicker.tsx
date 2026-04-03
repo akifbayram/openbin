@@ -82,8 +82,8 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         className={cn(
-          'row-spread w-full h-10 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 text-[15px] text-left transition-colors',
-          'hover:border-[var(--border-flat)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]',
+          'row-spread w-full h-11 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] px-3.5 text-[15px] text-left transition-colors',
+          'focus:outline-none focus:ring-2 focus:ring-[var(--accent)]',
           !selectedArea && 'text-[var(--text-tertiary)]'
         )}
       >

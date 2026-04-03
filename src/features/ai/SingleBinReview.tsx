@@ -1,5 +1,5 @@
 import { ArrowUp, ChevronDown, ChevronLeft, ChevronUp, Loader2, Sparkles } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,7 +28,6 @@ import type { AiSuggestions, BinItem } from '@/types';
 import { AiSettingsSection } from './AiSettingsSection';
 import { AiAnalyzeError, AiStreamingPreview } from './AiStreamingPreview';
 
-import { parsePartialAnalysis } from './parsePartialAnalysis';
 import { MAX_AI_PHOTOS } from './useAiAnalysis';
 import { useAiSettings } from './useAiSettings';
 import { useAiStream } from './useAiStream';
@@ -73,28 +72,21 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   const {
     isStreaming: isAnalyzing,
     error: analyzeError,
-    partialText: analyzePartial,
     stream: streamAnalyze,
     cancel: cancelAnalyze,
   } = useAiStream<AiSuggestions>('/api/ai/analyze-image/stream', "Couldn't analyze — try again");
 
   const {
     isStreaming: isCorrecting,
-    partialText: correctPartial,
     stream: streamCorrection,
     cancel: cancelCorrection,
   } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
 
   const {
     isStreaming: isReanalyzing,
-    partialText: reanalyzePartial,
     stream: streamReanalyze,
     cancel: cancelReanalyze,
   } = useAiStream<AiSuggestions>('/api/ai/reanalyze-image/stream', "Couldn't reanalyze — try again");
-
-  // Parse partial streaming text to show progressive name/items
-  const activePartial = isAnalyzing ? analyzePartial : isCorrecting ? correctPartial : isReanalyzing ? reanalyzePartial : '';
-  const parsedPartial = useMemo(() => activePartial ? parsePartialAnalysis(activePartial) : null, [activePartial]);
 
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -285,8 +277,8 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
       {(isAnalyzing || isCorrecting || isReanalyzing) ? (
         <AiStreamingPreview
           previewUrls={previewUrls}
-          streamedName={parsedPartial?.name ?? ''}
-          streamedItems={parsedPartial?.items ?? []}
+          streamedName=""
+          streamedItems={[]}
           initialStatusLabel={isCorrecting ? 'Applying correction...' : isReanalyzing ? 'Reanalyzing...' : `Analyzing ${Math.min(files.length, MAX_AI_PHOTOS)} photo${Math.min(files.length, MAX_AI_PHOTOS) !== 1 ? 's' : ''}...`}
         />
       ) : (

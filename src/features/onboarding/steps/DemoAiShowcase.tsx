@@ -63,14 +63,12 @@ export function DemoAiShowcase({ onNext }: { onNext: () => void }) {
       {visibleCount > 0 && (
         <div className="w-full rounded-[var(--radius-md)] bg-[var(--bg-input)] overflow-hidden mb-5">
           {DEMO_BIN.items.slice(0, visibleCount).map((item, i) => (
-            <div key={item} className="ai-item-reveal" style={{ animationDelay: `${i * 0.05}s` }}>
-              <div>
-                {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-                <div className="px-3.5 py-1">
-                  <span className="text-[15px] text-[var(--text-primary)] leading-relaxed">
-                    {item}
-                  </span>
-                </div>
+            <div key={item}>
+              {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
+              <div className="px-3.5 py-1">
+                <span className="text-[15px] text-[var(--text-primary)] leading-relaxed">
+                  {item}
+                </span>
               </div>
             </div>
           ))}

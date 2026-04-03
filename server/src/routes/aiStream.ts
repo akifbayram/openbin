@@ -465,7 +465,7 @@ streamRouter.post('/reorganize/stream', aiLimiter, requirePro(), requireLocation
   const { DEFAULT_REORGANIZATION_PROMPT } = await import('../lib/defaultPrompts.js');
   const basePrompt = resolvePrompt(DEFAULT_REORGANIZATION_PROMPT, settings.reorganization_prompt, isDemoUser(req));
   const maxBinsInstruction = maxBins ? `Create at most ${maxBins} bins.` : 'Choose the optimal number of bins.';
-  const areaInstruction = areaName ? `These bins are in the "${areaName}" area.` : '';
+  const areaInstruction = areaName ? `These bins are in the "${sanitizeForPrompt(areaName)}" area.` : '';
 
   const strictnessInstruction = strictness === 'conservative'
     ? 'Be conservative: prefer fewer moves from original bins. Only regroup when the benefit is clear.'
@@ -508,7 +508,7 @@ streamRouter.post('/reorganize/stream', aiLimiter, requirePro(), requireLocation
     ? `Each bin should contain ${itemsPerBinParts.join(' and ')} items.`
     : '';
 
-  const notesInstruction = userNotes?.trim() ? `Additional user guidance: ${userNotes.trim()}` : '';
+  const notesInstruction = userNotes?.trim() ? `Additional user guidance: ${sanitizeForPrompt(userNotes.trim())}` : '';
 
   // Extract unique tags from input bins for reuse guidance
   const existingTags = [...new Set(

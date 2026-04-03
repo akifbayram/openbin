@@ -17,7 +17,7 @@ interface QuickAddWidgetProps {
 export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade }: QuickAddWidgetProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <div data-tour="quick-add" className="mt-3 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)] ">
+    <div data-tour="quick-add" className="mt-3 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)]">
       {quickAdd.state === 'input' && (
         <div className="row-tight">
           <Input

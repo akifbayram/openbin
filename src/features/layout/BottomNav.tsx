@@ -1,5 +1,6 @@
 import { LayoutDashboard, Menu, Package, ScanLine, Sparkles } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { useSlidingIndicator } from '@/lib/useSlidingIndicator';
 import { cn } from '@/lib/utils';
 
 interface BottomNavProps {
@@ -22,6 +23,9 @@ export function BottomNav({ onNavigate, onScanClick, onMoreClick, onAskAi }: Bot
     { id: 'more', label: 'More', icon: Menu, action: () => onMoreClick(), active: false },
   ];
 
+  const activeId = items.find((i) => i.active)?.id ?? null;
+  const { containerRef, setButtonRef, indicator, animate } = useSlidingIndicator(activeId);
+
   return (
     <nav
       aria-label="Main navigation"
@@ -29,41 +33,45 @@ export function BottomNav({ onNavigate, onScanClick, onMoreClick, onAskAi }: Bot
       style={{ paddingBottom: 'var(--safe-bottom)' }}
     >
       <div
-        className="mx-3 mb-2 flex items-center justify-around rounded-2xl border border-[var(--bottom-bar-border)]"
+        ref={containerRef}
+        className="relative mx-3 mb-2 flex items-center justify-around rounded-2xl border border-[var(--bottom-bar-border)]"
         style={{
           height: 'var(--bottom-bar-height)',
           background: 'var(--bottom-bar-bg)',
         }}
       >
+        {/* Sliding active indicator */}
+        {indicator && (
+          <div
+            aria-hidden
+            className="absolute top-1.5 bottom-1.5 rounded-xl"
+            style={{
+              left: indicator.left,
+              width: indicator.width,
+              background: 'var(--tab-pill-bg)',
+              transition: animate ? 'left 200ms ease-out, width 200ms ease-out' : 'none',
+            }}
+          />
+        )}
         {items.map(({ id, label, icon: Icon, action, active }) => (
           <button
             key={id}
+            ref={setButtonRef(id)}
             type="button"
             onClick={action}
             aria-label={label}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'relative flex flex-col items-center justify-center gap-[1px] flex-1 h-full',
+              'relative z-10 flex flex-col items-center justify-center gap-[1px] flex-1 h-full',
               active ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]',
             )}
           >
-            {/* Active pill indicator */}
-            <span
-              className={cn(
-                'absolute inset-x-1.5 inset-y-1.5 rounded-xl transition-opacity duration-200 motion-reduce:transition-none',
-                active ? 'opacity-100' : 'opacity-0',
-              )}
-              style={{ background: 'var(--tab-pill-bg)' }}
-            />
             <Icon
-              className={cn(
-                'relative z-[1] h-[22px] w-[22px] transition-colors duration-200 motion-reduce:transition-none',
-              )}
+              className="h-[22px] w-[22px] transition-colors duration-200 motion-reduce:transition-none"
               strokeWidth={active ? 2.2 : 1.8}
+              {...(id === 'ai' ? { stroke: 'url(#ai-icon-gradient)' } : {})}
             />
-            <span className={cn(
-              'relative z-[1] text-[10px] font-medium leading-tight transition-colors duration-200 motion-reduce:transition-none',
-            )}>
+            <span className="text-[10px] font-medium leading-tight transition-colors duration-200 motion-reduce:transition-none">
               {label}
             </span>
           </button>

@@ -23,13 +23,11 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
 
   return (
     <div className="space-y-4">
-      <div className="ai-content-enter">
-        <StreamingText
-          text={answer}
-          isStreaming={!!showStreaming}
-          className="text-[14px] text-[var(--text-primary)] leading-relaxed"
-        />
-      </div>
+      <StreamingText
+        text={answer}
+        isStreaming={!!showStreaming}
+        className="text-[14px] text-[var(--text-primary)] leading-relaxed"
+      />
 
       {matches.length > 0 && (
         <div className="space-y-2">

@@ -124,7 +124,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
 
   return (
     <div ref={containerRef} className="relative">
-      <div className="flex flex-wrap gap-1.5 rounded-[var(--radius-md)] bg-[var(--bg-input)] p-2.5 transition-shadow duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)] ">
+      <div className="flex flex-wrap gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] p-2.5 transition-shadow duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)]">
         {tags.map((tag) => (
           <Badge
             key={tag}

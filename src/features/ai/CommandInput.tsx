@@ -134,7 +134,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
         )}
 
         {photoMode ? (
-          <div key="photo" className="ai-content-enter">
+          <div key="photo">
             <PhotoBulkAdd
               initialFiles={initialFiles}
               onClose={() => handleClose(false)}
@@ -142,7 +142,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
             />
           </div>
         ) : showProgress ? (
-          <div key="progress" className="ai-content-enter py-4 space-y-3">
+          <div key="progress" className="py-4 space-y-3">
             <AiProgressBar
               active={isParsing}
               complete={parseDone}
@@ -157,7 +157,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
             )}
           </div>
         ) : effectiveState === 'success' && executionResult ? (
-          <div key="success" className="ai-content-enter">
+          <div key="success">
             <CommandSuccess
               result={executionResult}
               onAskAnother={handleAskAnother}
@@ -166,7 +166,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
             />
           </div>
         ) : effectiveState === 'query-result' ? (
-          <div key="query-result" className="ai-content-enter">
+          <div key="query-result">
             <InventoryQueryResult
               queryResult={queryResult}
               streamingText={queryPartialText}
@@ -177,7 +177,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
             />
           </div>
         ) : effectiveState === 'preview' && actions ? (
-          <div key="preview" className="ai-content-enter">
+          <div key="preview">
             <CommandActionPreview
               actions={actions}
               interpretation={interpretation}
@@ -191,14 +191,14 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
             />
           </div>
         ) : !aiSettingsLoading && !isAiReady ? (
-          <div key="setup" className="ai-content-enter">
+          <div key="setup">
             <AiSetupView
               onNavigate={() => { handleClose(false); navigate('/settings#ai-settings'); }}
               onDismiss={() => handleClose(false)}
             />
           </div>
         ) : (
-          <div key="idle" className="ai-content-enter">
+          <div key="idle">
             <CommandIdleInput
               text={text}
               setText={setText}

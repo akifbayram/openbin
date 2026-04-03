@@ -62,7 +62,7 @@ export function BinEditContent({
       {/* Items */}
       <Card>
         <CardContent className="pt-3 pb-4">
-          <ItemList items={edit.items} onItemsChange={edit.setItems} />
+          <ItemList items={edit.items} onItemsChange={edit.setItems} collapsible />
           <QuickAddWidget quickAdd={quickAdd} aiEnabled={aiEnabled} />
         </CardContent>
       </Card>

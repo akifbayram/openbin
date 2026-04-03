@@ -40,7 +40,7 @@ export function ReorganizePreview({
   const totalItems = displayBins.reduce((sum, b) => sum + b.items.length, 0);
 
   return (
-    <div className="ai-content-enter space-y-4">
+    <div className="space-y-4">
       <div className="row-spread">
         <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal">
           Proposal
@@ -114,7 +114,7 @@ function BinCard({
   return (
     <li
       aria-label={`${name}: ${items.length} item${items.length !== 1 ? 's' : ''}`}
-      className="ai-stagger-item rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-input)] p-3.5 space-y-2"
+      className="ai-stagger-item rounded-[var(--radius-md)] border border-[var(--border-flat)] bg-[var(--bg-input)] p-3.5 space-y-2"
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center gap-2">

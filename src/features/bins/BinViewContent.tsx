@@ -92,7 +92,7 @@ export function BinViewContent({
       {/* Items card */}
       <Card>
         <CardContent className="pt-3 pb-4">
-          <ItemList items={bin.items} binId={bin.id} readOnly={!canEdit} />
+          <ItemList items={bin.items} binId={bin.id} readOnly={!canEdit} collapsible />
           {canEdit && <QuickAddWidget quickAdd={quickAdd} aiEnabled={aiEnabled} aiGated={aiGated} onUpgrade={onUpgrade} />}
         </CardContent>
       </Card>
