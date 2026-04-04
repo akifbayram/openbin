@@ -47,6 +47,7 @@ import {
 } from '../lib/importTransaction.js';
 import { safePath } from '../lib/pathSafety.js';
 import { authenticate } from '../middleware/auth.js';
+import { blockDemoUser } from '../middleware/demoGuard.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 import { requirePro } from '../middleware/requirePlan.js';
 
@@ -333,7 +334,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
 }));
 
 // POST /api/locations/:id/import — import bins + photos
-router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLocationMember(), asyncHandler(async (req, res) => {
+router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLocationMember(), blockDemoUser('import data'), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
   const {
     bins, trashedBins, mode, tagColors, customFieldDefinitions,
@@ -393,7 +394,7 @@ const csvUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 }).single('file');
 
-router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asyncHandler(async (req, res) => {
+router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), blockDemoUser('import data'), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
   const userId = req.user!.id;
 
@@ -620,7 +621,7 @@ const zipUpload = multer({
   limits: { fileSize: 25 * 1024 * 1024 },
 }).single('file');
 
-router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asyncHandler(async (req, res) => {
+router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), blockDemoUser('import data'), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
   const userId = req.user!.id;
 

@@ -573,7 +573,7 @@ router.put('/:id/members/:userId/role', blockDemoUser('manage members'), asyncHa
 }));
 
 // POST /api/locations/:id/members/:userId/reset-password — admin generates reset token
-router.post('/:id/members/:userId/reset-password', asyncHandler(async (req, res) => {
+router.post('/:id/members/:userId/reset-password', blockDemoUser('reset member passwords'), asyncHandler(async (req, res) => {
   const { id, userId } = req.params;
 
   // Requester must be admin

@@ -9,6 +9,7 @@ import { logRouteActivity } from '../lib/routeHelpers.js';
 import { storage } from '../lib/storage.js';
 import { generateThumbnailBuffer } from '../lib/thumbnailPool.js';
 import { authenticate } from '../middleware/auth.js';
+import { blockDemoUser } from '../middleware/demoGuard.js';
 
 const router = Router();
 
@@ -150,7 +151,7 @@ router.get('/:id/thumb', asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/photos/:id — delete photo
-router.delete('/:id', asyncHandler(async (req, res) => {
+router.delete('/:id', blockDemoUser('delete photos'), asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const access = await verifyPhotoAccess(id, req.user!.id);

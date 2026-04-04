@@ -17,6 +17,7 @@ import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
 import { memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
+import { blockDemoUser } from '../middleware/demoGuard.js';
 import { requirePro } from '../middleware/requirePlan.js';
 
 const MOCK_AI_SETTINGS = {
@@ -260,13 +261,13 @@ router.put('/settings', requirePro(), aiRouteHandler('save AI settings', async (
 }));
 
 // DELETE /api/ai/settings — remove AI config
-router.delete('/settings', requirePro(), aiRouteHandler('delete AI settings', async (req, res) => {
+router.delete('/settings', requirePro(), blockDemoUser('modify AI settings'), aiRouteHandler('delete AI settings', async (req, res) => {
   await query('DELETE FROM user_ai_settings WHERE user_id = $1', [req.user!.id]);
   res.json({ deleted: true });
 }));
 
 // POST /api/ai/analyze-image — analyze raw uploaded image(s) (no stored photo required)
-router.post('/analyze-image', memoryPhotoUpload.fields([
+router.post('/analyze-image', blockDemoUser('upload photos'), memoryPhotoUpload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'photos', maxCount: 5 },
 ]), aiLimiter, requirePro(), aiRouteHandler('analyze image', async (req, res) => {
