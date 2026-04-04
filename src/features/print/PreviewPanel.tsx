@@ -38,6 +38,7 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
   const pageCount = perPage > 0 && hasSelection ? Math.ceil(selectedBins.length / perPage) : 0;
 
   const [currentPage, setCurrentPage] = useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset page when count changes
   useEffect(() => { setCurrentPage(0); }, [pageCount]);
   const safePage = Math.min(currentPage, Math.max(0, pageCount - 1));
   const canPrev = safePage > 0;

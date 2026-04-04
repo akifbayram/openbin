@@ -26,6 +26,7 @@ export function notify(event: EventName) {
 export function useRefreshOn(...events: EventName[]): number {
   const [counter, setCounter] = useState(0);
   const key = events.join(',');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: key is a stable proxy for the events array reference
   const stableEvents = useMemo(() => events, [key]);
 
   useEffect(() => {

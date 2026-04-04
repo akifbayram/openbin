@@ -39,6 +39,7 @@ export function usePagedList<T>(
   const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize));
 
   // Fetch page data when basePath, page, or refresh changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCounter is an intentional trigger dep from useRefreshOn
   useEffect(() => {
     const generation = ++generationRef.current;
 

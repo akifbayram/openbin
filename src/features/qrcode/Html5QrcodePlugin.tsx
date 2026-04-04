@@ -15,6 +15,7 @@ export function Html5QrcodePlugin({ paused, onScanSuccess, onScanFailure }: Html
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scanner init runs once — callback deps would restart camera
   useEffect(() => {
     let cancelled = false;
 

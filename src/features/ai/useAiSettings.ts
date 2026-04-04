@@ -20,6 +20,7 @@ export function useAiSettings() {
     return () => window.removeEventListener('ai-settings-changed', handleChange);
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is an intentional trigger dep
   useEffect(() => {
     if (!token) {
       setSettings(null);

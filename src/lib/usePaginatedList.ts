@@ -36,6 +36,7 @@ export function usePaginatedList<T>(
   const refreshCounter = useRefreshOn(...events);
 
   // Reset and fetch first page when basePath or refresh changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCounter is an intentional trigger dep from useRefreshOn
   useEffect(() => {
     const generation = ++generationRef.current;
     offsetRef.current = 0;

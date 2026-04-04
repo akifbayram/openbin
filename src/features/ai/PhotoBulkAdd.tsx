@@ -54,11 +54,12 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   const effectiveMax = isDemo ? DEMO_MAX_PHOTOS : (mode === 'single-bin' ? MAX_AI_PHOTOS : MAX_PHOTOS);
 
   // Cleanup ObjectURLs on unmount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: cleanup on unmount only, captures current photos
   useEffect(() => {
     return () => {
       for (const p of state.photos) URL.revokeObjectURL(p.previewUrl);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-go back if all photos removed in upload step (only after having had photos)
   useEffect(() => {

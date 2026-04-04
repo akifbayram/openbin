@@ -103,6 +103,20 @@ export function useTour({ context, navigate, updatePreferences }: UseTourDeps): 
     window.removeEventListener('resize', scheduleRectUpdate);
   }, [scheduleRectUpdate]);
 
+  const markComplete = useCallback(() => {
+    const currentStep = filteredRef.current[activeIndex];
+    if (currentStep?.onLeave) {
+      currentStep.onLeave(contextRef.current);
+    }
+    cleanupTracking();
+    detachScrollListeners();
+    setTargetRect(null);
+    setIsActive(false);
+    setActiveIndex(0);
+    filteredRef.current = [];
+    updatePreferences({ tour_completed: true, tour_version: TOUR_VERSION });
+  }, [activeIndex, cleanupTracking, detachScrollListeners, updatePreferences]);
+
   // Navigate to a step and find its element
   const goToStep = useCallback(async (index: number) => {
     if (navigatingRef.current) return;
@@ -155,21 +169,7 @@ export function useTour({ context, navigate, updatePreferences }: UseTourDeps): 
     } finally {
       navigatingRef.current = false;
     }
-  }, [navigate, cleanupTracking, detachScrollListeners, trackElement]);
-
-  const markComplete = useCallback(() => {
-    const currentStep = filteredRef.current[activeIndex];
-    if (currentStep?.onLeave) {
-      currentStep.onLeave(contextRef.current);
-    }
-    cleanupTracking();
-    detachScrollListeners();
-    setTargetRect(null);
-    setIsActive(false);
-    setActiveIndex(0);
-    filteredRef.current = [];
-    updatePreferences({ tour_completed: true, tour_version: TOUR_VERSION });
-  }, [activeIndex, cleanupTracking, detachScrollListeners, updatePreferences]);
+  }, [navigate, cleanupTracking, detachScrollListeners, trackElement, markComplete]);
 
   const start = useCallback(() => {
     const filtered = filterSteps(TOUR_STEPS, contextRef.current);

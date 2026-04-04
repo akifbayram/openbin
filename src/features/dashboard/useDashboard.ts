@@ -21,6 +21,7 @@ function useDashboardStats(locationId: string | null) {
   const [isLoading, setIsLoading] = useState(true);
   const refreshKey = useRefreshOn(Events.BINS, Events.AREAS);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is an intentional trigger dep
   useEffect(() => {
     if (!locationId) {
       setStats(null);

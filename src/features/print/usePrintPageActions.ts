@@ -78,6 +78,7 @@ export function usePrintPageActions() {
   const nameCardOptions = settings.nameCardOptions ?? DEFAULT_NAME_CARD_OPTIONS;
 
   const modeInitRef = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: one-time init from URL param
   useEffect(() => {
     if (modeInitRef.current || settingsLoading) return;
     const modeParam = searchParams.get('mode');

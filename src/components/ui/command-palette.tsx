@@ -62,6 +62,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
   const flatItems = React.useMemo(() => groups.flatMap((g) => g.items), [groups]);
 
   // Clamp activeIndex when filtered list changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset index intentionally when query changes
   React.useEffect(() => {
     setActiveIndex(0);
   }, [query]);
@@ -95,6 +96,7 @@ export function CommandPalette({ open, onOpenChange, onAction }: CommandPaletteP
 
   // Scroll active item into view
   const listRef = React.useRef<HTMLDivElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll when active selection changes
   React.useEffect(() => {
     const item = listRef.current?.querySelector('[data-active="true"]');
     item?.scrollIntoView({ block: 'nearest' });

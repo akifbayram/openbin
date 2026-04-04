@@ -131,7 +131,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => { cancelled = true; };
-  }, [fetchPlan, fetchUsage]);
+  }, [fetchPlan, fetchUsage, token]);
 
   useEffect(() => {
     if (usageRefresh > 0) fetchUsage();

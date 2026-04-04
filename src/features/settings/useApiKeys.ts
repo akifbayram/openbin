@@ -17,6 +17,7 @@ export function useApiKeys() {
     return () => window.removeEventListener('api-keys-changed', handleChange);
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is an intentional trigger dep
   useEffect(() => {
     if (!token) {
       setKeys([]);

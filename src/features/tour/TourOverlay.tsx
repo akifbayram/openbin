@@ -107,6 +107,7 @@ export function TourOverlay({ tour, context }: TourOverlayProps) {
   }, [isActive, skip, next, prev, currentStep]);
 
   // Auto-focus the Next button when tooltip positions
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-focus button on step change
   useEffect(() => {
     if (!positioned) return;
     const btn = tooltipRef.current?.querySelector<HTMLButtonElement>('[data-tour-next]');

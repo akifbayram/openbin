@@ -55,6 +55,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose, onDelete }: Photo
   }, [photos.length]);
 
   // Re-focus container when it should be the active modal (e.g. after delete dialog closes)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-focus on photo navigation
   useEffect(() => {
     if (animating !== 'exit') {
       containerRef.current?.focus();

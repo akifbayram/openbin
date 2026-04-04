@@ -58,7 +58,6 @@ function MiniPreview({ style }: { style: QrStyleOptions }) {
   const [dataUrl, setDataUrl] = useState<string>('');
   const [prevUrl, setPrevUrl] = useState<string>('');
   const [transitioning, setTransitioning] = useState(false);
-  const styleKey = JSON.stringify(style);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
@@ -90,7 +89,7 @@ function MiniPreview({ style }: { style: QrStyleOptions }) {
       cancelled = true;
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [styleKey]);
+  }, [style, dataUrl]);
 
   return (
     <div className="flex items-center justify-center py-1">

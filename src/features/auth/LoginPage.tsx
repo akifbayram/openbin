@@ -63,7 +63,7 @@ export function LoginPage() {
         }
       });
     return () => { cancelled = true; };
-  }, [demoMode, showToast]);
+  }, [demoMode, showToast, navigate, refreshSession]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

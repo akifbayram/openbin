@@ -64,6 +64,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
   const photo = photos[currentIndex];
 
   // Abort streams on unmount or navigate away
+  // biome-ignore lint/correctness/useExhaustiveDependencies: unmount-only cleanup — stable refs
   useEffect(() => {
     return () => {
       for (const ctrl of abortRef.current.values()) ctrl.abort();
@@ -74,12 +75,14 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
   }, []);
 
   // Reset correction state when navigating between photos
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional trigger on index change
   useEffect(() => {
     setCorrectionOpen(false);
     setCorrectionText('');
   }, [currentIndex]);
 
   // Auto-analyze on first visit to each photo
+  // biome-ignore lint/correctness/useExhaustiveDependencies: triggerAnalyze is unstable — safe to omit
   useEffect(() => {
     if (!photo || photo.status !== 'pending' || autoAnalyzedRef.current.has(photo.id)) return;
     const scenarioKey = demoScenarios?.get(photo.id);
@@ -88,7 +91,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
       triggerAnalyze(photo);
     }
     return () => { if (photo) autoAnalyzedRef.current.delete(photo.id); };
-  }, [photo?.id, photo?.status, aiSettings, demoScenarios]);
+  }, [photo, aiSettings, aiEnabled, demoScenarios]);
 
   if (!photo) return null;
 

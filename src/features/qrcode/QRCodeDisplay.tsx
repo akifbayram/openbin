@@ -24,7 +24,7 @@ export function QRCodeDisplay({ binId, size = 200, shortCode, hideActions, color
 
   useEffect(() => {
     generateQRDataURL(binId, size, colors).then(setDataUrl);
-  }, [binId, size, colors?.dark, colors?.light]);
+  }, [binId, size, colors]);
 
   async function handleCopy() {
     await navigator.clipboard.writeText(getBinUrl(binId));

@@ -27,9 +27,6 @@ export function LabelSheet({ bins, format, labelDirection, showColorSwatch, icon
   const [qrMap, setQrMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(false);
 
-  // Serialize bin colors to a stable string for the dependency array
-  const binColorKey = showColorSwatch ? bins.map((b) => `${b.id}:${b.color || ''}`).join(',') : '';
-  const qrStyleKey = qrStyle ? JSON.stringify(qrStyle) : '';
   const useStyled = !isDefaultQrStyle(qrStyle);
 
   useEffect(() => {
@@ -63,7 +60,7 @@ export function LabelSheet({ bins, format, labelDirection, showColorSwatch, icon
     return () => {
       cancelled = true;
     };
-  }, [bins, qrPixelSize, binColorKey, qrStyleKey, useStyled]);
+  }, [bins, qrPixelSize, qrStyle, showColorSwatch, useStyled]);
 
   if (loading || (bins.length > 0 && qrMap.size === 0)) {
     return (

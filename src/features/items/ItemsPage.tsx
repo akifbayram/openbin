@@ -8,9 +8,9 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useTerminology } from '@/lib/terminology';
-import { cn } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
 import { useTableSearchParams } from '@/lib/useTableSearchParams';
+import { cn } from '@/lib/utils';
 import { type ItemSortColumn, ItemTableView } from './ItemTableView';
 import { usePaginatedItemList } from './useItems';
 

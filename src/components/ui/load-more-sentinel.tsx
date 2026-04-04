@@ -12,6 +12,7 @@ interface LoadMoreSentinelProps {
 export function LoadMoreSentinel({ hasMore, isLoadingMore, onLoadMore, skeleton }: LoadMoreSentinelProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isLoadingMore re-observes when loading state changes
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el || !hasMore) return;

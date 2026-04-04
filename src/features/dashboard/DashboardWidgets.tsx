@@ -7,6 +7,7 @@ export function useAnimatedNumber(target: number, duration = 400) {
   const [display, setDisplay] = useState(target);
   const rafRef = useRef<number>();
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: display excluded to avoid infinite loop since effect sets display
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setDisplay(target);

@@ -24,6 +24,7 @@ export function useListData<T, R = T>(
   const hasData = useRef(false);
   const refreshCounter = useRefreshOn(...events);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCounter is an intentional trigger dep; transform is caller-provided and intentionally excluded to avoid refetch loops
   useEffect(() => {
     if (!path) {
       setData([]);
@@ -59,6 +60,7 @@ export function useListData<T, R = T>(
     return () => { cancelled = true; };
   }, [path, refreshCounter]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: join(',') is a stable proxy for the events array reference
   const refresh = useCallback(() => {
     for (const e of events) notify(e);
   }, [events.join(',')]);

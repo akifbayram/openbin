@@ -81,6 +81,7 @@ export function useAreaList(locationId: string | null | undefined) {
 
   const path = locationId ? `/api/locations/${encodeURIComponent(locationId)}/areas` : null;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCounter is an intentional trigger dep
   useEffect(() => {
     if (!path) {
       setAreas([]);

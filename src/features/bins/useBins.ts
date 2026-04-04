@@ -181,6 +181,7 @@ export function useBin(id: string | undefined) {
   const refreshCounter = useRefreshOn(Events.BINS);
   const loadedIdRef = useRef<string | undefined>(undefined);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCounter is an intentional trigger dep
   useEffect(() => {
     if (!id || !token) {
       setBin(undefined);

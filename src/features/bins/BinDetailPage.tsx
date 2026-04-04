@@ -101,6 +101,7 @@ export function BinDetailPage() {
   // Keyboard shortcuts — use ref for unstable `edit` object to avoid re-registering listener every render
   const editRef = useRef(edit);
   editRef.current = edit;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: edit.editing intentionally triggers re-registration of shortcuts
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName;

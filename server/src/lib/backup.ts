@@ -73,7 +73,7 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
   const zipPath = path.join(cfg.backupPath, filename);
   const tempDbPath = path.join(cfg.backupPath, `.tmp-backup-${timestamp}.db`);
 
-  const dumpPath = tempDbPath + '.sql';
+  const dumpPath = `${tempDbPath}.sql`;
 
   try {
     if (getDialect() === 'sqlite') {

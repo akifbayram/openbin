@@ -9,6 +9,7 @@ export function useBulkSelection(bins: Bin[], resetDeps: unknown[]) {
   useEffect(() => {
     setSelectedIds(new Set());
     lastSelectedIndex.current = null;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dynamic dep array passed by caller, biome cannot verify
   }, resetDeps);
 
   const selectable = selectedIds.size > 0;

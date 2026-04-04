@@ -55,6 +55,7 @@ export function ReorganizePage() {
   const { areas } = useAreaList(activeLocationId);
   const selection = useBinSelection(allBins);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: demo-only init — selection deps would cause infinite loop
   useEffect(() => {
     if (!demoMode || allBins.length === 0) return;
     const targetIds = allBins
@@ -63,7 +64,7 @@ export function ReorganizePage() {
     for (const id of targetIds) {
       if (!selection.selectedIds.has(id)) selection.toggleBin(id);
     }
-  }, [demoMode, allBins]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [demoMode, allBins]);
 
   const [maxBins, setMaxBins] = useState<string>('');
   const [userNotes, setUserNotes] = useState('');
