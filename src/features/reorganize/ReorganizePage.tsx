@@ -507,6 +507,7 @@ export function ReorganizePage() {
                   onAccept={() => setConfirmOpen(true)}
                   onCancel={handleCancel}
                   onRegenerate={handleRegenerate}
+                  demoMode={demoMode}
                 />
               </CardContent>
             </Card>

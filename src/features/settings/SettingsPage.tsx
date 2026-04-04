@@ -66,7 +66,7 @@ export function SettingsPage() {
   const { aiEnabled, setAiEnabled } = useAiEnabled();
   const { settings, updateSettings, resetSettings } = useAppSettings();
   const t = useTerminology();
-  const { user, activeLocationId, deleteAccount } = useAuth();
+  const { user, activeLocationId, deleteAccount, demoMode } = useAuth();
   const { isAdmin, isLoading: permissionsLoading } = usePermissions();
   const { preferences, updatePreferences } = useUserPreferences();
   const { isGated, isSelfHosted, planInfo } = usePlan();
@@ -180,7 +180,7 @@ export function SettingsPage() {
             </Card>
           )}
 
-          <SubscriptionSection />
+          {!demoMode && <SubscriptionSection />}
         </SettingsGroup>
       )}
 
@@ -216,7 +216,7 @@ export function SettingsPage() {
             </CardContent>
           </Card>
 
-          {(isAdmin || permissionsLoading) && (
+          {!demoMode && (isAdmin || permissionsLoading) && (
             <PersonalizationSection
               settings={settings}
               updateSettings={updateSettings}
@@ -252,7 +252,7 @@ export function SettingsPage() {
       )}
 
       {/* DATA */}
-      {isVisible('data') && (isAdmin || permissionsLoading) && (
+      {isVisible('data') && !demoMode && (isAdmin || permissionsLoading) && (
         <SettingsGroup id="data" label="Data">
           <DataSection
             activeLocationId={activeLocationId}

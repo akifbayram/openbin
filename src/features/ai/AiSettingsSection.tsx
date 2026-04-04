@@ -153,7 +153,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
           <p id="ai-toggle-description" className="text-[13px] text-[var(--text-tertiary)]">
             Photo analysis, item extraction, and AI commands
           </p>
-          <Switch id="ai-toggle" checked={aiEnabled} onCheckedChange={onToggle} aria-labelledby="ai-toggle-description" />
+          <Switch id="ai-toggle" checked={aiEnabled} onCheckedChange={onToggle} aria-labelledby="ai-toggle-description" disabled={demoMode} />
         </div>
 
         {/* Animated expand/collapse wrapper — self-hosted only */}

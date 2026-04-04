@@ -19,6 +19,7 @@ interface ReorganizePreviewProps {
   onAccept: () => void;
   onCancel: () => void;
   onRegenerate?: () => void;
+  demoMode?: boolean;
 }
 
 export function ReorganizePreview({
@@ -30,6 +31,7 @@ export function ReorganizePreview({
   onAccept,
   onCancel,
   onRegenerate,
+  demoMode,
 }: ReorganizePreviewProps) {
   const t = useTerminology();
   const displayBins = result ? result.bins : partialResult.bins;
@@ -68,16 +70,22 @@ export function ReorganizePreview({
 
       {!isStreaming && result && (
         <div className="flex flex-col gap-3 pt-3 border-t border-[var(--border-subtle)]">
-          <Button onClick={onAccept} disabled={isApplying} fullWidth>
-            {isApplying ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                Applying…
-              </>
-            ) : (
-              'Accept & Apply'
-            )}
-          </Button>
+          {demoMode ? (
+            <p className="text-[13px] text-[var(--text-tertiary)] text-center py-1">
+              Apply is disabled in demo mode to keep data intact for other users.
+            </p>
+          ) : (
+            <Button onClick={onAccept} disabled={isApplying} fullWidth>
+              {isApplying ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  Applying…
+                </>
+              ) : (
+                'Accept & Apply'
+              )}
+            </Button>
+          )}
           <div className="flex gap-2 justify-center">
             {onRegenerate && (
               <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={isApplying}>
