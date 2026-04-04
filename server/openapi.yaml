@@ -7,7 +7,7 @@ info:
 
     **Authentication**: Most endpoints require authentication via one of:
     - **httpOnly cookies** (primary) — `openbin-access` (15 min) + `openbin-refresh` (7 days), set automatically on login/register. Browsers send these with every request.
-    - **API key** created via `POST /api-keys` (long-lived, format: `sk_openbin_...`) — `Authorization: Bearer <key>`
+    - **API key** created via `POST /api-keys` (long-lived, per-user, format: `sk_openbin_...`) — `Authorization: Bearer <key>`. A key grants access to all locations the user belongs to.
 
     **Response envelopes**: All list endpoints return `{ results: T[], count: number }`.
     Error responses use `{ error: "CODE", message: "Human readable" }`.

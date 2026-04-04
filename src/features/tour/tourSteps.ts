@@ -52,11 +52,11 @@ export const TOUR_STEPS: TourStep[] = [
     selector: (ctx) =>
       ctx.aiEnabled ? 'button[aria-label="Ask AI"]' : 'button[aria-label="Scan QR code"]',
     placement: 'bottom',
-    title: 'Ask AI anything',
+    title: (ctx) => (ctx.aiEnabled ? 'Ask AI anything' : 'Find your bins'),
     body: (ctx) =>
       ctx.aiEnabled
         ? `Try "add batteries to the kitchen ${ctx.terminology.bin}" or "which ${ctx.terminology.bins} have tools?"`
-        : `With an AI provider connected, you can manage your ${ctx.terminology.bins} by typing what you want in plain English. Set this up in Settings.`,
+        : `Scan a QR label to jump straight to a ${ctx.terminology.bin}, or use the search bar to find ${ctx.terminology.bins} by name, tag, or contents.`,
     route: '/bins',
     mobilePlacement: 'bottom',
   },

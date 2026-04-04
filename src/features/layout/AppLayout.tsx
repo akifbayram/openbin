@@ -73,7 +73,7 @@ export function AppLayout() {
   const [commandOpen, setCommandOpen] = useState(false);
   const commandMounted = useRef(false);
   if (commandOpen) commandMounted.current = true;
-  const aiEnabled = !!aiSettings && (isSelfHosted || planInfo.plan === 'pro');
+  const aiEnabled = !!aiSettings && (isSelfHosted || planInfo.plan === 'pro' || demoMode);
   // Register directly on the module-level ref (can't use useRegisterCommandInput here
   // because AppLayout is *above* TourProvider, so useTourContext() would return null).
   useEffect(() => {

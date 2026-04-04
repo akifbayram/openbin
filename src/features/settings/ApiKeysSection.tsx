@@ -99,7 +99,7 @@ export function ApiKeysSection() {
           <Disclosure label={<span className="inline-flex items-center gap-1.5 text-[var(--text-primary)]"><KeyRound className="h-4 w-4" />API Keys</span>} labelClassName="text-[15px] font-semibold">
           <div className="flex items-baseline justify-between mt-1">
             <p className="text-[13px] text-[var(--text-tertiary)]">
-              Use API keys for smart home integrations and automation.
+              API keys are tied to your account and work across all your locations. Use them for smart home integrations and automation.
             </p>
             <Tooltip content="Create API key" side="bottom">
               <Button

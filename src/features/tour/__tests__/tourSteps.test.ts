@@ -150,9 +150,14 @@ describe('resolveTitle', () => {
     expect(resolveTitle(findStep('qr-section'), ctx)).toBe('Bin QR code');
   });
 
-  it('returns static title as-is', () => {
-    const ctx = makeContext();
+  it('returns AI title when AI is enabled', () => {
+    const ctx = makeContext({ aiEnabled: true });
     expect(resolveTitle(findStep('ask-ai'), ctx)).toBe('Ask AI anything');
+  });
+
+  it('returns fallback title when AI is not enabled', () => {
+    const ctx = makeContext({ aiEnabled: false });
+    expect(resolveTitle(findStep('ask-ai'), ctx)).toBe('Find your bins');
   });
 });
 
@@ -166,7 +171,7 @@ describe('resolveBody', () => {
   it('adapts body for non-AI user', () => {
     const ctx = makeContext({ aiEnabled: false });
     const body = resolveBody(findStep('ask-ai'), ctx);
-    expect(body).toContain('AI provider connected');
+    expect(body).toContain('Scan a QR label');
   });
 
   it('CTA body adapts for writer + AI', () => {

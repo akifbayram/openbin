@@ -139,6 +139,7 @@ export function DashboardPage() {
                     variant="ghost"
                     size="sm"
                     className="hidden lg:inline-flex h-10 gap-1.5 rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 text-[var(--ai-accent)] hover:bg-[var(--ai-accent)]/15 active:bg-[var(--ai-accent)]/20 ai-shimmer"
+                    aria-label="Ask AI"
                   >
                     <Sparkles className="h-4 w-4" />
                     Ask AI
