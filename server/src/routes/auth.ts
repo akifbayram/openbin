@@ -605,6 +605,10 @@ router.delete('/account', authenticate, blockDemoUser('delete account'), asyncHa
 
 // POST /api/auth/forgot-password — request a password reset email (no auth)
 router.post('/forgot-password', asyncHandler(async (req, res) => {
+  if (config.demoMode) {
+    res.status(403).json({ error: 'DEMO_RESTRICTION', message: 'Password reset is disabled in demo mode' });
+    return;
+  }
   const { email } = req.body;
 
   if (!email || typeof email !== 'string') {
@@ -634,6 +638,10 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
 
 // POST /api/auth/reset-password — consume reset token and set new password (no auth)
 router.post('/reset-password', asyncHandler(async (req, res) => {
+  if (config.demoMode) {
+    res.status(403).json({ error: 'DEMO_RESTRICTION', message: 'Password reset is disabled in demo mode' });
+    return;
+  }
   const { token, newPassword } = req.body;
 
   if (!token || typeof token !== 'string') {
