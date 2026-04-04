@@ -238,7 +238,7 @@ export function SettingsPage() {
           ) : (
             <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />
           )}
-          {aiEnabled &&
+          {aiEnabled && !demoMode &&
             (apiKeysGated ? (
               <UpgradePrompt
                 feature="API Keys"
