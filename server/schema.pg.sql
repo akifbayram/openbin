@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   sub_status         INTEGER NOT NULL DEFAULT 1,
   active_until       TEXT,
   previous_sub_status INTEGER,
+  ai_credits_used    INTEGER NOT NULL DEFAULT 0,
   is_admin           BOOLEAN NOT NULL DEFAULT FALSE,
   deleted_at         TEXT,
   created_at         TEXT NOT NULL DEFAULT (NOW()),

@@ -237,8 +237,8 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   }
 
   if (plan !== undefined && !isSelfHosted()) {
-    if (plan !== Plan.LITE && plan !== Plan.PRO) {
-      throw new ValidationError('Plan must be 0 (lite) or 1 (pro)');
+    if (plan !== Plan.FREE && plan !== Plan.PLUS && plan !== Plan.PRO) {
+      throw new ValidationError('Plan must be 0 (plus), 1 (pro), or 2 (free)');
     }
   }
 

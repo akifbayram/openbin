@@ -6,7 +6,7 @@ import { ForbiddenError, NotFoundError, ValidationError } from '../lib/httpError
 import { assertLocationWritable } from '../lib/planGate.js';
 import { validateRequiredString } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
-import { requirePro } from '../middleware/requirePlan.js';
+import { requirePlusOrAbove } from '../middleware/requirePlan.js';
 
 const router = Router();
 router.use(authenticate);
@@ -28,7 +28,7 @@ router.get('/:locationId/custom-fields', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/locations/:locationId/custom-fields
-router.post('/:locationId/custom-fields', requirePro(), asyncHandler(async (req, res) => {
+router.post('/:locationId/custom-fields', requirePlusOrAbove(), asyncHandler(async (req, res) => {
   const { locationId } = req.params;
   const { name } = req.body;
 
@@ -63,7 +63,7 @@ router.post('/:locationId/custom-fields', requirePro(), asyncHandler(async (req,
 }));
 
 // PUT /api/locations/:locationId/custom-fields/reorder (before :fieldId to avoid param capture)
-router.put('/:locationId/custom-fields/reorder', requirePro(), asyncHandler(async (req, res) => {
+router.put('/:locationId/custom-fields/reorder', requirePlusOrAbove(), asyncHandler(async (req, res) => {
   const { locationId } = req.params;
   const { field_ids } = req.body;
 
@@ -88,7 +88,7 @@ router.put('/:locationId/custom-fields/reorder', requirePro(), asyncHandler(asyn
 }));
 
 // PUT /api/locations/:locationId/custom-fields/:fieldId
-router.put('/:locationId/custom-fields/:fieldId', requirePro(), asyncHandler(async (req, res) => {
+router.put('/:locationId/custom-fields/:fieldId', requirePlusOrAbove(), asyncHandler(async (req, res) => {
   const { locationId, fieldId } = req.params;
   const { name, position } = req.body;
 
@@ -139,7 +139,7 @@ router.put('/:locationId/custom-fields/:fieldId', requirePro(), asyncHandler(asy
 }));
 
 // DELETE /api/locations/:locationId/custom-fields/:fieldId
-router.delete('/:locationId/custom-fields/:fieldId', requirePro(), asyncHandler(async (req, res) => {
+router.delete('/:locationId/custom-fields/:fieldId', requirePlusOrAbove(), asyncHandler(async (req, res) => {
   const { locationId, fieldId } = req.params;
 
   await assertLocationWritable(locationId);

@@ -42,7 +42,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       : null,
     features: getFeatureMap(planInfo.plan),
     upgradeUrl: active && planInfo.plan === Plan.PRO && planInfo.subStatus !== SubStatus.TRIAL ? null : await generateUpgradeUrl(userId, email),
-    upgradeLiteUrl: isPaidActive ? null : await generateUpgradePlanUrl(userId, email, 'lite'),
+    upgradeLiteUrl: isPaidActive ? null : await generateUpgradePlanUrl(userId, email, 'plus'),
     upgradeProUrl: isPaidActive ? null : await generateUpgradePlanUrl(userId, email, 'pro'),
     portalUrl: isPaidActive ? await generatePortalUrl(userId, email) : null,
   });

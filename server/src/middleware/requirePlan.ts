@@ -5,6 +5,7 @@ import { PlanRestrictedError } from '../lib/httpErrors.js';
 import {
   generateUpgradeUrl,
   getUserPlanInfo,
+  isPlusOrAbove,
   isProUser,
   isSelfHosted,
   isSubscriptionActive,
@@ -31,6 +32,35 @@ function requireProAccess(message: string): RequestHandler {
     }
 
     if (!isProUser(planInfo)) {
+      const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
+      throw new PlanRestrictedError(message, upgradeUrl);
+    }
+
+    next();
+  });
+}
+
+/** Self-hosted mode bypasses all checks with zero DB queries. */
+function requirePlusAccess(message: string): RequestHandler {
+  return asyncHandler(async (req, _res, next) => {
+    if (isSelfHosted()) {
+      next();
+      return;
+    }
+
+    const userId = req.user!.id;
+    const planInfo = await getUserPlanInfo(userId);
+
+    if (!planInfo) {
+      throw new PlanRestrictedError('User plan not found');
+    }
+
+    if (!isSubscriptionActive(planInfo)) {
+      const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
+      throw new PlanRestrictedError('Your subscription has expired', upgradeUrl);
+    }
+
+    if (!isPlusOrAbove(planInfo)) {
       const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
       throw new PlanRestrictedError(message, upgradeUrl);
     }
@@ -79,4 +109,8 @@ export function requirePro(): RequestHandler {
 
 export function requireWriteApi(): RequestHandler {
   return requireProAccess('API write access requires a Pro plan');
+}
+
+export function requirePlusOrAbove(): RequestHandler {
+  return requirePlusAccess('This feature requires a Plus or Pro plan');
 }

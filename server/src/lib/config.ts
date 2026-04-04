@@ -71,18 +71,41 @@ export const config = Object.freeze({
   subscriptionWebhookSecret: process.env.SUBSCRIPTION_WEBHOOK_SECRET || null,
   trialPeriodDays: clamp(parseInt(process.env.TRIAL_PERIOD_DAYS || '7', 10), 1, 90, 7),
   planLimits: Object.freeze({
-    liteAi: parseBool(process.env.PLAN_LITE_AI, false),
-    liteApiKeys: parseBool(process.env.PLAN_LITE_API_KEYS, false),
-    liteCustomFields: parseBool(process.env.PLAN_LITE_CUSTOM_FIELDS, false),
-    liteFullExport: parseBool(process.env.PLAN_LITE_FULL_EXPORT, false),
-    liteReorganize: parseBool(process.env.PLAN_LITE_REORGANIZE, false),
-    liteBinSharing: parseBool(process.env.PLAN_LITE_BIN_SHARING, false),
-    liteMaxLocations: parseNullableInt(process.env.PLAN_LITE_MAX_LOCATIONS, 1),
-    liteMaxStorageMb: parseNullableInt(process.env.PLAN_LITE_MAX_STORAGE_MB, 100),
-    liteMaxMembers: parseNullableInt(process.env.PLAN_LITE_MAX_MEMBERS, 1),
-    liteActivityRetentionDays: parseNullableInt(process.env.PLAN_LITE_ACTIVITY_RETENTION_DAYS, 30),
-    proMaxStorageMb: parseNullableInt(process.env.PLAN_PRO_MAX_STORAGE_MB, 5000),
+    // Free tier
+    freeAi: false,
+    freeApiKeys: false,
+    freeCustomFields: parseBool(process.env.PLAN_FREE_CUSTOM_FIELDS, false),
+    freeFullExport: parseBool(process.env.PLAN_FREE_FULL_EXPORT, false),
+    freeReorganize: false,
+    freeBinSharing: false,
+    freeMaxBins: parseNullableInt(process.env.PLAN_FREE_MAX_BINS, 50),
+    freeMaxLocations: parseNullableInt(process.env.PLAN_FREE_MAX_LOCATIONS, 1),
+    freeMaxStorageMb: (() => {
+      const v = process.env.PLAN_FREE_MAX_STORAGE_MB;
+      if (v === undefined || v === '') return 0;
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? n : 0;
+    })(),
+    freeMaxMembers: parseNullableInt(process.env.PLAN_FREE_MAX_MEMBERS, 1),
+    freeActivityRetentionDays: parseNullableInt(process.env.PLAN_FREE_ACTIVITY_RETENTION_DAYS, 7),
+    // Plus tier (renamed from Lite)
+    plusAi: parseBool(process.env.PLAN_PLUS_AI, false),
+    plusApiKeys: parseBool(process.env.PLAN_PLUS_API_KEYS, false),
+    plusCustomFields: parseBool(process.env.PLAN_PLUS_CUSTOM_FIELDS, true),
+    plusFullExport: parseBool(process.env.PLAN_PLUS_FULL_EXPORT, true),
+    plusReorganize: parseBool(process.env.PLAN_PLUS_REORGANIZE, false),
+    plusBinSharing: parseBool(process.env.PLAN_PLUS_BIN_SHARING, false),
+    plusMaxBins: parseNullableInt(process.env.PLAN_PLUS_MAX_BINS, null),
+    plusMaxLocations: parseNullableInt(process.env.PLAN_PLUS_MAX_LOCATIONS, 1),
+    plusMaxStorageMb: parseNullableInt(process.env.PLAN_PLUS_MAX_STORAGE_MB, 100),
+    plusMaxMembers: parseNullableInt(process.env.PLAN_PLUS_MAX_MEMBERS, 1),
+    plusActivityRetentionDays: parseNullableInt(process.env.PLAN_PLUS_ACTIVITY_RETENTION_DAYS, 30),
+    // Pro tier
+    proMaxBins: parseNullableInt(process.env.PLAN_PRO_MAX_BINS, null),
+    proMaxStorageMb: parseNullableInt(process.env.PLAN_PRO_MAX_STORAGE_MB, 1000),
     proActivityRetentionDays: parseNullableInt(process.env.PLAN_PRO_ACTIVITY_RETENTION_DAYS, 90),
+    // Trial
+    trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '25', 10), 1, 1000, 25),
   }),
   // Email (Resend)
   emailEnabled: parseBool(process.env.EMAIL_ENABLED, false),

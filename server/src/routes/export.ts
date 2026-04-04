@@ -48,7 +48,7 @@ import {
 import { safePath } from '../lib/pathSafety.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
-import { requirePro } from '../middleware/requirePlan.js';
+import { requirePlusOrAbove } from '../middleware/requirePlan.js';
 
 const router = Router();
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
@@ -75,7 +75,7 @@ router.use(authenticate);
 
 // GET /api/locations/:id/export — export all bins + photos for a location
 // Streams JSON to avoid OOM: only one bin's photos are in memory at a time.
-router.get('/locations/:id/export', requireLocationMember(), requirePro(), asyncHandler(async (req, res) => {
+router.get('/locations/:id/export', requireLocationMember(), requirePlusOrAbove(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
   await requireMemberOrAbove(locationId, req.user!.id, 'export location data');
 
@@ -157,7 +157,7 @@ router.get('/locations/:id/export', requireLocationMember(), requirePro(), async
 }));
 
 // GET /api/locations/:id/export/zip — export as ZIP with structured directories
-router.get('/locations/:id/export/zip', requireLocationMember(), requirePro(), asyncHandler(async (req, res) => {
+router.get('/locations/:id/export/zip', requireLocationMember(), requirePlusOrAbove(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
   await requireMemberOrAbove(locationId, req.user!.id, 'export location data');
 

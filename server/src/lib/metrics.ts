@@ -4,7 +4,7 @@ import { getFeatureMap, Plan, SubStatus } from './planGate.js';
 
 export interface CloudMetrics {
   generatedAt: string;
-  plans: { liteActive: number; liteInactive: number; proActive: number; proTrial: number; proInactive: number; total: number };
+  plans: { plusActive: number; plusInactive: number; freeActive: number; proActive: number; proTrial: number; proInactive: number; total: number };
   locations: { total: number; avgPerUser: number; atLimit: number };
   bins: { total: number; avgPerLocation: number; createdLast7d: number; createdLast30d: number };
   storage: { totalMb: number; avgPerLocationMb: number; nearingLimitCount: number };
@@ -31,16 +31,16 @@ async function queryPlanDistribution(demo: { clause: string; params: string[] })
     `SELECT plan, sub_status, COUNT(*) as cnt FROM users u WHERE 1=1 ${demo.clause} GROUP BY plan, sub_status`,
     demo.params,
   );
-  const plans = { liteActive: 0, liteInactive: 0, proActive: 0, proTrial: 0, proInactive: 0, total: 0 };
+  const plans = { plusActive: 0, plusInactive: 0, freeActive: 0, proActive: 0, proTrial: 0, proInactive: 0, total: 0 };
   for (const row of result.rows) {
     const count = row.cnt;
     plans.total += count;
-    if (row.plan === Plan.LITE && row.sub_status === SubStatus.ACTIVE) plans.liteActive = count;
-    else if (row.plan === Plan.LITE && row.sub_status === SubStatus.INACTIVE) plans.liteInactive = count;
+    if (row.plan === Plan.PLUS && row.sub_status === SubStatus.ACTIVE) plans.plusActive = count;
+    else if (row.plan === Plan.PLUS && row.sub_status === SubStatus.INACTIVE) plans.plusInactive = count;
+    else if (row.plan === Plan.FREE) plans.freeActive += count;
     else if (row.plan === Plan.PRO && row.sub_status === SubStatus.ACTIVE) plans.proActive = count;
     else if (row.plan === Plan.PRO && row.sub_status === SubStatus.TRIAL) plans.proTrial = count;
     else if (row.plan === Plan.PRO && row.sub_status === SubStatus.INACTIVE) plans.proInactive = count;
-    else if (row.plan === Plan.LITE && row.sub_status === SubStatus.TRIAL) plans.total += 0; // counted above
   }
   return plans;
 }
@@ -54,10 +54,10 @@ async function queryLocationStats(demo: { clause: string; params: string[] }) {
     demo.params,
   );
 
-  const liteLimit = getFeatureMap(Plan.LITE).maxLocations ?? 1;
+  const plusLimit = getFeatureMap(Plan.PLUS).maxLocations ?? 1;
   const atLimitResult = await query<{ cnt: number }>(
-    `SELECT COUNT(*) as cnt FROM (SELECT l.created_by, COUNT(*) as loc_count FROM locations l JOIN users u ON u.id = l.created_by WHERE u.plan = ${Plan.LITE} ${demo.clause} GROUP BY l.created_by HAVING COUNT(*) >= $${demo.params.length + 1})`,
-    [...demo.params, liteLimit],
+    `SELECT COUNT(*) as cnt FROM (SELECT l.created_by, COUNT(*) as loc_count FROM locations l JOIN users u ON u.id = l.created_by WHERE u.plan = ${Plan.PLUS} ${demo.clause} GROUP BY l.created_by HAVING COUNT(*) >= $${demo.params.length + 1})`,
+    [...demo.params, plusLimit],
   );
 
   return { total, avgPerUser: Math.round((avgResult.rows[0]?.avg_locs ?? 0) * 100) / 100, atLimit: atLimitResult.rows[0].cnt };
@@ -118,7 +118,7 @@ async function queryStorageStats() {
 async function queryMemberStats() {
   const result = await query<{ avg_members: number; at_limit: number }>(
     `SELECT AVG(cnt) as avg_members,
-       SUM(CASE WHEN cnt >= 1 AND owner_plan = ${Plan.LITE} THEN 1 ELSE 0 END) as at_limit
+       SUM(CASE WHEN cnt >= 1 AND owner_plan = ${Plan.PLUS} THEN 1 ELSE 0 END) as at_limit
      FROM (
        SELECT lm.location_id, COUNT(*) as cnt, u.plan as owner_plan
        FROM location_members lm

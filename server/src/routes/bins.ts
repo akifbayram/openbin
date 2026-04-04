@@ -12,7 +12,7 @@ import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/custo
 import { ForbiddenError, NotFoundError, OverLimitError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
-import { assertLocationWritable, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache } from '../lib/planGate.js';
+import { assertBinCreationAllowed, assertLocationWritable, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache } from '../lib/planGate.js';
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { storage } from '../lib/storage.js';
@@ -41,6 +41,7 @@ router.post('/', asyncHandler(async (req, res) => {
   await requireMemberOrAbove(locationId, req.user!.id, 'create bins');
 
   await assertLocationWritable(locationId);
+  await assertBinCreationAllowed(req.user!.id);
 
   if (areaId) await verifyAreaInLocation(areaId, locationId);
 
@@ -435,6 +436,14 @@ router.post('/:id/photos', asyncHandler(async (req, res, next) => {
 
   // Per-user storage quotas (plan limit + demo limit share one query)
   const photoFeatures = await getUserFeatures(req.user!.id);
+
+  // Block uploads entirely for zero-storage plans (e.g. Free tier)
+  if (photoFeatures.maxPhotoStorageMb !== null && photoFeatures.maxPhotoStorageMb === 0) {
+    const planInfo = await getUserPlanInfo(req.user!.id);
+    const upgradeUrl = planInfo ? await generateUpgradeUrl(req.user!.id, planInfo.email) : null;
+    throw new OverLimitError('Photo uploads are available on Plus and Pro plans', upgradeUrl);
+  }
+
   const needsUserUsage = photoFeatures.maxPhotoStorageMb !== null || config.demoMode;
   if (needsUserUsage) {
     const usageResult = await query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [req.user!.id]);

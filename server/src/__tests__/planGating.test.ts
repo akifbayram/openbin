@@ -11,6 +11,7 @@ vi.mock('../lib/planGate.js', async (importOriginal) => {
     isSelfHosted: vi.fn(),
     getUserPlanInfo: vi.fn(),
     isProUser: vi.fn(),
+    isPlusOrAbove: vi.fn(),
     isSubscriptionActive: vi.fn(),
     generateUpgradeUrl: vi.fn(),
   };
@@ -22,6 +23,7 @@ import { createApp } from '../index.js';
 import {
   generateUpgradeUrl,
   getUserPlanInfo,
+  isPlusOrAbove,
   isProUser,
   isSelfHosted,
   isSubscriptionActive,
@@ -44,21 +46,23 @@ function mockProUser() {
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
   vi.mocked(isProUser).mockReturnValue(true);
+  vi.mocked(isPlusOrAbove).mockReturnValue(true);
   vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 }
 
-/** Configure mocks so all plan checks fail for a Lite cloud user. */
-function mockLiteUser() {
+/** Configure mocks so all plan checks fail for a Free cloud user. */
+function mockFreeUser() {
   vi.mocked(isSelfHosted).mockReturnValue(false);
   vi.mocked(getUserPlanInfo).mockResolvedValue({
-    plan: Plan.LITE,
+    plan: Plan.FREE,
     subStatus: SubStatus.ACTIVE,
     activeUntil: null,
-    email: 'lite@example.com',
+    email: 'free@example.com',
     previousSubStatus: null,
   });
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
   vi.mocked(isProUser).mockReturnValue(false);
+  vi.mocked(isPlusOrAbove).mockReturnValue(false);
   vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
 }
 
@@ -73,6 +77,7 @@ beforeEach(() => {
   vi.mocked(isSelfHosted).mockReset();
   vi.mocked(getUserPlanInfo).mockReset();
   vi.mocked(isProUser).mockReset();
+  vi.mocked(isPlusOrAbove).mockReset();
   vi.mocked(isSubscriptionActive).mockReset();
   vi.mocked(generateUpgradeUrl).mockReset();
 });
@@ -82,8 +87,8 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('AI route plan gating', () => {
-  it('GET /api/ai/settings returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
-    mockLiteUser();
+  it('GET /api/ai/settings returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
+    mockFreeUser();
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -107,8 +112,8 @@ describe('AI route plan gating', () => {
     expect(getUserPlanInfo).not.toHaveBeenCalled();
   });
 
-  it('POST /api/ai/analyze returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
-    mockLiteUser();
+  it('POST /api/ai/analyze returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
+    mockFreeUser();
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -120,8 +125,8 @@ describe('AI route plan gating', () => {
     expect(res.body.error).toBe('PLAN_RESTRICTED');
   });
 
-  it('POST /api/ai/structure-text returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
-    mockLiteUser();
+  it('POST /api/ai/structure-text returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
+    mockFreeUser();
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -140,8 +145,8 @@ describe('AI route plan gating', () => {
 // ---------------------------------------------------------------------------
 
 describe('Export route plan gating', () => {
-  it('GET /api/locations/:id/export returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
-    mockLiteUser();
+  it('GET /api/locations/:id/export returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
+    mockFreeUser();
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
@@ -166,8 +171,8 @@ describe('Export route plan gating', () => {
     expect(res.body.version).toBe(2);
   });
 
-  it('GET /api/locations/:id/export/zip returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
-    mockLiteUser();
+  it('GET /api/locations/:id/export/zip returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
+    mockFreeUser();
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
@@ -179,8 +184,8 @@ describe('Export route plan gating', () => {
     expect(res.body.error).toBe('PLAN_RESTRICTED');
   });
 
-  it('GET /api/locations/:id/export/csv works for cloud LITE user (not gated)', async () => {
-    mockLiteUser();
+  it('GET /api/locations/:id/export/csv works for cloud FREE user (not gated)', async () => {
+    mockFreeUser();
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
@@ -211,8 +216,8 @@ describe('Export route plan gating', () => {
 // ---------------------------------------------------------------------------
 
 describe('API key route plan gating', () => {
-  it('POST /api/api-keys returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
-    mockLiteUser();
+  it('POST /api/api-keys returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
+    mockFreeUser();
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -224,8 +229,8 @@ describe('API key route plan gating', () => {
     expect(res.body.error).toBe('PLAN_RESTRICTED');
   });
 
-  it('GET /api/api-keys works for cloud LITE user (list is not gated)', async () => {
-    mockLiteUser();
+  it('GET /api/api-keys works for cloud FREE user (list is not gated)', async () => {
+    mockFreeUser();
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -268,8 +273,8 @@ describe('API key route plan gating', () => {
 // ---------------------------------------------------------------------------
 
 describe('Custom field route plan gating', () => {
-  it('POST /api/locations/:id/custom-fields returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
-    mockLiteUser();
+  it('POST /api/locations/:id/custom-fields returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
+    mockFreeUser();
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
@@ -282,8 +287,8 @@ describe('Custom field route plan gating', () => {
     expect(res.body.error).toBe('PLAN_RESTRICTED');
   });
 
-  it('GET /api/locations/:id/custom-fields works for cloud LITE user (read is not gated)', async () => {
-    mockLiteUser();
+  it('GET /api/locations/:id/custom-fields works for cloud FREE user (read is not gated)', async () => {
+    mockFreeUser();
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 
@@ -295,8 +300,8 @@ describe('Custom field route plan gating', () => {
     expect(res.body.results).toEqual([]);
   });
 
-  it('DELETE /api/locations/:id/custom-fields/:fieldId returns 403 PLAN_RESTRICTED for cloud LITE user', async () => {
-    mockLiteUser();
+  it('DELETE /api/locations/:id/custom-fields/:fieldId returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
+    mockFreeUser();
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
 

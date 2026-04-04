@@ -11,7 +11,7 @@ export function getSubscriptionSecretKey(): Uint8Array {
   return _subSecretKey;
 }
 
-export const Plan = { LITE: 0, PRO: 1 } as const;
+export const Plan = { FREE: 2, PLUS: 0, PRO: 1 } as const;
 export type PlanTier = (typeof Plan)[keyof typeof Plan];
 
 export const SubStatus = { INACTIVE: 0, ACTIVE: 1, TRIAL: 2 } as const;
@@ -32,6 +32,7 @@ export interface PlanFeatures {
   fullExport: boolean;
   reorganize: boolean;
   binSharing: boolean;
+  maxBins: number | null;
   maxLocations: number | null;
   maxPhotoStorageMb: number | null;
   maxMembersPerLocation: number | null;
@@ -47,9 +48,14 @@ export function isProUser(planInfo: { plan: PlanTier; subStatus: SubStatusType }
   return planInfo.plan === Plan.PRO && planInfo.subStatus !== SubStatus.INACTIVE;
 }
 
+export function isPlusOrAbove(planInfo: { plan: PlanTier; subStatus: SubStatusType }): boolean {
+  if (config.selfHosted) return true;
+  return (planInfo.plan === Plan.PLUS || planInfo.plan === Plan.PRO) && planInfo.subStatus !== SubStatus.INACTIVE;
+}
+
 export function isPlanRestricted(planInfo: { plan: PlanTier; subStatus: SubStatusType }): boolean {
   if (config.selfHosted) return false;
-  return planInfo.plan === Plan.LITE || planInfo.subStatus === SubStatus.INACTIVE;
+  return planInfo.plan === Plan.FREE || planInfo.subStatus === SubStatus.INACTIVE;
 }
 
 export function isSubscriptionActive(planInfo: { subStatus: SubStatusType; activeUntil: string | null }): boolean {
@@ -75,8 +81,10 @@ export async function getUserPlanInfo(userId: string): Promise<UserPlanInfo | nu
   };
 }
 
-export function planLabel(plan: PlanTier): 'pro' | 'lite' {
-  return plan === Plan.PRO ? 'pro' : 'lite';
+export function planLabel(plan: PlanTier): 'free' | 'plus' | 'pro' {
+  if (plan === Plan.PRO) return 'pro';
+  if (plan === Plan.PLUS) return 'plus';
+  return 'free';
 }
 
 export function subStatusLabel(status: SubStatusType): 'active' | 'trial' | 'inactive' {
@@ -92,6 +100,7 @@ const UNRESTRICTED: PlanFeatures = {
   fullExport: true,
   reorganize: true,
   binSharing: true,
+  maxBins: null,
   maxLocations: null,
   maxPhotoStorageMb: null,
   maxMembersPerLocation: null,
@@ -102,19 +111,41 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
   if (config.selfHosted) return UNRESTRICTED;
   const pl = config.planLimits;
   if (plan === Plan.PRO) {
-    return { ...UNRESTRICTED, maxPhotoStorageMb: pl.proMaxStorageMb, activityRetentionDays: pl.proActivityRetentionDays };
+    return {
+      ...UNRESTRICTED,
+      maxBins: pl.proMaxBins,
+      maxPhotoStorageMb: pl.proMaxStorageMb,
+      activityRetentionDays: pl.proActivityRetentionDays,
+    };
   }
+  if (plan === Plan.PLUS) {
+    return {
+      ai: pl.plusAi,
+      apiKeys: pl.plusApiKeys,
+      customFields: pl.plusCustomFields,
+      fullExport: pl.plusFullExport,
+      reorganize: pl.plusReorganize,
+      binSharing: pl.plusBinSharing,
+      maxBins: pl.plusMaxBins,
+      maxLocations: pl.plusMaxLocations,
+      maxPhotoStorageMb: pl.plusMaxStorageMb,
+      maxMembersPerLocation: pl.plusMaxMembers,
+      activityRetentionDays: pl.plusActivityRetentionDays,
+    };
+  }
+  // Free tier
   return {
-    ai: pl.liteAi,
-    apiKeys: pl.liteApiKeys,
-    customFields: pl.liteCustomFields,
-    fullExport: pl.liteFullExport,
-    reorganize: pl.liteReorganize,
-    binSharing: pl.liteBinSharing,
-    maxLocations: pl.liteMaxLocations,
-    maxPhotoStorageMb: pl.liteMaxStorageMb,
-    maxMembersPerLocation: pl.liteMaxMembers,
-    activityRetentionDays: pl.liteActivityRetentionDays,
+    ai: pl.freeAi,
+    apiKeys: pl.freeApiKeys,
+    customFields: pl.freeCustomFields,
+    fullExport: pl.freeFullExport,
+    reorganize: pl.freeReorganize,
+    binSharing: pl.freeBinSharing,
+    maxBins: pl.freeMaxBins,
+    maxLocations: pl.freeMaxLocations,
+    maxPhotoStorageMb: pl.freeMaxStorageMb,
+    maxMembersPerLocation: pl.freeMaxMembers,
+    activityRetentionDays: pl.freeActivityRetentionDays,
   };
 }
 
@@ -142,6 +173,56 @@ export async function throwPlanRestricted(userId: string, message: string): Prom
   throw new PlanRestrictedError(message, upgradeUrl);
 }
 
+
+export async function getUserBinCount(userId: string): Promise<number> {
+  const result = await query<{ cnt: number }>(
+    'SELECT COUNT(*) as cnt FROM bins WHERE created_by = $1 AND deleted_at IS NULL',
+    [userId],
+  );
+  return result.rows[0].cnt;
+}
+
+export async function assertBinCreationAllowed(userId: string): Promise<void> {
+  if (config.selfHosted) return;
+  const features = await getUserFeatures(userId);
+  if (features.maxBins === null) return;
+  const count = await getUserBinCount(userId);
+  if (count >= features.maxBins) {
+    const planInfo = await getUserPlanInfo(userId);
+    const upgradeUrl = planInfo ? await generateUpgradeUrl(userId, planInfo.email) : null;
+    throw new PlanRestrictedError(
+      `You've reached the ${features.maxBins}-bin limit on your current plan. Upgrade to create more bins.`,
+      upgradeUrl,
+    );
+  }
+}
+
+export async function checkAndIncrementAiCredits(userId: string): Promise<{ allowed: boolean; used: number; limit: number }> {
+  if (config.selfHosted) return { allowed: true, used: 0, limit: 0 };
+  const planInfo = await getUserPlanInfo(userId);
+  if (!planInfo) return { allowed: true, used: 0, limit: 0 };
+  if (planInfo.subStatus !== SubStatus.TRIAL) return { allowed: true, used: 0, limit: 0 };
+  const limit = config.planLimits.trialAiCredits;
+  const userRow = await query<{ ai_credits_used: number }>(
+    'SELECT ai_credits_used FROM users WHERE id = $1',
+    [userId],
+  );
+  const used = userRow.rows[0]?.ai_credits_used ?? 0;
+  if (used >= limit) return { allowed: false, used, limit };
+  await query('UPDATE users SET ai_credits_used = ai_credits_used + 1 WHERE id = $1', [userId]);
+  return { allowed: true, used: used + 1, limit };
+}
+
+export async function getAiCredits(userId: string): Promise<{ used: number; limit: number }> {
+  if (config.selfHosted) return { used: 0, limit: 0 };
+  const planInfo = await getUserPlanInfo(userId);
+  if (!planInfo || planInfo.subStatus !== SubStatus.TRIAL) return { used: 0, limit: 0 };
+  const userRow = await query<{ ai_credits_used: number }>(
+    'SELECT ai_credits_used FROM users WHERE id = $1',
+    [userId],
+  );
+  return { used: userRow.rows[0]?.ai_credits_used ?? 0, limit: config.planLimits.trialAiCredits };
+}
 
 export async function getUserQuotaUsage(userId: string): Promise<{ locationCount: number; photoStorageMb: number }> {
   const [locResult, photoResult] = await Promise.all([
@@ -203,7 +284,7 @@ export async function generateUpgradeUrl(userId: string, email: string | null): 
   return token ? `${config.managerUrl}/auth/openbin?token=${token}` : null;
 }
 
-export async function generateUpgradePlanUrl(userId: string, email: string | null, plan: 'lite' | 'pro'): Promise<string | null> {
+export async function generateUpgradePlanUrl(userId: string, email: string | null, plan: 'plus' | 'pro'): Promise<string | null> {
   const token = await signManagerToken(userId, email);
   return token ? `${config.managerUrl}/auth/openbin?token=${token}&plan=${plan}` : null;
 }

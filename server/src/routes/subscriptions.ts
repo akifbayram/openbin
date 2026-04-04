@@ -92,7 +92,7 @@ router.post('/callback', asyncHandler(async (req, res) => {
     } else if (status === SubStatus.INACTIVE) {
       fireSubscriptionExpiredEmail(userId, userRow.email, userRow.display_name);
     }
-    if (plan === Plan.LITE && wasPro) {
+    if (plan === Plan.PLUS && wasPro) {
       const { fireDowngradeImpactEmail } = await import('../lib/emailSender.js');
       const [locRes, photoRes, memberRes] = await Promise.all([
         query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM locations WHERE created_by = $1', [userId]),
@@ -105,7 +105,7 @@ router.post('/callback', asyncHandler(async (req, res) => {
           [userId],
         ),
       ]);
-      const liteFeatures = (await import('../lib/planGate.js')).getFeatureMap(Plan.LITE);
+      const liteFeatures = (await import('../lib/planGate.js')).getFeatureMap(Plan.PLUS);
       const impact = {
         locationCount: locRes.rows[0].cnt,
         maxLocations: liteFeatures.maxLocations ?? 1,

@@ -9,18 +9,32 @@ vi.mock('../lib/config.js', () => ({
     subscriptionJwtSecret: null as string | null,
     jwtSecret: 'test-jwt-secret',
     planLimits: {
-      liteAi: false,
-      liteApiKeys: false,
-      liteCustomFields: false,
-      liteFullExport: false,
-      liteReorganize: false,
-      liteBinSharing: false,
-      liteMaxLocations: 1,
-      liteMaxStorageMb: 100,
-      liteMaxMembers: 1,
-      liteActivityRetentionDays: 30,
-      proMaxStorageMb: 5000,
+      freeAi: false,
+      freeApiKeys: false,
+      freeCustomFields: false,
+      freeFullExport: false,
+      freeReorganize: false,
+      freeBinSharing: false,
+      freeMaxBins: 50,
+      freeMaxLocations: 1,
+      freeMaxStorageMb: 0,
+      freeMaxMembers: 1,
+      freeActivityRetentionDays: 7,
+      plusAi: false,
+      plusApiKeys: false,
+      plusCustomFields: true,
+      plusFullExport: true,
+      plusReorganize: false,
+      plusBinSharing: false,
+      plusMaxBins: null,
+      plusMaxLocations: 1,
+      plusMaxStorageMb: 100,
+      plusMaxMembers: 1,
+      plusActivityRetentionDays: 30,
+      proMaxBins: null,
+      proMaxStorageMb: 1000,
       proActivityRetentionDays: 90,
+      trialAiCredits: 25,
     },
   },
 }));
@@ -52,18 +66,32 @@ import {
 
 // Default plan limits matching config.ts defaults
 const DEFAULT_PLAN_LIMITS = {
-  liteAi: false,
-  liteApiKeys: false,
-  liteCustomFields: false,
-  liteFullExport: false,
-  liteReorganize: false,
-  liteBinSharing: false,
-  liteMaxLocations: 1,
-  liteMaxStorageMb: 100,
-  liteMaxMembers: 1,
-  liteActivityRetentionDays: 30,
-  proMaxStorageMb: 5000,
-  proActivityRetentionDays: 90,
+  freeAi: false as const,
+  freeApiKeys: false as const,
+  freeCustomFields: false,
+  freeFullExport: false,
+  freeReorganize: false as const,
+  freeBinSharing: false as const,
+  freeMaxBins: 50 as number | null,
+  freeMaxLocations: 1 as number | null,
+  freeMaxStorageMb: 0,
+  freeMaxMembers: 1 as number | null,
+  freeActivityRetentionDays: 7 as number | null,
+  plusAi: false,
+  plusApiKeys: false,
+  plusCustomFields: true,
+  plusFullExport: true,
+  plusReorganize: false,
+  plusBinSharing: false,
+  plusMaxBins: null as number | null,
+  plusMaxLocations: 1 as number | null,
+  plusMaxStorageMb: 100 as number | null,
+  plusMaxMembers: 1 as number | null,
+  plusActivityRetentionDays: 30 as number | null,
+  proMaxBins: null as number | null,
+  proMaxStorageMb: 1000 as number | null,
+  proActivityRetentionDays: 90 as number | null,
+  trialAiCredits: 25,
 };
 
 // Helper to set config values for tests
@@ -86,8 +114,8 @@ describe('isSelfHosted()', () => {
 describe('isProUser()', () => {
   it('returns true for self-hosted regardless of plan', () => {
     setConfig({ selfHosted: true });
-    expect(isProUser({ plan: Plan.LITE, subStatus: SubStatus.INACTIVE })).toBe(true);
-    expect(isProUser({ plan: Plan.LITE, subStatus: SubStatus.ACTIVE })).toBe(true);
+    expect(isProUser({ plan: Plan.PLUS, subStatus: SubStatus.INACTIVE })).toBe(true);
+    expect(isProUser({ plan: Plan.PLUS, subStatus: SubStatus.ACTIVE })).toBe(true);
   });
 
   it('returns true for cloud PRO + ACTIVE', () => {
@@ -105,23 +133,28 @@ describe('isProUser()', () => {
     expect(isProUser({ plan: Plan.PRO, subStatus: SubStatus.INACTIVE })).toBe(false);
   });
 
-  it('returns false for cloud LITE', () => {
+  it('returns false for cloud PLUS', () => {
     setConfig({ selfHosted: false });
-    expect(isProUser({ plan: Plan.LITE, subStatus: SubStatus.ACTIVE })).toBe(false);
-    expect(isProUser({ plan: Plan.LITE, subStatus: SubStatus.INACTIVE })).toBe(false);
+    expect(isProUser({ plan: Plan.PLUS, subStatus: SubStatus.ACTIVE })).toBe(false);
+    expect(isProUser({ plan: Plan.PLUS, subStatus: SubStatus.INACTIVE })).toBe(false);
   });
 });
 
 describe('isPlanRestricted()', () => {
   it('returns false for self-hosted regardless of plan', () => {
     setConfig({ selfHosted: true });
-    expect(isPlanRestricted({ plan: Plan.LITE, subStatus: SubStatus.INACTIVE })).toBe(false);
-    expect(isPlanRestricted({ plan: Plan.LITE, subStatus: SubStatus.ACTIVE })).toBe(false);
+    expect(isPlanRestricted({ plan: Plan.FREE, subStatus: SubStatus.INACTIVE })).toBe(false);
+    expect(isPlanRestricted({ plan: Plan.FREE, subStatus: SubStatus.ACTIVE })).toBe(false);
   });
 
-  it('returns true for cloud LITE', () => {
+  it('returns true for cloud FREE', () => {
     setConfig({ selfHosted: false });
-    expect(isPlanRestricted({ plan: Plan.LITE, subStatus: SubStatus.ACTIVE })).toBe(true);
+    expect(isPlanRestricted({ plan: Plan.FREE, subStatus: SubStatus.ACTIVE })).toBe(true);
+  });
+
+  it('returns false for cloud PLUS + ACTIVE', () => {
+    setConfig({ selfHosted: false });
+    expect(isPlanRestricted({ plan: Plan.PLUS, subStatus: SubStatus.ACTIVE })).toBe(false);
   });
 
   it('returns true for cloud INACTIVE subscription', () => {
@@ -185,21 +218,23 @@ describe('getFeatureMap()', () => {
     expect(features.fullExport).toBe(true);
     expect(features.reorganize).toBe(true);
     expect(features.binSharing).toBe(true);
+    expect(features.maxBins).toBe(null);
     expect(features.maxLocations).toBe(null);
-    expect(features.maxPhotoStorageMb).toBe(5000);
+    expect(features.maxPhotoStorageMb).toBe(1000);
     expect(features.maxMembersPerLocation).toBe(null);
     expect(features.activityRetentionDays).toBe(90);
   });
 
-  it('returns LITE features for LITE plan (cloud)', () => {
+  it('returns PLUS features for PLUS plan (cloud)', () => {
     setConfig({ selfHosted: false });
-    const features = getFeatureMap(Plan.LITE);
+    const features = getFeatureMap(Plan.PLUS);
     expect(features.ai).toBe(false);
     expect(features.apiKeys).toBe(false);
-    expect(features.customFields).toBe(false);
-    expect(features.fullExport).toBe(false);
+    expect(features.customFields).toBe(true);
+    expect(features.fullExport).toBe(true);
     expect(features.reorganize).toBe(false);
     expect(features.binSharing).toBe(false);
+    expect(features.maxBins).toBe(null);
     expect(features.maxLocations).toBe(1);
     expect(features.maxPhotoStorageMb).toBe(100);
     expect(features.maxMembersPerLocation).toBe(1);
@@ -208,13 +243,14 @@ describe('getFeatureMap()', () => {
 
   it('returns PRO features when self-hosted regardless of plan argument', () => {
     setConfig({ selfHosted: true });
-    const features = getFeatureMap(Plan.LITE);
+    const features = getFeatureMap(Plan.PLUS);
     expect(features.ai).toBe(true);
     expect(features.apiKeys).toBe(true);
     expect(features.customFields).toBe(true);
     expect(features.fullExport).toBe(true);
     expect(features.reorganize).toBe(true);
     expect(features.binSharing).toBe(true);
+    expect(features.maxBins).toBe(null);
     expect(features.maxLocations).toBe(null);
     expect(features.maxPhotoStorageMb).toBe(null);
     expect(features.maxMembersPerLocation).toBe(null);
@@ -223,25 +259,22 @@ describe('getFeatureMap()', () => {
 });
 
 describe('getFeatureMap() with custom plan limits', () => {
-  it('uses custom Lite limits from config', () => {
+  it('uses custom Plus limits from config', () => {
     setConfig({
       selfHosted: false,
       planLimits: {
-        liteAi: true,
-        liteApiKeys: true,
-        liteCustomFields: false,
-        liteFullExport: false,
-        liteReorganize: false,
-        liteBinSharing: false,
-        liteMaxLocations: 3,
-        liteMaxStorageMb: 500,
-        liteMaxMembers: 5,
-        liteActivityRetentionDays: 60,
-        proMaxStorageMb: 5000,
-        proActivityRetentionDays: 90,
+        ...DEFAULT_PLAN_LIMITS,
+        plusAi: true,
+        plusApiKeys: true,
+        plusCustomFields: false,
+        plusFullExport: false,
+        plusMaxLocations: 3,
+        plusMaxStorageMb: 500,
+        plusMaxMembers: 5,
+        plusActivityRetentionDays: 60,
       },
     });
-    const features = getFeatureMap(Plan.LITE);
+    const features = getFeatureMap(Plan.PLUS);
     expect(features.ai).toBe(true);
     expect(features.apiKeys).toBe(true);
     expect(features.customFields).toBe(false);
@@ -255,16 +288,7 @@ describe('getFeatureMap() with custom plan limits', () => {
     setConfig({
       selfHosted: false,
       planLimits: {
-        liteAi: false,
-        liteApiKeys: false,
-        liteCustomFields: false,
-        liteFullExport: false,
-        liteReorganize: false,
-        liteBinSharing: false,
-        liteMaxLocations: 1,
-        liteMaxStorageMb: 100,
-        liteMaxMembers: 1,
-        liteActivityRetentionDays: 30,
+        ...DEFAULT_PLAN_LIMITS,
         proMaxStorageMb: 10000,
         proActivityRetentionDays: 365,
       },
@@ -280,21 +304,14 @@ describe('getFeatureMap() with custom plan limits', () => {
     setConfig({
       selfHosted: false,
       planLimits: {
-        liteAi: false,
-        liteApiKeys: false,
-        liteCustomFields: false,
-        liteFullExport: false,
-        liteReorganize: false,
-        liteBinSharing: false,
-        liteMaxLocations: null,
-        liteMaxStorageMb: null,
-        liteMaxMembers: null,
-        liteActivityRetentionDays: null,
-        proMaxStorageMb: null,
-        proActivityRetentionDays: null,
+        ...DEFAULT_PLAN_LIMITS,
+        plusMaxLocations: null,
+        plusMaxStorageMb: null,
+        plusMaxMembers: null,
+        plusActivityRetentionDays: null,
       },
     });
-    const features = getFeatureMap(Plan.LITE);
+    const features = getFeatureMap(Plan.PLUS);
     expect(features.maxLocations).toBe(null);
     expect(features.maxPhotoStorageMb).toBe(null);
     expect(features.maxMembersPerLocation).toBe(null);
@@ -331,11 +348,11 @@ describe('getUserPlanInfo()', () => {
   it('maps snake_case DB columns to camelCase', async () => {
     const activeUntil = '2027-01-01T00:00:00.000Z';
     vi.mocked(query).mockResolvedValue({
-      rows: [{ plan: Plan.LITE, sub_status: SubStatus.TRIAL, active_until: activeUntil, email: null, previous_sub_status: SubStatus.ACTIVE }],
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.TRIAL, active_until: activeUntil, email: null, previous_sub_status: SubStatus.ACTIVE }],
       rowCount: 1,
     });
     const result = await getUserPlanInfo('user-id');
-    expect(result?.plan).toBe(Plan.LITE);
+    expect(result?.plan).toBe(Plan.PLUS);
     expect(result?.subStatus).toBe(SubStatus.TRIAL);
     expect(result?.activeUntil).toBe(activeUntil);
     expect(result?.email).toBeNull();
@@ -411,7 +428,7 @@ describe('computeOverLimits()', () => {
   it('returns all false when under limits', () => {
     const result = computeOverLimits(
       { locationCount: 1, photoStorageMb: 50, memberCounts: { loc1: 1 } },
-      { ...getFeatureMap(Plan.LITE) },
+      { ...getFeatureMap(Plan.PLUS) },
     );
     expect(result).toEqual({ locations: false, photos: false, members: [] });
   });
@@ -419,7 +436,7 @@ describe('computeOverLimits()', () => {
   it('returns locations=true when over location limit', () => {
     const result = computeOverLimits(
       { locationCount: 3, photoStorageMb: 50, memberCounts: {} },
-      { ...getFeatureMap(Plan.LITE) },
+      { ...getFeatureMap(Plan.PLUS) },
     );
     expect(result.locations).toBe(true);
   });
@@ -427,7 +444,7 @@ describe('computeOverLimits()', () => {
   it('returns photos=true when over photo storage limit', () => {
     const result = computeOverLimits(
       { locationCount: 1, photoStorageMb: 200, memberCounts: {} },
-      { ...getFeatureMap(Plan.LITE) },
+      { ...getFeatureMap(Plan.PLUS) },
     );
     expect(result.photos).toBe(true);
   });
@@ -435,7 +452,7 @@ describe('computeOverLimits()', () => {
   it('returns member locationIds when over member limit', () => {
     const result = computeOverLimits(
       { locationCount: 1, photoStorageMb: 50, memberCounts: { loc1: 5, loc2: 1 } },
-      { ...getFeatureMap(Plan.LITE) },
+      { ...getFeatureMap(Plan.PLUS) },
     );
     expect(result.members).toEqual(['loc1']);
   });
@@ -465,7 +482,7 @@ describe('getUserOverLimits() with cache', () => {
 
   it('computes over-limits from DB queries', async () => {
     vi.mocked(query)
-      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ cnt: 3 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ total: 200 * 1024 * 1024 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });
@@ -477,7 +494,7 @@ describe('getUserOverLimits() with cache', () => {
 
   it('returns cached result on second call', async () => {
     vi.mocked(query)
-      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [], rowCount: 0 });
@@ -498,7 +515,7 @@ describe('checkLocationWritable()', () => {
   it('returns writable=true when under location limit', async () => {
     vi.mocked(query)
       .mockResolvedValueOnce({ rows: [{ created_by: 'owner1' }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [], rowCount: 0 });
@@ -509,7 +526,7 @@ describe('checkLocationWritable()', () => {
   it('returns writable=false when over location limit', async () => {
     vi.mocked(query)
       .mockResolvedValueOnce({ rows: [{ created_by: 'owner1' }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ cnt: 3 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [], rowCount: 0 });
@@ -534,7 +551,7 @@ describe('getEffectiveMemberRole()', () => {
 
   it('returns stored role when not over member limit', async () => {
     vi.mocked(query)
-      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 1 }], rowCount: 1 });
@@ -544,7 +561,7 @@ describe('getEffectiveMemberRole()', () => {
 
   it('downgrades non-owner to viewer when over member limit', async () => {
     vi.mocked(query)
-      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });
@@ -554,7 +571,7 @@ describe('getEffectiveMemberRole()', () => {
 
   it('preserves owner role even when over member limit', async () => {
     vi.mocked(query)
-      .mockResolvedValueOnce({ rows: [{ plan: Plan.LITE, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });

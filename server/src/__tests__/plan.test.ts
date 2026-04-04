@@ -30,23 +30,25 @@ const PRO_FEATURES = {
   fullExport: true,
   reorganize: true,
   binSharing: true,
+  maxBins: null,
   maxLocations: null,
-  maxPhotoStorageMb: 5000,
+  maxPhotoStorageMb: 1000,
   maxMembersPerLocation: null,
   activityRetentionDays: 90,
 };
 
-const LITE_FEATURES = {
+const PLUS_FEATURES = {
   ai: false,
   apiKeys: false,
-  customFields: false,
-  fullExport: false,
+  customFields: true,
+  fullExport: true,
   reorganize: false,
   binSharing: false,
+  maxBins: null,
   maxLocations: 1,
   maxPhotoStorageMb: 100,
   maxMembersPerLocation: 1,
-  activityRetentionDays: 90,
+  activityRetentionDays: 30,
 };
 
 beforeEach(() => {
@@ -135,16 +137,16 @@ describe('GET /api/plan', () => {
     expect(res.body.upgradeUrl).toBe('https://manager.example.com/auth/openbin?token=trial');
   });
 
-  it('returns restricted features + upgradeUrl for cloud lite user', async () => {
+  it('returns restricted features + upgradeUrl for cloud plus user', async () => {
     vi.mocked(isSelfHosted).mockReturnValue(false);
     vi.mocked(getUserPlanInfo).mockResolvedValue({
-      plan: Plan.LITE,
+      plan: Plan.PLUS,
       subStatus: SubStatus.ACTIVE,
       activeUntil: null,
-      email: 'lite@example.com',
+      email: 'plus@example.com',
       previousSubStatus: null,
     });
-    vi.mocked(getFeatureMap).mockReturnValue(LITE_FEATURES);
+    vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/auth/openbin?token=abc');
     const { token } = await createTestUser(app);
 
@@ -153,7 +155,7 @@ describe('GET /api/plan', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.plan).toBe('lite');
+    expect(res.body.plan).toBe('plus');
     expect(res.body.status).toBe('active');
     expect(res.body.selfHosted).toBe(false);
     expect(res.body.upgradeUrl).toBe('https://manager.example.com/auth/openbin?token=abc');
@@ -164,13 +166,13 @@ describe('GET /api/plan', () => {
   it('returns inactive status for cloud user with no subscription', async () => {
     vi.mocked(isSelfHosted).mockReturnValue(false);
     vi.mocked(getUserPlanInfo).mockResolvedValue({
-      plan: Plan.LITE,
+      plan: Plan.PLUS,
       subStatus: SubStatus.INACTIVE,
       activeUntil: null,
       email: 'inactive@example.com',
       previousSubStatus: null,
     });
-    vi.mocked(getFeatureMap).mockReturnValue(LITE_FEATURES);
+    vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
     const { token } = await createTestUser(app);
 
@@ -179,7 +181,7 @@ describe('GET /api/plan', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.plan).toBe('lite');
+    expect(res.body.plan).toBe('plus');
     expect(res.body.status).toBe('inactive');
   });
 
