@@ -31,7 +31,7 @@ describe('GET /api/tag-colors', () => {
     await request(app)
       .put('/api/tag-colors')
       .set('Authorization', `Bearer ${token}`)
-      .send({ locationId: location.id, tag: 'tools', color: 'blue' });
+      .send({ locationId: location.id, tag: 'tools', color: '#0000FF' });
 
     const res = await request(app)
       .get(`/api/tag-colors?location_id=${location.id}`)
@@ -40,7 +40,7 @@ describe('GET /api/tag-colors', () => {
     expect(res.status).toBe(200);
     expect(res.body.results).toHaveLength(1);
     expect(res.body.results[0].tag).toBe('tools');
-    expect(res.body.results[0].color).toBe('blue');
+    expect(res.body.results[0].color).toBe('#0000FF');
     expect(res.body.count).toBe(1);
   });
 
@@ -76,11 +76,11 @@ describe('PUT /api/tag-colors', () => {
     const res = await request(app)
       .put('/api/tag-colors')
       .set('Authorization', `Bearer ${token}`)
-      .send({ locationId: location.id, tag: 'tools', color: 'blue' });
+      .send({ locationId: location.id, tag: 'tools', color: '#0000FF' });
 
     expect(res.status).toBe(200);
     expect(res.body.tag).toBe('tools');
-    expect(res.body.color).toBe('blue');
+    expect(res.body.color).toBe('#0000FF');
   });
 
   it('upserts on conflict', async () => {
@@ -90,16 +90,16 @@ describe('PUT /api/tag-colors', () => {
     await request(app)
       .put('/api/tag-colors')
       .set('Authorization', `Bearer ${token}`)
-      .send({ locationId: location.id, tag: 'tools', color: 'blue' });
+      .send({ locationId: location.id, tag: 'tools', color: '#0000FF' });
 
     const res = await request(app)
       .put('/api/tag-colors')
       .set('Authorization', `Bearer ${token}`)
-      .send({ locationId: location.id, tag: 'tools', color: 'red' });
+      .send({ locationId: location.id, tag: 'tools', color: '#FF0000' });
 
     expect(res.status).toBe(200);
     expect(res.body.tag).toBe('tools');
-    expect(res.body.color).toBe('red');
+    expect(res.body.color).toBe('#FF0000');
 
     // Verify only one tag color exists
     const listRes = await request(app)
@@ -116,7 +116,7 @@ describe('PUT /api/tag-colors', () => {
     await request(app)
       .put('/api/tag-colors')
       .set('Authorization', `Bearer ${token}`)
-      .send({ locationId: location.id, tag: 'tools', color: 'blue' });
+      .send({ locationId: location.id, tag: 'tools', color: '#0000FF' });
 
     const res = await request(app)
       .put('/api/tag-colors')
@@ -143,7 +143,7 @@ describe('PUT /api/tag-colors', () => {
     const res = await request(app)
       .put('/api/tag-colors')
       .set('Authorization', `Bearer ${otherToken}`)
-      .send({ locationId: location.id, tag: 'tools', color: 'blue' });
+      .send({ locationId: location.id, tag: 'tools', color: '#0000FF' });
 
     expect(res.status).toBe(403);
   });
@@ -157,7 +157,7 @@ describe('DELETE /api/tag-colors/:tag', () => {
     await request(app)
       .put('/api/tag-colors')
       .set('Authorization', `Bearer ${token}`)
-      .send({ locationId: location.id, tag: 'tools', color: 'blue' });
+      .send({ locationId: location.id, tag: 'tools', color: '#0000FF' });
 
     const res = await request(app)
       .delete(`/api/tag-colors/tools?location_id=${location.id}`)
