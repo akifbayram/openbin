@@ -1,9 +1,9 @@
-import demoBinPhoto from '@/assets/premade-backgrounds/demo_bin.jpg';
 import demoCraftsPhoto from '@/assets/demo-photos/crafts.jpg';
 import demoKitchenPhoto from '@/assets/demo-photos/kitchen.jpg';
 import demoTech2Photo from '@/assets/demo-photos/tech_2.jpg';
 import demoTech3Photo from '@/assets/demo-photos/tech_3.jpg';
 import demoToolsPhoto from '@/assets/demo-photos/tools.jpg';
+import demoBinPhoto from '@/assets/premade-backgrounds/demo_bin.jpg';
 
 // ---------------------------------------------------------------------------
 // Photo sets — each mode gets its own photos + scenario keys

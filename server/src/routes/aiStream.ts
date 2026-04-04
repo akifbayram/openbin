@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { createPinnedFetch, validateEndpointUrl } from '../lib/aiCaller.js';
-import { getDemoResponse } from '../lib/demoAiResponses.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
 import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildCorrectionPrompt, buildReanalysisPrompt, buildReanalysisUserContent, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from '../lib/aiProviders.js';
@@ -15,6 +14,7 @@ import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg, buildUnifiedSystemPrompt } from '../lib/commandParser.js';
 import { config, isDemoUser } from '../lib/config.js';
 import { fetchCustomFieldDefs } from '../lib/customFieldHelpers.js';
+import { getDemoResponse } from '../lib/demoAiResponses.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
 import { createSdkModel } from '../lib/sdkProviderFactory.js';
