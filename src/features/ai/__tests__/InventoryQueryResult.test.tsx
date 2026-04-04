@@ -1,5 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@/lib/auth', () => ({
+  useAuth: () => ({ demoMode: false }),
+}));
+
 import { InventoryQueryResult } from '../InventoryQueryResult';
 
 describe('InventoryQueryResult', () => {
