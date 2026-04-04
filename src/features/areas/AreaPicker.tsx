@@ -3,7 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDialogPortal } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/toast';
+import { cn, getErrorMessage } from '@/lib/utils';
 import { buildAreaTree, createArea, flattenAreaTree, useAreaList } from './useAreas';
 
 interface AreaPickerProps {
@@ -14,6 +15,7 @@ interface AreaPickerProps {
 
 export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
   const dialogPortal = useDialogPortal();
+  const { showToast } = useToast();
   const { areas } = useAreaList(locationId);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -68,8 +70,9 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
       setNewName('');
       setCreating(false);
       setOpen(false);
-    } catch {
-      // Error handled silently — duplicate name will show in console
+    } catch (err) {
+      const message = getErrorMessage(err, 'Failed to create area');
+      showToast({ message, variant: 'error' });
     } finally {
       setSaving(false);
     }

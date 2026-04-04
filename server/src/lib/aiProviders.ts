@@ -238,15 +238,3 @@ export async function reanalyzeImages(
   }
 }
 
-export async function analyzeImage(
-  config: AiProviderConfig,
-  imageBase64: string,
-  mimeType: string,
-  existingTags?: string[],
-  customPrompt?: string | null,
-  overrides?: AiOverrides,
-  isDemoUser?: boolean
-): Promise<AiSuggestionsResult> {
-  return analyzeImages(config, [{ base64: imageBase64, mimeType }], existingTags, customPrompt, overrides, isDemoUser);
-}
-

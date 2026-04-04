@@ -16,7 +16,6 @@ import {
   buildFieldIdToNameMap,
   type ExportArea,
   type ExportBin,
-  type ExportData,
   type ExportLocationSettings,
   type ExportMember,
   type ExportPhoto,
@@ -54,33 +53,23 @@ import { requirePro } from '../middleware/requirePlan.js';
 const router = Router();
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
+/**
+ * Parse a tags field from CSV.
+ * New exports use "; " (semicolon-space) as the delimiter to avoid splitting
+ * tags that contain commas (e.g. "nuts, bolts"). Legacy exports used bare
+ * commas, so we fall back to comma-splitting when no semicolons are present.
+ */
+function parseCsvTags(raw: string): string[] {
+  if (raw.includes(';')) {
+    return raw.split(';').map(t => t.trim()).filter(Boolean);
+  }
+  return raw.split(',').map(t => t.trim()).filter(Boolean);
+}
+
 router.use(authenticate);
 
-// Legacy V1 format types
-interface LegacyBinV1 {
-  id?: string | number;
-  name: string;
-  contents?: string;
-  items?: string[];
-  notes?: string;
-  tags?: string[];
-  location?: string;
-  icon?: string;
-  color?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  photos?: LegacyPhotoV1[];
-}
-
-interface LegacyPhotoV1 {
-  id?: string | number;
-  data: string;
-  type?: string;
-  mimeType?: string;
-  filename?: string;
-}
-
 // GET /api/locations/:id/export — export all bins + photos for a location
+// Streams JSON to avoid OOM: only one bin's photos are in memory at a time.
 router.get('/locations/:id/export', requireLocationMember(), requirePro(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
 
@@ -103,40 +92,42 @@ router.get('/locations/:id/export', requireLocationMember(), requirePro(), async
     fetchLocationMembers(locationId),
   ]);
 
-  const exportBins: ExportBin[] = [];
-  for (const bin of bins) {
-    const entry = buildExportBinEntry(bin, fieldIdToName, areaPathMap);
-    entry.photos = await loadBinPhotosBase64(bin.id);
-    exportBins.push(entry);
-  }
-
-  const exportTrashedBins: ExportBin[] = [];
-  for (const bin of trashedBinsRaw) {
-    const entry = buildExportBinEntry(bin, fieldIdToName, areaPathMap, { includeTrashed: true });
-    entry.photos = await loadBinPhotosBase64(bin.id);
-    exportTrashedBins.push(entry);
-  }
-
-  // All area paths (including empty areas with no bins)
-  const allAreaPaths: ExportArea[] = Array.from(areaPathMap.values()).map(a => ({ path: a.path, createdBy: a.createdBy || undefined }));
-
-  const exportData: ExportData = {
-    version: 2,
-    exportedAt: new Date().toISOString(),
-    locationName,
-    locationSettings,
-    bins: exportBins,
-    trashedBins: exportTrashedBins.length > 0 ? exportTrashedBins : undefined,
-    areas: allAreaPaths.length > 0 ? allAreaPaths : undefined,
-    tagColors: tagColors.length > 0 ? tagColors : undefined,
-    customFieldDefinitions: fieldDefs.length > 0 ? fieldDefs : undefined,
-    pinnedBins: pinnedBins.length > 0 ? pinnedBins : undefined,
-    savedViews: savedViews.length > 0 ? savedViews : undefined,
-    members: members.length > 0 ? members : undefined,
-  };
-
+  res.setHeader('Content-Type', 'application/json');
   res.setHeader('Content-Disposition', `attachment; filename="openbin-export-${locationId}.json"`);
-  res.json(exportData);
+
+  // Write opening fields
+  res.write(`{"version":2,"exportedAt":${JSON.stringify(new Date().toISOString())},"locationName":${JSON.stringify(locationName)}`);
+  if (locationSettings) {
+    res.write(`,"locationSettings":${JSON.stringify(locationSettings)}`);
+  }
+
+  // Stream bins array one entry at a time so only one bin's photos are buffered
+  async function streamBins(key: string, rows: typeof bins, opts?: { includeTrashed: boolean }) {
+    res.write(`,"${key}":[`);
+    for (let i = 0; i < rows.length; i++) {
+      if (i > 0) res.write(',');
+      const entry = buildExportBinEntry(rows[i], fieldIdToName, areaPathMap, opts);
+      entry.photos = await loadBinPhotosBase64(rows[i].id);
+      res.write(JSON.stringify(entry));
+    }
+    res.write(']');
+  }
+
+  await streamBins('bins', bins);
+  if (trashedBinsRaw.length > 0) {
+    await streamBins('trashedBins', trashedBinsRaw, { includeTrashed: true });
+  }
+
+  // Remaining fields are small metadata — safe to buffer
+  const allAreaPaths: ExportArea[] = Array.from(areaPathMap.values()).map(a => ({ path: a.path, createdBy: a.createdBy || undefined }));
+  if (allAreaPaths.length > 0) res.write(`,"areas":${JSON.stringify(allAreaPaths)}`);
+  if (tagColors.length > 0) res.write(`,"tagColors":${JSON.stringify(tagColors)}`);
+  if (fieldDefs.length > 0) res.write(`,"customFieldDefinitions":${JSON.stringify(fieldDefs)}`);
+  if (pinnedBins.length > 0) res.write(`,"pinnedBins":${JSON.stringify(pinnedBins)}`);
+  if (savedViews.length > 0) res.write(`,"savedViews":${JSON.stringify(savedViews)}`);
+  if (members.length > 0) res.write(`,"members":${JSON.stringify(members)}`);
+
+  res.end('}');
 }));
 
 // GET /api/locations/:id/export/zip — export as ZIP with structured directories
@@ -271,7 +262,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
 
   for (const bin of bins) {
     const items = extractItemsWithQuantity(bin.items);
-    const tags = Array.isArray(bin.tags) ? bin.tags.join(',') : '';
+    const tags = Array.isArray(bin.tags) ? bin.tags.join('; ') : '';
     const binName = csvEscape(bin.name);
     const areaPath = bin.area_id ? (areaPathMap.get(bin.area_id)?.path || bin.area_name) : bin.area_name;
     const area = csvEscape(areaPath);
@@ -347,7 +338,7 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
     members,
   });
 
-  res.json({ ...result, photosSkipped: 0 });
+  res.json(result);
 }));
 
 // POST /api/locations/:id/import/csv — import bins from CSV file
@@ -427,7 +418,7 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
         if (item) prev.items.push(item);
       } else {
         const tags = tagsRaw
-          ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean)
+          ? parseCsvTags(tagsRaw)
           : [];
         pendingBins.push({
           name: binName,
@@ -468,7 +459,7 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
       }
 
       const tags = tagsRaw
-        ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean)
+        ? parseCsvTags(tagsRaw)
         : [];
       pendingBins.push({ name: binName, area, items, tags });
     }
@@ -749,86 +740,7 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
     members: manifest.members,
   });
 
-  res.json({ ...result, photosSkipped: 0 });
-}));
-
-// POST /api/import/legacy — import legacy V1/V2 format
-router.post('/import/legacy', asyncHandler(async (req, res) => {
-  const { locationId, data } = req.body;
-
-  if (!locationId) {
-    throw new ValidationError('locationId is required');
-  }
-
-  if (!data) {
-    throw new ValidationError('data is required');
-  }
-
-  // Verify membership (member or above — viewers are read-only)
-  await requireMemberOrAbove(locationId, req.user!.id, 'import data');
-
-  // Normalize legacy data to V2 format
-  const legacyBins: LegacyBinV1[] = data.bins || [];
-  const userId = req.user!.id;
-
-  const normalizedBins: ExportBin[] = legacyBins.map(bin => {
-    let items: string[] = bin.items || [];
-    if (items.length === 0 && bin.contents) {
-      items = bin.contents.split('\n').filter(s => s.trim().length > 0);
-    }
-
-    const photos: ExportPhoto[] = (bin.photos || []).map(p => ({
-      id: String(p.id || uuidv4()),
-      filename: p.filename || 'photo.jpg',
-      mimeType: p.mimeType || p.type || 'image/jpeg',
-      data: p.data,
-    }));
-
-    return {
-      id: String(bin.id || uuidv4()),
-      name: bin.name,
-      location: bin.location || '',
-      items,
-      notes: bin.notes || '',
-      tags: bin.tags || [],
-      icon: bin.icon || '',
-      color: bin.color || '',
-      createdAt: bin.createdAt || new Date().toISOString(),
-      updatedAt: bin.updatedAt || new Date().toISOString(),
-      photos,
-    };
-  });
-
-  const imported = await withTransaction(async (tx) => {
-    let count = 0;
-
-    for (const bin of normalizedBins) {
-      const areaId = await resolveArea(locationId, bin.location || '', userId, tx);
-
-      const binId = await insertBinWithShortCode(locationId, {
-        name: bin.name,
-        notes: bin.notes,
-        tags: bin.tags,
-        icon: bin.icon,
-        color: bin.color,
-        cardStyle: bin.cardStyle,
-        createdAt: bin.createdAt,
-        updatedAt: bin.updatedAt,
-      }, areaId, userId, tx);
-
-      await insertBinItems(binId, bin.items || [], tx);
-      await importPhotos(binId, bin.photos, userId, tx);
-
-      count++;
-    }
-
-    return count;
-  });
-
-  res.json({
-    message: 'Legacy import complete',
-    imported,
-  });
+  res.json(result);
 }));
 
 export default router;

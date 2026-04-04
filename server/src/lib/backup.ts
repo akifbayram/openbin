@@ -73,21 +73,25 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
   const zipPath = path.join(cfg.backupPath, filename);
   const tempDbPath = path.join(cfg.backupPath, `.tmp-backup-${timestamp}.db`);
 
+  const dumpPath = tempDbPath + '.sql';
+
   try {
     if (getDialect() === 'sqlite') {
       // Snapshot the database using SQLite's online backup API
       await getSqliteDb().backup(tempDbPath);
     } else {
       // PostgreSQL: dump to SQL file using pg_dump
-      const dumpPath = tempDbPath.replace(/\.db$/, '.sql');
       await execFileAsync('pg_dump', [
         appConfig.databaseUrl!,
         '-f', dumpPath,
         '--no-owner',
         '--no-acl',
       ]);
-      // Use SQL dump instead of DB file for archive
-      // We need to adjust the archive entry below
+      // Verify pg_dump produced a non-empty file
+      const stat = fs.statSync(dumpPath);
+      if (stat.size === 0) {
+        throw new Error('pg_dump produced an empty dump file');
+      }
     }
 
     // Create ZIP archive
@@ -102,7 +106,6 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
       if (getDialect() === 'sqlite') {
         archive.file(tempDbPath, { name: 'openbin.db' });
       } else {
-        const dumpPath = tempDbPath.replace(/\.db$/, '.sql');
         archive.file(dumpPath, { name: 'openbin.sql' });
       }
 
@@ -122,9 +125,9 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
     // Clean up temp files
     const filesToClean = getDialect() === 'sqlite'
       ? [tempDbPath]
-      : [tempDbPath.replace(/\.db$/, '.sql')];
+      : [dumpPath];
     for (const f of filesToClean) {
-      if (fs.existsSync(f)) fs.unlinkSync(f);
+      try { fs.unlinkSync(f); } catch (e) { if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e; }
     }
 
     // Prune old backups
@@ -135,12 +138,11 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
   } catch (err) {
     // Clean up partial files
     const filesToClean = getDialect() === 'sqlite'
-      ? [tempDbPath]
-      : [tempDbPath.replace(/\.db$/, '.sql')];
+      ? [tempDbPath, zipPath]
+      : [dumpPath, zipPath];
     for (const f of filesToClean) {
-      if (fs.existsSync(f)) fs.unlinkSync(f);
+      try { fs.unlinkSync(f); } catch (e) { if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e; }
     }
-    if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
 
     const error = err instanceof Error ? err : new Error(String(err));
     log.error('Backup failed:', error.message);

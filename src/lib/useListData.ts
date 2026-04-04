@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import type { EventName } from '@/lib/eventBus';
 import { notify, useRefreshOn } from '@/lib/eventBus';
@@ -21,6 +21,7 @@ export function useListData<T, R = T>(
   const [data, setData] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasData = useRef(false);
   const refreshCounter = useRefreshOn(...events);
 
   useEffect(() => {
@@ -28,23 +29,27 @@ export function useListData<T, R = T>(
       setData([]);
       setIsLoading(false);
       setError(null);
+      hasData.current = false;
       return;
     }
 
     let cancelled = false;
-    setIsLoading(true);
+    // Only show loading skeleton on initial load, not background refreshes
+    if (!hasData.current) setIsLoading(true);
     setError(null);
 
     apiFetch<ListResponse<R>>(path)
       .then((resp) => {
         if (!cancelled) {
           setData(transform ? transform(resp.results) : resp.results as unknown as T[]);
+          hasData.current = true;
         }
       })
       .catch((err) => {
         if (!cancelled) {
           setData([]);
           setError(getErrorMessage(err, 'Failed to load'));
+          hasData.current = false;
         }
       })
       .finally(() => {

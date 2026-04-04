@@ -39,9 +39,36 @@ const SELF_HOSTED_PLAN: PlanInfo = {
   portalUrl: null,
 };
 
+/** Restrictive fallback used when plan fetch fails and no prior data exists */
+const LOCKED_FALLBACK: PlanInfo = {
+  plan: 'lite',
+  status: 'inactive',
+  activeUntil: null,
+  previousSubStatus: null,
+  selfHosted: false,
+  locked: true,
+  features: {
+    ai: false,
+    apiKeys: false,
+    customFields: false,
+    fullExport: false,
+    reorganize: false,
+    binSharing: false,
+    maxLocations: 1,
+    maxPhotoStorageMb: 0,
+    maxMembersPerLocation: 1,
+    activityRetentionDays: 7,
+  },
+  upgradeUrl: null,
+  upgradeLiteUrl: null,
+  upgradeProUrl: null,
+  portalUrl: null,
+};
+
 interface PlanContextValue {
   planInfo: PlanInfo;
   isLoading: boolean;
+
   isPro: boolean;
   isLite: boolean;
   isSelfHosted: boolean;
@@ -61,6 +88,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   const [overLimits, setOverLimits] = useState<OverLimits | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
   const usageRefresh = useRefreshOn(Events.LOCATIONS, Events.PHOTOS);
   const planRefresh = useRefreshOn(Events.PLAN);
 
@@ -70,10 +98,12 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       const data = await apiFetch<PlanInfo>('/api/plan');
       const info = data.selfHosted ? SELF_HOSTED_PLAN : data;
       setPlanInfo(info);
+
       return info;
     } catch {
-      setPlanInfo(SELF_HOSTED_PLAN);
-      return SELF_HOSTED_PLAN;
+      setPlanInfo((prev) => prev ?? LOCKED_FALLBACK);
+
+      return null;
     }
   }, [token]);
 
@@ -83,7 +113,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       const data = await apiFetch<PlanUsage>('/api/plan/usage');
       setOverLimits(data.overLimits);
     } catch {
-      setOverLimits(null);
+      // Retain last known overLimits on failure
     }
   }, [token]);
 
@@ -112,7 +142,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   }, [planRefresh, fetchPlan]);
 
   const value = useMemo<PlanContextValue>(() => {
-    const info = planInfo ?? SELF_HOSTED_PLAN;
+    const info = planInfo ?? LOCKED_FALLBACK;
     const isPro = info.plan === 'pro';
     const isLite = info.plan === 'lite';
     const isSelfHosted = info.selfHosted;
@@ -129,6 +159,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     return {
       planInfo: info,
       isLoading,
+
       isPro,
       isLite,
       isSelfHosted,

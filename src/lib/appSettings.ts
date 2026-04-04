@@ -17,6 +17,7 @@ export function useAppSettings() {
   const [pendingPatch, setPendingPatch] = useState<Partial<AppSettings> | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const pendingPayloadRef = useRef<Record<string, string | number>>({});
+  const pendingLocationRef = useRef<string | undefined | null>(activeLocationId);
 
   const activeLocation = locations.find((l) => l.id === activeLocationId);
   const serverSettings: AppSettings = {
@@ -35,12 +36,27 @@ export function useAppSettings() {
     document.title = settings.appName;
   }, [settings.appName]);
 
-  // Clean up timer on unmount
+  // Flush or discard pending save on location change / unmount
   useEffect(() => {
+    const prevLocation = pendingLocationRef.current;
+    pendingLocationRef.current = activeLocationId;
+
+    // Location changed — flush pending save for the *previous* location
+    if (prevLocation && prevLocation !== activeLocationId && saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = undefined;
+      const payload = pendingPayloadRef.current;
+      pendingPayloadRef.current = {};
+      setPendingPatch(null);
+      if (Object.keys(payload).length > 0) {
+        updateLocation(prevLocation, payload);
+      }
+    }
+
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, []);
+  }, [activeLocationId]);
 
   const updateSettings = useCallback((patch: Partial<AppSettings>) => {
     if (!activeLocationId) return;
@@ -59,13 +75,15 @@ export function useAppSettings() {
     // Update optimistic local state immediately
     setPendingPatch((prev) => ({ ...prev, ...patch }));
 
-    // Debounce the actual API call
+    // Debounce the actual API call — capture location ID now so a late
+    // fire after a location switch still targets the correct location.
+    const targetLocationId = activeLocationId;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       const payload = pendingPayloadRef.current;
       pendingPayloadRef.current = {};
       setPendingPatch(null);
-      updateLocation(activeLocationId, payload);
+      updateLocation(targetLocationId, payload);
     }, 500);
   }, [activeLocationId]);
 

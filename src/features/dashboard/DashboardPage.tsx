@@ -21,6 +21,7 @@ import { useBulkSelection } from '@/features/bins/useBulkSelection';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { getCommandInputRef } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
+import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
 import { formatTimeAgo } from '@/lib/formatTime';
@@ -87,8 +88,7 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (sessionStorage.getItem('openbin-demo-toast')) return;
-    fetch('/api/auth/status')
-      .then((r) => r.json())
+    apiFetch<{ demoMode?: boolean }>('/api/auth/status')
       .then((data) => {
         if (data.demoMode) {
           sessionStorage.setItem('openbin-demo-toast', '1');

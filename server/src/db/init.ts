@@ -117,6 +117,17 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
   // Column migrations for existing databases
   // (ALTER TABLE ADD COLUMN errors if column already exists)
   // ------------------------------------------------------------------
+
+  /** Run an ALTER TABLE ADD COLUMN, ignoring "duplicate column" errors but re-throwing anything else. */
+  function addColumnIfNotExists(stmt: string): void {
+    try {
+      db.exec(stmt);
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('duplicate column name')) return;
+      throw err;
+    }
+  }
+
   try {
 
   // AI settings columns
@@ -128,14 +139,14 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
     'reorganization_prompt TEXT',
   ];
   for (const colDef of aiSettingsMigrations) {
-    try { db.exec(`ALTER TABLE user_ai_settings ADD COLUMN ${colDef}`); } catch { /* column already exists */ }
+    addColumnIfNotExists(`ALTER TABLE user_ai_settings ADD COLUMN ${colDef}`);
   }
 
-  try { db.exec('ALTER TABLE bin_items ADD COLUMN quantity INTEGER DEFAULT NULL'); } catch { /* column already exists */ }
-  try { db.exec('ALTER TABLE user_ai_settings ADD COLUMN task_model_overrides TEXT'); } catch { /* column already exists */ }
+  addColumnIfNotExists('ALTER TABLE bin_items ADD COLUMN quantity INTEGER DEFAULT NULL');
+  addColumnIfNotExists('ALTER TABLE user_ai_settings ADD COLUMN task_model_overrides TEXT');
 
   // Hierarchical areas: add parent_id column
-  try { db.exec('ALTER TABLE areas ADD COLUMN parent_id TEXT REFERENCES areas(id) ON DELETE CASCADE'); } catch { /* column already exists */ }
+  addColumnIfNotExists('ALTER TABLE areas ADD COLUMN parent_id TEXT REFERENCES areas(id) ON DELETE CASCADE');
 
   // Hierarchical areas: migrate UNIQUE constraint from (location_id, name) to (location_id, parent_id, name)
   {
@@ -169,7 +180,7 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
   }
 
   // Viewer role: add default_join_role to locations
-  try { db.exec("ALTER TABLE locations ADD COLUMN default_join_role TEXT NOT NULL DEFAULT 'member' CHECK (default_join_role IN ('member', 'viewer'))"); } catch { /* column already exists */ }
+  addColumnIfNotExists("ALTER TABLE locations ADD COLUMN default_join_role TEXT NOT NULL DEFAULT 'member' CHECK (default_join_role IN ('member', 'viewer'))");
 
   // AI usage tracking (daily budget for demo users)
   db.exec([
@@ -214,17 +225,17 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
   }
 
   // Cloud tier: plan and subscription columns for users
-  try { db.exec('ALTER TABLE users ADD COLUMN plan INTEGER NOT NULL DEFAULT 1'); } catch { /* column already exists */ }
-  try { db.exec('ALTER TABLE users ADD COLUMN sub_status INTEGER NOT NULL DEFAULT 1'); } catch { /* column already exists */ }
-  try { db.exec('ALTER TABLE users ADD COLUMN active_until TEXT'); } catch { /* column already exists */ }
-  try { db.exec('ALTER TABLE users ADD COLUMN previous_sub_status INTEGER'); } catch { /* column already exists */ }
+  addColumnIfNotExists('ALTER TABLE users ADD COLUMN plan INTEGER NOT NULL DEFAULT 1');
+  addColumnIfNotExists('ALTER TABLE users ADD COLUMN sub_status INTEGER NOT NULL DEFAULT 1');
+  addColumnIfNotExists('ALTER TABLE users ADD COLUMN active_until TEXT');
+  addColumnIfNotExists('ALTER TABLE users ADD COLUMN previous_sub_status INTEGER');
   db.exec('CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status)');
 
   // Global admin role
-  try { db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0'); } catch { /* column already exists */ }
+  addColumnIfNotExists('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
 
   // Soft delete for users
-  try { db.exec('ALTER TABLE users ADD COLUMN deleted_at TEXT'); } catch { /* column already exists */ }
+  addColumnIfNotExists('ALTER TABLE users ADD COLUMN deleted_at TEXT');
 
   // Unique email (case-insensitive) — deduplicate before creating index on existing DBs
   createUniqueIndexWithDedup(

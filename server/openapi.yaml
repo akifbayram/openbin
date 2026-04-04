@@ -4383,36 +4383,6 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
-  /import/legacy:
-    post:
-      tags: [Export]
-      summary: Import legacy V1 format
-      description: |
-        Imports data from the old V1 export format (freeform contents string).
-        Handles homeName field mapping. 50MB body limit.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ImportRequest'
-      responses:
-        '200':
-          description: Import summary
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  imported:
-                    type: integer
-                  photos:
-                    type: integer
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-
   # ════════════════════════════════════════════════════════
   # AI
   # ════════════════════════════════════════════════════════

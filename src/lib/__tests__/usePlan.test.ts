@@ -203,15 +203,16 @@ describe('usePlan', () => {
     expect(result.current.isGated('fullExport')).toBe(false);
   });
 
-  it('falls back to self-hosted plan on API error', async () => {
+  it('falls back to locked plan on API error', async () => {
     mockApiFetch.mockRejectedValue(new Error('Network error'));
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.planInfo.selfHosted).toBe(true);
-    expect(result.current.isPro).toBe(true);
+    expect(result.current.planInfo.locked).toBe(true);
+    expect(result.current.planInfo.plan).toBe('lite');
+    expect(result.current.isPro).toBe(false);
   });
 
   it('does not fetch when not authenticated', async () => {
@@ -222,7 +223,8 @@ describe('usePlan', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(mockApiFetch).not.toHaveBeenCalled();
-    // Falls back to self-hosted plan as default
-    expect(result.current.isPro).toBe(true);
+    // Falls back to locked plan when no token
+    expect(result.current.planInfo.locked).toBe(true);
+    expect(result.current.isPro).toBe(false);
   });
 });

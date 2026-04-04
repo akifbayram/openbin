@@ -56,6 +56,7 @@ export interface FullImportResult {
   binsSkipped: number;
   trashedBinsImported: number;
   photosImported: number;
+  photosSkipped: number;
   areasImported: number;
   pinsImported: number;
   viewsImported: number;
@@ -222,12 +223,15 @@ export async function executeFullImportTransaction(params: FullImportParams): Pr
     let binsImported = 0;
     let binsSkipped = 0;
     let photosImported = 0;
+    let photosSkipped = 0;
 
     for (const bin of bins) {
       if (await importSingleBin(bin)) {
         const newBinId = oldToNewBinId.get(bin.id)!;
         if (bin.photos && Array.isArray(bin.photos)) {
-          photosImported += await importPhotos(newBinId, bin.photos, userId, tx);
+          const photoResult = await importPhotos(newBinId, bin.photos, userId, tx);
+          photosImported += photoResult.imported;
+          photosSkipped += photoResult.skipped;
         }
         binsImported++;
       } else {
@@ -242,7 +246,9 @@ export async function executeFullImportTransaction(params: FullImportParams): Pr
         if (await importSingleBin(bin, { deletedAt: bin.deletedAt })) {
           const newBinId = oldToNewBinId.get(bin.id)!;
           if (bin.photos && Array.isArray(bin.photos)) {
-            photosImported += await importPhotos(newBinId, bin.photos, userId, tx);
+            const photoResult = await importPhotos(newBinId, bin.photos, userId, tx);
+            photosImported += photoResult.imported;
+            photosSkipped += photoResult.skipped;
           }
           trashedBinsImported++;
         }
@@ -261,6 +267,6 @@ export async function executeFullImportTransaction(params: FullImportParams): Pr
       viewsImported = await importSavedViews(savedViews, tx);
     }
 
-    return { binsImported, binsSkipped, trashedBinsImported, photosImported, areasImported, pinsImported, viewsImported, membersImported, settingsApplied };
+    return { binsImported, binsSkipped, trashedBinsImported, photosImported, photosSkipped, areasImported, pinsImported, viewsImported, membersImported, settingsApplied };
   });
 }

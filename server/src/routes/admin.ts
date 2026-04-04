@@ -433,7 +433,7 @@ router.post('/users/:id/send-password-reset', asyncHandler(async (req, res) => {
   if (!target.email) throw new ValidationError('User does not have an email address');
 
   const { rawToken } = await createPasswordResetToken(targetId, req.user!.id);
-  const resetUrl = `${config.baseUrl}/reset-password?token=${rawToken}`;
+  const resetUrl = `${config.baseUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
 
   firePasswordResetEmail(targetId, target.email, target.display_name, resetUrl);
 

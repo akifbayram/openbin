@@ -1,4 +1,4 @@
-import { AlertCircle, ChevronLeft } from 'lucide-react';
+import { AlertCircle, ChevronLeft, Home, RefreshCw } from 'lucide-react';
 import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -125,6 +125,10 @@ class ErrorBoundary extends React.Component<
     return { hasError: true };
   }
 
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[ErrorBoundary] Uncaught error:', error, info.componentStack);
+  }
+
   render() {
     if (this.state.hasError) {
       return (
@@ -145,6 +149,67 @@ class ErrorBoundary extends React.Component<
     }
     return this.props.children;
   }
+}
+
+class RouteErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback?: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallback?: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[RouteErrorBoundary] Uncaught error:', error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) return this.props.fallback;
+      return (
+        <div className="flex flex-col items-center justify-center gap-4 py-24 px-6 text-[var(--text-primary)]">
+          <AlertCircle className="h-12 w-12 text-[var(--destructive)] opacity-60" />
+          <h2 className="font-heading text-[18px] font-bold">Something went wrong</h2>
+          <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-sm">
+            This page encountered an error. You can try again or go back to the home page.
+          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <Button
+              onClick={() => this.setState({ hasError: false })}
+              className="gap-1.5"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Try Again
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { window.location.href = '/'; }}
+              className="gap-1.5"
+            >
+              <Home className="h-4 w-4" />
+              Go Home
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function RouteWithBoundary({ children }: { children: React.ReactNode }) {
+  return (
+    <RouteErrorBoundary>
+      <Suspense fallback={<LoadingFallback />}>
+        {children}
+      </Suspense>
+    </RouteErrorBoundary>
+  );
 }
 
 let controllerChangeReloaded = false;
@@ -258,62 +323,13 @@ export default function App() {
             <PlanErrorNotifier />
             <Routes>
               {/* Public routes */}
-              <Route
-                path="/login"
-                element={
-                  <Suspense fallback={<LoadingFallback />}>
-                    <LoginPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/register"
-                element={
-                  <Suspense fallback={<LoadingFallback />}>
-                    <RegisterPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/forgot-password"
-                element={
-                  <Suspense fallback={<LoadingFallback />}>
-                    <ForgotPasswordPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/reset-password"
-                element={
-                  <Suspense fallback={<LoadingFallback />}>
-                    <ResetPasswordPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/terms"
-                element={
-                  <Suspense fallback={<LoadingFallback />}>
-                    <TermsPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/privacy"
-                element={
-                  <Suspense fallback={<LoadingFallback />}>
-                    <PrivacyPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="/s/:token"
-                element={
-                  <Suspense fallback={<LoadingFallback />}>
-                    <SharedBinPage />
-                  </Suspense>
-                }
-              />
+              <Route path="/login" element={<RouteWithBoundary><LoginPage /></RouteWithBoundary>} />
+              <Route path="/register" element={<RouteWithBoundary><RegisterPage /></RouteWithBoundary>} />
+              <Route path="/forgot-password" element={<RouteWithBoundary><ForgotPasswordPage /></RouteWithBoundary>} />
+              <Route path="/reset-password" element={<RouteWithBoundary><ResetPasswordPage /></RouteWithBoundary>} />
+              <Route path="/terms" element={<RouteWithBoundary><TermsPage /></RouteWithBoundary>} />
+              <Route path="/privacy" element={<RouteWithBoundary><PrivacyPage /></RouteWithBoundary>} />
+              <Route path="/s/:token" element={<RouteWithBoundary><SharedBinPage /></RouteWithBoundary>} />
 
               {/* Protected routes */}
               <Route
@@ -329,127 +345,22 @@ export default function App() {
                   </AuthGuard>
                 }
               >
-                <Route
-                  path="/"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <DashboardPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/bins"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <BinListPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/bin/:id"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <BinDetailPage />
-                    </Suspense>
-                  }
-                />
+                <Route path="/" element={<RouteWithBoundary><DashboardPage /></RouteWithBoundary>} />
+                <Route path="/bins" element={<RouteWithBoundary><BinListPage /></RouteWithBoundary>} />
+                <Route path="/bin/:id" element={<RouteWithBoundary><BinDetailPage /></RouteWithBoundary>} />
                 <Route path="/scan" element={<ScanRedirect />} />
-                <Route
-                  path="/print"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <PrintPage />
-                    </Suspense>
-                  }
-                />
-<Route
-                  path="/settings"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <SettingsPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/tags"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <TagsPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/items"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <ItemsPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/locations"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <AreasPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/trash"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <TrashPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/activity"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <ActivityPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <ProfilePage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/reorganize"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <ReorganizePage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/capture"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <CapturePage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/admin/users"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <AdminUsersPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/admin/users/:id"
-                  element={
-                    <Suspense fallback={<LoadingFallback />}>
-                      <AdminUserDetailPage />
-                    </Suspense>
-                  }
-                />
+                <Route path="/print" element={<RouteWithBoundary><PrintPage /></RouteWithBoundary>} />
+                <Route path="/settings" element={<RouteWithBoundary><SettingsPage /></RouteWithBoundary>} />
+                <Route path="/tags" element={<RouteWithBoundary><TagsPage /></RouteWithBoundary>} />
+                <Route path="/items" element={<RouteWithBoundary><ItemsPage /></RouteWithBoundary>} />
+                <Route path="/locations" element={<RouteWithBoundary><AreasPage /></RouteWithBoundary>} />
+                <Route path="/trash" element={<RouteWithBoundary><TrashPage /></RouteWithBoundary>} />
+                <Route path="/activity" element={<RouteWithBoundary><ActivityPage /></RouteWithBoundary>} />
+                <Route path="/profile" element={<RouteWithBoundary><ProfilePage /></RouteWithBoundary>} />
+                <Route path="/reorganize" element={<RouteWithBoundary><ReorganizePage /></RouteWithBoundary>} />
+                <Route path="/capture" element={<RouteWithBoundary><CapturePage /></RouteWithBoundary>} />
+                <Route path="/admin/users" element={<RouteWithBoundary><AdminUsersPage /></RouteWithBoundary>} />
+                <Route path="/admin/users/:id" element={<RouteWithBoundary><AdminUserDetailPage /></RouteWithBoundary>} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Routes>

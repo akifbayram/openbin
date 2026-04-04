@@ -5,7 +5,6 @@ import { useAuth } from '@/lib/auth';
 import type { ExportData } from '@/types';
 import {
   countCSVBins,
-  downloadExport,
   exportAllData,
   exportCsv,
   exportZip,
@@ -158,12 +157,10 @@ export function useDataSectionActions() {
           await exportZip(targetLocationId);
           showToast({ message: 'ZIP backup exported successfully' });
           break;
-        case 'json': {
-          const data = await exportAllData(targetLocationId);
-          downloadExport(data);
+        case 'json':
+          await exportAllData(targetLocationId);
           showToast({ message: 'Backup exported successfully' });
           break;
-        }
         case 'csv':
           await exportCsv(targetLocationId);
           showToast({ message: 'CSV exported successfully' });

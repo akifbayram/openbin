@@ -68,6 +68,9 @@ router.post('/', asyncHandler(async (req, res) => {
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     throw new ValidationError('Location name is required');
   }
+  if (name.trim().length > 255) {
+    throw new ValidationError('Location name must be 255 characters or fewer');
+  }
 
   const locationId = generateUuid();
   const inviteCode = generateInviteCode();
@@ -155,6 +158,9 @@ router.put('/:id', asyncHandler(async (req, res) => {
 
   if (name !== undefined && (!name || typeof name !== 'string' || name.trim().length === 0)) {
     throw new ValidationError('Location name cannot be empty');
+  }
+  if (name !== undefined && typeof name === 'string' && name.trim().length > 255) {
+    throw new ValidationError('Location name must be 255 characters or fewer');
   }
 
   if (activity_retention_days !== undefined) {

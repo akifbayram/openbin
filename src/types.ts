@@ -149,16 +149,6 @@ export interface ExportedPhoto {
   createdAt: string;
 }
 
-/** V1 export format (legacy: freeform contents string) */
-export interface ExportBinV1 {
-  id: string;
-  name: string;
-  contents: string;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
 /** V2 export format (current: discrete items + notes + optional location) */
 export interface ExportBinV2 {
   id: string;
@@ -190,13 +180,6 @@ export interface ExportBinPhoto {
   createdAt?: string;
 }
 
-export interface ExportDataV1 {
-  version: 1;
-  exportedAt: string;
-  bins: ExportBinV1[];
-  photos: ExportedPhoto[];
-}
-
 export interface ExportDataV2 {
   version: 2;
   exportedAt: string;
@@ -221,7 +204,7 @@ export interface ExportDataV2 {
   photos?: ExportedPhoto[];
 }
 
-export type ExportData = ExportDataV1 | ExportDataV2;
+export type ExportData = ExportDataV2;
 
 export type AiProvider = 'openai' | 'anthropic' | 'gemini' | 'openai-compatible';
 

@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
+import { usePlan } from '@/lib/usePlan';
 import { cn, getErrorMessage } from '@/lib/utils';
 import { AI_PROVIDERS, KEY_PLACEHOLDERS, MODEL_HINTS } from './aiConstants';
 import { useAiProviderSetup } from './useAiProviderSetup';
@@ -32,6 +33,7 @@ interface AiSettingsSectionProps {
 
 export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProps) {
   const { demoMode } = useAuth();
+  const { isSelfHosted } = usePlan();
   const { settings, isLoading, setSettings } = useAiSettings();
   const { prompts: defaultPrompts } = useDefaultPrompts();
   const { showToast } = useToast();
@@ -154,7 +156,8 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
           <Switch id="ai-toggle" checked={aiEnabled} onCheckedChange={onToggle} aria-labelledby="ai-toggle-description" />
         </div>
 
-        {/* Animated expand/collapse wrapper */}
+        {/* Animated expand/collapse wrapper — self-hosted only */}
+        {isSelfHosted && (
         <div className={cn(
           'grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none',
           aiEnabled ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
@@ -487,6 +490,7 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
             </div>
           </div>
         </div>
+        )}
         </Disclosure>
       </CardContent>
     </Card>

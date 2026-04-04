@@ -64,11 +64,7 @@ describe('schema parity — tables', () => {
 // ---------------------------------------------------------------------------
 
 describe('schema parity — columns', () => {
-  // PG schema includes task_model_overrides in CREATE TABLE;
-  // SQLite adds it via ALTER TABLE migration in init.ts
-  const KNOWN_PG_ONLY_COLUMNS: Record<string, string[]> = {
-    user_ai_settings: ['task_model_overrides'],
-  };
+  const KNOWN_PG_ONLY_COLUMNS: Record<string, string[]> = {};
 
   for (const [table, pgCols] of pgTables) {
     it(`${table} has the same columns in both schemas`, () => {

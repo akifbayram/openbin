@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ExportDataV2 } from '@/types';
+import type { ExportData } from '@/types';
 import {
   ImportError,
   MAX_IMPORT_SIZE,
@@ -11,7 +11,7 @@ vi.mock('@/lib/api', () => ({
   apiFetch: vi.fn(),
 }));
 
-function makeValidExportData(overrides?: Partial<ExportDataV2>): ExportDataV2 {
+function makeValidExportData(overrides?: Partial<ExportData>): ExportData {
   return {
     version: 2,
     exportedAt: new Date().toISOString(),
@@ -60,7 +60,7 @@ describe('validateExportData', () => {
     expect(validateExportData(data)).toBe(true);
   });
 
-  it('returns true for valid v1 data', () => {
+  it('returns false for v1 data', () => {
     const data = {
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -74,7 +74,7 @@ describe('validateExportData', () => {
       }],
       photos: [],
     };
-    expect(validateExportData(data)).toBe(true);
+    expect(validateExportData(data)).toBe(false);
   });
 
   it('returns false when version is missing', () => {
@@ -83,22 +83,22 @@ describe('validateExportData', () => {
   });
 
   it('returns false when bins array is missing', () => {
-    const data = { version: 1, exportedAt: 'x', photos: [] };
+    const data = { version: 2, exportedAt: 'x' };
     expect(validateExportData(data)).toBe(false);
   });
 
   it('returns false for invalid bin (missing name)', () => {
     const data = makeValidExportData({
-      bins: [makeExportBin({ name: undefined })] as ExportDataV2['bins'],
+      bins: [makeExportBin({ name: undefined })] as ExportData['bins'],
     });
     expect(validateExportData(data)).toBe(false);
   });
 
-  it('returns false for invalid photo (missing dataBase64)', () => {
+  it('ignores top-level photos field', () => {
     const data = makeValidExportData({
-      photos: [makeExportPhoto({ dataBase64: undefined })] as ExportDataV2['photos'],
+      photos: [makeExportPhoto({ dataBase64: undefined })] as ExportData['photos'],
     });
-    expect(validateExportData(data)).toBe(false);
+    expect(validateExportData(data)).toBe(true);
   });
 
   it('returns true for empty bins and photos arrays', () => {

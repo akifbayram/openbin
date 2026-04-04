@@ -16,7 +16,7 @@ export type EventName = (typeof Events)[keyof typeof Events];
 
 /** Dispatch a DOM event to trigger all listeners for the given event name. */
 export function notify(event: EventName) {
-  window.dispatchEvent(new Event(event));
+  queueMicrotask(() => window.dispatchEvent(new Event(event)));
 }
 
 /**

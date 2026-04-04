@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import { d, query } from '../db.js';
 import { config } from './config.js';
 import { createLogger } from './logger.js';
@@ -27,45 +27,39 @@ export async function purgeExpiredTrash(locationId: string): Promise<void> {
     if (expired.rows.length === 0) return;
 
     const binIds = expired.rows.map((r) => r.id as string);
+    const placeholders = binIds.map((_, i) => `$${i + 1}`).join(', ');
 
-    // Query photos for disk cleanup — use individual queries per bin
-    const allPhotos: { storage_path: string }[] = [];
-    for (const binId of binIds) {
-      const photos = await query<{ storage_path: string }>(
-        'SELECT storage_path FROM photos WHERE bin_id = $1',
-        [binId]
-      );
-      allPhotos.push(...photos.rows);
-    }
+    // Batch query photos for disk cleanup
+    const photos = await query<{ storage_path: string }>(
+      `SELECT storage_path FROM photos WHERE bin_id IN (${placeholders})`,
+      binIds
+    );
 
-    // Hard delete bins (CASCADE deletes photo rows)
-    for (const binId of binIds) {
-      await query('DELETE FROM bins WHERE id = $1', [binId]);
-    }
+    // Batch hard delete bins (CASCADE deletes photo rows)
+    await query(
+      `DELETE FROM bins WHERE id IN (${placeholders})`,
+      binIds
+    );
 
-    // Clean up photo files from disk
-    for (const photo of allPhotos) {
-      try {
+    // Clean up photo files from disk (parallel async I/O)
+    await Promise.allSettled(
+      photos.rows.map(async (photo) => {
         const filePath = safePath(PHOTO_STORAGE_PATH, photo.storage_path);
-        if (filePath && fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
+        if (filePath) {
+          await fs.unlink(filePath);
         }
-      } catch {
-        // Ignore file cleanup errors
-      }
-    }
+      })
+    );
 
-    // Clean up empty bin directories
-    for (const binId of binIds) {
-      try {
+    // Clean up empty bin directories (parallel async I/O)
+    await Promise.allSettled(
+      binIds.map(async (binId) => {
         const binDir = safePath(PHOTO_STORAGE_PATH, binId);
-        if (binDir && fs.existsSync(binDir)) {
-          fs.rmdirSync(binDir);
+        if (binDir) {
+          await fs.rm(binDir, { recursive: true, force: true });
         }
-      } catch {
-        // Ignore directory cleanup errors
-      }
-    }
+      })
+    );
   } catch (err) {
     log.error('Trash purge error:', err instanceof Error ? err.message : err);
   }

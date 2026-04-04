@@ -1,5 +1,5 @@
 import { apiFetch } from '@/lib/api';
-import type { ExportData, ExportDataV2 } from '@/types';
+import type { ExportData } from '@/types';
 
 export const MAX_IMPORT_SIZE = 100 * 1024 * 1024;
 
@@ -14,56 +14,33 @@ export class ImportError extends Error {
   }
 }
 
-export async function exportAllData(locationId: string): Promise<ExportDataV2> {
-  return apiFetch<ExportDataV2>(`/api/locations/${locationId}/export`);
-}
-
-export function downloadExport(data: ExportData): void {
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const date = new Date().toISOString().slice(0, 10);
+async function fetchAndDownload(url: string, filename: string): Promise<void> {
+  const resp = await fetch(url, { credentials: 'same-origin' });
+  if (!resp.ok) throw new Error(`Export failed (${resp.status})`);
+  const blob = await resp.blob();
+  const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = `openbin-backup-${date}.json`;
+  a.href = blobUrl;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(blobUrl);
+}
+
+export async function exportAllData(locationId: string): Promise<void> {
+  const date = new Date().toISOString().slice(0, 10);
+  await fetchAndDownload(`/api/locations/${encodeURIComponent(locationId)}/export`, `openbin-backup-${date}.json`);
 }
 
 export async function exportZip(locationId: string): Promise<void> {
-  const resp = await fetch(`/api/locations/${encodeURIComponent(locationId)}/export/zip`, {
-    credentials: 'same-origin',
-  });
-  if (!resp.ok) throw new Error('ZIP export failed');
-  const blob = await resp.blob();
-  const url = URL.createObjectURL(blob);
   const date = new Date().toISOString().slice(0, 10);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `openbin-export-${date}.zip`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  await fetchAndDownload(`/api/locations/${encodeURIComponent(locationId)}/export/zip`, `openbin-export-${date}.zip`);
 }
 
 export async function exportCsv(locationId: string): Promise<void> {
-  const resp = await fetch(`/api/locations/${encodeURIComponent(locationId)}/export/csv`, {
-    credentials: 'same-origin',
-  });
-  if (!resp.ok) throw new Error('CSV export failed');
-  const blob = await resp.blob();
-  const url = URL.createObjectURL(blob);
   const date = new Date().toISOString().slice(0, 10);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `openbin-bins-${date}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  await fetchAndDownload(`/api/locations/${encodeURIComponent(locationId)}/export/csv`, `openbin-bins-${date}.csv`);
 }
 
 function isISODate(s: unknown): boolean {
@@ -73,58 +50,29 @@ function isISODate(s: unknown): boolean {
 export function validateExportData(data: unknown): data is ExportData {
   if (!data || typeof data !== 'object') return false;
   const d = data as Record<string, unknown>;
-  if (d.version !== 1 && d.version !== 2) return false;
+  if (d.version !== 2) return false;
   if (typeof d.exportedAt !== 'string') return false;
   if (!Array.isArray(d.bins)) return false;
-
-  // photos is optional — server format nests them in bins; legacy format has top-level array
-  if (d.photos !== undefined && !Array.isArray(d.photos)) return false;
-
-  const isV2 = d.version === 2;
 
   const binsValid = d.bins.every((b: unknown) => {
     if (!b || typeof b !== 'object') return false;
     const bin = b as Record<string, unknown>;
-    const baseValid =
+    return (
       typeof bin.id === 'string' &&
       typeof bin.name === 'string' &&
       Array.isArray(bin.tags) &&
       (bin.tags as unknown[]).every((t) => typeof t === 'string') &&
       isISODate(bin.createdAt) &&
-      isISODate(bin.updatedAt);
-    if (!baseValid) return false;
-
-    if (isV2) {
-      return (
-        Array.isArray(bin.items) &&
-        (bin.items as unknown[]).every((i) => typeof i === 'string' || (typeof i === 'object' && i !== null && typeof (i as Record<string, unknown>).name === 'string')) &&
-        typeof bin.notes === 'string'
-      );
-    }
-    return typeof bin.contents === 'string';
+      isISODate(bin.updatedAt) &&
+      Array.isArray(bin.items) &&
+      (bin.items as unknown[]).every((i) => typeof i === 'string' || (typeof i === 'object' && i !== null && typeof (i as Record<string, unknown>).name === 'string')) &&
+      typeof bin.notes === 'string'
+    );
   });
   if (!binsValid) return false;
 
   // Validate trashed bins if present (same shape as bins)
   if (d.trashedBins !== undefined && !Array.isArray(d.trashedBins)) return false;
-
-  // Validate top-level photos if present (legacy format)
-  if (Array.isArray(d.photos)) {
-    const photosValid = (d.photos as unknown[]).every((p: unknown) => {
-      if (!p || typeof p !== 'object') return false;
-      const photo = p as Record<string, unknown>;
-      return (
-        typeof photo.id === 'string' &&
-        typeof photo.binId === 'string' &&
-        typeof photo.dataBase64 === 'string' &&
-        typeof photo.filename === 'string' &&
-        typeof photo.mimeType === 'string' &&
-        typeof photo.size === 'number' &&
-        isISODate(photo.createdAt)
-      );
-    });
-    if (!photosValid) return false;
-  }
 
   return true;
 }
@@ -164,46 +112,19 @@ export async function importData(
   data: ExportData,
   mode: 'merge' | 'replace'
 ): Promise<ImportResult> {
-  // Server expects { bins, mode } where bins have nested photos
-  const d = data as unknown as Record<string, unknown>;
-  const rawBins = (d.bins ?? []) as Record<string, unknown>[];
-
-  // If legacy format with top-level photos, merge them into bins
-  const topPhotos = d.photos;
-  let bins: unknown[] = rawBins;
-  if (Array.isArray(topPhotos) && topPhotos.length > 0) {
-    const photosMap = new Map<string, { id: string; filename: string; mimeType: string; data: string }[]>();
-    for (const p of topPhotos as Array<Record<string, unknown>>) {
-      const binId = (p.binId as string) || '';
-      const arr = photosMap.get(binId) || [];
-      arr.push({
-        id: p.id as string,
-        filename: p.filename as string,
-        mimeType: p.mimeType as string,
-        data: p.dataBase64 as string,
-      });
-      photosMap.set(binId, arr);
-    }
-    bins = rawBins.map((bin) => ({
-      ...bin,
-      photos: photosMap.get(bin.id as string) || bin.photos || [],
-    }));
-  }
-
-  // Pass all V2 export sections to the server
   return apiFetch<ImportResult>(`/api/locations/${locationId}/import`, {
     method: 'POST',
     body: {
-      bins,
-      trashedBins: d.trashedBins,
+      bins: data.bins,
+      trashedBins: data.trashedBins,
       mode,
-      tagColors: d.tagColors,
-      customFieldDefinitions: d.customFieldDefinitions,
-      locationSettings: d.locationSettings,
-      areas: d.areas,
-      pinnedBins: d.pinnedBins,
-      savedViews: d.savedViews,
-      members: d.members,
+      tagColors: data.tagColors,
+      customFieldDefinitions: data.customFieldDefinitions,
+      locationSettings: data.locationSettings,
+      areas: data.areas,
+      pinnedBins: data.pinnedBins,
+      savedViews: data.savedViews,
+      members: data.members,
     },
   });
 }
@@ -342,14 +263,4 @@ export async function importZip(
     `/api/locations/${locationId}/import/zip`,
     { method: 'POST', body: formData },
   );
-}
-
-export async function importLegacyData(
-  locationId: string,
-  data: ExportData
-): Promise<ImportResult> {
-  return apiFetch<ImportResult>('/api/import/legacy', {
-    method: 'POST',
-    body: { locationId, data },
-  });
 }

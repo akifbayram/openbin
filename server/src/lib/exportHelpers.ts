@@ -652,13 +652,14 @@ function isAllowedImageBuffer(buf: Buffer): boolean {
 }
 
 /** Import photos from base64 data into storage. */
-export async function importPhotos(binId: string, photos: ExportPhoto[], userId: string, tx?: TxQueryFn): Promise<number> {
+export async function importPhotos(binId: string, photos: ExportPhoto[], userId: string, tx?: TxQueryFn): Promise<{ imported: number; skipped: number }> {
   const q = tx ?? query;
-  let count = 0;
+  let imported = 0;
+  let skipped = 0;
   for (const photo of photos) {
     const buffer = Buffer.from(photo.data, 'base64');
-    if (buffer.length > 10 * 1024 * 1024) continue; // Skip oversized photos
-    if (!isAllowedImageBuffer(buffer)) continue; // Skip files with invalid magic bytes
+    if (buffer.length > 10 * 1024 * 1024) { skipped++; continue; } // Skip oversized photos
+    if (!isAllowedImageBuffer(buffer)) { skipped++; continue; } // Skip files with invalid magic bytes
 
     const photoId = uuidv4();
     const photoExt = path.extname(photo.filename || '').toLowerCase();
@@ -678,10 +679,10 @@ export async function importPhotos(binId: string, photos: ExportPhoto[], userId:
     } else {
       // Local: synchronous file write
       const fullPath = path.join(PHOTO_STORAGE_PATH, storagePath);
-      if (!isPathSafe(fullPath, PHOTO_STORAGE_PATH)) continue;
+      if (!isPathSafe(fullPath, PHOTO_STORAGE_PATH)) { skipped++; continue; }
 
       const dir = safePath(PHOTO_STORAGE_PATH, binId);
-      if (!dir) continue;
+      if (!dir) { skipped++; continue; }
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(fullPath, buffer);
     }
@@ -692,9 +693,9 @@ export async function importPhotos(binId: string, photos: ExportPhoto[], userId:
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [photoId, binId, safeOriginalName, safeMimeType, buffer.length, storagePath, resolvedPhotoCreator, photo.createdAt || new Date().toISOString()]
     );
-    count++;
+    imported++;
   }
-  return count;
+  return { imported, skipped };
 }
 
 /**

@@ -29,7 +29,7 @@ function useDashboardStats(locationId: string | null) {
     }
     let cancelled = false;
     setIsLoading(true);
-    apiFetch<DashboardStats>(`/locations/${locationId}/stats`)
+    apiFetch<DashboardStats>(`/api/locations/${locationId}/stats`)
       .then((data) => { if (!cancelled) { setStats(data); setIsLoading(false); } })
       .catch(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };

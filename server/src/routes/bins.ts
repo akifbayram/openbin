@@ -79,10 +79,10 @@ router.get('/', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Not a member of this location');
   }
 
-  // Pagination params
+  // Pagination — cap explicit limit to 200, default 200 when omitted
   const limitRaw = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
-  const limit = limitRaw !== undefined && !Number.isNaN(limitRaw) ? Math.max(1, Math.min(100, limitRaw)) : undefined;
-  const offset = limit !== undefined ? Math.max(0, Number(req.query.offset) || 0) : 0;
+  const limit = limitRaw !== undefined && !Number.isNaN(limitRaw) ? Math.max(1, Math.min(200, limitRaw)) : 200;
+  const offset = Math.max(0, Number(req.query.offset) || 0);
 
   const { ctePrefix, whereSQL, orderClause, params } = buildBinListQuery({
     locationId,
@@ -101,37 +101,24 @@ router.get('/', asyncHandler(async (req, res) => {
     sortDir: req.query.sort_dir as string | undefined,
   });
 
-  // When limit is provided, run a count query and apply LIMIT/OFFSET
-  if (limit !== undefined) {
-    const countResult = await query(
-      `${ctePrefix}SELECT COUNT(*) AS total FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE ${whereSQL}`,
-      params
-    );
-    const total = (countResult.rows[0] as { total: number }).total;
+  const countResult = await query(
+    `${ctePrefix}SELECT COUNT(*) AS total FROM bins b LEFT JOIN areas a ON a.id = b.area_id WHERE ${whereSQL}`,
+    params
+  );
+  const total = (countResult.rows[0] as { total: number }).total;
 
-    const paginatedParams = [...params, limit, offset];
-    const limitIdx = params.length + 1;
-    const offsetIdx = params.length + 2;
-    const result = await query(
-      `${ctePrefix}SELECT ${BIN_SELECT_COLS()}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
-       FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-       LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
-       WHERE ${whereSQL} ORDER BY ${orderClause} LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
-      paginatedParams
-    );
+  const paginatedParams = [...params, limit, offset];
+  const limitIdx = params.length + 1;
+  const offsetIdx = params.length + 2;
+  const result = await query(
+    `${ctePrefix}SELECT ${BIN_SELECT_COLS()}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
+     FROM bins b LEFT JOIN areas a ON a.id = b.area_id
+     LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
+     WHERE ${whereSQL} ORDER BY ${orderClause} LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+    paginatedParams
+  );
 
-    res.json({ results: result.rows, count: total });
-  } else {
-    const result = await query(
-      `${ctePrefix}SELECT ${BIN_SELECT_COLS()}, CASE WHEN pb.user_id IS NOT NULL THEN 1 ELSE 0 END AS is_pinned
-       FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-       LEFT JOIN pinned_bins pb ON pb.bin_id = b.id AND pb.user_id = $2
-       WHERE ${whereSQL} ORDER BY ${orderClause}`,
-      params
-    );
-
-    res.json({ results: result.rows, count: result.rows.length });
-  }
+  res.json({ results: result.rows, count: total });
 }));
 
 // GET /api/bins/trash — list soft-deleted bins for a location
@@ -152,7 +139,7 @@ router.get('/trash', asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT ${BIN_SELECT_COLS()}, b.deleted_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-     WHERE b.location_id = $1 AND b.deleted_at IS NOT NULL AND (b.visibility = 'location' OR b.created_by = $2) ORDER BY b.deleted_at DESC`,
+     WHERE b.location_id = $1 AND b.deleted_at IS NOT NULL AND (b.visibility = 'location' OR b.created_by = $2) ORDER BY b.deleted_at DESC LIMIT 500`,
     [locationId, req.user!.id]
   );
 

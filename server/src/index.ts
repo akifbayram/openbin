@@ -85,6 +85,7 @@ export function createApp(): express.Express {
   app.use(cors({
     origin: config.corsOrigin,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    credentials: true,
   }));
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
@@ -92,6 +93,10 @@ export function createApp(): express.Express {
 
   // Health check (no auth, no rate limit)
   app.get('/api/health', async (_req, res) => {
+    if (isRestoreInProgress()) {
+      res.status(503).json({ status: 'restore', message: 'Restore in progress' });
+      return;
+    }
     try {
       const result = await query<{ ok: number }>('SELECT 1 AS ok');
       if (result.rows[0]?.ok === 1) {
