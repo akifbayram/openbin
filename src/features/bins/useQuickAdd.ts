@@ -94,7 +94,11 @@ export function useQuickAdd(options: UseQuickAddOptions) {
     e.preventDefault();
     const lines = text.split('\n').map((s) => s.trim()).filter(Boolean);
     if (lines.length === 0) return;
-    const parsed = lines.map((s) => parseItemQuantity(s));
+    const capped = lines.slice(0, 500);
+    if (lines.length > 500) {
+      showToast({ message: `Pasted ${lines.length} lines — only the first 500 will be added`, variant: 'warning' });
+    }
+    const parsed = capped.map((s) => parseItemQuantity(s));
     setSaving(true);
     try {
       if (onAdd) {

@@ -69,6 +69,7 @@ export function CreateAreaDialog({ open, onOpenChange, locationId, areas, defaul
               value={newAreaName}
               onChange={(e) => setNewAreaName(e.target.value)}
               placeholder={`${t.Area} name...`}
+              maxLength={255}
               autoFocus
               required
             />

@@ -76,7 +76,7 @@ export function DashboardPage() {
   const allTags = useAllTags();
   const bulk = useBulkDialogs();
   const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(allDashboardBins, [activeLocationId]);
-  const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(allDashboardBins, selectedIds, clearSelection, showToast, t);
+  const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel, isBusy } = useBulkActions(allDashboardBins, selectedIds, clearSelection, showToast, t);
 
   const showChecklist = !preferences.checklist_dismissed && totalBins < 3 && totalBins > 0;
 
@@ -388,7 +388,7 @@ export function DashboardPage() {
         bulk={bulk} selectedIds={selectedIds} clearSelection={clearSelection}
         allTags={allTags} selectable={selectable} isAdmin={isAdmin} canWrite={canWrite}
         bulkDelete={bulkDelete} bulkPinToggle={bulkPinToggle} bulkDuplicate={bulkDuplicate}
-        pinLabel={pinLabel} bins={allDashboardBins} t={t}
+        pinLabel={pinLabel} isBusy={isBusy} bins={allDashboardBins} t={t}
       />
 
       <UpgradeDialog

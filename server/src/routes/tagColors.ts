@@ -3,6 +3,7 @@ import { d, generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireMemberOrAbove, verifyLocationMembership } from '../lib/binAccess.js';
 import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
+import { HEX_COLOR_REGEX } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -37,6 +38,10 @@ router.put('/', asyncHandler(async (req, res) => {
   }
 
   await requireMemberOrAbove(locationId, req.user!.id, 'manage tag colors');
+
+  if (color && !HEX_COLOR_REGEX.test(color)) {
+    throw new ValidationError('Color must be a valid hex color (e.g., #FF0000)');
+  }
 
   // If color is empty, remove the tag color
   if (!color) {

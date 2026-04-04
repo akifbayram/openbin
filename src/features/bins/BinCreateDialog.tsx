@@ -62,16 +62,8 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
         visibility: data.visibility,
         customFields: data.customFields,
       });
-      setSuccessInfo([{
-        id,
-        name: data.name,
-        icon: data.icon,
-        color: data.color,
-        itemCount: data.items.length,
-      }]);
-      // Upload photos in background — warn on failure without blocking success view
       if (data.photos.length > 0) {
-        Promise.all(
+        const results = await Promise.all(
           data.photos.map((p) =>
             compressImage(p)
               .then((compressed) => addPhoto(id, compressed instanceof File
@@ -80,13 +72,19 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
               .then(() => true)
               .catch(() => false)
           )
-        ).then((results) => {
-          const failCount = results.filter((ok) => !ok).length;
-          if (failCount > 0) {
-            showToast({ message: `${t.Bin} created, but ${failCount} photo(s) failed to upload`, variant: 'warning' });
-          }
-        });
+        );
+        const failCount = results.filter((ok) => !ok).length;
+        if (failCount > 0) {
+          showToast({ message: `${failCount} photo${failCount > 1 ? 's' : ''} failed to upload`, variant: 'error' });
+        }
       }
+      setSuccessInfo([{
+        id,
+        name: data.name,
+        icon: data.icon,
+        color: data.color,
+        itemCount: data.items.length,
+      }]);
     } catch {
       showToast({ message: `Failed to create ${t.bin}`, variant: 'error' });
     } finally {

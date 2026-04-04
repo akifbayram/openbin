@@ -376,7 +376,9 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, o
   useEffect(() => {
     const ref = pendingDeletesRef;
     return () => {
-      for (const [itemId, timerId] of ref.current) {
+      const entries = [...ref.current.entries()];
+      ref.current.clear(); // prevent re-entry from any subsequent cleanup
+      for (const [itemId, timerId] of entries) {
         clearTimeout(timerId);
         if (onItemsChangeRef.current) {
           // handled below in batch
@@ -384,11 +386,10 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, o
           if (binId) removeItemFromBin(binId, itemId, { quiet: true }).catch(() => {});
         }
       }
-      if (onItemsChangeRef.current && ref.current.size > 0) {
-        const ids = new Set(ref.current.keys());
+      if (onItemsChangeRef.current && entries.length > 0) {
+        const ids = new Set(entries.map(([id]) => id));
         onItemsChangeRef.current(itemsRef.current.filter((i) => !ids.has(i.id)));
       }
-      ref.current.clear();
     };
   }, [binId]);
 

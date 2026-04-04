@@ -28,6 +28,7 @@ interface DashboardDialogsProps {
   bulkPinToggle: () => Promise<void>;
   bulkDuplicate: () => Promise<void>;
   pinLabel: string;
+  isBusy?: boolean;
   bins: Bin[];
   t: Terminology;
 }
@@ -36,7 +37,7 @@ export function DashboardDialogs({
   createOpen, setCreateOpen,
   bulk, selectedIds, clearSelection,
   allTags, selectable, isAdmin, canWrite,
-  bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel,
+  bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel, isBusy,
   bins, t,
 }: DashboardDialogsProps) {
   const { showToast } = useToast();
@@ -84,6 +85,7 @@ export function DashboardDialogs({
           onPasteStyle={handlePasteStyle}
           canCopyStyle={selectedIds.size === 1}
           canPasteStyle={copiedStyle !== null}
+          isBusy={isBusy}
         />
       )}
       <BulkTagDialog open={bulk.isOpen('tag')} onOpenChange={(v) => v ? bulk.open('tag') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} allTags={allTags} />

@@ -2,6 +2,12 @@ import { ValidationError } from './httpErrors.js';
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,50}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
+
+/** Strip Unicode control/format characters that enable visual spoofing (RTL overrides, zero-width chars, etc.) */
+export function stripUnicodeControl(text: string): string {
+  return text.replace(/[\u200B-\u200F\u2028-\u202F\u2060-\u206F\uFEFF\u00AD]/g, '');
+}
 
 export function validateUsername(username: unknown): string {
   if (!username || typeof username !== 'string' || !USERNAME_REGEX.test(username)) {
@@ -31,7 +37,7 @@ export function validateEmail(email: string): void {
 }
 
 export function validateDisplayName(displayName: unknown): string {
-  const trimmed = String(displayName).trim();
+  const trimmed = stripUnicodeControl(String(displayName).trim());
   if (trimmed.length < 1 || trimmed.length > 100) {
     throw new ValidationError('Display name must be 1-100 characters');
   }
@@ -42,10 +48,11 @@ export function validateBinName(name: unknown): string {
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     throw new ValidationError('Bin name is required');
   }
-  if (name.trim().length > 255) {
+  const trimmed = stripUnicodeControl(name.trim());
+  if (trimmed.length > 255) {
     throw new ValidationError('Bin name must be 255 characters or less');
   }
-  return name.trim();
+  return trimmed;
 }
 
 export function validateRetentionDays(value: unknown, label: string): number {

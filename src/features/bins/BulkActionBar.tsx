@@ -24,13 +24,14 @@ interface BulkActionBarProps {
   onCustomFields?: () => void;
   canCopyStyle?: boolean;
   canPasteStyle?: boolean;
+  isBusy?: boolean;
   aiEnabled?: boolean;
   aiGated?: boolean;
   onAskAi?: () => void;
   onReorganize?: () => void;
 }
 
-export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel, onCustomFields, onCopyStyle, onPasteStyle, canCopyStyle, canPasteStyle, aiEnabled, aiGated, onAskAi, onReorganize }: BulkActionBarProps) {
+export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, onMove, onDelete, onClear, onAppearance, onVisibility, onMoveLocation, onPin, onDuplicate, pinLabel, onCustomFields, onCopyStyle, onPasteStyle, canCopyStyle, canPasteStyle, isBusy, aiEnabled, aiGated, onAskAi, onReorganize }: BulkActionBarProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -67,6 +68,7 @@ export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, 
             size="sm"
             className="h-8 px-2 sm:px-3"
             onClick={onTag}
+            disabled={isBusy}
             aria-label="Tag"
           >
             <Tag className="h-3.5 w-3.5 sm:mr-1.5" />
@@ -81,6 +83,7 @@ export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, 
             size="sm"
             className="h-8 px-2 sm:px-3"
             onClick={onMove}
+            disabled={isBusy}
             aria-label="Move"
           >
             <MapPin className="h-3.5 w-3.5 sm:mr-1.5" />
@@ -95,6 +98,7 @@ export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, 
             size="sm"
             className="h-8 px-2 sm:px-3"
             onClick={onDelete}
+            disabled={isBusy}
             aria-label="Delete"
           >
             <Trash2 className="h-3.5 w-3.5 sm:mr-1.5" />
@@ -109,6 +113,7 @@ export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, 
             size="sm"
             className="h-8 px-2 sm:px-3"
             onClick={onAskAi}
+            disabled={isBusy}
             aria-label="AI"
           >
             <Sparkles className="h-3.5 w-3.5 sm:mr-1.5" />
@@ -124,6 +129,7 @@ export function BulkActionBar({ selectedCount, isAdmin, canWrite = true, onTag, 
               size="icon"
               className="h-8 w-8 rounded-[var(--radius-xs)]"
               onClick={() => setMoreOpen((o) => !o)}
+              disabled={isBusy}
               aria-label="More actions"
             >
               <MoreHorizontal className="h-4 w-4" />

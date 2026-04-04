@@ -33,6 +33,7 @@ export function CustomFieldsEditCard({ fields, values, onChange }: CustomFieldsE
               value={values[field.id] ?? ''}
               onChange={(e) => handleChange(field.id, e.target.value)}
               placeholder={field.name}
+              maxLength={2000}
             />
           </div>
         ))}

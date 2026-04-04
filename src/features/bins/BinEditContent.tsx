@@ -75,6 +75,7 @@ export function BinEditContent({
             id="edit-notes"
             value={edit.notes}
             onChange={(e) => edit.setNotes(e.target.value)}
+            maxLength={10000}
             rows={3}
             className="[field-sizing:content] min-h-[5rem]"
           />

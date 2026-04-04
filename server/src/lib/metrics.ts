@@ -56,7 +56,7 @@ async function queryLocationStats(demo: { clause: string; params: string[] }) {
 
   const liteLimit = getFeatureMap(Plan.LITE).maxLocations ?? 1;
   const atLimitResult = await query<{ cnt: number }>(
-    `SELECT COUNT(*) as cnt FROM (SELECT l.created_by, COUNT(*) as loc_count FROM locations l JOIN users u ON u.id = l.created_by WHERE u.plan = ${Plan.LITE} ${demo.clause} GROUP BY l.created_by HAVING loc_count >= $${demo.params.length + 1})`,
+    `SELECT COUNT(*) as cnt FROM (SELECT l.created_by, COUNT(*) as loc_count FROM locations l JOIN users u ON u.id = l.created_by WHERE u.plan = ${Plan.LITE} ${demo.clause} GROUP BY l.created_by HAVING COUNT(*) >= $${demo.params.length + 1})`,
     [...demo.params, liteLimit],
   );
 
@@ -103,7 +103,7 @@ async function queryStorageStats() {
        SELECT b.location_id, SUM(p.size) as loc_bytes FROM photos p
        JOIN bins b ON b.id = p.bin_id JOIN locations l ON l.id = b.location_id
        JOIN users u ON u.id = l.created_by
-       WHERE b.deleted_at IS NULL GROUP BY b.location_id HAVING loc_bytes > $1
+       WHERE b.deleted_at IS NULL GROUP BY b.location_id HAVING SUM(p.size) > $1
      )`,
     [threshold],
   );
@@ -124,7 +124,7 @@ async function queryMemberStats() {
        FROM location_members lm
        JOIN locations l ON l.id = lm.location_id
        JOIN users u ON u.id = l.created_by
-       GROUP BY lm.location_id
+       GROUP BY lm.location_id, u.plan
      )`,
   );
   const r = result.rows[0];

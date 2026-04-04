@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 import { useAuth } from '@/lib/auth';
@@ -16,6 +16,7 @@ export function useBulkActions(
 ) {
   const { activeLocationId } = useAuth();
   const navigate = useNavigate();
+  const [isBusy, setIsBusy] = useState(false);
   const selected = useMemo(
     () => bins.filter((b) => selectedIds.has(b.id)),
     [bins, selectedIds],
@@ -29,59 +30,74 @@ export function useBulkActions(
   const pinLabel = majorityUnpinned ? 'Pin' : 'Unpin';
 
   const bulkDelete = useCallback(async () => {
-    const snapshots: Bin[] = selected.map((b) => ({ ...b }));
-    await Promise.all(selected.map((b) => deleteBin(b.id)));
-    haptic([50, 30, 50]);
-    clearSelection();
-    showToast({
-      message: `Deleted ${snapshots.length} ${snapshots.length !== 1 ? t.bins : t.bin}`,
-      action: {
-        label: 'Undo',
-        onClick: async () => {
-          for (const bin of snapshots) {
-            await restoreBin(bin);
-          }
+    setIsBusy(true);
+    try {
+      const snapshots: Bin[] = selected.map((b) => ({ ...b }));
+      await Promise.all(selected.map((b) => deleteBin(b.id)));
+      haptic([50, 30, 50]);
+      clearSelection();
+      showToast({
+        message: `Deleted ${snapshots.length} ${snapshots.length !== 1 ? t.bins : t.bin}`,
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            for (const bin of snapshots) {
+              await restoreBin(bin);
+            }
+          },
         },
-      },
-    });
+      });
+    } finally {
+      setIsBusy(false);
+    }
   }, [selected, clearSelection, showToast, t]);
 
   const bulkPinToggle = useCallback(async () => {
-    if (majorityUnpinned) {
-      await Promise.all(selected.filter((b) => !b.is_pinned).map((b) => pinBin(b.id)));
-    } else {
-      await Promise.all(selected.filter((b) => b.is_pinned).map((b) => unpinBin(b.id)));
+    setIsBusy(true);
+    try {
+      if (majorityUnpinned) {
+        await Promise.all(selected.filter((b) => !b.is_pinned).map((b) => pinBin(b.id)));
+      } else {
+        await Promise.all(selected.filter((b) => b.is_pinned).map((b) => unpinBin(b.id)));
+      }
+      clearSelection();
+    } finally {
+      setIsBusy(false);
     }
-    clearSelection();
   }, [selected, majorityUnpinned, clearSelection]);
 
   const bulkDuplicate = useCallback(async () => {
     if (!activeLocationId) return;
-    const ids: string[] = [];
-    for (const bin of selected) {
-      const newBin = await addBin({
-        name: `${bin.name} (copy)`,
-        locationId: activeLocationId,
-        items: bin.items.map((i) => i.name),
-        notes: bin.notes,
-        tags: [...bin.tags],
-        areaId: bin.area_id,
-        icon: bin.icon,
-        color: bin.color,
-        cardStyle: bin.card_style,
-        visibility: bin.visibility,
-        customFields: bin.custom_fields ? { ...bin.custom_fields } : undefined,
-      });
-      ids.push(newBin.id);
-    }
-    clearSelection();
-    if (ids.length === 1) {
-      navigate(`/bin/${ids[0]}`);
-      showToast({ message: `Duplicated "${selected[0].name}"` });
-    } else {
-      showToast({ message: `Duplicated ${ids.length} ${t.bins}` });
+    setIsBusy(true);
+    try {
+      const ids: string[] = [];
+      for (const bin of selected) {
+        const newBin = await addBin({
+          name: `${bin.name} (copy)`,
+          locationId: activeLocationId,
+          items: bin.items.map((i) => i.name),
+          notes: bin.notes,
+          tags: [...bin.tags],
+          areaId: bin.area_id,
+          icon: bin.icon,
+          color: bin.color,
+          cardStyle: bin.card_style,
+          visibility: bin.visibility,
+          customFields: bin.custom_fields ? { ...bin.custom_fields } : undefined,
+        });
+        ids.push(newBin.id);
+      }
+      clearSelection();
+      if (ids.length === 1) {
+        navigate(`/bin/${ids[0]}`);
+        showToast({ message: `Duplicated "${selected[0].name}"` });
+      } else {
+        showToast({ message: `Duplicated ${ids.length} ${t.bins}` });
+      }
+    } finally {
+      setIsBusy(false);
     }
   }, [selected, activeLocationId, clearSelection, showToast, navigate, t]);
 
-  return { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel };
+  return { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel, isBusy };
 }

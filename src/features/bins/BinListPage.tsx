@@ -95,7 +95,7 @@ export function BinListPage() {
 
   const bulk = useBulkDialogs();
   const { selectedIds, selectable, toggleSelect, clearSelection } = useBulkSelection(bins, [debouncedSearch, sort, sortDir, filters]);
-  const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel } = useBulkActions(bins, selectedIds, clearSelection, showToast, t);
+  const { bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel, isBusy } = useBulkActions(bins, selectedIds, clearSelection, showToast, t);
 
   const selectedBinIds = useMemo(() => selectedIds.size > 0 ? [...selectedIds] : undefined, [selectedIds]);
   useEffect(() => {
@@ -381,6 +381,7 @@ export function BinListPage() {
           onPasteStyle={handlePasteStyle}
           canCopyStyle={selectedIds.size === 1}
           canPasteStyle={copiedStyle !== null}
+          isBusy={isBusy}
           aiEnabled={aiEnabled}
           aiGated={aiGated}
           onAskAi={() => aiGated ? setUpgradeOpen(true) : getCommandInputRef().current?.open()}

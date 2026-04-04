@@ -166,10 +166,10 @@ router.post('/register', asyncHandler(async (req, res) => {
     );
   } catch (err: unknown) {
     if (isUniqueViolation(err, 'idx_users_email_unique')) {
-      throw new ConflictError('An account with this email already exists');
+      throw new ConflictError('Registration failed — please try different credentials');
     }
     if (isUniqueViolation(err)) {
-      throw new ConflictError('Username already taken');
+      throw new ConflictError('Registration failed — please try different credentials');
     }
     throw err;
   }

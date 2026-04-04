@@ -244,6 +244,7 @@ export function ProfilePage() {
                     if (err) setProfileErrors({ displayName: err });
                   }}
                   placeholder="Your name"
+                  maxLength={100}
                   required
                   aria-invalid={!!profileErrors.displayName}
                 />

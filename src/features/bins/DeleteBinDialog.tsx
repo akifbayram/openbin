@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTerminology } from '@/lib/terminology';
@@ -6,14 +7,15 @@ interface DeleteBinDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   binName: string;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
 }
 
 export function DeleteBinDialog({ open, onOpenChange, binName, onConfirm }: DeleteBinDialogProps) {
   const t = useTerminology();
+  const [deleting, setDeleting] = useState(false);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!deleting) onOpenChange(v); }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete this {t.bin}?</DialogTitle>
@@ -22,17 +24,23 @@ export function DeleteBinDialog({ open, onOpenChange, binName, onConfirm }: Dele
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={deleting}>
             Cancel
           </Button>
           <Button
             variant="destructive"
-            onClick={() => {
-              onOpenChange(false);
-              onConfirm();
+            disabled={deleting}
+            onClick={async () => {
+              setDeleting(true);
+              try {
+                await onConfirm();
+                onOpenChange(false);
+              } finally {
+                setDeleting(false);
+              }
             }}
           >
-            Delete
+            {deleting ? 'Deleting\u2026' : 'Delete'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -72,6 +72,7 @@ router.use(authenticate);
 // Streams JSON to avoid OOM: only one bin's photos are in memory at a time.
 router.get('/locations/:id/export', requireLocationMember(), requirePro(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
+  await requireMemberOrAbove(locationId, req.user!.id, 'export location data');
 
   const locationResult = await query('SELECT name FROM locations WHERE id = $1', [locationId]);
   if (locationResult.rows.length === 0) {
@@ -133,6 +134,7 @@ router.get('/locations/:id/export', requireLocationMember(), requirePro(), async
 // GET /api/locations/:id/export/zip — export as ZIP with structured directories
 router.get('/locations/:id/export/zip', requireLocationMember(), requirePro(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
+  await requireMemberOrAbove(locationId, req.user!.id, 'export location data');
 
   const locationResult = await query('SELECT name FROM locations WHERE id = $1', [locationId]);
   if (locationResult.rows.length === 0) {
@@ -239,6 +241,7 @@ router.get('/locations/:id/export/zip', requireLocationMember(), requirePro(), a
 // GET /api/locations/:id/export/csv — export bins as CSV (one row per item)
 router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
+  await requireMemberOrAbove(locationId, req.user!.id, 'export location data');
 
   const locationResult = await query('SELECT name FROM locations WHERE id = $1', [locationId]);
   if (locationResult.rows.length === 0) {
@@ -251,7 +254,11 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
   ]);
 
   function csvEscape(val: string): string {
-    if (val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r')) {
+    // Prevent CSV formula injection (Excel/Sheets interpret =, +, -, @, \t, \r as formulas)
+    if (/^[=+\-@\t\r]/.test(val)) {
+      val = "'" + val;
+    }
+    if (val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r') || val.includes("'")) {
       return `"${val.replace(/"/g, '""')}"`;
     }
     return val;

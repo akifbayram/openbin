@@ -22,6 +22,8 @@ interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
 
 // Shared promise to deduplicate concurrent refresh attempts
 let refreshPromise: Promise<boolean> | null = null;
+// Debounce 403-triggered location refreshes (e.g., bulk ops hitting many 403s at once)
+let lastLocationRefresh = 0;
 
 export async function tryRefresh(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
@@ -104,6 +106,10 @@ async function doFetch<T>(path: string, options: ApiFetchOptions, isRetry: boole
     if (code === 'PLAN_RESTRICTED' || code === 'SUBSCRIPTION_EXPIRED' || code === 'OVER_LIMIT') {
       notify(Events.PLAN);
       window.dispatchEvent(new CustomEvent('openbin-plan-restricted', { detail: { code, message: data.message, upgradeUrl } }));
+    }
+    if (res.status === 403 && Date.now() - lastLocationRefresh > 5_000) {
+      lastLocationRefresh = Date.now();
+      notify(Events.LOCATIONS);
     }
     throw new ApiError(res.status, data.message || data.error || res.statusText, code, upgradeUrl);
   }

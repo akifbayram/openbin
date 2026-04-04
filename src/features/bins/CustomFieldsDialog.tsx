@@ -101,6 +101,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
                   <Input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
+                    maxLength={100}
                     autoFocus
                     className="h-8 text-[14px]"
                   />
@@ -142,6 +143,7 @@ export function CustomFieldsDialog({ locationId, open, onOpenChange }: CustomFie
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="New field name"
+              maxLength={100}
               className="h-8 text-[14px]"
             />
             <Button type="submit" size="sm" disabled={!newName.trim() || adding} className="shrink-0">

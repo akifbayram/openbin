@@ -50,6 +50,9 @@ router.post('/:locationId/areas', requireLocationAdmin('locationId'), asyncHandl
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     throw new ValidationError('Area name is required');
   }
+  if (name.trim().length > 255) {
+    throw new ValidationError('Area name must be 255 characters or less');
+  }
 
   const resolvedParentId = parent_id || null;
 
@@ -108,6 +111,9 @@ router.put('/:locationId/areas/:areaId', requireLocationAdmin('locationId'), asy
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     throw new ValidationError('Area name is required');
+  }
+  if (name.trim().length > 255) {
+    throw new ValidationError('Area name must be 255 characters or less');
   }
 
   // Get old name for activity log

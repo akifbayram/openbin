@@ -1,4 +1,5 @@
 import { ValidationError } from './httpErrors.js';
+import { HEX_COLOR_REGEX, stripUnicodeControl } from './validation.js';
 
 const CODE_REGEX = /^[A-Z0-9]{6}$/;
 
@@ -30,17 +31,31 @@ export function validateBinFields(fields: {
     throw new ValidationError('Notes too long (max 10000 characters)');
   }
   if (items !== undefined && Array.isArray(items)) {
-    for (const item of items) {
-      const name = typeof item === 'string' ? item : (item as { name: string })?.name;
-      if (typeof name === 'string' && name.length > 500) {
-        throw new ValidationError('Item name too long (max 500 characters)');
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (typeof item === 'string') {
+        const sanitized = stripUnicodeControl(item.trim());
+        if (sanitized.length > 500) {
+          throw new ValidationError('Item name too long (max 500 characters)');
+        }
+        items[i] = sanitized;
+      } else if (item && typeof (item as { name: string }).name === 'string') {
+        const sanitized = stripUnicodeControl((item as { name: string }).name.trim());
+        if (sanitized.length > 500) {
+          throw new ValidationError('Item name too long (max 500 characters)');
+        }
+        (item as { name: string }).name = sanitized;
       }
     }
   }
   if (tags !== undefined && Array.isArray(tags)) {
-    for (const tag of tags) {
-      if (typeof tag === 'string' && tag.length > 100) {
-        throw new ValidationError('Tag too long (max 100 characters)');
+    for (let i = 0; i < tags.length; i++) {
+      if (typeof tags[i] === 'string') {
+        const sanitized = stripUnicodeControl((tags[i] as string).trim());
+        if (sanitized.length > 100) {
+          throw new ValidationError('Tag too long (max 100 characters)');
+        }
+        tags[i] = sanitized;
       }
     }
   }
@@ -49,6 +64,9 @@ export function validateBinFields(fields: {
   }
   if (color !== undefined && typeof color === 'string' && color.length > 50) {
     throw new ValidationError('Color value too long (max 50 characters)');
+  }
+  if (color !== undefined && typeof color === 'string' && color !== '' && !HEX_COLOR_REGEX.test(color)) {
+    throw new ValidationError('Color must be a valid hex color (e.g., #FF0000)');
   }
   if (cardStyle !== undefined && typeof cardStyle === 'string' && cardStyle.length > 500) {
     throw new ValidationError('Card style too long (max 500 characters)');

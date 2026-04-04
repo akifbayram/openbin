@@ -67,7 +67,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
               {/* Description */}
               <div className="flex-[2] min-w-0">
                 <p className="text-[13px] text-[var(--text-primary)] truncate">
-                  <span className="md:hidden font-medium">{entry.display_name} </span>
+                  <span className="md:hidden font-medium truncate max-w-[10rem]" title={entry.display_name}>{entry.display_name}</span>{' '}
                   {getActionLabel(entry, t)}
                 </p>
                 {changeDiffs && (
@@ -84,7 +84,7 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore }:
 
               {/* User */}
               <div className="hidden md:flex flex-1 min-w-0 items-center gap-1.5">
-                <span className="text-[13px] text-[var(--text-secondary)] truncate">{entry.display_name}</span>
+                <span className="text-[13px] text-[var(--text-secondary)] truncate max-w-[10rem]" title={entry.display_name}>{entry.display_name}</span>
                 {entry.auth_method === 'api_key' && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
                     API{entry.api_key_name ? `: ${entry.api_key_name}` : ''}

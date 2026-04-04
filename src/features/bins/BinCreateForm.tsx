@@ -208,6 +208,7 @@ export function BinCreateForm({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={isFull ? 'e.g., Holiday Decorations' : `${t.Bin} name`}
+          maxLength={255}
           required
           autoFocus
         />
@@ -228,6 +229,7 @@ export function BinCreateForm({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Additional notes..."
+            maxLength={10000}
             rows={2}
           />
         </div>

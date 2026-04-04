@@ -67,6 +67,7 @@ export function LocationCreateDialog({ open, onOpenChange }: LocationCreateDialo
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., My House, Office"
+              maxLength={255}
               autoFocus
               required
             />
@@ -206,6 +207,7 @@ export function LocationRenameDialog({ locationId, currentName, open, onOpenChan
               id="rename-location"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              maxLength={255}
               autoFocus
               required
             />
