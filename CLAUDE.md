@@ -25,11 +25,12 @@ Inventory with intelligence. Multi-user web app for organizing physical storage 
 - **API response envelopes**: Lists return `{ results: T[], count }`. Errors return `{ error: "CODE", message }`. See `server/openapi.yaml` for details.
 - **CSS**: use `var(--token)` design tokens, not raw colors. Surface classes `flat-card`, `flat-nav`, `flat-heavy`, `flat-popover` provide opaque backgrounds with solid borders — no blur, no shadow. Use `cn()` from `lib/utils.ts` (clsx + tailwind-merge) for className composition. **Do not** add `backdrop-blur-*`, `shadow-*`, or `rounded-full` (except pills/avatars) — the design is deliberately flat.
 - **Border tokens**: `--border-flat` for structural/container borders (cards, inputs, pickers, panels). `--border-subtle` for internal separators (dividers between list items, section breaks within a card).
+- **Radius tokens**: `--radius-xs` (4px) through `--radius-xl` (12px), `--radius-full` (9999px). Use `var(--radius-*)` instead of hardcoded values or Tailwind `rounded-*`.
 - **Shared class constants** in `lib/utils.ts`: `inputBase` (form controls), `flatCard`, `focusRing`, `focusRingInset`, `categoryHeader`, `iconButton`, `rowAction`, `overlayBackdrop`, `disclosureSectionLabel`. Use these instead of hand-rolling the same patterns.
 - **Icons**: `lucide-react` — import named icons (e.g. `import { Plus } from 'lucide-react'`).
 - **Responsive**: mobile-first. Breakpoint `lg` (1024px).
 - **Server error handling**: Routes use `throw new ValidationError(...)` etc. from `server/src/lib/httpErrors.ts`, wrapped in `asyncHandler()` to forward to the global error handler.
-- **Event bus**: `notify()` and `useRefreshOn()` from `lib/eventBus.ts`. 8 event types: `BINS`, `LOCATIONS`, `PHOTOS`, `PINS`, `AREAS`, `TAG_COLORS`, `SCAN_HISTORY`, `CUSTOM_FIELDS`.
+- **Event bus**: `notify()` and `useRefreshOn()` from `lib/eventBus.ts`. 9 event types: `BINS`, `LOCATIONS`, `PHOTOS`, `PINS`, `AREAS`, `TAG_COLORS`, `SCAN_HISTORY`, `CUSTOM_FIELDS`, `PLAN`.
 
 ## API Documentation
 
@@ -48,6 +49,8 @@ OpenAPI spec at `server/openapi.yaml`.
 - **`DATABASE_PATH`**: Must be set to `/data/openbin.db` in Docker. The SQLite init code creates this directory; the path is also used by `resolveJwtSecret()` to locate `.jwt_secret`, so it matters even with PostgreSQL.
 - **`JWT_SECRET`**: Set explicitly in Docker. Auto-generation writes to `data/.jwt_secret` which fails if the data dir isn't writable yet at config load time.
 - **`CORS_ORIGIN`**: Defaults to `http://localhost:5173`. Must be set to the production URL (e.g. `https://cloud.openbin.app`) in deployment — otherwise the dev origin leaks into production ACAO headers.
+- **Thumbnail generation**: Worker pool via `piscina` (`server/src/lib/thumbnailPool.ts`). Sharp runs off-main-thread to avoid blocking the event loop.
+- **Export streaming**: Large exports stream JSON via `res.write()` to prevent OOM. Don't buffer the full response in `server/src/routes/export.ts`.
 
 ## Security (non-obvious)
 
@@ -55,6 +58,7 @@ OpenAPI spec at `server/openapi.yaml`.
 - **AI API key encryption**: AES-256-GCM when `AI_ENCRYPTION_KEY` env var set. Graceful fallback to plaintext.
 - **Dual auth**: Middleware supports JWT tokens and API keys (`sk_openbin_` prefix). `req.authMethod` is `'jwt' | 'api_key'`.
 - **Roles**: Three-tier role system — `admin`, `member`, `viewer`. Viewers are read-only (no create/edit/delete/pin). Use `usePermissions()` hook for client-side guards and `requireMemberOrAbove()` middleware for server-side.
+- **SSRF protection**: AI provider calls use `undici` Agent with DNS pinning (`server/src/lib/aiCaller.ts`). Resolved IPs are pinned at request time to close TOCTOU gap. Self-hosted mode skips validation (allows local endpoints like Ollama).
 - **Registration modes**: `REGISTRATION_MODE` env var — `open` (default), `invite` (require location invite code), `closed` (no sign-ups).
 
 ## Development

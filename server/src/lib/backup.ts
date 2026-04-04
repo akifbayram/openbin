@@ -86,6 +86,8 @@ export async function runBackup(config?: Partial<BackupConfig>): Promise<string>
         '-f', dumpPath,
         '--no-owner',
         '--no-acl',
+        '--clean',
+        '--if-exists',
       ]);
       // Verify pg_dump produced a non-empty file
       const stat = fs.statSync(dumpPath);

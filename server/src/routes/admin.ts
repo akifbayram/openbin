@@ -1,10 +1,12 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import path from 'node:path';
 import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import multer from 'multer';
 import { d, generateUuid, isUniqueViolation, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { runBackup } from '../lib/backup.js';
 import { config } from '../lib/config.js';
 import { firePasswordResetEmail } from '../lib/emailSender.js';
 import { ConflictError, ForbiddenError, HttpError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
@@ -494,6 +496,13 @@ export async function getRegistrationMode(): Promise<string> {
   const result = await query<{ value: string }>("SELECT value FROM settings WHERE key = 'registration_mode'");
   return result.rows[0]?.value || 'open';
 }
+
+// POST /api/admin/backup — trigger on-demand backup
+router.post('/backup', asyncHandler(async (req, res) => {
+  const zipPath = await runBackup();
+  log.info(`On-demand backup created by ${req.user!.username}`);
+  res.json({ message: 'Backup created', filename: path.basename(zipPath) });
+}));
 
 // POST /api/admin/restore — restore from backup ZIP
 const restoreUpload = multer({
