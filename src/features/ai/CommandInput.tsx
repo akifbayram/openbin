@@ -41,7 +41,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
     fileInputRef,
     state, isAiReady, aiSettingsLoading, selectedCount,
     actions, interpretation, error,
-    handleParse, handleBack, toggleAction,
+    handleParse, handleDemoScenario, handleBack, toggleAction,
     handleClose, handlePhotoSelect, handleDemoPhotoSelect, handleBinClick,
     handleExecuteComplete, handleAskAnother, handleFollowUp,
     scopeInfo,
@@ -181,7 +181,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
               isStreaming={isQueryStreaming}
               onBinClick={handleBinClick}
               onBack={handleBack}
-              onFollowUp={handleFollowUp}
+              onFollowUp={demoMode ? undefined : handleFollowUp}
             />
           </div>
         ) : effectiveState === 'preview' && actions ? (
@@ -218,6 +218,8 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
               onPhotoClick={demoMode ? handleDemoPhotoSelect : () => fileInputRef.current?.click()}
               onCameraClick={demoMode ? handleDemoPhotoSelect : handleCameraClick}
               isScoped={scopeInfo.isScoped}
+              demoMode={demoMode}
+              onDemoScenario={handleDemoScenario}
             />
           </div>
         )}

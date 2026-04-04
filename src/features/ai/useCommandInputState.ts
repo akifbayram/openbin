@@ -15,11 +15,11 @@ type State = 'idle' | 'parsing' | 'preview' | 'executing' | 'querying' | 'query-
 
 export function useCommandInputState(onOpenChange: (open: boolean) => void, selectedBinIds?: string[]) {
   const t = useTerminology();
-  const { activeLocationId } = useAuth();
+  const { activeLocationId, demoMode } = useAuth();
   const navigate = useNavigate();
   const { settings, isLoading: aiSettingsLoading } = useAiSettings();
   const { showToast } = useToast();
-  const { isStreaming: isParsing, error, partialText: queryPartialText, ask, cancel: cancelAsk, clear: clearAsk } = useStreamingAsk();
+  const { isStreaming: isParsing, error, partialText: queryPartialText, ask, demoAsk, cancel: cancelAsk, clear: clearAsk } = useStreamingAsk();
   const [text, setText] = useState('');
   const [checkedActions, setCheckedActions] = useState<Map<number, boolean>>(new Map());
   const [actions, setActions] = useState<CommandAction[] | null>(null);
@@ -82,8 +82,23 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void, sele
     }
   }
 
+  async function handleDemoScenario(scenarioKey: string, displayText: string) {
+    setText(displayText);
+    setActions(null);
+    setInterpretation('');
+    setQueryResult(null);
+
+    try {
+      const result = await demoAsk(scenarioKey);
+      if (result) applyAskResult(result);
+    } catch (err) {
+      showToast({ message: mapAiError(err, 'Request failed') });
+    }
+  }
+
   async function handleParse() {
-    if (!text.trim() || !activeLocationId || !isAiReady) return;
+    if (!text.trim() || !activeLocationId) return;
+    if (!isAiReady && !demoMode) return;
     setActions(null);
     setInterpretation('');
     setQueryResult(null);
@@ -225,7 +240,9 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void, sele
     interpretation,
     error,
     // Handlers
+    demoMode,
     handleParse,
+    handleDemoScenario,
     handleBack,
     toggleAction,
     handleClose,

@@ -51,15 +51,40 @@ function classifyResult(result: AskResult): AskClassified {
 }
 
 export function useStreamingAsk() {
-  const { result, isStreaming, error, partialText, stream, cancel, clear: clearStream } = useAiStream<AskResult>(
+  const realStream = useAiStream<AskResult>(
     '/api/ai/ask/stream',
     "Couldn't process that request"
   );
 
-  const ask = useCallback(
-    (options: { text: string; locationId: string; binIds?: string[] }) => stream(options),
-    [stream]
+  const demoStream = useAiStream<AskResult>(
+    '/api/ai/demo-scenario/stream',
+    "Couldn't process that request"
   );
+
+  const ask = useCallback(
+    (options: { text: string; locationId: string; binIds?: string[] }) => realStream.stream(options),
+    [realStream.stream]
+  );
+
+  const demoAsk = useCallback(
+    (scenarioKey: string) => demoStream.stream({ demoScenario: scenarioKey }),
+    [demoStream.stream]
+  );
+
+  const isStreaming = realStream.isStreaming || demoStream.isStreaming;
+  const error = realStream.error || demoStream.error;
+  const partialText = realStream.partialText || demoStream.partialText;
+  const result = realStream.result || demoStream.result;
+
+  const cancel = useCallback(() => {
+    realStream.cancel();
+    demoStream.cancel();
+  }, [realStream.cancel, demoStream.cancel]);
+
+  const clear = useCallback(() => {
+    realStream.clear();
+    demoStream.clear();
+  }, [realStream.clear, demoStream.clear]);
 
   const classified = useMemo(
     () => (result ? classifyResult(result) : null),
@@ -67,6 +92,6 @@ export function useStreamingAsk() {
   );
 
   return useMemo(() => ({
-    classified, isStreaming, error, partialText, ask, cancel, clear: clearStream,
-  }), [classified, isStreaming, error, partialText, ask, cancel, clearStream]);
+    classified, isStreaming, error, partialText, ask, demoAsk, cancel, clear,
+  }), [classified, isStreaming, error, partialText, ask, demoAsk, cancel, clear]);
 }

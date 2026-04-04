@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/toast';
+import { DEMO_STRUCTURE_TEXT, DEMO_STRUCTURED_ITEMS } from '@/features/ai/demoAiScenarios';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
+import { useAuth } from '@/lib/auth';
 import { clientItemId, parseItemQuantity, toItemPayload } from '@/lib/itemQuantities';
 import type { BinItem } from '@/types';
 import { addItemsToBin } from './useBins';
@@ -20,6 +22,7 @@ interface UseQuickAddOptions {
 export function useQuickAdd(options: UseQuickAddOptions) {
   const { binId, binName, existingItems, activeLocationId, aiConfigured = false, onNavigateAiSetup = () => {}, onAdd } = options;
   const { showToast } = useToast();
+  const { demoMode } = useAuth();
 
   const [value, setValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -33,6 +36,7 @@ export function useQuickAdd(options: UseQuickAddOptions) {
     error: structureError,
     structure,
     clearStructured,
+    setStructuredItems,
   } = useTextStructuring();
 
   function reset() {
@@ -43,6 +47,17 @@ export function useQuickAdd(options: UseQuickAddOptions) {
   }
 
   function handleStructure(text: string) {
+    if (demoMode) {
+      setState('processing');
+      setTimeout(() => {
+        setStructuredItems(DEMO_STRUCTURED_ITEMS);
+        const initial = new Map<number, boolean>();
+        for (let i = 0; i < DEMO_STRUCTURED_ITEMS.length; i++) initial.set(i, true);
+        setChecked(initial);
+        setState('preview');
+      }, 600);
+      return;
+    }
     setState('processing');
     structure({
       text,
@@ -120,6 +135,11 @@ export function useQuickAdd(options: UseQuickAddOptions) {
   }
 
   function handleAiClick() {
+    if (demoMode) {
+      setExpandedText(DEMO_STRUCTURE_TEXT);
+      setState('expanded');
+      return;
+    }
     if (!aiConfigured) {
       onNavigateAiSetup();
       return;

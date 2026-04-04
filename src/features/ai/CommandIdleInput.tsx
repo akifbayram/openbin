@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
+import { DEMO_TEXT_PRESETS } from './demoAiScenarios';
 
 interface CommandIdleInputProps {
   text: string;
@@ -16,6 +17,8 @@ interface CommandIdleInputProps {
   onPhotoClick: () => void;
   onCameraClick?: () => void;
   isScoped?: boolean;
+  demoMode?: boolean;
+  onDemoScenario?: (scenarioKey: string, displayText: string) => void;
 }
 
 export function CommandIdleInput({
@@ -29,6 +32,8 @@ export function CommandIdleInput({
   onPhotoClick,
   onCameraClick,
   isScoped,
+  demoMode,
+  onDemoScenario,
 }: CommandIdleInputProps) {
   const t = useTerminology();
 
@@ -47,6 +52,57 @@ export function CommandIdleInput({
     { label: 'Find things', example: 'Where is the glass cleaner?' },
     { label: 'Search trash', example: "What's in my trash?" },
   ], [isScoped, t]);
+
+  if (demoMode && onDemoScenario) {
+    return (
+      <div className="space-y-3">
+        <p className="text-[13px] text-[var(--text-secondary)]">
+          Try these examples to see AI in action:
+        </p>
+        <div className="grid gap-2">
+          {DEMO_TEXT_PRESETS.map((preset) => (
+            <button
+              key={preset.scenarioKey}
+              type="button"
+              disabled={isLoading}
+              onClick={() => onDemoScenario(preset.scenarioKey, preset.text)}
+              className={cn(
+                'w-full text-left px-3 py-2.5 rounded-[var(--radius-md)]',
+                'border border-[var(--border-flat)] bg-[var(--bg-elevated)]',
+                'hover:border-[var(--accent)] hover:bg-[var(--bg-active)]',
+                'transition-colors cursor-pointer',
+                'flex items-center justify-between gap-2',
+              )}
+            >
+              <div className="min-w-0">
+                <span className="block text-[13px] font-medium text-[var(--text-primary)] truncate">
+                  {preset.text}
+                </span>
+                <span className="block text-[11px] text-[var(--text-tertiary)] mt-0.5">
+                  {preset.category === 'query' ? 'Search' : 'Command'}
+                </span>
+              </div>
+              <Sparkles className="h-3.5 w-3.5 text-[var(--text-tertiary)] shrink-0" />
+            </button>
+          ))}
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onPhotoClick}
+          disabled={isLoading}
+          className="w-full"
+        >
+          <ImagePlus className="h-4 w-4 mr-1.5" />
+          Try photo analysis
+        </Button>
+        {error && (
+          <p className="text-[13px] text-[var(--destructive)]">{error}</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">

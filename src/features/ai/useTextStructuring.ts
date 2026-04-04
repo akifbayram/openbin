@@ -61,5 +61,10 @@ export function useTextStructuring() {
     setError(null);
   }, []);
 
-  return { structuredItems, isStructuring, error, structure, clearStructured };
+  const setStructuredItems = useCallback((items: AiSuggestedItem[]) => {
+    setAiSuggestedItems(items);
+    setError(null);
+  }, []);
+
+  return { structuredItems, isStructuring, error, structure, clearStructured, setStructuredItems };
 }
