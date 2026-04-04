@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,7 +10,9 @@ import type { Photo } from '@/types';
 import { compressImage } from './compressImage';
 import { DeletePhotoDialog } from './DeletePhotoDialog';
 import { PhotoLightbox } from './PhotoLightbox';
-import { addPhoto, deletePhoto, getPhotoThumbUrl, usePhotos } from './usePhotos';
+import { addPhoto, deletePhoto, getPhotoThumbUrl, notifyPhotosChanged, usePhotos } from './usePhotos';
+
+const UPLOAD_CONCURRENCY = 3;
 
 interface PhotoGalleryProps {
   binId: string;
@@ -23,21 +25,46 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
+  const [uploadingCount, setUploadingCount] = useState(0);
 
   const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files) return;
-    for (const file of Array.from(files)) {
-      if (!file.type.startsWith('image/')) continue;
-      try {
-        const compressed = await compressImage(file);
-        const compressedFile = new File([compressed], file.name, { type: compressed.type });
-        await addPhoto(binId, compressedFile);
-      } catch (err) {
-        showToast({
-          message: getErrorMessage(err, 'Failed to add photo'),
-          variant: 'error',
-        });
+    const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (imageFiles.length === 0) return;
+
+    setUploadingCount(imageFiles.length);
+    let errorCount = 0;
+
+    // Process uploads with bounded concurrency
+    const queue = [...imageFiles];
+    const uploadOne = async () => {
+      let file = queue.shift();
+      while (file) {
+        try {
+          const compressed = await compressImage(file);
+          const compressedFile = new File([compressed], file.name, { type: compressed.type });
+          await addPhoto(binId, compressedFile, { silent: true });
+        } catch {
+          errorCount++;
+        } finally {
+          setUploadingCount((c) => c - 1);
+        }
+        file = queue.shift();
       }
+    };
+
+    const workers = Array.from(
+      { length: Math.min(UPLOAD_CONCURRENCY, imageFiles.length) },
+      () => uploadOne(),
+    );
+    await Promise.all(workers);
+
+    notifyPhotosChanged();
+    if (errorCount > 0) {
+      showToast({
+        message: `Failed to upload ${errorCount} photo${errorCount > 1 ? 's' : ''}`,
+        variant: 'error',
+      });
     }
     if (inputRef.current) inputRef.current.value = '';
   }, [binId, showToast]);
@@ -80,6 +107,15 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </Tooltip>
+          </div>
+        ))}
+        {uploadingCount > 0 && Array.from({ length: uploadingCount }, (_, i) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: identical stateless placeholders
+            key={i}
+            className="flex items-center justify-center w-20 h-20 flex-shrink-0 rounded-[var(--radius-sm)] bg-[var(--bg-input)] snap-start"
+          >
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--text-tertiary)]" />
           </div>
         ))}
         {/* Add photo button */}

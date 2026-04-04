@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 import { d, query, withTransaction } from '../db.js';
@@ -406,7 +405,16 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/bins/:id/photos — upload photo for a bin
-router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
+router.post('/:id/photos', asyncHandler(async (req, res, next) => {
+  // Best-effort: reject before multer buffers. +1 KB for multipart overhead.
+  const cl = req.headers['content-length'];
+  if (cl) {
+    const maxBytes = config.maxPhotoSizeMb * 1024 * 1024 + 1024;
+    if (Number(cl) > maxBytes) {
+      throw new QuotaExceededError('PAYLOAD_TOO_LARGE', `Upload exceeds ${config.maxPhotoSizeMb} MB limit`);
+    }
+  }
+
   // Validate bin access before multer writes file to disk
   const binId = req.params.id;
   const access = await verifyBinAccess(binId, req.user!.id);
@@ -416,6 +424,8 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
   await requireMemberOrAbove(access.locationId, req.user!.id, 'upload photos');
 
   await assertLocationWritable(access.locationId);
+
+  res.locals.binAccess = access;
 
   // Per-bin photo count limit (always enforced)
   const countResult = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM photos WHERE bin_id = $1', [binId]);
@@ -460,17 +470,12 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
   }
 
   const isS3 = config.storageBackend === 's3';
+  const access = res.locals.binAccess as import('../lib/binAccess.js').BinAccessResult;
 
   if (isS3) {
     await validateFileBuffer(file.buffer);
   } else {
     await validateFileType(file.path);
-  }
-
-  const access = await verifyBinAccess(binId, req.user!.id);
-  if (!access) {
-    if (!isS3) fs.unlinkSync(file.path);
-    throw new NotFoundError('Bin not found');
   }
 
   // For S3 (memoryStorage), multer doesn't generate a filename
@@ -499,6 +504,7 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
       thumbPromise,
     ]);
     thumbPath = resolvedThumbPath;
+    (file as any).buffer = undefined; // release for GC
   } else {
     // Local: file already on disk from multer, just generate thumbnail
     try {
@@ -525,9 +531,7 @@ router.post('/:id/photos', asyncHandler(async (req, _res, next) => {
 
   const photo = result.rows[0];
 
-  // Get bin name for activity log
-  const binResult = await query('SELECT name FROM bins WHERE id = $1', [binId]);
-  logRouteActivity(req, { entityType: 'bin', locationId: access.locationId, action: 'add_photo', entityId: binId, entityName: binResult.rows[0]?.name });
+  logRouteActivity(req, { entityType: 'bin', locationId: access.locationId, action: 'add_photo', entityId: binId, entityName: access.name });
 
   res.status(201).json({ id: photo.id });
 }));

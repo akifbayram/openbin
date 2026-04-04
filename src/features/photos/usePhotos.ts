@@ -28,7 +28,7 @@ export function getPhotoThumbUrl(photoId: string): string {
   return `/api/photos/${photoId}/thumb`;
 }
 
-export async function addPhoto(binId: string, file: File): Promise<string> {
+export async function addPhoto(binId: string, file: File, options?: { silent?: boolean }): Promise<string> {
   const formData = new FormData();
   formData.append('photo', file);
 
@@ -36,7 +36,7 @@ export async function addPhoto(binId: string, file: File): Promise<string> {
     method: 'POST',
     body: formData,
   });
-  notifyPhotosChanged();
+  if (!options?.silent) notifyPhotosChanged();
   return result.id;
 }
 

@@ -2,11 +2,18 @@ import { query } from '../db.js';
 import { ForbiddenError, OverLimitError, ValidationError } from './httpErrors.js';
 import { checkLocationWritable, generateUpgradeUrl, getEffectiveMemberRole, getUserPlanInfo } from './planGate.js';
 
+export interface BinAccessResult {
+  locationId: string;
+  visibility: string;
+  createdBy: string;
+  name: string;
+}
+
 /** Verify user is a member of the location that owns a non-deleted bin.
  *  Private bins are only accessible to their creator. */
-export async function verifyBinAccess(binId: string, userId: string): Promise<{ locationId: string; visibility: string; createdBy: string } | null> {
+export async function verifyBinAccess(binId: string, userId: string): Promise<BinAccessResult | null> {
   const result = await query(
-    `SELECT b.location_id, b.visibility, b.created_by FROM bins b
+    `SELECT b.location_id, b.visibility, b.created_by, b.name FROM bins b
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
      WHERE b.id = $1 AND b.deleted_at IS NULL`,
     [binId, userId]
@@ -15,7 +22,7 @@ export async function verifyBinAccess(binId: string, userId: string): Promise<{ 
   const row = result.rows[0];
   // Private bins: only the creator can access
   if (row.visibility === 'private' && row.created_by !== userId) return null;
-  return { locationId: row.location_id, visibility: row.visibility, createdBy: row.created_by };
+  return { locationId: row.location_id, visibility: row.visibility, createdBy: row.created_by, name: row.name };
 }
 
 /** Verify user is a member of a specific location */

@@ -1,9 +1,14 @@
 const MAX_DIMENSION = 1920;
-const JPEG_QUALITY = 0.85;
+const QUALITY = 0.85;
 const SKIP_THRESHOLD = 200 * 1024; // 200 KB
+
+/** MIME types we can re-encode on a canvas. GIFs (animated) are skipped entirely. */
+const COMPRESSIBLE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 export async function compressImage(file: Blob): Promise<Blob> {
   if (file.size <= SKIP_THRESHOLD) return file;
+
+  if (!COMPRESSIBLE_TYPES.has(file.type)) return file;
 
   try {
     const bitmap = await createImageBitmap(file);
@@ -25,8 +30,8 @@ export async function compressImage(file: Blob): Promise<Blob> {
     bitmap.close();
 
     const compressed = await canvas.convertToBlob({
-      type: 'image/jpeg',
-      quality: JPEG_QUALITY,
+      type: file.type,
+      quality: QUALITY,
     });
 
     return compressed.size < file.size ? compressed : file;
