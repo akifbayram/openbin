@@ -22,6 +22,8 @@
 
 ## Features
 
+[![SafeSkill 20/100](https://img.shields.io/badge/SafeSkill-20%2F100_Blocked-red)](https://safeskill.dev/scan/akifbayram-openbin)
+
 - **AI assisted autofill** — Capture photos, and the assistant autofills the items in each bin. Bring your own AI.
 - **Natural language commands** — "Add batteries to the tools bin" or "Create a bin with widgets x, y, and z".
 - **AI reorganization** — Let the assistant suggest how to restructure an entire location's bins, areas, and tags in bulk.
