@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { createPinnedFetch, validateEndpointUrl } from '../lib/aiCaller.js';
+import { getDemoResponse } from '../lib/demoAiResponses.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
 import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildCorrectionPrompt, buildReanalysisPrompt, buildReanalysisUserContent, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from '../lib/aiProviders.js';
@@ -26,6 +27,28 @@ import { requirePro } from '../middleware/requirePlan.js';
 
 const streamRouter = Router();
 streamRouter.use(authenticate);
+
+streamRouter.post('/demo-scenario/stream', aiLimiter, async (req, res, next) => {
+  try {
+    if (!config.demoMode) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Not available' });
+      return;
+    }
+    const { demoScenario } = req.body;
+    if (typeof demoScenario !== 'string') {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'demoScenario is required' });
+      return;
+    }
+    const data = getDemoResponse(demoScenario);
+    if (!data) {
+      res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Unknown demo scenario' });
+      return;
+    }
+    await sendMockJsonStream(res, data);
+  } catch (err) {
+    next(err);
+  }
+});
 
 /** Fetch existing tags and custom field definitions for a location (used by analysis/correction routes). */
 async function fetchLocationAiMeta(locationId: string | undefined) {
