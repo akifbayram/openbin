@@ -31,6 +31,7 @@ interface DataSectionProps {
   activeLocationId: string | null | undefined;
   actions: ReturnType<typeof useDataSectionActions>;
   locationName?: string;
+  disabled?: boolean;
 }
 
 function RowGroup({ children }: { children: React.ReactNode }) {
@@ -119,6 +120,7 @@ export function DataSection({
   activeLocationId,
   actions,
   locationName,
+  disabled,
 }: DataSectionProps) {
   const navigate = useNavigate();
   const { isGated, isSelfHosted } = usePlan();
@@ -211,7 +213,7 @@ export function DataSection({
                 label="Export Data"
                 description="Backup or download your data"
                 onClick={() => { setSelectedLocationId(activeLocationId ?? null); if (exportGated) setExportFormat('csv'); setExportDialogOpen(true); }}
-                disabled={!activeLocationId}
+                disabled={disabled || !activeLocationId}
               />
               <RowDivider />
               <SettingsRow
@@ -223,7 +225,7 @@ export function DataSection({
                   setSelectedLocationId(activeLocationId ?? null);
                   setImportDialogOpen(true);
                 }}
-                disabled={!activeLocationId}
+                disabled={disabled || !activeLocationId}
               />
             </RowGroup>
           </div>

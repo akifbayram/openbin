@@ -27,7 +27,7 @@ function formatDate(iso: string | null): string {
   });
 }
 
-export function ApiKeysSection() {
+export function ApiKeysSection({ disabled }: { disabled?: boolean }) {
   const { keys, isLoading } = useApiKeys();
   const { showToast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
@@ -106,6 +106,7 @@ export function ApiKeysSection() {
                 onClick={() => setCreateOpen(true)}
                 size="icon-sm"
                 aria-label="Create API key"
+                disabled={disabled}
               >
                 <Plus className="h-4 w-4" />
               </Button>

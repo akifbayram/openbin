@@ -216,11 +216,12 @@ export function SettingsPage() {
             </CardContent>
           </Card>
 
-          {!demoMode && (isAdmin || permissionsLoading) && (
+          {(isAdmin || permissionsLoading) && (
             <PersonalizationSection
               settings={settings}
               updateSettings={updateSettings}
               resetSettings={resetSettings}
+              disabled={demoMode}
             />
           )}
         </SettingsGroup>
@@ -238,7 +239,7 @@ export function SettingsPage() {
           ) : (
             <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />
           )}
-          {aiEnabled && !demoMode &&
+          {aiEnabled &&
             (apiKeysGated ? (
               <UpgradePrompt
                 feature="API Keys"
@@ -246,18 +247,19 @@ export function SettingsPage() {
                 upgradeUrl={planInfo.upgradeUrl}
               />
             ) : (
-              <ApiKeysSection />
+              <ApiKeysSection disabled={demoMode} />
             ))}
         </SettingsGroup>
       )}
 
       {/* DATA */}
-      {isVisible('data') && !demoMode && (isAdmin || permissionsLoading) && (
+      {isVisible('data') && (isAdmin || permissionsLoading) && (
         <SettingsGroup id="data" label="Data">
           <DataSection
             activeLocationId={activeLocationId}
             actions={dataActions}
             locationName={activeLocation?.name}
+            disabled={demoMode}
           />
         </SettingsGroup>
       )}

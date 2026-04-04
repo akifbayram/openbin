@@ -5,15 +5,17 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import type { AppSettings } from '@/lib/appSettings';
+import { cn } from '@/lib/utils';
 import { SavedBadge, useSavedFlash } from './useSavedFlash';
 
 interface PersonalizationSectionProps {
   settings: AppSettings;
   updateSettings: (updates: Partial<AppSettings>) => void;
   resetSettings: () => void;
+  disabled?: boolean;
 }
 
-export function PersonalizationSection({ settings, updateSettings, resetSettings }: PersonalizationSectionProps) {
+export function PersonalizationSection({ settings, updateSettings, resetSettings, disabled }: PersonalizationSectionProps) {
   const { saved, flash } = useSavedFlash();
 
   return (
@@ -29,7 +31,7 @@ export function PersonalizationSection({ settings, updateSettings, resetSettings
           }
           labelClassName="text-[15px] font-semibold"
         >
-          <div className="flex flex-col gap-3 mt-1">
+          <fieldset disabled={disabled} className={cn('flex flex-col gap-3 mt-1', disabled && 'opacity-60 pointer-events-none')}>
             <FormField label="App Name" htmlFor="app-name">
               <Input
                 id="app-name"
@@ -83,7 +85,7 @@ export function PersonalizationSection({ settings, updateSettings, resetSettings
               <RotateCcw className="h-4 w-4 mr-2.5" />
               Reset to Defaults
             </Button>
-          </div>
+          </fieldset>
         </Disclosure>
       </CardContent>
     </Card>

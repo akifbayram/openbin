@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useAuth } from '@/lib/auth';
 import { cn, getErrorMessage } from '@/lib/utils';
 import type { Photo } from '@/types';
 import { compressImage } from './compressImage';
@@ -22,6 +23,7 @@ interface PhotoGalleryProps {
 export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
   const { photos } = usePhotos(binId);
   const { showToast } = useToast();
+  const { demoMode } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
@@ -96,11 +98,12 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
                 className="w-full h-full object-cover"
               />
             </button>
-            <Tooltip content="Delete photo">
+            <Tooltip content={demoMode ? 'Disabled in demo' : 'Delete photo'}>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setPhotoToDelete(photo)}
+                onClick={() => !demoMode && setPhotoToDelete(photo)}
+                disabled={demoMode}
                 className="absolute top-1 right-1 h-8 w-8 rounded-[var(--radius-xs)] bg-[var(--overlay-button)] text-white opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-[var(--destructive)]"
                 aria-label="Delete photo"
               >
@@ -121,9 +124,12 @@ export function PhotoGallery({ binId, variant = 'card' }: PhotoGalleryProps) {
         {/* Add photo button */}
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
+          onClick={() => !demoMode && inputRef.current?.click()}
           aria-label="Add photo"
-          className="flex flex-col items-center justify-center w-20 h-20 flex-shrink-0 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors snap-start"
+          className={cn(
+            'flex flex-col items-center justify-center w-20 h-20 flex-shrink-0 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] transition-colors snap-start',
+            demoMode ? 'opacity-40 cursor-not-allowed' : 'hover:border-[var(--accent)] hover:text-[var(--accent)]'
+          )}
         >
           <Plus className="h-6 w-6" />
           <span className="text-[11px] mt-1 font-medium">Add Photo</span>
