@@ -4,17 +4,13 @@ import demoTech2Photo from '@/assets/demo-photos/tech_2.jpg';
 import demoTech3Photo from '@/assets/demo-photos/tech_3.jpg';
 import demoToolsPhoto from '@/assets/demo-photos/tools.jpg';
 import demoBinPhoto from '@/assets/premade-backgrounds/demo_bin.jpg';
+import type { AiSuggestedItem } from '@/types';
 
-// ---------------------------------------------------------------------------
-// Photo sets — each mode gets its own photos + scenario keys
-// ---------------------------------------------------------------------------
+// Photo sets
 
 export interface DemoPhotoSet {
-  /** Asset URL (Vite import) */
   url: string;
-  /** Filename used when creating the File object */
   filename: string;
-  /** Scenario key sent to /api/ai/demo-scenario/stream for this photo's analysis */
   scenarioKey: string;
 }
 
@@ -32,21 +28,14 @@ export const DEMO_PER_PHOTO_PHOTOS: DemoPhotoSet[] = [
   { url: demoKitchenPhoto, filename: 'kitchen.jpg', scenarioKey: 'demo-photo-kitchen' },
 ];
 
-/** The scenario key used for the single-bin combined analysis. */
 export const DEMO_SINGLE_BIN_SCENARIO = 'demo-photo-single';
 
-// ---------------------------------------------------------------------------
-// Text presets — clickable cards in the Ask AI panel
-// ---------------------------------------------------------------------------
+// Text presets (Ask AI panel)
 
 export interface DemoTextPreset {
-  /** Short label shown on the card */
   label: string;
-  /** Full text displayed + sent to server */
   text: string;
-  /** Scenario key for the pre-computed response */
   scenarioKey: string;
-  /** Visual category hint */
   category: 'query' | 'command';
 }
 
@@ -83,13 +72,10 @@ export const DEMO_TEXT_PRESETS: DemoTextPreset[] = [
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Loader — converts asset URLs to File objects for PhotoBulkAdd
-// ---------------------------------------------------------------------------
+// Loader
 
 const fileCache = new Map<string, File>();
 
-/** Fetch a static asset URL and return a File object. Results are cached. */
 export async function loadDemoPhotoAsFile(photoSet: DemoPhotoSet): Promise<File> {
   const cached = fileCache.get(photoSet.url);
   if (cached) return cached;
@@ -101,34 +87,25 @@ export async function loadDemoPhotoAsFile(photoSet: DemoPhotoSet): Promise<File>
   return file;
 }
 
-/** Load an entire photo set as File[]. */
 export async function loadDemoPhotoSet(set: DemoPhotoSet[]): Promise<File[]> {
   return Promise.all(set.map(loadDemoPhotoAsFile));
 }
 
-// ---------------------------------------------------------------------------
 // Reorganize preset
-// ---------------------------------------------------------------------------
 
-/** Scenario key for the Garage bins reorganization demo. */
 export const DEMO_REORGANIZE_SCENARIO = 'demo-reorganize-garage';
 
-/** Bin names (from demo seed) that the demo reorganize targets. */
 export const DEMO_REORGANIZE_BIN_NAMES = [
   'Power Tools', 'Camping Gear', 'Bike Gear', 'Sports Equipment',
   'Gardening', 'Car Supplies', 'Paint & Stain',
 ];
 
-// ---------------------------------------------------------------------------
-// Text structuring preset (QuickAdd widget)
-// ---------------------------------------------------------------------------
+// Text structuring preset (QuickAdd)
 
-/** Example freeform text pre-filled in the QuickAdd textarea. */
 export const DEMO_STRUCTURE_TEXT =
   '3 screwdrivers, tape measure, a couple of pliers, maybe 6 cable ties, and a utility knife';
 
-/** Pre-computed structured items returned without an AI call. */
-export const DEMO_STRUCTURED_ITEMS: Array<{ name: string; quantity?: number }> = [
+export const DEMO_STRUCTURED_ITEMS: AiSuggestedItem[] = [
   { name: 'Screwdrivers', quantity: 3 },
   { name: 'Tape measure' },
   { name: 'Pliers', quantity: 2 },

@@ -99,12 +99,12 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
   const autoAnalyzedRef = useRef(false);
 
-  function applyResult(result: AiSuggestions) {
+  const applyResult = useCallback((result: AiSuggestions) => {
     setName(result.name);
     setItems(aiItemsToBinItems(result.items));
     setTags(result.tags);
     setNotes(result.notes);
-  }
+  }, []);
 
   // Abort streams on unmount
   useEffect(() => {
@@ -138,7 +138,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     if (activeLocationId) formData.append('locationId', activeLocationId);
     const result = await streamAnalyze(formData);
     if (result) applyResult(result);
-  }, [demoScenario, files, aiSettings, activeLocationId, streamAnalyze]);
+  }, [demoScenario, files, aiSettings, activeLocationId, streamAnalyze, applyResult]);
 
   const triggerReanalyze = useCallback(async () => {
     if (demoScenario) {
@@ -177,38 +177,20 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
     const result = await streamReanalyze(formData);
     if (result) applyResult(result);
-  }, [demoScenario, files, aiSettings, activeLocationId, streamReanalyze, name, items, tags, notes]);
+  }, [demoScenario, files, aiSettings, activeLocationId, streamReanalyze, name, items, tags, notes, applyResult]);
 
   const triggerCorrection = useCallback(async (text: string) => {
-    if (demoScenario) {
-      const result = await streamCorrection({ demoScenario });
-      if (result) {
-        setName(result.name);
-        setItems(aiItemsToBinItems(result.items));
-        setTags(result.tags);
-        setNotes(result.notes);
-        setCorrectionCount((c) => c + 1);
-        setCorrectionText('');
-        setCorrectionOpen(false);
-      }
-      return;
-    }
-    const previousResult = { name, items, tags, notes };
-    const result = await streamCorrection({
-      previousResult,
-      correction: text,
-      locationId: activeLocationId || undefined,
-    });
+    const body = demoScenario
+      ? { demoScenario }
+      : { previousResult: { name, items, tags, notes }, correction: text, locationId: activeLocationId || undefined };
+    const result = await streamCorrection(body);
     if (result) {
-      setName(result.name);
-      setItems(aiItemsToBinItems(result.items));
-      setTags(result.tags);
-      setNotes(result.notes);
+      applyResult(result);
       setCorrectionCount((c) => c + 1);
       setCorrectionText('');
       setCorrectionOpen(false);
     }
-  }, [demoScenario, name, items, tags, notes, activeLocationId, streamCorrection]);
+  }, [demoScenario, name, items, tags, notes, activeLocationId, streamCorrection, applyResult]);
 
   function handleCorrectionSubmit() {
     const trimmed = correctionText.trim();

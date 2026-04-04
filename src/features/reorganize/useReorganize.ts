@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { DEMO_REORGANIZE_SCENARIO } from '@/features/ai/demoAiScenarios';
 import { useAiStream } from '@/features/ai/useAiStream';
 import { addBin, deleteBin } from '@/features/bins/useBins';
 import { useAuth } from '@/lib/auth';
@@ -40,7 +41,7 @@ export function useReorganize(demoMode = false) {
   const startReorg = useCallback(
     (bins: Bin[], maxBins?: number, areaId?: string, areaName?: string, options?: ReorgOptions) => {
       if (demoMode) {
-        stream({ demoScenario: 'demo-reorganize-garage' });
+        stream({ demoScenario: DEMO_REORGANIZE_SCENARIO });
         return;
       }
       if (!activeLocationId) return;

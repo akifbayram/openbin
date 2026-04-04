@@ -215,5 +215,3 @@ const responses: Record<string, DemoResponse> = {
 export function getDemoResponse(scenario: string): DemoResponse | undefined {
   return responses[scenario];
 }
-
-export const DEMO_SCENARIO_KEYS = Object.keys(responses);

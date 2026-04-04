@@ -98,6 +98,17 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
 
   const isStreaming = photo.status === 'analyzing' || isReanalyzing;
 
+  function dispatchResult(id: string, result: AiSuggestions) {
+    dispatch({
+      type: 'SET_ANALYZE_RESULT',
+      id,
+      name: result.name,
+      items: aiItemsToBinItems(result.items),
+      tags: result.tags,
+      notes: result.notes,
+    });
+  }
+
   async function triggerAnalyze(target: BulkAddPhoto) {
     const scenarioKey = demoScenarios?.get(target.id);
 
@@ -132,15 +143,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
 
       for await (const event of apiStream(endpoint, { body, signal: controller.signal })) {
         if (event.type === 'done') {
-          const result: AiSuggestions = JSON.parse(event.text);
-          dispatch({
-            type: 'SET_ANALYZE_RESULT',
-            id: target.id,
-            name: result.name,
-            items: aiItemsToBinItems(result.items),
-            tags: result.tags,
-            notes: result.notes,
-          });
+          dispatchResult(target.id, JSON.parse(event.text));
         } else if (event.type === 'error') {
           dispatch({ type: 'SET_ANALYZE_ERROR', id: target.id, error: event.message });
         }
@@ -168,16 +171,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
     try {
       if (scenarioKey) {
         const result = await streamReanalyze({ demoScenario: scenarioKey });
-        if (result) {
-          dispatch({
-            type: 'SET_ANALYZE_RESULT',
-            id: target.id,
-            name: result.name,
-            items: result.items.map((i, idx) => ({ id: `ai-${target.id}-${idx}`, name: i.name, quantity: i.quantity ?? null })),
-            tags: result.tags,
-            notes: result.notes,
-          });
-        }
+        if (result) dispatchResult(target.id, result);
         return;
       }
 
@@ -199,16 +193,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
       if (activeLocationId) formData.append('locationId', activeLocationId);
 
       const result = await streamReanalyze(formData);
-      if (result) {
-        dispatch({
-          type: 'SET_ANALYZE_RESULT',
-          id: target.id,
-          name: result.name,
-          items: result.items.map((i, idx) => ({ id: `ai-${target.id}-${idx}`, name: i.name, quantity: i.quantity ?? null })),
-          tags: result.tags,
-          notes: result.notes,
-        });
-      }
+      if (result) dispatchResult(target.id, result);
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       dispatch({ type: 'SET_ANALYZE_ERROR', id: target.id, error: mapErrorMessage(err) });
@@ -222,46 +207,22 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
     abortRef.current.get(target.id)?.abort();
     dispatch({ type: 'SET_ANALYZING', id: target.id });
 
-    if (scenarioKey) {
-      const result = await streamCorrection({ demoScenario: scenarioKey });
-      if (result) {
-        dispatch({
-          type: 'SET_ANALYZE_RESULT',
-          id: target.id,
-          name: result.name,
-          items: result.items.map((i, idx) => ({ id: `ai-${target.id}-${idx}`, name: i.name, quantity: i.quantity ?? null })),
-          tags: result.tags,
-          notes: result.notes,
-        });
-        dispatch({ type: 'INCREMENT_CORRECTION', id: target.id });
-        setCorrectionText('');
-        setCorrectionOpen(false);
-      }
-      return;
-    }
+    const body = scenarioKey
+      ? { demoScenario: scenarioKey }
+      : {
+          previousResult: {
+            name: target.name,
+            items: target.items.map((i) => ({ name: i.name, quantity: i.quantity })),
+            tags: target.tags,
+            notes: target.notes,
+          },
+          correction: text,
+          locationId: activeLocationId || undefined,
+        };
 
-    const previousResult = {
-      name: target.name,
-      items: target.items.map((i) => ({ name: i.name, quantity: i.quantity })),
-      tags: target.tags,
-      notes: target.notes,
-    };
-
-    const result = await streamCorrection({
-      previousResult,
-      correction: text,
-      locationId: activeLocationId || undefined,
-    });
-
+    const result = await streamCorrection(body);
     if (result) {
-      dispatch({
-        type: 'SET_ANALYZE_RESULT',
-        id: target.id,
-        name: result.name,
-        items: result.items.map((i, idx) => ({ id: `ai-${target.id}-${idx}`, name: i.name, quantity: i.quantity ?? null })),
-        tags: result.tags,
-        notes: result.notes,
-      });
+      dispatchResult(target.id, result);
       dispatch({ type: 'INCREMENT_CORRECTION', id: target.id });
       setCorrectionText('');
       setCorrectionOpen(false);

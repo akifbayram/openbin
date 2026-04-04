@@ -1,11 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { config, isDemoUser } from '../lib/config.js';
 
-/**
- * Middleware that blocks demo users from performing an action.
- * Returns 403 with a clear message. Non-demo users pass through.
- * Only active when DEMO_MODE=true.
- */
+/** Returns 403 for demo users when DEMO_MODE is enabled. */
 export function blockDemoUser(action: string) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (config.demoMode && isDemoUser(req)) {
