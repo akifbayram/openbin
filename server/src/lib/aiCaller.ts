@@ -1,6 +1,8 @@
 import dns from 'node:dns';
 import { promisify } from 'node:util';
 import { generateText } from 'ai';
+import { Agent } from 'undici';
+import { config as appConfig } from './config.js';
 import { createSdkModel } from './sdkProviderFactory.js';
 
 const dnsResolve4 = promisify(dns.resolve4);
@@ -49,8 +51,12 @@ function isPrivateIp(ip: string): boolean {
   return false;
 }
 
-/** Validate an AI endpoint URL to prevent SSRF attacks. */
-export async function validateEndpointUrl(url: string, isDemoUser = false): Promise<void> {
+/**
+ * Validate an AI endpoint URL to prevent SSRF attacks.
+ * Returns resolved IPs when DNS pinning is needed (cloud + custom host),
+ * undefined when pinning is not needed (allowed host or self-hosted).
+ */
+export async function validateEndpointUrl(url: string, isDemoUser = false): Promise<string[] | undefined> {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -67,11 +73,12 @@ export async function validateEndpointUrl(url: string, isDemoUser = false): Prom
   }
 
   // Allow known AI provider hosts without DNS check
-  if (ALLOWED_AI_HOSTS.has(parsed.hostname)) return;
+  if (ALLOWED_AI_HOSTS.has(parsed.hostname)) return undefined;
 
-  // Resolve hostname and check ALL IPs for private addresses.
-  // Note: a TOCTOU gap exists between this check and the SDK's HTTP request;
-  // full mitigation would require a custom DNS resolver passed to the HTTP client.
+  // Self-hosted: skip DNS validation — admin needs LAN access for local AI (Ollama, etc.)
+  if (appConfig.selfHosted) return undefined;
+
+  // Cloud: resolve hostname, reject private IPs, return resolved IPs for DNS pinning
   try {
     const [ipv4s, ipv6s] = await Promise.all([
       dnsResolve4(parsed.hostname).catch(() => [] as string[]),
@@ -86,10 +93,31 @@ export async function validateEndpointUrl(url: string, isDemoUser = false): Prom
         throw new AiAnalysisError('NETWORK_ERROR', 'Endpoint URL must not resolve to a private or reserved IP address');
       }
     }
+    return allIps;
   } catch (err) {
     if (err instanceof AiAnalysisError) throw err;
     throw new AiAnalysisError('NETWORK_ERROR', `Failed to resolve endpoint hostname: ${parsed.hostname}`);
   }
+}
+
+/** Create a fetch function that pins DNS to pre-validated IPs (prevents DNS rebinding). */
+export function createPinnedFetch(resolvedIps: string[]): typeof globalThis.fetch {
+  const ip = resolvedIps[0];
+  const family = ip.includes(':') ? 6 : 4;
+  const agent = new Agent({
+    connect: {
+      lookup: (
+        _hostname: string,
+        _options: unknown,
+        cb: (err: Error | null, address: string, family: number) => void,
+      ) => {
+        cb(null, ip, family);
+      },
+    },
+  });
+  return ((input: unknown, init?: unknown) =>
+    globalThis.fetch(input as Request, { ...(init as RequestInit), dispatcher: agent } as RequestInit)
+  ) as typeof globalThis.fetch;
 }
 
 /** Safe client-facing messages keyed by AI error code (avoids leaking provider internals). */
@@ -136,11 +164,12 @@ export function mapSdkError(err: unknown): AiAnalysisError {
 
 export async function testProviderConnection(config: AiProviderConfig, isDemoUser = false): Promise<void> {
   // SSRF protection: validate user-supplied endpoint URLs before making requests
-  if (config.endpointUrl) {
-    await validateEndpointUrl(config.endpointUrl, isDemoUser);
-  }
+  const resolvedIps = config.endpointUrl
+    ? await validateEndpointUrl(config.endpointUrl, isDemoUser)
+    : undefined;
+  const pinnedFetch = resolvedIps ? createPinnedFetch(resolvedIps) : undefined;
 
-  const model = createSdkModel(config);
+  const model = createSdkModel(config, pinnedFetch);
   try {
     await generateText({
       model,

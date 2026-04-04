@@ -2,7 +2,7 @@ import { ArrowUpRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { usePlan } from '@/lib/usePlan';
-import { cn, focusRing } from '@/lib/utils';
+import { cn, focusRing, isSafeExternalUrl } from '@/lib/utils';
 
 interface UpgradeDialogProps {
   open: boolean;
@@ -34,7 +34,7 @@ export function UpgradeDialog({ open, onOpenChange, feature, description }: Upgr
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Maybe later
           </Button>
-          {upgradeUrl && (
+          {upgradeUrl && isSafeExternalUrl(upgradeUrl) && (
             <a
               href={upgradeUrl}
               target="_blank"

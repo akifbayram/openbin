@@ -23,6 +23,16 @@ export function getErrorMessage(err: unknown, fallback = 'Something went wrong')
   return fallback;
 }
 
+/** Returns true if `url` uses http: or https: protocol (blocks javascript:, data:, etc.). */
+export function isSafeExternalUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === 'https:' || protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 // ── Shared UI class constants ──────────────────────────────────────
 
 /** Focus ring used on buttons, switches, checkboxes, and similar interactive controls. */

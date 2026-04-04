@@ -1,6 +1,6 @@
 import { ArrowUpRight } from 'lucide-react';
 import { usePlan } from '@/lib/usePlan';
-import { cn, focusRing } from '@/lib/utils';
+import { cn, focusRing, isSafeExternalUrl } from '@/lib/utils';
 
 interface UpgradePromptProps {
   feature: string;  // e.g. "AI Features", "API Keys"
@@ -28,7 +28,7 @@ export function UpgradePrompt({ feature, description, upgradeUrl, className }: U
           <p className="text-[13px] text-[var(--text-tertiary)] mt-1">{description}</p>
         )}
       </div>
-      {upgradeUrl && (
+      {upgradeUrl && isSafeExternalUrl(upgradeUrl) && (
         <a
           href={upgradeUrl}
           target="_blank"

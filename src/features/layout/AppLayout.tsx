@@ -28,7 +28,7 @@ import { usePermissions } from '@/lib/usePermissions';
 import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
 import { useUserPreferences } from '@/lib/userPreferences';
 import { toggleSidebarCollapsed, useSidebarCollapsed } from '@/lib/useSidebarCollapsed';
-import { cn } from '@/lib/utils';
+import { cn, isSafeExternalUrl } from '@/lib/utils';
 import { BottomNav } from './BottomNav';
 import { DrawerProvider } from './DrawerContext';
 import { MobileDrawer } from './MobileDrawer';
@@ -244,7 +244,7 @@ export function AppLayout() {
                   ? getLockedMessage(planInfo.previousSubStatus)
                   : 'You\'re over your Lite plan limits. Reduce usage or upgrade to Pro to resume editing.'}
               </p>
-              {(showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) && (
+              {(showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) && isSafeExternalUrl((showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) ?? '') && (
                 <a
                   href={(showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) ?? ''}
                   target="_blank"

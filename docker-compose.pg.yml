@@ -1,4 +1,5 @@
 # Docker Compose override for PostgreSQL deployment.
+# ⚠ Set POSTGRES_PASSWORD in a .env file for production deployments.
 # Usage: docker compose -f docker-compose.yml -f docker-compose.pg.yml up -d
 services:
   openbin:

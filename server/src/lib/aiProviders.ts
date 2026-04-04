@@ -1,6 +1,6 @@
 import { generateObject } from 'ai';
 import type { AiProviderConfig } from './aiCaller.js';
-import { mapSdkError, validateEndpointUrl } from './aiCaller.js';
+import { createPinnedFetch, mapSdkError, validateEndpointUrl } from './aiCaller.js';
 import { HARDENING_INSTRUCTION, resolvePrompt, validateAiOutput } from './aiSanitize.js';
 import { AiSuggestionsSchema } from './aiSchemas.js';
 import type { CustomFieldDef } from './customFieldHelpers.js';
@@ -156,11 +156,12 @@ export async function analyzeImages(
   isDemoUser?: boolean
 ): Promise<AiSuggestionsResult> {
   // SSRF protection: validate user-supplied endpoint URLs before making requests
-  if (config.endpointUrl) {
-    await validateEndpointUrl(config.endpointUrl, isDemoUser);
-  }
+  const resolvedIps = config.endpointUrl
+    ? await validateEndpointUrl(config.endpointUrl, isDemoUser)
+    : undefined;
+  const pinnedFetch = resolvedIps ? createPinnedFetch(resolvedIps) : undefined;
 
-  const model = createSdkModel(config);
+  const model = createSdkModel(config, pinnedFetch);
 
   const userText = buildAnalysisUserText(images.length);
 
@@ -202,11 +203,12 @@ export async function reanalyzeImages(
   overrides?: AiOverrides,
   isDemoUser?: boolean
 ): Promise<AiSuggestionsResult> {
-  if (config.endpointUrl) {
-    await validateEndpointUrl(config.endpointUrl, isDemoUser);
-  }
+  const resolvedIps = config.endpointUrl
+    ? await validateEndpointUrl(config.endpointUrl, isDemoUser)
+    : undefined;
+  const pinnedFetch = resolvedIps ? createPinnedFetch(resolvedIps) : undefined;
 
-  const model = createSdkModel(config);
+  const model = createSdkModel(config, pinnedFetch);
 
   const imageParts = images.map((img) => ({
     type: 'image' as const,

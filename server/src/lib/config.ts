@@ -107,6 +107,9 @@ export const config = Object.freeze({
   uploadQuotaDemoMb: 5,
   uploadQuotaGlobalDemoMb: 50,
 
+  // AI API key encryption (separate from JWT to avoid single point of compromise)
+  aiEncryptionKey: process.env.AI_ENCRYPTION_KEY || null,
+
   // AI provider env var fallback
   aiProvider: (process.env.AI_PROVIDER as AiProviderType) || null,
   aiApiKey: process.env.AI_API_KEY || null,

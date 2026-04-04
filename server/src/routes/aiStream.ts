@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { validateEndpointUrl } from '../lib/aiCaller.js';
+import { createPinnedFetch, validateEndpointUrl } from '../lib/aiCaller.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
 import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildCorrectionPrompt, buildReanalysisPrompt, buildReanalysisUserContent, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from '../lib/aiProviders.js';
@@ -53,8 +53,11 @@ async function sendMockJsonStream(res: import('express').Response, data: object)
 async function resolveUserModel(userId: string, task: TaskType, isDemoUser = false) {
   const settings = await getUserAiSettings(userId);
   const taskConfig = getConfigForTask(settings, task);
-  if (taskConfig.endpointUrl) await validateEndpointUrl(taskConfig.endpointUrl, isDemoUser);
-  const model = createSdkModel(taskConfig);
+  const resolvedIps = taskConfig.endpointUrl
+    ? await validateEndpointUrl(taskConfig.endpointUrl, isDemoUser)
+    : undefined;
+  const pinnedFetch = resolvedIps ? createPinnedFetch(resolvedIps) : undefined;
+  const model = createSdkModel(taskConfig, pinnedFetch);
   return { settings, model };
 }
 

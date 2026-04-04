@@ -1,6 +1,6 @@
 import { generateObject } from 'ai';
 import type { AiProviderConfig } from './aiCaller.js';
-import { mapSdkError, validateEndpointUrl } from './aiCaller.js';
+import { createPinnedFetch, mapSdkError, validateEndpointUrl } from './aiCaller.js';
 import type { AiSuggestedItem } from './aiProviders.js';
 import { normalizeAiItems } from './aiProviders.js';
 import { resolvePrompt } from './aiSanitize.js';
@@ -62,11 +62,12 @@ export async function structureText(
   isDemoUser?: boolean
 ): Promise<StructureTextResult> {
   // SSRF protection: validate user-supplied endpoint URLs before making requests
-  if (config.endpointUrl) {
-    await validateEndpointUrl(config.endpointUrl);
-  }
+  const resolvedIps = config.endpointUrl
+    ? await validateEndpointUrl(config.endpointUrl)
+    : undefined;
+  const pinnedFetch = resolvedIps ? createPinnedFetch(resolvedIps) : undefined;
 
-  const model = createSdkModel(config);
+  const model = createSdkModel(config, pinnedFetch);
 
   try {
     const result = await generateObject({

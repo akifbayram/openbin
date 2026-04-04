@@ -63,7 +63,7 @@ router.get('/users', asyncHandler(async (req, res) => {
     locations: 'location_count',
     storage: 'photo_storage_bytes',
   };
-  const orderCol = sortMap[field] || 'u.created_at';
+  const orderCol = Object.hasOwn(sortMap, field) ? sortMap[field] : sortMap.created;
   const orderDir = desc ? 'DESC' : 'ASC';
 
   const usersResult = await query(

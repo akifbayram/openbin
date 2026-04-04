@@ -13,6 +13,7 @@ import { NavigationGuardProvider } from '@/lib/navigationGuard';
 import { initQrConfig } from '@/lib/qrConfig';
 import { PlanProvider } from '@/lib/usePlan';
 import { UserPreferencesProvider } from '@/lib/userPreferences';
+import { isSafeExternalUrl } from '@/lib/utils';
 
 // Fire-and-forget: fetch QR config early. getQrConfig() returns safe default (app mode) until this resolves.
 initQrConfig();
@@ -282,7 +283,7 @@ function PlanErrorNotifier() {
         message,
         variant: 'warning',
         duration: 6000,
-        ...(upgradeUrl ? { action: { label: actionLabel, onClick: () => window.open(upgradeUrl, '_blank') } } : {}),
+        ...(upgradeUrl && isSafeExternalUrl(upgradeUrl) ? { action: { label: actionLabel, onClick: () => window.open(upgradeUrl, '_blank') } } : {}),
       });
     };
     window.addEventListener('openbin-plan-restricted', handler);

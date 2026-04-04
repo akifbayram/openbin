@@ -12,12 +12,13 @@ import { AiAnalysisError } from './aiCaller.js';
  * Called on every request — SDK provider factories are cheap config objects
  * (no connection pooling), so per-request instantiation is correct and safe.
  */
-export function createSdkModel(config: AiProviderConfig): LanguageModel {
+export function createSdkModel(config: AiProviderConfig, customFetch?: typeof globalThis.fetch): LanguageModel {
   switch (config.provider) {
     case 'openai': {
       const provider = createOpenAI({
         apiKey: config.apiKey,
         baseURL: config.endpointUrl ?? undefined,
+        fetch: customFetch,
       });
       return provider(config.model);
     }
@@ -25,6 +26,7 @@ export function createSdkModel(config: AiProviderConfig): LanguageModel {
       const provider = createAnthropic({
         apiKey: config.apiKey,
         baseURL: config.endpointUrl ?? undefined,
+        fetch: customFetch,
       });
       return provider(config.model);
     }
@@ -32,6 +34,7 @@ export function createSdkModel(config: AiProviderConfig): LanguageModel {
       const provider = createGoogleGenerativeAI({
         apiKey: config.apiKey,
         baseURL: config.endpointUrl ?? undefined,
+        fetch: customFetch,
       });
       return provider(config.model);
     }
@@ -43,6 +46,7 @@ export function createSdkModel(config: AiProviderConfig): LanguageModel {
         name: 'openai-compatible',
         baseURL: config.endpointUrl,
         apiKey: config.apiKey,
+        fetch: customFetch,
       });
       return provider(config.model);
     }
