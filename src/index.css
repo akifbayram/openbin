@@ -334,6 +334,34 @@ body {
   .animate-shimmer { animation: none !important; }
 }
 
+/* ─── AI Button Shimmer ─── */
+.ai-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.ai-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 25%,
+    color-mix(in srgb, var(--ai-accent) 14%, transparent) 50%,
+    transparent 75%
+  );
+  animation: ai-btn-shimmer 4s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+@keyframes ai-btn-shimmer {
+  0% { transform: translateX(-100%); }
+  40% { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-shimmer::after { animation: none !important; opacity: 0 !important; }
+}
+
 /* ─── Check Pop ─── */
 @keyframes check-pop {
   from { transform: scale(0); }

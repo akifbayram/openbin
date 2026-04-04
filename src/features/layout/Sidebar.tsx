@@ -45,8 +45,8 @@ const brandIcon = <BrandIcon className="h-8 w-8 text-[var(--accent)] shrink-0" /
 function SectionLabel({ children, collapsed }: { children: React.ReactNode; collapsed?: boolean }) {
   return (
     <span className={cn(
-      'px-2 pt-8 pb-1 text-[11px] font-normal uppercase tracking-wider text-[var(--text-tertiary)] block',
-      collapsed && 'w-0 opacity-0 overflow-hidden'
+      'px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] block',
+      collapsed ? 'pt-3 w-0 opacity-0 overflow-hidden' : 'pt-8',
     )} aria-hidden={collapsed || undefined}>
       {children}
     </span>
@@ -219,7 +219,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
             onClick={() => { logout(); onItemClick?.(); }}
             aria-label="Sign Out"
             className="flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]
-  w-full overflow-hidden whitespace-nowrap"
+  w-full overflow-hidden whitespace-nowrap text-left border border-transparent"
           >
             <LogOut className="h-5 w-5 shrink-0" />
             <span className={cn('truncate', collapsed && 'w-0 opacity-0')} aria-hidden={collapsed || undefined}>

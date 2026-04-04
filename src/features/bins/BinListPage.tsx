@@ -141,7 +141,7 @@ export function BinListPage() {
         title={t.Bins}
         actions={activeLocationId ? (
           <div className="row">
-            <div className="flex items-center">
+            <div className="flex items-center gap-1">
               <SearchBarOverflowMenu
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
@@ -161,15 +161,15 @@ export function BinListPage() {
                 </Button>
               </Tooltip>
               {(aiEnabled || aiGated) && (
-                <Tooltip content="Ask AI" side="bottom">
+                <Tooltip content={`${/Mac|iPhone|iPad/.test(navigator.userAgent) ? '\u2318' : 'Ctrl+'}J`} side="bottom">
                   <Button
                     onClick={() => aiGated ? setUpgradeOpen(true) : getCommandInputRef().current?.open()}
-                    size="icon"
                     variant="ghost"
-                    className="hidden lg:inline-flex h-10 w-10 rounded-[var(--radius-sm)]"
-                    aria-label="Ask AI"
+                    size="sm"
+                    className="hidden lg:inline-flex h-10 gap-1.5 rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 text-[var(--ai-accent)] hover:bg-[var(--ai-accent)]/15 active:bg-[var(--ai-accent)]/20 ai-shimmer"
                   >
-                    <Sparkles className="h-5 w-5" stroke="url(#ai-icon-gradient)" />
+                    <Sparkles className="h-4 w-4" />
+                    Ask AI
                   </Button>
                 </Tooltip>
               )}

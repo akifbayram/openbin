@@ -34,7 +34,7 @@ export function BottomNav({ onNavigate, onScanClick, onMoreClick, onAskAi }: Bot
     >
       <div
         ref={containerRef}
-        className="relative mx-3 mb-2 flex items-center justify-around rounded-2xl border border-[var(--bottom-bar-border)]"
+        className="relative mx-3 mb-2 flex items-center justify-around px-1.5 rounded-[var(--radius-xl)] border border-[var(--bottom-bar-border)]"
         style={{
           height: 'var(--bottom-bar-height)',
           background: 'var(--bottom-bar-bg)',
@@ -44,7 +44,7 @@ export function BottomNav({ onNavigate, onScanClick, onMoreClick, onAskAi }: Bot
         {indicator && (
           <div
             aria-hidden
-            className="absolute top-1.5 bottom-1.5 rounded-xl"
+            className="absolute top-1.5 bottom-1.5 rounded-[var(--radius-lg)]"
             style={{
               left: indicator.left,
               width: indicator.width,
