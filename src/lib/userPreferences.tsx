@@ -30,7 +30,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   dashboard_show_pinned_bins: true,
   dashboard_show_recently_scanned: true,
   dashboard_show_recently_updated: true,
-  dashboard_show_timestamps: true,
+  dashboard_show_timestamps: false,
   ai_enabled: true,
   onboarding_completed: false,
   onboarding_step: 0,

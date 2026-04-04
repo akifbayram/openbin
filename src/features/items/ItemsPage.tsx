@@ -8,6 +8,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
 import { useTableSearchParams } from '@/lib/useTableSearchParams';
 import { type ItemSortColumn, ItemTableView } from './ItemTableView';
@@ -40,15 +41,22 @@ export function ItemsPage() {
         isLoading={isLoading && items.length === 0}
         skeleton={
           <div className="flex flex-col gap-4">
-            <Skeleton className="h-10 w-full rounded-[var(--radius-full)]" />
+            <Skeleton className="h-10 w-full rounded-[var(--radius-sm)]" />
             <div className="flat-card rounded-[var(--radius-md)] overflow-hidden">
-              <div className="h-9 bg-[var(--bg-hover)] border-b border-[var(--border-subtle)]" />
-              <SkeletonList count={6}>
-                {() => (
-                  <div className="px-3 py-2.5 border-b border-[var(--border-subtle)] flex items-center gap-3">
-                    <Skeleton className="h-5 w-3/4 flex-[2]" />
-                    <Skeleton className="h-4 w-8" />
-                    <Skeleton className="h-4 w-1/2 flex-1" />
+              <div className="flex items-center gap-3 px-3 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-hover)]">
+                <Skeleton className="h-4 w-10 flex-[2]" />
+                <Skeleton className="h-4 w-8 shrink-0" />
+                <Skeleton className="h-4 w-8 flex-1" />
+              </div>
+              <SkeletonList count={6} className="gap-0">
+                {(i) => (
+                  <div className={cn('px-3 py-2.5 flex items-center gap-3', i < 5 && 'border-b border-[var(--border-subtle)]')}>
+                    <Skeleton className={cn('h-4 flex-[2]', i % 3 === 0 ? 'w-2/3' : i % 3 === 1 ? 'w-1/2' : 'w-3/5')} />
+                    <Skeleton className="h-4 w-6 shrink-0" />
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                      <Skeleton className={cn('h-4', i % 2 === 0 ? 'w-1/2' : 'w-2/5')} />
+                    </div>
                   </div>
                 )}
               </SkeletonList>

@@ -14,6 +14,7 @@ import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import { cn } from '@/lib/utils';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePermissions } from '@/lib/usePermissions';
 import { useTableSearchParams } from '@/lib/useTableSearchParams';
@@ -105,15 +106,21 @@ export function TagsPage() {
         isLoading={isLoading && tags.length === 0}
         skeleton={
           <div className="flex flex-col gap-4">
-            <Skeleton className="h-10 w-full rounded-[var(--radius-full)]" />
+            <Skeleton className="h-10 w-full rounded-[var(--radius-sm)]" />
             <div className="flat-card rounded-[var(--radius-md)] overflow-hidden">
-              <div className="h-9 bg-[var(--bg-hover)] border-b border-[var(--border-subtle)]" />
-              <SkeletonList count={6}>
-                {() => (
-                  <div className="px-3 py-2.5 border-b border-[var(--border-subtle)] flex items-center gap-3">
-                    <Skeleton className="h-6 w-20" />
-                    <Skeleton className="h-4 w-12 flex-1" />
-                    <Skeleton className="h-6 w-6 rounded-full" />
+              <div className="flex items-center gap-3 px-3 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-hover)]">
+                <Skeleton className="h-4 w-10 flex-[2]" />
+                <Skeleton className="h-4 w-12 ml-auto" />
+              </div>
+              <SkeletonList count={6} className="gap-0">
+                {(i) => (
+                  <div className={cn('px-3 py-2.5 flex items-center gap-3', i < 5 && 'border-b border-[var(--border-subtle)]')}>
+                    <div className="flex-[2] min-w-0">
+                      <Skeleton className={cn('h-6 rounded-[var(--radius-full)]', i % 3 === 0 ? 'w-24' : i % 3 === 1 ? 'w-16' : 'w-20')} />
+                    </div>
+                    <Skeleton className="h-4 w-14 shrink-0" />
+                    <Skeleton className="h-6 w-6 rounded-full shrink-0" />
+                    <Skeleton className="h-4 w-4 shrink-0 rounded-[var(--radius-sm)]" />
                   </div>
                 )}
               </SkeletonList>

@@ -21,7 +21,6 @@ import { useBulkSelection } from '@/features/bins/useBulkSelection';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { getCommandInputRef } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
-import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
 import { formatTimeAgo } from '@/lib/formatTime';
@@ -85,25 +84,6 @@ export function DashboardPage() {
     for (let i = 0; i < allDashboardBins.length; i++) map.set(allDashboardBins[i].id, i);
     return map;
   }, [allDashboardBins]);
-
-  useEffect(() => {
-    if (sessionStorage.getItem('openbin-demo-toast')) return;
-    apiFetch<{ demoMode?: boolean }>('/api/auth/status')
-      .then((data) => {
-        if (data.demoMode) {
-          sessionStorage.setItem('openbin-demo-toast', '1');
-          showToast({
-            message: 'This is a demo — data resets periodically.',
-            action: {
-              label: 'Self-host',
-              onClick: () => window.open('https://github.com/openbin-app/openbin', '_blank'),
-            },
-            duration: 8000,
-          });
-        }
-      })
-      .catch(() => {});
-  }, [showToast]);
 
   useEffect(() => {
     if (debouncedSearch.trim()) {

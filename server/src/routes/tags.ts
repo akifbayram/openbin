@@ -75,6 +75,9 @@ router.put('/rename', asyncHandler(async (req, res) => {
   if (!locationId || !oldTag || !newTag) {
     throw new ValidationError('locationId, oldTag, and newTag are required');
   }
+  if (String(oldTag).length > 100) {
+    throw new ValidationError('Tag must be 1-100 characters');
+  }
 
   const trimmed = String(newTag).trim().toLowerCase();
   if (!trimmed || trimmed.length > 100) {
@@ -119,6 +122,9 @@ router.put('/rename', asyncHandler(async (req, res) => {
 // DELETE /api/tags/:tag?location_id=X — remove a tag from all bins in a location
 router.delete('/:tag', asyncHandler(async (req, res) => {
   const tag = decodeURIComponent(req.params.tag);
+  if (!tag || tag.length > 100) {
+    throw new ValidationError('Tag must be 1-100 characters');
+  }
   const locationId = req.query.location_id as string;
 
   if (!locationId) {

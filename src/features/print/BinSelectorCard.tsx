@@ -49,26 +49,36 @@ export function BinSelectorCard({
   return (
     <Card>
       <CardContent>
-        <button
-          type="button"
-          className="row-spread w-full"
-          aria-expanded={expanded}
-          onClick={() => onExpandedChange(!expanded)}
-        >
-          <div className="row">
+        <div className="row-spread w-full">
+          <button
+            type="button"
+            className="row flex-1 min-w-0"
+            aria-expanded={expanded}
+            onClick={() => onExpandedChange(!expanded)}
+          >
             <Package className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
             <Label className="text-[15px] font-semibold text-[var(--text-primary)] normal-case tracking-normal pointer-events-none">Select {t.Bins}</Label>
-            {!expanded && selectedIds.size > 0 && (
+            {selectedIds.size > 0 && (
               <span className="text-[13px] text-[var(--text-tertiary)]">
-                ({selectedIds.size} of {allBins.length})
+                ({selectedIds.size}/{allBins.length})
               </span>
             )}
+          </button>
+          <div className="flex items-center shrink-0">
+            {allBins.length > 0 && (
+              <>
+                <Button variant="ghost" size="sm" onClick={selectAll} className="text-[13px] text-[var(--accent)] h-7 px-2">All</Button>
+                <Button variant="ghost" size="sm" onClick={selectNone} className="text-[13px] text-[var(--accent)] h-7 px-2">None</Button>
+              </>
+            )}
+            <button type="button" className="p-1" onClick={() => onExpandedChange(!expanded)}>
+              <ChevronDown className={cn(
+                'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
+                expanded && 'rotate-180'
+              )} />
+            </button>
           </div>
-          <ChevronDown className={cn(
-            'h-5 w-5 text-[var(--text-tertiary)] transition-transform duration-200',
-            expanded && 'rotate-180'
-          )} />
-        </button>
+        </div>
 
         {expanded && (
           allBins.length === 0 ? (
@@ -77,14 +87,6 @@ export function BinSelectorCard({
             </p>
           ) : (
             <>
-              <div className="flex items-center gap-1.5 mt-2">
-                <Button variant="ghost" size="sm" onClick={selectAll} className="text-[13px] text-[var(--accent)] h-8 px-2.5">All</Button>
-                <Button variant="ghost" size="sm" onClick={selectNone} className="text-[13px] text-[var(--accent)] h-8 px-2.5">None</Button>
-                <span className="text-[12px] text-[var(--text-tertiary)] ml-auto tabular-nums">
-                  {selectedIds.size} of {allBins.length} selected
-                </span>
-              </div>
-
               {grouped.length > 1 && (
                 <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
                   {grouped.map((group) => {

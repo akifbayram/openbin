@@ -1,6 +1,20 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ViewMode } from './useViewMode';
 
+export function BinCardSkeleton() {
+  return (
+    <div className="flat-card rounded-[var(--radius-lg)] px-4 py-3.5 space-y-2">
+      <Skeleton className="h-5 w-3/4" />
+      <Skeleton className="h-3 w-1/3" />
+      <Skeleton className="h-4 w-full" />
+      <div className="flex gap-1.5 pt-1">
+        <Skeleton className="h-5 w-12 rounded-[var(--radius-full)]" />
+        <Skeleton className="h-5 w-16 rounded-[var(--radius-full)]" />
+      </div>
+    </div>
+  );
+}
+
 export function BinListSkeleton({ viewMode }: { viewMode: ViewMode }) {
   if (viewMode === 'compact') {
     return (
@@ -31,11 +45,7 @@ export function BinListSkeleton({ viewMode }: { viewMode: ViewMode }) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="flat-card rounded-[var(--radius-lg)] p-4 space-y-3">
-          <Skeleton className="h-5 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-1/2" />
-        </div>
+        <BinCardSkeleton key={i} />
       ))}
     </div>
   );

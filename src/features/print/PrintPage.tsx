@@ -36,27 +36,50 @@ export function PrintPage() {
   if (isLoading) {
     return (
       <div className="page-content print-hide max-w-6xl">
-        <div className="row mb-4">
-          <Skeleton className="h-9 w-16" />
+        {/* PageHeader */}
+        <div className="flex items-center gap-2">
+          <Skeleton className="hidden lg:block h-8 w-8 rounded-[var(--radius-sm)]" />
+          <Skeleton className="h-8 w-14" />
         </div>
+
         <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
           <div className="flex flex-col gap-4">
+            {/* OptionGroup — 3 segments */}
+            <div className="flex bg-[var(--bg-flat)] border border-[var(--border-flat)] rounded-[var(--radius-md)] p-1 gap-0.5">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5">
+                  <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
+                  <Skeleton className="h-3.5 w-12" />
+                </div>
+              ))}
+            </div>
+
+            {/* Collapsed cards */}
             {[1, 2, 3, 4].map((i) => (
               <Card key={i}>
                 <CardContent>
-                  <div className="row">
-                    <Skeleton className="h-4 w-4 rounded shrink-0" />
-                    <Skeleton className="h-4 w-28" />
+                  <div className="row-spread">
+                    <div className="row">
+                      <Skeleton className="h-4 w-4 rounded shrink-0" />
+                      <Skeleton className="h-4 w-28" />
+                    </div>
+                    <Skeleton className="h-5 w-5 rounded shrink-0" />
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
-          <div className="hidden lg:block">
-            <Card>
-              <CardContent className="flex flex-col items-center gap-3 py-8">
-                <Skeleton className="h-5 w-5 rounded" />
-                <Skeleton className="h-4 w-40" />
+
+          {/* Preview column */}
+          <div className="lg:sticky lg:top-6 flex flex-col gap-4">
+            <div className="flex gap-2">
+              <Skeleton className="flex-1 h-12 rounded-[var(--radius-md)]" />
+              <Skeleton className="h-12 w-[72px] rounded-[var(--radius-md)]" />
+            </div>
+            <Card className="hidden lg:block">
+              <CardContent>
+                <Skeleton className="h-4 w-16 mb-3" />
+                <Skeleton className="h-48 w-full rounded-[var(--radius-md)]" />
               </CardContent>
             </Card>
           </div>
