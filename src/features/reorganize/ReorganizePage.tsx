@@ -25,6 +25,7 @@ import { useAreaList } from '@/features/areas/useAreas';
 import { useBinList } from '@/features/bins/useBins';
 import { BinSelectorCard } from '@/features/print/BinSelectorCard';
 import { useBinSelection } from '@/features/print/useBinSelection';
+import { DEMO_REORGANIZE_BIN_NAMES } from '@/features/ai/demoAiScenarios';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
@@ -46,13 +47,23 @@ export function ReorganizePage() {
   const navigate = useNavigate();
   const t = useTerminology();
   const { showToast } = useToast();
-  const { activeLocationId } = useAuth();
+  const { activeLocationId, demoMode } = useAuth();
   const { canWrite, isLoading: permissionsLoading } = usePermissions();
   const { isGated, isSelfHosted, planInfo } = usePlan();
-  const reorganizeGated = !isSelfHosted && isGated('reorganize');
+  const reorganizeGated = !isSelfHosted && isGated('reorganize') && !demoMode;
   const { bins: allBins, isLoading } = useBinList(undefined, 'name');
   const { areas } = useAreaList(activeLocationId);
   const selection = useBinSelection(allBins);
+
+  useEffect(() => {
+    if (!demoMode || allBins.length === 0) return;
+    const targetIds = allBins
+      .filter((b) => DEMO_REORGANIZE_BIN_NAMES.includes(b.name))
+      .map((b) => b.id);
+    for (const id of targetIds) {
+      if (!selection.selectedIds.has(id)) selection.toggleBin(id);
+    }
+  }, [demoMode, allBins]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [maxBins, setMaxBins] = useState<string>('');
   const [userNotes, setUserNotes] = useState('');
@@ -79,7 +90,7 @@ export function ReorganizePage() {
     apply,
     cancel,
     clear,
-  } = useReorganize();
+  } = useReorganize(demoMode);
 
   const [showProgress, setShowProgress] = useState(false);
   const progressComplete = !isStreaming && !!result;
@@ -281,6 +292,11 @@ export function ReorganizePage() {
 
       <div className="flex flex-col lg:grid lg:grid-cols-2 lg:items-start gap-4">
         <div className="flex flex-col gap-4">
+          {demoMode && (
+            <p className="text-[13px] text-[var(--text-secondary)] bg-[var(--bg-elevated)] px-3 py-2 rounded-[var(--radius-md)] border border-[var(--border-flat)]">
+              Try reorganizing the Garage bins below. AI will suggest a better grouping.
+            </p>
+          )}
           <BinSelectorCard
             allBins={allBins}
             areas={areas}
@@ -382,6 +398,8 @@ export function ReorganizePage() {
                         onChange={(e) => setUserNotes(e.target.value)}
                         placeholder="e.g. Keep kitchen items separate from garage tools"
                         rows={2}
+                        disabled={isStreaming || demoMode}
+                        className={cn(demoMode && 'opacity-60')}
                       />
                     </div>
 

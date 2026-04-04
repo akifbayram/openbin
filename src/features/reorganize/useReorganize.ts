@@ -23,10 +23,13 @@ export interface ReorgOptions {
   maxItemsPerBin?: number;
 }
 
-export function useReorganize() {
+export function useReorganize(demoMode = false) {
   const { activeLocationId } = useAuth();
+  const endpoint = demoMode
+    ? '/api/ai/demo-scenario/stream'
+    : '/api/ai/reorganize/stream';
   const { result, isStreaming, error, partialText, stream, cancel, clear } =
-    useAiStream<ReorgResponse>('/api/ai/reorganize/stream', 'Failed to generate reorganization');
+    useAiStream<ReorgResponse>(endpoint, "Couldn't reorganize — try again");
   const [isApplying, setIsApplying] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
 
@@ -36,6 +39,10 @@ export function useReorganize() {
 
   const startReorg = useCallback(
     (bins: Bin[], maxBins?: number, areaId?: string, areaName?: string, options?: ReorgOptions) => {
+      if (demoMode) {
+        stream({ demoScenario: 'demo-reorganize-garage' });
+        return;
+      }
       if (!activeLocationId) return;
       setApplyError(null);
       stream({
@@ -54,7 +61,7 @@ export function useReorganize() {
         ...options,
       });
     },
-    [activeLocationId, stream],
+    [activeLocationId, demoMode, stream],
   );
 
   const apply = useCallback(
