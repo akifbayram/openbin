@@ -87,6 +87,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
       autoAnalyzedRef.current.add(photo.id);
       triggerAnalyze(photo);
     }
+    return () => { if (photo) autoAnalyzedRef.current.delete(photo.id); };
   }, [photo?.id, photo?.status, aiSettings, demoScenarios]);
 
   if (!photo) return null;

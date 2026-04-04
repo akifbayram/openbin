@@ -248,6 +248,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
       autoAnalyzedRef.current = true;
       triggerAnalyze();
     }
+    return () => { autoAnalyzedRef.current = false; };
   }, [demoScenario, aiEnabled, aiSettings, triggerAnalyze]);
 
   function handleBack() {

@@ -2,7 +2,7 @@
 
 interface DemoAnalysis {
   name: string;
-  items: Array<string | { name: string; quantity?: number }>;
+  items: Array<{ name: string; quantity?: number }>;
   tags: string[];
   notes: string;
 }
@@ -42,7 +42,7 @@ const responses: Record<string, DemoResponse> = {
       { name: 'Logitech webcam', quantity: 1 },
       { name: 'MicroSD cards', quantity: 4 },
       { name: 'SDR receiver', quantity: 1 },
-      'Outdoor security camera',
+      { name: 'Outdoor security camera' },
     ],
     tags: ['electronics', 'networking', 'iot'],
     notes: 'Mix of networking gear, single-board computers, and peripherals. Keep anti-static bags for storage.',
@@ -50,13 +50,13 @@ const responses: Record<string, DemoResponse> = {
   'demo-photo-tools': {
     name: 'Hand Tools',
     items: [
-      'Claw hammer',
-      'Tape measure',
-      'Adjustable wrench',
+      { name: 'Claw hammer' },
+      { name: 'Tape measure' },
+      { name: 'Adjustable wrench' },
       { name: 'Screwdriver set', quantity: 6 },
-      'Pliers',
-      'Level',
-      'Utility knife',
+      { name: 'Pliers' },
+      { name: 'Level' },
+      { name: 'Utility knife' },
     ],
     tags: ['tools', 'hardware'],
     notes: 'Basic hand tools for household repairs and projects.',
@@ -66,10 +66,10 @@ const responses: Record<string, DemoResponse> = {
     items: [
       { name: 'Acrylic paint tubes', quantity: 8 },
       { name: 'Paint brushes', quantity: 5 },
-      'Sketch pad',
+      { name: 'Sketch pad' },
       { name: 'Colored pencils', quantity: 24 },
       { name: 'Washi tape rolls', quantity: 6 },
-      'Hot glue gun',
+      { name: 'Hot glue gun' },
     ],
     tags: ['art', 'crafts', 'hobbies'],
     notes: 'Assorted art and craft materials for projects.',
@@ -78,12 +78,12 @@ const responses: Record<string, DemoResponse> = {
     name: 'Kitchen Gadgets',
     items: [
       { name: 'Silicone spatulas', quantity: 3 },
-      'Measuring cups',
-      'Whisk',
-      'Garlic press',
-      'Peeler',
-      'Kitchen shears',
-      'Citrus juicer',
+      { name: 'Measuring cups' },
+      { name: 'Whisk' },
+      { name: 'Garlic press' },
+      { name: 'Peeler' },
+      { name: 'Kitchen shears' },
+      { name: 'Citrus juicer' },
     ],
     tags: ['kitchen', 'cooking'],
     notes: 'Common utensils and prep tools. Check drawer divider for small items.',

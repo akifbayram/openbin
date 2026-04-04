@@ -1,0 +1,281 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#main-content"
+    - complementary "Main navigation" [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - generic [ref=e8]:
+            - img [ref=e9]
+            - heading "OpenBin" [level=1] [ref=e11]
+          - generic [ref=e12]:
+            - button "Our House" [ref=e89]:
+              - img [ref=e90]
+              - generic [ref=e93]: Our House
+              - img [ref=e94]
+            - button "Dashboard" [ref=e13]:
+              - img [ref=e14]
+              - generic [ref=e19]: Dashboard
+            - button "Bins" [ref=e20]:
+              - img [ref=e21]
+              - generic [ref=e25]: Bins
+          - generic [ref=e26]:
+            - generic [ref=e27]: Manage
+            - generic [ref=e28]:
+              - button "Locations" [ref=e29]:
+                - img [ref=e30]
+                - generic [ref=e33]: Locations
+              - button "Items" [ref=e34]:
+                - img [ref=e35]
+                - generic [ref=e38]: Items
+              - button "Tags" [ref=e39]:
+                - img [ref=e40]
+                - generic [ref=e44]: Tags
+            - generic [ref=e45]: Tools
+            - generic [ref=e46]:
+              - button "Print" [ref=e47]:
+                - img [ref=e48]
+                - generic [ref=e52]: Print
+              - button "Scan" [ref=e53]:
+                - img [ref=e54]
+                - generic [ref=e59]: Scan
+              - button "Reorganize" [ref=e97]:
+                - img [ref=e98]
+                - generic [ref=e108]: Reorganize
+        - generic [ref=e61]:
+          - button "Darrin DeYoung" [ref=e62]:
+            - img "Darrin DeYoung" [ref=e63]:
+              - generic [ref=e64]: D
+            - generic [ref=e65]: Darrin DeYoung
+          - button "Settings" [ref=e66]:
+            - img [ref=e67]
+            - generic [ref=e70]: Settings
+          - button "Sign Out" [ref=e71]:
+            - img [ref=e72]
+            - generic [ref=e75]: Sign Out
+      - button "Collapse sidebar" [expanded] [ref=e76]:
+        - img [ref=e77]
+    - main [ref=e80]:
+      - generic [ref=e109]:
+        - generic [ref=e110]:
+          - heading "Dashboard" [level=1] [ref=e112]
+          - generic [ref=e113]:
+            - generic [ref=e114]:
+              - button "Dashboard settings" [ref=e117]:
+                - img [ref=e118]
+              - button "Scan QR code" [ref=e122]:
+                - img [ref=e123]
+              - button "Ask AI" [ref=e129]:
+                - img [ref=e130]
+                - text: Ask AI
+            - button "New bin" [ref=e134]:
+              - img [ref=e135]
+        - generic [ref=e136]:
+          - img [ref=e137]
+          - textbox "Search bins" [ref=e140]:
+            - /placeholder: Search bins...
+        - generic [ref=e141]:
+          - region "Saved Searches" [ref=e142]:
+            - heading "Saved Searches" [level=2] [ref=e144]:
+              - img [ref=e145]
+              - text: Saved Searches
+            - generic [ref=e148]:
+              - 'button "Apply saved view: Kids stuff" [ref=e149] [cursor=pointer]':
+                - img [ref=e150]
+                - generic [ref=e152]: Kids stuff
+                - button "Remove saved view Kids stuff" [ref=e153]:
+                  - img [ref=e154]
+              - 'button "Apply saved view: Outdoor & sports" [ref=e157] [cursor=pointer]':
+                - img [ref=e158]
+                - generic [ref=e160]: Outdoor & sports
+                - button "Remove saved view Outdoor & sports" [ref=e161]:
+                  - img [ref=e162]
+              - 'button "Apply saved view: Everything in the garage" [ref=e165] [cursor=pointer]':
+                - img [ref=e166]
+                - generic [ref=e168]: Everything in the garage
+                - button "Remove saved view Everything in the garage" [ref=e169]:
+                  - img [ref=e170]
+              - 'button "Apply saved view: Holiday & seasonal" [ref=e173] [cursor=pointer]':
+                - img [ref=e174]
+                - generic [ref=e176]: Holiday & seasonal
+                - button "Remove saved view Holiday & seasonal" [ref=e177]:
+                  - img [ref=e178]
+          - region "Pinned" [ref=e181]:
+            - heading "Pinned" [level=2] [ref=e183]:
+              - img [ref=e184]
+              - text: Pinned
+            - generic [ref=e186]:
+              - button "Brewing Equipment" [ref=e188] [cursor=pointer]:
+                - generic [ref=e190]:
+                  - generic [ref=e191]:
+                    - heading "Brewing Equipment" [level=3] [ref=e192]:
+                      - generic [ref=e193]: Brewing Equipment
+                    - paragraph [ref=e194]: Kitchen
+                    - paragraph [ref=e195]: Hario V60 dripper, Kalita Wave 185 dripper, Chemex 6-cup, AeroPress, Acaia Pearl scale (0.1g precision), Fellow Atmos vacuum canister, Timemore C2 hand grinder, Melodrip pulse pouring tool, WDT distribution tool
+                    - generic [ref=e196]:
+                      - button "coffee" [ref=e197]
+                      - button "brewing" [ref=e198]
+                      - button "hobbies" [ref=e199]
+                      - generic [ref=e200]: "+1"
+                  - button "Select" [ref=e201]:
+                    - img [ref=e202]
+              - button "Yarn Stash" [ref=e207] [cursor=pointer]:
+                - generic [ref=e208]:
+                  - generic [ref=e209]:
+                    - heading "Yarn Stash" [level=3] [ref=e210]:
+                      - generic [ref=e211]: Yarn Stash
+                    - paragraph [ref=e212]: Office
+                    - paragraph [ref=e213]: Merino wool, Chunky alpaca blend, Cotton yarn — cream, Sock yarn — self-striping, Lace weight mohair, DK weight superwash, Cashmere blend fingering weight (50g), Recycled silk ribbon yarn (100g), Baby yarn — soft white (100g), Tapestry wool remnants, Yarn swift (for winding)
+                    - generic [ref=e214]:
+                      - button "hobbies" [ref=e215]
+                      - button "knitting" [ref=e216]
+                      - button "yarn" [ref=e217]
+                      - button "crafts" [ref=e218]
+                  - button "Select" [ref=e219]:
+                    - img [ref=e220]
+          - region "Recently Scanned" [ref=e224]:
+            - heading "Recently Scanned" [level=2] [ref=e226]:
+              - img [ref=e227]
+              - text: Recently Scanned
+            - generic [ref=e232]:
+              - button "Dog Supplies" [ref=e234] [cursor=pointer]:
+                - generic [ref=e235]:
+                  - generic [ref=e236]:
+                    - heading "Dog Supplies" [level=3] [ref=e237]:
+                      - generic [ref=e238]: Dog Supplies
+                    - paragraph [ref=e239]: Kitchen
+                    - paragraph [ref=e240]: Kibble, Treats, Leash, Poop bags, Chew toys, Flea medicine, Collar (spare), Nail clippers, Brush (deshedding), Dog shampoo, Travel water bowl
+                    - generic [ref=e241]:
+                      - button "pets" [ref=e242]
+                      - button "dog" [ref=e243]
+                  - button "Select" [ref=e244]:
+                    - img [ref=e245]
+              - button "Board Games" [ref=e252] [cursor=pointer]:
+                - generic [ref=e253]:
+                  - generic [ref=e254]:
+                    - heading "Board Games" [level=3] [ref=e255]:
+                      - generic [ref=e256]: Board Games
+                    - paragraph [ref=e257]: Basement
+                    - paragraph [ref=e258]: Candy Land, Uno, Sorry!, Jenga, Playing cards, Puzzles, Ticket to Ride, Scrabble, Monopoly, Catan, Codenames
+                    - generic [ref=e259]:
+                      - button "games" [ref=e260]
+                      - button "family" [ref=e261]
+                  - button "Select" [ref=e262]:
+                    - img [ref=e263]
+              - button "Cleaning Supplies" [ref=e268] [cursor=pointer]:
+                - generic [ref=e269]:
+                  - generic [ref=e270]:
+                    - heading "Cleaning Supplies" [level=3] [ref=e271]:
+                      - generic [ref=e272]: Cleaning Supplies
+                    - paragraph [ref=e273]: Kitchen
+                    - paragraph [ref=e274]: All-purpose cleaner, Sponges, Microfiber cloths, Glass cleaner, Rubber gloves, Scrub brush, Broom & dustpan, Mop refill pads, Disinfectant spray, Stainless steel polish
+                    - generic [ref=e275]:
+                      - button "cleaning" [ref=e276]
+                      - button "supplies" [ref=e277]
+                  - button "Select" [ref=e278]:
+                    - img [ref=e279]
+              - button "Baby & Toddler" [ref=e285] [cursor=pointer]:
+                - generic [ref=e286]:
+                  - generic [ref=e287]:
+                    - heading "Baby & Toddler" [level=3] [ref=e288]:
+                      - generic [ref=e289]: Baby & Toddler
+                    - paragraph [ref=e290]: Kids' Room
+                    - paragraph [ref=e291]: Diapers, Wipes, Bottles, Pacifiers, Burp cloths, Teething rings, Diaper cream, Baby nail clippers, Swaddle blankets, Bottle brush, Sippy cup (transition)
+                    - generic [ref=e292]:
+                      - button "baby" [ref=e293]
+                      - button "kids" [ref=e294]
+                  - button "Select" [ref=e295]:
+                    - img [ref=e296]
+              - button "Power Tools" [ref=e302] [cursor=pointer]:
+                - generic [ref=e303]:
+                  - generic [ref=e304]:
+                    - heading "Power Tools" [level=3] [ref=e305]:
+                      - generic [ref=e306]: Power Tools
+                    - paragraph [ref=e307]: Workbench
+                    - paragraph [ref=e308]: Cordless drill, Circular saw, Jigsaw, Orbital sander, Drill bit set, Impact driver, Reciprocating saw, Clamp set, Safety glasses, Shop vacuum
+                    - generic [ref=e309]:
+                      - button "tools" [ref=e310]
+                      - button "dad" [ref=e311]
+                  - button "Select" [ref=e312]:
+                    - img [ref=e313]
+          - region "Recently Updated" [ref=e317]:
+            - generic [ref=e318]:
+              - heading "Recently Updated" [level=2] [ref=e319]:
+                - img [ref=e320]
+                - text: Recently Updated
+              - button "All Bins" [ref=e323]:
+                - text: All Bins
+                - img [ref=e324]
+            - generic [ref=e326]:
+              - button "Self-Hosted Gear" [ref=e328] [cursor=pointer]:
+                - generic [ref=e330]:
+                  - generic [ref=e331]:
+                    - heading "Self-Hosted Gear" [level=3] [ref=e332]:
+                      - generic [ref=e333]: Self-Hosted Gear
+                      - img [ref=e334]
+                    - paragraph [ref=e337]: Office
+                    - paragraph [ref=e338]: YubiKey 5 NFC (Vaultwarden), Zigbee coordinator (Sonoff USB stick), RTL-SDR dongle (ADS-B tracking), USB GPS receiver (NTP server), PoE camera (Frigate, spare), Webcam (replaced by PoE cam), USB Bluetooth adapter (ESPresense), Z-Wave stick (upgraded to Z-Wave LR)
+                    - generic [ref=e339]:
+                      - button "homelab" [ref=e340]
+                      - button "self-hosted" [ref=e341]
+                      - button "electronics" [ref=e342]
+                  - button "Select" [ref=e343]:
+                    - img [ref=e344]
+              - button "Print Fails" [ref=e349] [cursor=pointer]:
+                - generic [ref=e350]:
+                  - generic [ref=e351]:
+                    - heading "Print Fails" [level=3] [ref=e352]:
+                      - generic [ref=e353]: Print Fails
+                    - paragraph [ref=e354]: Office
+                    - paragraph [ref=e355]: Benchy (first layer shift), Calibration cubes, Spaghetti blob (PLA), Half a Mandalorian helmet, Cable clips (the only good prints), Lithophane (wrong orientation), Phone stand (warped), Vase mode test (collapsed at 80%), Flexi Rex with fused joints, Temp tower, Purge blocks bag
+                    - generic [ref=e356]:
+                      - button "3d-printing" [ref=e357]
+                      - button "hobbies" [ref=e358]
+                  - button "Select" [ref=e359]:
+                    - img [ref=e360]
+              - button "NAS Spares" [ref=e367] [cursor=pointer]:
+                - generic [ref=e368]:
+                  - generic [ref=e369]:
+                    - heading "NAS Spares" [level=3] [ref=e370]:
+                      - generic [ref=e371]: NAS Spares
+                    - paragraph [ref=e372]: Office
+                    - paragraph [ref=e373]: SATA cables, HDD mounting screws (ziplock bag), Molex splitters, Anti-vibration grommets, SATA power extensions, IEC C13 power cord (spare), Drive sleds (wrong model), Thermal pads (1mm, spare sheet), Case fan splitter, 80mm case fans, Hot swap bay (unused)
+                    - generic [ref=e374]:
+                      - button "homelab" [ref=e375]
+                      - button "nas" [ref=e376]
+                      - button "hardware" [ref=e377]
+                  - button "Select" [ref=e378]:
+                    - img [ref=e379]
+              - button "Dead Drives" [ref=e384] [cursor=pointer]:
+                - generic [ref=e385]:
+                  - generic [ref=e386]:
+                    - heading "Dead Drives" [level=3] [ref=e387]:
+                      - generic [ref=e388]: Dead Drives
+                    - paragraph [ref=e389]: Office
+                    - paragraph [ref=e390]: Seagate 3TB (the SMR batch), Samsung 840 EVO (firmware bug era), WD MyBook 8TB (shucked, then dropped), Crucial MX500 (worn out, 98% life used), Laptop HDD 500GB (slow death), USB thumb drive (lost partition table)
+                    - generic [ref=e391]:
+                      - button "homelab" [ref=e392]
+                      - button "hardware" [ref=e393]
+                      - button "electronics" [ref=e394]
+                  - button "Select" [ref=e395]:
+                    - img [ref=e396]
+              - button "Pi Graveyard" [ref=e402] [cursor=pointer]:
+                - generic [ref=e403]:
+                  - generic [ref=e404]:
+                    - heading "Pi Graveyard" [level=3] [ref=e405]:
+                      - generic [ref=e406]: Pi Graveyard
+                    - paragraph [ref=e407]: Office
+                    - paragraph [ref=e408]: Pi 3A (was going to be a magic mirror), Pi Zero W (planned as a PiHole), Pi 4 2GB (briefly a NAS, regretted it), Pi Zero 2 W (earmarked for OctoPrint), Micro SD cards with unknown images, Pi cases (assorted), Official Pi power supplies, Pi camera module V2, Sense HAT (used once), GPIO ribbon cable (never used)
+                    - generic [ref=e409]:
+                      - button "homelab" [ref=e410]
+                      - button "sbc" [ref=e411]
+                      - button "electronics" [ref=e412]
+                  - button "Select" [ref=e413]:
+                    - img [ref=e414]
+    - generic [ref=e438]:
+      - img [ref=e439]
+      - paragraph [ref=e442]: See what OpenBin can do
+      - button "Show me" [ref=e443]
+      - button "Dismiss tour prompt" [ref=e444]:
+        - img [ref=e445]
+  - status
