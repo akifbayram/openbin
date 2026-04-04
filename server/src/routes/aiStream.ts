@@ -44,7 +44,7 @@ streamRouter.post('/demo-scenario/stream', aiLimiter, async (req, res, next) => 
       res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Unknown demo scenario' });
       return;
     }
-    await sendMockJsonStream(res, data);
+    await sendMockJsonStream(res, data, 3000);
   } catch (err) {
     next(err);
   }
@@ -60,13 +60,15 @@ async function fetchLocationAiMeta(locationId: string | undefined) {
 }
 
 /** Stream a JSON object as fake SSE chunks (mock mode). */
-async function sendMockJsonStream(res: import('express').Response, data: object): Promise<void> {
+async function sendMockJsonStream(res: import('express').Response, data: object, totalMs = 0): Promise<void> {
   const writeEvent = initSseResponse(res);
   const json = JSON.stringify(data);
   const chunkSize = 20;
+  const chunks = Math.ceil(json.length / chunkSize);
+  const delayMs = totalMs > 0 ? Math.max(5, Math.round(totalMs / chunks)) : 5;
   for (let i = 0; i < json.length; i += chunkSize) {
     writeEvent({ type: 'delta', text: json.slice(i, i + chunkSize) });
-    await new Promise((r) => setTimeout(r, 5));
+    await new Promise((r) => setTimeout(r, delayMs));
   }
   writeEvent({ type: 'done', text: json });
   res.end();
