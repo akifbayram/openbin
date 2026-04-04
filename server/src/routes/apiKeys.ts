@@ -6,6 +6,7 @@ import { enforceCountLimit } from '../lib/countLimiter.js';
 import { NotFoundError } from '../lib/httpErrors.js';
 import { createLogger } from '../lib/logger.js';
 import { authenticate } from '../middleware/auth.js';
+import { blockDemoUser } from '../middleware/demoGuard.js';
 import { requirePro } from '../middleware/requirePlan.js';
 
 const log = createLogger('apiKeys');
@@ -35,7 +36,7 @@ router.get('/', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/api-keys — create a new API key
-router.post('/', requirePro(), asyncHandler(async (req, res) => {
+router.post('/', blockDemoUser('create API keys'), requirePro(), asyncHandler(async (req, res) => {
   const { name } = req.body;
 
   await enforceCountLimit('api_keys', req.user!.id, MAX_KEYS_PER_USER, 'active API keys');
@@ -62,7 +63,7 @@ router.post('/', requirePro(), asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/api-keys/:id — revoke an API key
-router.delete('/:id', requirePro(), asyncHandler(async (req, res) => {
+router.delete('/:id', blockDemoUser('manage API keys'), requirePro(), asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const result = await query(

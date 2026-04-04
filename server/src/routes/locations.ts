@@ -10,6 +10,7 @@ import { getEffectiveMemberRole, getFeatureMap, invalidateOverLimitCache, type P
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { validateRetentionDays } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
+import { blockDemoUser } from '../middleware/demoGuard.js';
 
 const router = Router();
 
@@ -63,7 +64,7 @@ router.get('/', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/locations — create location
-router.post('/', asyncHandler(async (req, res) => {
+router.post('/', blockDemoUser('create locations'), asyncHandler(async (req, res) => {
   const { name } = req.body;
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     throw new ValidationError('Location name is required');
@@ -143,7 +144,7 @@ router.post('/', asyncHandler(async (req, res) => {
 }));
 
 // PUT /api/locations/:id — update location (admin only)
-router.put('/:id', asyncHandler(async (req, res) => {
+router.put('/:id', blockDemoUser('modify location settings'), asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { name, activity_retention_days, trash_retention_days, app_name, term_bin, term_location, term_area, default_join_role } = req.body;
 
@@ -280,7 +281,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/locations/:id — delete location (admin only, cascades)
-router.delete('/:id', asyncHandler(async (req, res) => {
+router.delete('/:id', blockDemoUser('delete locations'), asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!await isLocationAdmin(id, req.user!.id)) {
@@ -460,7 +461,7 @@ router.get('/:id/members', asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/locations/:id/members/:userId — remove member
-router.delete('/:id/members/:userId', asyncHandler(async (req, res) => {
+router.delete('/:id/members/:userId', blockDemoUser('manage members'), asyncHandler(async (req, res) => {
   const { id, userId } = req.params;
   const requesterId = req.user!.id;
 
@@ -516,7 +517,7 @@ router.delete('/:id/members/:userId', asyncHandler(async (req, res) => {
 }));
 
 // PUT /api/locations/:id/members/:userId/role — change member role (admin only)
-router.put('/:id/members/:userId/role', asyncHandler(async (req, res) => {
+router.put('/:id/members/:userId/role', blockDemoUser('manage members'), asyncHandler(async (req, res) => {
   const { id, userId } = req.params;
   const { role } = req.body;
 
@@ -609,7 +610,7 @@ router.post('/:id/members/:userId/reset-password', asyncHandler(async (req, res)
 }));
 
 // POST /api/locations/:id/regenerate-invite — new invite code (admin only)
-router.post('/:id/regenerate-invite', asyncHandler(async (req, res) => {
+router.post('/:id/regenerate-invite', blockDemoUser('regenerate invite codes'), asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!await isLocationAdmin(id, req.user!.id)) {

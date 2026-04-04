@@ -21,6 +21,7 @@ import { purgeExpiredTrash } from '../lib/trashPurge.js';
 import { binPhotoUpload, MIME_TO_EXT, validateFileBuffer, validateFileType } from '../lib/uploadConfig.js';
 import { validateBinName } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
+import { blockDemoUser } from '../middleware/demoGuard.js';
 import { requireCleanFile } from '../middleware/malwareScan.js';
 
 const router = Router();
@@ -405,7 +406,7 @@ router.delete('/:id/permanent', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/bins/:id/photos — upload photo for a bin
-router.post('/:id/photos', asyncHandler(async (req, res, next) => {
+router.post('/:id/photos', blockDemoUser('upload photos'), asyncHandler(async (req, res, next) => {
   // Best-effort: reject before multer buffers. +1 KB for multipart overhead.
   const cl = req.headers['content-length'];
   if (cl) {

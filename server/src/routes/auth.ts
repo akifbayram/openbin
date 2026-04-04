@@ -14,6 +14,7 @@ import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, signToken } from '../middleware/auth.js';
+import { blockDemoUser } from '../middleware/demoGuard.js';
 
 import { getRegistrationMode } from './admin.js';
 
@@ -109,6 +110,11 @@ router.get('/invite-preview', asyncHandler(async (req, res) => {
 
 // POST /api/auth/register
 router.post('/register', asyncHandler(async (req, res) => {
+  if (config.demoMode) {
+    res.status(403).json({ error: 'DEMO_RESTRICTION', message: 'Registration is disabled in demo mode' });
+    return;
+  }
+
   const regMode = await getRegistrationMode();
   if (regMode === 'closed') {
     throw new ForbiddenError('Registration is currently disabled');
@@ -394,7 +400,7 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // PUT /api/auth/profile — update display name and/or email
-router.put('/profile', authenticate, asyncHandler(async (req, res) => {
+router.put('/profile', authenticate, blockDemoUser('modify profile'), asyncHandler(async (req, res) => {
   const { displayName, email } = req.body;
 
   if (displayName !== undefined) {
@@ -483,7 +489,7 @@ router.put('/active-location', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // PUT /api/auth/password — change password
-router.put('/password', authenticate, asyncHandler(async (req, res) => {
+router.put('/password', authenticate, blockDemoUser('change password'), asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword) {
@@ -513,7 +519,7 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/auth/account — permanently delete account
-router.delete('/account', authenticate, asyncHandler(async (req, res) => {
+router.delete('/account', authenticate, blockDemoUser('delete account'), asyncHandler(async (req, res) => {
   const { password } = req.body;
   if (!password) {
     throw new ValidationError('Password is required');
