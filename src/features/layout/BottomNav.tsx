@@ -71,7 +71,10 @@ export function BottomNav({ onNavigate, onScanClick, onMoreClick, onAskAi }: Bot
               strokeWidth={active ? 2.2 : 1.8}
               {...(id === 'ai' ? { stroke: 'url(#ai-icon-gradient)' } : {})}
             />
-            <span className="text-[10px] font-medium leading-tight transition-colors duration-200 motion-reduce:transition-none">
+            <span className={cn(
+              'text-[10px] font-medium leading-tight transition-colors duration-200 motion-reduce:transition-none',
+              id === 'ai' && 'text-[var(--ai-accent)]',
+            )}>
               {label}
             </span>
           </button>
