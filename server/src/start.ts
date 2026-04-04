@@ -22,9 +22,6 @@ loadEmailTemplates();
 
 const app = createApp();
 
-if (!config.aiEncryptionKey) {
-  log.warn('AI_ENCRYPTION_KEY is not set — AI API keys will be stored in plaintext');
-}
 if (config.disableRateLimit && process.env.NODE_ENV !== 'test') {
   log.warn('Rate limiting is disabled (DISABLE_RATE_LIMIT=true)');
 }

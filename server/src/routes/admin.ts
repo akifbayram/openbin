@@ -259,7 +259,8 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   const nextParam = () => `$${++paramIdx}`;
 
   if (isAdmin !== undefined) {
-    updates.push(`is_admin = ${isAdmin ? 'TRUE' : 'FALSE'}`);
+    updates.push(`is_admin = ${nextParam()}`);
+    updateParams.push(isAdmin ? 1 : 0);
   }
   if (typeof subStatus === 'number') {
     updates.push(`sub_status = ${nextParam()}`);

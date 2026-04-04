@@ -3,28 +3,24 @@ import { query } from '../db.js';
 import { config } from './config.js';
 import { ValidationError } from './httpErrors.js';
 
-const AI_ENCRYPTION_KEY = config.aiEncryptionKey;
 const KDF_SALT = Buffer.from('openbin-ai-key-encryption-v1');
 
-let cachedDerivedKey: Buffer | null | undefined;
+let cachedDerivedKey: Buffer | undefined;
 
-function getDerivedKey(salt?: Buffer): Buffer | null {
-  if (!AI_ENCRYPTION_KEY) return null;
-  if (salt) return crypto.scryptSync(AI_ENCRYPTION_KEY, salt, 32);
+function getDerivedKey(salt?: Buffer): Buffer {
+  if (salt) return crypto.scryptSync(config.jwtSecret, salt, 32);
   if (cachedDerivedKey !== undefined) return cachedDerivedKey;
-  cachedDerivedKey = crypto.scryptSync(AI_ENCRYPTION_KEY, KDF_SALT, 32);
+  cachedDerivedKey = crypto.scryptSync(config.jwtSecret, KDF_SALT, 32);
   return cachedDerivedKey;
 }
 
-function getLegacyKey(): Buffer | null {
-  if (!AI_ENCRYPTION_KEY) return null;
-  return crypto.createHash('sha256').update(AI_ENCRYPTION_KEY).digest();
+function getLegacyKey(): Buffer {
+  return crypto.createHash('sha256').update(config.jwtSecret).digest();
 }
 
 export function encryptApiKey(plaintext: string): string {
-  if (!AI_ENCRYPTION_KEY) return plaintext;
   const salt = crypto.randomBytes(16);
-  const key = getDerivedKey(salt)!;
+  const key = getDerivedKey(salt);
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
@@ -34,9 +30,6 @@ export function encryptApiKey(plaintext: string): string {
 
 export function decryptApiKey(stored: string): string {
   if (!stored.startsWith('enc:')) return stored;
-  if (!AI_ENCRYPTION_KEY) {
-    throw new Error('AI_ENCRYPTION_KEY is required to decrypt stored API keys');
-  }
   const parts = stored.split(':');
 
   // New 5-part format: enc:salt:iv:authTag:encrypted (per-value salt)
@@ -46,7 +39,7 @@ export function decryptApiKey(stored: string): string {
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
     const encrypted = Buffer.from(encryptedHex, 'hex');
-    const key = getDerivedKey(salt)!;
+    const key = getDerivedKey(salt);
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(authTag);
     return decipher.update(encrypted) + decipher.final('utf8');
@@ -61,49 +54,24 @@ export function decryptApiKey(stored: string): string {
   const authTag = Buffer.from(authTagHex, 'hex');
   const encrypted = Buffer.from(encryptedHex, 'hex');
 
-  // Try scrypt-derived key with static salt first
-  const key = getDerivedKey()!;
-  try {
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-    decipher.setAuthTag(authTag);
-    const plaintext = decipher.update(encrypted) + decipher.final('utf8');
-    // Re-encrypt with per-value salt so future reads use the new format
-    const reEncrypted = encryptApiKey(plaintext);
+  // Try scrypt-derived key first, then legacy SHA-256 key
+  for (const k of [getDerivedKey(), getLegacyKey()]) {
     try {
-      query(
-        'UPDATE user_ai_settings SET api_key = $1 WHERE api_key = $2',
-        [reEncrypted, stored]
-      );
+      const decipher = crypto.createDecipheriv('aes-256-gcm', k, iv);
+      decipher.setAuthTag(authTag);
+      const plaintext = decipher.update(encrypted) + decipher.final('utf8');
+      // Re-encrypt with per-value salt so future reads use the new format
+      try {
+        query('UPDATE user_ai_settings SET api_key = $1 WHERE api_key = $2', [encryptApiKey(plaintext), stored]);
+      } catch {
+        // Best-effort; will succeed on next write
+      }
+      return plaintext;
     } catch {
-      // Best-effort re-encryption; will succeed on next write
+      // Try next key
     }
-    return plaintext;
-  } catch {
-    // Fall back to legacy SHA-256 key for keys encrypted before migration
   }
-
-  const legacyKey = getLegacyKey();
-  if (!legacyKey) {
-    throw new Error('Failed to decrypt API key');
-  }
-  try {
-    const decipher = crypto.createDecipheriv('aes-256-gcm', legacyKey, iv);
-    decipher.setAuthTag(authTag);
-    const plaintext = decipher.update(encrypted) + decipher.final('utf8');
-    // Re-encrypt with per-value salt so future reads use the new format
-    const reEncrypted = encryptApiKey(plaintext);
-    try {
-      query(
-        'UPDATE user_ai_settings SET api_key = $1 WHERE api_key = $2',
-        [reEncrypted, stored]
-      );
-    } catch {
-      // Best-effort re-encryption; will succeed on next write
-    }
-    return plaintext;
-  } catch {
-    throw new Error('Failed to decrypt API key');
-  }
+  throw new Error('Failed to decrypt API key');
 }
 
 export function maskApiKey(_key: string): string {

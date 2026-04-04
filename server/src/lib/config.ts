@@ -95,9 +95,6 @@ export const config = Object.freeze({
   aiMock: parseBool(process.env.AI_MOCK, false),
   demoUsernames: new Set<string>(),
 
-  // Encryption
-  aiEncryptionKey: process.env.AI_ENCRYPTION_KEY || null,
-
   // ClamAV malware scanning (opt-in for cloud deployments)
   clamavHost: process.env.CLAMAV_HOST || null,
   clamavPort: 3310,

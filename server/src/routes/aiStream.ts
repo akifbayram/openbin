@@ -64,9 +64,7 @@ function streamOpts(settings: UserAiSettings, overrides?: { maxTokens?: number; 
     maxTokens: overrides?.maxTokens ?? settings.max_tokens ?? 4096,
     temperature: overrides?.temperature ?? settings.temperature ?? 0.3,
     topP: settings.top_p ?? undefined,
-    abortSignal: settings.request_timeout
-      ? AbortSignal.timeout(settings.request_timeout * 1000)
-      : undefined,
+    abortSignal: AbortSignal.timeout((settings.request_timeout ?? 300) * 1000),
   };
 }
 

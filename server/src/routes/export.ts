@@ -53,6 +53,11 @@ import { requirePro } from '../middleware/requirePlan.js';
 const router = Router();
 const PHOTO_STORAGE_PATH = config.photoStoragePath;
 
+/** Export size limits to prevent DoS via unbounded base64 photo streaming */
+const MAX_EXPORT_BINS = 5000;
+const MAX_EXPORT_PHOTOS_PER_BIN = 50;
+const MAX_EXPORT_TOTAL_PHOTOS = 1000;
+
 /**
  * Parse a tags field from CSV.
  * New exports use "; " (semicolon-space) as the delimiter to avoid splitting
@@ -93,6 +98,10 @@ router.get('/locations/:id/export', requireLocationMember(), requirePro(), async
     fetchLocationMembers(locationId),
   ]);
 
+  if (bins.length + trashedBinsRaw.length > MAX_EXPORT_BINS) {
+    throw new ValidationError(`Export limited to ${MAX_EXPORT_BINS} bins. Use filters or export in batches.`);
+  }
+
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Content-Disposition', `attachment; filename="openbin-export-${locationId}.json"`);
 
@@ -102,13 +111,29 @@ router.get('/locations/:id/export', requireLocationMember(), requirePro(), async
     res.write(`,"locationSettings":${JSON.stringify(locationSettings)}`);
   }
 
+  // Track total photos across all bins to enforce global cap
+  let totalPhotosStreamed = 0;
+
   // Stream bins array one entry at a time so only one bin's photos are buffered
   async function streamBins(key: string, rows: typeof bins, opts?: { includeTrashed: boolean }) {
     res.write(`,"${key}":[`);
     for (let i = 0; i < rows.length; i++) {
       if (i > 0) res.write(',');
       const entry = buildExportBinEntry(rows[i], fieldIdToName, areaPathMap, opts);
-      entry.photos = await loadBinPhotosBase64(rows[i].id);
+      if (totalPhotosStreamed < MAX_EXPORT_TOTAL_PHOTOS) {
+        let photos = await loadBinPhotosBase64(rows[i].id);
+        if (photos.length > MAX_EXPORT_PHOTOS_PER_BIN) {
+          photos = photos.slice(0, MAX_EXPORT_PHOTOS_PER_BIN);
+        }
+        const remaining = MAX_EXPORT_TOTAL_PHOTOS - totalPhotosStreamed;
+        if (photos.length > remaining) {
+          photos = photos.slice(0, remaining);
+        }
+        totalPhotosStreamed += photos.length;
+        entry.photos = photos;
+      } else {
+        entry.photos = [];
+      }
       res.write(JSON.stringify(entry));
     }
     res.write(']');
@@ -155,14 +180,27 @@ router.get('/locations/:id/export/zip', requireLocationMember(), requirePro(), a
     fetchLocationMembers(locationId),
   ]);
 
+  if (dbBins.length + trashedBinsRaw.length > MAX_EXPORT_BINS) {
+    throw new ValidationError(`Export limited to ${MAX_EXPORT_BINS} bins. Use filters or export in batches.`);
+  }
+
   interface ZipPhotoRef { id: string; filename: string; mimeType: string; zipPath: string; createdBy?: string; createdAt?: string }
   type ZipBinEntry = Omit<ExportBin, 'photos'> & { photos: ZipPhotoRef[] };
 
   const bins: ZipBinEntry[] = [];
   const photosToInclude: Array<{ binId: string; photoId: string; filename: string; storagePath: string }> = [];
+  let totalPhotosCollected = 0;
 
   async function collectPhotos(binId: string, entry: ZipBinEntry) {
-    const photoMeta = await loadBinPhotoMeta(binId);
+    if (totalPhotosCollected >= MAX_EXPORT_TOTAL_PHOTOS) return;
+    let photoMeta = await loadBinPhotoMeta(binId);
+    if (photoMeta.length > MAX_EXPORT_PHOTOS_PER_BIN) {
+      photoMeta = photoMeta.slice(0, MAX_EXPORT_PHOTOS_PER_BIN);
+    }
+    const remaining = MAX_EXPORT_TOTAL_PHOTOS - totalPhotosCollected;
+    if (photoMeta.length > remaining) {
+      photoMeta = photoMeta.slice(0, remaining);
+    }
     for (const photo of photoMeta) {
       const ext = path.extname(photo.filename || '.jpg').toLowerCase();
       const zipFilename = `${photo.id}${ext}`;
@@ -175,6 +213,7 @@ router.get('/locations/:id/export/zip', requireLocationMember(), requirePro(), a
         createdAt: photo.created_at || undefined,
       });
       photosToInclude.push({ binId, photoId: photo.id, filename: zipFilename, storagePath: photo.storage_path });
+      totalPhotosCollected++;
     }
   }
 

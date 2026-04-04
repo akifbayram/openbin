@@ -26,7 +26,6 @@ vi.mock('../lib/config.js', () => ({
     demoMode: false,
     aiMock: false,
     demoUsernames: new Set<string>(),
-    aiEncryptionKey: null,
     maxPhotoSizeMb: 5,
     maxAvatarSizeMb: 2,
     maxPhotosPerBin: 1,

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockQuery = vi.fn();
 vi.mock('../../db.js', () => ({ query: (...args: unknown[]) => mockQuery(...args) }));
 vi.mock('../config.js', () => ({
-  config: { aiEncryptionKey: 'test-secret-key-for-encryption' },
+  config: { jwtSecret: 'test-secret-key-for-encryption' },
 }));
 
 const { encryptApiKey, decryptApiKey, maskApiKey, resolveMaskedApiKey } = await import('../crypto.js');
