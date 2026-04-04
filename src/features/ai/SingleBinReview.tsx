@@ -99,6 +99,13 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
   const autoAnalyzedRef = useRef(false);
 
+  function applyResult(result: AiSuggestions) {
+    setName(result.name);
+    setItems(aiItemsToBinItems(result.items));
+    setTags(result.tags);
+    setNotes(result.notes);
+  }
+
   // Abort streams on unmount
   useEffect(() => {
     return () => { cancelAnalyze(); cancelCorrection(); cancelReanalyze(); };
@@ -107,12 +114,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   const triggerAnalyze = useCallback(async () => {
     if (demoScenario) {
       const result = await streamAnalyze({ demoScenario });
-      if (result) {
-        setName(result.name);
-        setItems(aiItemsToBinItems(result.items));
-        setTags(result.tags);
-        setNotes(result.notes);
-      }
+      if (result) applyResult(result);
       return;
     }
     if (!aiSettings) {
@@ -135,23 +137,13 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     }
     if (activeLocationId) formData.append('locationId', activeLocationId);
     const result = await streamAnalyze(formData);
-    if (result) {
-      setName(result.name);
-      setItems(aiItemsToBinItems(result.items));
-      setTags(result.tags);
-      setNotes(result.notes);
-    }
+    if (result) applyResult(result);
   }, [demoScenario, files, aiSettings, activeLocationId, streamAnalyze]);
 
   const triggerReanalyze = useCallback(async () => {
     if (demoScenario) {
       const result = await streamReanalyze({ demoScenario });
-      if (result) {
-        setName(result.name);
-        setItems(aiItemsToBinItems(result.items));
-        setTags(result.tags);
-        setNotes(result.notes);
-      }
+      if (result) applyResult(result);
       return;
     }
     if (!aiSettings) {
@@ -184,12 +176,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     if (activeLocationId) formData.append('locationId', activeLocationId);
 
     const result = await streamReanalyze(formData);
-    if (result) {
-      setName(result.name);
-      setItems(aiItemsToBinItems(result.items));
-      setTags(result.tags);
-      setNotes(result.notes);
-    }
+    if (result) applyResult(result);
   }, [demoScenario, files, aiSettings, activeLocationId, streamReanalyze, name, items, tags, notes]);
 
   const triggerCorrection = useCallback(async (text: string) => {

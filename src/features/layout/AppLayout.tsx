@@ -63,8 +63,8 @@ export function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { preferences, updatePreferences } = useUserPreferences();
   const { canWrite } = usePermissions();
-  const { isLocked, isSelfHosted, planInfo, isOverAnyLimit } = usePlan();
-  const showLockedBanner = isLocked && !isSelfHosted;
+  const { isLocked, isSelfHosted, planInfo, isOverAnyLimit, isLoading: planLoading } = usePlan();
+  const showLockedBanner = isLocked && !isSelfHosted && !planLoading;
   const { settings: aiSettings } = useAiSettings();
   const terminology = useTerminology();
   const { bins } = useBinList();
