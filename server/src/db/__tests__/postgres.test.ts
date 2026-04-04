@@ -10,12 +10,12 @@ const mocks = vi.hoisted(() => {
   const mockConnect = vi.fn();
   const mockEnd = vi.fn();
   const mockPoolQuery = vi.fn();
-  // Must be a regular function (not arrow) so it can be called with `new`
-  const MockPool = vi.fn(() => ({
-      query: mockPoolQuery,
-      connect: mockConnect,
-      end: mockEnd,
-    }));
+  // Regular function (not arrow) so `new Pool(...)` works in postgres.ts
+  const MockPool = vi.fn(function (this: Record<string, unknown>) {
+      this.query = mockPoolQuery;
+      this.connect = mockConnect;
+      this.end = mockEnd;
+    });
   return { mockClientQuery, mockRelease, mockConnect, mockEnd, mockPoolQuery, MockPool };
 });
 

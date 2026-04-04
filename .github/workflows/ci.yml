@@ -48,13 +48,43 @@ jobs:
       - name: Test (client)
         run: npx vitest run
 
-      - name: Test (server)
-        run: npx vitest run
-        working-directory: server
-
       - name: Build client
         run: npx vite build
 
       - name: Build server
         run: npm run build
+        working-directory: server
+
+  test-server:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: openbin_test
+          POSTGRES_PASSWORD: openbin_test
+          POSTGRES_DB: openbin_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U openbin_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install server dependencies
+        run: npm ci
+        working-directory: server
+
+      - name: Test (server)
+        run: npx vitest run
         working-directory: server
