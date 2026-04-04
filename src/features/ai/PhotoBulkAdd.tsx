@@ -12,11 +12,15 @@ import { BulkAddReviewStep } from '@/features/bulk-add/BulkAddReviewStep';
 import { BulkAddSummaryStep } from '@/features/bulk-add/BulkAddSummaryStep';
 import type { BulkAddPhoto, BulkAddState } from '@/features/bulk-add/useBulkAdd';
 import { BULK_ADD_STEPS, bulkAddReducer, bulkAddStepIndex, createBulkAddPhoto, initialState } from '@/features/bulk-add/useBulkAdd';
-import { compressImage } from '@/features/photos/compressImage';
-import { addPhoto } from '@/features/photos/usePhotos';
 import { useAuth } from '@/lib/auth';
 import { binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
+import {
+  DEMO_PER_PHOTO_PHOTOS,
+  DEMO_SINGLE_BIN_PHOTOS,
+  DEMO_SINGLE_BIN_SCENARIO,
+  loadDemoPhotoSet,
+} from './demoAiScenarios';
 import { SingleBinReview } from './SingleBinReview';
 import { MAX_AI_PHOTOS } from './useAiAnalysis';
 
@@ -42,9 +46,10 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   const [state, dispatch] = useReducer(bulkAddReducer, initialFiles, initState);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hadPhotos = useRef(initialFiles.length > 0);
-  const [mode, setMode] = useState<'per-photo' | 'single-bin'>(isDemo ? 'single-bin' : 'per-photo');
+  const [mode, setMode] = useState<'per-photo' | 'single-bin'>('per-photo');
   const [singleBinReview, setSingleBinReview] = useState(false);
   const [successBins, setSuccessBins] = useState<CreatedBinInfo[] | null>(null);
+  const [demoScenarios, setDemoScenarios] = useState<Map<string, string>>(new Map());
 
   const effectiveMax = isDemo ? DEMO_MAX_PHOTOS : (mode === 'single-bin' ? MAX_AI_PHOTOS : MAX_PHOTOS);
 
@@ -62,6 +67,31 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       onBack();
     }
   }, [state.photos.length, state.step, onBack]);
+
+  // Initialize demo scenarios on mount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: one-time init keyed on mount
+  useEffect(() => {
+    if (isDemo && state.photos.length > 0 && demoScenarios.size === 0) {
+      const photoSet = mode === 'single-bin' ? DEMO_SINGLE_BIN_PHOTOS : DEMO_PER_PHOTO_PHOTOS;
+      const scenarioMap = new Map<string, string>();
+      state.photos.forEach((p, i) => {
+        if (i < photoSet.length) scenarioMap.set(p.id, photoSet[i].scenarioKey);
+      });
+      setDemoScenarios(scenarioMap);
+    }
+  }, []);
+
+  const handleDemoModeChange = useCallback(async (newMode: 'per-photo' | 'single-bin') => {
+    setMode(newMode);
+    for (const p of state.photos) URL.revokeObjectURL(p.previewUrl);
+    const photoSet = newMode === 'single-bin' ? DEMO_SINGLE_BIN_PHOTOS : DEMO_PER_PHOTO_PHOTOS;
+    const files = await loadDemoPhotoSet(photoSet);
+    const newPhotos = files.map((f) => createBulkAddPhoto(f, state.sharedAreaId));
+    const scenarioMap = new Map<string, string>();
+    for (let i = 0; i < newPhotos.length; i++) scenarioMap.set(newPhotos[i].id, photoSet[i].scenarioKey);
+    setDemoScenarios(scenarioMap);
+    dispatch({ type: 'REPLACE_PHOTOS', photos: newPhotos });
+  }, [state.photos, state.sharedAreaId]);
 
   function handleAddMore(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -110,18 +140,6 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
             color: photo.color,
             itemCount: photo.items.length,
           });
-          // Upload photo fire-and-forget
-          compressImage(photo.file)
-            .then((compressed) => {
-              const file =
-                compressed instanceof File
-                  ? compressed
-                  : new File([compressed], photo.file.name, {
-                      type: compressed.type || 'image/jpeg',
-                    });
-              return addPhoto(createdBin.id, file);
-            })
-            .catch(() => {});
         } catch (err) {
           dispatch({
             type: 'SET_CREATE_ERROR',
@@ -177,6 +195,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
         onBack={() => setSingleBinReview(false)}
         onClose={onClose}
         onRestart={onBack}
+        demoScenario={isDemo ? DEMO_SINGLE_BIN_SCENARIO : undefined}
       />
     );
   }
@@ -190,6 +209,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           currentIndex={state.currentIndex}
           editingFromSummary={state.editingFromSummary}
           dispatch={dispatch}
+          demoScenarios={isDemo ? demoScenarios : undefined}
         />
       </div>
     );
@@ -236,16 +256,18 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
               alt={`Preview ${state.photos.indexOf(photo) + 1}`}
               className="h-full w-full rounded-[var(--radius-md)] object-cover"
             />
-            <button
-              type="button"
-              onClick={() => handleRemove(photo.id)}
-              className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center hover:bg-[var(--destructive)] hover:text-white transition-colors opacity-0 group-hover:opacity-100"
-            >
-              <X className="h-3 w-3" />
-            </button>
+            {!isDemo && (
+              <button
+                type="button"
+                onClick={() => handleRemove(photo.id)}
+                className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center hover:bg-[var(--destructive)] hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
         ))}
-        {state.photos.length < effectiveMax && (
+        {!isDemo && state.photos.length < effectiveMax && (
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -258,16 +280,14 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
       </div>
 
       {/* Mode toggle */}
-      {!isDemo && (
-        <OptionGroup
-          options={[
-            { key: 'per-photo' as const, label: `One ${t.bin} per photo` },
-            { key: 'single-bin' as const, label: `All in one ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Up to ${MAX_AI_PHOTOS} photos in single-${t.bin} mode` },
-          ]}
-          value={mode}
-          onChange={setMode}
-        />
-      )}
+      <OptionGroup
+        options={[
+          { key: 'per-photo' as const, label: `One ${t.bin} per photo` },
+          { key: 'single-bin' as const, label: `All in one ${t.bin}`, disabled: singleBinDisabled, disabledTitle: `Up to ${MAX_AI_PHOTOS} photos in single-${t.bin} mode` },
+        ]}
+        value={mode}
+        onChange={isDemo ? handleDemoModeChange : setMode}
+      />
 
       {/* Shared area picker */}
       <div className="space-y-1.5">

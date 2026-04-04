@@ -54,7 +54,8 @@ export type BulkAddAction =
   | { type: 'INCREMENT_CORRECTION'; id: string }
   | { type: 'RESET_CORRECTION_COUNT'; id: string }
   | { type: 'DONE_CREATING' }
-  | { type: 'SET_EDITING_FROM_SUMMARY'; value: boolean };
+  | { type: 'SET_EDITING_FROM_SUMMARY'; value: boolean }
+  | { type: 'REPLACE_PHOTOS'; photos: BulkAddPhoto[] };
 
 export const initialState: BulkAddState = {
   step: 'upload',
@@ -210,6 +211,9 @@ export function bulkAddReducer(state: BulkAddState, action: BulkAddAction): Bulk
 
     case 'SET_EDITING_FROM_SUMMARY':
       return { ...state, editingFromSummary: action.value };
+
+    case 'REPLACE_PHOTOS':
+      return { ...state, photos: action.photos, step: 'upload' };
 
     default:
       return state;

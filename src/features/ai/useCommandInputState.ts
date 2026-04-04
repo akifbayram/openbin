@@ -4,6 +4,7 @@ import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { mapAiError } from './aiErrors';
+import { DEMO_PER_PHOTO_PHOTOS, loadDemoPhotoSet } from './demoAiScenarios';
 import type { ExecutionResult } from './useActionExecutor';
 import { useAiSettings } from './useAiSettings';
 import type { CommandAction } from './useCommand';
@@ -138,6 +139,12 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void, sele
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
+  async function handleDemoPhotoSelect() {
+    const files = await loadDemoPhotoSet(DEMO_PER_PHOTO_PHOTOS);
+    setInitialFiles(files);
+    setPhotoMode(true);
+  }
+
   function handleBinClick(binId: string, isTrashed?: boolean) {
     handleClose(false);
     if (isTrashed) {
@@ -223,6 +230,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void, sele
     toggleAction,
     handleClose,
     handlePhotoSelect,
+    handleDemoPhotoSelect,
     handleBinClick,
     handleExecuteComplete,
     handleAskAnother,

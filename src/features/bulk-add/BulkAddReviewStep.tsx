@@ -30,9 +30,10 @@ interface BulkAddReviewStepProps {
   currentIndex: number;
   editingFromSummary: boolean;
   dispatch: React.Dispatch<BulkAddAction>;
+  demoScenarios?: Map<string, string>;
 }
 
-export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, dispatch }: BulkAddReviewStepProps) {
+export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, dispatch, demoScenarios }: BulkAddReviewStepProps) {
   const t = useTerminology();
   const { activeLocationId } = useAuth();
   const { settings: aiSettings } = useAiSettings();
@@ -45,17 +46,20 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
   const [correctionText, setCorrectionText] = useState('');
   const MAX_CORRECTIONS = 3;
 
+  const isDemo = !!demoScenarios;
+  const correctEndpoint = isDemo ? '/api/ai/demo-scenario/stream' : '/api/ai/correct/stream';
   const {
     isStreaming: isCorrecting,
     stream: streamCorrection,
     cancel: cancelCorrection,
-  } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
+  } = useAiStream<AiSuggestions>(correctEndpoint, "Couldn't correct — try again");
 
+  const reanalyzeEndpoint = isDemo ? '/api/ai/demo-scenario/stream' : '/api/ai/reanalyze-image/stream';
   const {
     isStreaming: isReanalyzing,
     stream: streamReanalyze,
     cancel: cancelReanalyze,
-  } = useAiStream<AiSuggestions>('/api/ai/reanalyze-image/stream', "Couldn't reanalyze — try again");
+  } = useAiStream<AiSuggestions>(reanalyzeEndpoint, "Couldn't reanalyze — try again");
 
   const photo = photos[currentIndex];
 
@@ -77,11 +81,13 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
 
   // Auto-analyze on first visit to each photo
   useEffect(() => {
-    if (photo && photo.status === 'pending' && aiEnabled && aiSettings && !autoAnalyzedRef.current.has(photo.id)) {
+    if (!photo || photo.status !== 'pending' || autoAnalyzedRef.current.has(photo.id)) return;
+    const scenarioKey = demoScenarios?.get(photo.id);
+    if (scenarioKey || (aiEnabled && aiSettings)) {
       autoAnalyzedRef.current.add(photo.id);
       triggerAnalyze(photo);
     }
-  }, [photo?.id, photo?.status, aiSettings]);
+  }, [photo?.id, photo?.status, aiSettings, demoScenarios]);
 
   if (!photo) return null;
 
@@ -92,7 +98,9 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
   const isStreaming = photo.status === 'analyzing' || isReanalyzing;
 
   async function triggerAnalyze(target: BulkAddPhoto) {
-    if (!aiSettings) {
+    const scenarioKey = demoScenarios?.get(target.id);
+
+    if (!scenarioKey && !aiSettings) {
       setAiSetupExpanded(true);
       return;
     }
@@ -105,16 +113,23 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
     dispatch({ type: 'SET_ANALYZING', id: target.id });
 
     try {
-      const compressed = await compressImage(target.file);
-      const file = compressed instanceof File
-        ? compressed
-        : new File([compressed], target.file.name, { type: compressed.type || 'image/jpeg' });
+      const endpoint = scenarioKey ? '/api/ai/demo-scenario/stream' : '/api/ai/analyze-image/stream';
+      let body: unknown;
+      if (scenarioKey) {
+        body = { demoScenario: scenarioKey };
+      } else {
+        const compressed = await compressImage(target.file);
+        const file = compressed instanceof File
+          ? compressed
+          : new File([compressed], target.file.name, { type: compressed.type || 'image/jpeg' });
 
-      const formData = new FormData();
-      formData.append('photo', file);
-      if (activeLocationId) formData.append('locationId', activeLocationId);
+        const formData = new FormData();
+        formData.append('photo', file);
+        if (activeLocationId) formData.append('locationId', activeLocationId);
+        body = formData;
+      }
 
-      for await (const event of apiStream('/api/ai/analyze-image/stream', { body: formData, signal: controller.signal })) {
+      for await (const event of apiStream(endpoint, { body, signal: controller.signal })) {
         if (event.type === 'done') {
           const result: AiSuggestions = JSON.parse(event.text);
           dispatch({
@@ -138,7 +153,9 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
   }
 
   async function triggerReanalyze(target: BulkAddPhoto) {
-    if (!aiSettings) {
+    const scenarioKey = demoScenarios?.get(target.id);
+
+    if (!scenarioKey && !aiSettings) {
       setAiSetupExpanded(true);
       return;
     }
@@ -148,6 +165,21 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
     dispatch({ type: 'SET_ANALYZING', id: target.id });
 
     try {
+      if (scenarioKey) {
+        const result = await streamReanalyze({ demoScenario: scenarioKey });
+        if (result) {
+          dispatch({
+            type: 'SET_ANALYZE_RESULT',
+            id: target.id,
+            name: result.name,
+            items: result.items.map((i, idx) => ({ id: `ai-${target.id}-${idx}`, name: i.name, quantity: i.quantity ?? null })),
+            tags: result.tags,
+            notes: result.notes,
+          });
+        }
+        return;
+      }
+
       const compressed = await compressImage(target.file);
       const file = compressed instanceof File
         ? compressed
@@ -183,9 +215,29 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
   }
 
   async function triggerCorrection(target: BulkAddPhoto, text: string) {
+    const scenarioKey = demoScenarios?.get(target.id);
+
     // Abort any pending analyze stream for this photo
     abortRef.current.get(target.id)?.abort();
     dispatch({ type: 'SET_ANALYZING', id: target.id });
+
+    if (scenarioKey) {
+      const result = await streamCorrection({ demoScenario: scenarioKey });
+      if (result) {
+        dispatch({
+          type: 'SET_ANALYZE_RESULT',
+          id: target.id,
+          name: result.name,
+          items: result.items.map((i, idx) => ({ id: `ai-${target.id}-${idx}`, name: i.name, quantity: i.quantity ?? null })),
+          tags: result.tags,
+          notes: result.notes,
+        });
+        dispatch({ type: 'INCREMENT_CORRECTION', id: target.id });
+        setCorrectionText('');
+        setCorrectionOpen(false);
+      }
+      return;
+    }
 
     const previousResult = {
       name: target.name,

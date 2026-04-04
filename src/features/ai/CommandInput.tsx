@@ -4,6 +4,7 @@ import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { takeCapturedPhotos } from '@/features/capture/capturedPhotos';
+import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { CommandActionPreview } from './CommandActionPreview';
 import { CommandIdleInput } from './CommandIdleInput';
@@ -25,6 +26,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
   const selectedBinIds = getCommandSelectedBinIds();
   const navigate = useNavigate();
   const t = useTerminology();
+  const { demoMode } = useAuth();
 
   const {
     text, setText,
@@ -40,7 +42,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
     state, isAiReady, aiSettingsLoading, selectedCount,
     actions, interpretation, error,
     handleParse, handleBack, toggleAction,
-    handleClose, handlePhotoSelect, handleBinClick,
+    handleClose, handlePhotoSelect, handleDemoPhotoSelect, handleBinClick,
     handleExecuteComplete, handleAskAnother, handleFollowUp,
     scopeInfo,
   } = useCommandInputState(onOpenChange, selectedBinIds);
@@ -57,10 +59,14 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
   useEffect(() => {
     if (open && autoTriggerPhoto && !autoTriggeredRef.current) {
       autoTriggeredRef.current = true;
-      setTimeout(() => fileInputRef.current?.click(), 100);
+      if (demoMode) {
+        handleDemoPhotoSelect();
+      } else {
+        setTimeout(() => fileInputRef.current?.click(), 100);
+      }
     }
     if (!open) autoTriggeredRef.current = false;
-  }, [open, autoTriggerPhoto]);
+  }, [open, autoTriggerPhoto, demoMode, handleDemoPhotoSelect]);
 
   // Pick up photos captured via the camera capture page
   const capturePickedUp = useRef(false);
@@ -116,7 +122,9 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
           <DialogTitle>{photoMode ? 'Create from Photos' : 'Ask AI'}</DialogTitle>
         </DialogHeader>
 
-        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
+        {!demoMode && (
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
+        )}
 
         {scopeInfo.isScoped && !photoMode && (
           <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 border border-[var(--ai-accent)]/20 px-3 py-2 mb-1 text-[13px]">
@@ -190,7 +198,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
               onExecute={executeActions}
             />
           </div>
-        ) : !aiSettingsLoading && !isAiReady ? (
+        ) : !aiSettingsLoading && !isAiReady && !demoMode ? (
           <div key="setup">
             <AiSetupView
               onNavigate={() => { handleClose(false); navigate('/settings#ai-settings'); }}
@@ -207,8 +215,8 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
               setExamplesOpen={setExamplesOpen}
               error={error}
               onParse={handleParse}
-              onPhotoClick={() => fileInputRef.current?.click()}
-              onCameraClick={handleCameraClick}
+              onPhotoClick={demoMode ? handleDemoPhotoSelect : () => fileInputRef.current?.click()}
+              onCameraClick={demoMode ? handleDemoPhotoSelect : handleCameraClick}
               isScoped={scopeInfo.isScoped}
             />
           </div>

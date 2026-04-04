@@ -18,7 +18,6 @@ import { addBin, notifyBinsChanged, useAllTags } from '@/features/bins/useBins';
 import { useQuickAdd } from '@/features/bins/useQuickAdd';
 import { BULK_ADD_STEPS } from '@/features/bulk-add/useBulkAdd';
 import { compressImage } from '@/features/photos/compressImage';
-import { addPhoto } from '@/features/photos/usePhotos';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { aiItemsToBinItems, binItemsToPayload } from '@/lib/itemQuantities';
@@ -39,9 +38,10 @@ interface SingleBinReviewProps {
   onBack: () => void;
   onClose: () => void;
   onRestart: () => void;
+  demoScenario?: string;
 }
 
-export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onClose, onRestart }: SingleBinReviewProps) {
+export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onClose, onRestart, demoScenario }: SingleBinReviewProps) {
   const t = useTerminology();
   const { activeLocationId } = useAuth();
   const { settings: aiSettings } = useAiSettings();
@@ -69,24 +69,27 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     onAdd: (newItems) => setItems((prev) => [...prev, ...newItems]),
   });
 
+  const analyzeEndpoint = demoScenario ? '/api/ai/demo-scenario/stream' : '/api/ai/analyze-image/stream';
   const {
     isStreaming: isAnalyzing,
     error: analyzeError,
     stream: streamAnalyze,
     cancel: cancelAnalyze,
-  } = useAiStream<AiSuggestions>('/api/ai/analyze-image/stream', "Couldn't analyze — try again");
+  } = useAiStream<AiSuggestions>(analyzeEndpoint, "Couldn't analyze — try again");
 
+  const correctEndpoint = demoScenario ? '/api/ai/demo-scenario/stream' : '/api/ai/correct/stream';
   const {
     isStreaming: isCorrecting,
     stream: streamCorrection,
     cancel: cancelCorrection,
-  } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
+  } = useAiStream<AiSuggestions>(correctEndpoint, "Couldn't correct — try again");
 
+  const reanalyzeEndpoint = demoScenario ? '/api/ai/demo-scenario/stream' : '/api/ai/reanalyze-image/stream';
   const {
     isStreaming: isReanalyzing,
     stream: streamReanalyze,
     cancel: cancelReanalyze,
-  } = useAiStream<AiSuggestions>('/api/ai/reanalyze-image/stream', "Couldn't reanalyze — try again");
+  } = useAiStream<AiSuggestions>(reanalyzeEndpoint, "Couldn't reanalyze — try again");
 
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -102,6 +105,16 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   }, [cancelAnalyze, cancelCorrection, cancelReanalyze]);
 
   const triggerAnalyze = useCallback(async () => {
+    if (demoScenario) {
+      const result = await streamAnalyze({ demoScenario });
+      if (result) {
+        setName(result.name);
+        setItems(aiItemsToBinItems(result.items));
+        setTags(result.tags);
+        setNotes(result.notes);
+      }
+      return;
+    }
     if (!aiSettings) {
       setAiSetupExpanded(true);
       return;
@@ -128,9 +141,19 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
       setTags(result.tags);
       setNotes(result.notes);
     }
-  }, [files, aiSettings, activeLocationId, streamAnalyze]);
+  }, [demoScenario, files, aiSettings, activeLocationId, streamAnalyze]);
 
   const triggerReanalyze = useCallback(async () => {
+    if (demoScenario) {
+      const result = await streamReanalyze({ demoScenario });
+      if (result) {
+        setName(result.name);
+        setItems(aiItemsToBinItems(result.items));
+        setTags(result.tags);
+        setNotes(result.notes);
+      }
+      return;
+    }
     if (!aiSettings) {
       setAiSetupExpanded(true);
       return;
@@ -167,9 +190,22 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
       setTags(result.tags);
       setNotes(result.notes);
     }
-  }, [files, aiSettings, activeLocationId, streamReanalyze, name, items, tags, notes]);
+  }, [demoScenario, files, aiSettings, activeLocationId, streamReanalyze, name, items, tags, notes]);
 
   const triggerCorrection = useCallback(async (text: string) => {
+    if (demoScenario) {
+      const result = await streamCorrection({ demoScenario });
+      if (result) {
+        setName(result.name);
+        setItems(aiItemsToBinItems(result.items));
+        setTags(result.tags);
+        setNotes(result.notes);
+        setCorrectionCount((c) => c + 1);
+        setCorrectionText('');
+        setCorrectionOpen(false);
+      }
+      return;
+    }
     const previousResult = { name, items, tags, notes };
     const result = await streamCorrection({
       previousResult,
@@ -185,7 +221,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
       setCorrectionText('');
       setCorrectionOpen(false);
     }
-  }, [name, items, tags, notes, activeLocationId, streamCorrection]);
+  }, [demoScenario, name, items, tags, notes, activeLocationId, streamCorrection]);
 
   function handleCorrectionSubmit() {
     const trimmed = correctionText.trim();
@@ -207,11 +243,12 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
   // Auto-analyze on mount
   useEffect(() => {
-    if (aiEnabled && aiSettings && !autoAnalyzedRef.current) {
+    if (autoAnalyzedRef.current) return;
+    if (demoScenario || (aiEnabled && aiSettings)) {
       autoAnalyzedRef.current = true;
       triggerAnalyze();
     }
-  }, [aiEnabled, aiSettings, triggerAnalyze]);
+  }, [demoScenario, aiEnabled, aiSettings, triggerAnalyze]);
 
   function handleBack() {
     cancelAnalyze();
@@ -234,18 +271,6 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
         icon: icon || undefined,
         color: color || undefined,
       });
-      // Upload all photos fire-and-forget
-      for (const file of files) {
-        compressImage(file)
-          .then((blob) => {
-            const f =
-              blob instanceof File
-                ? blob
-                : new File([blob], file.name, { type: blob.type || 'image/jpeg' });
-            return addPhoto(createdBin.id, f);
-          })
-          .catch(() => {});
-      }
       notifyBinsChanged();
       setSuccessBin({
         id: createdBin.id,
