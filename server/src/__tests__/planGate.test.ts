@@ -102,7 +102,6 @@ const DEFAULT_PLAN_LIMITS = {
   proActivityRetentionDays: 90 as number | null,
   proAiCreditsPerMonth: 500 as number | null,
   trialAiCredits: 25,
-  plusAiCredits: 25,
 };
 
 // Helper to set config values for tests

@@ -16,6 +16,13 @@ function parseNullableInt(value: string | undefined, fallback: number | null): n
   return n;
 }
 
+/** Like parseNullableInt but treats 0 as literal 0 (not unlimited). */
+function parseStrictInt(value: string | undefined, fallback: number): number {
+  if (value === undefined || value === '') return fallback;
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 function clamp(value: number, min: number, max: number, fallback: number): number {
   if (!Number.isFinite(value)) return fallback;
   return Math.min(Math.max(value, min), max);
@@ -80,12 +87,7 @@ export const config = Object.freeze({
     freeBinSharing: false,
     freeMaxBins: parseNullableInt(process.env.PLAN_FREE_MAX_BINS, 50),
     freeMaxLocations: parseNullableInt(process.env.PLAN_FREE_MAX_LOCATIONS, 1),
-    freeMaxStorageMb: (() => {
-      const v = process.env.PLAN_FREE_MAX_STORAGE_MB;
-      if (v === undefined || v === '') return 0;
-      const n = parseInt(v, 10);
-      return Number.isFinite(n) ? n : 0;
-    })(),
+    freeMaxStorageMb: parseStrictInt(process.env.PLAN_FREE_MAX_STORAGE_MB, 0),
     freeMaxMembers: parseNullableInt(process.env.PLAN_FREE_MAX_MEMBERS, 1),
     freeActivityRetentionDays: parseNullableInt(process.env.PLAN_FREE_ACTIVITY_RETENTION_DAYS, 7),
     // Plus tier (renamed from Lite)
@@ -100,26 +102,16 @@ export const config = Object.freeze({
     plusMaxStorageMb: parseNullableInt(process.env.PLAN_PLUS_MAX_STORAGE_MB, 100),
     plusMaxMembers: parseNullableInt(process.env.PLAN_PLUS_MAX_MEMBERS, 1),
     plusActivityRetentionDays: parseNullableInt(process.env.PLAN_PLUS_ACTIVITY_RETENTION_DAYS, 30),
-    // Plus AI credits (0 = no AI, positive = monthly limit)
-    plusAiCreditsPerMonth: (() => {
-      const v = process.env.PLAN_PLUS_AI_CREDITS_PER_MONTH;
-      if (v === undefined || v === '') return 25;
-      const n = parseInt(v, 10);
-      return Number.isFinite(n) ? n : 25;
-    })(),
+    plusAiCreditsPerMonth: parseStrictInt(process.env.PLAN_PLUS_AI_CREDITS_PER_MONTH, 25),
     // Pro tier
     proMaxBins: parseNullableInt(process.env.PLAN_PRO_MAX_BINS, 5000),
     proMaxLocations: parseNullableInt(process.env.PLAN_PRO_MAX_LOCATIONS, 10),
     proMaxMembers: parseNullableInt(process.env.PLAN_PRO_MAX_MEMBERS, 25),
     proMaxStorageMb: parseNullableInt(process.env.PLAN_PRO_MAX_STORAGE_MB, 1000),
     proActivityRetentionDays: parseNullableInt(process.env.PLAN_PRO_ACTIVITY_RETENTION_DAYS, 90),
-    // Pro AI credits (null = unlimited via parseNullableInt where 0 -> null)
     proAiCreditsPerMonth: parseNullableInt(process.env.PLAN_PRO_AI_CREDITS_PER_MONTH, 500),
-    // Free AI credits (hardcoded, free has no AI)
     freeAiCreditsPerMonth: 0,
-    // Trial
     trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '25', 10), 1, 1000, 25),
-    plusAiCredits: clamp(parseInt(process.env.PLUS_AI_CREDITS || '25', 10), 1, 10000, 25),
   }),
   // Email (Resend)
   emailEnabled: parseBool(process.env.EMAIL_ENABLED, false),
