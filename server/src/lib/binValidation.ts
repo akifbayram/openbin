@@ -2,6 +2,7 @@ import { ValidationError } from './httpErrors.js';
 import { HEX_COLOR_REGEX, stripUnicodeControl } from './validation.js';
 
 const CODE_REGEX = /^[A-Z0-9]{6}$/;
+const COLOR_KEY_REGEX = /^((neutral|\d{1,3}):\d|black|white)$/;
 
 export function validateCodeFormat(code: string): void {
   if (!CODE_REGEX.test(code)) {
@@ -65,8 +66,8 @@ export function validateBinFields(fields: {
   if (color !== undefined && typeof color === 'string' && color.length > 50) {
     throw new ValidationError('Color value too long (max 50 characters)');
   }
-  if (color !== undefined && typeof color === 'string' && color !== '' && !HEX_COLOR_REGEX.test(color)) {
-    throw new ValidationError('Color must be a valid hex color (e.g., #FF0000)');
+  if (color !== undefined && typeof color === 'string' && color !== '' && !HEX_COLOR_REGEX.test(color) && !COLOR_KEY_REGEX.test(color)) {
+    throw new ValidationError('Color must be a valid hex color or color key');
   }
   if (cardStyle !== undefined && typeof cardStyle === 'string' && cardStyle.length > 500) {
     throw new ValidationError('Card style too long (max 500 characters)');
