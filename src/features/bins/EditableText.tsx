@@ -78,7 +78,7 @@ export function EditableText({
     return (
       <div className={cn('rounded-[var(--radius-sm)] p-1.5 -m-1.5', saved && 'animate-save-flash')}>
         <Tag
-          ref={inputRef as any}
+          ref={inputRef as React.RefObject<HTMLInputElement & HTMLTextAreaElement>}
           value={editValue}
           onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
             setEditValue(e.target.value);
@@ -112,17 +112,32 @@ export function EditableText({
 
   const hasValue = value.trim().length > 0;
 
+  if (readOnly) {
+    return (
+      <div className={cn('rounded-[var(--radius-sm)] p-1.5 -m-1.5')}>
+        <div className="relative">
+          {multiline ? (
+            <p className={cn(textStyles, 'whitespace-pre-wrap', !hasValue && 'text-[var(--text-quaternary)]')}>
+              {hasValue ? value : placeholder}
+            </p>
+          ) : (
+            <span className={cn(textStyles, !hasValue && 'text-[var(--text-quaternary)]')}>
+              {hasValue ? value : placeholder}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
+    <button
+      type="button"
       className={cn(
-        'group/editable rounded-[var(--radius-sm)] p-1.5 -m-1.5 transition-colors duration-150',
-        !readOnly && 'cursor-text hover:bg-[var(--bg-hover)]',
+        'group/editable block w-full text-left rounded-[var(--radius-sm)] p-1.5 -m-1.5 transition-colors duration-150 cursor-text hover:bg-[var(--bg-hover)]',
         saved && 'animate-save-flash',
       )}
       onClick={startEdit}
-      onKeyDown={(e) => { if (e.key === 'Enter') startEdit(); }}
-      role={readOnly ? undefined : 'button'}
-      tabIndex={readOnly ? undefined : 0}
     >
       <div className="relative">
         {multiline ? (
@@ -134,10 +149,8 @@ export function EditableText({
             {hasValue ? value : placeholder}
           </span>
         )}
-        {!readOnly && (
-          <Pencil className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-quaternary)] opacity-0 group-hover/editable:opacity-100 transition-opacity duration-150" />
-        )}
+        <Pencil className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-quaternary)] opacity-0 group-hover/editable:opacity-100 transition-opacity duration-150" />
       </div>
-    </div>
+    </button>
   );
 }

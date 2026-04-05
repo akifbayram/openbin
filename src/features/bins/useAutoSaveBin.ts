@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import type { Bin, BinVisibility } from '@/types';
 import { updateBin } from './useBins';
@@ -69,45 +69,45 @@ export function useAutoSaveBin(bin: Bin | null) {
     }, delay));
   }
 
-  const saveName = useCallback((name: string) => {
+  function saveName(name: string) {
     if (!binRef.current || name.trim() === binRef.current.name) return;
     debouncedSave('name', { name: name.trim() }, 300);
-  }, []);
+  }
 
-  const saveNotes = useCallback((notes: string) => {
+  function saveNotes(notes: string) {
     if (!binRef.current || notes === binRef.current.notes) return;
     debouncedSave('notes', { notes }, 300);
-  }, []);
+  }
 
-  const saveTags = useCallback((tags: string[]) => {
+  function saveTags(tags: string[]) {
     doSave('tags', { tags });
-  }, []);
+  }
 
-  const saveAreaId = useCallback((areaId: string | null) => {
+  function saveAreaId(areaId: string | null) {
     doSave('areaId', { areaId });
-  }, []);
+  }
 
-  const saveIcon = useCallback((icon: string) => {
+  function saveIcon(icon: string) {
     doSave('icon', { icon });
-  }, []);
+  }
 
-  const saveColor = useCallback((color: string) => {
+  function saveColor(color: string) {
     if (!binRef.current || color === binRef.current.color) return;
     debouncedSave('color', { color }, 200);
-  }, []);
+  }
 
-  const saveCardStyle = useCallback((cardStyle: string) => {
+  function saveCardStyle(cardStyle: string) {
     if (!binRef.current || cardStyle === binRef.current.card_style) return;
     debouncedSave('cardStyle', { cardStyle }, 200);
-  }, []);
+  }
 
-  const saveVisibility = useCallback((visibility: BinVisibility) => {
+  function saveVisibility(visibility: BinVisibility) {
     doSave('visibility', { visibility });
-  }, []);
+  }
 
-  const saveCustomFields = useCallback((customFields: Record<string, string>) => {
+  function saveCustomFields(customFields: Record<string, string>) {
     doSave('customFields', { customFields });
-  }, []);
+  }
 
   return {
     saveName, saveNotes, saveTags, saveAreaId, saveIcon,
