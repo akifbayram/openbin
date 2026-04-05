@@ -54,7 +54,7 @@ export function AdminUserDetailPage() {
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [regenKeyOpen, setRegenKeyOpen] = useState(false);
-  const [pendingPlan, setPendingPlan] = useState<'lite' | 'pro' | null>(null);
+  const [pendingPlan, setPendingPlan] = useState<'free' | 'plus' | 'pro' | null>(null);
   const [pendingStatus, setPendingStatus] = useState<'inactive' | 'trial' | 'active' | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ email: '', displayName: '', password: '' });
@@ -103,7 +103,7 @@ export function AdminUserDetailPage() {
     }
   }, [detail, showToast, navigate]);
 
-  const handlePlanChange = useCallback((newPlan: 'lite' | 'pro') => {
+  const handlePlanChange = useCallback((newPlan: 'free' | 'plus' | 'pro') => {
     if (!detail || newPlan === detail.plan) return;
     setPendingPlan(newPlan);
   }, [detail]);
@@ -111,7 +111,8 @@ export function AdminUserDetailPage() {
   const confirmPlanChange = useCallback(async () => {
     if (!detail || !pendingPlan) return;
     try {
-      await updateUser(detail.id, { plan: pendingPlan === 'pro' ? 1 : 0 });
+      const planMap = { free: 2, plus: 0, pro: 1 } as const;
+      await updateUser(detail.id, { plan: planMap[pendingPlan] });
       showToast({ message: `Plan changed to ${pendingPlan}`, variant: 'success' });
       refresh();
     } catch (err) {
@@ -335,7 +336,8 @@ export function AdminUserDetailPage() {
                 <span className="text-[14px] text-[var(--text-secondary)]">Plan tier</span>
                 <OptionGroup
                   options={[
-                    { key: 'lite' as const, label: 'Lite' },
+                    { key: 'free' as const, label: 'Free' },
+                    { key: 'plus' as const, label: 'Plus' },
                     { key: 'pro' as const, label: 'Pro' },
                   ]}
                   value={detail.plan}

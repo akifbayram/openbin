@@ -28,20 +28,22 @@ const SELF_HOSTED_PLAN: PlanInfo = {
     fullExport: true,
     reorganize: true,
     binSharing: true,
+    maxBins: null,
     maxLocations: null,
     maxPhotoStorageMb: null,
     maxMembersPerLocation: null,
     activityRetentionDays: null,
   },
   upgradeUrl: null,
-  upgradeLiteUrl: null,
+  upgradePlusUrl: null,
   upgradeProUrl: null,
   portalUrl: null,
+  aiCredits: null,
 };
 
 /** Restrictive fallback used when plan fetch fails and no prior data exists */
 const LOCKED_FALLBACK: PlanInfo = {
-  plan: 'lite',
+  plan: 'free',
   status: 'inactive',
   activeUntil: null,
   previousSubStatus: null,
@@ -54,15 +56,17 @@ const LOCKED_FALLBACK: PlanInfo = {
     fullExport: false,
     reorganize: false,
     binSharing: false,
+    maxBins: 50,
     maxLocations: 1,
     maxPhotoStorageMb: 0,
     maxMembersPerLocation: 1,
     activityRetentionDays: 7,
   },
   upgradeUrl: null,
-  upgradeLiteUrl: null,
+  upgradePlusUrl: null,
   upgradeProUrl: null,
   portalUrl: null,
+  aiCredits: null,
 };
 
 interface PlanContextValue {
@@ -70,7 +74,8 @@ interface PlanContextValue {
   isLoading: boolean;
 
   isPro: boolean;
-  isLite: boolean;
+  isPlus: boolean;
+  isFree: boolean;
   isSelfHosted: boolean;
   isLocked: boolean;
   isGated: (feature: keyof PlanFeatures) => boolean;
@@ -144,7 +149,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<PlanContextValue>(() => {
     const info = planInfo ?? LOCKED_FALLBACK;
     const isPro = info.plan === 'pro';
-    const isLite = info.plan === 'lite';
+    const isPlus = info.plan === 'plus';
+    const isFree = info.plan === 'free';
     const isSelfHosted = info.selfHosted;
     const isLocked = !!info.locked;
     const isGated = (feature: keyof PlanFeatures): boolean => {
@@ -161,7 +167,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       isLoading,
 
       isPro,
-      isLite,
+      isPlus,
+      isFree,
       isSelfHosted,
       isLocked,
       isGated,

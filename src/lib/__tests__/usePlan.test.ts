@@ -42,24 +42,26 @@ const SELF_HOSTED_PLAN: PlanInfo = {
     fullExport: true,
     reorganize: true,
     binSharing: true,
+    maxBins: null,
     maxLocations: null,
     maxPhotoStorageMb: null,
     maxMembersPerLocation: null,
     activityRetentionDays: null,
   },
   upgradeUrl: null,
-  upgradeLiteUrl: null,
+  upgradePlusUrl: null,
   upgradeProUrl: null,
   portalUrl: null,
+  aiCredits: null,
 };
 
-const LITE_PLAN: PlanInfo = {
-  plan: 'lite',
-  status: 'inactive',
+const FREE_PLAN: PlanInfo = {
+  plan: 'free',
+  status: 'active',
   activeUntil: null,
-  previousSubStatus: 'active',
+  previousSubStatus: null,
   selfHosted: false,
-  locked: true,
+  locked: false,
   features: {
     ai: false,
     apiKeys: false,
@@ -67,15 +69,44 @@ const LITE_PLAN: PlanInfo = {
     fullExport: false,
     reorganize: false,
     binSharing: false,
+    maxBins: 50,
     maxLocations: 1,
-    maxPhotoStorageMb: 100,
+    maxPhotoStorageMb: 0,
     maxMembersPerLocation: 1,
+    activityRetentionDays: 7,
+  },
+  upgradeUrl: 'https://example.com/upgrade',
+  upgradePlusUrl: 'https://example.com/auth/openbin?token=abc&plan=plus',
+  upgradeProUrl: 'https://example.com/auth/openbin?token=abc&plan=pro',
+  portalUrl: null,
+  aiCredits: null,
+};
+
+const PLUS_PLAN: PlanInfo = {
+  plan: 'plus',
+  status: 'active',
+  activeUntil: null,
+  previousSubStatus: null,
+  selfHosted: false,
+  locked: false,
+  features: {
+    ai: false,
+    apiKeys: false,
+    customFields: true,
+    fullExport: true,
+    reorganize: false,
+    binSharing: false,
+    maxBins: null,
+    maxLocations: 3,
+    maxPhotoStorageMb: 500,
+    maxMembersPerLocation: 5,
     activityRetentionDays: 90,
   },
   upgradeUrl: 'https://example.com/upgrade',
-  upgradeLiteUrl: 'https://example.com/auth/openbin?token=abc&plan=lite',
+  upgradePlusUrl: null,
   upgradeProUrl: 'https://example.com/auth/openbin?token=abc&plan=pro',
-  portalUrl: null,
+  portalUrl: 'https://example.com/portal?token=abc',
+  aiCredits: null,
 };
 
 const PRO_PLAN: PlanInfo = {
@@ -92,15 +123,17 @@ const PRO_PLAN: PlanInfo = {
     fullExport: true,
     reorganize: true,
     binSharing: true,
+    maxBins: null,
     maxLocations: null,
-    maxPhotoStorageMb: 5000,
+    maxPhotoStorageMb: 1000,
     maxMembersPerLocation: null,
     activityRetentionDays: 90,
   },
   upgradeUrl: null,
-  upgradeLiteUrl: null,
+  upgradePlusUrl: null,
   upgradeProUrl: null,
   portalUrl: 'https://example.com/portal?token=abc',
+  aiCredits: null,
 };
 
 function makeWrapper() {
@@ -137,18 +170,34 @@ describe('usePlan', () => {
     expect(result.current.planInfo.plan).toBe('pro');
     expect(result.current.isSelfHosted).toBe(true);
     expect(result.current.isPro).toBe(true);
-    expect(result.current.isLite).toBe(false);
+    expect(result.current.isPlus).toBe(false);
+    expect(result.current.isFree).toBe(false);
   });
 
-  it('provides lite plan info for lite users', async () => {
-    mockPlanFetch(LITE_PLAN);
+  it('provides free plan info for free users', async () => {
+    mockPlanFetch(FREE_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.planInfo.plan).toBe('lite');
-    expect(result.current.isLite).toBe(true);
+    expect(result.current.planInfo.plan).toBe('free');
+    expect(result.current.isFree).toBe(true);
+    expect(result.current.isPlus).toBe(false);
+    expect(result.current.isPro).toBe(false);
+    expect(result.current.isSelfHosted).toBe(false);
+  });
+
+  it('provides plus plan info for plus users', async () => {
+    mockPlanFetch(PLUS_PLAN);
+
+    const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.planInfo.plan).toBe('plus');
+    expect(result.current.isPlus).toBe(true);
+    expect(result.current.isFree).toBe(false);
     expect(result.current.isPro).toBe(false);
     expect(result.current.isSelfHosted).toBe(false);
   });
@@ -162,12 +211,13 @@ describe('usePlan', () => {
 
     expect(result.current.planInfo.plan).toBe('pro');
     expect(result.current.isPro).toBe(true);
-    expect(result.current.isLite).toBe(false);
+    expect(result.current.isPlus).toBe(false);
+    expect(result.current.isFree).toBe(false);
     expect(result.current.isSelfHosted).toBe(false);
   });
 
-  it('isGated returns true for gated boolean features on lite plan', async () => {
-    mockPlanFetch(LITE_PLAN);
+  it('isGated returns true for gated boolean features on free plan', async () => {
+    mockPlanFetch(FREE_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
@@ -180,7 +230,7 @@ describe('usePlan', () => {
   });
 
   it('isGated returns false for numeric limit features (not boolean)', async () => {
-    mockPlanFetch(LITE_PLAN);
+    mockPlanFetch(FREE_PLAN);
 
     const { result } = renderHook(() => usePlan(), { wrapper: makeWrapper() });
 
@@ -211,7 +261,7 @@ describe('usePlan', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.planInfo.locked).toBe(true);
-    expect(result.current.planInfo.plan).toBe('lite');
+    expect(result.current.planInfo.plan).toBe('free');
     expect(result.current.isPro).toBe(false);
   });
 

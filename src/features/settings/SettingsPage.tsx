@@ -41,7 +41,7 @@ import { SubscriptionSection } from './SubscriptionSection';
 import { useDataSectionActions } from './useDataSectionActions';
 
 const SEARCH_KEYWORDS: Record<string, string[]> = {
-  account: ['profile', 'admin', 'subscription', 'plan', 'billing', 'upgrade', 'pro', 'lite', 'trial', 'avatar', 'password'],
+  account: ['profile', 'admin', 'subscription', 'plan', 'billing', 'upgrade', 'pro', 'plus', 'free', 'trial', 'avatar', 'password'],
   preferences: ['dashboard', 'keyboard', 'shortcuts', 'personalization', 'terminology', 'app name', 'theme', 'widgets', 'stats', 'bins', 'scan'],
   integrations: ['ai', 'api', 'key', 'openai', 'anthropic', 'gemini', 'provider', 'model', 'prompt', 'automation'],
   data: ['export', 'import', 'backup', 'activity', 'trash', 'csv', 'json', 'zip', 'download'],

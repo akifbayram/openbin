@@ -12,8 +12,8 @@ interface UpgradeDialogProps {
 }
 
 export function UpgradeDialog({ open, onOpenChange, feature, description }: UpgradeDialogProps) {
-  const { isLite, isLocked, planInfo } = usePlan();
-  const isActiveLite = isLite && !isLocked;
+  const { isFree, isPlus, isLocked, planInfo } = usePlan();
+  const isActiveFreeOrPlus = (isFree || isPlus) && !isLocked;
   const upgradeUrl = planInfo.upgradeUrl;
 
   return (
@@ -24,7 +24,7 @@ export function UpgradeDialog({ open, onOpenChange, feature, description }: Upgr
             <Sparkles className="h-6 w-6 text-[var(--accent)]" />
           </div>
           <DialogTitle>
-            {isActiveLite
+            {isActiveFreeOrPlus
               ? `Upgrade to unlock ${feature}`
               : `${feature} requires Pro`}
           </DialogTitle>

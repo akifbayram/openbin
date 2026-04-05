@@ -242,7 +242,7 @@ export function AppLayout() {
               <p className="text-sm font-medium text-white">
                 {showLockedBanner
                   ? getLockedMessage(planInfo.previousSubStatus)
-                  : 'You\'re over your Lite plan limits. Reduce usage or upgrade to Pro to resume editing.'}
+                  : 'You\'re over your plan limits. Reduce usage or upgrade to resume editing.'}
               </p>
               {(showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) && isSafeExternalUrl((showLockedBanner ? planInfo.upgradeUrl : planInfo.upgradeProUrl) ?? '') && (
                 <a

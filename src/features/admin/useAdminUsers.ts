@@ -7,7 +7,7 @@ export interface AdminUser {
   displayName: string;
   email: string | null;
   isAdmin: boolean;
-  plan: 'lite' | 'pro';
+  plan: 'free' | 'plus' | 'pro';
   status: 'active' | 'inactive' | 'trial';
   activeUntil: string | null;
   deletedAt: string | null;
@@ -91,7 +91,7 @@ export interface AdminUserDetail {
   displayName: string;
   email: string | null;
   isAdmin: boolean;
-  plan: 'lite' | 'pro';
+  plan: 'free' | 'plus' | 'pro';
   status: 'active' | 'inactive' | 'trial';
   activeUntil: string | null;
   deletedAt: string | null;

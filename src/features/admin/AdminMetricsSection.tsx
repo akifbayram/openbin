@@ -75,7 +75,7 @@ export function AdminMetricsSection() {
             <MetricCard label="Total Users" value={metrics.plans.total} large />
             <MetricCard label="Pro Active" value={metrics.plans.proActive} />
             <MetricCard label="Pro Trial" value={metrics.plans.proTrial} />
-            <MetricCard label="Lite Active" value={metrics.plans.liteActive} />
+            <MetricCard label="Plus Active" value={metrics.plans.liteActive} />
             <MetricCard label="Conversion" value={`${metrics.trialConversion.rate}%`} sub={`${metrics.trialConversion.converted} of ${metrics.trialConversion.started} trials`} />
           </div>
         </CardContent>

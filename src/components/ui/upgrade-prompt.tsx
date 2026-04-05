@@ -10,8 +10,8 @@ interface UpgradePromptProps {
 }
 
 export function UpgradePrompt({ feature, description, upgradeUrl, className }: UpgradePromptProps) {
-  const { isLite, isLocked } = usePlan();
-  const isActiveLite = isLite && !isLocked;
+  const { isFree, isPlus, isLocked } = usePlan();
+  const isActiveFreeOrPlus = (isFree || isPlus) && !isLocked;
 
   return (
     <div className={cn(
@@ -20,7 +20,7 @@ export function UpgradePrompt({ feature, description, upgradeUrl, className }: U
     )}>
       <div>
         <p className="text-[15px] font-semibold text-[var(--text-primary)]">
-          {isActiveLite
+          {isActiveFreeOrPlus
             ? `Upgrade to Pro to unlock ${feature}`
             : `${feature} requires a Pro plan`}
         </p>

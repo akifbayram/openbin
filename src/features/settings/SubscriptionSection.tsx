@@ -10,7 +10,7 @@ import { cn, focusRing } from '@/lib/utils';
 import type { PlanUsage } from '@/types';
 
 export function SubscriptionSection() {
-  const { planInfo, isPro, isLite, isSelfHosted, isLocked, refresh } = usePlan();
+  const { planInfo, isPro, isPlus, isSelfHosted, isLocked, refresh } = usePlan();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const handledRef = useRef(false);
@@ -92,7 +92,7 @@ export function SubscriptionSection() {
           <div className="flex items-center justify-between rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3.5 py-3">
             <div className="flex items-center gap-2">
               <span className="text-[15px] font-medium text-[var(--text-primary)]">
-                {isPro ? 'Pro' : 'Lite'} Plan
+                {isPro ? 'Pro' : isPlus ? 'Plus' : 'Free'} Plan
               </span>
               {isTrialing && (
                 <span className="rounded-[var(--radius-sm)] bg-[var(--color-warning-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-warning)]">
@@ -114,16 +114,16 @@ export function SubscriptionSection() {
           </div>
 
           {/* Upgrade buttons (no active paid subscription) */}
-          {(planInfo.upgradeLiteUrl || planInfo.upgradeProUrl) && (
+          {(planInfo.upgradePlusUrl || planInfo.upgradeProUrl) && (
             <div className="flex items-center gap-2">
-              {planInfo.upgradeLiteUrl && (
+              {planInfo.upgradePlusUrl && (
                 <a
-                  href={planInfo.upgradeLiteUrl}
+                  href={planInfo.upgradePlusUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn('inline-flex flex-1 items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--border-flat)] bg-[var(--bg-input)] h-9 px-3.5 text-[13px] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors', focusRing)}
                 >
-                  Upgrade to Lite
+                  Upgrade to Plus
                   <ArrowUpRight className="h-3 w-3" />
                 </a>
               )}
@@ -141,8 +141,8 @@ export function SubscriptionSection() {
             </div>
           )}
 
-          {/* Lite entitlements */}
-          {isLite && !isLocked && planInfo.status === 'active' && (
+          {/* Plus entitlements */}
+          {isPlus && !isLocked && planInfo.status === 'active' && (
             <ul className="flex flex-col gap-0.5 text-[13px] text-[var(--text-secondary)] px-1">
               {planInfo.features.maxLocations !== null && (
                 <li>{planInfo.features.maxLocations} {planInfo.features.maxLocations === 1 ? 'location' : 'locations'}</li>
@@ -150,7 +150,11 @@ export function SubscriptionSection() {
               {planInfo.features.maxPhotoStorageMb !== null && (
                 <li>{planInfo.features.maxPhotoStorageMb} MB photo storage</li>
               )}
-              <li>Unlimited bins</li>
+              {planInfo.features.maxBins !== null ? (
+                <li>{planInfo.features.maxBins} bins</li>
+              ) : (
+                <li>Unlimited bins</li>
+              )}
               {planInfo.features.maxMembersPerLocation !== null && (
                 <li>{planInfo.features.maxMembersPerLocation} {planInfo.features.maxMembersPerLocation === 1 ? 'member' : 'members'} per location</li>
               )}
@@ -172,9 +176,17 @@ export function SubscriptionSection() {
           )}
 
           {/* Usage */}
-          {usage && (planInfo.features.maxLocations !== null || planInfo.features.maxPhotoStorageMb !== null || planInfo.features.maxMembersPerLocation !== null) && (
+          {usage && (planInfo.features.maxBins !== null || planInfo.features.maxLocations !== null || planInfo.features.maxPhotoStorageMb !== null || planInfo.features.maxMembersPerLocation !== null) && (
             <div className="space-y-2 pt-1">
               <p className="text-[13px] font-semibold text-[var(--text-primary)]">Usage</p>
+              {planInfo.features.maxBins !== null && (
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-[var(--text-secondary)]">Bins</span>
+                  <span className="tabular-nums text-[var(--text-tertiary)]">
+                    — / {planInfo.features.maxBins}
+                  </span>
+                </div>
+              )}
               {planInfo.features.maxLocations !== null && (
                 <div className="flex items-center justify-between text-[13px]">
                   <span className="text-[var(--text-secondary)]">Locations</span>

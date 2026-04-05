@@ -1,5 +1,5 @@
 // Plan/subscription types
-export type PlanTier = 'lite' | 'pro';
+export type PlanTier = 'free' | 'plus' | 'pro';
 export type SubscriptionStatus = 'inactive' | 'active' | 'trial';
 
 export interface User {
@@ -261,6 +261,7 @@ export interface PlanFeatures {
   fullExport: boolean;
   reorganize: boolean;
   binSharing: boolean;
+  maxBins: number | null;
   maxLocations: number | null;
   maxPhotoStorageMb: number | null;
   maxMembersPerLocation: number | null;
@@ -289,7 +290,8 @@ export interface PlanInfo {
   locked: boolean;
   features: PlanFeatures;
   upgradeUrl: string | null;
-  upgradeLiteUrl: string | null;
+  upgradePlusUrl: string | null;
   upgradeProUrl: string | null;
   portalUrl: string | null;
+  aiCredits: { used: number; limit: number } | null;
 }
