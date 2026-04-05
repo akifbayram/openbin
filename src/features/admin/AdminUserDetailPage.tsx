@@ -38,6 +38,35 @@ function StatItem({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function LimitStatItem({ label, used, limit, unit }: { label: string; used: number; limit: number | null; unit?: string }) {
+  if (limit === null || limit === 0) return <StatItem label={label} value="—" />;
+  const pct = Math.round(used / limit * 100);
+  const color = pct >= 90 ? 'bg-[var(--destructive)]' : pct >= 75 ? 'bg-[var(--color-warning)]' : 'bg-[var(--accent)]';
+  return (
+    <div className="flex flex-col gap-1.5 p-3 rounded-[var(--radius-sm)] bg-[var(--bg-input)]">
+      <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">{label}</span>
+      <span className="text-[20px] font-bold text-[var(--text-primary)] leading-tight tabular-nums">
+        {used}{unit ? ` ${unit}` : ''} <span className="text-[14px] font-normal text-[var(--text-tertiary)]">/ {limit}{unit ? ` ${unit}` : ''}</span>
+      </span>
+      <div className="h-1.5 rounded-[var(--radius-full)] bg-[var(--bg-hover)] overflow-hidden">
+        <div className={cn('h-full rounded-[var(--radius-full)] transition-all', color)} style={{ width: `${Math.min(pct, 100)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function relativeTime(iso: string | null): string {
+  if (!iso) return '—';
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export function AdminUserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -294,14 +323,31 @@ export function AdminUserDetailPage() {
           <CardTitle>Stats</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            <StatItem label="Last Active" value={relativeTime(detail.lastActiveAt)} />
             <StatItem label="Locations" value={detail.stats.locationCount} />
             <StatItem label="Bins" value={detail.stats.binCount} />
+            <StatItem label="Items" value={detail.stats.itemCount} />
             <StatItem label="Photos" value={detail.stats.photoCount} />
             <StatItem label="Storage (MB)" value={detail.stats.photoStorageMb} />
+            <StatItem label="Scans (30d)" value={detail.stats.scans30d} />
             <StatItem label="API Keys" value={detail.stats.apiKeyCount} />
+            <StatItem label="API Reqs (7d)" value={detail.stats.apiRequests7d} />
             <StatItem label="Shares" value={detail.stats.shareCount} />
+            <StatItem label="New Bins (7d)" value={detail.stats.binsCreated7d} />
+            <StatItem label="Account Age" value={`${Math.floor((Date.now() - new Date(detail.createdAt).getTime()) / 86400000)}d`} />
           </div>
+
+          {/* Limit bars */}
+          {(detail.stats.binLimit !== null || detail.stats.storageLimit !== null || detail.stats.aiCreditsLimit > 0) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
+              <LimitStatItem label="Bin Usage" used={detail.stats.binCount} limit={detail.stats.binLimit} />
+              <LimitStatItem label="Storage Usage" used={detail.stats.photoStorageMb} limit={detail.stats.storageLimit} unit="MB" />
+              {detail.stats.aiCreditsLimit > 0 && (
+                <LimitStatItem label="AI Credits" used={detail.stats.aiCreditsUsed} limit={detail.stats.aiCreditsLimit} />
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
