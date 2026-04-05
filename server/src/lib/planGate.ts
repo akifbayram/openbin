@@ -343,6 +343,7 @@ export async function getAiCredits(userId: string): Promise<AiCreditInfo> {
 export interface UserUsage {
   binCount: number;
   locationCount: number;
+  photoCount: number;
   photoStorageMb: number;
   memberCounts: Record<string, number>;
 }
@@ -351,7 +352,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
   const [binResult, locResult, photoResult, memberResult] = await Promise.all([
     query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM bins WHERE created_by = $1 AND deleted_at IS NULL', [userId]),
     query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM locations WHERE created_by = $1', [userId]),
-    query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [userId]),
+    query<{ cnt: number; total: number }>('SELECT COUNT(*) as cnt, COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [userId]),
     query<{ location_id: string; cnt: number }>(
       `SELECT location_id, COUNT(*) as cnt FROM location_members
        WHERE location_id IN (SELECT id FROM locations WHERE created_by = $1)
@@ -366,6 +367,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
   return {
     binCount: binResult.rows[0].cnt,
     locationCount: locResult.rows[0].cnt,
+    photoCount: photoResult.rows[0].cnt,
     photoStorageMb: Math.round((photoResult.rows[0].total / (1024 * 1024)) * 100) / 100,
     memberCounts,
   };

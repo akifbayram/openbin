@@ -97,7 +97,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const [usage, setUsage] = useState<PlanUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const usageRefresh = useRefreshOn(Events.LOCATIONS, Events.PHOTOS, Events.BINS);
+  const usageRefresh = useRefreshOn(Events.LOCATIONS, Events.PHOTOS);
   const planRefresh = useRefreshOn(Events.PLAN);
 
   const fetchPlan = useCallback(async (): Promise<PlanInfo | null> => {
@@ -158,9 +158,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     const isLocked = !!info.locked;
     const isGated = (feature: keyof PlanFeatures): boolean => {
       const val = info.features[feature];
-      if (typeof val === 'boolean') return !val;
-      if (val === null) return false;
-      return false;
+      return typeof val === 'boolean' ? !val : false;
     };
     const overLimits = usage?.overLimits ?? null;
     const isOverAnyLimit = overLimits !== null && (overLimits.locations || overLimits.photos || overLimits.members.length > 0);

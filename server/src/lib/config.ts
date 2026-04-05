@@ -95,7 +95,7 @@ export const config = Object.freeze({
     plusApiKeys: parseBool(process.env.PLAN_PLUS_API_KEYS, false),
     plusCustomFields: parseBool(process.env.PLAN_PLUS_CUSTOM_FIELDS, true),
     plusFullExport: parseBool(process.env.PLAN_PLUS_FULL_EXPORT, true),
-    plusReorganize: parseBool(process.env.PLAN_PLUS_REORGANIZE, false),
+    plusReorganize: parseBool(process.env.PLAN_PLUS_REORGANIZE, true),
     plusBinSharing: parseBool(process.env.PLAN_PLUS_BIN_SHARING, false),
     plusMaxBins: parseNullableInt(process.env.PLAN_PLUS_MAX_BINS, 500),
     plusMaxLocations: parseNullableInt(process.env.PLAN_PLUS_MAX_LOCATIONS, 1),

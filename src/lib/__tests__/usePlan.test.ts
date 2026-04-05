@@ -96,7 +96,7 @@ const PLUS_PLAN: PlanInfo = {
     apiKeys: false,
     customFields: true,
     fullExport: true,
-    reorganize: false,
+    reorganize: true,
     binSharing: false,
     maxBins: 500,
     maxLocations: 3,

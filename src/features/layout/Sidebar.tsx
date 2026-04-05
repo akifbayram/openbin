@@ -109,8 +109,8 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
   const t = useTerminology();
   const { user, logout } = useAuth();
   const { canWrite } = usePermissions();
-  const { isSelfHosted, isFree, isPlus } = usePlan();
-  const showProBadges = !isSelfHosted && (isFree || isPlus);
+  const { isSelfHosted, isFree } = usePlan();
+  const showProBadges = !isSelfHosted && isFree;
 
   return (
     <>

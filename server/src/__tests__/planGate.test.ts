@@ -25,7 +25,7 @@ vi.mock('../lib/config.js', () => ({
       plusApiKeys: false,
       plusCustomFields: true,
       plusFullExport: true,
-      plusReorganize: false,
+      plusReorganize: true,
       plusBinSharing: false,
       plusMaxBins: 500,
       plusMaxLocations: 1,
@@ -87,7 +87,7 @@ const DEFAULT_PLAN_LIMITS = {
   plusApiKeys: false,
   plusCustomFields: true,
   plusFullExport: true,
-  plusReorganize: false,
+  plusReorganize: true,
   plusBinSharing: false,
   plusMaxBins: 500 as number | null,
   plusMaxLocations: 1 as number | null,
@@ -243,7 +243,7 @@ describe('getFeatureMap()', () => {
     expect(features.apiKeys).toBe(false);
     expect(features.customFields).toBe(true);
     expect(features.fullExport).toBe(true);
-    expect(features.reorganize).toBe(false);
+    expect(features.reorganize).toBe(true);
     expect(features.binSharing).toBe(false);
     expect(features.maxBins).toBe(500);
     expect(features.maxLocations).toBe(1);
