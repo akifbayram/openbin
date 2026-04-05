@@ -2,6 +2,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { PlanBreakdownCard } from './PlanBreakdownCard';
 import { useAdminMetrics } from './useAdminMetrics';
 
 function MetricCard({ label, value, sub, large }: { label: string; value: string | number; sub?: string; large?: boolean }) {
@@ -110,6 +111,8 @@ export function AdminMetricsSection() {
           </div>
         </CardContent>
       </Card>
+
+      <PlanBreakdownCard />
     </>
   );
 }
