@@ -14,7 +14,7 @@ import type { AiSuggestions, Bin } from '@/types';
 import { addBin, deleteBin, moveBin, restoreBin, updateBin } from './useBins';
 import { useQuickAdd } from './useQuickAdd';
 
-export function useBinDetailActions(bin: Bin | null | undefined, id: string | undefined, editing: boolean) {
+export function useBinDetailActions(bin: Bin | null | undefined, id: string | undefined) {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { activeLocationId } = useAuth();
@@ -156,7 +156,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
   const canEdit = bin ? canWrite : false;
   const canDelete = isAdmin;
   const canEditMeta = bin ? canEditBin(bin.created_by) : false;
-  const showAiButton = (aiEnabled || aiGated) && photos.length > 0 && !editing;
+  const showAiButton = (aiEnabled || aiGated) && photos.length > 0;
   const isReanalysis = !!(lastSuggestions || (bin && (bin.name || bin.items.length > 0 || bin.tags.length > 0)));
   const hasNotes = !!bin?.notes;
   const hasTags = (bin?.tags.length ?? 0) > 0;
