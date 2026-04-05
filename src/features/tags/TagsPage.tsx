@@ -32,7 +32,7 @@ export function TagsPage() {
   const { canWrite } = usePermissions();
   const { showToast } = useToast();
   const { tags, totalCount, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedTagList(debouncedSearch, sortColumn, sortDirection);
-  const { tagColors } = useTagColorsContext();
+  const { tagColors, tagParents } = useTagColorsContext();
   const getTagBadgeStyle = useTagStyle();
 
   // Rename dialog state
@@ -149,6 +149,7 @@ export function TagsPage() {
             onSortChange={setSort}
             searchQuery={debouncedSearch}
             tagColors={tagColors}
+            tagParents={tagParents}
             getTagBadgeStyle={getTagBadgeStyle}
             onColorChange={handleColorChange}
             onRename={canWrite ? handleRenameOpen : undefined}
