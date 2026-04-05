@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { d, generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireMemberOrAbove, verifyLocationMembership } from '../lib/binAccess.js';
-import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
 import { COLOR_KEY_REGEX } from '../lib/binValidation.js';
+import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
 import { HEX_COLOR_REGEX } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 
