@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
 import { useDialogPortal } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { CreateTagDialog } from '@/features/tags/CreateTagDialog';
+import { useTagColorsContext } from '@/features/tags/TagColorsContext';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +19,7 @@ interface TagInputProps {
 
 export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
   const dialogPortal = useDialogPortal();
+  const { tagParents } = useTagColorsContext();
   const [input, setInput] = useState('');
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -26,6 +29,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const getTagStyle = useTagStyle();
   const [exitingTags, setExitingTags] = useState<Set<string>>(new Set());
+  const [pendingCreateTag, setPendingCreateTag] = useState<string | null>(null);
 
   const trimmedInput = input.trim().toLowerCase();
 
@@ -57,6 +61,13 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
+  function openCreateDialog(tagName: string) {
+    setPendingCreateTag(tagName);
+    setInput('');
+    setHighlightIndex(-1);
+    setShowSuggestions(false);
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (visible) {
       if (e.key === 'ArrowDown') {
@@ -74,7 +85,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
         if (highlightIndex < filtered.length) {
           addTag(filtered[highlightIndex]);
         } else if (showCreate) {
-          addTag(trimmedInput);
+          openCreateDialog(trimmedInput);
         }
         return;
       }
@@ -242,7 +253,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
                   onMouseDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    addTag(trimmedInput);
+                    openCreateDialog(trimmedInput);
                   }}
                   className={cn(
                     dropdownRow,
@@ -260,6 +271,17 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
         </div>,
         dialogPortal ?? document.body,
       )}
+      <CreateTagDialog
+        open={pendingCreateTag !== null}
+        onOpenChange={(v) => { if (!v) setPendingCreateTag(null); }}
+        tagName={pendingCreateTag ?? ''}
+        onConfirm={() => {
+          if (pendingCreateTag) addTag(pendingCreateTag);
+          setPendingCreateTag(null);
+        }}
+        suggestions={suggestions}
+        tagParents={tagParents}
+      />
     </div>
   );
 }
