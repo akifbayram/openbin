@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
@@ -17,7 +18,6 @@ import { BinPreviewCard } from './BinPreviewCard';
 import { ColorPicker } from './ColorPicker';
 import { CustomFieldsEditCard } from './CustomFieldsEditCard';
 import { CustomFieldsViewCard } from './CustomFieldsViewCard';
-import { EditableText } from './EditableText';
 import { IconPicker } from './IconPicker';
 import { ItemList } from './ItemList';
 import { QuickAddWidget } from './QuickAddWidget';
@@ -75,18 +75,20 @@ export function BinDetailContent({
   const navigate = useNavigate();
   const getTagStyle = useTagStyle();
   const t = useTerminology();
-  // Local state for appearance fields (optimistic — synced from bin prop)
+  // Local state for optimistic updates — synced from bin prop on server refetch
+  const [localNotes, setLocalNotes] = useState(bin.notes);
   const [localIcon, setLocalIcon] = useState(bin.icon);
   const [localColor, setLocalColor] = useState(bin.color);
   const [localCardStyle, setLocalCardStyle] = useState(bin.card_style);
   const [localCustomFields, setLocalCustomFields] = useState(bin.custom_fields || {});
 
-  // Sync local state when bin prop changes (server refetch after save)
+  const prevNotes = useRef(bin.notes);
   const prevIcon = useRef(bin.icon);
   const prevColor = useRef(bin.color);
   const prevCardStyle = useRef(bin.card_style);
   const prevCustomFields = useRef(bin.custom_fields);
 
+  if (bin.notes !== prevNotes.current) { prevNotes.current = bin.notes; setLocalNotes(bin.notes); }
   if (bin.icon !== prevIcon.current) { prevIcon.current = bin.icon; setLocalIcon(bin.icon); }
   if (bin.color !== prevColor.current) { prevColor.current = bin.color; setLocalColor(bin.color); }
   if (bin.card_style !== prevCardStyle.current) { prevCardStyle.current = bin.card_style; setLocalCardStyle(bin.card_style); }
@@ -143,26 +145,26 @@ export function BinDetailContent({
       <div className="lg:sticky lg:top-6 flex flex-col gap-4">
         {/* Notes card */}
         <Card>
-          <CardContent className={cn('pt-3 pb-4', autoSave.savedFields.has('notes') && 'animate-save-flash')}>
-            <Label>Notes</Label>
+          <CardContent className={cn('space-y-2 pt-3 pb-4', autoSave.savedFields.has('notes') && 'animate-save-flash')}>
+            <Label htmlFor="detail-notes">Notes</Label>
             {canEdit ? (
-              <div className="mt-2">
-                <EditableText
-                  value={bin.notes}
-                  placeholder="Add notes..."
-                  multiline
-                  maxLength={10000}
-                  onSave={autoSave.saveNotes}
-                  saved={autoSave.savedFields.has('notes')}
-                />
-              </div>
+              <Textarea
+                id="detail-notes"
+                value={localNotes}
+                onChange={(e) => setLocalNotes(e.target.value)}
+                onBlur={() => autoSave.saveNotes(localNotes)}
+                maxLength={10000}
+                rows={3}
+                className="[field-sizing:content] min-h-[5rem]"
+                placeholder="Add notes..."
+              />
             ) : (
               bin.notes ? (
-                <p className="mt-2 text-[15px] text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
+                <p className="text-[15px] text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
                   {bin.notes}
                 </p>
               ) : (
-                <p className="mt-2 text-[15px] text-[var(--text-quaternary)]">No notes</p>
+                <p className="text-[15px] text-[var(--text-quaternary)]">No notes</p>
               )
             )}
           </CardContent>
