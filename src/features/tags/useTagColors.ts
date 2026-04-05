@@ -37,10 +37,10 @@ export function useTagColors() {
   return { tagColors, tagParents, isLoading };
 }
 
-export async function setTagColor(locationId: string, tag: string, color: string): Promise<void> {
+export async function setTagColor(locationId: string, tag: string, color: string, parentTag?: string | null): Promise<void> {
   await apiFetch('/api/tag-colors', {
     method: 'PUT',
-    body: { locationId, tag, color },
+    body: { locationId, tag, color, ...(parentTag !== undefined && { parentTag }) },
   });
   notifyTagColorsChanged();
 }
@@ -52,15 +52,6 @@ export async function removeTagColor(locationId: string, tag: string): Promise<v
   notifyTagColorsChanged();
 }
 
-export async function setTagParent(
-  locationId: string,
-  tag: string,
-  parentTag: string | null,
-  currentColor: string,
-): Promise<void> {
-  await apiFetch('/api/tag-colors', {
-    method: 'PUT',
-    body: { locationId, tag, color: currentColor, parentTag: parentTag || null },
-  });
-  notifyTagColorsChanged();
+export async function setTagParent(locationId: string, tag: string, parentTag: string | null, currentColor: string): Promise<void> {
+  return setTagColor(locationId, tag, currentColor, parentTag);
 }

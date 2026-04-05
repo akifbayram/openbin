@@ -1,4 +1,4 @@
-import { PackageOpen, Tags as TagsIcon } from 'lucide-react';
+import { PackageOpen, Plus, Tags as TagsIcon } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,8 @@ import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePermissions } from '@/lib/usePermissions';
 import { useTableSearchParams } from '@/lib/useTableSearchParams';
-import { cn, inputBase } from '@/lib/utils';
+import { cn, getErrorMessage, inputBase } from '@/lib/utils';
+import { CreateTagDialog } from './CreateTagDialog';
 import { useTagColorsContext } from './TagColorsContext';
 import { type TagSortColumn, TagTableView } from './TagTableView';
 import { setTagColor, setTagParent } from './useTagColors';
@@ -44,6 +45,9 @@ export function TagsPage() {
   // Delete dialog state
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Create dialog state
+  const [createOpen, setCreateOpen] = useState(false);
 
   // Set Parent dialog state
   const [parentTarget, setParentTarget] = useState<string | null>(null);
@@ -116,8 +120,7 @@ export function TagsPage() {
       showToast({ message: parentValue ? `Set parent of "${parentTarget}" to "${parentValue}"` : `Removed parent from "${parentTarget}"` });
       setParentTarget(null);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to set parent';
-      showToast({ message: msg, variant: 'error' });
+      showToast({ message: getErrorMessage(err, 'Failed to set parent'), variant: 'error' });
     } finally {
       setParentLoading(false);
     }
@@ -125,7 +128,15 @@ export function TagsPage() {
 
   return (
     <div className="page-content">
-      <PageHeader title="Tags" />
+      <PageHeader
+        title="Tags"
+        actions={canWrite ? (
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Create Tag
+          </Button>
+        ) : undefined}
+      />
 
       {(totalCount > 0 || search) && (
         <SearchInput
@@ -170,9 +181,17 @@ export function TagsPage() {
             variant={search ? 'search' : undefined}
           >
             {!search && (
-              <Link to="/bins">
-                <Button variant="secondary" size="sm">Browse {t.bins}</Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                {canWrite && (
+                  <Button size="sm" onClick={() => setCreateOpen(true)}>
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    Create Tag
+                  </Button>
+                )}
+                <Link to="/bins">
+                  <Button variant="secondary" size="sm">Browse {t.bins}</Button>
+                </Link>
+              </div>
             )}
           </EmptyState>
         ) : (
@@ -248,7 +267,7 @@ export function TagsPage() {
       <Dialog open={parentTarget !== null} onOpenChange={(open) => { if (!open) setParentTarget(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Set Parent</DialogTitle>
+            <DialogTitle>Set parent</DialogTitle>
             <DialogDescription>
               Choose a parent tag for &ldquo;{parentTarget}&rdquo;.
             </DialogDescription>
@@ -259,7 +278,7 @@ export function TagsPage() {
               id="set-parent-select"
               value={parentValue}
               onChange={(e) => setParentValue(e.target.value)}
-              className={cn(inputBase, 'h-10')}
+              className={cn(inputBase, 'h-10 focus-visible:ring-2 focus-visible:ring-[var(--accent)]')}
             >
               <option value="">None</option>
               {parentEligible.map((tag) => (
@@ -275,6 +294,20 @@ export function TagsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Create tag dialog */}
+      <CreateTagDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onConfirm={(createdTag) => {
+          setCreateOpen(false);
+          if (createdTag) {
+            showToast({ message: `Created tag "${createdTag}"` });
+          }
+        }}
+        suggestions={tags.map((t) => t.tag)}
+        tagParents={tagParents}
+      />
     </div>
   );
 }

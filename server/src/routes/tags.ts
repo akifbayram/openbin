@@ -42,19 +42,22 @@ router.get('/', asyncHandler(async (req, res) => {
     GROUP BY jt.value
     ${havingClause}`;
 
-  // Parent tags that have children but are not used on any bin (so the tree is visible)
-  const parentOnlyQuery = `
-    SELECT DISTINCT tc_p.parent_tag AS tag, 0 AS count
-    FROM tag_colors tc_p
-    WHERE tc_p.location_id = $1
-      AND tc_p.parent_tag IS NOT NULL
-      ${searchQuery?.trim() ? `AND tc_p.parent_tag LIKE $${params.length}` : ''}
-      AND tc_p.parent_tag NOT IN (
-        SELECT jt2.value FROM bins b2, ${d.jsonEachFrom('b2.tags', 'jt2')}
-        WHERE b2.location_id = $1 AND b2.deleted_at IS NULL
-      )`;
+  // Tags from tag_colors not present on any bin (standalone or parent-only)
+  const colorOnlyQuery = `
+    SELECT DISTINCT t_all.tag, 0 AS count FROM (
+      SELECT tc.tag FROM tag_colors tc WHERE tc.location_id = $1
+      UNION
+      SELECT tc2.parent_tag FROM tag_colors tc2
+        WHERE tc2.location_id = $1 AND tc2.parent_tag IS NOT NULL
+    ) t_all
+    WHERE t_all.tag NOT IN (
+      SELECT jt2.value FROM bins b2, ${d.jsonEachFrom('b2.tags', 'jt2')}
+      WHERE b2.location_id = $1 AND b2.deleted_at IS NULL
+        AND (b2.visibility = 'location' OR b2.created_by = $2)
+    )
+    ${searchQuery?.trim() ? `AND t_all.tag LIKE $${params.length}` : ''}`;
 
-  const combinedQuery = `${binTagsQuery} UNION ALL ${parentOnlyQuery}`;
+  const combinedQuery = `${binTagsQuery} UNION ALL ${colorOnlyQuery}`;
 
   // Count query
   const countResult = await query<{ total: number }>(

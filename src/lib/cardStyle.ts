@@ -134,7 +134,7 @@ function renderGradientProps(cardStyle: CardStyle, colorPreset: ColorPreset | un
   const endColor = endPreset?.bgCss ?? (theme === 'dark' ? '#1f2937' : '#f3f4f6');
   const { primary, muted } = getTextColors(colorPreset, theme);
   return {
-    className: '',
+    className: 'flat-card',
     style: {
       background: `linear-gradient(135deg, ${startColor}, ${endColor})`,
     },

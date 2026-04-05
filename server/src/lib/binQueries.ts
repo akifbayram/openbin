@@ -82,17 +82,11 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
       params.push(t);
       paramIdx++;
     }
-    if (filters.tagMode === 'all') {
-      const allClauses = expandedClauses.map(
-        (clause) => `EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE ${clause})`,
-      );
-      whereClauses.push(`(${allClauses.join(' AND ')})`);
-    } else {
-      const anyClauses = expandedClauses.map(
-        (clause) => `EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE ${clause})`,
-      );
-      whereClauses.push(`(${anyClauses.join(' OR ')})`);
-    }
+    const existsClauses = expandedClauses.map(
+      (clause) => `EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE ${clause})`,
+    );
+    const joiner = filters.tagMode === 'all' ? ' AND ' : ' OR ';
+    whereClauses.push(`(${existsClauses.join(joiner)})`);
   } else if (filters.tag?.trim()) {
     const p = `$${paramIdx}`;
     whereClauses.push(

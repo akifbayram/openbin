@@ -2,7 +2,7 @@ import { ValidationError } from './httpErrors.js';
 import { HEX_COLOR_REGEX, stripUnicodeControl } from './validation.js';
 
 const CODE_REGEX = /^[A-Z0-9]{6}$/;
-const COLOR_KEY_REGEX = /^((neutral|\d{1,3}):\d|black|white)$/;
+export const COLOR_KEY_REGEX = /^((neutral|\d{1,3}):[0-4]|black|white)$/;
 
 export function validateCodeFormat(code: string): void {
   if (!CODE_REGEX.test(code)) {

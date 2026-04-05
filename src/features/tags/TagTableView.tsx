@@ -1,4 +1,4 @@
-import { ArrowUpFromLine, ChevronDown, ChevronRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { ArrowUpFromLine, ChevronDown, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -209,14 +209,10 @@ export function TagTableView({
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); toggleCollapse(tag); }}
-                    className="p-0.5 text-[var(--text-quaternary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+                    className="p-0.5 rounded-[var(--radius-xs)] text-[var(--text-quaternary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                     aria-label={collapsedParents.has(tag) ? `Expand ${tag}` : `Collapse ${tag}`}
                   >
-                    {collapsedParents.has(tag) ? (
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    ) : (
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    )}
+                    <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', collapsedParents.has(tag) && '-rotate-90')} />
                   </button>
                 )}
                 <Badge
