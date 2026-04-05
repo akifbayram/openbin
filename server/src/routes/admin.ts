@@ -503,6 +503,16 @@ router.get('/metrics', metricsLimiter, asyncHandler(async (_req, res) => {
   res.json(metrics);
 }));
 
+// GET /api/admin/metrics/plan-breakdown — per-plan usage averages
+router.get('/metrics/plan-breakdown', metricsLimiter, asyncHandler(async (_req, res) => {
+  if (config.selfHosted) {
+    throw new NotFoundError('Metrics not available in self-hosted mode');
+  }
+  const { getPlanBreakdown } = await import('../lib/metrics.js');
+  const breakdown = await getPlanBreakdown();
+  res.json(breakdown);
+}));
+
 // PATCH /api/admin/registration — toggle registration mode
 // Runtime override stored in settings table; env var takes precedence
 router.patch('/registration', asyncHandler(async (req, res) => {
