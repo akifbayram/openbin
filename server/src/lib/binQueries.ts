@@ -70,18 +70,34 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   }
 
   // Multi-tag filter (tags param takes precedence over single tag)
+  // Each tag is expanded to also match children: value = tag OR value IN (children of tag)
   const tagList = filters.tags ? filters.tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
   if (tagList.length > 0) {
-    const tagPlaceholders = tagList.map((_, i) => `$${paramIdx + i}`);
-    if (filters.tagMode === 'all') {
-      whereClauses.push(`(SELECT COUNT(DISTINCT value) FROM ${d.jsonEach('b.tags')} WHERE value IN (${tagPlaceholders.join(', ')})) = ${tagList.length}`);
-    } else {
-      whereClauses.push(`EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE value IN (${tagPlaceholders.join(', ')}))`);
+    const expandedClauses: string[] = [];
+    for (const t of tagList) {
+      const p = `$${paramIdx}`;
+      expandedClauses.push(
+        `(value = ${p} OR value IN (SELECT tag FROM tag_colors WHERE parent_tag = ${p} AND location_id = $1))`,
+      );
+      params.push(t);
+      paramIdx++;
     }
-    params.push(...tagList);
-    paramIdx += tagList.length;
+    if (filters.tagMode === 'all') {
+      const allClauses = expandedClauses.map(
+        (clause) => `EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE ${clause})`,
+      );
+      whereClauses.push(`(${allClauses.join(' AND ')})`);
+    } else {
+      const anyClauses = expandedClauses.map(
+        (clause) => `EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE ${clause})`,
+      );
+      whereClauses.push(`(${anyClauses.join(' OR ')})`);
+    }
   } else if (filters.tag?.trim()) {
-    whereClauses.push(`EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE value = $${paramIdx})`);
+    const p = `$${paramIdx}`;
+    whereClauses.push(
+      `EXISTS (SELECT 1 FROM ${d.jsonEach('b.tags')} WHERE value = ${p} OR value IN (SELECT tag FROM tag_colors WHERE parent_tag = ${p} AND location_id = $1))`,
+    );
     params.push(filters.tag.trim());
     paramIdx++;
   }
