@@ -144,6 +144,20 @@ CREATE TABLE IF NOT EXISTS user_ai_settings (
 );
 CREATE INDEX IF NOT EXISTS idx_user_ai_settings_user ON user_ai_settings(user_id);
 
+CREATE TABLE IF NOT EXISTS user_ai_task_overrides (
+  id              TEXT PRIMARY KEY,
+  user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  task_group      TEXT NOT NULL CHECK (task_group IN ('vision', 'quickText', 'deepText')),
+  provider        TEXT CHECK (provider IN ('openai', 'anthropic', 'gemini', 'openai-compatible')),
+  api_key         TEXT,
+  model           TEXT,
+  endpoint_url    TEXT,
+  created_at      TEXT NOT NULL DEFAULT (now()),
+  updated_at      TEXT NOT NULL DEFAULT (now()),
+  UNIQUE(user_id, task_group)
+);
+CREATE INDEX IF NOT EXISTS idx_user_ai_task_overrides_user ON user_ai_task_overrides(user_id);
+
 CREATE TABLE IF NOT EXISTS user_print_settings (
   id         TEXT PRIMARY KEY,
   user_id    TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,

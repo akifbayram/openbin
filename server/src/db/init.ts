@@ -145,6 +145,23 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
   addColumnIfNotExists('ALTER TABLE bin_items ADD COLUMN quantity INTEGER DEFAULT NULL');
   addColumnIfNotExists('ALTER TABLE user_ai_settings ADD COLUMN task_model_overrides TEXT');
 
+  // Per-task-group AI model overrides
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_ai_task_overrides (
+      id              TEXT PRIMARY KEY,
+      user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      task_group      TEXT NOT NULL CHECK (task_group IN ('vision', 'quickText', 'deepText')),
+      provider        TEXT CHECK (provider IN ('openai', 'anthropic', 'gemini', 'openai-compatible')),
+      api_key         TEXT,
+      model           TEXT,
+      endpoint_url    TEXT,
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, task_group)
+    );
+    CREATE INDEX IF NOT EXISTS idx_user_ai_task_overrides_user ON user_ai_task_overrides(user_id);
+  `);
+
   // Hierarchical areas: add parent_id column
   addColumnIfNotExists('ALTER TABLE areas ADD COLUMN parent_id TEXT REFERENCES areas(id) ON DELETE CASCADE');
 
@@ -459,6 +476,23 @@ async function runPostgresInit(): Promise<DatabaseEngine> {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_bin_shares_active ON bin_shares(bin_id) WHERE revoked_at IS NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_email_log_daily ON email_log(user_id, email_type, (left(sent_at, 10)));
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(LOWER(email)) WHERE email IS NOT NULL;
+  `);
+
+  // Per-task-group AI model overrides (new installs get it via schema.pg.sql; this handles existing DBs)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_ai_task_overrides (
+      id              TEXT PRIMARY KEY,
+      user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      task_group      TEXT NOT NULL CHECK (task_group IN ('vision', 'quickText', 'deepText')),
+      provider        TEXT CHECK (provider IN ('openai', 'anthropic', 'gemini', 'openai-compatible')),
+      api_key         TEXT,
+      model           TEXT,
+      endpoint_url    TEXT,
+      created_at      TEXT NOT NULL DEFAULT (now()),
+      updated_at      TEXT NOT NULL DEFAULT (now()),
+      UNIQUE(user_id, task_group)
+    );
+    CREATE INDEX IF NOT EXISTS idx_user_ai_task_overrides_user ON user_ai_task_overrides(user_id);
   `);
 
   // api_key_daily_usage: add FK on api_key_id if missing
