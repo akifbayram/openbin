@@ -3,6 +3,7 @@ import { d, generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireMemberOrAbove, verifyLocationMembership } from '../lib/binAccess.js';
 import { ForbiddenError, ValidationError } from '../lib/httpErrors.js';
+import { COLOR_KEY_REGEX } from '../lib/binValidation.js';
 import { HEX_COLOR_REGEX } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -22,7 +23,7 @@ router.get('/', asyncHandler(async (req, res) => {
   }
 
   const result = await query(
-    `SELECT id, location_id, tag, color, created_at, updated_at FROM tag_colors WHERE location_id = $1 ORDER BY tag ${d.nocase()}`,
+    `SELECT id, location_id, tag, color, parent_tag, created_at, updated_at FROM tag_colors WHERE location_id = $1 ORDER BY tag ${d.nocase()}`,
     [locationId]
   );
 
@@ -31,7 +32,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // PUT /api/tag-colors — upsert tag color
 router.put('/', asyncHandler(async (req, res) => {
-  const { locationId, tag, color } = req.body;
+  const { locationId, tag, color, parentTag } = req.body;
 
   if (!locationId || !tag) {
     throw new ValidationError('locationId and tag are required');
@@ -39,12 +40,39 @@ router.put('/', asyncHandler(async (req, res) => {
 
   await requireMemberOrAbove(locationId, req.user!.id, 'manage tag colors');
 
-  if (color && !HEX_COLOR_REGEX.test(color)) {
-    throw new ValidationError('Color must be a valid hex color (e.g., #FF0000)');
+  if (color && !HEX_COLOR_REGEX.test(color) && !COLOR_KEY_REGEX.test(color)) {
+    throw new ValidationError('Color must be a valid hex color or color key');
   }
 
-  // If color is empty, remove the tag color
-  if (!color) {
+  const trimmedParent = parentTag?.trim().toLowerCase() || null;
+
+  // Validate parent hierarchy constraints
+  if (trimmedParent) {
+    if (trimmedParent === tag.trim().toLowerCase()) {
+      throw new ValidationError('A tag cannot be its own parent');
+    }
+    // Parent must not itself be a child (single-level hierarchy)
+    const parentEntry = await query<{ parent_tag: string | null }>(
+      'SELECT parent_tag FROM tag_colors WHERE location_id = $1 AND tag = $2',
+      [locationId, trimmedParent],
+    );
+    if (parentEntry.rows.length > 0 && parentEntry.rows[0].parent_tag) {
+      throw new ValidationError('Cannot set a child tag as parent (single-level hierarchy)');
+    }
+    // Tag must not already have children
+    const children = await query<{ tag: string }>(
+      'SELECT tag FROM tag_colors WHERE location_id = $1 AND parent_tag = $2',
+      [locationId, tag],
+    );
+    if (children.rows.length > 0) {
+      throw new ValidationError('Cannot set parent on a tag that already has children');
+    }
+  }
+
+  const effectiveColor = color || '';
+
+  // If color is empty and no parentTag, delete the entry
+  if (!effectiveColor && !trimmedParent) {
     await query(
       'DELETE FROM tag_colors WHERE location_id = $1 AND tag = $2',
       [locationId, tag]
@@ -55,11 +83,11 @@ router.put('/', asyncHandler(async (req, res) => {
 
   const newId = generateUuid();
   const result = await query(
-    `INSERT INTO tag_colors (id, location_id, tag, color)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (location_id, tag) DO UPDATE SET color = $4, updated_at = ${d.now()}
-     RETURNING id, location_id, tag, color, created_at, updated_at`,
-    [newId, locationId, tag, color]
+    `INSERT INTO tag_colors (id, location_id, tag, color, parent_tag)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (location_id, tag) DO UPDATE SET color = $4, parent_tag = $5, updated_at = ${d.now()}
+     RETURNING id, location_id, tag, color, parent_tag, created_at, updated_at`,
+    [newId, locationId, tag, effectiveColor, trimmedParent]
   );
 
   res.json(result.rows[0]);
