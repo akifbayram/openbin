@@ -26,7 +26,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
-import { cn, getErrorMessage } from '@/lib/utils';
+import { cn, getErrorMessage, relativeTime } from '@/lib/utils';
 import { capitalize, deleteUser, regenerateApiKey, sendPasswordReset, statusVariant, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
 
 function StatItem({ label, value }: { label: string; value: string | number }) {
@@ -53,18 +53,6 @@ function LimitStatItem({ label, used, limit, unit }: { label: string; used: numb
       </div>
     </div>
   );
-}
-
-function relativeTime(iso: string | null): string {
-  if (!iso) return '—';
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }
 
 export function AdminUserDetailPage() {

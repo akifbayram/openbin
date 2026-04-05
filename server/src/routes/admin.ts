@@ -12,7 +12,7 @@ import { firePasswordResetEmail } from '../lib/emailSender.js';
 import { ConflictError, ForbiddenError, HttpError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { createLogger } from '../lib/logger.js';
 import { notifyManagerUserUpdate } from '../lib/managerWebhook.js';
-import { getCloudMetrics } from '../lib/metrics.js';
+import { getCloudMetrics, getPlanBreakdown } from '../lib/metrics.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { getFeatureMap, invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
 import { metricsLimiter } from '../lib/rateLimiters.js';
@@ -123,6 +123,8 @@ router.get('/users', asyncHandler(async (req, res) => {
       apiKeyCount: u.api_key_count ?? 0,
       apiRequests7d: u.api_requests_7d ?? 0,
       binsCreated7d: u.bins_created_7d ?? 0,
+      binLimit: features.maxBins,
+      storageLimit: features.maxPhotoStorageMb,
     };
   });
 
@@ -508,7 +510,6 @@ router.get('/metrics/plan-breakdown', metricsLimiter, asyncHandler(async (_req, 
   if (config.selfHosted) {
     throw new NotFoundError('Metrics not available in self-hosted mode');
   }
-  const { getPlanBreakdown } = await import('../lib/metrics.js');
   const breakdown = await getPlanBreakdown();
   res.json(breakdown);
 }));

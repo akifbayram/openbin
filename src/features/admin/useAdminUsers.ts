@@ -24,6 +24,8 @@ export interface AdminUser {
   apiKeyCount: number;
   apiRequests7d: number;
   binsCreated7d: number;
+  binLimit: number | null;
+  storageLimit: number | null;
 }
 
 interface RegistrationInfo {

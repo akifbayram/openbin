@@ -63,12 +63,14 @@ const DELETED_CACHE_TTL = 60_000;
 
 // Debounce last_active_at writes to once per 5 minutes per user
 const LAST_ACTIVE_DEBOUNCE_MS = 5 * 60 * 1000;
+const LAST_ACTIVE_CACHE_MAX = 10_000;
 const lastActiveCache = new Map<string, number>();
 
 function maybeUpdateLastActive(userId: string): void {
   const now = Date.now();
   const lastWrite = lastActiveCache.get(userId);
   if (lastWrite && now - lastWrite < LAST_ACTIVE_DEBOUNCE_MS) return;
+  if (lastActiveCache.size >= LAST_ACTIVE_CACHE_MAX) lastActiveCache.clear();
   lastActiveCache.set(userId, now);
   query(`UPDATE users SET last_active_at = ${d.now()} WHERE id = $1`, [userId]).catch(() => {});
 }

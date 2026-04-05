@@ -262,34 +262,36 @@ export async function getPlanBreakdown(): Promise<PlanBreakdownResponse> {
 
   const demo = demoExclusion();
 
-  const result = await query<{
-    user_id: string; plan: number; sub_status: number;
-    bin_count: number; item_count: number; photo_count: number;
-    storage_bytes: number; location_count: number; ai_credits_used: number;
-    api_key_count: number; api_requests_7d: number; scans_30d: number;
-  }>(
-    `SELECT u.id as user_id, u.plan, u.sub_status,
-       (SELECT COUNT(*) FROM bins WHERE created_by = u.id AND deleted_at IS NULL) AS bin_count,
-       (SELECT COUNT(*) FROM bin_items bi JOIN bins b ON b.id = bi.bin_id WHERE b.created_by = u.id AND b.deleted_at IS NULL) AS item_count,
-       (SELECT COUNT(*) FROM photos WHERE created_by = u.id) AS photo_count,
-       (SELECT COALESCE(SUM(size), 0) FROM photos WHERE created_by = u.id) AS storage_bytes,
-       (SELECT COUNT(DISTINCT lm.location_id) FROM location_members lm WHERE lm.user_id = u.id) AS location_count,
-       u.ai_credits_used,
-       (SELECT COUNT(*) FROM api_keys WHERE user_id = u.id AND revoked_at IS NULL) AS api_key_count,
-       (SELECT COALESCE(SUM(request_count), 0) FROM api_key_daily_usage WHERE api_key_id IN (SELECT id FROM api_keys WHERE user_id = u.id) AND date >= ${d.dateOf(d.daysAgo(7))}) AS api_requests_7d,
-       (SELECT COUNT(*) FROM scan_history WHERE user_id = u.id AND scanned_at >= ${d.daysAgo(30)}) AS scans_30d
-     FROM users u
-     WHERE u.sub_status != ${SubStatus.INACTIVE} AND u.deleted_at IS NULL ${demo.clause}`,
-    demo.params,
-  );
+  const [result, memberAvgResult] = await Promise.all([
+    query<{
+      user_id: string; plan: number; sub_status: number;
+      bin_count: number; item_count: number; photo_count: number;
+      storage_bytes: number; location_count: number; ai_credits_used: number;
+      api_key_count: number; api_requests_7d: number; scans_30d: number;
+    }>(
+      `SELECT u.id as user_id, u.plan, u.sub_status,
+         (SELECT COUNT(*) FROM bins WHERE created_by = u.id AND deleted_at IS NULL) AS bin_count,
+         (SELECT COUNT(*) FROM bin_items bi JOIN bins b ON b.id = bi.bin_id WHERE b.created_by = u.id AND b.deleted_at IS NULL) AS item_count,
+         (SELECT COUNT(*) FROM photos WHERE created_by = u.id) AS photo_count,
+         (SELECT COALESCE(SUM(size), 0) FROM photos WHERE created_by = u.id) AS storage_bytes,
+         (SELECT COUNT(DISTINCT lm.location_id) FROM location_members lm WHERE lm.user_id = u.id) AS location_count,
+         u.ai_credits_used,
+         (SELECT COUNT(*) FROM api_keys WHERE user_id = u.id AND revoked_at IS NULL) AS api_key_count,
+         (SELECT COALESCE(SUM(request_count), 0) FROM api_key_daily_usage WHERE api_key_id IN (SELECT id FROM api_keys WHERE user_id = u.id) AND date >= ${d.dateOf(d.daysAgo(7))}) AS api_requests_7d,
+         (SELECT COUNT(*) FROM scan_history WHERE user_id = u.id AND scanned_at >= ${d.daysAgo(30)}) AS scans_30d
+       FROM users u
+       WHERE u.sub_status != ${SubStatus.INACTIVE} AND u.deleted_at IS NULL ${demo.clause}`,
+      demo.params,
+    ),
+    query<{ plan: number; avg_members: number }>(
+      `SELECT u.plan, AVG(cnt) as avg_members
+       FROM (SELECT l.created_by, lm.location_id, COUNT(*) as cnt FROM location_members lm JOIN locations l ON l.id = lm.location_id GROUP BY l.created_by, lm.location_id) sub
+       JOIN users u ON u.id = sub.created_by
+       WHERE u.sub_status != ${SubStatus.INACTIVE} AND u.deleted_at IS NULL
+       GROUP BY u.plan`,
+    ),
+  ]);
 
-  const memberAvgResult = await query<{ plan: number; avg_members: number }>(
-    `SELECT u.plan, AVG(cnt) as avg_members
-     FROM (SELECT l.created_by, lm.location_id, COUNT(*) as cnt FROM location_members lm JOIN locations l ON l.id = lm.location_id GROUP BY l.created_by, lm.location_id) sub
-     JOIN users u ON u.id = sub.created_by
-     WHERE u.sub_status != ${SubStatus.INACTIVE} AND u.deleted_at IS NULL
-     GROUP BY u.plan`,
-  );
   const memberAvgByPlan = new Map<number, number>();
   for (const row of memberAvgResult.rows) memberAvgByPlan.set(row.plan, row.avg_members);
 

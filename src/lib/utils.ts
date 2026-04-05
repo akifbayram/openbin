@@ -73,3 +73,19 @@ export const rowAction =
 /** Disclosure label for collapsible card sections (Photos, QR Code). */
 export const disclosureSectionLabel =
   'py-4 text-[var(--text-tertiary)] uppercase tracking-wider';
+
+/** Human-readable relative time string from an ISO timestamp (e.g. "5m ago", "3d ago"). */
+export function relativeTime(iso: string | null): string {
+  if (!iso) return '—';
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}
