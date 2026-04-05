@@ -75,8 +75,6 @@ export function BinDetailContent({
   const navigate = useNavigate();
   const getTagStyle = useTagStyle();
   const t = useTerminology();
-  const [tagEditing, setTagEditing] = useState(false);
-
   // Local state for appearance fields (optimistic — synced from bin prop)
   const [localIcon, setLocalIcon] = useState(bin.icon);
   const [localColor, setLocalColor] = useState(bin.color);
@@ -192,44 +190,13 @@ export function BinDetailContent({
             <div className={cn(autoSave.savedFields.has('tags') && 'animate-save-flash')}>
               <Label>Tags</Label>
               {canEdit ? (
-                tagEditing ? (
-                  <div className="mt-2">
-                    <TagInput
-                      tags={bin.tags}
-                      onChange={(tags) => {
-                        autoSave.saveTags(tags);
-                      }}
-                      suggestions={allTags}
-                    />
-                    <button
-                      type="button"
-                      className="mt-1.5 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-                      onClick={() => setTagEditing(false)}
-                    >
-                      Done
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2 mt-2.5">
-                    {bin.tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        style={getTagStyle(tag)}
-                        onClick={() => navigate(`/bins?tags=${encodeURIComponent(tag)}`)}
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                    <button
-                      type="button"
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[13px] font-medium text-[var(--text-quaternary)] border border-dashed border-[var(--border-flat)] hover:border-[var(--text-tertiary)] hover:text-[var(--text-tertiary)] transition-colors"
-                      onClick={() => setTagEditing(true)}
-                    >
-                      + Add tag
-                    </button>
-                  </div>
-                )
+                <div className="mt-2">
+                  <TagInput
+                    tags={bin.tags}
+                    onChange={(tags) => autoSave.saveTags(tags)}
+                    suggestions={allTags}
+                  />
+                </div>
               ) : (
                 hasTags ? (
                   <div className="flex flex-wrap gap-2 mt-2.5">

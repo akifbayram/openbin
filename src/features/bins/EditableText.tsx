@@ -1,5 +1,4 @@
-import { Pencil } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface EditableTextProps {
@@ -23,49 +22,23 @@ export function EditableText({
   saved = false,
   maxLength,
 }: EditableTextProps) {
-  const [editing, setEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value);
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const [localValue, setLocalValue] = useState(value);
+  const committedRef = useRef(value);
 
-  // Sync local value when prop changes (e.g. after server refetch)
+  // Sync from prop when server value changes
   const prevValue = useRef(value);
   if (value !== prevValue.current) {
     prevValue.current = value;
-    if (!editing) setEditValue(value);
+    setLocalValue(value);
+    committedRef.current = value;
   }
 
-  function startEdit() {
-    if (readOnly) return;
-    setEditValue(value);
-    setEditing(true);
-  }
-
-  useEffect(() => {
-    if (editing && inputRef.current) {
-      inputRef.current.focus();
-      if (!multiline && inputRef.current instanceof HTMLInputElement) {
-        inputRef.current.select();
-      }
-      if (multiline && inputRef.current instanceof HTMLTextAreaElement) {
-        const el = inputRef.current;
-        el.style.height = 'auto';
-        el.style.height = `${el.scrollHeight}px`;
-        el.selectionStart = el.selectionEnd = el.value.length;
-      }
-    }
-  }, [editing, multiline]);
-
-  function commitEdit() {
-    setEditing(false);
-    const trimmed = multiline ? editValue : editValue.trim();
-    if (trimmed !== value) {
+  function handleBlur() {
+    const trimmed = multiline ? localValue : localValue.trim();
+    if (trimmed !== committedRef.current) {
+      committedRef.current = trimmed;
       onSave(trimmed);
     }
-  }
-
-  function cancelEdit() {
-    setEditValue(value);
-    setEditing(false);
   }
 
   const textStyles = cn(
@@ -73,84 +46,49 @@ export function EditableText({
     className,
   );
 
-  if (editing) {
-    const Tag = multiline ? 'textarea' : 'input';
-    return (
-      <div className={cn('rounded-[var(--radius-sm)] bg-[var(--bg-input)] p-1.5 -m-1.5', saved && 'animate-save-flash')}>
-        <Tag
-          ref={inputRef as React.RefObject<HTMLInputElement & HTMLTextAreaElement>}
-          value={editValue}
-          onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            setEditValue(e.target.value);
-            if (multiline && e.target instanceof HTMLTextAreaElement) {
-              e.target.style.height = 'auto';
-              e.target.style.height = `${e.target.scrollHeight}px`;
-            }
-          }}
-          onBlur={commitEdit}
-          onKeyDown={(e: React.KeyboardEvent) => {
-            if (e.key === 'Escape') {
-              e.preventDefault();
-              cancelEdit();
-            }
-            if (!multiline && e.key === 'Enter') {
-              e.preventDefault();
-              commitEdit();
-            }
-          }}
-          maxLength={maxLength}
-          className={cn(
-            textStyles,
-            'w-full bg-transparent outline-none resize-none',
-            multiline && '[field-sizing:content] min-h-[1.5em]',
-          )}
-          {...(multiline ? { rows: 1 } : {})}
-        />
-      </div>
-    );
-  }
-
-  const hasValue = value.trim().length > 0;
-
   if (readOnly) {
-    return (
-      <div className={cn('rounded-[var(--radius-sm)] p-1.5 -m-1.5')}>
-        <div className="relative">
-          {multiline ? (
-            <p className={cn(textStyles, 'whitespace-pre-wrap', !hasValue && 'text-[var(--text-quaternary)]')}>
-              {hasValue ? value : placeholder}
-            </p>
-          ) : (
-            <span className={cn(textStyles, !hasValue && 'text-[var(--text-quaternary)]')}>
-              {hasValue ? value : placeholder}
-            </span>
-          )}
-        </div>
-      </div>
+    const hasValue = value.trim().length > 0;
+    return multiline ? (
+      <p className={cn(textStyles, 'whitespace-pre-wrap', !hasValue && 'text-[var(--text-quaternary)]')}>
+        {hasValue ? value : placeholder}
+      </p>
+    ) : (
+      <span className={cn(textStyles, !hasValue && 'text-[var(--text-quaternary)]')}>
+        {hasValue ? value : placeholder}
+      </span>
     );
   }
+
+  const Tag = multiline ? 'textarea' : 'input';
 
   return (
-    <button
-      type="button"
-      className={cn(
-        'group/editable block w-full text-left rounded-[var(--radius-sm)] p-1.5 -m-1.5 transition-colors duration-150 cursor-text hover:bg-[var(--bg-hover)]',
-        saved && 'animate-save-flash',
-      )}
-      onClick={startEdit}
-    >
-      <div className="relative">
-        {multiline ? (
-          <p className={cn(textStyles, 'whitespace-pre-wrap', !hasValue && 'text-[var(--text-quaternary)]')}>
-            {hasValue ? value : placeholder}
-          </p>
-        ) : (
-          <span className={cn(textStyles, !hasValue && 'text-[var(--text-quaternary)]')}>
-            {hasValue ? value : placeholder}
-          </span>
+    <div className={cn(saved && 'animate-save-flash')}>
+      <Tag
+        value={localValue}
+        onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+          setLocalValue(e.target.value);
+        }}
+        onBlur={handleBlur}
+        onKeyDown={(e: React.KeyboardEvent) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            setLocalValue(committedRef.current);
+            (e.target as HTMLElement).blur();
+          }
+          if (!multiline && e.key === 'Enter') {
+            e.preventDefault();
+            (e.target as HTMLElement).blur();
+          }
+        }}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        className={cn(
+          textStyles,
+          'w-full bg-transparent outline-none resize-none placeholder:text-[var(--text-quaternary)]',
+          multiline && '[field-sizing:content] min-h-[1.5em]',
         )}
-        <Pencil className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-quaternary)] opacity-0 group-hover/editable:opacity-100 transition-opacity duration-150" />
-      </div>
-    </button>
+        {...(multiline ? { rows: 1 } : {})}
+      />
+    </div>
   );
 }
