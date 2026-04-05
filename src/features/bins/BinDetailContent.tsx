@@ -334,24 +334,49 @@ export function BinDetailContent({
           </Card>
         )}
 
-        {/* Visibility */}
-        {canChangeVisibility && (
-          <Card>
-            <CardContent className={cn('space-y-2 pt-3 pb-4', autoSave.savedFields.has('visibility') && 'animate-save-flash')}>
-              <Label>Visibility</Label>
-              <VisibilityPicker
-                value={bin.visibility}
-                onChange={(v) => autoSave.saveVisibility(v)}
-              />
-            </CardContent>
-          </Card>
-        )}
+        {/* Information: visibility, created by, dates */}
+        <Card>
+          <CardContent className="space-y-4 pt-3 pb-4">
+            <Label>Information</Label>
+            {canChangeVisibility && (
+              <div className={cn(autoSave.savedFields.has('visibility') && 'animate-save-flash')}>
+                <p className="text-[13px] text-[var(--text-tertiary)] mb-1.5">Visibility</p>
+                <VisibilityPicker
+                  value={bin.visibility}
+                  onChange={(v) => autoSave.saveVisibility(v)}
+                />
+              </div>
+            )}
+            {bin.created_by_name && (
+              <div>
+                <p className="text-[13px] text-[var(--text-tertiary)]">Created by</p>
+                <p className="mt-0.5 text-[15px] text-[var(--text-primary)]">
+                  {bin.created_by_name}
+                </p>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-[13px] text-[var(--text-tertiary)]">Created</p>
+                <p className="mt-0.5 text-[15px] text-[var(--text-primary)]">
+                  {formatDate(bin.created_at)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[13px] text-[var(--text-tertiary)]">Updated</p>
+                <p className="mt-0.5 text-[15px] text-[var(--text-primary)]">
+                  {formatDate(bin.updated_at)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* QR Code & Info */}
+        {/* QR Code */}
         <Card data-tour="qr-section">
           <CardContent className="!py-0">
             <Disclosure
-              label="QR Code & Info"
+              label="QR Code"
               labelClassName={disclosureSectionLabel}
               defaultOpen={localStorage.getItem('openbin-qr-expanded') === 'true'}
               onOpenChange={(v) => localStorage.setItem('openbin-qr-expanded', String(v))}
@@ -361,34 +386,10 @@ export function BinDetailContent({
                   <QRCodeDisplay binId={bin.id} size={160} />
                 </div>
                 <div className="border-t border-[var(--border-subtle)] pt-4">
-                  <div className="mb-4">
-                    <Label>Code</Label>
-                    <p className="mt-1.5 text-[15px] font-mono tracking-widest text-[var(--text-primary)]">
-                      {bin.short_code}
-                    </p>
-                  </div>
-                  {bin.created_by_name && (
-                    <div className="mb-4">
-                      <Label>Created by</Label>
-                      <p className="mt-1.5 text-[13px] text-[var(--text-secondary)]">
-                        {bin.created_by_name}
-                      </p>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <Label>Created</Label>
-                      <p className="mt-1.5 text-[13px] text-[var(--text-secondary)]">
-                        {formatDate(bin.created_at)}
-                      </p>
-                    </div>
-                    <div>
-                      <Label>Updated</Label>
-                      <p className="mt-1.5 text-[13px] text-[var(--text-secondary)]">
-                        {formatDate(bin.updated_at)}
-                      </p>
-                    </div>
-                  </div>
+                  <Label>Code</Label>
+                  <p className="mt-1.5 text-[15px] font-mono tracking-widest text-[var(--text-primary)]">
+                    {bin.short_code}
+                  </p>
                 </div>
               </div>
             </Disclosure>
