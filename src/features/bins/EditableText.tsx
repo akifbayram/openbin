@@ -84,7 +84,7 @@ export function EditableText({
         maxLength={maxLength}
         className={cn(
           textStyles,
-          'w-full bg-transparent outline-none resize-none placeholder:text-[var(--text-quaternary)]',
+          'w-full bg-transparent outline-none focus-visible:border-b focus-visible:border-b-[var(--accent)] resize-none placeholder:text-[var(--text-quaternary)]',
           multiline && '[field-sizing:content] min-h-[1.5em]',
         )}
         {...(multiline ? { rows: 1 } : {})}

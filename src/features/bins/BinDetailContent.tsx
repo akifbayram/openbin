@@ -145,79 +145,107 @@ export function BinDetailContent({
       <div className="lg:sticky lg:top-6 flex flex-col gap-4">
         {/* Notes card */}
         <Card>
-          <CardContent className={cn('space-y-2 pt-3 pb-4', autoSave.savedFields.has('notes') && 'animate-save-flash')}>
-            <Label htmlFor="detail-notes">Notes</Label>
-            {canEdit ? (
-              <Textarea
-                id="detail-notes"
-                value={localNotes}
-                onChange={(e) => setLocalNotes(e.target.value)}
-                onBlur={() => autoSave.saveNotes(localNotes)}
-                maxLength={10000}
-                rows={3}
-                className="[field-sizing:content] min-h-[5rem]"
-                placeholder="Add notes..."
-              />
-            ) : (
-              bin.notes ? (
-                <p className="text-[15px] text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
-                  {bin.notes}
-                </p>
-              ) : (
-                <p className="text-[15px] text-[var(--text-quaternary)]">No notes</p>
-              )
-            )}
+          <CardContent className="!py-0">
+            <Disclosure
+              label="Notes"
+              labelClassName={disclosureSectionLabel}
+              defaultOpen={localStorage.getItem('openbin-notes-expanded') !== 'false'}
+              onOpenChange={(v) => localStorage.setItem('openbin-notes-expanded', String(v))}
+            >
+              <div className={cn('pb-4', autoSave.savedFields.has('notes') && 'animate-save-flash')}>
+                {canEdit ? (
+                  <Textarea
+                    id="detail-notes"
+                    value={localNotes}
+                    onChange={(e) => setLocalNotes(e.target.value)}
+                    onBlur={() => autoSave.saveNotes(localNotes)}
+                    maxLength={10000}
+                    rows={3}
+                    className="[field-sizing:content] min-h-[5rem]"
+                    placeholder="Add notes..."
+                  />
+                ) : (
+                  bin.notes ? (
+                    <p className="text-[15px] text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
+                      {bin.notes}
+                    </p>
+                  ) : (
+                    <p className="text-[15px] text-[var(--text-quaternary)]">No notes</p>
+                  )
+                )}
+              </div>
+            </Disclosure>
           </CardContent>
         </Card>
 
-        {/* Organization: Area + Tags */}
+        {/* Organization: Area + Tags + Visibility */}
         <Card>
-          <CardContent className="space-y-4 pt-3 pb-4">
-            <div className={cn(autoSave.savedFields.has('areaId') && 'animate-save-flash')}>
-              <Label>{t.Area}</Label>
-              {canEdit ? (
-                <div className="mt-1.5">
-                  <AreaPicker
-                    locationId={activeLocationId}
-                    value={bin.area_id}
-                    onChange={(areaId) => autoSave.saveAreaId(areaId)}
-                  />
+          <CardContent className="!py-0">
+            <Disclosure
+              label="Organization"
+              labelClassName={disclosureSectionLabel}
+              defaultOpen={localStorage.getItem('openbin-organization-expanded') !== 'false'}
+              onOpenChange={(v) => localStorage.setItem('openbin-organization-expanded', String(v))}
+            >
+              <div className="pb-4 space-y-4">
+                <div className={cn(autoSave.savedFields.has('areaId') && 'animate-save-flash')}>
+                  <Label>{t.Area}</Label>
+                  {canEdit ? (
+                    <div className="mt-1.5">
+                      <AreaPicker
+                        locationId={activeLocationId}
+                        value={bin.area_id}
+                        onChange={(areaId) => autoSave.saveAreaId(areaId)}
+                      />
+                    </div>
+                  ) : (
+                    <p className="mt-1.5 text-[15px] text-[var(--text-primary)]">
+                      {areaName || <span className="text-[var(--text-quaternary)]">No area</span>}
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <p className="mt-1.5 text-[15px] text-[var(--text-primary)]">
-                  {areaName || <span className="text-[var(--text-quaternary)]">No area</span>}
-                </p>
-              )}
-            </div>
-            <div className={cn(autoSave.savedFields.has('tags') && 'animate-save-flash')}>
-              <Label>Tags</Label>
-              {canEdit ? (
-                <div className="mt-2">
-                  <TagInput
-                    tags={bin.tags}
-                    onChange={(tags) => autoSave.saveTags(tags)}
-                    suggestions={allTags}
-                  />
+                <div className={cn(autoSave.savedFields.has('tags') && 'animate-save-flash')}>
+                  <Label>Tags</Label>
+                  {canEdit ? (
+                    <div className="mt-2">
+                      <TagInput
+                        tags={bin.tags}
+                        onChange={(tags) => autoSave.saveTags(tags)}
+                        suggestions={allTags}
+                      />
+                    </div>
+                  ) : (
+                    hasTags ? (
+                      <div className="flex flex-wrap gap-2 mt-2.5">
+                        {bin.tags.map((tag) => (
+                          <Badge
+                            key={tag}
+                            variant="secondary"
+                            style={getTagStyle(tag)}
+                            onClick={() => navigate(`/bins?tags=${encodeURIComponent(tag)}`)}
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-1.5 text-[15px] text-[var(--text-quaternary)]">No tags</p>
+                    )
+                  )}
                 </div>
-              ) : (
-                hasTags ? (
-                  <div className="flex flex-wrap gap-2 mt-2.5">
-                    {bin.tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        style={getTagStyle(tag)}
-                        onClick={() => navigate(`/bins?tags=${encodeURIComponent(tag)}`)}
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
+                {canChangeVisibility && (
+                  <div className={cn(autoSave.savedFields.has('visibility') && 'animate-save-flash')}>
+                    <Label>Visibility</Label>
+                    <div className="mt-1.5">
+                      <VisibilityPicker
+                        value={bin.visibility}
+                        onChange={(v) => autoSave.saveVisibility(v)}
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <p className="mt-1.5 text-[15px] text-[var(--text-quaternary)]">No tags</p>
-                )
-              )}
-            </div>
+                )}
+              </div>
+            </Disclosure>
           </CardContent>
         </Card>
 
@@ -303,7 +331,7 @@ export function BinDetailContent({
           </Card>
         )}
 
-        {/* Information: visibility, created by, dates */}
+        {/* Information: created by, dates */}
         <Card>
           <CardContent className="!py-0">
             <Disclosure
@@ -313,15 +341,6 @@ export function BinDetailContent({
               onOpenChange={(v) => localStorage.setItem('openbin-info-expanded', String(v))}
             >
               <div className="pb-4 space-y-4">
-                {canChangeVisibility && (
-                  <div className={cn(autoSave.savedFields.has('visibility') && 'animate-save-flash')}>
-                    <p className="text-[13px] text-[var(--text-tertiary)] mb-1.5">Visibility</p>
-                    <VisibilityPicker
-                      value={bin.visibility}
-                      onChange={(v) => autoSave.saveVisibility(v)}
-                    />
-                  </div>
-                )}
                 {bin.created_by_name && (
                   <div>
                     <p className="text-[13px] text-[var(--text-tertiary)]">Created by</p>

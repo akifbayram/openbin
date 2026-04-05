@@ -62,6 +62,11 @@ export function BinDetailSkeleton() {
             <Skeleton className="h-4 w-24" />
           </div>
 
+          {/* Information disclosure (collapsed) */}
+          <div className="flat-card rounded-[var(--radius-lg)] px-4 py-4">
+            <Skeleton className="h-4 w-24" />
+          </div>
+
           {/* QR Code disclosure (collapsed) */}
           <div className="flat-card rounded-[var(--radius-lg)] px-4 py-4">
             <Skeleton className="h-4 w-28" />

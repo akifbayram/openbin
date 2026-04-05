@@ -18,7 +18,7 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { activeLocationId } = useAuth();
-  const { isAdmin, canWrite, canEditBin, canChangeVisibility, canPin, canEditItems } = usePermissions();
+  const { isAdmin, canWrite, canChangeVisibility, canPin } = usePermissions();
   const { aiEnabled, aiGated } = useAiEnabled();
   const t = useTerminology();
 
@@ -155,11 +155,8 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
 
   const canEdit = bin ? canWrite : false;
   const canDelete = isAdmin;
-  const canEditMeta = bin ? canEditBin(bin.created_by) : false;
   const showAiButton = (aiEnabled || aiGated) && photos.length > 0;
   const isReanalysis = !!(lastSuggestions || (bin && (bin.name || bin.items.length > 0 || bin.tags.length > 0)));
-  const hasNotes = !!bin?.notes;
-  const hasTags = (bin?.tags.length ?? 0) > 0;
 
   return {
     // Actions
@@ -178,19 +175,14 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     lastSuggestions,
     // Data
     photos,
-    aiSettings,
     otherLocations,
     quickAdd,
     // Flags
     canEdit,
-    canEditMeta,
-    canEditItems,
     canDelete,
     canPin,
     canChangeVisibility,
     showAiButton,
-    hasNotes,
-    hasTags,
     aiEnabled,
     aiGated,
     activeLocationId,

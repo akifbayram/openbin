@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { ChevronDown, Plus, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,8 @@ import { useDialogPortal } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { cn } from '@/lib/utils';
+
+const dropdownRow = 'flex w-full items-center gap-2.5 px-3 py-1.5 text-sm transition-colors cursor-pointer text-left';
 
 interface TagInputProps {
   tags: string[];
@@ -24,22 +26,25 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const getTagStyle = useTagStyle();
   const [exitingTags, setExitingTags] = useState<Set<string>>(new Set());
-  const knownTagsRef = useRef<Set<string>>(new Set(tags));
-  const newTags = new Set<string>();
-  for (const tag of tags) {
-    if (!knownTagsRef.current.has(tag)) newTags.add(tag);
-  }
-  useEffect(() => {
-    knownTagsRef.current = new Set(tags);
-  }, [tags]);
 
-  const filtered = useMemo(() => {
-    const available = suggestions.filter((s) => !tags.includes(s));
-    if (!input.trim()) return available;
-    return available.filter((s) => s.includes(input.trim().toLowerCase()));
-  }, [suggestions, tags, input]);
+  const trimmedInput = input.trim().toLowerCase();
 
-  const visible = showSuggestions && filtered.length > 0;
+  const available = useMemo(
+    () => suggestions.filter((s) => !tags.includes(s)),
+    [suggestions, tags],
+  );
+
+  const filtered = useMemo(
+    () => !trimmedInput ? available : available.filter((s) => s.includes(trimmedInput)),
+    [available, trimmedInput],
+  );
+
+  const showCreate = trimmedInput.length > 0
+    && !tags.includes(trimmedInput)
+    && !suggestions.includes(trimmedInput);
+
+  const itemCount = filtered.length + (showCreate ? 1 : 0);
+  const visible = showSuggestions && itemCount > 0;
 
   function addTag(tag: string) {
     const t = tag.trim().toLowerCase();
@@ -56,17 +61,21 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
     if (visible) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlightIndex((i) => (i + 1) % filtered.length);
+        setHighlightIndex((i) => (i + 1) % itemCount);
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setHighlightIndex((i) => (i <= 0 ? filtered.length - 1 : i - 1));
+        setHighlightIndex((i) => (i <= 0 ? itemCount - 1 : i - 1));
         return;
       }
       if (e.key === 'Enter' && highlightIndex >= 0) {
         e.preventDefault();
-        addTag(filtered[highlightIndex]);
+        if (highlightIndex < filtered.length) {
+          addTag(filtered[highlightIndex]);
+        } else if (showCreate) {
+          addTag(trimmedInput);
+        }
         return;
       }
       if (e.key === 'Escape') {
@@ -84,10 +93,14 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
     }
   }
 
+  const rafRef = useRef(0);
   const reposition = useCallback(() => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    });
   }, []);
 
   // Scroll highlighted item into view
@@ -98,7 +111,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
     }
   }, [highlightIndex]);
 
-  // Reposition and close on outside click
+  // Reposition on show, scroll, resize; close on outside click
   useEffect(() => {
     if (!showSuggestions) return;
     reposition();
@@ -110,8 +123,14 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
         setShowSuggestions(false);
       }
     }
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    return () => {
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+      document.removeEventListener('mousedown', handleClick);
+    };
   }, [showSuggestions, reposition]);
 
   function removeTag(tag: string) {
@@ -124,7 +143,7 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
 
   return (
     <div ref={containerRef} className="relative">
-      <div className="flex flex-wrap gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] p-2.5 transition-shadow duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)]">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] p-2.5 transition-shadow duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)]">
         {tags.map((tag) => (
           <Badge
             key={tag}
@@ -152,10 +171,28 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
           }}
           onKeyDown={handleKeyDown}
           onFocus={() => setShowSuggestions(true)}
-          placeholder={tags.length === 0 ? 'Add tags...' : ''}
+          placeholder={tags.length === 0 ? 'Search or create tags...' : ''}
           maxLength={100}
           className="h-6 min-w-[80px] flex-1 border-0 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0 focus-visible:shadow-none"
         />
+        {available.length > 0 && (
+          <button
+            type="button"
+            tabIndex={-1}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              if (showSuggestions) {
+                setShowSuggestions(false);
+              } else {
+                setShowSuggestions(true);
+                inputRef.current?.focus();
+              }
+            }}
+            className="ml-auto flex-shrink-0 rounded-[var(--radius-xs)] p-0.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+          >
+            <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', showSuggestions && visible && 'rotate-180')} />
+          </button>
+        )}
       </div>
       {visible && pos && createPortal(
         <div
@@ -163,20 +200,10 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
           className="fixed z-[100] rounded-[var(--radius-md)] flat-popover overflow-hidden"
           style={{ top: pos.top, left: pos.left, width: pos.width }}
         >
-          <div className="max-h-48 overflow-auto p-2 flex flex-wrap gap-1.5">
+          <div className="max-h-48 overflow-auto py-1">
             {filtered.map((tag, i) => {
-              const baseStyle = getTagStyle(tag);
+              const tagStyle = getTagStyle(tag);
               const isHighlighted = i === highlightIndex;
-              const style: React.CSSProperties = baseStyle
-                ? {
-                    ...baseStyle,
-                    ...(isHighlighted ? { outline: '2px solid var(--accent)', outlineOffset: '1px' } : {}),
-                  }
-                : {
-                    ...(isHighlighted
-                      ? { backgroundColor: 'var(--accent)', color: 'var(--text-on-accent)' }
-                      : {}),
-                  };
               return (
                 <button
                   key={tag}
@@ -187,15 +214,48 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
                     addTag(tag);
                   }}
                   className={cn(
-                    'inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-0.5 text-[12px] font-medium transition-colors cursor-pointer',
-                    !baseStyle && !isHighlighted && 'bg-[var(--bg-input)] text-[var(--text-secondary)] hover:bg-[var(--bg-active)]',
+                    dropdownRow,
+                    isHighlighted
+                      ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
                   )}
-                  style={style}
                 >
-                  {tag}
+                  {tagStyle ? (
+                    <span
+                      className="h-3 w-3 flex-shrink-0 rounded-full"
+                      style={{ backgroundColor: tagStyle.backgroundColor as string }}
+                    />
+                  ) : (
+                    <span className="h-3 w-3 flex-shrink-0 rounded-full bg-[var(--text-tertiary)] opacity-30" />
+                  )}
+                  <span>{tag}</span>
                 </button>
               );
             })}
+            {showCreate && (
+              <>
+                {filtered.length > 0 && (
+                  <div className="mx-3 my-1 border-t border-[var(--border-subtle)]" />
+                )}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addTag(trimmedInput);
+                  }}
+                  className={cn(
+                    dropdownRow,
+                    highlightIndex === filtered.length
+                      ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
+                  )}
+                >
+                  <Plus className="h-3.5 w-3.5 flex-shrink-0 text-[var(--accent)]" />
+                  <span>Create <span className="font-medium text-[var(--text-primary)]">{trimmedInput}</span></span>
+                </button>
+              </>
+            )}
           </div>
         </div>,
         dialogPortal ?? document.body,

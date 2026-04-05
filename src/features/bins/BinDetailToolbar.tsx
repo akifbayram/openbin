@@ -96,6 +96,8 @@ export function BinDetailToolbar({
     }
   }
 
+  const menuItemBase = 'w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150';
+
   function handleItem(action: () => void) {
     close();
     action();
@@ -130,7 +132,7 @@ export function BinDetailToolbar({
               if (e.key === 'Enter') { e.preventDefault(); commitName(); }
               if (e.key === 'Escape') { e.preventDefault(); setNameValue(bin.name); setEditingName(false); }
             }}
-            className="w-full bg-transparent text-[17px] font-semibold text-[var(--text-primary)] leading-tight border-b border-b-[var(--accent)] outline-none placeholder:text-[var(--text-tertiary)] p-0"
+            className="w-full bg-transparent text-[17px] font-semibold text-[var(--text-primary)] leading-tight border-b border-b-[var(--accent)] outline-none focus-visible:border-b-2 placeholder:text-[var(--text-tertiary)] p-0"
             placeholder="Name..."
           />
         ) : (
@@ -192,42 +194,42 @@ export function BinDetailToolbar({
             >
               {/* Mobile-only: AI, Pin */}
               {showAiButton && (
-                <button type="button" className="lg:hidden w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150 disabled:opacity-40" onClick={() => handleItem(onAnalyze)} disabled={isAnalyzing}>
+                <button type="button" role="menuitem" className={cn(menuItemBase, 'lg:hidden disabled:opacity-40')} onClick={() => handleItem(onAnalyze)} disabled={isAnalyzing}>
                   {isAnalyzing ? <Loader2 className="h-4 w-4 text-[var(--text-tertiary)] animate-spin" /> : <Sparkles className="h-4 w-4 text-[var(--text-tertiary)]" />}
                   {isReanalysis ? 'Reanalyze with AI' : 'Analyze with AI'}
                 </button>
               )}
               {canPin && (
-                <button type="button" className="lg:hidden w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150" onClick={() => handleItem(onTogglePin)}>
+                <button type="button" role="menuitem" className={cn(menuItemBase, 'lg:hidden')} onClick={() => handleItem(onTogglePin)}>
                   <Pin className="h-4 w-4 text-[var(--text-tertiary)]" fill={bin.is_pinned ? 'currentColor' : 'none'} />
                   {bin.is_pinned ? 'Unpin' : 'Pin'}
                 </button>
               )}
               {(showAiButton || canPin) && <div className="lg:hidden my-1 border-t border-[var(--border-flat)]" />}
               {canEdit && (
-                <button type="button" className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150" onClick={() => handleItem(onDuplicate)}>
+                <button type="button" role="menuitem" className={menuItemBase} onClick={() => handleItem(onDuplicate)}>
                   <Copy className="h-4 w-4 text-[var(--text-tertiary)]" />
                   Duplicate
                 </button>
               )}
-              <button type="button" className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150" onClick={() => handleItem(onPrint)}>
+              <button type="button" role="menuitem" className={menuItemBase} onClick={() => handleItem(onPrint)}>
                 <Printer className="h-4 w-4 text-[var(--text-tertiary)]" />
                 Print Label
               </button>
               {canEdit && otherLocations.length > 0 && (
-                <button type="button" className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150" onClick={() => handleItem(onMove)}>
+                <button type="button" role="menuitem" className={menuItemBase} onClick={() => handleItem(onMove)}>
                   <ArrowRightLeft className="h-4 w-4 text-[var(--text-tertiary)]" />
                   Move
                 </button>
               )}
               {isAdmin && (
-                <button type="button" className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150" onClick={() => handleItem(onChangeCode)}>
+                <button type="button" role="menuitem" className={menuItemBase} onClick={() => handleItem(onChangeCode)}>
                   <QrCode className="h-4 w-4 text-[var(--text-tertiary)]" />
                   Change Code
                 </button>
               )}
               {showShareButton && onShare && (
-                <button type="button" className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors duration-150" onClick={() => handleItem(onShare)}>
+                <button type="button" role="menuitem" className={menuItemBase} onClick={() => handleItem(onShare)}>
                   <Share2 className="h-4 w-4 text-[var(--text-tertiary)]" />
                   Share
                 </button>
@@ -235,7 +237,7 @@ export function BinDetailToolbar({
               {canDelete && (
                 <>
                   <div className="my-1 border-t border-[var(--border-flat)]" />
-                  <button type="button" className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[14px] text-[var(--destructive)] hover:bg-[var(--bg-hover)] transition-colors duration-150" onClick={() => handleItem(onDelete)}>
+                  <button type="button" role="menuitem" className={cn(menuItemBase, 'text-[var(--destructive)]')} onClick={() => handleItem(onDelete)}>
                     <Trash2 className="h-4 w-4" />
                     Delete
                   </button>
