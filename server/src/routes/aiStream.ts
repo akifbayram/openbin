@@ -1,3 +1,4 @@
+import type { RequestHandler } from 'express';
 import { Router } from 'express';
 import { createPinnedFetch, validateEndpointUrl } from '../lib/aiCaller.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
@@ -9,12 +10,15 @@ import { QueryResultSchema } from '../lib/aiSchemas.js';
 import type { TaskType, UserAiSettings } from '../lib/aiSettings.js';
 import { getConfigForTask, getUserAiSettings } from '../lib/aiSettings.js';
 import { initSseResponse, pipeAiStreamToResponse } from '../lib/aiStream.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg, buildUnifiedSystemPrompt } from '../lib/commandParser.js';
 import { config, isDemoUser } from '../lib/config.js';
 import { fetchCustomFieldDefs } from '../lib/customFieldHelpers.js';
+import { PlanRestrictedError } from '../lib/httpErrors.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
+import { checkAndIncrementAiCredits, generateUpgradeUrl, getUserPlanInfo } from '../lib/planGate.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
 import { createSdkModel } from '../lib/sdkProviderFactory.js';
 import { buildPrompt as buildStructurePrompt, STRUCTURE_TEXT_TOKENS } from '../lib/structureText.js';
@@ -26,6 +30,19 @@ import { requirePro } from '../middleware/requirePlan.js';
 
 const streamRouter = Router();
 streamRouter.use(authenticate);
+
+const checkAiCredits: RequestHandler = asyncHandler(async (req, _res, next) => {
+  const result = await checkAndIncrementAiCredits(req.user!.id);
+  if (!result.allowed) {
+    const planInfo = await getUserPlanInfo(req.user!.id);
+    const upgradeUrl = planInfo ? await generateUpgradeUrl(req.user!.id, planInfo.email) : null;
+    throw new PlanRestrictedError(
+      `You've used all ${result.limit} AI credits included in your trial. Upgrade to Pro for unlimited AI.`,
+      upgradeUrl,
+    );
+  }
+  next();
+});
 
 /** Fetch existing tags and custom field definitions for a location (used by analysis/correction routes). */
 async function fetchLocationAiMeta(locationId: string | undefined) {
@@ -82,7 +99,7 @@ function validateBinIds(binIds: unknown): string[] | undefined {
 }
 
 // POST /api/ai/query/stream
-streamRouter.post('/query/stream', aiLimiter, requirePro(), requireLocationMember(), aiRouteHandler('stream query', async (req, res) => {
+streamRouter.post('/query/stream', aiLimiter, requirePro(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream query', async (req, res) => {
   const question = validateTextInput(req.body.question, 'question');
   const { locationId } = req.body;
   const [{ settings, model }, context] = await Promise.all([
@@ -99,7 +116,7 @@ streamRouter.post('/query/stream', aiLimiter, requirePro(), requireLocationMembe
 }));
 
 // POST /api/ai/command/stream
-streamRouter.post('/command/stream', aiLimiter, requirePro(), requireLocationMember(), aiRouteHandler('stream command', async (req, res) => {
+streamRouter.post('/command/stream', aiLimiter, requirePro(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream command', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { locationId } = req.body;
   const [{ settings, model }, context] = await Promise.all([
@@ -119,7 +136,7 @@ streamRouter.post('/command/stream', aiLimiter, requirePro(), requireLocationMem
 }));
 
 // POST /api/ai/ask/stream — unified command+query endpoint
-streamRouter.post('/ask/stream', aiLimiter, requirePro(), requireLocationMember(), aiRouteHandler('stream ask', async (req, res) => {
+streamRouter.post('/ask/stream', aiLimiter, requirePro(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream ask', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { locationId, binIds: rawBinIds } = req.body;
   const binIds = validateBinIds(rawBinIds);
@@ -145,7 +162,7 @@ streamRouter.post('/ask/stream', aiLimiter, requirePro(), requireLocationMember(
 }));
 
 // POST /api/ai/structure-text/stream
-streamRouter.post('/structure-text/stream', aiLimiter, requirePro(), aiRouteHandler('stream structure-text', async (req, res) => {
+streamRouter.post('/structure-text/stream', aiLimiter, requirePro(), checkAiCredits, aiRouteHandler('stream structure-text', async (req, res) => {
   const text = validateTextInput(req.body.text, 'text');
   const { context } = req.body;
   const { settings, model } = await resolveUserModel(req.user!.id, 'structure', isDemoUser(req));
@@ -181,7 +198,7 @@ function demoAwareAnalyzeUpload(req: import('express').Request, res: import('exp
 }
 
 // POST /api/ai/analyze-image/stream
-streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnalyzeUpload, aiLimiter, requirePro(), aiRouteHandler('stream analyze image', async (req, res) => {
+streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnalyzeUpload, aiLimiter, requirePro(), checkAiCredits, aiRouteHandler('stream analyze image', async (req, res) => {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
   const allFiles = [
     ...(files?.photo || []),
@@ -219,7 +236,7 @@ streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnaly
 }));
 
 // POST /api/ai/analyze/stream — stream analysis of stored photos
-streamRouter.post('/analyze/stream', aiLimiter, requirePro(), aiRouteHandler('stream analyze photo', async (req, res) => {
+streamRouter.post('/analyze/stream', aiLimiter, requirePro(), checkAiCredits, aiRouteHandler('stream analyze photo', async (req, res) => {
   const { photoId, photoIds } = req.body;
 
   let ids: string[] = [];
@@ -259,7 +276,7 @@ streamRouter.post('/analyze/stream', aiLimiter, requirePro(), aiRouteHandler('st
 }));
 
 // POST /api/ai/correct/stream — correct a previous analysis result
-streamRouter.post('/correct/stream', aiLimiter, requirePro(), aiRouteHandler('stream correction', async (req, res) => {
+streamRouter.post('/correct/stream', aiLimiter, requirePro(), checkAiCredits, aiRouteHandler('stream correction', async (req, res) => {
   const { previousResult: rawPrev, correction, locationId } = req.body;
 
   const validatedPrev = validatePreviousResult(rawPrev);
@@ -345,7 +362,7 @@ function sanitizePreviousResult(previousResult: Record<string, unknown>) {
 }
 
 // POST /api/ai/reanalyze/stream — reanalyze stored photos with previous result context
-streamRouter.post('/reanalyze/stream', aiLimiter, requirePro(), aiRouteHandler('stream reanalyze photo', async (req, res) => {
+streamRouter.post('/reanalyze/stream', aiLimiter, requirePro(), checkAiCredits, aiRouteHandler('stream reanalyze photo', async (req, res) => {
   const { photoIds, previousResult: rawPrev } = req.body;
 
   const previousResult = validatePreviousResult(rawPrev);
@@ -448,7 +465,7 @@ streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
 }));
 
 // POST /api/ai/reorganize/stream
-streamRouter.post('/reorganize/stream', aiLimiter, requirePro(), requireLocationMember(), aiRouteHandler('stream reorganization', async (req, res) => {
+streamRouter.post('/reorganize/stream', aiLimiter, requirePro(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream reorganization', async (req, res) => {
   const { locationId: _locationId, bins: inputBins, maxBins, areaName,
     userNotes, strictness, granularity, ambiguousPolicy, duplicates, outliers,
     minItemsPerBin, maxItemsPerBin } = req.body;

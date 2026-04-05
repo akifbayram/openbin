@@ -546,7 +546,7 @@ describe('GET /api/auth/me — plan info', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.plan).toBeDefined();
-    expect(['pro', 'lite']).toContain(res.body.plan);
+    expect(['pro', 'plus', 'free']).toContain(res.body.plan);
     expect(res.body.subscriptionStatus).toBeDefined();
     expect(['active', 'trial', 'inactive']).toContain(res.body.subscriptionStatus);
     expect('activeUntil' in res.body).toBe(true);

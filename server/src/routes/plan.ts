@@ -1,7 +1,8 @@
 import { Router } from 'express';
+import { query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError } from '../lib/httpErrors.js';
-import { computeOverLimits, generatePortalUrl, generateUpgradePlanUrl, generateUpgradeUrl, getFeatureMap, getUserPlanInfo, getUserUsage, isSelfHosted, isSubscriptionActive, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
+import { computeOverLimits, generatePortalUrl, generateUpgradePlanUrl, generateUpgradeUrl, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, isSelfHosted, isSubscriptionActive, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -16,9 +17,10 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       locked: false,
       features: getFeatureMap(Plan.PRO),
       upgradeUrl: null,
-      upgradeLiteUrl: null,
+      upgradePlusUrl: null,
       upgradeProUrl: null,
       portalUrl: null,
+      aiCredits: null,
     });
     return;
   }
@@ -31,6 +33,10 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
   const userId = req.user!.id;
   const { email } = planInfo;
 
+  const aiCredits = planInfo.subStatus === SubStatus.TRIAL
+    ? await getAiCredits(userId)
+    : null;
+
   res.json({
     plan: planLabel(planInfo.plan),
     status: subStatusLabel(planInfo.subStatus),
@@ -42,9 +48,10 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       : null,
     features: getFeatureMap(planInfo.plan),
     upgradeUrl: active && planInfo.plan === Plan.PRO && planInfo.subStatus !== SubStatus.TRIAL ? null : await generateUpgradeUrl(userId, email),
-    upgradeLiteUrl: isPaidActive ? null : await generateUpgradePlanUrl(userId, email, 'plus'),
+    upgradePlusUrl: isPaidActive ? null : await generateUpgradePlanUrl(userId, email, 'plus'),
     upgradeProUrl: isPaidActive ? null : await generateUpgradePlanUrl(userId, email, 'pro'),
     portalUrl: isPaidActive ? await generatePortalUrl(userId, email) : null,
+    aiCredits,
   });
 }));
 
@@ -57,6 +64,29 @@ router.get('/usage', authenticate, asyncHandler(async (req, res) => {
   res.json({
     ...usage,
     overLimits: computeOverLimits(usage, features),
+  });
+}));
+
+router.get('/usage-summary', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user!.id;
+  const [usage, aiCredits, binCount, photoCount, fieldCount] = await Promise.all([
+    getUserUsage(userId),
+    getAiCredits(userId),
+    query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM bins WHERE created_by = $1 AND deleted_at IS NULL', [userId]),
+    query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM photos WHERE created_by = $1', [userId]),
+    query<{ cnt: number }>(
+      'SELECT COUNT(*) as cnt FROM location_custom_fields WHERE location_id IN (SELECT id FROM locations WHERE created_by = $1)',
+      [userId],
+    ),
+  ]);
+
+  res.json({
+    binCount: binCount.rows[0].cnt,
+    photoCount: photoCount.rows[0].cnt,
+    photoStorageMb: usage.photoStorageMb,
+    customFieldCount: fieldCount.rows[0].cnt,
+    aiCreditsUsed: aiCredits.used,
+    aiCreditsLimit: aiCredits.limit,
   });
 }));
 
