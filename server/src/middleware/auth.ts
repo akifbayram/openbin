@@ -46,6 +46,7 @@ export function tryAuthenticate(req: Request, _res: Response, next: NextFunction
         if (user) {
           req.user = user;
           req.authMethod = 'jwt';
+          maybeUpdateLastActive(user.id);
         }
         next();
       }).catch(() => next());
@@ -59,6 +60,18 @@ export function tryAuthenticate(req: Request, _res: Response, next: NextFunction
 // Soft-deletes are rare admin actions; 60 s staleness is acceptable.
 const deletedCache = new Map<string, { deleted: boolean; expires: number }>();
 const DELETED_CACHE_TTL = 60_000;
+
+// Debounce last_active_at writes to once per 5 minutes per user
+const LAST_ACTIVE_DEBOUNCE_MS = 5 * 60 * 1000;
+const lastActiveCache = new Map<string, number>();
+
+function maybeUpdateLastActive(userId: string): void {
+  const now = Date.now();
+  const lastWrite = lastActiveCache.get(userId);
+  if (lastWrite && now - lastWrite < LAST_ACTIVE_DEBOUNCE_MS) return;
+  lastActiveCache.set(userId, now);
+  query(`UPDATE users SET last_active_at = ${d.now()} WHERE id = $1`, [userId]).catch(() => {});
+}
 
 function checkSoftDeleted(userId: string): Promise<boolean> {
   const cached = deletedCache.get(userId);
@@ -81,13 +94,15 @@ export function invalidateDeletedCache(userId: string): void {
 
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   if (req.user) {
-    checkSoftDeleted(req.user.id).then((deleted) => {
+    const userId = req.user.id;
+    checkSoftDeleted(userId).then((deleted) => {
       if (deleted) {
         req.user = undefined;
         req.authMethod = undefined;
         res.status(401).json({ error: 'ACCOUNT_DELETED', message: 'This account has been deleted' });
         return;
       }
+      maybeUpdateLastActive(userId);
       next();
     }).catch(next);
     return;
@@ -125,6 +140,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       req.user = { id: row.id, username: row.username };
       req.authMethod = 'api_key';
       req.apiKeyId = row.key_id;
+      maybeUpdateLastActive(row.id);
       // Fire-and-forget: update last_used_at + daily usage counter
       query(`UPDATE api_keys SET last_used_at = ${d.now()} WHERE id = $1`, [row.key_id]).catch(() => {});
       query(`INSERT INTO api_key_daily_usage (api_key_id, date) VALUES ($1, ${d.today()}) ON CONFLICT(api_key_id, date) DO UPDATE SET request_count = request_count + 1`, [row.key_id]).catch(() => {});
@@ -145,6 +161,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
         }
         req.user = user;
         req.authMethod = 'jwt';
+        maybeUpdateLastActive(user.id);
         next();
       }).catch(next);
     } else {
