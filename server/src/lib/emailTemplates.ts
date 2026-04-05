@@ -76,7 +76,7 @@ export function welcomeEmail(params: { displayName: string; loginUrl: string }):
     html: wrap([
       h1('Welcome to OpenBin'),
       greeting(params.displayName),
-      p('Your account is ready with a <strong>7-day Pro trial</strong> — all features are unlocked.'),
+      p('Your account is ready with a <strong>7-day Plus trial</strong> — all features are unlocked.'),
       `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;margin:24px 0 8px"><tr>
 <td width="33%" align="center" valign="top" style="padding:0 8px 0 0">${featureCard('📦', 'QR Labels', 'Print codes for instant scanning')}</td>
 <td width="33%" align="center" valign="top" style="padding:0 4px">${featureCard('🤖', 'AI Recognition', 'Photo-based item cataloging')}</td>
@@ -88,7 +88,7 @@ export function welcomeEmail(params: { displayName: string; loginUrl: string }):
     text: [
       `Hi ${params.displayName},`,
       '',
-      'Welcome to OpenBin! Your account is ready with a 7-day Pro trial — all features are unlocked.',
+      'Welcome to OpenBin! Your account is ready with a 7-day Plus trial — all features are unlocked.',
       '',
       'Organize your physical storage with QR codes, invite team members, and let AI help catalog your items.',
       '',
@@ -103,7 +103,7 @@ export function trialExpiringEmail(params: { displayName: string; expiryDate: st
     html: wrap([
       h1('Your trial ends in 3 days'),
       greeting(params.displayName),
-      p(`Your Pro trial ends on <strong>${params.expiryDate}</strong>.`),
+      p(`Your Plus trial ends on <strong>${params.expiryDate}</strong>.`),
       p('When it expires, your account will switch to read-only mode. All your data stays safe — you just won\'t be able to create or edit bins until you subscribe.'),
       `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse"><tr><td align="center" style="padding-top:20px">
 <div style="border-top:2px solid #ff9500;width:60px;margin:0 auto 8px"></div>
@@ -115,7 +115,7 @@ export function trialExpiringEmail(params: { displayName: string; expiryDate: st
     text: [
       `Hi ${params.displayName},`,
       '',
-      `Your Pro trial ends on ${params.expiryDate}.`,
+      `Your Plus trial ends on ${params.expiryDate}.`,
       '',
       'When it expires, your account will switch to read-only mode. All your data stays safe — you just won\'t be able to create or edit bins until you subscribe.',
       '',
@@ -130,7 +130,7 @@ export function trialExpiredEmail(params: { displayName: string; upgradeUrl: str
     html: wrap([
       h1('Your trial has ended'),
       greeting(params.displayName),
-      p('Your Pro trial has ended and your account is now in <strong>read-only mode</strong>.'),
+      p('Your Plus trial has ended and your account is now in <strong>read-only mode</strong>.'),
       p('All your bins, items, and photos are safe — nothing has been deleted. Subscribe to a plan to continue creating and editing.'),
       divider,
       btn(params.upgradeUrl, 'Subscribe Now'),
@@ -138,7 +138,7 @@ export function trialExpiredEmail(params: { displayName: string; upgradeUrl: str
     text: [
       `Hi ${params.displayName},`,
       '',
-      'Your Pro trial has ended and your account is now in read-only mode.',
+      'Your Plus trial has ended and your account is now in read-only mode.',
       '',
       'All your bins, items, and photos are safe — nothing has been deleted. Subscribe to a plan to continue creating and editing.',
       '',

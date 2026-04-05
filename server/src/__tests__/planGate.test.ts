@@ -92,6 +92,7 @@ const DEFAULT_PLAN_LIMITS = {
   proMaxStorageMb: 1000 as number | null,
   proActivityRetentionDays: 90 as number | null,
   trialAiCredits: 25,
+  plusAiCredits: 25,
 };
 
 // Helper to set config values for tests
@@ -123,9 +124,9 @@ describe('isProUser()', () => {
     expect(isProUser({ plan: Plan.PRO, subStatus: SubStatus.ACTIVE })).toBe(true);
   });
 
-  it('returns true for cloud PRO + TRIAL', () => {
+  it('returns false for cloud PLUS + TRIAL', () => {
     setConfig({ selfHosted: false });
-    expect(isProUser({ plan: Plan.PRO, subStatus: SubStatus.TRIAL })).toBe(true);
+    expect(isProUser({ plan: Plan.PLUS, subStatus: SubStatus.TRIAL })).toBe(false);
   });
 
   it('returns false for cloud PRO + INACTIVE', () => {
@@ -167,9 +168,9 @@ describe('isPlanRestricted()', () => {
     expect(isPlanRestricted({ plan: Plan.PRO, subStatus: SubStatus.ACTIVE })).toBe(false);
   });
 
-  it('returns false for cloud PRO + TRIAL', () => {
+  it('returns false for cloud PLUS + TRIAL', () => {
     setConfig({ selfHosted: false });
-    expect(isPlanRestricted({ plan: Plan.PRO, subStatus: SubStatus.TRIAL })).toBe(false);
+    expect(isPlanRestricted({ plan: Plan.PLUS, subStatus: SubStatus.TRIAL })).toBe(false);
   });
 });
 

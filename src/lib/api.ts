@@ -103,7 +103,7 @@ async function doFetch<T>(path: string, options: ApiFetchOptions, isRetry: boole
     const data = await res.json().catch(() => ({ error: res.statusText }));
     const code = data.error as string | undefined;
     const upgradeUrl = data.upgrade_url as string | null | undefined;
-    if (code === 'PLAN_RESTRICTED' || code === 'SUBSCRIPTION_EXPIRED' || code === 'OVER_LIMIT') {
+    if (code === 'PLAN_RESTRICTED' || code === 'SUBSCRIPTION_EXPIRED' || code === 'OVER_LIMIT' || code === 'AI_CREDITS_EXHAUSTED') {
       notify(Events.PLAN);
       window.dispatchEvent(new CustomEvent('openbin-plan-restricted', { detail: { code, message: data.message, upgradeUrl } }));
     }

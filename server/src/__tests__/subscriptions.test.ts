@@ -43,8 +43,6 @@ vi.mock('../lib/config.js', () => ({
     qrPayloadMode: 'app',
     baseUrl: null,
     disableRateLimit: true,
-    aiRateLimit: 30,
-    aiRateLimitApiKey: 1000,
     demoAiRateLimit: 10,
     demoAiMaxPhotosPerRequest: 3,
     demoAiDailyBudget: 100,
@@ -264,7 +262,7 @@ describe('POST /api/subscriptions/callback', () => {
   it('updates user to trial status (status=2)', async () => {
     const { user } = await createTestUser(app);
     const activeUntil = '2026-12-31T00:00:00.000Z';
-    const token = await makeSubToken({ userId: user.id, plan: 1, status: 2, activeUntil });
+    const token = await makeSubToken({ userId: user.id, plan: 0, status: 2, activeUntil });
 
     const res = await request(app)
       .post('/api/subscriptions/callback')
@@ -278,7 +276,7 @@ describe('POST /api/subscriptions/callback', () => {
       'SELECT plan, sub_status, active_until FROM users WHERE id = $1',
       [user.id],
     );
-    expect(dbResult.rows[0].plan).toBe(1);
+    expect(dbResult.rows[0].plan).toBe(0);
     expect(dbResult.rows[0].sub_status).toBe(2);
     expect(dbResult.rows[0].active_until).toBe(activeUntil);
   });

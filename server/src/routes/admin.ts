@@ -122,11 +122,11 @@ router.post('/users', asyncHandler(async (req, res) => {
         passwordHash,
         displayName || username,
         email || null,
-        Plan.PRO,
+        Plan.PLUS,
         isSelfHosted() ? SubStatus.ACTIVE : SubStatus.TRIAL,
         isSelfHosted()
           ? new Date(Date.now() + 1000 * 365 * 24 * 60 * 60 * 1000).toISOString()
-          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          : new Date(Date.now() + config.trialPeriodDays * 24 * 60 * 60 * 1000).toISOString(),
       ]
     );
   } catch (err: unknown) {
@@ -247,7 +247,7 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
     const effectivePlan = plan !== undefined ? plan : target.plan;
     const effectiveStatus = typeof subStatus === 'number' ? subStatus : target.sub_status;
     if (!validatePlanTransition(effectivePlan as PlanTier, effectiveStatus as SubStatusType)) {
-      throw new ValidationError('Invalid plan/status combination: TRIAL is only valid for PRO');
+      throw new ValidationError('Invalid plan/status combination: TRIAL is only valid for PLUS');
     }
   }
 

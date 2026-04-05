@@ -309,6 +309,18 @@ CREATE TABLE IF NOT EXISTS ai_usage (
 );
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user_date ON ai_usage(user_id, date);
 
+CREATE TABLE IF NOT EXISTS ai_credit_periods (
+  id           TEXT PRIMARY KEY,
+  user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  period_start TEXT NOT NULL,
+  period_end   TEXT NOT NULL,
+  credits_used INTEGER NOT NULL DEFAULT 0,
+  credits_limit INTEGER NOT NULL,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(user_id, period_start)
+);
+CREATE INDEX IF NOT EXISTS idx_ai_credit_periods_user ON ai_credit_periods(user_id, period_start);
+
 CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL

@@ -89,7 +89,7 @@ export const config = Object.freeze({
     freeMaxMembers: parseNullableInt(process.env.PLAN_FREE_MAX_MEMBERS, 1),
     freeActivityRetentionDays: parseNullableInt(process.env.PLAN_FREE_ACTIVITY_RETENTION_DAYS, 7),
     // Plus tier (renamed from Lite)
-    plusAi: parseBool(process.env.PLAN_PLUS_AI, false),
+    plusAi: parseBool(process.env.PLAN_PLUS_AI, true),
     plusApiKeys: parseBool(process.env.PLAN_PLUS_API_KEYS, false),
     plusCustomFields: parseBool(process.env.PLAN_PLUS_CUSTOM_FIELDS, true),
     plusFullExport: parseBool(process.env.PLAN_PLUS_FULL_EXPORT, true),
@@ -106,6 +106,7 @@ export const config = Object.freeze({
     proActivityRetentionDays: parseNullableInt(process.env.PLAN_PRO_ACTIVITY_RETENTION_DAYS, 90),
     // Trial
     trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '25', 10), 1, 1000, 25),
+    plusAiCredits: clamp(parseInt(process.env.PLUS_AI_CREDITS || '25', 10), 1, 10000, 25),
   }),
   // Email (Resend)
   emailEnabled: parseBool(process.env.EMAIL_ENABLED, false),
@@ -169,8 +170,9 @@ export const config = Object.freeze({
 
   // Rate limiting
   disableRateLimit: process.env.NODE_ENV === 'test' || parseBool(process.env.DISABLE_RATE_LIMIT, false),
-  aiRateLimit: 30,
-  aiRateLimitApiKey: 1000,
+  aiRateLimitPerMinute: clamp(parseInt(process.env.AI_RATE_LIMIT_PER_MINUTE || '15', 10), 1, 1000, 15),
+  aiRateLimitPerHour: clamp(parseInt(process.env.AI_RATE_LIMIT_PER_HOUR || '100', 10), 1, 10000, 100),
+  aiRateLimitPerDay: clamp(parseInt(process.env.AI_RATE_LIMIT_PER_DAY || '200', 10), 1, 100000, 200),
 
   // Demo AI limits
   demoAiRateLimit: 10,

@@ -4,8 +4,10 @@ import { config } from '../lib/config.js';
 import { PlanRestrictedError } from '../lib/httpErrors.js';
 import {
   checkAndIncrementAiCredits,
+  generateUpgradePlanUrl,
   generateUpgradeUrl,
   getUserPlanInfo,
+  hasAiAccess,
   isPlusOrAbove,
   isProUser,
   isSelfHosted,
@@ -90,15 +92,46 @@ export function requirePlusOrAbove(): RequestHandler {
   return requirePlanAccess('This feature requires a Plus or Pro plan', isPlusOrAbove);
 }
 
-export const checkAiCredits: RequestHandler = asyncHandler(async (req, _res, next) => {
+/** Allows Pro+active, Plus+active, and Trial users. Blocks Free and inactive. */
+export function requireAiAccess(): RequestHandler {
+  return asyncHandler(async (req, res, next) => {
+    if (isSelfHosted()) { next(); return; }
+
+    const userId = req.user!.id;
+    const planInfo = await getUserPlanInfo(userId);
+    if (!planInfo) throw new PlanRestrictedError('User plan not found');
+
+    if (!isSubscriptionActive(planInfo)) {
+      const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
+      throw new PlanRestrictedError('Your subscription has expired', upgradeUrl);
+    }
+
+    if (!hasAiAccess(planInfo)) {
+      const upgradeUrl = await generateUpgradePlanUrl(userId, planInfo.email, 'plus');
+      throw new PlanRestrictedError('AI features require a Plus or Pro plan', upgradeUrl);
+    }
+
+    // Stash for downstream middleware (checkAiCredits) to avoid re-fetching
+    res.locals.planInfo = planInfo;
+    next();
+  });
+}
+
+export const checkAiCredits: RequestHandler = asyncHandler(async (req, res, next) => {
   const result = await checkAndIncrementAiCredits(req.user!.id);
   if (!result.allowed) {
-    const planInfo = await getUserPlanInfo(req.user!.id);
-    const upgradeUrl = planInfo ? await generateUpgradeUrl(req.user!.id, planInfo.email) : null;
-    throw new PlanRestrictedError(
-      `You've used all ${result.limit} AI credits included in your trial. Upgrade to Pro for unlimited AI.`,
-      upgradeUrl,
-    );
+    const planInfo = res.locals.planInfo ?? await getUserPlanInfo(req.user!.id);
+    const upgradeUrl = planInfo ? await generateUpgradePlanUrl(req.user!.id, planInfo.email, 'pro') : null;
+    const message = result.resetsAt
+      ? `You've used all ${result.limit} AI credits for this billing period.`
+      : `You've used all ${result.limit} AI credits included in your trial. Upgrade to Pro for unlimited AI.`;
+    res.status(403).json({
+      error: 'AI_CREDITS_EXHAUSTED',
+      message,
+      aiCredits: { used: result.used, limit: result.limit, resetsAt: result.resetsAt },
+      upgrade_url: upgradeUrl,
+    });
+    return;
   }
   next();
 });

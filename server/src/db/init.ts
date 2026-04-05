@@ -369,6 +369,21 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
      )`,
   );
 
+  // AI credit periods (monthly billing-cycle tracking for Plus users)
+  db.exec([
+    'CREATE TABLE IF NOT EXISTS ai_credit_periods (',
+    '  id           TEXT PRIMARY KEY,',
+    '  user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,',
+    '  period_start TEXT NOT NULL,',
+    '  period_end   TEXT NOT NULL,',
+    '  credits_used INTEGER NOT NULL DEFAULT 0,',
+    '  credits_limit INTEGER NOT NULL,',
+    "  created_at   TEXT NOT NULL DEFAULT (datetime('now')),",
+    '  UNIQUE(user_id, period_start)',
+    ');',
+    'CREATE INDEX IF NOT EXISTS idx_ai_credit_periods_user ON ai_credit_periods(user_id, period_start);',
+  ].join('\n'));
+
   } catch (e) {
     log.error('Migration failed — exiting to prevent corrupt state:', e instanceof Error ? e.message : e);
     process.exit(1);

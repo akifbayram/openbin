@@ -1,4 +1,5 @@
 import { ApiError, tryRefresh } from './api';
+import { Events, notify } from './eventBus';
 
 export interface StreamDeltaEvent {
   type: 'delta';
@@ -57,7 +58,8 @@ export async function* apiStream(
     const data = await res.json().catch(() => ({ error: res.statusText }));
     const code = data.error as string | undefined;
     const upgradeUrl = data.upgrade_url as string | null | undefined;
-    if (code === 'PLAN_RESTRICTED' || code === 'SUBSCRIPTION_EXPIRED') {
+    if (code === 'PLAN_RESTRICTED' || code === 'SUBSCRIPTION_EXPIRED' || code === 'AI_CREDITS_EXHAUSTED') {
+      notify(Events.PLAN);
       window.dispatchEvent(new CustomEvent('openbin-plan-restricted', { detail: { code, message: data.message, upgradeUrl } }));
     }
     throw new ApiError(res.status, data.message || data.error || res.statusText, code, upgradeUrl);

@@ -54,4 +54,4 @@ export const metricsLimiter: RequestHandler = isTest ? noop : rateLimit({
 });
 
 
-export { aiLimiter } from './aiRateLimiter.js';
+export { aiRateLimiters } from './aiRateLimiter.js';

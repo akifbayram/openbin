@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 
 export interface CloudMetrics {
-  plans: { liteActive: number; liteInactive: number; proActive: number; proTrial: number; proInactive: number; total: number };
+  plans: { liteActive: number; liteInactive: number; plusTrial: number; proActive: number; proInactive: number; total: number };
   bins: { total: number; avgPerLocation: number; createdLast7d: number; createdLast30d: number };
   storage: { totalMb: number; avgPerLocationMb: number; nearingLimitCount: number };
   trialConversion: { started: number; converted: number; expired: number; active: number; rate: number };

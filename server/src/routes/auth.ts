@@ -157,7 +157,7 @@ router.post('/register', asyncHandler(async (req, res) => {
         passwordHash,
         displayName || username,
         trimmedEmail,
-        Plan.PRO,
+        Plan.PLUS,
         isSelfHosted() ? SubStatus.ACTIVE : SubStatus.TRIAL,
         isSelfHosted()
           ? new Date(Date.now() + 1000 * 365 * 24 * 60 * 60 * 1000).toISOString()  // +1000 years

@@ -33,8 +33,11 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
   const userId = req.user!.id;
   const { email } = planInfo;
 
-  const aiCredits = planInfo.subStatus === SubStatus.TRIAL
+  const aiCreditsRaw = (planInfo.subStatus === SubStatus.TRIAL || (planInfo.plan === Plan.PLUS && planInfo.subStatus === SubStatus.ACTIVE))
     ? await getAiCredits(userId)
+    : null;
+  const aiCredits = aiCreditsRaw && aiCreditsRaw.limit > 0
+    ? { used: aiCreditsRaw.used, limit: aiCreditsRaw.limit, resetsAt: aiCreditsRaw.resetsAt }
     : null;
 
   res.json({
@@ -47,7 +50,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       ? (planInfo.previousSubStatus === SubStatus.TRIAL ? 'trial' : 'active')
       : null,
     features: getFeatureMap(planInfo.plan),
-    upgradeUrl: active && planInfo.plan === Plan.PRO && planInfo.subStatus !== SubStatus.TRIAL ? null : await generateUpgradeUrl(userId, email),
+    upgradeUrl: active && planInfo.plan === Plan.PRO ? null : await generateUpgradeUrl(userId, email),
     upgradePlusUrl: isPaidActive ? null : await generateUpgradePlanUrl(userId, email, 'plus'),
     upgradeProUrl: isPaidActive ? null : await generateUpgradePlanUrl(userId, email, 'pro'),
     portalUrl: isPaidActive ? await generatePortalUrl(userId, email) : null,
@@ -87,6 +90,7 @@ router.get('/usage-summary', authenticate, asyncHandler(async (req, res) => {
     customFieldCount: fieldCount.rows[0].cnt,
     aiCreditsUsed: aiCredits.used,
     aiCreditsLimit: aiCredits.limit,
+    aiCreditsResetsAt: aiCredits.resetsAt,
   });
 }));
 

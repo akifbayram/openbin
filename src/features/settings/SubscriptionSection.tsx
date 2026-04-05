@@ -10,7 +10,7 @@ import { cn, focusRing } from '@/lib/utils';
 import type { PlanUsage } from '@/types';
 
 export function SubscriptionSection() {
-  const { planInfo, isPro, isPlus, isSelfHosted, isLocked, refresh } = usePlan();
+  const { planInfo, isPro, isPlus, isSelfHosted, isLocked, isLoading, refresh } = usePlan();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const handledRef = useRef(false);
@@ -71,12 +71,15 @@ export function SubscriptionSection() {
     apiFetch<PlanUsage>('/api/plan/usage').then(setUsage).catch(() => {});
   }, [isSelfHosted]);
 
-  // Don't render in self-hosted mode
-  if (isSelfHosted) return null;
+  // Don't render in self-hosted mode or while loading
+  if (isSelfHosted || isLoading) return null;
 
   const isTrialing = planInfo.status === 'trial';
   const daysRemaining = planInfo.activeUntil
     ? Math.max(0, Math.ceil((new Date(planInfo.activeUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
+  const creditsResetsLabel = planInfo.aiCredits?.resetsAt
+    ? new Date(planInfo.aiCredits.resetsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     : null;
 
   return (
@@ -172,6 +175,33 @@ export function SubscriptionSection() {
             <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] bg-[var(--color-warning-soft)] text-[var(--color-warning)]">
               <Clock className="h-3.5 w-3.5" />
               {`${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining in your trial`}
+            </div>
+          )}
+
+          {/* AI Credits */}
+          {planInfo.aiCredits && planInfo.aiCredits.limit > 0 && (
+            <div className="flex items-center justify-between rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3.5 py-3">
+              <div className="text-[13px]">
+                <span className="font-medium text-[var(--text-primary)]">AI Credits</span>
+                <span className="ml-1.5 tabular-nums text-[var(--text-secondary)]">
+                  {planInfo.aiCredits.used} / {planInfo.aiCredits.limit} used
+                </span>
+              </div>
+              <span className="text-[12px] text-[var(--text-tertiary)]">
+                {creditsResetsLabel ? `Resets ${creditsResetsLabel}` : 'Lifetime'}
+              </span>
+            </div>
+          )}
+          {planInfo.aiCredits && planInfo.aiCredits.used >= planInfo.aiCredits.limit && planInfo.aiCredits.limit > 0 && (
+            <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] bg-[var(--color-warning-soft)] text-[var(--color-warning)]">
+              AI credits exhausted{creditsResetsLabel
+                ? ` — resets ${creditsResetsLabel}`
+                : ''}.{' '}
+              {planInfo.upgradeProUrl && (
+                <a href={planInfo.upgradeProUrl} target="_blank" rel="noopener noreferrer" className="underline font-semibold">
+                  Upgrade to Pro
+                </a>
+              )}
             </div>
           )}
 

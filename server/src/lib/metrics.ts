@@ -4,7 +4,7 @@ import { getFeatureMap, Plan, SubStatus } from './planGate.js';
 
 export interface CloudMetrics {
   generatedAt: string;
-  plans: { plusActive: number; plusInactive: number; freeActive: number; proActive: number; proTrial: number; proInactive: number; total: number };
+  plans: { plusActive: number; plusInactive: number; plusTrial: number; freeActive: number; proActive: number; proInactive: number; total: number };
   locations: { total: number; avgPerUser: number; atLimit: number };
   bins: { total: number; avgPerLocation: number; createdLast7d: number; createdLast30d: number };
   storage: { totalMb: number; avgPerLocationMb: number; nearingLimitCount: number };
@@ -31,7 +31,7 @@ async function queryPlanDistribution(demo: { clause: string; params: string[] })
     `SELECT plan, sub_status, COUNT(*) as cnt FROM users u WHERE 1=1 ${demo.clause} GROUP BY plan, sub_status`,
     demo.params,
   );
-  const plans = { plusActive: 0, plusInactive: 0, freeActive: 0, proActive: 0, proTrial: 0, proInactive: 0, total: 0 };
+  const plans = { plusActive: 0, plusInactive: 0, plusTrial: 0, freeActive: 0, proActive: 0, proInactive: 0, total: 0 };
   for (const row of result.rows) {
     const count = row.cnt;
     plans.total += count;
@@ -39,7 +39,7 @@ async function queryPlanDistribution(demo: { clause: string; params: string[] })
     else if (row.plan === Plan.PLUS && row.sub_status === SubStatus.INACTIVE) plans.plusInactive = count;
     else if (row.plan === Plan.FREE) plans.freeActive += count;
     else if (row.plan === Plan.PRO && row.sub_status === SubStatus.ACTIVE) plans.proActive = count;
-    else if (row.plan === Plan.PRO && row.sub_status === SubStatus.TRIAL) plans.proTrial = count;
+    else if (row.plan === Plan.PLUS && row.sub_status === SubStatus.TRIAL) plans.plusTrial = count;
     else if (row.plan === Plan.PRO && row.sub_status === SubStatus.INACTIVE) plans.proInactive = count;
   }
   return plans;
@@ -223,14 +223,14 @@ export async function getCloudMetrics(): Promise<CloudMetrics> {
 
   const demo = demoExclusion();
   const plans = await queryPlanDistribution(demo);
-  const totalProUsers = plans.proActive + plans.proTrial;
+  const totalPaidUsers = plans.proActive + plans.plusActive + plans.plusTrial;
 
   const [locations, bins, storage, members, featureAdoption, activityLast30d, trialConversion, apiKeyUsage] = await Promise.all([
     queryLocationStats(demo),
     queryBinStats(),
     queryStorageStats(),
     queryMemberStats(),
-    queryFeatureAdoption(totalProUsers),
+    queryFeatureAdoption(totalPaidUsers),
     queryActivityVolume(),
     queryTrialConversion(demo),
     queryApiKeyUsage(),

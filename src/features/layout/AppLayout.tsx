@@ -63,8 +63,8 @@ export function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { preferences, updatePreferences } = useUserPreferences();
   const { canWrite } = usePermissions();
-  const { isLocked, isSelfHosted, planInfo, isOverAnyLimit } = usePlan();
-  const showLockedBanner = isLocked && !isSelfHosted;
+  const { isLocked, isSelfHosted, planInfo, isOverAnyLimit, isLoading: planLoading } = usePlan();
+  const showLockedBanner = isLocked && !isSelfHosted && !planLoading;
   const { settings: aiSettings } = useAiSettings();
   const terminology = useTerminology();
   const { bins } = useBinList();
@@ -231,7 +231,7 @@ export function AppLayout() {
         'pt-[var(--safe-top)] lg:pt-[var(--safe-top)] pb-[calc(16px+var(--bottom-bar-height)+var(--safe-bottom))] lg:pb-8 transition-[margin-left] duration-200 ease-in-out',
         sidebarCollapsed ? 'lg:ml-[var(--sidebar-collapsed-width)]' : 'lg:ml-[var(--sidebar-width)]',
       )}>
-        {(showLockedBanner || (!isLocked && isOverAnyLimit && !isSelfHosted)) && (
+        {!planLoading && (showLockedBanner || (!isLocked && isOverAnyLimit && !isSelfHosted)) && (
           <div className="mx-auto w-full max-w-7xl px-4 lg:px-6 pt-4">
             <div className={cn(
               'flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border px-4 py-3',

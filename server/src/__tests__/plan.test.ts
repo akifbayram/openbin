@@ -113,10 +113,10 @@ describe('GET /api/plan', () => {
     expect(res.body.features.maxLocations).toBeNull();
   });
 
-  it('returns trial status + upgradeUrl for cloud pro user on trial', async () => {
+  it('returns trial status + upgradeUrl for cloud plus user on trial', async () => {
     vi.mocked(isSelfHosted).mockReturnValue(false);
     vi.mocked(getUserPlanInfo).mockResolvedValue({
-      plan: Plan.PRO,
+      plan: Plan.PLUS,
       subStatus: SubStatus.TRIAL,
       activeUntil: '2027-01-01T00:00:00.000Z',
       email: 'trial@example.com',
@@ -131,7 +131,7 @@ describe('GET /api/plan', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.plan).toBe('pro');
+    expect(res.body.plan).toBe('plus');
     expect(res.body.status).toBe('trial');
     expect(res.body.activeUntil).toBe('2027-01-01T00:00:00.000Z');
     expect(res.body.upgradeUrl).toBe('https://manager.example.com/auth/openbin?token=trial');

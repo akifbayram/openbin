@@ -7,6 +7,8 @@ import { ApiError } from '@/lib/api';
  */
 export function mapAiError(err: unknown, fallback: string): string {
   if (err instanceof ApiError) {
+    if (err.code === 'AI_CREDITS_EXHAUSTED') return err.message;
+    if (err.code === 'AI_RATE_LIMITED') return 'Too many AI requests — try again in a moment';
     switch (err.status) {
       case 422: return 'Invalid API key or model — check Settings > AI';
       case 429: return 'AI provider rate limited — wait a moment and try again';

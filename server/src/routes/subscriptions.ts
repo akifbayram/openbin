@@ -49,7 +49,7 @@ router.post('/callback', asyncHandler(async (req, res) => {
     throw new ValidationError('Invalid status value');
   }
   if (!validatePlanTransition(plan as PlanTier, status as SubStatusType)) {
-    throw new ValidationError('Invalid plan/status combination: TRIAL is only valid for PRO');
+    throw new ValidationError('Invalid plan/status combination: TRIAL is only valid for PLUS');
   }
 
   // Reject stale webhooks if updatedAt is provided
