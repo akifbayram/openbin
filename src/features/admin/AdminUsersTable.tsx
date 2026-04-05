@@ -4,18 +4,46 @@ import { Button } from '@/components/ui/button';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { Table, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import type { AdminFieldKey } from './useAdminColumnVisibility';
 import { type AdminUser, capitalize, statusVariant } from './useAdminUsers';
 
-type SortField = 'username' | 'email' | 'plan' | 'status' | 'bins' | 'locations' | 'storage' | 'created';
+
+const PLAN_LIMITS: Record<string, { maxBins: number | null; maxStorageMb: number | null }> = {
+  free:  { maxBins: 50,   maxStorageMb: 0    },
+  plus:  { maxBins: 500,  maxStorageMb: 100  },
+  pro:   { maxBins: 5000, maxStorageMb: 1000 },
+};
+
+function relativeTime(iso: string | null): string {
+  if (!iso) return '—';
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}
+
+function pctColor(pct: number): string {
+  if (pct > 90) return 'text-[var(--destructive)]';
+  if (pct >= 75) return 'text-[var(--color-warning)]';
+  return '';
+}
 
 interface AdminUsersTableProps {
   users: AdminUser[];
   currentUserId: string;
-  sortColumn: SortField;
+  sortColumn: string;
   sortDirection: SortDirection;
-  onSort: (column: SortField, direction: SortDirection) => void;
+  onSort: (column: string, direction: SortDirection) => void;
   onDelete: (user: AdminUser) => void;
   onClickUser: (id: string) => void;
+  isVisible: (field: AdminFieldKey) => boolean;
 }
 
 export function AdminUsersTable({
@@ -26,6 +54,7 @@ export function AdminUsersTable({
   onSort,
   onDelete,
   onClickUser,
+  isVisible,
 }: AdminUsersTableProps) {
   return (
     <Table>
@@ -33,35 +62,111 @@ export function AdminUsersTable({
         <div className="flex-1 min-w-0">
           <SortHeader label="User" column="username" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} />
         </div>
-        <div className="hidden lg:block w-40">
-          <SortHeader label="Email" column="email" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} />
-        </div>
-        <div className="w-16">
-          <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Role</span>
-        </div>
+        {isVisible('email') && (
+          <div className="hidden lg:block w-40">
+            <SortHeader label="Email" column="email" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} />
+          </div>
+        )}
+        {isVisible('role') && (
+          <div className="w-16">
+            <span className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Role</span>
+          </div>
+        )}
         <div className="w-16">
           <SortHeader label="Plan" column="plan" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} />
         </div>
         <div className="w-24">
           <SortHeader label="Status" column="status" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} />
         </div>
-        <div className="hidden lg:block w-14 text-right">
-          <SortHeader label="Bins" column="bins" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
-        </div>
-        <div className="hidden lg:block w-14 text-right">
-          <SortHeader label="Locs" column="locations" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
-        </div>
-        <div className="hidden lg:block w-20 text-right">
-          <SortHeader label="Storage" column="storage" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
-        </div>
-        <div className="hidden sm:block w-24">
-          <SortHeader label="Created" column="created" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} />
-        </div>
+        {isVisible('bins') && (
+          <div className="hidden lg:block w-14 text-right">
+            <SortHeader label="Bins" column="bins" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('locations') && (
+          <div className="hidden lg:block w-14 text-right">
+            <SortHeader label="Locs" column="locations" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('storage') && (
+          <div className="hidden lg:block w-20 text-right">
+            <SortHeader label="Storage" column="storage" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('lastActive') && (
+          <div className="hidden sm:block w-24">
+            <SortHeader label="Last Active" column="lastActive" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} />
+          </div>
+        )}
+        {isVisible('items') && (
+          <div className="hidden lg:block w-14 text-right">
+            <SortHeader label="Items" column="items" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('photos') && (
+          <div className="hidden lg:block w-14 text-right">
+            <SortHeader label="Photos" column="photos" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('scans30d') && (
+          <div className="hidden lg:block w-14 text-right">
+            <SortHeader label="Scans" column="scans30d" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('aiCredits') && (
+          <div className="hidden lg:block w-20 text-right">
+            <SortHeader label="AI Credits" column="aiCredits" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('apiKeys') && (
+          <div className="hidden lg:block w-14 text-right">
+            <SortHeader label="Keys" column="apiKeys" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('apiRequests7d') && (
+          <div className="hidden lg:block w-20 text-right">
+            <SortHeader label="Reqs (7d)" column="apiRequests7d" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('binPct') && (
+          <div className="hidden lg:block w-14 text-right">
+            <SortHeader label="Bin %" column="binPct" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('storagePct') && (
+          <div className="hidden lg:block w-20 text-right">
+            <SortHeader label="Stor %" column="storagePct" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('binsCreated7d') && (
+          <div className="hidden lg:block w-14 text-right">
+            <SortHeader label="New (7d)" column="binsCreated7d" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('accountAge') && (
+          <div className="hidden lg:block w-14 text-right">
+            <SortHeader label="Age" column="accountAge" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} defaultDirection="desc" className="justify-end" />
+          </div>
+        )}
+        {isVisible('created') && (
+          <div className="hidden sm:block w-24">
+            <SortHeader label="Created" column="created" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} />
+          </div>
+        )}
         <div className="w-9" />
       </TableHeader>
 
       {users.map((u) => {
         const isSelf = u.id === currentUserId;
+        const limits = PLAN_LIMITS[u.plan] ?? PLAN_LIMITS.free;
+        const binPct = limits.maxBins !== null && limits.maxBins > 0
+          ? Math.round((u.binCount / limits.maxBins) * 100)
+          : null;
+        const storagePct = limits.maxStorageMb !== null && limits.maxStorageMb > 0
+          ? Math.round((u.photoStorageMb / limits.maxStorageMb) * 100)
+          : null;
+        const accountAge = Math.floor((Date.now() - new Date(u.createdAt).getTime()) / 86400000);
+
         return (
           <TableRow
             key={u.id}
@@ -74,10 +179,14 @@ export function AdminUsersTable({
               <div className="font-medium text-[14px] text-[var(--text-primary)] truncate">{u.displayName || u.username}</div>
               <div className="text-[12px] text-[var(--text-tertiary)] truncate">@{u.username}</div>
             </div>
-            <div className="hidden lg:block w-40 text-[14px] text-[var(--text-secondary)] truncate">{u.email || '—'}</div>
-            <div className="w-16 text-[14px]">
-              {u.isAdmin ? <Badge variant="default" className="text-[11px]">Admin</Badge> : <span className="text-[var(--text-tertiary)]">—</span>}
-            </div>
+            {isVisible('email') && (
+              <div className="hidden lg:block w-40 text-[14px] text-[var(--text-secondary)] truncate">{u.email || '—'}</div>
+            )}
+            {isVisible('role') && (
+              <div className="w-16 text-[14px]">
+                {u.isAdmin ? <Badge variant="default" className="text-[11px]">Admin</Badge> : <span className="text-[var(--text-tertiary)]">—</span>}
+              </div>
+            )}
             <div className="w-16 text-[14px]">
               <Badge variant="secondary" className="text-[11px]">{capitalize(u.plan)}</Badge>
             </div>
@@ -87,12 +196,63 @@ export function AdminUsersTable({
                 <Badge variant={statusVariant(u.status)} className="text-[11px]">{capitalize(u.status)}</Badge>
               </span>
             </div>
-            <div className="hidden lg:block w-14 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : u.binCount}</div>
-            <div className="hidden lg:block w-14 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : u.locationCount}</div>
-            <div className="hidden lg:block w-20 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : `${u.photoStorageMb} MB`}</div>
-            <div className="hidden sm:block w-24">
-              <span className="text-[12px] text-[var(--text-tertiary)] whitespace-nowrap">{new Date(u.createdAt).toLocaleDateString()}</span>
-            </div>
+            {isVisible('bins') && (
+              <div className="hidden lg:block w-14 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : u.binCount}</div>
+            )}
+            {isVisible('locations') && (
+              <div className="hidden lg:block w-14 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : u.locationCount}</div>
+            )}
+            {isVisible('storage') && (
+              <div className="hidden lg:block w-20 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : `${u.photoStorageMb} MB`}</div>
+            )}
+            {isVisible('lastActive') && (
+              <div className="hidden sm:block w-24">
+                <span className="text-[12px] text-[var(--text-tertiary)] whitespace-nowrap">
+                  {u.deletedAt ? '—' : relativeTime(u.lastActiveAt)}
+                </span>
+              </div>
+            )}
+            {isVisible('items') && (
+              <div className="hidden lg:block w-14 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : u.itemCount}</div>
+            )}
+            {isVisible('photos') && (
+              <div className="hidden lg:block w-14 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : u.photoCount}</div>
+            )}
+            {isVisible('scans30d') && (
+              <div className="hidden lg:block w-14 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : u.scans30d}</div>
+            )}
+            {isVisible('aiCredits') && (
+              <div className="hidden lg:block w-20 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">
+                {u.deletedAt || u.aiCreditsLimit === 0 ? '—' : `${u.aiCreditsUsed}/${u.aiCreditsLimit}`}
+              </div>
+            )}
+            {isVisible('apiKeys') && (
+              <div className="hidden lg:block w-14 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : u.apiKeyCount}</div>
+            )}
+            {isVisible('apiRequests7d') && (
+              <div className="hidden lg:block w-20 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : u.apiRequests7d}</div>
+            )}
+            {isVisible('binPct') && (
+              <div className={cn('hidden lg:block w-14 text-[14px] text-right tabular-nums', binPct !== null ? pctColor(binPct) : 'text-[var(--text-secondary)]')}>
+                {u.deletedAt || binPct === null ? '—' : `${binPct}%`}
+              </div>
+            )}
+            {isVisible('storagePct') && (
+              <div className={cn('hidden lg:block w-20 text-[14px] text-right tabular-nums', storagePct !== null ? pctColor(storagePct) : 'text-[var(--text-secondary)]')}>
+                {u.deletedAt || storagePct === null ? '—' : `${storagePct}%`}
+              </div>
+            )}
+            {isVisible('binsCreated7d') && (
+              <div className="hidden lg:block w-14 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : u.binsCreated7d}</div>
+            )}
+            {isVisible('accountAge') && (
+              <div className="hidden lg:block w-14 text-[14px] text-[var(--text-secondary)] text-right tabular-nums">{u.deletedAt ? '—' : `${accountAge}d`}</div>
+            )}
+            {isVisible('created') && (
+              <div className="hidden sm:block w-24">
+                <span className="text-[12px] text-[var(--text-tertiary)] whitespace-nowrap">{new Date(u.createdAt).toLocaleDateString()}</span>
+              </div>
+            )}
             <div className="w-9 flex justify-center">
               <Button
                 variant="ghost"

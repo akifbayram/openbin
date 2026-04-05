@@ -21,8 +21,10 @@ import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { getErrorMessage } from '@/lib/utils';
+import { AdminColumnVisibilityMenu } from './AdminColumnVisibilityMenu';
 import { AdminMetricsSection } from './AdminMetricsSection';
 import { AdminUsersTable } from './AdminUsersTable';
+import { useAdminColumnVisibility } from './useAdminColumnVisibility';
 import { type AdminUser, useAdminUsers } from './useAdminUsers';
 
 const PAGE_SIZE = 25;
@@ -41,8 +43,9 @@ export function AdminUsersPage() {
   const [tab, setTab] = useState<'users' | 'metrics'>('users');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [sortColumn, setSortColumn] = useState<'username' | 'email' | 'plan' | 'status' | 'bins' | 'locations' | 'storage' | 'created'>('created');
+  const [sortColumn, setSortColumn] = useState<string>('created');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const { visibility, toggleField, isVisible } = useAdminColumnVisibility();
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ username: '', password: '', displayName: '', email: '', isAdmin: false });
@@ -52,7 +55,7 @@ export function AdminUsersPage() {
   const { users, count, isLoading, registration, deleteUser, updateRegistrationMode, createUser } = useAdminUsers(search, page, sortParam);
   const totalPages = Math.ceil(count / PAGE_SIZE);
 
-  const handleSort = useCallback((column: typeof sortColumn, direction: SortDirection) => {
+  const handleSort = useCallback((column: string, direction: SortDirection) => {
     setSortColumn(column);
     setSortDirection(direction);
     setPage(1);
@@ -167,12 +170,16 @@ export function AdminUsersPage() {
             <Badge variant="secondary" className="text-[11px]">{count}</Badge>
           </div>
 
-          <SearchInput
-            placeholder="Search users..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            onClear={search ? () => { setSearch(''); setPage(1); } : undefined}
-          />
+          <div className="flex items-center gap-2">
+            <SearchInput
+              placeholder="Search users..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onClear={search ? () => { setSearch(''); setPage(1); } : undefined}
+              className="flex-1"
+            />
+            <AdminColumnVisibilityMenu visibility={visibility} onToggle={toggleField} />
+          </div>
 
           {/* Users table */}
           {isLoading ? (
@@ -224,6 +231,7 @@ export function AdminUsersPage() {
               onSort={handleSort}
               onDelete={setDeleteTarget}
               onClickUser={(id) => navigate(`/admin/users/${id}`)}
+              isVisible={isVisible}
             />
           )}
 
