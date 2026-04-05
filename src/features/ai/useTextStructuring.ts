@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { Events, notify } from '@/lib/eventBus';
 import type { AiSuggestedItem } from '@/types';
 import { mapAiError } from './aiErrors';
 
@@ -32,6 +33,7 @@ export async function structureTextItems(options: StructureTextOptions): Promise
       locationId: options.locationId,
     },
   });
+  notify(Events.PLAN);
   return result.items;
 }
 

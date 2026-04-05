@@ -82,6 +82,7 @@ interface PlanContextValue {
   isLocked: boolean;
   isGated: (feature: keyof PlanFeatures) => boolean;
   refresh: () => Promise<PlanInfo | null>;
+  usage: PlanUsage | null;
   overLimits: OverLimits | null;
   isOverAnyLimit: boolean;
   isLocationOverLimit: (locationId: string) => boolean;
@@ -93,10 +94,10 @@ const PlanContext = createContext<PlanContextValue | null>(null);
 export function PlanProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
-  const [overLimits, setOverLimits] = useState<OverLimits | null>(null);
+  const [usage, setUsage] = useState<PlanUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const usageRefresh = useRefreshOn(Events.LOCATIONS, Events.PHOTOS);
+  const usageRefresh = useRefreshOn(Events.LOCATIONS, Events.PHOTOS, Events.BINS);
   const planRefresh = useRefreshOn(Events.PLAN);
 
   const fetchPlan = useCallback(async (): Promise<PlanInfo | null> => {
@@ -118,9 +119,9 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
     try {
       const data = await apiFetch<PlanUsage>('/api/plan/usage');
-      setOverLimits(data.overLimits);
+      setUsage(data);
     } catch {
-      // Retain last known overLimits on failure
+      // Retain last known usage on failure
     }
   }, [token]);
 
@@ -161,6 +162,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       if (val === null) return false;
       return false;
     };
+    const overLimits = usage?.overLimits ?? null;
     const isOverAnyLimit = overLimits !== null && (overLimits.locations || overLimits.photos || overLimits.members.length > 0);
     const isLocationOverLimit = (locationId: string) => overLimits?.members.includes(locationId) ?? false;
 
@@ -175,12 +177,13 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       isLocked,
       isGated,
       refresh: fetchPlan,
+      usage,
       overLimits,
       isOverAnyLimit,
       isLocationOverLimit,
       refreshUsage: fetchUsage,
     };
-  }, [planInfo, isLoading, fetchPlan, overLimits, fetchUsage]);
+  }, [planInfo, isLoading, fetchPlan, usage, fetchUsage]);
 
   return <PlanContext.Provider value={value}>{children}</PlanContext.Provider>;
 }

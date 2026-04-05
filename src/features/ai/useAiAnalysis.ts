@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { Events, notify } from '@/lib/eventBus';
 import type { AiSuggestions } from '@/types';
 import { mapAiError } from './aiErrors';
 
@@ -14,10 +15,12 @@ export async function analyzeImageFile(file: File, locationId?: string): Promise
   const formData = new FormData();
   formData.append('photo', file);
   if (locationId) formData.append('locationId', locationId);
-  return apiFetch<AiSuggestions>('/api/ai/analyze-image', {
+  const result = await apiFetch<AiSuggestions>('/api/ai/analyze-image', {
     method: 'POST',
     body: formData,
   });
+  notify(Events.PLAN);
+  return result;
 }
 
 export async function analyzeImageFiles(files: File[], locationId?: string): Promise<AiSuggestions> {
@@ -26,10 +29,12 @@ export async function analyzeImageFiles(files: File[], locationId?: string): Pro
     formData.append('photos', file);
   }
   if (locationId) formData.append('locationId', locationId);
-  return apiFetch<AiSuggestions>('/api/ai/analyze-image', {
+  const result = await apiFetch<AiSuggestions>('/api/ai/analyze-image', {
     method: 'POST',
     body: formData,
   });
+  notify(Events.PLAN);
+  return result;
 }
 
 export function useAiAnalysis() {
@@ -47,6 +52,7 @@ export function useAiAnalysis() {
         body: { photoId },
       });
       setSuggestions(result);
+      notify(Events.PLAN);
     } catch (err) {
       setError(mapAiError(err, 'Couldn\'t analyze the photo — try again'));
     } finally {
@@ -64,6 +70,7 @@ export function useAiAnalysis() {
         body: { photoIds: photoIds.slice(0, MAX_AI_PHOTOS) },
       });
       setSuggestions(result);
+      notify(Events.PLAN);
     } catch (err) {
       setError(mapAiError(err, 'Couldn\'t analyze the photo — try again'));
     } finally {
@@ -81,6 +88,7 @@ export function useAiAnalysis() {
         body: { photoIds: photoIds.slice(0, MAX_AI_PHOTOS), previousResult },
       });
       setSuggestions(result);
+      notify(Events.PLAN);
     } catch (err) {
       setError(mapAiError(err, 'Couldn\'t reanalyze the photo — try again'));
     } finally {

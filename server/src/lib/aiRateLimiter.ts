@@ -22,6 +22,7 @@ function createAiLimiter(windowMs: number, max: number): RequestHandler {
     standardHeaders: true,
     legacyHeaders: false,
     message: rateLimitMessage,
+    validate: { ip: false },
   });
 }
 
@@ -51,6 +52,7 @@ const demoHourlyLimiter: RequestHandler = (() => {
     legacyHeaders: false,
     message: rateLimitMessage,
     skip: (req) => !config.demoMode || !isDemoUser(req),
+    validate: { ip: false },
   });
 })();
 

@@ -1,16 +1,14 @@
 import { ArrowUpRight, Clock, CreditCard } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { useToast } from '@/components/ui/toast';
-import { apiFetch } from '@/lib/api';
 import { getLockedMessage, usePlan } from '@/lib/usePlan';
 import { cn, focusRing } from '@/lib/utils';
-import type { PlanUsage } from '@/types';
 
 export function SubscriptionSection() {
-  const { planInfo, isPro, isPlus, isSelfHosted, isLocked, isLoading, refresh } = usePlan();
+  const { planInfo, isPro, isPlus, isSelfHosted, isLocked, isLoading, refresh, refreshUsage, usage } = usePlan();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const handledRef = useRef(false);
@@ -55,21 +53,17 @@ export function SubscriptionSection() {
     return () => clearTimeout(pollRef.current);
   }, [searchParams, setSearchParams, showToast, refresh, planInfo.status]);
 
-  // Refetch plan when page regains visibility (user returning from payment tab)
+  // Refetch plan + usage when page regains visibility (user returning from payment tab)
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible') refresh();
+      if (document.visibilityState === 'visible') {
+        refresh();
+        refreshUsage();
+      }
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [refresh]);
-
-  const [usage, setUsage] = useState<PlanUsage | null>(null);
-
-  useEffect(() => {
-    if (isSelfHosted) return;
-    apiFetch<PlanUsage>('/api/plan/usage').then(setUsage).catch(() => {});
-  }, [isSelfHosted]);
+  }, [refresh, refreshUsage]);
 
   // Don't render in self-hosted mode or while loading
   if (isSelfHosted || isLoading) return null;
@@ -212,8 +206,8 @@ export function SubscriptionSection() {
               {planInfo.features.maxBins !== null && (
                 <div className="flex items-center justify-between text-[13px]">
                   <span className="text-[var(--text-secondary)]">Bins</span>
-                  <span className="tabular-nums text-[var(--text-tertiary)]">
-                    — / {planInfo.features.maxBins}
+                  <span className={cn('tabular-nums text-[var(--text-tertiary)]', usage.binCount > planInfo.features.maxBins && 'text-[var(--destructive)] font-semibold')}>
+                    {usage.binCount} / {planInfo.features.maxBins}{usage.binCount > planInfo.features.maxBins && ' — Over limit'}
                   </span>
                 </div>
               )}

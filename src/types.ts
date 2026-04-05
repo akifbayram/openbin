@@ -276,6 +276,7 @@ export interface OverLimits {
 }
 
 export interface PlanUsage {
+  binCount: number;
   locationCount: number;
   photoStorageMb: number;
   memberCounts: Record<string, number>;

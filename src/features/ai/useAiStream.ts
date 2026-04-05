@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { apiStream } from '@/lib/apiStream';
+import { Events, notify } from '@/lib/eventBus';
 import { mapAiError } from './aiErrors';
 
 /**
@@ -48,6 +49,7 @@ export function useAiStream<T>(
             }
             const parsed = JSON.parse(text) as T;
             setResult(parsed);
+            notify(Events.PLAN);
             return parsed;
           } catch {
             setError(`${errorFallback} — unexpected response format`);

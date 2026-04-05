@@ -70,10 +70,9 @@ router.get('/usage', authenticate, asyncHandler(async (req, res) => {
 
 router.get('/usage-summary', authenticate, asyncHandler(async (req, res) => {
   const userId = req.user!.id;
-  const [usage, aiCredits, binCount, photoCount, fieldCount] = await Promise.all([
+  const [usage, aiCredits, photoCount, fieldCount] = await Promise.all([
     getUserUsage(userId),
     getAiCredits(userId),
-    query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM bins WHERE created_by = $1 AND deleted_at IS NULL', [userId]),
     query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM photos WHERE created_by = $1', [userId]),
     query<{ cnt: number }>(
       'SELECT COUNT(*) as cnt FROM location_custom_fields WHERE location_id IN (SELECT id FROM locations WHERE created_by = $1)',
@@ -82,7 +81,7 @@ router.get('/usage-summary', authenticate, asyncHandler(async (req, res) => {
   ]);
 
   res.json({
-    binCount: binCount.rows[0].cnt,
+    binCount: usage.binCount,
     photoCount: photoCount.rows[0].cnt,
     photoStorageMb: usage.photoStorageMb,
     customFieldCount: fieldCount.rows[0].cnt,
