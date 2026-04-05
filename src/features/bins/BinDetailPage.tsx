@@ -1,5 +1,5 @@
 import { PackageOpen } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,23 +9,20 @@ import { UpgradeDialog } from '@/components/ui/upgrade-dialog';
 import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { resolveIcon } from '@/lib/iconMap';
-import { useNavigationGuard } from '@/lib/navigationGuard';
 import { useTerminology } from '@/lib/terminology';
 import { usePlan } from '@/lib/usePlan';
 import { disclosureSectionLabel } from '@/lib/utils';
+import { BinDetailContent } from './BinDetailContent';
 import { BinDetailSkeleton } from './BinDetailSkeleton';
 import { BinDetailToolbar } from './BinDetailToolbar';
-import { BinEditContent } from './BinEditContent';
-import { BinViewContent } from './BinViewContent';
 import { ChangeCodeDialog } from './ChangeCodeDialog';
 import { MoveBinDialog } from './MoveBinDialog';
 import { ShareBinDialog } from './ShareBinDialog';
-import { UnsavedChangesDialog } from './UnsavedChangesDialog';
+import { useAutoSaveBin } from './useAutoSaveBin';
 import { useBinDetailActions } from './useBinDetailActions';
 import type { BinFilters, SortOption } from './useBins';
 import { useAllTags, useBin, useBinList } from './useBins';
 import { useCustomFields } from './useCustomFields';
-import { useEditBinForm } from './useEditBinForm';
 
 interface BinDetailLocationState {
   backPath?: string;
@@ -43,8 +40,8 @@ export function BinDetailPage() {
   const allTags = useAllTags();
   const t = useTerminology();
   const backState = location.state as BinDetailLocationState | null;
-  const edit = useEditBinForm(id);
-  const actions = useBinDetailActions(bin, id, edit.editing);
+  const actions = useBinDetailActions(bin, id);
+  const autoSave = useAutoSaveBin(bin ?? null);
   const { fields: customFieldDefs } = useCustomFields(bin?.location_id);
   const { isLocked } = usePlan();
   const [shareOpen, setShareOpen] = useState(false);
@@ -65,75 +62,24 @@ export function BinDetailPage() {
   const prevBinId = currentIndex > 0 ? binList[currentIndex - 1].id : null;
   const nextBinId = currentIndex >= 0 && currentIndex < binList.length - 1 ? binList[currentIndex + 1].id : null;
 
-  const [unsavedOpen, setUnsavedOpen] = useState(false);
-  const pendingNav = useRef<(() => void) | null>(null);
-  const { setGuard, guardedNavigate } = useNavigationGuard();
-
-  // Register navigation guard so sidebar/bottom nav are intercepted
-  useEffect(() => {
-    if (!edit.editing || !edit.isDirty) {
-      setGuard(null);
-      return;
-    }
-    setGuard({
-      shouldBlock: () => true,
-      onBlocked: (proceed) => {
-        pendingNav.current = proceed;
-        setUnsavedOpen(true);
-      },
-    });
-    return () => setGuard(null);
-  }, [edit.editing, edit.isDirty, setGuard]);
-
-  // Block browser back/forward via popstate when dirty
-  useEffect(() => {
-    if (!edit.editing || !edit.isDirty) return;
-    window.history.pushState(null, '', window.location.href);
-    function handlePopState() {
-      window.history.pushState(null, '', window.location.href);
-      pendingNav.current = () => window.history.go(-2);
-      setUnsavedOpen(true);
-    }
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [edit.editing, edit.isDirty]);
-
-  // Keyboard shortcuts — use ref for unstable `edit` object to avoid re-registering listener every render
-  const editRef = useRef(edit);
-  editRef.current = edit;
+  // Keyboard shortcuts — prev/next only (no edit mode shortcuts)
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      const ed = editRef.current;
 
-      if (ed.editing) {
-        if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-          e.preventDefault();
-          ed.saveEdit();
-        }
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          guardedNavigate(() => ed.cancelEdit());
-        }
-      } else if (bin) {
-        if (e.key === 'e' && actions.canEdit) {
-          e.preventDefault();
-          ed.startEdit(bin);
-        }
-        if ((e.key === 'j' || e.key === 'ArrowLeft') && prevBinId) {
-          e.preventDefault();
-          navigate(`/bin/${prevBinId}`, { state: { ...backState } });
-        }
-        if ((e.key === 'k' || e.key === 'ArrowRight') && nextBinId) {
-          e.preventDefault();
-          navigate(`/bin/${nextBinId}`, { state: { ...backState } });
-        }
+      if ((e.key === 'j' || e.key === 'ArrowLeft') && prevBinId) {
+        e.preventDefault();
+        navigate(`/bin/${prevBinId}`, { state: { ...backState } });
+      }
+      if ((e.key === 'k' || e.key === 'ArrowRight') && nextBinId) {
+        e.preventDefault();
+        navigate(`/bin/${nextBinId}`, { state: { ...backState } });
       }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [edit.editing, actions.canEdit, bin, prevBinId, nextBinId, navigate, backState, guardedNavigate]);
+  }, [prevBinId, nextBinId, navigate, backState]);
 
   if (isLoading && bin === undefined) {
     return <BinDetailSkeleton />;
@@ -149,7 +95,7 @@ export function BinDetailPage() {
     );
   }
 
-  const HeaderIcon = resolveIcon(edit.editing ? edit.icon : bin.icon);
+  const HeaderIcon = resolveIcon(bin.icon);
 
   const photosSection = (
     <Card>
@@ -166,30 +112,28 @@ export function BinDetailPage() {
     </Card>
   );
 
+  function handleClose() {
+    if (backState?.backPath) navigate(backState.backPath);
+    else if (window.history.length > 1) navigate(-1);
+    else navigate('/bins');
+  }
+
   return (
     <div className="page-content max-w-5xl">
       <BinDetailToolbar
         bin={bin}
-        editing={edit.editing}
         canEdit={actions.canEdit}
         canPin={actions.canPin}
         canDelete={actions.canDelete}
         binIcon={HeaderIcon}
-        editingName={edit.name}
-        onNameChange={edit.setName}
         showAiButton={actions.showAiButton}
         isAnalyzing={actions.isAnalyzing}
         isReanalysis={actions.isReanalysis}
-        editNameValid={!!edit.name.trim()}
-        isSaving={edit.isSaving}
         otherLocations={actions.otherLocations}
-        onClose={() => guardedNavigate(() => backState?.backPath ? navigate(backState.backPath) : window.history.length > 1 ? navigate(-1) : navigate('/bins'))}
-        onPrev={prevBinId ? () => guardedNavigate(() => navigate(`/bin/${prevBinId}`, { state: { ...backState } })) : null}
-        onNext={nextBinId ? () => guardedNavigate(() => navigate(`/bin/${nextBinId}`, { state: { ...backState } })) : null}
+        onClose={handleClose}
+        onPrev={prevBinId ? () => navigate(`/bin/${prevBinId}`, { state: { ...backState } }) : null}
+        onNext={nextBinId ? () => navigate(`/bin/${nextBinId}`, { state: { ...backState } }) : null}
         hasBinListContext={hasBinListContext}
-        onCancelEdit={() => guardedNavigate(() => edit.cancelEdit())}
-        onSave={edit.saveEdit}
-        onStartEdit={() => edit.startEdit(bin)}
         onAnalyze={actions.aiGated ? () => setUpgradeOpen(true) : actions.handleAnalyzeClick}
         onTogglePin={actions.handleTogglePin}
         onPrint={() => navigate(`/print?ids=${id}`)}
@@ -206,40 +150,30 @@ export function BinDetailPage() {
         onChangeCode={() => actions.setChangeCodeOpen(true)}
         onShare={() => setShareOpen(true)}
         showShareButton={showShareButton}
+        onSaveName={autoSave.saveName}
+        nameSaved={autoSave.savedFields.has('name')}
       />
 
-      {edit.editing ? (
-        <BinEditContent
-          edit={edit}
-          photosSection={photosSection}
-          photos={actions.photos}
-          allTags={allTags}
-          aiEnabled={actions.aiEnabled}
-          aiConfigured={actions.aiEnabled && !!actions.aiSettings}
-          activeLocationId={actions.activeLocationId ?? undefined}
-          canChangeVisibility={actions.canChangeVisibility(bin.created_by)}
-          customFields={customFieldDefs}
-          onAiSetupNeeded={() => actions.setAiSetupOpen(true)}
-        />
-      ) : (
-        <BinViewContent
-          bin={bin}
-          photosSection={photosSection}
-          canEdit={actions.canEdit}
-          quickAdd={actions.quickAdd}
-          aiEnabled={actions.aiEnabled}
-          aiGated={actions.aiGated}
-          onUpgrade={() => setUpgradeOpen(true)}
-          aiError={actions.aiError}
-          suggestions={actions.suggestions}
-          previousResult={actions.lastSuggestions}
-          hasNotes={actions.hasNotes}
-          hasTags={actions.hasTags}
-          customFields={customFieldDefs}
-          onApplySuggestions={actions.handleApplySuggestions}
-          onClearSuggestions={actions.clearSuggestions}
-        />
-      )}
+      <BinDetailContent
+        bin={bin}
+        autoSave={autoSave}
+        photosSection={photosSection}
+        canEdit={actions.canEdit}
+        canChangeVisibility={actions.canChangeVisibility(bin.created_by)}
+        quickAdd={actions.quickAdd}
+        allTags={allTags}
+        aiEnabled={actions.aiEnabled}
+        aiGated={actions.aiGated}
+        onUpgrade={() => setUpgradeOpen(true)}
+        aiError={actions.aiError}
+        suggestions={actions.suggestions}
+        previousResult={actions.lastSuggestions}
+        customFields={customFieldDefs}
+        photos={actions.photos}
+        activeLocationId={actions.activeLocationId ?? undefined}
+        onApplySuggestions={actions.handleApplySuggestions}
+        onClearSuggestions={actions.clearSuggestions}
+      />
 
       <MoveBinDialog
         open={actions.moveOpen}
@@ -271,26 +205,6 @@ export function BinDetailPage() {
           onOpenChange={setShareOpen}
         />
       )}
-
-      <UnsavedChangesDialog
-        open={unsavedOpen}
-        onSave={async () => {
-          await edit.saveEdit();
-          setUnsavedOpen(false);
-          pendingNav.current?.();
-          pendingNav.current = null;
-        }}
-        onDiscard={() => {
-          edit.cancelEdit();
-          setUnsavedOpen(false);
-          pendingNav.current?.();
-          pendingNav.current = null;
-        }}
-        onCancel={() => {
-          setUnsavedOpen(false);
-          pendingNav.current = null;
-        }}
-      />
     </div>
   );
 }
