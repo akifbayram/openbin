@@ -52,8 +52,8 @@ export async function renameTag(locationId: string, oldTag: string, newTag: stri
   return result;
 }
 
-export async function deleteTag(locationId: string, tag: string): Promise<{ binsUpdated: number }> {
-  const result = await apiFetch<{ binsUpdated: number }>(
+export async function deleteTag(locationId: string, tag: string): Promise<{ binsUpdated: number; orphanedChildren?: number }> {
+  const result = await apiFetch<{ binsUpdated: number; orphanedChildren?: number }>(
     `/api/tags/${encodeURIComponent(tag)}?location_id=${encodeURIComponent(locationId)}`,
     { method: 'DELETE' },
   );

@@ -1,5 +1,5 @@
 import { PackageOpen, Tags as TagsIcon } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
@@ -17,10 +17,10 @@ import { useTerminology } from '@/lib/terminology';
 import { useDebounce } from '@/lib/useDebounce';
 import { usePermissions } from '@/lib/usePermissions';
 import { useTableSearchParams } from '@/lib/useTableSearchParams';
-import { cn } from '@/lib/utils';
+import { cn, inputBase } from '@/lib/utils';
 import { useTagColorsContext } from './TagColorsContext';
 import { type TagSortColumn, TagTableView } from './TagTableView';
-import { setTagColor } from './useTagColors';
+import { setTagColor, setTagParent } from './useTagColors';
 import { useTagStyle } from './useTagStyle';
 import { deleteTag, renameTag, usePaginatedTagList } from './useTags';
 
@@ -44,6 +44,16 @@ export function TagsPage() {
   // Delete dialog state
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Set Parent dialog state
+  const [parentTarget, setParentTarget] = useState<string | null>(null);
+  const [parentValue, setParentValue] = useState('');
+  const [parentLoading, setParentLoading] = useState(false);
+
+  // Parent-eligible tags: not themselves children, excluding the target tag
+  const parentEligible = useMemo(() => {
+    return tags.map((t) => t.tag).filter((t) => !tagParents.has(t) && t !== parentTarget);
+  }, [tags, tagParents, parentTarget]);
 
   function handleColorChange(tag: string, color: string) {
     if (!activeLocationId) return;
@@ -79,13 +89,37 @@ export function TagsPage() {
     if (!activeLocationId || !deleteTarget) return;
     setDeleteLoading(true);
     try {
-      const { binsUpdated } = await deleteTag(activeLocationId, deleteTarget);
-      showToast({ message: `Removed "${deleteTarget}" from ${binsUpdated} ${binsUpdated === 1 ? t.bin : t.bins}` });
+      const result = await deleteTag(activeLocationId, deleteTarget);
+      const orphanMsg = result.orphanedChildren
+        ? ` \u2014 ${result.orphanedChildren} child tag${result.orphanedChildren === 1 ? '' : 's'} moved to top level`
+        : '';
+      showToast({ message: `Removed "${deleteTarget}" from ${result.binsUpdated} ${result.binsUpdated === 1 ? t.bin : t.bins}${orphanMsg}` });
       setDeleteTarget(null);
     } catch {
       showToast({ message: 'Failed to delete tag', variant: 'error' });
     } finally {
       setDeleteLoading(false);
+    }
+  }
+
+  function handleSetParentOpen(tag: string) {
+    setParentTarget(tag);
+    setParentValue(tagParents.get(tag) || '');
+  }
+
+  async function handleSetParentSubmit() {
+    if (!activeLocationId || !parentTarget) return;
+    setParentLoading(true);
+    try {
+      const currentColor = tagColors.get(parentTarget) || '';
+      await setTagParent(activeLocationId, parentTarget, parentValue || null, currentColor);
+      showToast({ message: parentValue ? `Set parent of "${parentTarget}" to "${parentValue}"` : `Removed parent from "${parentTarget}"` });
+      setParentTarget(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to set parent';
+      showToast({ message: msg, variant: 'error' });
+    } finally {
+      setParentLoading(false);
     }
   }
 
@@ -154,6 +188,7 @@ export function TagsPage() {
             onColorChange={handleColorChange}
             onRename={canWrite ? handleRenameOpen : undefined}
             onDelete={canWrite ? (tag) => setDeleteTarget(tag) : undefined}
+            onSetParent={canWrite ? handleSetParentOpen : undefined}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
             loadMore={loadMore}
@@ -204,6 +239,38 @@ export function TagsPage() {
             <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}>Cancel</Button>
             <Button variant="destructive" onClick={handleDeleteConfirm} disabled={deleteLoading}>
               {deleteLoading ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Set Parent dialog */}
+      <Dialog open={parentTarget !== null} onOpenChange={(open) => { if (!open) setParentTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Parent</DialogTitle>
+            <DialogDescription>
+              Choose a parent tag for &ldquo;{parentTarget}&rdquo;.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="set-parent-select">Parent</Label>
+            <select
+              id="set-parent-select"
+              value={parentValue}
+              onChange={(e) => setParentValue(e.target.value)}
+              className={cn(inputBase, 'h-10')}
+            >
+              <option value="">None</option>
+              {parentEligible.map((tag) => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setParentTarget(null)} disabled={parentLoading}>Cancel</Button>
+            <Button onClick={handleSetParentSubmit} disabled={parentLoading}>
+              {parentLoading ? 'Saving\u2026' : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>
