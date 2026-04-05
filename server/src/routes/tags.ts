@@ -32,7 +32,8 @@ router.get('/', asyncHandler(async (req, res) => {
     havingClause = `HAVING jt.value LIKE $${params.length}`;
   }
 
-  const baseQuery = `
+  // Tags used on bins
+  const binTagsQuery = `
     SELECT jt.value AS tag, COUNT(DISTINCT b.id) AS count
     FROM bins b, ${d.jsonEachFrom('b.tags', 'jt')}
     WHERE b.location_id = $1
@@ -41,9 +42,23 @@ router.get('/', asyncHandler(async (req, res) => {
     GROUP BY jt.value
     ${havingClause}`;
 
+  // Parent tags that have children but are not used on any bin (so the tree is visible)
+  const parentOnlyQuery = `
+    SELECT DISTINCT tc_p.parent_tag AS tag, 0 AS count
+    FROM tag_colors tc_p
+    WHERE tc_p.location_id = $1
+      AND tc_p.parent_tag IS NOT NULL
+      ${searchQuery?.trim() ? `AND tc_p.parent_tag LIKE $${params.length}` : ''}
+      AND tc_p.parent_tag NOT IN (
+        SELECT jt2.value FROM bins b2, ${d.jsonEachFrom('b2.tags', 'jt2')}
+        WHERE b2.location_id = $1 AND b2.deleted_at IS NULL
+      )`;
+
+  const combinedQuery = `${binTagsQuery} UNION ALL ${parentOnlyQuery}`;
+
   // Count query
   const countResult = await query<{ total: number }>(
-    `SELECT COUNT(*) AS total FROM (${baseQuery})`,
+    `SELECT COUNT(*) AS total FROM (${combinedQuery}) _u`,
     params,
   );
   const total = countResult.rows[0]?.total ?? 0;
@@ -53,12 +68,17 @@ router.get('/', asyncHandler(async (req, res) => {
   const orderParam = req.query.sort_dir as string | undefined;
   const desc = orderParam === 'desc';
   const orderBy = sortParam === 'count'
-    ? `count ${desc ? 'DESC' : 'ASC'}, jt.value ${d.nocase()} ASC`
-    : `jt.value ${d.nocase()} ${desc ? 'DESC' : 'ASC'}`;
+    ? `count ${desc ? 'DESC' : 'ASC'}, t.tag ${d.nocase()} ASC`
+    : `t.tag ${d.nocase()} ${desc ? 'DESC' : 'ASC'}`;
 
-  // Data query with sort, limit, offset
+  // Data query with LEFT JOIN for parent_tag
+  const baseQuery = `
+    SELECT t.tag, t.count, tc.parent_tag
+    FROM (${combinedQuery}) t
+    LEFT JOIN tag_colors tc ON tc.tag = t.tag AND tc.location_id = $1`;
+
   params.push(limit, offset);
-  const dataResult = await query<{ tag: string; count: number }>(
+  const dataResult = await query<{ tag: string; count: number; parent_tag: string | null }>(
     `${baseQuery}
      ORDER BY ${orderBy}
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -113,6 +133,13 @@ router.put('/rename', asyncHandler(async (req, res) => {
       [trimmed, locationId, oldTag],
     );
 
+    // Update parent_tag references in children
+    await txQuery(
+      `UPDATE tag_colors SET parent_tag = $1, updated_at = ${d.now()}
+       WHERE location_id = $2 AND parent_tag = $3`,
+      [trimmed, locationId, oldTag],
+    );
+
     return { binsUpdated: result.rows.length };
   });
 
@@ -133,7 +160,7 @@ router.delete('/:tag', asyncHandler(async (req, res) => {
 
   await requireMemberOrAbove(locationId, req.user!.id, 'delete tags');
 
-  const { binsUpdated } = await withTransaction(async (txQuery) => {
+  const { binsUpdated, orphanedChildren } = await withTransaction(async (txQuery) => {
     const result = await txQuery<{ updated: number }>(
       `UPDATE bins
        SET tags = (
@@ -149,15 +176,23 @@ router.delete('/:tag', asyncHandler(async (req, res) => {
       [locationId, tag],
     );
 
+    // Orphan children — set their parent_tag to NULL
+    const orphaned = await txQuery<{ tag: string }>(
+      `UPDATE tag_colors SET parent_tag = NULL, updated_at = ${d.now()}
+       WHERE location_id = $1 AND parent_tag = $2
+       RETURNING tag`,
+      [locationId, tag],
+    );
+
     await txQuery(
       'DELETE FROM tag_colors WHERE location_id = $1 AND tag = $2',
       [locationId, tag],
     );
 
-    return { binsUpdated: result.rows.length };
+    return { binsUpdated: result.rows.length, orphanedChildren: orphaned.rows.length };
   });
 
-  res.json({ deleted: true, binsUpdated });
+  res.json({ deleted: true, binsUpdated, orphanedChildren });
 }));
 
 export default router;
