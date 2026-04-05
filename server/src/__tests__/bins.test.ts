@@ -204,7 +204,7 @@ describe('GET /api/bins/:id', () => {
       .get(`/api/bins/${bin.id}`)
       .set('Authorization', `Bearer ${otherToken}`);
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
   });
 });
 

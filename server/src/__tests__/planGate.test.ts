@@ -496,9 +496,10 @@ describe('getUserOverLimits() with cache', () => {
   it('computes over-limits from DB queries', async () => {
     vi.mocked(query)
       .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ cnt: 3 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ total: 200 * 1024 * 1024 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });
+      .mockResolvedValueOnce({ rows: [{ cnt: 10 }], rowCount: 1 })           // binResult
+      .mockResolvedValueOnce({ rows: [{ cnt: 3 }], rowCount: 1 })            // locResult (over limit)
+      .mockResolvedValueOnce({ rows: [{ cnt: 5, total: 200 * 1024 * 1024 }], rowCount: 1 }) // photoResult (over limit)
+      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });     // memberResult
     const result = await getUserOverLimits('user1');
     expect(result.locations).toBe(true);
     expect(result.photos).toBe(true);
@@ -508,9 +509,10 @@ describe('getUserOverLimits() with cache', () => {
   it('returns cached result on second call', async () => {
     vi.mocked(query)
       .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })            // binResult
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })            // locResult
+      .mockResolvedValueOnce({ rows: [{ cnt: 0, total: 0 }], rowCount: 1 })  // photoResult
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });                      // memberResult
     await getUserOverLimits('user1');
     const callCount = vi.mocked(query).mock.calls.length;
     await getUserOverLimits('user1');
@@ -529,9 +531,10 @@ describe('checkLocationWritable()', () => {
     vi.mocked(query)
       .mockResolvedValueOnce({ rows: [{ created_by: 'owner1' }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })            // binResult
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })            // locResult
+      .mockResolvedValueOnce({ rows: [{ cnt: 0, total: 0 }], rowCount: 1 })  // photoResult
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });                      // memberResult
     const result = await checkLocationWritable('loc1');
     expect(result.writable).toBe(true);
   });
@@ -540,9 +543,10 @@ describe('checkLocationWritable()', () => {
     vi.mocked(query)
       .mockResolvedValueOnce({ rows: [{ created_by: 'owner1' }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ cnt: 3 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })            // binResult
+      .mockResolvedValueOnce({ rows: [{ cnt: 3 }], rowCount: 1 })            // locResult (over limit)
+      .mockResolvedValueOnce({ rows: [{ cnt: 0, total: 0 }], rowCount: 1 })  // photoResult
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });                      // memberResult
     const result = await checkLocationWritable('loc1');
     expect(result.writable).toBe(false);
     expect(result.reason).toContain('location');
@@ -565,9 +569,10 @@ describe('getEffectiveMemberRole()', () => {
   it('returns stored role when not over member limit', async () => {
     vi.mocked(query)
       .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 1 }], rowCount: 1 });
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })            // binResult
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })            // locResult
+      .mockResolvedValueOnce({ rows: [{ cnt: 0, total: 0 }], rowCount: 1 })  // photoResult
+      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 1 }], rowCount: 1 }); // memberResult
     const role = await getEffectiveMemberRole('member1', 'loc1', 'member', 'owner1');
     expect(role).toBe('member');
   });
@@ -575,9 +580,10 @@ describe('getEffectiveMemberRole()', () => {
   it('downgrades non-owner to viewer when over member limit', async () => {
     vi.mocked(query)
       .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })            // binResult
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })            // locResult
+      .mockResolvedValueOnce({ rows: [{ cnt: 0, total: 0 }], rowCount: 1 })  // photoResult
+      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 }); // memberResult (over limit)
     const role = await getEffectiveMemberRole('member1', 'loc1', 'admin', 'owner1');
     expect(role).toBe('viewer');
   });
@@ -585,9 +591,10 @@ describe('getEffectiveMemberRole()', () => {
   it('preserves owner role even when over member limit', async () => {
     vi.mocked(query)
       .mockResolvedValueOnce({ rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, active_until: null, email: null, previous_sub_status: null }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ total: 0 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 });
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })            // binResult
+      .mockResolvedValueOnce({ rows: [{ cnt: 1 }], rowCount: 1 })            // locResult
+      .mockResolvedValueOnce({ rows: [{ cnt: 0, total: 0 }], rowCount: 1 })  // photoResult
+      .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 }); // memberResult (over limit)
     const role = await getEffectiveMemberRole('owner1', 'loc1', 'admin', 'owner1');
     expect(role).toBe('admin');
   });

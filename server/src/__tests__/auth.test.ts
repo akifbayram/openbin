@@ -525,7 +525,7 @@ describe('POST /api/auth/register — plan initialization', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(meRes.status).toBe(200);
-    expect(meRes.body.plan).toBe('pro');
+    expect(meRes.body.plan).toBe('plus');
     expect(meRes.body.subscriptionStatus).toBe('active');
     expect(meRes.body.activeUntil).toBeDefined();
 

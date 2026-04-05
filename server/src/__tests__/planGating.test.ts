@@ -13,7 +13,9 @@ vi.mock('../lib/planGate.js', async (importOriginal) => {
     isProUser: vi.fn(),
     isPlusOrAbove: vi.fn(),
     isSubscriptionActive: vi.fn(),
+    hasAiAccess: vi.fn(),
     generateUpgradeUrl: vi.fn(),
+    generateUpgradePlanUrl: vi.fn(),
   };
 });
 
@@ -21,8 +23,10 @@ vi.mock('../lib/planGate.js', async (importOriginal) => {
 
 import { createApp } from '../index.js';
 import {
+  generateUpgradePlanUrl,
   generateUpgradeUrl,
   getUserPlanInfo,
+  hasAiAccess,
   isPlusOrAbove,
   isProUser,
   isSelfHosted,
@@ -47,7 +51,9 @@ function mockProUser() {
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
   vi.mocked(isProUser).mockReturnValue(true);
   vi.mocked(isPlusOrAbove).mockReturnValue(true);
+  vi.mocked(hasAiAccess).mockReturnValue(true);
   vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
+  vi.mocked(generateUpgradePlanUrl).mockResolvedValue(null);
 }
 
 /** Configure mocks so all plan checks fail for a Free cloud user. */
@@ -63,7 +69,9 @@ function mockFreeUser() {
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
   vi.mocked(isProUser).mockReturnValue(false);
   vi.mocked(isPlusOrAbove).mockReturnValue(false);
+  vi.mocked(hasAiAccess).mockReturnValue(false);
   vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
+  vi.mocked(generateUpgradePlanUrl).mockResolvedValue(null);
 }
 
 /** Configure mocks so the self-hosted fast-path is taken. */
@@ -79,7 +87,9 @@ beforeEach(() => {
   vi.mocked(isProUser).mockReset();
   vi.mocked(isPlusOrAbove).mockReset();
   vi.mocked(isSubscriptionActive).mockReset();
+  vi.mocked(hasAiAccess).mockReset();
   vi.mocked(generateUpgradeUrl).mockReset();
+  vi.mocked(generateUpgradePlanUrl).mockReset();
 });
 
 // ---------------------------------------------------------------------------
