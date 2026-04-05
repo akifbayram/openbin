@@ -15,7 +15,7 @@ import { apiFetch, getAvatarUrl } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { allChecksPassing, computePasswordChecks } from '@/lib/passwordStrength';
 import { useWarnOnUnload } from '@/lib/useWarnOnUnload';
-import { cn, getErrorMessage } from '@/lib/utils';
+import { cn, EMAIL_REGEX, getErrorMessage } from '@/lib/utils';
 import type { User } from '@/types';
 
 function validateDisplayName(value: string): string | undefined {
@@ -33,7 +33,7 @@ export function ProfilePage() {
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [email, setEmail] = useState(user?.email || '');
   const [savingProfile, setSavingProfile] = useState(false);
-  const [profileErrors, setProfileErrors] = useState<{ displayName?: string }>({});
+  const [profileErrors, setProfileErrors] = useState<{ displayName?: string; email?: string }>({});
 
   // Password form
   const [currentPassword, setCurrentPassword] = useState('');
@@ -63,8 +63,10 @@ export function ProfilePage() {
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
     const nameError = validateDisplayName(displayName);
-    if (nameError) {
-      setProfileErrors({ displayName: nameError });
+    const trimmedEmail = email.trim();
+    const emailError = trimmedEmail && !EMAIL_REGEX.test(trimmedEmail) ? 'Enter a valid email address' : undefined;
+    if (nameError || emailError) {
+      setProfileErrors({ displayName: nameError || undefined, email: emailError });
       return;
     }
     setProfileErrors({});
@@ -237,7 +239,7 @@ export function ProfilePage() {
                   value={displayName}
                   onChange={(e) => {
                     setDisplayName(e.target.value);
-                    if (profileErrors.displayName) setProfileErrors({});
+                    if (profileErrors.displayName) setProfileErrors(prev => ({ ...prev, displayName: undefined }));
                   }}
                   onBlur={() => {
                     const err = validateDisplayName(displayName);
@@ -249,14 +251,15 @@ export function ProfilePage() {
                   aria-invalid={!!profileErrors.displayName}
                 />
               </FormField>
-              <FormField label="Email" htmlFor="profile-email" hint="Optional — used for account recovery">
+              <FormField label="Email" htmlFor="profile-email" hint="Optional — used for account recovery" error={profileErrors.email}>
                 <Input
                   id="profile-email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); if (profileErrors.email) setProfileErrors(prev => ({ ...prev, email: undefined })); }}
                   placeholder="you@example.com"
                   autoComplete="email"
+                  aria-invalid={!!profileErrors.email}
                 />
               </FormField>
               <p className="text-[11px] text-[var(--text-tertiary)]">

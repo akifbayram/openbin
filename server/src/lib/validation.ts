@@ -1,7 +1,7 @@
 import { ValidationError } from './httpErrors.js';
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,50}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_REGEX = /^[^\s@+]+@[^\s@]+\.[^\s@]+$/;
 export const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
 
 /** Strip Unicode control/format characters that enable visual spoofing (RTL overrides, zero-width chars, etc.) */

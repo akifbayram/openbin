@@ -63,7 +63,7 @@ export function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { preferences, updatePreferences } = useUserPreferences();
   const { canWrite } = usePermissions();
-  const { isLocked, isSelfHosted, planInfo, isOverAnyLimit, isLoading: planLoading } = usePlan();
+  const { isLocked, isSelfHosted, isGated, planInfo, isOverAnyLimit, isLoading: planLoading } = usePlan();
   const showLockedBanner = isLocked && !isSelfHosted && !planLoading;
   const { settings: aiSettings } = useAiSettings();
   const terminology = useTerminology();
@@ -73,7 +73,7 @@ export function AppLayout() {
   const [commandOpen, setCommandOpen] = useState(false);
   const commandMounted = useRef(false);
   if (commandOpen) commandMounted.current = true;
-  const aiEnabled = !!aiSettings && (isSelfHosted || planInfo.plan === 'pro' || demoMode);
+  const aiEnabled = !!aiSettings && (isSelfHosted || !isGated('ai') || demoMode);
   // Register directly on the module-level ref (can't use useRegisterCommandInput here
   // because AppLayout is *above* TourProvider, so useTourContext() would return null).
   useEffect(() => {

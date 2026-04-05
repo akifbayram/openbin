@@ -13,10 +13,9 @@ import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { allChecksPassing, computePasswordChecks } from '@/lib/passwordStrength';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
-import { cn, focusRing, getErrorMessage } from '@/lib/utils';
+import { cn, EMAIL_REGEX, focusRing, getErrorMessage } from '@/lib/utils';
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,50}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function RegisterPage() {
   const navigate = useNavigate();

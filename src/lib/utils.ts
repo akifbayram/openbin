@@ -10,6 +10,8 @@ export function plural(count: number, singular: string, pluralForm = `${singular
   return count === 1 ? singular : pluralForm;
 }
 
+export const EMAIL_REGEX = /^[^\s@+]+@[^\s@]+\.[^\s@]+$/;
+
 export function haptic(pattern: number | number[] = 10) {
   if ('vibrate' in navigator) {
     navigator.vibrate(pattern);
