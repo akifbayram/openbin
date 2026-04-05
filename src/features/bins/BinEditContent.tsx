@@ -58,98 +58,104 @@ export function BinEditContent({
   });
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Items */}
-      <Card>
-        <CardContent className="pt-3 pb-4">
-          <ItemList items={edit.items} onItemsChange={edit.setItems} collapsible />
-          <QuickAddWidget quickAdd={quickAdd} aiEnabled={aiEnabled} />
-        </CardContent>
-      </Card>
-
-      {/* Notes */}
-      <Card>
-        <CardContent className="space-y-2 pt-3 pb-4">
-          <Label htmlFor="edit-notes">Notes</Label>
-          <Textarea
-            id="edit-notes"
-            value={edit.notes}
-            onChange={(e) => edit.setNotes(e.target.value)}
-            maxLength={10000}
-            rows={3}
-            className="[field-sizing:content] min-h-[5rem]"
-          />
-        </CardContent>
-      </Card>
-
-      {/* Organization: Area + Tags */}
-      <Card>
-        <CardContent className="space-y-5 pt-3 pb-4">
-          <div className="space-y-2">
-            <Label>{t.Area}</Label>
-            <AreaPicker locationId={activeLocationId} value={edit.areaId} onChange={edit.setAreaId} />
-          </div>
-          <div className="space-y-2">
-            <Label>Tags</Label>
-            <TagInput tags={edit.tags} onChange={edit.setTags} suggestions={allTags} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Custom Fields */}
-      <CustomFieldsEditCard
-        fields={customFields}
-        values={edit.customFields}
-        onChange={edit.setCustomFields}
-      />
-
-      {photosSection}
-
-      {/* Appearance — icon, color, style */}
-      <Card>
-        <CardContent className="space-y-5 pt-3 pb-4">
-          <div className="space-y-3">
-            <Label>Preview</Label>
-            <BinPreviewCard
-              name={edit.name}
-              color={edit.color}
-              items={edit.items.map((i) => i.name)}
-              tags={edit.tags}
-              icon={edit.icon}
-              cardStyle={edit.cardStyle}
-              areaName={editAreaName}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Icon</Label>
-            <IconPicker value={edit.icon} onChange={edit.setIcon} />
-          </div>
-          <div className="space-y-2">
-            <Label>Color</Label>
-            <ColorPicker
-              value={edit.color}
-              onChange={edit.setColor}
-              secondaryLabel={secondaryInfo?.label}
-              secondaryValue={secondaryInfo?.value}
-              onSecondaryChange={secondaryInfo ? (c) => edit.setCardStyle(setSecondaryColor(edit.cardStyle, c)) : undefined}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Style</Label>
-            <StylePicker value={edit.cardStyle} color={edit.color} onChange={edit.setCardStyle} photos={photos} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Visibility */}
-      {canChangeVisibility && (
+    <div className="flex flex-col lg:grid lg:grid-cols-[3fr_2fr] lg:items-start gap-4">
+      {/* Left column */}
+      <div className="flex flex-col gap-4">
+        {/* Items */}
         <Card>
-          <CardContent className="space-y-2 pt-3 pb-4">
-            <Label>Visibility</Label>
-            <VisibilityPicker value={edit.visibility} onChange={edit.setVisibility} />
+          <CardContent className="pt-3 pb-4">
+            <ItemList items={edit.items} onItemsChange={edit.setItems} collapsible />
+            <QuickAddWidget quickAdd={quickAdd} aiEnabled={aiEnabled} />
           </CardContent>
         </Card>
-      )}
+
+        {/* Notes */}
+        <Card>
+          <CardContent className="space-y-2 pt-3 pb-4">
+            <Label htmlFor="edit-notes">Notes</Label>
+            <Textarea
+              id="edit-notes"
+              value={edit.notes}
+              onChange={(e) => edit.setNotes(e.target.value)}
+              maxLength={10000}
+              rows={3}
+              className="[field-sizing:content] min-h-[5rem]"
+            />
+          </CardContent>
+        </Card>
+
+        {photosSection}
+
+        {/* Appearance — icon, color, style */}
+        <Card>
+          <CardContent className="space-y-5 pt-3 pb-4">
+            <div className="space-y-3">
+              <Label>Preview</Label>
+              <BinPreviewCard
+                name={edit.name}
+                color={edit.color}
+                items={edit.items.map((i) => i.name)}
+                tags={edit.tags}
+                icon={edit.icon}
+                cardStyle={edit.cardStyle}
+                areaName={editAreaName}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <IconPicker value={edit.icon} onChange={edit.setIcon} />
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <ColorPicker
+                value={edit.color}
+                onChange={edit.setColor}
+                secondaryLabel={secondaryInfo?.label}
+                secondaryValue={secondaryInfo?.value}
+                onSecondaryChange={secondaryInfo ? (c) => edit.setCardStyle(setSecondaryColor(edit.cardStyle, c)) : undefined}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Style</Label>
+              <StylePicker value={edit.cardStyle} color={edit.color} onChange={edit.setCardStyle} photos={photos} />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Right column */}
+      <div className="lg:sticky lg:top-6 flex flex-col gap-4">
+        {/* Organization: Area + Tags */}
+        <Card>
+          <CardContent className="space-y-5 pt-3 pb-4">
+            <div className="space-y-2">
+              <Label>{t.Area}</Label>
+              <AreaPicker locationId={activeLocationId} value={edit.areaId} onChange={edit.setAreaId} />
+            </div>
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <TagInput tags={edit.tags} onChange={edit.setTags} suggestions={allTags} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Custom Fields */}
+        <CustomFieldsEditCard
+          fields={customFields}
+          values={edit.customFields}
+          onChange={edit.setCustomFields}
+        />
+
+        {/* Visibility */}
+        {canChangeVisibility && (
+          <Card>
+            <CardContent className="space-y-2 pt-3 pb-4">
+              <Label>Visibility</Label>
+              <VisibilityPicker value={edit.visibility} onChange={edit.setVisibility} />
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
