@@ -385,6 +385,9 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
     'CREATE INDEX IF NOT EXISTS idx_ai_credit_periods_user ON ai_credit_periods(user_id, period_start);',
   ].join('\n'));
 
+  // Tag hierarchy: add parent_tag column to tag_colors
+  addColumnIfNotExists('ALTER TABLE tag_colors ADD COLUMN parent_tag TEXT DEFAULT NULL');
+
   } catch (e) {
     log.error('Migration failed — exiting to prevent corrupt state:', e instanceof Error ? e.message : e);
     process.exit(1);

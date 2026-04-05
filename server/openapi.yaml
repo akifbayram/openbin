@@ -664,6 +664,10 @@ components:
         color:
           type: string
           description: Color preset key from colorPalette
+        parent_tag:
+          type: string
+          nullable: true
+          description: Parent tag name for hierarchy (single-level only)
         created_at:
           type: string
           format: date-time
@@ -682,6 +686,10 @@ components:
           type: string
         color:
           type: string
+        parentTag:
+          type: string
+          nullable: true
+          description: Parent tag name (null or empty to clear)
 
     # ── Activity ───────────────────────────────────────────
     ActivityLogEntry:

@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS tag_colors (
   location_id   TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
   tag           TEXT NOT NULL,
   color         TEXT NOT NULL,
+  parent_tag    TEXT DEFAULT NULL,
   created_at    TEXT DEFAULT (datetime('now')),
   updated_at    TEXT DEFAULT (datetime('now')),
   UNIQUE(location_id, tag)

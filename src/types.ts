@@ -135,6 +135,7 @@ export interface TagColor {
   location_id: string;
   tag: string;
   color: string;
+  parent_tag: string | null;
   created_at: string;
   updated_at: string;
 }
