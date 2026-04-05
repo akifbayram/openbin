@@ -99,6 +99,11 @@ export function BinViewContent({
           </CardContent>
         </Card>
 
+        {photosSection}
+      </div>
+
+      {/* Right column */}
+      <div className="lg:sticky lg:top-6 flex flex-col gap-4">
         {/* Notes card */}
         {hasNotes && (
           <Card>
@@ -111,11 +116,6 @@ export function BinViewContent({
           </Card>
         )}
 
-        {photosSection}
-      </div>
-
-      {/* Right column */}
-      <div className="lg:sticky lg:top-6 flex flex-col gap-4">
         {/* Area & Tags card */}
         {(bin.area_name || hasTags) && (
           <Card>

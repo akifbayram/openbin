@@ -69,21 +69,6 @@ export function BinEditContent({
           </CardContent>
         </Card>
 
-        {/* Notes */}
-        <Card>
-          <CardContent className="space-y-2 pt-3 pb-4">
-            <Label htmlFor="edit-notes">Notes</Label>
-            <Textarea
-              id="edit-notes"
-              value={edit.notes}
-              onChange={(e) => edit.setNotes(e.target.value)}
-              maxLength={10000}
-              rows={3}
-              className="[field-sizing:content] min-h-[5rem]"
-            />
-          </CardContent>
-        </Card>
-
         {photosSection}
 
         {/* Appearance — icon, color, style */}
@@ -125,6 +110,21 @@ export function BinEditContent({
 
       {/* Right column */}
       <div className="lg:sticky lg:top-6 flex flex-col gap-4">
+        {/* Notes */}
+        <Card>
+          <CardContent className="space-y-2 pt-3 pb-4">
+            <Label htmlFor="edit-notes">Notes</Label>
+            <Textarea
+              id="edit-notes"
+              value={edit.notes}
+              onChange={(e) => edit.setNotes(e.target.value)}
+              maxLength={10000}
+              rows={3}
+              className="[field-sizing:content] min-h-[5rem]"
+            />
+          </CardContent>
+        </Card>
+
         {/* Organization: Area + Tags */}
         <Card>
           <CardContent className="space-y-5 pt-3 pb-4">

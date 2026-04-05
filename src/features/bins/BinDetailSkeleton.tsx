@@ -26,13 +26,6 @@ export function BinDetailSkeleton() {
             <Skeleton className="h-10 w-full rounded-[var(--radius-md)]" />
           </div>
 
-          {/* Notes card */}
-          <div className="flat-card rounded-[var(--radius-lg)] p-4 space-y-2.5">
-            <Skeleton className="h-4 w-12" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-2/3" />
-          </div>
-
           {/* Photos disclosure (collapsed) */}
           <div className="flat-card rounded-[var(--radius-lg)] px-4 py-4">
             <Skeleton className="h-4 w-20" />
@@ -41,6 +34,13 @@ export function BinDetailSkeleton() {
 
         {/* Right column */}
         <div className="flex flex-col gap-4">
+          {/* Notes card */}
+          <div className="flat-card rounded-[var(--radius-lg)] p-4 space-y-2.5">
+            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+
           {/* Area & Tags card */}
           <div className="flat-card rounded-[var(--radius-lg)] p-4 space-y-4">
             <div className="space-y-2">
