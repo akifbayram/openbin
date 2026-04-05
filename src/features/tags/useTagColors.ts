@@ -21,12 +21,20 @@ export function useTagColors() {
   const tagColors = useMemo(() => {
     const map = new Map<string, string>();
     for (const tc of rawTagColors) {
-      map.set(tc.tag, tc.color);
+      if (tc.color) map.set(tc.tag, tc.color);
     }
     return map;
   }, [rawTagColors]);
 
-  return { tagColors, isLoading };
+  const tagParents = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const tc of rawTagColors) {
+      if (tc.parent_tag) map.set(tc.tag, tc.parent_tag);
+    }
+    return map;
+  }, [rawTagColors]);
+
+  return { tagColors, tagParents, isLoading };
 }
 
 export async function setTagColor(locationId: string, tag: string, color: string): Promise<void> {
@@ -40,6 +48,19 @@ export async function setTagColor(locationId: string, tag: string, color: string
 export async function removeTagColor(locationId: string, tag: string): Promise<void> {
   await apiFetch(`/api/tag-colors/${encodeURIComponent(tag)}?location_id=${encodeURIComponent(locationId)}`, {
     method: 'DELETE',
+  });
+  notifyTagColorsChanged();
+}
+
+export async function setTagParent(
+  locationId: string,
+  tag: string,
+  parentTag: string | null,
+  currentColor: string,
+): Promise<void> {
+  await apiFetch('/api/tag-colors', {
+    method: 'PUT',
+    body: { locationId, tag, color: currentColor, parentTag: parentTag || null },
   });
   notifyTagColorsChanged();
 }
