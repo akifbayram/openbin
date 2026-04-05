@@ -43,12 +43,56 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
     [available, trimmedInput],
   );
 
+  // Build grouped list for browse mode (no search text)
+  const groupedAvailable = useMemo(() => {
+    if (trimmedInput) return null; // Use flat filtered list during search
+
+    const parentToChildren = new Map<string, string[]>();
+    const ungrouped: string[] = [];
+    const parentSet = new Set<string>();
+
+    // Identify all parents
+    for (const [, p] of tagParents) {
+      parentSet.add(p);
+    }
+
+    // Group available tags
+    for (const tag of available) {
+      const p = tagParents.get(tag);
+      if (p && available.includes(p)) {
+        // This is a child and its parent is also available
+        const list = parentToChildren.get(p) || [];
+        list.push(tag);
+        parentToChildren.set(p, list);
+      } else if (p && !available.includes(p)) {
+        // Parent already added to bin — show child as ungrouped
+        ungrouped.push(tag);
+      } else if (!parentSet.has(tag)) {
+        ungrouped.push(tag);
+      }
+      // Parents are handled as group headers, not pushed to ungrouped
+    }
+
+    // Sort children alphabetically within each group
+    for (const children of parentToChildren.values()) {
+      children.sort();
+    }
+
+    // Build ordered list of parent tags
+    const parents = [...parentToChildren.keys()].sort();
+
+    return { parents, parentToChildren, ungrouped: ungrouped.sort() };
+  }, [available, tagParents, trimmedInput]);
+
   const showCreate = trimmedInput.length > 0
     && !tags.includes(trimmedInput)
     && !suggestions.includes(trimmedInput);
 
   const itemCount = filtered.length + (showCreate ? 1 : 0);
-  const visible = showSuggestions && itemCount > 0;
+  const browseItemCount = groupedAvailable
+    ? groupedAvailable.parents.length + [...groupedAvailable.parentToChildren.values()].reduce((s, c) => s + c.length, 0) + groupedAvailable.ungrouped.length
+    : 0;
+  const visible = showSuggestions && (groupedAvailable ? browseItemCount > 0 || showCreate : itemCount > 0);
 
   function addTag(tag: string) {
     const t = tag.trim().toLowerCase();
@@ -212,40 +256,111 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
           style={{ top: pos.top, left: pos.left, width: pos.width }}
         >
           <div className="max-h-48 overflow-auto py-1">
-            {filtered.map((tag, i) => {
-              const tagStyle = getTagStyle(tag);
-              const isHighlighted = i === highlightIndex;
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    addTag(tag);
-                  }}
-                  className={cn(
-                    dropdownRow,
-                    isHighlighted
-                      ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
-                  )}
-                >
-                  {tagStyle ? (
-                    <span
-                      className="h-3 w-3 flex-shrink-0 rounded-full"
-                      style={{ backgroundColor: tagStyle.backgroundColor as string }}
-                    />
-                  ) : (
-                    <span className="h-3 w-3 flex-shrink-0 rounded-full bg-[var(--text-tertiary)] opacity-30" />
-                  )}
-                  <span>{tag}</span>
-                </button>
-              );
-            })}
+            {groupedAvailable ? (
+              <>
+                {/* Parent groups */}
+                {groupedAvailable.parents.map((parent) => {
+                  const parentStyle = getTagStyle(parent);
+                  const children = groupedAvailable.parentToChildren.get(parent) || [];
+                  return (
+                    <div key={parent}>
+                      {/* Parent header -- clickable to add parent tag */}
+                      <button
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); addTag(parent); }}
+                        className="flex w-full items-center gap-2 px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-[var(--text-quaternary)] hover:bg-[var(--bg-hover)] cursor-pointer"
+                      >
+                        <span
+                          className="h-2 w-2 flex-shrink-0 rounded-full"
+                          style={parentStyle ? { backgroundColor: parentStyle.backgroundColor as string } : { backgroundColor: 'var(--text-tertiary)', opacity: 0.3 }}
+                        />
+                        {parent}
+                      </button>
+                      {/* Children */}
+                      {children.map((tag) => {
+                        const tagStyle = getTagStyle(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); addTag(tag); }}
+                            className={cn(dropdownRow, 'pl-7 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}
+                          >
+                            {tagStyle ? (
+                              <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: tagStyle.backgroundColor as string }} />
+                            ) : (
+                              <span className="h-3 w-3 flex-shrink-0 rounded-full bg-[var(--text-tertiary)] opacity-30" />
+                            )}
+                            <span>{tag}</span>
+                          </button>
+                        );
+                      })}
+                      <div className="mx-3 my-1 border-t border-[var(--border-subtle)]" />
+                    </div>
+                  );
+                })}
+                {/* Ungrouped tags */}
+                {groupedAvailable.ungrouped.map((tag) => {
+                  const tagStyle = getTagStyle(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); addTag(tag); }}
+                      className={cn(dropdownRow, 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]')}
+                    >
+                      {tagStyle ? (
+                        <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: tagStyle.backgroundColor as string }} />
+                      ) : (
+                        <span className="h-3 w-3 flex-shrink-0 rounded-full bg-[var(--text-tertiary)] opacity-30" />
+                      )}
+                      <span>{tag}</span>
+                    </button>
+                  );
+                })}
+              </>
+            ) : (
+              /* Flat filtered list -- used during search */
+              filtered.map((tag, i) => {
+                const tagStyle = getTagStyle(tag);
+                const parentHint = tagParents.get(tag);
+                const isHighlighted = i === highlightIndex;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      addTag(tag);
+                    }}
+                    className={cn(
+                      dropdownRow,
+                      isHighlighted
+                        ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
+                    )}
+                  >
+                    {tagStyle ? (
+                      <span
+                        className="h-3 w-3 flex-shrink-0 rounded-full"
+                        style={{ backgroundColor: tagStyle.backgroundColor as string }}
+                      />
+                    ) : (
+                      <span className="h-3 w-3 flex-shrink-0 rounded-full bg-[var(--text-tertiary)] opacity-30" />
+                    )}
+                    <span>{tag}</span>
+                    {parentHint && (
+                      <span className="ml-auto text-[10px] text-[var(--text-quaternary)]">{parentHint}</span>
+                    )}
+                  </button>
+                );
+              })
+            )}
+            {/* Create option -- always at bottom */}
             {showCreate && (
               <>
-                {filtered.length > 0 && (
+                {(groupedAvailable ? browseItemCount > 0 : filtered.length > 0) && (
                   <div className="mx-3 my-1 border-t border-[var(--border-subtle)]" />
                 )}
                 <button
