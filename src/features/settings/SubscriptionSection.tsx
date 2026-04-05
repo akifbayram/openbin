@@ -228,12 +228,17 @@ export function SubscriptionSection() {
 
           {/* Usage grid */}
           {tiles.length > 0 && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-6 gap-2">
               {tiles.map((tile, i) => {
-                const remainder = tiles.length % 3;
-                const spanClass = remainder !== 0 && i === tiles.length - 1
-                  ? (remainder === 1 ? 'col-span-3' : 'col-span-2')
-                  : undefined;
+                const total = tiles.length;
+                let spanClass: string;
+                if (total <= 2) {
+                  spanClass = total === 1 ? 'col-span-6' : 'col-span-3';
+                } else if (i < 3) {
+                  spanClass = 'col-span-2';
+                } else {
+                  spanClass = total - 3 === 1 ? 'col-span-6' : 'col-span-3';
+                }
                 return (
                   <div
                     key={tile.label}
