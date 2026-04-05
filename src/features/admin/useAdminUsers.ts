@@ -15,6 +15,15 @@ export interface AdminUser {
   binCount: number;
   locationCount: number;
   photoStorageMb: number;
+  lastActiveAt: string | null;
+  itemCount: number;
+  photoCount: number;
+  scans30d: number;
+  aiCreditsUsed: number;
+  aiCreditsLimit: number;
+  apiKeyCount: number;
+  apiRequests7d: number;
+  binsCreated7d: number;
 }
 
 interface RegistrationInfo {
@@ -97,6 +106,7 @@ export interface AdminUserDetail {
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  lastActiveAt: string | null;
   stats: {
     locationCount: number;
     binCount: number;
@@ -104,6 +114,15 @@ export interface AdminUserDetail {
     photoStorageMb: number;
     apiKeyCount: number;
     shareCount: number;
+    itemCount: number;
+    scans30d: number;
+    aiCreditsUsed: number;
+    aiCreditsLimit: number;
+    aiCreditsResetAt: string | null;
+    apiRequests7d: number;
+    binsCreated7d: number;
+    binLimit: number | null;
+    storageLimit: number | null;
   };
 }
 
