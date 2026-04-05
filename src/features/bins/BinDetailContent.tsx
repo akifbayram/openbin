@@ -336,39 +336,47 @@ export function BinDetailContent({
 
         {/* Information: visibility, created by, dates */}
         <Card>
-          <CardContent className="space-y-4 pt-3 pb-4">
-            <Label>Information</Label>
-            {canChangeVisibility && (
-              <div className={cn(autoSave.savedFields.has('visibility') && 'animate-save-flash')}>
-                <p className="text-[13px] text-[var(--text-tertiary)] mb-1.5">Visibility</p>
-                <VisibilityPicker
-                  value={bin.visibility}
-                  onChange={(v) => autoSave.saveVisibility(v)}
-                />
+          <CardContent className="!py-0">
+            <Disclosure
+              label="Information"
+              labelClassName={disclosureSectionLabel}
+              defaultOpen={localStorage.getItem('openbin-info-expanded') === 'true'}
+              onOpenChange={(v) => localStorage.setItem('openbin-info-expanded', String(v))}
+            >
+              <div className="pb-4 space-y-4">
+                {canChangeVisibility && (
+                  <div className={cn(autoSave.savedFields.has('visibility') && 'animate-save-flash')}>
+                    <p className="text-[13px] text-[var(--text-tertiary)] mb-1.5">Visibility</p>
+                    <VisibilityPicker
+                      value={bin.visibility}
+                      onChange={(v) => autoSave.saveVisibility(v)}
+                    />
+                  </div>
+                )}
+                {bin.created_by_name && (
+                  <div>
+                    <p className="text-[13px] text-[var(--text-tertiary)]">Created by</p>
+                    <p className="mt-0.5 text-[15px] text-[var(--text-primary)]">
+                      {bin.created_by_name}
+                    </p>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-[13px] text-[var(--text-tertiary)]">Created</p>
+                    <p className="mt-0.5 text-[15px] text-[var(--text-primary)]">
+                      {formatDate(bin.created_at)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[13px] text-[var(--text-tertiary)]">Updated</p>
+                    <p className="mt-0.5 text-[15px] text-[var(--text-primary)]">
+                      {formatDate(bin.updated_at)}
+                    </p>
+                  </div>
+                </div>
               </div>
-            )}
-            {bin.created_by_name && (
-              <div>
-                <p className="text-[13px] text-[var(--text-tertiary)]">Created by</p>
-                <p className="mt-0.5 text-[15px] text-[var(--text-primary)]">
-                  {bin.created_by_name}
-                </p>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <p className="text-[13px] text-[var(--text-tertiary)]">Created</p>
-                <p className="mt-0.5 text-[15px] text-[var(--text-primary)]">
-                  {formatDate(bin.created_at)}
-                </p>
-              </div>
-              <div>
-                <p className="text-[13px] text-[var(--text-tertiary)]">Updated</p>
-                <p className="mt-0.5 text-[15px] text-[var(--text-primary)]">
-                  {formatDate(bin.updated_at)}
-                </p>
-              </div>
-            </div>
+            </Disclosure>
           </CardContent>
         </Card>
 
