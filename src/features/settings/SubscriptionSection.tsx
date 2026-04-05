@@ -243,7 +243,10 @@ export function SubscriptionSection() {
                   <div
                     key={tile.label}
                     className={cn(
-                      'rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3 py-2.5',
+                      'rounded-[var(--radius-sm)] px-3 py-2.5',
+                      tile.isOver ? 'bg-[var(--destructive-soft)]'
+                        : tile.isExhausted ? 'bg-[var(--color-warning-soft)]'
+                        : 'bg-[var(--bg-input)]',
                       spanClass,
                     )}
                   >
