@@ -99,3 +99,19 @@ export async function testAiConnection(opts: {
     body: opts,
   });
 }
+
+export async function saveTaskOverride(
+  taskGroup: string,
+  override: { provider?: string | null; model?: string | null; endpointUrl?: string | null },
+): Promise<void> {
+  await apiFetch(`/api/ai/task-overrides/${taskGroup}`, {
+    method: 'PUT',
+    body: override,
+  });
+  notifyAiSettingsChanged();
+}
+
+export async function deleteTaskOverride(taskGroup: string): Promise<void> {
+  await apiFetch(`/api/ai/task-overrides/${taskGroup}`, { method: 'DELETE' });
+  notifyAiSettingsChanged();
+}
