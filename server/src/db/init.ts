@@ -387,6 +387,8 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
 
   // Tag hierarchy: add parent_tag column to tag_colors
   addColumnIfNotExists('ALTER TABLE tag_colors ADD COLUMN parent_tag TEXT DEFAULT NULL');
+  // Admin usage metrics: last_active_at on users
+  addColumnIfNotExists('ALTER TABLE users ADD COLUMN last_active_at TEXT');
 
   } catch (e) {
     log.error('Migration failed — exiting to prevent corrupt state:', e instanceof Error ? e.message : e);
