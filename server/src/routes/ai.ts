@@ -8,7 +8,7 @@ import { analyzeImages, reanalyzeImages } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getConfigForTask, getUserAiSettings, parseTaskModelOverrides, TASK_TYPES } from '../lib/aiSettings.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
-import { config, getEnvAiConfig, isDemoUser } from '../lib/config.js';
+import { AI_TASK_GROUPS, type AiTaskGroup, config, getEnvAiConfig, isDemoUser, isGroupEnvLocked } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
 import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
 import { HttpError, ValidationError } from '../lib/httpErrors.js';
@@ -73,6 +73,8 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
         maxTokens: null,
         topP: null,
         requestTimeout: null,
+        taskOverrides: {},
+        taskOverridesEnvLocked: AI_TASK_GROUPS.filter(isGroupEnvLocked),
         source: 'env' as const,
       });
       return;
@@ -87,6 +89,23 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
   }
 
   const activeRow = result.rows.find((r: any) => !!r.is_active) || result.rows[0];
+
+  // Fetch task overrides for this user
+  const overridesResult = await query(
+    'SELECT task_group, provider, model, endpoint_url FROM user_ai_task_overrides WHERE user_id = $1',
+    [req.user!.id],
+  );
+
+  const taskOverrides: Record<string, { provider: string | null; model: string | null; endpointUrl: string | null; source: 'user' } | null> = {};
+  for (const row of overridesResult.rows) {
+    taskOverrides[row.task_group] = {
+      provider: row.provider || null,
+      model: row.model || null,
+      endpointUrl: row.endpoint_url || null,
+      source: 'user',
+    };
+  }
+  const taskOverridesEnvLocked: string[] = AI_TASK_GROUPS.filter(isGroupEnvLocked);
 
   // Build providerConfigs from all rows
   const providerConfigs: Record<string, { apiKey: string; model: string; endpointUrl: string | null }> = {};
@@ -115,6 +134,8 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
     requestTimeout: activeRow.request_timeout ?? null,
     taskModelOverrides: parseTaskModelOverrides(activeRow.task_model_overrides),
     providerConfigs,
+    taskOverrides,
+    taskOverridesEnvLocked,
     source: 'user' as const,
   });
 }));
@@ -261,6 +282,7 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
 
 // DELETE /api/ai/settings — remove AI config
 router.delete('/settings', requireAiAccess(), aiRouteHandler('delete AI settings', async (req, res) => {
+  await query('DELETE FROM user_ai_task_overrides WHERE user_id = $1', [req.user!.id]);
   await query('DELETE FROM user_ai_settings WHERE user_id = $1', [req.user!.id]);
   res.json({ deleted: true });
 }));
@@ -448,6 +470,48 @@ router.post('/test', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRou
     endpointUrl: endpointUrl || null,
   }, isDemoUser(req));
   res.json({ success: true });
+}));
+
+// PUT /api/ai/task-overrides/:taskGroup
+router.put('/task-overrides/:taskGroup', requireAiAccess(), aiRouteHandler('save task override', async (req, res) => {
+  const group = req.params.taskGroup as AiTaskGroup;
+  if (!(AI_TASK_GROUPS as readonly string[]).includes(group)) {
+    throw new ValidationError(`Invalid task group: ${group}. Valid: ${AI_TASK_GROUPS.join(', ')}`);
+  }
+  if (isGroupEnvLocked(group)) {
+    throw new HttpError(409, 'ENV_LOCKED', `Task routing for ${group} is configured by server environment`);
+  }
+  if (isDemoUser(req)) {
+    throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot configure task routing');
+  }
+
+  const { provider, model, endpointUrl } = req.body;
+  if (provider && !['openai', 'anthropic', 'gemini', 'openai-compatible'].includes(provider)) {
+    throw new ValidationError('Invalid provider');
+  }
+
+  const id = generateUuid();
+  await query(
+    `INSERT INTO user_ai_task_overrides (id, user_id, task_group, provider, model, endpoint_url)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (user_id, task_group) DO UPDATE SET
+       provider = $4, model = $5, endpoint_url = $6, updated_at = ${d.now()}`,
+    [id, req.user!.id, group, provider || null, model || null, endpointUrl || null],
+  );
+  res.json({ taskGroup: group, provider: provider || null, model: model || null, endpointUrl: endpointUrl || null });
+}));
+
+// DELETE /api/ai/task-overrides/:taskGroup
+router.delete('/task-overrides/:taskGroup', requireAiAccess(), aiRouteHandler('delete task override', async (req, res) => {
+  const group = req.params.taskGroup as AiTaskGroup;
+  if (!(AI_TASK_GROUPS as readonly string[]).includes(group)) {
+    throw new ValidationError(`Invalid task group: ${group}`);
+  }
+  if (isGroupEnvLocked(group)) {
+    throw new HttpError(409, 'ENV_LOCKED', `Task routing for ${group} is configured by server environment`);
+  }
+  await query('DELETE FROM user_ai_task_overrides WHERE user_id = $1 AND task_group = $2', [req.user!.id, group]);
+  res.json({ deleted: true });
 }));
 
 export default router;
