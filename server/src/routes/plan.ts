@@ -19,6 +19,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       upgradeUrl: null,
       upgradePlusUrl: null,
       upgradeProUrl: null,
+      subscribePlanUrl: null,
       portalUrl: null,
       aiCredits: null,
     });
@@ -49,8 +50,12 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       : null,
     features: getFeatureMap(planInfo.plan),
     upgradeUrl: active && planInfo.plan === Plan.PRO ? null : await generateUpgradeUrl(userId, email),
-    upgradePlusUrl: isPaidActive ? null : await generateUpgradePlanUrl(userId, email, 'plus'),
-    upgradeProUrl: isPaidActive ? null : await generateUpgradePlanUrl(userId, email, 'pro'),
+    upgradePlusUrl: planInfo.plan !== Plan.PLUS && planInfo.plan !== Plan.PRO
+      ? await generateUpgradePlanUrl(userId, email, 'plus') : null,
+    upgradeProUrl: planInfo.plan !== Plan.PRO
+      ? await generateUpgradePlanUrl(userId, email, 'pro') : null,
+    subscribePlanUrl: planInfo.subStatus === SubStatus.TRIAL
+      ? await generateUpgradePlanUrl(userId, email, planLabel(planInfo.plan) as 'plus' | 'pro') : null,
     portalUrl: isPaidActive ? await generatePortalUrl(userId, email) : null,
     aiCredits,
   });
