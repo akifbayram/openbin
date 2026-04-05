@@ -14,7 +14,7 @@ import { createLogger } from '../lib/logger.js';
 import { notifyManagerUserUpdate } from '../lib/managerWebhook.js';
 import { getCloudMetrics } from '../lib/metrics.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
-import { invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
+import { getFeatureMap, invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
 import { metricsLimiter } from '../lib/rateLimiters.js';
 import { restoreBackup } from '../lib/restore.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
@@ -64,36 +64,67 @@ router.get('/users', asyncHandler(async (req, res) => {
     bins: 'bin_count',
     locations: 'location_count',
     storage: 'photo_storage_bytes',
+    lastActive: 'u.last_active_at',
+    items: 'item_count',
+    photos: 'photo_count',
+    scans30d: 'scans_30d',
+    aiCredits: 'u.ai_credits_used',
+    apiKeys: 'api_key_count',
+    apiRequests7d: 'api_requests_7d',
+    binPct: 'bin_count',
+    storagePct: 'photo_storage_bytes',
+    binsCreated7d: 'bins_created_7d',
+    accountAge: 'u.created_at',
   };
   const orderCol = Object.hasOwn(sortMap, field) ? sortMap[field] : sortMap.created;
   const orderDir = desc ? 'DESC' : 'ASC';
 
   const usersResult = await query(
-    `SELECT u.id, u.username, u.display_name, u.email, u.is_admin, u.plan, u.sub_status, u.active_until, u.deleted_at, u.created_at,
+    `SELECT u.id, u.username, u.display_name, u.email, u.is_admin, u.plan, u.sub_status,
+       u.active_until, u.deleted_at, u.created_at, u.last_active_at,
+       u.ai_credits_used, u.ai_credits_reset_at,
        (SELECT COUNT(*) FROM bins b JOIN location_members lm ON b.location_id = lm.location_id WHERE lm.user_id = u.id AND b.deleted_at IS NULL) AS bin_count,
        (SELECT COUNT(DISTINCT lm.location_id) FROM location_members lm WHERE lm.user_id = u.id) AS location_count,
-       (SELECT COALESCE(SUM(p.size), 0) FROM photos p WHERE p.created_by = u.id) AS photo_storage_bytes
+       (SELECT COALESCE(SUM(p.size), 0) FROM photos p WHERE p.created_by = u.id) AS photo_storage_bytes,
+       (SELECT COUNT(*) FROM bin_items bi JOIN bins b ON b.id = bi.bin_id WHERE b.created_by = u.id AND b.deleted_at IS NULL) AS item_count,
+       (SELECT COUNT(*) FROM photos WHERE created_by = u.id) AS photo_count,
+       (SELECT COUNT(*) FROM scan_history WHERE user_id = u.id AND scanned_at >= ${d.daysAgo(30)}) AS scans_30d,
+       (SELECT COUNT(*) FROM api_keys WHERE user_id = u.id AND revoked_at IS NULL) AS api_key_count,
+       (SELECT COALESCE(SUM(request_count), 0) FROM api_key_daily_usage WHERE api_key_id IN (SELECT id FROM api_keys WHERE user_id = u.id) AND date >= ${d.dateOf(d.daysAgo(7))}) AS api_requests_7d,
+       (SELECT COUNT(*) FROM bins WHERE created_by = u.id AND deleted_at IS NULL AND created_at >= ${d.daysAgo(7)}) AS bins_created_7d
      FROM users u ${whereClause}
      ORDER BY ${orderCol} ${orderDir}
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, limit, offset],
   );
 
-  const results = usersResult.rows.map((u: any) => ({
-    id: u.id,
-    username: u.username,
-    displayName: u.display_name,
-    email: u.email || null,
-    isAdmin: !!u.is_admin,
-    plan: planLabel(u.plan),
-    status: subStatusLabel(u.sub_status),
-    activeUntil: u.active_until || null,
-    deletedAt: u.deleted_at || null,
-    createdAt: u.created_at,
-    binCount: u.bin_count ?? 0,
-    locationCount: u.location_count ?? 0,
-    photoStorageMb: Math.round((u.photo_storage_bytes ?? 0) / 1024 / 1024 * 10) / 10,
-  }));
+  const results = usersResult.rows.map((u: any) => {
+    const features = getFeatureMap(u.plan as PlanTier);
+    return {
+      id: u.id,
+      username: u.username,
+      displayName: u.display_name,
+      email: u.email || null,
+      isAdmin: !!u.is_admin,
+      plan: planLabel(u.plan),
+      status: subStatusLabel(u.sub_status),
+      activeUntil: u.active_until || null,
+      deletedAt: u.deleted_at || null,
+      createdAt: u.created_at,
+      binCount: u.bin_count ?? 0,
+      locationCount: u.location_count ?? 0,
+      photoStorageMb: Math.round((u.photo_storage_bytes ?? 0) / 1024 / 1024 * 10) / 10,
+      lastActiveAt: u.last_active_at || null,
+      itemCount: u.item_count ?? 0,
+      photoCount: u.photo_count ?? 0,
+      scans30d: u.scans_30d ?? 0,
+      aiCreditsUsed: u.ai_credits_used ?? 0,
+      aiCreditsLimit: features.aiCreditsPerMonth ?? 0,
+      apiKeyCount: u.api_key_count ?? 0,
+      apiRequests7d: u.api_requests_7d ?? 0,
+      binsCreated7d: u.bins_created_7d ?? 0,
+    };
+  });
 
   res.json({ results, count: countResult.rows[0].cnt, adminCount: await getAdminCount() });
 }));
@@ -163,22 +194,29 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
     id: string; username: string; display_name: string; email: string | null;
     is_admin: number; plan: PlanTier; sub_status: SubStatusType;
     active_until: string | null; deleted_at: string | null; created_at: string; updated_at: string;
+    last_active_at: string | null; ai_credits_used: number | null; ai_credits_reset_at: string | null;
   }>(
-    'SELECT id, username, display_name, email, is_admin, plan, sub_status, active_until, deleted_at, created_at, updated_at FROM users WHERE id = $1',
+    'SELECT id, username, display_name, email, is_admin, plan, sub_status, active_until, deleted_at, created_at, updated_at, last_active_at, ai_credits_used, ai_credits_reset_at FROM users WHERE id = $1',
     [userId],
   );
 
   const row = userResult.rows[0];
   if (!row) throw new NotFoundError('User not found');
 
-  const [locationRes, binRes, photoRes, storageRes, apiKeyRes, shareRes] = await Promise.all([
+  const [locationRes, binRes, photoRes, storageRes, apiKeyRes, shareRes, itemRes, scanRes, apiReqRes, binsCreated7dRes] = await Promise.all([
     query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM locations WHERE created_by = $1', [userId]),
     query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM bins WHERE created_by = $1 AND deleted_at IS NULL', [userId]),
     query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM photos WHERE created_by = $1', [userId]),
     query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [userId]),
     query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM api_keys WHERE user_id = $1 AND revoked_at IS NULL', [userId]),
     query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM bin_shares WHERE created_by = $1 AND revoked_at IS NULL', [userId]),
+    query<{ cnt: number }>(`SELECT COUNT(*) as cnt FROM bin_items bi JOIN bins b ON b.id = bi.bin_id WHERE b.created_by = $1 AND b.deleted_at IS NULL`, [userId]),
+    query<{ cnt: number }>(`SELECT COUNT(*) as cnt FROM scan_history WHERE user_id = $1 AND scanned_at >= ${d.daysAgo(30)}`, [userId]),
+    query<{ total: number }>(`SELECT COALESCE(SUM(request_count), 0) as total FROM api_key_daily_usage WHERE api_key_id IN (SELECT id FROM api_keys WHERE user_id = $1) AND date >= ${d.dateOf(d.daysAgo(7))}`, [userId]),
+    query<{ cnt: number }>(`SELECT COUNT(*) as cnt FROM bins WHERE created_by = $1 AND deleted_at IS NULL AND created_at >= ${d.daysAgo(7)}`, [userId]),
   ]);
+
+  const features = getFeatureMap(row.plan);
 
   res.json({
     id: row.id,
@@ -192,6 +230,7 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
     deletedAt: row.deleted_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    lastActiveAt: row.last_active_at || null,
     stats: {
       locationCount: locationRes.rows[0].cnt,
       binCount: binRes.rows[0].cnt,
@@ -199,6 +238,15 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
       photoStorageMb: Math.round((storageRes.rows[0].total / (1024 * 1024)) * 100) / 100,
       apiKeyCount: apiKeyRes.rows[0].cnt,
       shareCount: shareRes.rows[0].cnt,
+      itemCount: itemRes.rows[0].cnt,
+      scans30d: scanRes.rows[0].cnt,
+      aiCreditsUsed: row.ai_credits_used ?? 0,
+      aiCreditsLimit: features.aiCreditsPerMonth ?? 0,
+      aiCreditsResetAt: row.ai_credits_reset_at || null,
+      apiRequests7d: apiReqRes.rows[0].total,
+      binsCreated7d: binsCreated7dRes.rows[0].cnt,
+      binLimit: features.maxBins,
+      storageLimit: features.maxPhotoStorageMb,
     },
   });
 }));
