@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export function BinDetailSkeleton() {
   return (
-    <div className="page-content">
+    <div className="page-content max-w-5xl">
       {/* Toolbar */}
       <div className="flex items-center gap-2">
         <Skeleton className="hidden lg:block h-5 w-5 rounded shrink-0" />
