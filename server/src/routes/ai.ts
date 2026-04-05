@@ -6,7 +6,7 @@ import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLo
 import type { ImageInput } from '../lib/aiProviders.js';
 import { analyzeImages, reanalyzeImages } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
-import { getConfigForTask, getUserAiSettings, parseTaskModelOverrides, TASK_TYPES } from '../lib/aiSettings.js';
+import { getUserAiSettings, parseTaskModelOverrides, TASK_TYPES } from '../lib/aiSettings.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import { AI_TASK_GROUPS, type AiTaskGroup, config, getEnvAiConfig, isDemoUser, isGroupEnvLocked } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
@@ -15,6 +15,7 @@ import { HttpError, ValidationError } from '../lib/httpErrors.js';
 import { aiRateLimiters } from '../lib/rateLimiters.js';
 import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
+import { resolveTaskConfig } from '../lib/taskRouting.js';
 import { memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
 import { checkAiCredits, requireAiAccess } from '../middleware/requirePlan.js';
@@ -310,7 +311,7 @@ router.post('/analyze-image', memoryPhotoUpload.fields([
   }
 
   const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = getConfigForTask(settings, 'analysis');
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision');
 
   const images: ImageInput[] = allFiles.map((f) => ({
     base64: f.buffer.toString('base64'),
@@ -350,7 +351,7 @@ router.post('/analyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, ai
   }
 
   const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = getConfigForTask(settings, 'analysis');
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision');
 
   const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
   if (!loaded) {
@@ -399,7 +400,7 @@ router.post('/reanalyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, 
   }
 
   const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = getConfigForTask(settings, 'analysis');
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision');
 
   const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
   if (!loaded) {
@@ -428,7 +429,7 @@ router.post('/structure-text', ...aiRateLimiters, requireAiAccess(), checkAiCred
   }
 
   const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = getConfigForTask(settings, 'structure');
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'quickText');
 
   const request: StructureTextRequest = {
     text,

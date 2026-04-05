@@ -18,6 +18,7 @@ import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQuer
 import { aiRateLimiters } from '../lib/rateLimiters.js';
 import { createSdkModel } from '../lib/sdkProviderFactory.js';
 import { buildPrompt as buildStructurePrompt, STRUCTURE_TEXT_TOKENS } from '../lib/structureText.js';
+import { resolveTaskConfig, TASK_GROUP_MAP } from '../lib/taskRouting.js';
 import { demoMemoryPhotoUpload, memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
 import { demoConnectionLimiter, isDemoUser as isDemoConn } from '../middleware/demoConnectionLimiter.js';
@@ -49,10 +50,13 @@ async function sendMockJsonStream(res: import('express').Response, data: object)
   res.end();
 }
 
-/** Resolve a user's AI model (settings + SSRF check + SDK model). */
+/** Resolve a user's AI model (task routing + SSRF check + SDK model). */
 async function resolveUserModel(userId: string, task: TaskType, isDemoUser = false) {
   const settings = await getUserAiSettings(userId);
-  const taskConfig = getConfigForTask(settings, task);
+  const group = TASK_GROUP_MAP[task];
+  const taskConfig = group
+    ? await resolveTaskConfig(userId, group)
+    : getConfigForTask(settings, task);
   const resolvedIps = taskConfig.endpointUrl
     ? await validateEndpointUrl(taskConfig.endpointUrl, isDemoUser)
     : undefined;
