@@ -8,7 +8,7 @@ import { analyzeImages, reanalyzeImages } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
-import { AI_TASK_GROUPS, type AiTaskGroup, config, getEnvAiConfig, isDemoUser, isGroupEnvLocked } from '../lib/config.js';
+import { AI_TASK_GROUPS, type AiTaskGroup, config, getEnvAiConfig, getEnvGroupOverride, isDemoUser, isGroupEnvLocked } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
 import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
 import { HttpError, ValidationError } from '../lib/httpErrors.js';
@@ -74,7 +74,12 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
         maxTokens: null,
         topP: null,
         requestTimeout: null,
-        taskOverrides: {},
+        taskOverrides: Object.fromEntries(
+          AI_TASK_GROUPS.filter(isGroupEnvLocked).map((g) => {
+            const o = getEnvGroupOverride(g);
+            return [g, { provider: o.provider, model: o.model, endpointUrl: o.endpointUrl, source: 'env' as const }];
+          }),
+        ),
         taskOverridesEnvLocked: AI_TASK_GROUPS.filter(isGroupEnvLocked),
         source: 'env' as const,
       });
@@ -107,6 +112,12 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
     };
   }
   const taskOverridesEnvLocked: string[] = AI_TASK_GROUPS.filter(isGroupEnvLocked);
+
+  // Populate env override values for env-locked groups
+  for (const g of taskOverridesEnvLocked) {
+    const o = getEnvGroupOverride(g as AiTaskGroup);
+    taskOverrides[g] = { provider: o.provider, model: o.model, endpointUrl: o.endpointUrl, source: 'env' as any };
+  }
 
   // Build providerConfigs from all rows
   const providerConfigs: Record<string, { apiKey: string; model: string; endpointUrl: string | null }> = {};

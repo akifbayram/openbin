@@ -11,6 +11,7 @@ export const TASK_GROUP_MAP: Record<string, AiTaskGroup> = {
   'analyze-image': 'vision',
   'command': 'quickText',
   'execute': 'quickText',
+  'structure': 'quickText',
   'structure-text': 'quickText',
   'query': 'deepText',
   'reorganization': 'deepText',
