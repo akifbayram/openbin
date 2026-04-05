@@ -4,8 +4,126 @@ import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { useToast } from '@/components/ui/toast';
-import { getLockedMessage, usePlan } from '@/lib/usePlan';
+import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
 import { cn, focusRing } from '@/lib/utils';
+
+const actionBase = cn(
+  'inline-flex flex-1 items-center justify-center gap-1 rounded-[var(--radius-md)] h-9 px-3.5 text-[13px] font-semibold transition-colors',
+  focusRing,
+);
+const actionSecondary = cn(actionBase, 'border border-[var(--border-flat)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]');
+const actionPrimary = cn(actionBase, 'bg-[var(--accent)] text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)]');
+
+interface UsageTile {
+  label: string;
+  sublabel?: string;
+  used: number | string;
+  limit: number | string;
+  isOver?: boolean;
+  isExhausted?: boolean;
+}
+
+function buildUsageTiles(
+  planInfo: ReturnType<typeof usePlan>['planInfo'],
+  usage: ReturnType<typeof usePlan>['usage'],
+): UsageTile[] {
+  const { features, aiCredits } = planInfo;
+  const tiles: UsageTile[] = [];
+
+  if (features.maxBins !== null && usage) {
+    tiles.push({
+      label: 'Bins',
+      used: usage.binCount,
+      limit: features.maxBins,
+      isOver: usage.binCount > features.maxBins,
+    });
+  }
+
+  if (aiCredits && aiCredits.limit > 0) {
+    const resetsLabel = aiCredits.resetsAt
+      ? new Date(aiCredits.resetsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      : null;
+    tiles.push({
+      label: 'AI Credits',
+      sublabel: resetsLabel ? `Resets ${resetsLabel}` : undefined,
+      used: aiCredits.used,
+      limit: aiCredits.limit,
+      isExhausted: aiCredits.used >= aiCredits.limit,
+    });
+  }
+
+  if (features.maxPhotoStorageMb !== null && usage) {
+    tiles.push({
+      label: 'Photos',
+      used: `${usage.photoStorageMb.toFixed(1)}`,
+      limit: features.maxPhotoStorageMb >= 1024
+        ? `${(features.maxPhotoStorageMb / 1024).toFixed(0)} GB`
+        : `${features.maxPhotoStorageMb} MB`,
+      isOver: usage.photoStorageMb > features.maxPhotoStorageMb,
+    });
+  }
+
+  if (features.maxLocations !== null && usage) {
+    tiles.push({
+      label: 'Locations',
+      used: usage.locationCount,
+      limit: features.maxLocations,
+      isOver: usage.locationCount > features.maxLocations,
+    });
+  }
+
+  if (features.maxMembersPerLocation !== null && usage) {
+    const maxMembers = Math.max(0, ...Object.values(usage.memberCounts));
+    tiles.push({
+      label: 'Members per Location',
+      used: maxMembers,
+      limit: features.maxMembersPerLocation,
+      isOver: maxMembers > features.maxMembersPerLocation,
+    });
+  }
+
+  return tiles;
+}
+
+interface ActionButton {
+  label: string;
+  href: string;
+  variant: 'primary' | 'secondary';
+}
+
+function buildActions(planInfo: ReturnType<typeof usePlan>['planInfo'], isLocked: boolean): ActionButton[] {
+  const actions: ActionButton[] = [];
+
+  if (isLocked) {
+    const label = getLockedCta(planInfo.previousSubStatus);
+    const href = planInfo.subscribePlanUrl ?? planInfo.upgradeUrl;
+    if (href) actions.push({ label, href, variant: 'primary' });
+    return actions;
+  }
+
+  const isTrialing = planInfo.status === 'trial';
+
+  // Secondary (left) button
+  if (isTrialing && planInfo.subscribePlanUrl) {
+    const planName = planInfo.plan === 'plus' ? 'Plus' : 'Pro';
+    actions.push({ label: `Subscribe to ${planName}`, href: planInfo.subscribePlanUrl, variant: 'secondary' });
+  } else if (planInfo.portalUrl) {
+    actions.push({ label: 'Manage Subscription', href: planInfo.portalUrl, variant: 'secondary' });
+  } else if (planInfo.upgradePlusUrl) {
+    actions.push({ label: 'Upgrade to Plus', href: planInfo.upgradePlusUrl, variant: 'secondary' });
+  }
+
+  // Primary (right) button
+  if (planInfo.upgradeProUrl) {
+    actions.push({ label: 'Upgrade to Pro', href: planInfo.upgradeProUrl, variant: 'primary' });
+  } else if (isTrialing && planInfo.subscribePlanUrl && actions.length === 0) {
+    // Pro trial: subscribePlanUrl is the only action, show as primary
+    const planName = planInfo.plan === 'plus' ? 'Plus' : 'Pro';
+    actions.push({ label: `Subscribe to ${planName}`, href: planInfo.subscribePlanUrl, variant: 'primary' });
+  }
+
+  return actions;
+}
 
 export function SubscriptionSection() {
   const { planInfo, isPro, isPlus, isSelfHosted, isLocked, isLoading, refresh, refreshUsage, usage } = usePlan();
@@ -22,7 +140,6 @@ export function SubscriptionSection() {
     if (!status) return;
     handledRef.current = true;
 
-    // Clean the URL param
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.delete('subscription');
@@ -30,7 +147,6 @@ export function SubscriptionSection() {
     }, { replace: true });
 
     if (status === 'success') {
-      // Webhook may not have arrived yet — poll until plan updates
       const previousStatus = planInfo.status;
       let attempt = 0;
       const poll = () => {
@@ -65,16 +181,14 @@ export function SubscriptionSection() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [refresh, refreshUsage]);
 
-  // Don't render in self-hosted mode or while loading
   if (isSelfHosted || isLoading) return null;
 
   const isTrialing = planInfo.status === 'trial';
   const daysRemaining = planInfo.activeUntil
     ? Math.max(0, Math.ceil((new Date(planInfo.activeUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
-  const creditsResetsLabel = planInfo.aiCredits?.resetsAt
-    ? new Date(planInfo.aiCredits.resetsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    : null;
+  const tiles = buildUsageTiles(planInfo, usage);
+  const actions = buildActions(planInfo, isLocked);
 
   return (
     <Card>
@@ -84,7 +198,7 @@ export function SubscriptionSection() {
           labelClassName="text-[15px] font-semibold"
           defaultOpen={isTrialing || isLocked}
         >
-        <div className="flex flex-col gap-3 mt-1">
+        <div className="flex flex-col gap-2.5 mt-1">
           {/* Plan status */}
           <div className="flex items-center justify-between rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3.5 py-3">
             <div className="flex items-center gap-2">
@@ -97,147 +211,74 @@ export function SubscriptionSection() {
                 </span>
               )}
             </div>
-            {planInfo.portalUrl && (
-              <a
-                href={planInfo.portalUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn('inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent)] h-9 px-3.5 text-[13px] font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] transition-colors', focusRing)}
-              >
-                Manage Subscription
-                <ArrowUpRight className="h-3 w-3" />
-              </a>
+            {isTrialing && daysRemaining !== null && (
+              <span className="text-[12px] text-[var(--color-warning)]">
+                {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} remaining
+              </span>
             )}
           </div>
 
-          {/* Upgrade buttons (no active paid subscription) */}
-          {(planInfo.upgradePlusUrl || planInfo.upgradeProUrl) && (
-            <div className="flex items-center gap-2">
-              {planInfo.upgradePlusUrl && (
-                <a
-                  href={planInfo.upgradePlusUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn('inline-flex flex-1 items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--border-flat)] bg-[var(--bg-input)] h-9 px-3.5 text-[13px] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors', focusRing)}
-                >
-                  Upgrade to Plus
-                  <ArrowUpRight className="h-3 w-3" />
-                </a>
-              )}
-              {planInfo.upgradeProUrl && (
-                <a
-                  href={planInfo.upgradeProUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn('inline-flex flex-1 items-center justify-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent)] h-9 px-3.5 text-[13px] font-semibold text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] transition-colors', focusRing)}
-                >
-                  Upgrade to Pro
-                  <ArrowUpRight className="h-3 w-3" />
-                </a>
-              )}
-            </div>
-          )}
-
-          {/* Plus entitlements */}
-          {isPlus && !isLocked && planInfo.status === 'active' && (
-            <ul className="flex flex-col gap-0.5 text-[13px] text-[var(--text-secondary)] px-1">
-              {planInfo.features.maxLocations !== null && (
-                <li>{planInfo.features.maxLocations} {planInfo.features.maxLocations === 1 ? 'location' : 'locations'}</li>
-              )}
-              {planInfo.features.maxPhotoStorageMb !== null && (
-                <li>{planInfo.features.maxPhotoStorageMb} MB photo storage</li>
-              )}
-              {planInfo.features.maxBins !== null ? (
-                <li>{planInfo.features.maxBins} bins</li>
-              ) : (
-                <li>Unlimited bins</li>
-              )}
-              {planInfo.features.maxMembersPerLocation !== null && (
-                <li>{planInfo.features.maxMembersPerLocation} {planInfo.features.maxMembersPerLocation === 1 ? 'member' : 'members'} per location</li>
-              )}
-            </ul>
-          )}
-
-          {/* Trial/expiry info */}
+          {/* Warning banner (locked/expired) */}
           {isLocked && (
             <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] bg-[var(--destructive-soft)] text-[var(--destructive)]">
-              <Clock className="h-3.5 w-3.5" />
+              <Clock className="h-3.5 w-3.5 shrink-0" />
               {getLockedMessage(planInfo.previousSubStatus)}
             </div>
           )}
-          {!isLocked && isTrialing && daysRemaining !== null && (
-            <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] bg-[var(--color-warning-soft)] text-[var(--color-warning)]">
-              <Clock className="h-3.5 w-3.5" />
-              {`${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining in your trial`}
-            </div>
-          )}
 
-          {/* AI Credits */}
-          {planInfo.aiCredits && planInfo.aiCredits.limit > 0 && (
-            <div className="flex items-center justify-between rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3.5 py-3">
-              <div className="text-[13px]">
-                <span className="font-medium text-[var(--text-primary)]">AI Credits</span>
-                <span className="ml-1.5 tabular-nums text-[var(--text-secondary)]">
-                  {planInfo.aiCredits.used} / {planInfo.aiCredits.limit} used
-                </span>
-              </div>
-              <span className="text-[12px] text-[var(--text-tertiary)]">
-                {creditsResetsLabel ? `Resets ${creditsResetsLabel}` : 'Lifetime'}
-              </span>
-            </div>
-          )}
-          {planInfo.aiCredits && planInfo.aiCredits.used >= planInfo.aiCredits.limit && planInfo.aiCredits.limit > 0 && (
-            <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] bg-[var(--color-warning-soft)] text-[var(--color-warning)]">
-              AI credits exhausted{creditsResetsLabel
-                ? ` — resets ${creditsResetsLabel}`
-                : ''}.{' '}
-              {planInfo.upgradeProUrl && (
-                <a href={planInfo.upgradeProUrl} target="_blank" rel="noopener noreferrer" className="underline font-semibold">
-                  Upgrade to Pro
-                </a>
-              )}
-            </div>
-          )}
-
-          {/* Usage */}
-          {usage && (planInfo.features.maxBins !== null || planInfo.features.maxLocations !== null || planInfo.features.maxPhotoStorageMb !== null || planInfo.features.maxMembersPerLocation !== null) && (
-            <div className="space-y-2 pt-1">
-              <p className="text-[13px] font-semibold text-[var(--text-primary)]">Usage</p>
-              {planInfo.features.maxBins !== null && (
-                <div className="flex items-center justify-between text-[13px]">
-                  <span className="text-[var(--text-secondary)]">Bins</span>
-                  <span className={cn('tabular-nums text-[var(--text-tertiary)]', usage.binCount > planInfo.features.maxBins && 'text-[var(--destructive)] font-semibold')}>
-                    {usage.binCount} / {planInfo.features.maxBins}{usage.binCount > planInfo.features.maxBins && ' — Over limit'}
-                  </span>
-                </div>
-              )}
-              {planInfo.features.maxLocations !== null && (
-                <div className="flex items-center justify-between text-[13px]">
-                  <span className="text-[var(--text-secondary)]">Locations</span>
-                  <span className={cn('tabular-nums text-[var(--text-tertiary)]', usage.locationCount > planInfo.features.maxLocations && 'text-[var(--destructive)] font-semibold')}>
-                    {usage.locationCount} / {planInfo.features.maxLocations}{usage.locationCount > planInfo.features.maxLocations && ' — Over limit'}
-                  </span>
-                </div>
-              )}
-              {planInfo.features.maxPhotoStorageMb !== null && (
-                <div className="flex items-center justify-between text-[13px]">
-                  <span className="text-[var(--text-secondary)]">Photo Storage</span>
-                  <span className={cn('tabular-nums text-[var(--text-tertiary)]', usage.photoStorageMb > planInfo.features.maxPhotoStorageMb && 'text-[var(--destructive)] font-semibold')}>
-                    {usage.photoStorageMb.toFixed(1)} MB / {planInfo.features.maxPhotoStorageMb} MB{usage.photoStorageMb > planInfo.features.maxPhotoStorageMb && ' — Over limit'}
-                  </span>
-                </div>
-              )}
-              {planInfo.features.maxMembersPerLocation !== null && (() => {
-                const maxMembers = Math.max(0, ...Object.values(usage.memberCounts));
-                return (
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className="text-[var(--text-secondary)]">Members per Location</span>
-                    <span className={cn('tabular-nums text-[var(--text-tertiary)]', maxMembers > planInfo.features.maxMembersPerLocation && 'text-[var(--destructive)] font-semibold')}>
-                      {maxMembers} / {planInfo.features.maxMembersPerLocation}{maxMembers > planInfo.features.maxMembersPerLocation && ' — Over limit'}
-                    </span>
+          {/* Usage grid */}
+          {tiles.length > 0 && (
+            <div className="grid grid-cols-2 gap-2">
+              {tiles.map((tile, i) => (
+                <div
+                  key={tile.label}
+                  className={cn(
+                    'rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3 py-2.5',
+                    tiles.length % 2 !== 0 && i === tiles.length - 1 && 'col-span-2',
+                  )}
+                >
+                  <div className="text-[11px] text-[var(--text-tertiary)]">
+                    {tile.label}
+                    {tile.sublabel && (
+                      <span className="ml-1 text-[10px]">&middot; {tile.sublabel}</span>
+                    )}
                   </div>
-                );
-              })()}
+                  <div className={cn(
+                    'text-[15px] font-semibold tabular-nums text-[var(--text-primary)]',
+                    tile.isOver && 'text-[var(--destructive)]',
+                    tile.isExhausted && 'text-[var(--color-warning)]',
+                  )}>
+                    {tile.used}{' '}
+                    <span className={cn(
+                      'text-[12px] font-normal text-[var(--text-tertiary)]',
+                      tile.isOver && 'text-[var(--destructive)]',
+                    )}>
+                      / {tile.limit}
+                    </span>
+                    {tile.isOver && (
+                      <span className="text-[11px] font-normal"> — Over limit</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Actions */}
+          {actions.length > 0 && (
+            <div className="flex gap-2">
+              {actions.map((action) => (
+                <a
+                  key={action.label}
+                  href={action.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={action.variant === 'primary' ? actionPrimary : actionSecondary}
+                >
+                  {action.label}
+                  <ArrowUpRight className="h-3 w-3" />
+                </a>
+              ))}
             </div>
           )}
         </div>
