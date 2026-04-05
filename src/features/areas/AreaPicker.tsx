@@ -1,11 +1,13 @@
-import { ChevronDown, Plus, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronDown, FolderTree, Plus } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDialogPortal } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/toast';
-import { cn, getErrorMessage } from '@/lib/utils';
-import { buildAreaTree, createArea, flattenAreaTree, useAreaList } from './useAreas';
+import { cn } from '@/lib/utils';
+import { CreateAreaDialog } from './AreaDialogs';
+import { buildAreaTree, flattenAreaTree, useAreaList } from './useAreas';
+
+const dropdownRow = 'flex w-full items-center gap-2.5 px-3 py-1.5 text-sm transition-colors cursor-pointer text-left';
 
 interface AreaPickerProps {
   locationId: string | undefined;
@@ -15,26 +17,40 @@ interface AreaPickerProps {
 
 export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
   const dialogPortal = useDialogPortal();
-  const { showToast } = useToast();
   const { areas } = useAreaList(locationId);
   const [open, setOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [highlightIndex, setHighlightIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const selectedArea = areas.find((a) => a.id === value);
+  const flatAreas = useMemo(() => flattenAreaTree(buildAreaTree(areas)), [areas]);
+  const trimmed = search.trim().toLowerCase();
 
+  const filtered = useMemo(
+    () => !trimmed ? flatAreas : flatAreas.filter((a) => a.name.toLowerCase().includes(trimmed)),
+    [flatAreas, trimmed],
+  );
+
+  // "No area" + filtered areas + "Create" = total items for keyboard nav
+  const itemCount = 1 + filtered.length + 1; // no-area + areas + create
+
+  const rafRef = useRef(0);
   const reposition = useCallback(() => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    });
   }, []);
 
-  // Close dropdown on click outside
+  // Close on outside click; reposition on scroll/resize
   useEffect(() => {
     if (!open) return;
     reposition();
@@ -44,37 +60,59 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
         menuRef.current && !menuRef.current.contains(e.target as Node)
       ) {
         setOpen(false);
-        setCreating(false);
-        setNewName('');
       }
     }
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    return () => {
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+      document.removeEventListener('mousedown', handleClick);
+    };
   }, [open, reposition]);
 
-  // Focus input when creating
+  // Focus search input when dropdown opens
   useEffect(() => {
-    if (creating && inputRef.current) {
-      inputRef.current.focus();
+    if (open) {
+      setSearch('');
+      setHighlightIndex(-1);
+      requestAnimationFrame(() => searchRef.current?.focus());
     }
-  }, [creating]);
+  }, [open]);
 
-  const flatAreas = flattenAreaTree(buildAreaTree(areas));
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightIndex >= 0 && listRef.current) {
+      const item = listRef.current.children[highlightIndex] as HTMLElement;
+      item?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightIndex]);
 
-  async function handleCreate() {
-    if (!newName.trim() || !locationId || saving) return;
-    setSaving(true);
-    try {
-      const area = await createArea(locationId, newName.trim());
-      onChange(area.id);
-      setNewName('');
-      setCreating(false);
+  function select(areaId: string | null) {
+    onChange(areaId);
+    setOpen(false);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIndex((i) => (i + 1) % itemCount);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIndex((i) => (i <= 0 ? itemCount - 1 : i - 1));
+    } else if (e.key === 'Enter' && highlightIndex >= 0) {
+      e.preventDefault();
+      if (highlightIndex === 0) {
+        select(null);
+      } else if (highlightIndex <= filtered.length) {
+        select(filtered[highlightIndex - 1].id);
+      } else {
+        setCreateOpen(true);
+        setOpen(false);
+      }
+    } else if (e.key === 'Escape') {
       setOpen(false);
-    } catch (err) {
-      const message = getErrorMessage(err, 'Failed to create area');
-      showToast({ message, variant: 'error' });
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -86,7 +124,7 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
         aria-expanded={open}
         className={cn(
           'row-spread w-full h-11 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] px-3.5 text-[15px] text-left transition-colors',
-          'focus:outline-none focus:ring-2 focus:ring-[var(--accent)]',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
           !selectedArea && 'text-[var(--text-tertiary)]'
         )}
       >
@@ -100,78 +138,87 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
           className="fixed z-[100] rounded-[var(--radius-md)] flat-popover overflow-hidden"
           style={{ top: pos.top, left: pos.left, width: pos.width }}
         >
-          <div className="max-h-48 overflow-y-auto">
+          {flatAreas.length > 5 && (
+            <div className="p-1.5 border-b border-[var(--border-subtle)]">
+              <Input
+                ref={searchRef}
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setHighlightIndex(-1); }}
+                onKeyDown={handleKeyDown}
+                placeholder="Search areas..."
+                className="h-8 text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:shadow-none"
+              />
+            </div>
+          )}
+
+          <div ref={listRef} className="max-h-48 overflow-y-auto py-1">
             <button
               type="button"
-              onClick={() => { onChange(null); setOpen(false); }}
+              onMouseDown={(e) => { e.preventDefault(); select(null); }}
               className={cn(
-                'w-full text-left px-3 py-2.5 text-[15px] transition-colors hover:bg-[var(--bg-hover)]',
-                value === null ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-tertiary)]'
+                dropdownRow,
+                highlightIndex === 0
+                  ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
+                  : value === null
+                    ? 'text-[var(--accent)] font-medium'
+                    : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]',
               )}
             >
               No area
             </button>
-            {flatAreas.map((area) => (
-              <button
-                key={area.id}
-                type="button"
-                onClick={() => { onChange(area.id); setOpen(false); }}
-                className={cn(
-                  'w-full text-left py-2.5 text-[15px] transition-colors hover:bg-[var(--bg-hover)]',
-                  value === area.id && 'text-[var(--accent)] font-medium'
-                )}
-                style={{ paddingLeft: 12 + area.depth * 16, paddingRight: 12 }}
-              >
-                {area.name}
-              </button>
-            ))}
+            {filtered.map((area, i) => {
+              const idx = i + 1;
+              const isSelected = value === area.id;
+              return (
+                <button
+                  key={area.id}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); select(area.id); }}
+                  className={cn(
+                    dropdownRow,
+                    highlightIndex === idx
+                      ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
+                      : isSelected
+                        ? 'text-[var(--accent)] font-medium'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
+                  )}
+                  style={{ paddingLeft: 12 + area.depth * 16 }}
+                >
+                  {area.depth > 0 && (
+                    <FolderTree className="h-3 w-3 flex-shrink-0 text-[var(--text-quaternary)]" />
+                  )}
+                  <span>{area.name}</span>
+                </button>
+              );
+            })}
           </div>
 
           <div className="border-t border-[var(--border-subtle)]">
-            {creating ? (
-              <div className="row p-2">
-                <Input
-                  ref={inputRef}
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); handleCreate(); }
-                    if (e.key === 'Escape') { setCreating(false); setNewName(''); }
-                  }}
-                  placeholder="Area name..."
-                  disabled={saving}
-                  className="h-8 text-[14px] flex-1"
-                />
-                <button
-                  type="button"
-                  onClick={handleCreate}
-                  disabled={!newName.trim() || saving}
-                  className="h-8 px-2.5 rounded-[var(--radius-sm)] bg-[var(--accent)] text-white text-[13px] font-medium disabled:opacity-40 transition-opacity"
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setCreating(false); setNewName(''); }}
-                  className="h-8 w-8 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setCreating(true)}
-                className="w-full row px-3 py-2.5 text-[14px] text-[var(--accent)] hover:bg-[var(--bg-hover)] transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                Create new area...
-              </button>
-            )}
+            <button
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); setCreateOpen(true); setOpen(false); }}
+              className={cn(
+                dropdownRow, 'py-2',
+                highlightIndex === itemCount - 1
+                  ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
+              )}
+            >
+              <Plus className="h-3.5 w-3.5 flex-shrink-0 text-[var(--accent)]" />
+              <span>Create new area...</span>
+            </button>
           </div>
         </div>,
         dialogPortal ?? document.body,
       )}
+
+      <CreateAreaDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        locationId={locationId ?? null}
+        areas={areas}
+        onCreated={(area) => onChange(area.id)}
+      />
     </div>
   );
 }

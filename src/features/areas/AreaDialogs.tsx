@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { useTerminology } from '@/lib/terminology';
-import { cn } from '@/lib/utils';
+import { cn, inputBase } from '@/lib/utils';
 import type { Area } from '@/types';
 import { buildAreaTree, createArea, deleteArea, flattenAreaTree } from './useAreas';
 
@@ -20,9 +20,11 @@ interface CreateAreaDialogProps {
   locationId: string | null;
   areas: Area[];
   defaultParentId?: string | null;
+  /** Called with the newly created area – use to auto-select in pickers */
+  onCreated?: (area: Area) => void;
 }
 
-export function CreateAreaDialog({ open, onOpenChange, locationId, areas, defaultParentId }: CreateAreaDialogProps) {
+export function CreateAreaDialog({ open, onOpenChange, locationId, areas, defaultParentId, onCreated }: CreateAreaDialogProps) {
   const t = useTerminology();
   const { showToast } = useToast();
   const [newAreaName, setNewAreaName] = useState('');
@@ -43,7 +45,8 @@ export function CreateAreaDialog({ open, onOpenChange, locationId, areas, defaul
     if (!newAreaName.trim() || !locationId) return;
     setCreatingArea(true);
     try {
-      await createArea(locationId, newAreaName.trim(), parentId);
+      const area = await createArea(locationId, newAreaName.trim(), parentId);
+      onCreated?.(area);
       setNewAreaName('');
       setParentId(null);
       onOpenChange(false);
@@ -80,10 +83,7 @@ export function CreateAreaDialog({ open, onOpenChange, locationId, areas, defaul
               <select
                 value={parentId ?? ''}
                 onChange={(e) => setParentId(e.target.value || null)}
-                className={cn(
-                  'w-full h-10 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 text-[15px]',
-                  'focus:outline-none focus:ring-2 focus:ring-[var(--accent)]'
-                )}
+                className={cn(inputBase, 'h-10 focus-visible:ring-2 focus-visible:ring-[var(--accent)]')}
               >
                 <option value="">No parent (root {t.area})</option>
                 {flatAreas.map((a) => (

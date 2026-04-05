@@ -136,6 +136,7 @@ export function BinDetailToolbar({
             placeholder="Name..."
           />
         ) : (
+          // biome-ignore lint/a11y/noStaticElementInteractions: role and handlers are both gated on canEdit
           <div
             className={cn(
               'row-tight min-w-0',
