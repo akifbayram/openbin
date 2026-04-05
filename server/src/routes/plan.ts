@@ -33,10 +33,8 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
   const userId = req.user!.id;
   const { email } = planInfo;
 
-  const aiCreditsRaw = (planInfo.subStatus === SubStatus.TRIAL || (planInfo.plan === Plan.PLUS && planInfo.subStatus === SubStatus.ACTIVE))
-    ? await getAiCredits(userId)
-    : null;
-  const aiCredits = aiCreditsRaw && aiCreditsRaw.limit > 0
+  const aiCreditsRaw = await getAiCredits(userId);
+  const aiCredits = aiCreditsRaw.limit > 0
     ? { used: aiCreditsRaw.used, limit: aiCreditsRaw.limit, resetsAt: aiCreditsRaw.resetsAt }
     : null;
 

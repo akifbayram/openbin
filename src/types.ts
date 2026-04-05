@@ -266,6 +266,7 @@ export interface PlanFeatures {
   maxPhotoStorageMb: number | null;
   maxMembersPerLocation: number | null;
   activityRetentionDays: number | null;
+  aiCreditsPerMonth: number | null;
 }
 
 export interface OverLimits {

@@ -12,13 +12,14 @@ vi.mock('../lib/planGate.js', async (importOriginal) => {
     getUserPlanInfo: vi.fn(),
     generateUpgradeUrl: vi.fn(),
     getFeatureMap: vi.fn(),
+    getAiCredits: vi.fn(),
   };
 });
 
 // ---- Imports (after mocks) ----
 
 import { createApp } from '../index.js';
-import { generateUpgradeUrl, getFeatureMap, getUserPlanInfo, isSelfHosted, Plan, SubStatus } from '../lib/planGate.js';
+import { generateUpgradeUrl, getAiCredits, getFeatureMap, getUserPlanInfo, isSelfHosted, Plan, SubStatus } from '../lib/planGate.js';
 import { createTestUser } from './helpers.js';
 
 let app: Express;
@@ -30,25 +31,27 @@ const PRO_FEATURES = {
   fullExport: true,
   reorganize: true,
   binSharing: true,
-  maxBins: null,
-  maxLocations: null,
+  maxBins: 5000,
+  maxLocations: 10,
   maxPhotoStorageMb: 1000,
-  maxMembersPerLocation: null,
+  maxMembersPerLocation: 25,
   activityRetentionDays: 90,
+  aiCreditsPerMonth: 500,
 };
 
 const PLUS_FEATURES = {
-  ai: false,
+  ai: true,
   apiKeys: false,
   customFields: true,
   fullExport: true,
   reorganize: false,
   binSharing: false,
-  maxBins: null,
+  maxBins: 500,
   maxLocations: 1,
   maxPhotoStorageMb: 100,
   maxMembersPerLocation: 1,
   activityRetentionDays: 30,
+  aiCreditsPerMonth: 25,
 };
 
 beforeEach(() => {
@@ -57,6 +60,8 @@ beforeEach(() => {
   vi.mocked(getUserPlanInfo).mockReset();
   vi.mocked(generateUpgradeUrl).mockReset();
   vi.mocked(getFeatureMap).mockReset();
+  vi.mocked(getAiCredits).mockReset();
+  vi.mocked(getAiCredits).mockResolvedValue({ used: 0, limit: 0, resetsAt: null });
 });
 
 describe('GET /api/plan', () => {
@@ -82,7 +87,7 @@ describe('GET /api/plan', () => {
     expect(res.body.upgradeUrl).toBeNull();
     expect(res.body.features).toBeDefined();
     expect(res.body.features.ai).toBe(true);
-    expect(res.body.features.maxLocations).toBeNull();
+    expect(res.body.features.maxLocations).toBe(10);
     expect(getUserPlanInfo).not.toHaveBeenCalled();
   });
 
@@ -110,7 +115,7 @@ describe('GET /api/plan', () => {
     expect(res.body.activeUntil).toBeNull();
     expect(res.body.upgradeUrl).toBeNull();
     expect(res.body.features.ai).toBe(true);
-    expect(res.body.features.maxLocations).toBeNull();
+    expect(res.body.features.maxLocations).toBe(10);
   });
 
   it('returns trial status + upgradeUrl for cloud plus user on trial', async () => {
@@ -159,7 +164,7 @@ describe('GET /api/plan', () => {
     expect(res.body.status).toBe('active');
     expect(res.body.selfHosted).toBe(false);
     expect(res.body.upgradeUrl).toBe('https://manager.example.com/auth/openbin?token=abc');
-    expect(res.body.features.ai).toBe(false);
+    expect(res.body.features.ai).toBe(true);
     expect(res.body.features.maxLocations).toBe(1);
   });
 

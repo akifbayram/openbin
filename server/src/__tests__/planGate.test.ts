@@ -20,20 +20,25 @@ vi.mock('../lib/config.js', () => ({
       freeMaxStorageMb: 0,
       freeMaxMembers: 1,
       freeActivityRetentionDays: 7,
-      plusAi: false,
+      freeAiCreditsPerMonth: 0,
+      plusAi: true,
       plusApiKeys: false,
       plusCustomFields: true,
       plusFullExport: true,
       plusReorganize: false,
       plusBinSharing: false,
-      plusMaxBins: null,
+      plusMaxBins: 500,
       plusMaxLocations: 1,
       plusMaxStorageMb: 100,
       plusMaxMembers: 1,
       plusActivityRetentionDays: 30,
-      proMaxBins: null,
+      plusAiCreditsPerMonth: 25,
+      proMaxBins: 5000,
+      proMaxLocations: 10,
+      proMaxMembers: 25,
       proMaxStorageMb: 1000,
       proActivityRetentionDays: 90,
+      proAiCreditsPerMonth: 500,
       trialAiCredits: 25,
     },
   },
@@ -77,20 +82,25 @@ const DEFAULT_PLAN_LIMITS = {
   freeMaxStorageMb: 0,
   freeMaxMembers: 1 as number | null,
   freeActivityRetentionDays: 7 as number | null,
-  plusAi: false,
+  freeAiCreditsPerMonth: 0 as const,
+  plusAi: true,
   plusApiKeys: false,
   plusCustomFields: true,
   plusFullExport: true,
   plusReorganize: false,
   plusBinSharing: false,
-  plusMaxBins: null as number | null,
+  plusMaxBins: 500 as number | null,
   plusMaxLocations: 1 as number | null,
   plusMaxStorageMb: 100 as number | null,
   plusMaxMembers: 1 as number | null,
   plusActivityRetentionDays: 30 as number | null,
-  proMaxBins: null as number | null,
+  plusAiCreditsPerMonth: 25,
+  proMaxBins: 5000 as number | null,
+  proMaxLocations: 10 as number | null,
+  proMaxMembers: 25 as number | null,
   proMaxStorageMb: 1000 as number | null,
   proActivityRetentionDays: 90 as number | null,
+  proAiCreditsPerMonth: 500 as number | null,
   trialAiCredits: 25,
   plusAiCredits: 25,
 };
@@ -219,27 +229,29 @@ describe('getFeatureMap()', () => {
     expect(features.fullExport).toBe(true);
     expect(features.reorganize).toBe(true);
     expect(features.binSharing).toBe(true);
-    expect(features.maxBins).toBe(null);
-    expect(features.maxLocations).toBe(null);
+    expect(features.maxBins).toBe(5000);
+    expect(features.maxLocations).toBe(10);
     expect(features.maxPhotoStorageMb).toBe(1000);
-    expect(features.maxMembersPerLocation).toBe(null);
+    expect(features.maxMembersPerLocation).toBe(25);
     expect(features.activityRetentionDays).toBe(90);
+    expect(features.aiCreditsPerMonth).toBe(500);
   });
 
   it('returns PLUS features for PLUS plan (cloud)', () => {
     setConfig({ selfHosted: false });
     const features = getFeatureMap(Plan.PLUS);
-    expect(features.ai).toBe(false);
+    expect(features.ai).toBe(true);
     expect(features.apiKeys).toBe(false);
     expect(features.customFields).toBe(true);
     expect(features.fullExport).toBe(true);
     expect(features.reorganize).toBe(false);
     expect(features.binSharing).toBe(false);
-    expect(features.maxBins).toBe(null);
+    expect(features.maxBins).toBe(500);
     expect(features.maxLocations).toBe(1);
     expect(features.maxPhotoStorageMb).toBe(100);
     expect(features.maxMembersPerLocation).toBe(1);
     expect(features.activityRetentionDays).toBe(30);
+    expect(features.aiCreditsPerMonth).toBe(25);
   });
 
   it('returns PRO features when self-hosted regardless of plan argument', () => {
@@ -256,6 +268,7 @@ describe('getFeatureMap()', () => {
     expect(features.maxPhotoStorageMb).toBe(null);
     expect(features.maxMembersPerLocation).toBe(null);
     expect(features.activityRetentionDays).toBe(null);
+    expect(features.aiCreditsPerMonth).toBe(null);
   });
 });
 
@@ -297,7 +310,7 @@ describe('getFeatureMap() with custom plan limits', () => {
     const features = getFeatureMap(Plan.PRO);
     expect(features.maxPhotoStorageMb).toBe(10000);
     expect(features.activityRetentionDays).toBe(365);
-    expect(features.maxLocations).toBe(null);
+    expect(features.maxLocations).toBe(10);
     expect(features.ai).toBe(true);
   });
 
@@ -461,7 +474,7 @@ describe('computeOverLimits()', () => {
   it('returns all false when limits are null (unlimited)', () => {
     const result = computeOverLimits(
       { locationCount: 100, photoStorageMb: 9999, memberCounts: { loc1: 999 } },
-      { ...getFeatureMap(Plan.PRO), maxPhotoStorageMb: null },
+      { ...getFeatureMap(Plan.PRO), maxBins: null, maxLocations: null, maxPhotoStorageMb: null, maxMembersPerLocation: null },
     );
     expect(result).toEqual({ locations: false, photos: false, members: [] });
   });

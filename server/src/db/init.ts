@@ -230,6 +230,7 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
   addColumnIfNotExists('ALTER TABLE users ADD COLUMN active_until TEXT');
   addColumnIfNotExists('ALTER TABLE users ADD COLUMN previous_sub_status INTEGER');
   addColumnIfNotExists('ALTER TABLE users ADD COLUMN ai_credits_used INTEGER NOT NULL DEFAULT 0');
+  addColumnIfNotExists('ALTER TABLE users ADD COLUMN ai_credits_reset_at TEXT');
   db.exec('CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan, sub_status)');
 
   // Global admin role

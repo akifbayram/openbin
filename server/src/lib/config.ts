@@ -95,15 +95,28 @@ export const config = Object.freeze({
     plusFullExport: parseBool(process.env.PLAN_PLUS_FULL_EXPORT, true),
     plusReorganize: parseBool(process.env.PLAN_PLUS_REORGANIZE, false),
     plusBinSharing: parseBool(process.env.PLAN_PLUS_BIN_SHARING, false),
-    plusMaxBins: parseNullableInt(process.env.PLAN_PLUS_MAX_BINS, null),
+    plusMaxBins: parseNullableInt(process.env.PLAN_PLUS_MAX_BINS, 500),
     plusMaxLocations: parseNullableInt(process.env.PLAN_PLUS_MAX_LOCATIONS, 1),
     plusMaxStorageMb: parseNullableInt(process.env.PLAN_PLUS_MAX_STORAGE_MB, 100),
     plusMaxMembers: parseNullableInt(process.env.PLAN_PLUS_MAX_MEMBERS, 1),
     plusActivityRetentionDays: parseNullableInt(process.env.PLAN_PLUS_ACTIVITY_RETENTION_DAYS, 30),
+    // Plus AI credits (0 = no AI, positive = monthly limit)
+    plusAiCreditsPerMonth: (() => {
+      const v = process.env.PLAN_PLUS_AI_CREDITS_PER_MONTH;
+      if (v === undefined || v === '') return 25;
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? n : 25;
+    })(),
     // Pro tier
-    proMaxBins: parseNullableInt(process.env.PLAN_PRO_MAX_BINS, null),
+    proMaxBins: parseNullableInt(process.env.PLAN_PRO_MAX_BINS, 5000),
+    proMaxLocations: parseNullableInt(process.env.PLAN_PRO_MAX_LOCATIONS, 10),
+    proMaxMembers: parseNullableInt(process.env.PLAN_PRO_MAX_MEMBERS, 25),
     proMaxStorageMb: parseNullableInt(process.env.PLAN_PRO_MAX_STORAGE_MB, 1000),
     proActivityRetentionDays: parseNullableInt(process.env.PLAN_PRO_ACTIVITY_RETENTION_DAYS, 90),
+    // Pro AI credits (null = unlimited via parseNullableInt where 0 -> null)
+    proAiCreditsPerMonth: parseNullableInt(process.env.PLAN_PRO_AI_CREDITS_PER_MONTH, 500),
+    // Free AI credits (hardcoded, free has no AI)
+    freeAiCreditsPerMonth: 0,
     // Trial
     trialAiCredits: clamp(parseInt(process.env.TRIAL_AI_CREDITS || '25', 10), 1, 1000, 25),
     plusAiCredits: clamp(parseInt(process.env.PLUS_AI_CREDITS || '25', 10), 1, 10000, 25),

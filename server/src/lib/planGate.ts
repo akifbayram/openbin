@@ -1,5 +1,5 @@
 import * as jose from 'jose';
-import { generateUuid, query } from '../db.js';
+import { query } from '../db.js';
 import { config } from './config.js';
 import { PlanRestrictedError } from './httpErrors.js';
 
@@ -37,6 +37,7 @@ export interface PlanFeatures {
   maxPhotoStorageMb: number | null;
   maxMembersPerLocation: number | null;
   activityRetentionDays: number | null;
+  aiCreditsPerMonth: number | null; // null = unlimited, 0 = no AI credits
 }
 
 export function isSelfHosted(): boolean {
@@ -112,6 +113,7 @@ const UNRESTRICTED: PlanFeatures = {
   maxPhotoStorageMb: null,
   maxMembersPerLocation: null,
   activityRetentionDays: null,
+  aiCreditsPerMonth: null,
 };
 
 export function getFeatureMap(plan: PlanTier): PlanFeatures {
@@ -121,8 +123,11 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
     return {
       ...UNRESTRICTED,
       maxBins: pl.proMaxBins,
+      maxLocations: pl.proMaxLocations,
+      maxMembersPerLocation: pl.proMaxMembers,
       maxPhotoStorageMb: pl.proMaxStorageMb,
       activityRetentionDays: pl.proActivityRetentionDays,
+      aiCreditsPerMonth: pl.proAiCreditsPerMonth,
     };
   }
   if (plan === Plan.PLUS) {
@@ -138,6 +143,7 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
       maxPhotoStorageMb: pl.plusMaxStorageMb,
       maxMembersPerLocation: pl.plusMaxMembers,
       activityRetentionDays: pl.plusActivityRetentionDays,
+      aiCreditsPerMonth: pl.plusAiCreditsPerMonth,
     };
   }
   // Free tier
@@ -153,6 +159,7 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
     maxPhotoStorageMb: pl.freeMaxStorageMb,
     maxMembersPerLocation: pl.freeMaxMembers,
     activityRetentionDays: pl.freeActivityRetentionDays,
+    aiCreditsPerMonth: pl.freeAiCreditsPerMonth,
   };
 }
 
@@ -261,99 +268,76 @@ export function getCurrentBillingPeriod(activeUntil: string): { start: string; e
 export async function checkAndIncrementAiCredits(userId: string): Promise<AiCreditResult> {
   if (config.selfHosted) return { allowed: true, used: 0, limit: 0, resetsAt: null };
 
-  const result = await query<{ plan: number; sub_status: number; ai_credits_used: number; active_until: string | null }>(
-    'SELECT plan, sub_status, ai_credits_used, active_until FROM users WHERE id = $1',
+  const result = await query<{ plan: number; sub_status: number; ai_credits_used: number; ai_credits_reset_at: string | null; active_until: string | null }>(
+    'SELECT plan, sub_status, ai_credits_used, ai_credits_reset_at, active_until FROM users WHERE id = $1',
     [userId],
   );
   if (result.rows.length === 0) return { allowed: true, used: 0, limit: 0, resetsAt: null };
-  const { plan, sub_status, ai_credits_used, active_until } = result.rows[0];
+  let { plan, sub_status, ai_credits_used, ai_credits_reset_at, active_until } = result.rows[0];
 
-  // Pro + active: unlimited, no credit check
-  if (plan === Plan.PRO && sub_status === SubStatus.ACTIVE) {
-    return { allowed: true, used: 0, limit: 0, resetsAt: null };
-  }
+  const features = getFeatureMap(plan as PlanTier);
 
-  // Trial (Plus only): lifetime credits — atomic conditional increment
+  // No AI credits for this plan (e.g. Free)
+  if (features.aiCreditsPerMonth === 0) return { allowed: false, used: 0, limit: 0, resetsAt: null };
+  // Unlimited credits (e.g. self-hosted or Pro with null limit)
+  if (features.aiCreditsPerMonth === null) return { allowed: true, used: ai_credits_used, limit: 0, resetsAt: null };
+
+  const limit = features.aiCreditsPerMonth;
+
+  // Trial (Plus only): lifetime credits — no monthly reset
   if (plan === Plan.PLUS && sub_status === SubStatus.TRIAL) {
-    const limit = config.planLimits.trialAiCredits;
+    const trialLimit = config.planLimits.trialAiCredits;
     const updated = await query<{ ai_credits_used: number }>(
       'UPDATE users SET ai_credits_used = ai_credits_used + 1 WHERE id = $1 AND ai_credits_used < $2 RETURNING ai_credits_used',
-      [userId, limit],
+      [userId, trialLimit],
     );
     if (updated.rows.length === 0) {
-      return { allowed: false, used: ai_credits_used, limit, resetsAt: null };
+      return { allowed: false, used: ai_credits_used, limit: trialLimit, resetsAt: null };
     }
-    return { allowed: true, used: updated.rows[0].ai_credits_used, limit, resetsAt: null };
+    return { allowed: true, used: updated.rows[0].ai_credits_used, limit: trialLimit, resetsAt: null };
   }
 
-  // Plus + active: monthly credits via ledger
-  if (plan === Plan.PLUS && sub_status === SubStatus.ACTIVE) {
-    if (!active_until) return { allowed: false, used: 0, limit: 0, resetsAt: null };
-    const period = getCurrentBillingPeriod(active_until);
-    const limit = config.planLimits.plusAiCredits;
-
-    // Ensure period row exists (initial credits_used = 0)
-    await query(
-      `INSERT INTO ai_credit_periods (id, user_id, period_start, period_end, credits_used, credits_limit)
-       VALUES ($1, $2, $3, $4, 0, $5)
-       ON CONFLICT (user_id, period_start) DO NOTHING`,
-      [generateUuid(), userId, period.start, period.end, limit],
-    );
-
-    // Atomic conditional increment — only succeeds if under limit
-    const updated = await query<{ credits_used: number; credits_limit: number }>(
-      `UPDATE ai_credit_periods SET credits_used = credits_used + 1
-       WHERE user_id = $1 AND period_start = $2 AND credits_used < credits_limit
-       RETURNING credits_used, credits_limit`,
-      [userId, period.start],
-    );
-
-    if (updated.rows.length > 0) {
-      return { allowed: true, used: updated.rows[0].credits_used, limit: updated.rows[0].credits_limit, resetsAt: period.end };
-    }
-
-    // Limit reached — read current state
-    const current = await query<{ credits_used: number; credits_limit: number }>(
-      'SELECT credits_used, credits_limit FROM ai_credit_periods WHERE user_id = $1 AND period_start = $2',
-      [userId, period.start],
-    );
-    const row = current.rows[0]!;
-    return { allowed: false, used: row.credits_used, limit: row.credits_limit, resetsAt: period.end };
+  // Monthly credit check with reset
+  const now = new Date();
+  if (!ai_credits_reset_at || new Date(ai_credits_reset_at) <= now) {
+    // Reset credits and set next reset date (30 days from now)
+    const nextReset = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    await query('UPDATE users SET ai_credits_used = 0, ai_credits_reset_at = $1 WHERE id = $2', [nextReset, userId]);
+    ai_credits_used = 0;
+    ai_credits_reset_at = nextReset;
   }
 
-  // Free / inactive: blocked
-  return { allowed: false, used: 0, limit: 0, resetsAt: null };
+  if (ai_credits_used >= limit) {
+    return { allowed: false, used: ai_credits_used, limit, resetsAt: ai_credits_reset_at };
+  }
+
+  await query('UPDATE users SET ai_credits_used = ai_credits_used + 1 WHERE id = $1', [userId]);
+  return { allowed: true, used: ai_credits_used + 1, limit, resetsAt: ai_credits_reset_at };
 }
 
 export async function getAiCredits(userId: string): Promise<AiCreditInfo> {
   if (config.selfHosted) return { used: 0, limit: 0, resetsAt: null };
 
-  const result = await query<{ plan: number; sub_status: number; ai_credits_used: number; active_until: string | null }>(
-    'SELECT plan, sub_status, ai_credits_used, active_until FROM users WHERE id = $1',
+  const result = await query<{ plan: number; sub_status: number; ai_credits_used: number; ai_credits_reset_at: string | null }>(
+    'SELECT plan, sub_status, ai_credits_used, ai_credits_reset_at FROM users WHERE id = $1',
     [userId],
   );
   if (result.rows.length === 0) return { used: 0, limit: 0, resetsAt: null };
-  const { plan, sub_status, ai_credits_used, active_until } = result.rows[0];
+  const { plan, sub_status, ai_credits_used, ai_credits_reset_at } = result.rows[0];
+
+  const features = getFeatureMap(plan as PlanTier);
+
+  // No AI credits or unlimited — nothing to report
+  if (features.aiCreditsPerMonth === null || features.aiCreditsPerMonth === 0) {
+    return { used: 0, limit: 0, resetsAt: null };
+  }
 
   // Trial (Plus only): lifetime credits
   if (plan === Plan.PLUS && sub_status === SubStatus.TRIAL) {
     return { used: ai_credits_used, limit: config.planLimits.trialAiCredits, resetsAt: null };
   }
 
-  // Plus + active: monthly credits
-  if (plan === Plan.PLUS && sub_status === SubStatus.ACTIVE && active_until) {
-    const period = getCurrentBillingPeriod(active_until);
-    const limit = config.planLimits.plusAiCredits;
-    const existing = await query<{ credits_used: number }>(
-      'SELECT credits_used FROM ai_credit_periods WHERE user_id = $1 AND period_start = $2',
-      [userId, period.start],
-    );
-    const used = existing.rows[0]?.credits_used ?? 0;
-    return { used, limit, resetsAt: period.end };
-  }
-
-  // Pro or Free: no credits to report
-  return { used: 0, limit: 0, resetsAt: null };
+  return { used: ai_credits_used, limit: features.aiCreditsPerMonth, resetsAt: ai_credits_reset_at };
 }
 
 export async function getUserQuotaUsage(userId: string): Promise<{ locationCount: number; photoStorageMb: number }> {
