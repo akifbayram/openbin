@@ -30,7 +30,6 @@ import {
   fetchLocationSettings,
   fetchLocationTagColors,
   fetchTrashedBins,
-  importPhotos,
   insertBinItems,
   insertBinWithShortCode,
   isLocationAdminCheck,
@@ -295,7 +294,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
   function csvEscape(val: string): string {
     // Prevent CSV formula injection (Excel/Sheets interpret =, +, -, @, \t, \r as formulas)
     if (/^[=+\-@\t\r]/.test(val)) {
-      val = "'" + val;
+      val = `'${val}`;
     }
     if (val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r') || val.includes("'")) {
       return `"${val.replace(/"/g, '""')}"`;

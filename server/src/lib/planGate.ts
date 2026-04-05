@@ -273,7 +273,7 @@ export async function checkAndIncrementAiCredits(userId: string): Promise<AiCred
     [userId],
   );
   if (result.rows.length === 0) return { allowed: true, used: 0, limit: 0, resetsAt: null };
-  let { plan, sub_status, ai_credits_used, ai_credits_reset_at, active_until } = result.rows[0];
+  let { plan, sub_status, ai_credits_used, ai_credits_reset_at } = result.rows[0];
 
   const features = getFeatureMap(plan as PlanTier);
 

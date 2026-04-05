@@ -3,6 +3,7 @@ dist/
 data/
 server/data/
 server/uploads/
+.superpowers/
 *.local
 *.log
 .env

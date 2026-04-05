@@ -21,7 +21,7 @@ vi.mock('../lib/planGate.js', async (importOriginal) => {
 // ---- Imports (after mocks) ----
 
 import { createApp } from '../index.js';
-import { generateUpgradePlanUrl, generateUpgradeUrl, generatePortalUrl, getAiCredits, getFeatureMap, getUserPlanInfo, isSelfHosted, Plan, SubStatus } from '../lib/planGate.js';
+import { generatePortalUrl, generateUpgradePlanUrl, generateUpgradeUrl, getAiCredits, getFeatureMap, getUserPlanInfo, isSelfHosted, Plan, SubStatus } from '../lib/planGate.js';
 import { createTestUser } from './helpers.js';
 
 let app: Express;
