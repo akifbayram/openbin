@@ -295,5 +295,6 @@ export interface PlanInfo {
   upgradePlusUrl: string | null;
   upgradeProUrl: string | null;
   portalUrl: string | null;
+  subscribePlanUrl: string | null;
   aiCredits: { used: number; limit: number; resetsAt: string | null } | null;
 }
