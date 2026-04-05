@@ -167,7 +167,7 @@ export function BinDetailPage() {
   );
 
   return (
-    <div className="page-content">
+    <div className="page-content max-w-5xl">
       <BinDetailToolbar
         bin={bin}
         editing={edit.editing}
