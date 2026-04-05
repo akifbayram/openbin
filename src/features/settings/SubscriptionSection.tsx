@@ -228,39 +228,45 @@ export function SubscriptionSection() {
 
           {/* Usage grid */}
           {tiles.length > 0 && (
-            <div className="grid grid-cols-2 gap-2">
-              {tiles.map((tile, i) => (
-                <div
-                  key={tile.label}
-                  className={cn(
-                    'rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3 py-2.5',
-                    tiles.length % 2 !== 0 && i === tiles.length - 1 && 'col-span-2',
-                  )}
-                >
-                  <div className="text-[11px] text-[var(--text-tertiary)]">
-                    {tile.label}
-                    {tile.sublabel && (
-                      <span className="ml-1 text-[10px]">&middot; {tile.sublabel}</span>
+            <div className="grid grid-cols-3 gap-2">
+              {tiles.map((tile, i) => {
+                const remainder = tiles.length % 3;
+                const spanClass = remainder !== 0 && i === tiles.length - 1
+                  ? (remainder === 1 ? 'col-span-3' : 'col-span-2')
+                  : undefined;
+                return (
+                  <div
+                    key={tile.label}
+                    className={cn(
+                      'rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3 py-2.5',
+                      spanClass,
                     )}
-                  </div>
-                  <div className={cn(
-                    'text-[15px] font-semibold tabular-nums text-[var(--text-primary)]',
-                    tile.isOver && 'text-[var(--destructive)]',
-                    tile.isExhausted && 'text-[var(--color-warning)]',
-                  )}>
-                    {tile.used}{' '}
-                    <span className={cn(
-                      'text-[12px] font-normal text-[var(--text-tertiary)]',
+                  >
+                    <div className="text-[11px] text-[var(--text-tertiary)]">
+                      {tile.label}
+                      {tile.sublabel && (
+                        <span className="ml-1 text-[10px]">&middot; {tile.sublabel}</span>
+                      )}
+                    </div>
+                    <div className={cn(
+                      'text-[15px] font-semibold tabular-nums text-[var(--text-primary)]',
                       tile.isOver && 'text-[var(--destructive)]',
+                      tile.isExhausted && 'text-[var(--color-warning)]',
                     )}>
-                      / {tile.limit}
-                    </span>
-                    {tile.isOver && (
-                      <span className="text-[11px] font-normal"> — Over limit</span>
-                    )}
+                      {tile.used}{' '}
+                      <span className={cn(
+                        'text-[12px] font-normal text-[var(--text-tertiary)]',
+                        tile.isOver && 'text-[var(--destructive)]',
+                      )}>
+                        / {tile.limit}
+                      </span>
+                      {tile.isOver && (
+                        <span className="text-[11px] font-normal"> — Over limit</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
