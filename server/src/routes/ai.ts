@@ -6,7 +6,7 @@ import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLo
 import type { ImageInput } from '../lib/aiProviders.js';
 import { analyzeImages, reanalyzeImages } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
-import { getUserAiSettings, parseTaskModelOverrides, TASK_TYPES } from '../lib/aiSettings.js';
+import { getUserAiSettings } from '../lib/aiSettings.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import { AI_TASK_GROUPS, type AiTaskGroup, config, getEnvAiConfig, isDemoUser, isGroupEnvLocked } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
@@ -133,7 +133,6 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
     maxTokens: activeRow.max_tokens ?? null,
     topP: activeRow.top_p ?? null,
     requestTimeout: activeRow.request_timeout ?? null,
-    taskModelOverrides: parseTaskModelOverrides(activeRow.task_model_overrides),
     providerConfigs,
     taskOverrides,
     taskOverridesEnvLocked,
@@ -155,12 +154,9 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     if (PROMPT_FIELDS.some(f => req.body[f] != null)) {
       throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot customize AI prompts');
     }
-    if (req.body.taskModelOverrides && Object.values(req.body.taskModelOverrides).some((v: unknown) => v)) {
-      throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot set model overrides');
-    }
   }
 
-  const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt, reorganizationPrompt, taskModelOverrides: rawOverrides } = req.body;
+  const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt, reorganizationPrompt } = req.body;
   const { temperature: rawTemp, maxTokens: rawMaxTokens, topP: rawTopP, requestTimeout: rawTimeout } = req.body;
 
   if (!provider || !apiKey || !model) {
@@ -205,21 +201,6 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     return;
   }
 
-  // Validate and serialize task model overrides
-  let finalOverrides: string | null = null;
-  if (rawOverrides && typeof rawOverrides === 'object' && !Array.isArray(rawOverrides)) {
-    const cleaned: Record<string, string> = {};
-    for (const [key, value] of Object.entries(rawOverrides)) {
-      if (!(TASK_TYPES as readonly string[]).includes(key)) continue;
-      if (value === null || value === undefined || value === '') continue;
-      if (typeof value !== 'string') {
-        throw new ValidationError(`taskModelOverrides.${key} must be a string`);
-      }
-      cleaned[key] = value;
-    }
-    finalOverrides = Object.keys(cleaned).length > 0 ? JSON.stringify(cleaned) : null;
-  }
-
   const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id, provider);
   const encryptedKey = encryptApiKey(finalApiKey);
   const finalCustomPrompt = (customPrompt && typeof customPrompt === 'string' && customPrompt.trim()) ? customPrompt.trim() : null;
@@ -242,7 +223,7 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
      ON CONFLICT (user_id, provider) DO UPDATE SET
        api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, reorganization_prompt = $11, temperature = $12, max_tokens = $13, top_p = $14, request_timeout = $15, task_model_overrides = $16, is_active = TRUE, updated_at = ${d.now()}
      RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides`,
-    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt, finalReorganizationPrompt, finalTemperature, finalMaxTokens, finalTopP, finalTimeout, finalOverrides]
+    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt, finalReorganizationPrompt, finalTemperature, finalMaxTokens, finalTopP, finalTimeout, null]
   );
 
   // Fetch all rows to build providerConfigs
@@ -275,7 +256,6 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     maxTokens: row.max_tokens ?? null,
     topP: row.top_p ?? null,
     requestTimeout: row.request_timeout ?? null,
-    taskModelOverrides: parseTaskModelOverrides(row.task_model_overrides),
     providerConfigs,
     source: 'user' as const,
   });

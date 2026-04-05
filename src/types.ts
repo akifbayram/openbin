@@ -233,7 +233,6 @@ export interface AiSettings {
   maxTokens: number | null;
   topP: number | null;
   requestTimeout: number | null;
-  taskModelOverrides?: Partial<Record<string, string>> | null;
   providerConfigs?: Partial<Record<AiProvider, {
     apiKey: string;
     model: string;
