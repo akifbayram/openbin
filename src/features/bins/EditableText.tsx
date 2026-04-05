@@ -76,7 +76,7 @@ export function EditableText({
   if (editing) {
     const Tag = multiline ? 'textarea' : 'input';
     return (
-      <div className={cn('rounded-[var(--radius-sm)] p-1.5 -m-1.5', saved && 'animate-save-flash')}>
+      <div className={cn('rounded-[var(--radius-sm)] bg-[var(--bg-input)] p-1.5 -m-1.5', saved && 'animate-save-flash')}>
         <Tag
           ref={inputRef as React.RefObject<HTMLInputElement & HTMLTextAreaElement>}
           value={editValue}
