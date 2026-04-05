@@ -1,4 +1,3 @@
-import type { RequestHandler } from 'express';
 import { Router } from 'express';
 import { d, generateUuid, query } from '../db.js';
 import { testProviderConnection } from '../lib/aiCaller.js';
@@ -8,18 +7,17 @@ import type { ImageInput } from '../lib/aiProviders.js';
 import { analyzeImages, reanalyzeImages } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getConfigForTask, getUserAiSettings, parseTaskModelOverrides, TASK_TYPES } from '../lib/aiSettings.js';
-import { asyncHandler } from '../lib/asyncHandler.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import { config, getEnvAiConfig, isDemoUser } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
 import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
-import { HttpError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
-import { checkAndIncrementAiCredits, generateUpgradeUrl, getUserPlanInfo } from '../lib/planGate.js';
+import { HttpError, ValidationError } from '../lib/httpErrors.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
 import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
 import { memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
+import { checkAiCredits } from '../middleware/requirePlan.js';
 import { requirePro } from '../middleware/requirePlan.js';
 
 const MOCK_AI_SETTINGS = {
@@ -41,19 +39,6 @@ const MOCK_AI_SETTINGS = {
 } as const;
 
 const router = Router();
-
-const checkAiCredits: RequestHandler = asyncHandler(async (req, _res, next) => {
-  const result = await checkAndIncrementAiCredits(req.user!.id);
-  if (!result.allowed) {
-    const planInfo = await getUserPlanInfo(req.user!.id);
-    const upgradeUrl = planInfo ? await generateUpgradeUrl(req.user!.id, planInfo.email) : null;
-    throw new PlanRestrictedError(
-      `You've used all ${result.limit} AI credits included in your trial. Upgrade to Pro for unlimited AI.`,
-      upgradeUrl,
-    );
-  }
-  next();
-});
 
 // GET /api/ai/default-prompts — public (no auth), returns default prompt strings
 router.get('/default-prompts', (_req, res) => {

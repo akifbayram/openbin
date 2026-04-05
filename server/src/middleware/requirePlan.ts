@@ -3,6 +3,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { PlanRestrictedError } from '../lib/httpErrors.js';
 import {
+  checkAndIncrementAiCredits,
   generateUpgradeUrl,
   getUserPlanInfo,
   isPlusOrAbove,
@@ -12,7 +13,10 @@ import {
 } from '../lib/planGate.js';
 
 /** Self-hosted mode bypasses all checks with zero DB queries. */
-function requireProAccess(message: string): RequestHandler {
+function requirePlanAccess(
+  message: string,
+  check: (planInfo: { plan: import('../lib/planGate.js').PlanTier; subStatus: import('../lib/planGate.js').SubStatusType }) => boolean,
+): RequestHandler {
   return asyncHandler(async (req, _res, next) => {
     if (isSelfHosted()) {
       next();
@@ -31,36 +35,7 @@ function requireProAccess(message: string): RequestHandler {
       throw new PlanRestrictedError('Your subscription has expired', upgradeUrl);
     }
 
-    if (!isProUser(planInfo)) {
-      const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
-      throw new PlanRestrictedError(message, upgradeUrl);
-    }
-
-    next();
-  });
-}
-
-/** Self-hosted mode bypasses all checks with zero DB queries. */
-function requirePlusAccess(message: string): RequestHandler {
-  return asyncHandler(async (req, _res, next) => {
-    if (isSelfHosted()) {
-      next();
-      return;
-    }
-
-    const userId = req.user!.id;
-    const planInfo = await getUserPlanInfo(userId);
-
-    if (!planInfo) {
-      throw new PlanRestrictedError('User plan not found');
-    }
-
-    if (!isSubscriptionActive(planInfo)) {
-      const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
-      throw new PlanRestrictedError('Your subscription has expired', upgradeUrl);
-    }
-
-    if (!isPlusOrAbove(planInfo)) {
+    if (!check(planInfo)) {
       const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
       throw new PlanRestrictedError(message, upgradeUrl);
     }
@@ -104,13 +79,26 @@ export function requireActiveSubscription(): RequestHandler {
 }
 
 export function requirePro(): RequestHandler {
-  return requireProAccess('This feature requires a Pro plan');
+  return requirePlanAccess('This feature requires a Pro plan', isProUser);
 }
 
 export function requireWriteApi(): RequestHandler {
-  return requireProAccess('API write access requires a Pro plan');
+  return requirePlanAccess('API write access requires a Pro plan', isProUser);
 }
 
 export function requirePlusOrAbove(): RequestHandler {
-  return requirePlusAccess('This feature requires a Plus or Pro plan');
+  return requirePlanAccess('This feature requires a Plus or Pro plan', isPlusOrAbove);
 }
+
+export const checkAiCredits: RequestHandler = asyncHandler(async (req, _res, next) => {
+  const result = await checkAndIncrementAiCredits(req.user!.id);
+  if (!result.allowed) {
+    const planInfo = await getUserPlanInfo(req.user!.id);
+    const upgradeUrl = planInfo ? await generateUpgradeUrl(req.user!.id, planInfo.email) : null;
+    throw new PlanRestrictedError(
+      `You've used all ${result.limit} AI credits included in your trial. Upgrade to Pro for unlimited AI.`,
+      upgradeUrl,
+    );
+  }
+  next();
+});

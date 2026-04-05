@@ -199,29 +199,27 @@ export async function assertBinCreationAllowed(userId: string): Promise<void> {
 
 export async function checkAndIncrementAiCredits(userId: string): Promise<{ allowed: boolean; used: number; limit: number }> {
   if (config.selfHosted) return { allowed: true, used: 0, limit: 0 };
-  const planInfo = await getUserPlanInfo(userId);
-  if (!planInfo) return { allowed: true, used: 0, limit: 0 };
-  if (planInfo.subStatus !== SubStatus.TRIAL) return { allowed: true, used: 0, limit: 0 };
-  const limit = config.planLimits.trialAiCredits;
-  const userRow = await query<{ ai_credits_used: number }>(
-    'SELECT ai_credits_used FROM users WHERE id = $1',
+  const result = await query<{ sub_status: number; ai_credits_used: number }>(
+    'SELECT sub_status, ai_credits_used FROM users WHERE id = $1',
     [userId],
   );
-  const used = userRow.rows[0]?.ai_credits_used ?? 0;
-  if (used >= limit) return { allowed: false, used, limit };
+  if (result.rows.length === 0) return { allowed: true, used: 0, limit: 0 };
+  const { sub_status, ai_credits_used } = result.rows[0];
+  if (sub_status !== SubStatus.TRIAL) return { allowed: true, used: 0, limit: 0 };
+  const limit = config.planLimits.trialAiCredits;
+  if (ai_credits_used >= limit) return { allowed: false, used: ai_credits_used, limit };
   await query('UPDATE users SET ai_credits_used = ai_credits_used + 1 WHERE id = $1', [userId]);
-  return { allowed: true, used: used + 1, limit };
+  return { allowed: true, used: ai_credits_used + 1, limit };
 }
 
 export async function getAiCredits(userId: string): Promise<{ used: number; limit: number }> {
   if (config.selfHosted) return { used: 0, limit: 0 };
-  const planInfo = await getUserPlanInfo(userId);
-  if (!planInfo || planInfo.subStatus !== SubStatus.TRIAL) return { used: 0, limit: 0 };
-  const userRow = await query<{ ai_credits_used: number }>(
-    'SELECT ai_credits_used FROM users WHERE id = $1',
+  const result = await query<{ sub_status: number; ai_credits_used: number }>(
+    'SELECT sub_status, ai_credits_used FROM users WHERE id = $1',
     [userId],
   );
-  return { used: userRow.rows[0]?.ai_credits_used ?? 0, limit: config.planLimits.trialAiCredits };
+  if (result.rows.length === 0 || result.rows[0].sub_status !== SubStatus.TRIAL) return { used: 0, limit: 0 };
+  return { used: result.rows[0].ai_credits_used, limit: config.planLimits.trialAiCredits };
 }
 
 export async function getUserQuotaUsage(userId: string): Promise<{ locationCount: number; photoStorageMb: number }> {

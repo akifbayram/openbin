@@ -1,4 +1,3 @@
-import type { RequestHandler } from 'express';
 import { Router } from 'express';
 import { createPinnedFetch, validateEndpointUrl } from '../lib/aiCaller.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
@@ -10,15 +9,12 @@ import { QueryResultSchema } from '../lib/aiSchemas.js';
 import type { TaskType, UserAiSettings } from '../lib/aiSettings.js';
 import { getConfigForTask, getUserAiSettings } from '../lib/aiSettings.js';
 import { initSseResponse, pipeAiStreamToResponse } from '../lib/aiStream.js';
-import { asyncHandler } from '../lib/asyncHandler.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg, buildUnifiedSystemPrompt } from '../lib/commandParser.js';
 import { config, isDemoUser } from '../lib/config.js';
 import { fetchCustomFieldDefs } from '../lib/customFieldHelpers.js';
-import { PlanRestrictedError } from '../lib/httpErrors.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
-import { checkAndIncrementAiCredits, generateUpgradeUrl, getUserPlanInfo } from '../lib/planGate.js';
 import { aiLimiter } from '../lib/rateLimiters.js';
 import { createSdkModel } from '../lib/sdkProviderFactory.js';
 import { buildPrompt as buildStructurePrompt, STRUCTURE_TEXT_TOKENS } from '../lib/structureText.js';
@@ -26,23 +22,10 @@ import { demoMemoryPhotoUpload, memoryPhotoUpload } from '../lib/uploadConfig.js
 import { authenticate } from '../middleware/auth.js';
 import { demoConnectionLimiter, isDemoUser as isDemoConn } from '../middleware/demoConnectionLimiter.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
-import { requirePro } from '../middleware/requirePlan.js';
+import { checkAiCredits, requirePro } from '../middleware/requirePlan.js';
 
 const streamRouter = Router();
 streamRouter.use(authenticate);
-
-const checkAiCredits: RequestHandler = asyncHandler(async (req, _res, next) => {
-  const result = await checkAndIncrementAiCredits(req.user!.id);
-  if (!result.allowed) {
-    const planInfo = await getUserPlanInfo(req.user!.id);
-    const upgradeUrl = planInfo ? await generateUpgradeUrl(req.user!.id, planInfo.email) : null;
-    throw new PlanRestrictedError(
-      `You've used all ${result.limit} AI credits included in your trial. Upgrade to Pro for unlimited AI.`,
-      upgradeUrl,
-    );
-  }
-  next();
-});
 
 /** Fetch existing tags and custom field definitions for a location (used by analysis/correction routes). */
 async function fetchLocationAiMeta(locationId: string | undefined) {

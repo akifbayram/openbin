@@ -105,16 +105,16 @@ router.post('/callback', asyncHandler(async (req, res) => {
           [userId],
         ),
       ]);
-      const liteFeatures = (await import('../lib/planGate.js')).getFeatureMap(Plan.PLUS);
+      const plusFeatures = (await import('../lib/planGate.js')).getFeatureMap(Plan.PLUS);
       const impact = {
         locationCount: locRes.rows[0].cnt,
-        maxLocations: liteFeatures.maxLocations ?? 1,
+        maxLocations: plusFeatures.maxLocations ?? 1,
         photoStorageMb: Math.round((photoRes.rows[0].total / (1024 * 1024)) * 100) / 100,
-        maxPhotoStorageMb: liteFeatures.maxPhotoStorageMb ?? 100,
+        maxPhotoStorageMb: plusFeatures.maxPhotoStorageMb ?? 100,
         overLimitMembers: memberRes.rows
-          .filter(r => liteFeatures.maxMembersPerLocation !== null && r.cnt > liteFeatures.maxMembersPerLocation)
+          .filter(r => plusFeatures.maxMembersPerLocation !== null && r.cnt > plusFeatures.maxMembersPerLocation)
           .map(r => ({ locationName: r.name, memberCount: r.cnt })),
-        maxMembersPerLocation: liteFeatures.maxMembersPerLocation ?? 1,
+        maxMembersPerLocation: plusFeatures.maxMembersPerLocation ?? 1,
       };
       fireDowngradeImpactEmail(userId, userRow.email, userRow.display_name, impact);
     }
