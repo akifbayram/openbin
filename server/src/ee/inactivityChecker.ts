@@ -31,7 +31,7 @@ export async function checkInactiveUsers(): Promise<void> {
        WHERE sub_status = $1
          AND deleted_at IS NULL
          AND suspended_at IS NULL
-         AND is_admin = 0
+         AND is_admin = FALSE
          AND COALESCE(last_active_at, created_at) <= ${d.daysAgo(WARNING_30D_DAYS)}`,
       [SubStatus.INACTIVE],
     );
