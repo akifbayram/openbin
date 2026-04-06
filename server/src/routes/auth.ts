@@ -960,7 +960,7 @@ router.delete('/oauth/link/:provider', authenticate, asyncHandler(async (req, re
     [userId, provider]
   );
 
-  if ((result as any).rowCount === 0 && (result as any).changes === 0) {
+  if (result.rowCount === 0) {
     throw new NotFoundError('Provider not linked');
   }
 

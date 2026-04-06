@@ -1,4 +1,5 @@
 import type { Express } from 'express';
+import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { generateUuid, query } from '../db.js';
 import { createApp } from '../index.js';
@@ -107,5 +108,74 @@ describe('findOrCreateOAuthUser', () => {
         displayName: 'Suspended',
       })
     ).rejects.toThrow();
+  });
+});
+
+describe('OAuth routes', () => {
+  it('GET /api/auth/status includes oauthProviders', async () => {
+    const res = await request(app).get('/api/auth/status');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('oauthProviders');
+    expect(Array.isArray(res.body.oauthProviders)).toBe(true);
+  });
+
+  it('GET /api/auth/oauth/google returns 422 when not configured', async () => {
+    const res = await request(app).get('/api/auth/oauth/google');
+    expect(res.status).toBe(422);
+  });
+
+  it('GET /api/auth/oauth/apple returns 422 when not configured', async () => {
+    const res = await request(app).get('/api/auth/oauth/apple');
+    expect(res.status).toBe(422);
+  });
+
+  it('GET /api/auth/oauth/links requires auth', async () => {
+    const res = await request(app).get('/api/auth/oauth/links');
+    expect(res.status).toBe(401);
+  });
+
+  it('GET /api/auth/oauth/links returns empty for new user', async () => {
+    const { token } = await createTestUser(app);
+    const res = await request(app)
+      .get('/api/auth/oauth/links')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.results).toEqual([]);
+  });
+
+  it('DELETE /api/auth/oauth/link/:provider requires auth', async () => {
+    const res = await request(app).delete('/api/auth/oauth/link/google');
+    expect(res.status).toBe(401);
+  });
+
+  it('DELETE /api/auth/oauth/link/:provider returns 404 for unlinked provider', async () => {
+    const { token } = await createTestUser(app);
+    const res = await request(app)
+      .delete('/api/auth/oauth/link/google')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('login returns hint for social-only user', async () => {
+    const { user } = await findOrCreateOAuthUser({
+      provider: 'google',
+      providerUserId: `no-password-test-${Date.now()}`,
+      email: `nopass${Date.now()}@example.com`,
+      displayName: 'No Pass',
+    });
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ username: user.username, password: 'anything' });
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe('NO_PASSWORD');
+  });
+
+  it('GET /api/auth/me includes hasPassword', async () => {
+    const { token } = await createTestUser(app);
+    const res = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.hasPassword).toBe(true);
   });
 });
