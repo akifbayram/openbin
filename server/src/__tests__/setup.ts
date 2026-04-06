@@ -47,6 +47,7 @@ const TABLES = [
   'user_limit_overrides',
   'login_history',
   'announcements',
+  'user_oauth_links',
 ];
 
 afterEach(() => {
