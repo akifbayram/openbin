@@ -45,7 +45,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: BUILD_EDITION=selfhosted
+          build-args: |
+            BUILD_EDITION=selfhosted
+            BUILD_VERSION=${{ github.ref_name }}
           cache-from: type=gha,scope=selfhosted
           cache-to: type=gha,mode=max,scope=selfhosted
 
@@ -72,7 +74,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cloud
-          build-args: BUILD_EDITION=cloud
+          build-args: |
+            BUILD_EDITION=cloud
+            BUILD_VERSION=${{ github.ref_name }}
           cache-from: type=gha,scope=cloud
           cache-to: type=gha,mode=max,scope=cloud
 

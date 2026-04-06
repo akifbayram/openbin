@@ -35,7 +35,7 @@ export function SettingsLayout() {
 
   if (isDesktop) {
     return (
-      <div className="flex h-full">
+      <div className="flex min-h-[calc(100dvh-var(--safe-top))] -mb-8">
         <SettingsSidebar mainCategories={mainCategories} adminCategories={adminCategories} />
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-2xl px-8 py-6">

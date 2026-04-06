@@ -183,6 +183,7 @@ describe('GET /api/plan', () => {
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
+    vi.mocked(generateUpgradePlanUrl).mockResolvedValue(null);
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -318,6 +319,7 @@ describe('GET /api/plan', () => {
     });
     vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
     vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    vi.mocked(generateUpgradePlanUrl).mockResolvedValue('https://manager.example.com/checkout-plus');
     const { token } = await createTestUser(app);
 
     const res = await request(app)
@@ -373,6 +375,61 @@ describe('GET /api/plan', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.canDowngradeToFree).toBe(false);
+  });
+
+  it('returns subscribePlanUrl and upgradeProUrl for expired Pro user', async () => {
+    vi.mocked(isSelfHosted).mockReturnValue(false);
+    vi.mocked(getUserPlanInfo).mockResolvedValue({
+      plan: Plan.PRO,
+      subStatus: SubStatus.INACTIVE,
+      activeUntil: null,
+      email: 'pro@example.com',
+      previousSubStatus: SubStatus.ACTIVE,
+    });
+    vi.mocked(getFeatureMap).mockReturnValue(PRO_FEATURES);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    vi.mocked(generateUpgradePlanUrl).mockResolvedValue('https://manager.example.com/checkout-pro');
+    vi.mocked(generatePortalUrl).mockResolvedValue(null);
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .get('/api/plan')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.upgradeProUrl).toBe('https://manager.example.com/checkout-pro');
+    expect(res.body.subscribePlanUrl).toBe('https://manager.example.com/checkout-pro');
+    expect(res.body.upgradePlusUrl).toBeNull();
+    expect(res.body.portalUrl).toBeNull();
+    expect(res.body.canDowngradeToFree).toBe(true);
+  });
+
+  it('returns subscribePlanUrl and upgradePlusUrl for expired Plus user', async () => {
+    vi.mocked(isSelfHosted).mockReturnValue(false);
+    vi.mocked(getUserPlanInfo).mockResolvedValue({
+      plan: Plan.PLUS,
+      subStatus: SubStatus.INACTIVE,
+      activeUntil: null,
+      email: 'plus@example.com',
+      previousSubStatus: SubStatus.ACTIVE,
+    });
+    vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    vi.mocked(generateUpgradePlanUrl).mockImplementation(async (_uid, _email, plan) =>
+      `https://manager.example.com/checkout-${plan}`);
+    vi.mocked(generatePortalUrl).mockResolvedValue(null);
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .get('/api/plan')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.upgradePlusUrl).toBe('https://manager.example.com/checkout-plus');
+    expect(res.body.upgradeProUrl).toBe('https://manager.example.com/checkout-pro');
+    expect(res.body.subscribePlanUrl).toBe('https://manager.example.com/checkout-plus');
+    expect(res.body.portalUrl).toBeNull();
+    expect(res.body.canDowngradeToFree).toBe(true);
   });
 
   it('returns upgradePlusUrl and upgradeProUrl for Free user', async () => {

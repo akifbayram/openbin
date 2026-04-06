@@ -33,6 +33,13 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
   const isPaidActive = active && planInfo.subStatus === SubStatus.ACTIVE;
   const userId = req.user!.id;
   const { email } = planInfo;
+  const { plan, subStatus } = planInfo;
+
+  const isFree = plan === Plan.FREE;
+  const isPlus = plan === Plan.PLUS;
+  const isPro = plan === Plan.PRO;
+  const isTrial = subStatus === SubStatus.TRIAL;
+  const isLapsed = !isPaidActive && !isTrial;
 
   const aiCreditsRaw = await getAiCredits(userId);
   const aiCredits = aiCreditsRaw.limit > 0
@@ -40,24 +47,24 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     : null;
 
   res.json({
-    plan: planLabel(planInfo.plan),
-    status: subStatusLabel(planInfo.subStatus),
+    plan: planLabel(plan),
+    status: subStatusLabel(subStatus),
     activeUntil: planInfo.activeUntil,
     selfHosted: false,
     locked: !active,
     previousSubStatus: planInfo.previousSubStatus !== null
       ? (planInfo.previousSubStatus === SubStatus.TRIAL ? 'trial' : 'active')
       : null,
-    features: getFeatureMap(planInfo.plan),
-    upgradeUrl: active && planInfo.plan === Plan.PRO ? null : await generateUpgradeUrl(userId, email),
-    upgradePlusUrl: planInfo.plan !== Plan.PLUS && planInfo.plan !== Plan.PRO
+    features: getFeatureMap(plan),
+    upgradeUrl: active && isPro ? null : await generateUpgradeUrl(userId, email),
+    upgradePlusUrl: isFree || (isPlus && isLapsed)
       ? await generateUpgradePlanUrl(userId, email, 'plus') : null,
-    upgradeProUrl: planInfo.plan !== Plan.PRO
+    upgradeProUrl: !isPro || !isPaidActive
       ? await generateUpgradePlanUrl(userId, email, 'pro') : null,
-    subscribePlanUrl: planInfo.subStatus === SubStatus.TRIAL
-      ? await generateUpgradePlanUrl(userId, email, planLabel(planInfo.plan) as 'plus' | 'pro') : null,
+    subscribePlanUrl: isTrial || (!isFree && isLapsed)
+      ? await generateUpgradePlanUrl(userId, email, planLabel(plan) as 'plus' | 'pro') : null,
     portalUrl: isPaidActive ? await generatePortalUrl(userId, email) : null,
-    canDowngradeToFree: planInfo.plan !== Plan.FREE && !isPaidActive,
+    canDowngradeToFree: !isFree && !isPaidActive,
     aiCredits,
   });
 }));

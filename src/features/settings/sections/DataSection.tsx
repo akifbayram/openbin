@@ -15,6 +15,7 @@ import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { cn } from '@/lib/utils';
 import type { Location } from '@/types';
+import { SettingsPageHeader } from '../SettingsPageHeader';
 import { SettingsRow } from '../SettingsRow';
 import { SettingsSection } from '../SettingsSection';
 import { useDataSectionActions } from '../useDataSectionActions';
@@ -97,14 +98,7 @@ export function DataSection() {
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-[20px] font-bold text-[var(--text-primary)]">
-          Data
-        </h2>
-        <p className="text-[13px] text-[var(--text-tertiary)]">
-          Export, import, and manage your data.
-        </p>
-      </div>
+      <SettingsPageHeader title="Data" description="Export, import, and manage your data." />
 
       <SettingsSection label="Navigation">
         <SettingsRow

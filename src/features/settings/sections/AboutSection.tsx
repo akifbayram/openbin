@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
 import { useUserPreferences } from '@/lib/userPreferences';
 import { cn, focusRing } from '@/lib/utils';
+import { SettingsPageHeader } from '../SettingsPageHeader';
 import { SettingsSection } from '../SettingsSection';
 
 export function AboutSection() {
@@ -21,14 +22,7 @@ export function AboutSection() {
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-[20px] font-bold text-[var(--text-primary)]">
-          About
-        </h2>
-        <p className="text-[13px] text-[var(--text-tertiary)]">
-          Version info and resources.
-        </p>
-      </div>
+      <SettingsPageHeader title="About" description="Version info and resources." />
 
       <SettingsSection label="Info">
         <div className="py-3 border-b border-[var(--border-subtle)]">

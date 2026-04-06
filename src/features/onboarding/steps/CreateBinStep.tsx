@@ -2,7 +2,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { BinPreviewCard } from '@/features/bins/BinPreviewCard';
-import { ItemList } from '@/features/bins/ItemList';
 import { QuickAddWidget } from '@/features/bins/QuickAddWidget';
 import { useQuickAdd } from '@/features/bins/useQuickAdd';
 import type { BinItem } from '@/types';
@@ -66,7 +65,6 @@ export function CreateBinStep({
             onChange={setBinAreaId}
           />
         )}
-        <ItemList items={binItems} onItemsChange={setBinItems} />
         <QuickAddWidget quickAdd={quickAdd} aiEnabled={false} />
       </div>
       <Button

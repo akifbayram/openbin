@@ -14,6 +14,7 @@ import { useTerminology } from '@/lib/terminology';
 import type { ThemePreference } from '@/lib/theme';
 import { useTheme } from '@/lib/theme';
 import { useUserPreferences } from '@/lib/userPreferences';
+import { SettingsPageHeader } from '../SettingsPageHeader';
 import { SettingsRow } from '../SettingsRow';
 import { SettingsSection } from '../SettingsSection';
 import { SavedBadge, useSavedFlash } from '../useSavedFlash';
@@ -39,14 +40,7 @@ export function PreferencesSection() {
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-[20px] font-bold text-[var(--text-primary)]">
-          Preferences
-        </h2>
-        <p className="text-[13px] text-[var(--text-tertiary)]">
-          Customize your experience.
-        </p>
-      </div>
+      <SettingsPageHeader title="Preferences" description="Customize your experience." />
 
       <SettingsSection label="Appearance">
         <SettingsRow

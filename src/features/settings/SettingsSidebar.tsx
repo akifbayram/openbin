@@ -16,13 +16,13 @@ export function SettingsSidebar({ mainCategories, adminCategories }: SettingsSid
   return (
     <nav
       aria-label="Settings"
-      className="flex w-[220px] shrink-0 flex-col border-r border-[var(--border-flat)] bg-[var(--bg-input)]/50"
+      className="flex w-[220px] shrink-0 flex-col overflow-y-auto border-r border-[var(--border-flat)] bg-[var(--bg-input)]/50"
     >
       <div className="px-4 pt-5 pb-3">
         <h1 className="text-[18px] font-bold text-[var(--text-primary)]">Settings</h1>
       </div>
 
-      <div className="flex flex-1 flex-col gap-0.5 px-2">
+      <div className="flex flex-1 flex-col gap-0.5 px-2 pb-4">
         {mainCategories.map((cat) => {
           const Icon = cat.icon;
 

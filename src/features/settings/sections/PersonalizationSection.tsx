@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
 import { useAppSettings } from '@/lib/appSettings';
+import { SettingsPageHeader } from '../SettingsPageHeader';
 import { SettingsSection } from '../SettingsSection';
 import { SavedBadge, useSavedFlash } from '../useSavedFlash';
 
@@ -12,17 +13,11 @@ export function PersonalizationSection() {
 
   return (
     <>
-      <div className="mb-6">
-        <div className="flex items-center gap-2">
-          <h2 className="text-[20px] font-bold text-[var(--text-primary)]">
-            Personalization
-          </h2>
-          <SavedBadge visible={saved} />
-        </div>
-        <p className="text-[13px] text-[var(--text-tertiary)]">
-          Customize naming and branding for your workspace.
-        </p>
-      </div>
+      <SettingsPageHeader
+        title="Personalization"
+        description="Customize naming and branding for your workspace."
+        action={<SavedBadge visible={saved} />}
+      />
 
       <SettingsSection label="App Name">
         <div className="py-2">

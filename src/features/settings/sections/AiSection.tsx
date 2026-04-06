@@ -33,6 +33,7 @@ import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { cn, getErrorMessage } from '@/lib/utils';
 import type { AiTaskGroup } from '@/types';
+import { SettingsPageHeader } from '../SettingsPageHeader';
 import { SettingsRow } from '../SettingsRow';
 import { SettingsSection } from '../SettingsSection';
 import { createApiKey, revokeApiKey, useApiKeys } from '../useApiKeys';
@@ -281,13 +282,7 @@ export function AiSection() {
 
   return (
     <>
-      {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-[20px] font-bold text-[var(--text-primary)]">AI</h2>
-        <p className="text-[13px] text-[var(--text-tertiary)]">
-          Configure AI features and API keys.
-        </p>
-      </div>
+      <SettingsPageHeader title="AI" description="Configure AI features and API keys." />
 
       {/* AI gating check */}
       {aiGated ? (

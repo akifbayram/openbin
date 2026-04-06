@@ -10,6 +10,7 @@ server/uploads/
 .env
 .env.*
 !.env.example
+docker-compose.cloud.yml
 .mcp.json
 .claude/
 reports/

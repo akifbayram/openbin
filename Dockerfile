@@ -1,6 +1,7 @@
 # ── Stage 1: Build frontend ──────────────────
 FROM node:22-alpine AS frontend-builder
 ARG BUILD_EDITION=selfhosted
+ARG BUILD_VERSION
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -8,7 +9,7 @@ COPY index.html vite.config.ts tsconfig*.json ./
 COPY src ./src
 COPY public ./public
 COPY server/openapi.yaml ./server/openapi.yaml
-RUN BUILD_EDITION=$BUILD_EDITION npx vite build
+RUN BUILD_EDITION=$BUILD_EDITION BUILD_VERSION=$BUILD_VERSION npx vite build
 
 # ── Stage 2: Build server ────────────────────
 FROM node:22-alpine AS server-builder

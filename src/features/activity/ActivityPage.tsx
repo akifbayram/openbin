@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { OptionGroup, type OptionGroupOption } from '@/components/ui/option-group';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
+import { SettingsPageHeader } from '@/features/settings/SettingsPageHeader';
 import { useTerminology } from '@/lib/terminology';
 import { usePermissions } from '@/lib/usePermissions';
 import { ActivityTableView } from './ActivityTableView';
@@ -34,29 +35,21 @@ export function ActivityPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-[20px] font-bold text-[var(--text-primary)]">Activity Log</h2>
-        <p className="text-[13px] text-[var(--text-tertiary)]">View changes and actions across your location.</p>
-      </div>
+    <>
+      <SettingsPageHeader title="Activity Log" description="View changes and actions across your location." />
 
       <OptionGroup
         options={filterOptions}
         value={entityTypeFilter}
         onChange={setEntityTypeFilter}
         size="sm"
+        className="mb-4"
       />
 
       <Crossfade
         isLoading={(isLoading || permissionsLoading) && entries.length === 0}
         skeleton={
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-2">
-              {Array.from({ length: 5 }, (_, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton placeholders
-                <Skeleton key={i} className="h-7 w-16 rounded-full" />
-              ))}
-            </div>
+          <div>
             <div className="flat-card rounded-[var(--radius-lg)] overflow-hidden">
               <div className="h-9 bg-[var(--bg-hover)] border-b border-[var(--border-subtle)]" />
               <SkeletonList count={8}>
@@ -99,6 +92,6 @@ export function ActivityPage() {
           />
         )}
       </Crossfade>
-    </div>
+    </>
   );
 }

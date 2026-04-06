@@ -23,6 +23,7 @@ import { allChecksPassing, computePasswordChecks } from '@/lib/passwordStrength'
 import { useWarnOnUnload } from '@/lib/useWarnOnUnload';
 import { cn, EMAIL_REGEX, getErrorMessage } from '@/lib/utils';
 import type { User } from '@/types';
+import { SettingsPageHeader } from '../SettingsPageHeader';
 import { SettingsSection } from '../SettingsSection';
 
 function validateDisplayName(value: string): string | undefined {
@@ -178,10 +179,7 @@ export function AccountSection() {
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-[20px] font-bold text-[var(--text-primary)]">Account</h2>
-        <p className="text-[13px] text-[var(--text-tertiary)]">Manage your profile and account settings.</p>
-      </div>
+      <SettingsPageHeader title="Account" description="Manage your profile and account settings." />
 
       {/* Avatar + identity */}
       <SettingsSection label="Profile">
@@ -275,9 +273,6 @@ export function AccountSection() {
               aria-invalid={!!profileErrors.email}
             />
           </FormField>
-          <p className="text-[11px] text-[var(--text-tertiary)]">
-            Username (@{user.username}) cannot be changed.
-          </p>
           <Button
             type="submit"
             disabled={savingProfile || !displayName.trim() || !profileDirty}

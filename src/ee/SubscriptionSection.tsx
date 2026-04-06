@@ -1,7 +1,8 @@
-import { AlertTriangle, ArrowUpRight, Clock } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Check, Clock } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useToast } from '@/components/ui/toast';
+import { SettingsPageHeader } from '@/features/settings/SettingsPageHeader';
 import { SettingsRow } from '@/features/settings/SettingsRow';
 import { SettingsSection } from '@/features/settings/SettingsSection';
 import { apiFetch } from '@/lib/api';
@@ -63,7 +64,7 @@ function buildUsageTiles(
   if (features.maxPhotoStorageMb !== null && usage) {
     tiles.push({
       label: 'Photos',
-      used: `${usage.photoStorageMb.toFixed(1)}`,
+      used: `${usage.photoStorageMb.toFixed(1)} MB`,
       limit: features.maxPhotoStorageMb >= 1024
         ? `${(features.maxPhotoStorageMb / 1024).toFixed(0)} GB`
         : `${features.maxPhotoStorageMb} MB`,
@@ -218,7 +219,7 @@ function PlanHeader({
 
       {isTrialing && daysRemaining !== null && (
         <p className="text-[12px] text-[var(--color-warning)] mt-2">
-          {daysRemaining} {plural(daysRemaining, 'day')} remaining
+          {daysRemaining === 0 ? 'Expires today' : `${daysRemaining} ${plural(daysRemaining, 'day')} remaining`}
         </p>
       )}
 
@@ -281,7 +282,7 @@ function UnlockSection({
           href={planInfo.upgradeProUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[13px] font-medium text-[var(--accent)] hover:underline"
+          className={cn('inline-flex items-center gap-1 rounded-[var(--radius-xs)] text-[13px] font-medium text-[var(--accent)] hover:underline', focusRing)}
         >
           Upgrade to Pro
           <ArrowUpRight className="h-3 w-3" />
@@ -302,7 +303,7 @@ function UnlockSection({
       <ul className="flex flex-col gap-1.5 mb-3">
         {nextTierFeatures.map((feat) => (
           <li key={feat} className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
-            <span className="text-[var(--color-success)]">&#10003;</span>
+            <Check className="h-3.5 w-3.5 shrink-0 text-[var(--color-success)]" />
             {feat}
           </li>
         ))}
@@ -405,10 +406,7 @@ export function SubscriptionSection() {
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-[20px] font-bold text-[var(--text-primary)]">Subscription</h2>
-        <p className="text-[13px] text-[var(--text-tertiary)]">Manage your plan and billing.</p>
-      </div>
+      <SettingsPageHeader title="Subscription" description="Manage your plan and billing." />
 
       {isLocked && (
         <div className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3.5 py-3 mb-5 bg-[var(--destructive-soft)] text-[var(--destructive)]">
@@ -437,7 +435,7 @@ export function SubscriptionSection() {
               type="button"
               disabled={downgrading}
               onClick={handleDowngradeToFree}
-              className="mt-2 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50"
+              className={cn('mt-2 rounded-[var(--radius-xs)] text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50', focusRing)}
             >
               {isLocked ? 'Continue with Free Plan' : 'Switch to Free Plan'}
             </button>

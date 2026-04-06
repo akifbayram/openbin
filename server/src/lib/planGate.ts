@@ -436,7 +436,7 @@ export async function getMemberCount(locationId: string): Promise<number> {
   return result.rows[0].cnt;
 }
 
-async function signManagerToken(userId: string, email: string | null): Promise<string | null> {
+export async function getManagerToken(userId: string, email: string | null): Promise<string | null> {
   if (!config.managerUrl || !config.subscriptionJwtSecret) return null;
   return new jose.SignJWT({ userId, email })
     .setProtectedHeader({ alg: 'HS256' })
@@ -444,19 +444,31 @@ async function signManagerToken(userId: string, email: string | null): Promise<s
     .sign(getSubscriptionSecretKey());
 }
 
+export function buildUpgradeUrl(token: string): string {
+  return `${config.managerUrl}/plans?token=${token}&origin=${encodeURIComponent(config.corsOrigin)}`;
+}
+
+export function buildUpgradePlanUrl(token: string, plan: 'plus' | 'pro'): string {
+  return `${config.managerUrl}/auth/openbin?token=${token}&plan=${plan}`;
+}
+
+export function buildPortalUrl(token: string): string {
+  return `${config.managerUrl}/portal?token=${token}`;
+}
+
 export async function generateUpgradeUrl(userId: string, email: string | null): Promise<string | null> {
-  const token = await signManagerToken(userId, email);
-  return token ? `${config.managerUrl}/auth/openbin?token=${token}` : null;
+  const token = await getManagerToken(userId, email);
+  return token ? buildUpgradeUrl(token) : null;
 }
 
 export async function generateUpgradePlanUrl(userId: string, email: string | null, plan: 'plus' | 'pro'): Promise<string | null> {
-  const token = await signManagerToken(userId, email);
-  return token ? `${config.managerUrl}/auth/openbin?token=${token}&plan=${plan}` : null;
+  const token = await getManagerToken(userId, email);
+  return token ? buildUpgradePlanUrl(token, plan) : null;
 }
 
 export async function generatePortalUrl(userId: string, email: string | null): Promise<string | null> {
-  const token = await signManagerToken(userId, email);
-  return token ? `${config.managerUrl}/portal?token=${token}` : null;
+  const token = await getManagerToken(userId, email);
+  return token ? buildPortalUrl(token) : null;
 }
 
 export interface OverLimits {

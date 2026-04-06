@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
 import { useLocationList } from '@/features/locations/useLocations';
+import { SettingsPageHeader } from '@/features/settings/SettingsPageHeader';
 import { useAuth } from '@/lib/auth';
 import { formatTimeAgo } from '@/lib/formatTime';
 import { useTerminology } from '@/lib/terminology';
@@ -62,12 +63,10 @@ export function TrashPage() {
 
   return (
     <>
-      <div className="mb-4">
-        <h2 className="text-[20px] font-bold text-[var(--text-primary)]">Trash</h2>
-        <p className="text-[13px] text-[var(--text-tertiary)]">
-          Deleted {t.bins} are kept for {retentionDays} day{retentionDays !== 1 ? 's' : ''} before being permanently removed.
-        </p>
-      </div>
+      <SettingsPageHeader
+        title="Trash"
+        description={`Deleted ${t.bins} are kept for ${retentionDays} day${retentionDays !== 1 ? 's' : ''} before being permanently removed.`}
+      />
 
       {isLoading ? (
         <SkeletonList count={3} className="flex flex-col gap-3">
@@ -146,7 +145,7 @@ export function TrashPage() {
             <DialogTitle>Permanently Delete</DialogTitle>
           </DialogHeader>
           <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-[var(--radius-xl)] bg-[var(--destructive)] bg-opacity-10 flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 rounded-[var(--radius-xl)] bg-[var(--destructive-soft)] flex items-center justify-center shrink-0">
               <AlertTriangle className="h-5 w-5 text-[var(--destructive)]" />
             </div>
             <div>
