@@ -1,9 +1,10 @@
 import '@/components/ui/animations.css';
-import { Cloud, PackagePlus, Printer, QrCode, Server, Settings, Sparkles, X } from 'lucide-react';
+import { PackagePlus, Printer, QrCode, Settings, Sparkles, X } from 'lucide-react';
 import { BrandIcon } from '@/components/BrandIcon';
 import { AnimatedHeight } from '@/components/ui/animated-height';
-import { cn } from '@/lib/utils';
+import { cn, focusRing, iconButton } from '@/lib/utils';
 import type { OnboardingActions } from './onboardingConstants';
+import { markDemoTourDone } from './onboardingConstants';
 import { AiShowcaseStep } from './steps/AiShowcaseStep';
 import type { CompletionAction } from './steps/CompletionStep';
 import { CompletionStep } from './steps/CompletionStep';
@@ -24,11 +25,6 @@ const DEMO_COMPLETION_ACTIONS: CompletionAction[] = [
   { icon: Settings, label: 'Explore settings', description: 'Customize terminology, AI, and more', path: '/settings' },
 ];
 
-const DEMO_CTA_ACTIONS: CompletionAction[] = [
-  { icon: Cloud, label: 'Sign up for Cloud', description: 'Managed hosting, automatic updates', path: 'https://cloud.openbin.app/register' },
-  { icon: Server, label: 'Self-host with Docker', description: 'Free, open source, full control', path: 'https://github.com/akifbayram/openbin' },
-];
-
 const PROD_COMPLETION_ACTIONS: CompletionAction[] = [
   { icon: PackagePlus, label: 'Create more bins', description: 'Add bins for your boxes, drawers, and shelves', path: '/bins' },
   { icon: QrCode, label: 'Scan a QR code', description: 'Try scanning a label with your camera', path: '/scan' },
@@ -42,6 +38,7 @@ export function OnboardingOverlay(props: OnboardingActions) {
   const dots = Array.from({ length: totalSteps });
 
   function handleNavigate(path: string) {
+    if (demoMode) markDemoTourDone();
     complete();
     navigate(path);
   }
@@ -55,7 +52,7 @@ export function OnboardingOverlay(props: OnboardingActions) {
           onClick={state.handleSkipSetup}
           disabled={loading}
           aria-label="Close setup"
-          className="absolute top-4 right-4 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-40 p-1 z-10"
+          className={cn(iconButton, focusRing, 'absolute top-3 right-3 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-40 z-10')}
         >
           <X className="h-5 w-5" />
         </button>
@@ -127,16 +124,6 @@ export function OnboardingOverlay(props: OnboardingActions) {
               subtitle="That's the essentials. Dive in and explore."
               actions={DEMO_COMPLETION_ACTIONS}
               onAction={handleNavigate}
-              onDashboard={() => handleNavigate('/')}
-            />
-          )}
-          {displayedStep === 4 && demoMode && (
-            <CompletionStep
-              icon={<BrandIcon className="h-16 w-16 text-[var(--accent)] mb-5" />}
-              title="Ready to get started?"
-              subtitle="Take OpenBin home with you."
-              actions={DEMO_CTA_ACTIONS}
-              onAction={(path) => window.open(path, '_blank', 'noopener')}
               onDashboard={() => handleNavigate('/')}
             />
           )}

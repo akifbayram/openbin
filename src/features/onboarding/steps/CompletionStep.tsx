@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn, focusRing } from '@/lib/utils';
 
 export interface CompletionAction {
   icon: LucideIcon;
@@ -33,7 +34,10 @@ export function CompletionStep({ icon, title, subtitle, actions, onAction, onDas
             key={path}
             type="button"
             onClick={() => onAction(path)}
-            className="onboarding-action-card w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-[var(--bg-active)] hover:bg-[var(--bg-hover)] transition-colors text-left"
+            className={cn(
+              'onboarding-action-card w-full flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-3 bg-[var(--bg-active)] hover:bg-[var(--bg-hover)] transition-colors text-left',
+              focusRing,
+            )}
             style={{ animationDelay: `${0.1 + i * 0.07}s` }}
           >
             <div className="h-8 w-8 rounded-[var(--radius-xl)] flex items-center justify-center shrink-0 bg-[var(--accent)]/10">

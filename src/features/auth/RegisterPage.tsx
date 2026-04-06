@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/auth';
 import { allChecksPassing, computePasswordChecks } from '@/lib/passwordStrength';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
 import { cn, EMAIL_REGEX, focusRing, getErrorMessage } from '@/lib/utils';
+import { SocialButtons, SocialDivider } from './SocialButtons';
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,50}$/;
 
@@ -33,6 +34,7 @@ export function RegisterPage() {
   const [inviteCode, setInviteCode] = useState(searchParams.get('invite') ?? '');
   const [registrationMode, setRegistrationMode] = useState<'open' | 'invite'>('open');
   const [selfHosted, setSelfHosted] = useState(true);
+  const [oauthProviders, setOAuthProviders] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusLoaded, setStatusLoaded] = useState(false);
   const [invitePreview, setInvitePreview] = useState<{ name: string; memberCount: number } | null>(null);
@@ -56,6 +58,7 @@ export function RegisterPage() {
         }
         setRegistrationMode(data.registrationMode ?? 'open');
         if (data.selfHosted === false) setSelfHosted(false);
+        if (Array.isArray(data.oauthProviders)) setOAuthProviders(data.oauthProviders);
       })
       .catch(() => {})
       .finally(() => setStatusLoaded(true));
@@ -227,6 +230,8 @@ export function RegisterPage() {
           <>
             <Card>
               <CardContent className="py-6">
+                <SocialButtons providers={oauthProviders} />
+                {oauthProviders.length > 0 && <SocialDivider />}
                 <form onSubmit={handleSubmit} noValidate>
                   {/* Account details */}
                   <fieldset className="space-y-4">

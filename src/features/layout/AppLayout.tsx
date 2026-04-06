@@ -9,6 +9,7 @@ import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useBinList } from '@/features/bins/useBins';
 import { useAutoOpenOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useLocationList } from '@/features/locations/useLocations';
+import { DemoCtaOverlay } from '@/features/onboarding/DemoCtaOverlay';
 import { OnboardingOverlay } from '@/features/onboarding/OnboardingOverlay';
 import { useOnboarding } from '@/features/onboarding/useOnboarding';
 import { ScanDialogContext } from '@/features/qrcode/ScanDialogContext';
@@ -320,6 +321,7 @@ export function AppLayout() {
           activeLocationId={activeLocationId ?? undefined}
         />
       )}
+      {demoMode && <DemoCtaOverlay />}
       <TourOverlay tour={tour} context={tourContext} />
       {showTourBanner && (
         <TourBanner appName={settings.appName} onStart={tour.start} onDismiss={dismissTour} />

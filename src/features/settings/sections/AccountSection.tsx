@@ -1,5 +1,5 @@
-import { Calendar, Eye, EyeOff, Loader2, MapPin, Trash2, X } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { Calendar, Eye, EyeOff, Link2, Link2Off, Loader2, MapPin, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -55,6 +55,12 @@ export function AccountSection() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarKey, setAvatarKey] = useState(() => Date.now());
 
+  // Connected accounts (OAuth)
+  const [oauthLinks, setOauthLinks] = useState<{ provider: string; email: string | null; created_at: string }[]>([]);
+  const [oauthProviders, setOauthProviders] = useState<string[]>([]);
+  const [unlinking, setUnlinking] = useState<string | null>(null);
+  const hasPassword = user?.hasPassword !== false;
+
   // Delete account
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -65,6 +71,19 @@ export function AccountSection() {
     ? displayName !== (user.displayName || '') || email !== (user.email || '')
     : false;
   useWarnOnUnload(profileDirty);
+
+  useEffect(() => {
+    fetch('/api/auth/status')
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data.oauthProviders)) setOauthProviders(data.oauthProviders);
+      })
+      .catch(() => {});
+
+    apiFetch<{ results: { provider: string; email: string | null; created_at: string }[] }>('/api/auth/oauth/links')
+      .then((data) => setOauthLinks(data.results))
+      .catch(() => {});
+  }, []);
 
   const passwordChecks = useMemo(() => computePasswordChecks(newPassword), [newPassword]);
 
@@ -352,6 +371,67 @@ export function AccountSection() {
           </Button>
         </form>
       </SettingsSection>
+
+      {/* Connected accounts */}
+      {oauthProviders.length > 0 && (
+        <SettingsSection label="Connected Accounts">
+          <div className="divide-y divide-[var(--border-subtle)]">
+            {oauthProviders.map((provider) => {
+              const link = oauthLinks.find((l) => l.provider === provider);
+              const providerLabel = provider === 'google' ? 'Google' : 'Apple';
+              const canUnlink = oauthLinks.length > 1 || hasPassword;
+
+              return (
+                <div key={provider} className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-active)] flex items-center justify-center">
+                      <Link2 className="h-4 w-4 text-[var(--text-secondary)]" />
+                    </div>
+                    <div>
+                      <p className="text-[14px] font-medium text-[var(--text-primary)]">{providerLabel}</p>
+                      <p className="text-[12px] text-[var(--text-tertiary)]">
+                        {link ? (link.email || 'Connected') : 'Not connected'}
+                      </p>
+                    </div>
+                  </div>
+                  {link ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={!canUnlink || unlinking === provider}
+                      onClick={async () => {
+                        setUnlinking(provider);
+                        try {
+                          await apiFetch(`/api/auth/oauth/link/${provider}`, { method: 'DELETE' });
+                          setOauthLinks((prev) => prev.filter((l) => l.provider !== provider));
+                          showToast({ message: `${providerLabel} disconnected`, variant: 'success' });
+                        } catch (err) {
+                          showToast({ message: getErrorMessage(err, `Failed to disconnect ${providerLabel}`), variant: 'error' });
+                        } finally {
+                          setUnlinking(null);
+                        }
+                      }}
+                      title={!canUnlink ? 'Set a password before disconnecting your last login method' : undefined}
+                    >
+                      {unlinking === provider ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2Off className="h-4 w-4 mr-1.5" />}
+                      Disconnect
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => { window.location.href = `/api/auth/oauth/${provider}`; }}
+                    >
+                      <Link2 className="h-4 w-4 mr-1.5" />
+                      Connect
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </SettingsSection>
+      )}
 
       {/* Danger zone */}
       <SettingsSection
