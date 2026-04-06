@@ -56,6 +56,7 @@ vi.mock('../lib/config.js', () => ({
 // ---- Imports (after mocks) ----
 
 import { query } from '../db.js';
+import { subscriptionsRoutes } from '../ee/routes/subscriptions.js';
 import { createApp } from '../index.js';
 import { createTestUser } from './helpers.js';
 
@@ -64,7 +65,9 @@ const SUB_SECRET = 'test-webhook-secret';
 let app: Express;
 
 beforeEach(() => {
-  app = createApp();
+  app = createApp({
+    mountEeRoutes: (a) => a.use('/api/subscriptions', subscriptionsRoutes),
+  });
 });
 
 async function makeSubToken(payload: Record<string, unknown>, secret = SUB_SECRET, opts: { expiresIn?: number | string } = {}) {
