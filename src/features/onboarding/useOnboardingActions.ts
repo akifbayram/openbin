@@ -10,6 +10,7 @@ import { useTerminology } from '@/lib/terminology';
 import { getErrorMessage } from '@/lib/utils';
 import type { Bin, BinItem } from '@/types';
 import type { OnboardingActions } from './onboardingConstants';
+import { markDemoTourDone } from './onboardingConstants';
 
 export interface OnboardingState {
   t: ReturnType<typeof useTerminology>;
@@ -144,6 +145,7 @@ export function useOnboardingActions(props: OnboardingActions): OnboardingState 
         const loc = await createLocation(`My ${t.Location}`);
         setActiveLocationId(loc.id);
       }
+      if (demoMode) markDemoTourDone();
       complete();
     } catch (err) {
       showToast({ message: getErrorMessage(err, 'Failed to skip setup'), variant: 'error' });

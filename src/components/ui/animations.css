@@ -146,7 +146,7 @@
   .scan-text-fade, .scan-text-fade-delay, .fade-in-fast {
     animation: none !important;
   }
-  .onboarding-action-card { opacity: 1 !important; }
+  .onboarding-feature-card, .onboarding-action-card { opacity: 1 !important; }
   .scan-check-draw { stroke-dashoffset: 0 !important; }
   .scan-ring { opacity: 0 !important; }
 }
