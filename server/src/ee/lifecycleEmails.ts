@@ -5,6 +5,8 @@ import {
   type DowngradeImpact,
   downgradeImpactEmail,
   exploreFeaturesEmail,
+  inactivityWarning7dEmail,
+  inactivityWarning30dEmail,
   postTrialEarlyEmail,
   postTrialLateEmail,
   subscriptionConfirmedEmail,
@@ -90,4 +92,18 @@ export async function fireDowngradeImpactEmail(userId: string, email: string, di
   const vars = { displayName, upgradeUrl, impactHtml, impactText };
   const template = resolveTemplate('downgrade_impact', vars, downgradeImpactEmail({ displayName, impact, upgradeUrl }));
   safeSend(userId, 'downgrade_impact', email, template);
+}
+
+export function fireInactivityWarning30d(userId: string, email: string, displayName: string, daysInactive: number): void {
+  const loginUrl = config.baseUrl ? `${config.baseUrl}/login` : '';
+  const vars = { displayName, loginUrl, daysInactive: String(daysInactive) };
+  const template = resolveTemplate('inactivity_warning_30d', vars, inactivityWarning30dEmail({ displayName, loginUrl, daysInactive }));
+  safeSend(userId, 'inactivity_warning_30d', email, template);
+}
+
+export function fireInactivityWarning7d(userId: string, email: string, displayName: string, daysInactive: number): void {
+  const loginUrl = config.baseUrl ? `${config.baseUrl}/login` : '';
+  const vars = { displayName, loginUrl, daysInactive: String(daysInactive) };
+  const template = resolveTemplate('inactivity_warning_7d', vars, inactivityWarning7dEmail({ displayName, loginUrl, daysInactive }));
+  safeSend(userId, 'inactivity_warning_7d', email, template);
 }
