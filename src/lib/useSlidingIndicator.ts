@@ -25,7 +25,7 @@ export function useSlidingIndicator(activeKey: string | null) {
 
   const measure = useCallback(() => {
     const container = containerRef.current;
-    if (!activeKey || !container) {
+    if (activeKey == null || !container) {
       setIndicator((prev) => (prev === null ? prev : null));
       return;
     }
