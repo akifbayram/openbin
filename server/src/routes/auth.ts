@@ -13,6 +13,7 @@ import { createLogger } from '../lib/logger.js';
 import {
   appleJwks,
   clearOAuthCookies,
+  finalizeOAuthLogin,
   findOrCreateOAuthUser,
   generateNonce,
   generatePkce,
@@ -726,16 +727,13 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
 
 // -- OAuth: Google --
 
-router.get('/oauth/google', (req, res) => {
+router.get('/oauth/google', (_req, res) => {
   if (!config.googleClientId || !config.googleClientSecret) {
     throw new ValidationError('Google login is not configured');
   }
 
   const state = generateState(res);
   const { codeChallenge } = generatePkce(res);
-
-  const linking = !!(req as any).cookies?.['openbin-access'];
-  if (linking) res.cookie('oauth_linking', '1', { httpOnly: true, secure: config.cookieSecure, sameSite: 'lax', maxAge: 600_000, path: '/' });
 
   const params = new URLSearchParams({
     client_id: config.googleClientId,
@@ -811,18 +809,7 @@ router.get('/oauth/google/callback', asyncHandler(async (req, res) => {
       displayName,
     });
 
-    const accessToken = await signToken({ id: user.id, username: user.username }, user.token_version);
-    const refresh = await createRefreshToken(user.id);
-    setAccessTokenCookie(res, accessToken);
-    setRefreshTokenCookie(res, refresh.rawToken);
-
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '';
-    const ua = req.headers['user-agent'] || '';
-    query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 1)',
-      [generateUuid(), user.id, ip, ua, 'google']).catch(() => {});
-
-    log.info(`User "${user.username}" logged in via Google OAuth`);
-    res.redirect('/?oauth=success');
+    await finalizeOAuthLogin(req, res, user, 'google');
   } catch (err) {
     clearOAuthCookies(res);
     log.error('Google OAuth callback error:', err);
@@ -832,16 +819,13 @@ router.get('/oauth/google/callback', asyncHandler(async (req, res) => {
 
 // -- OAuth: Apple --
 
-router.get('/oauth/apple', (req, res) => {
+router.get('/oauth/apple', (_req, res) => {
   if (!config.appleClientId || !config.appleTeamId || !config.appleKeyId || !config.applePrivateKey) {
     throw new ValidationError('Apple login is not configured');
   }
 
   const state = generateState(res);
   const { nonceHash } = generateNonce(res);
-
-  const linking = !!(req as any).cookies?.['openbin-access'];
-  if (linking) res.cookie('oauth_linking', '1', { httpOnly: true, secure: config.cookieSecure, sameSite: 'lax', maxAge: 600_000, path: '/' });
 
   const params = new URLSearchParams({
     client_id: config.appleClientId,
@@ -906,18 +890,7 @@ router.post('/oauth/apple/callback', asyncHandler(async (req, res) => {
       displayName,
     });
 
-    const accessToken = await signToken({ id: user.id, username: user.username }, user.token_version);
-    const refresh = await createRefreshToken(user.id);
-    setAccessTokenCookie(res, accessToken);
-    setRefreshTokenCookie(res, refresh.rawToken);
-
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '';
-    const ua = req.headers['user-agent'] || '';
-    query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 1)',
-      [generateUuid(), user.id, ip, ua, 'apple']).catch(() => {});
-
-    log.info(`User "${user.username}" logged in via Apple OAuth`);
-    res.redirect('/?oauth=success');
+    await finalizeOAuthLogin(req, res, user, 'apple');
   } catch (err) {
     clearOAuthCookies(res);
     log.error('Apple OAuth callback error:', err);

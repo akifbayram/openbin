@@ -1,11 +1,14 @@
 import crypto from 'node:crypto';
 import type { Response } from 'express';
 import * as jose from 'jose';
-import { generateUuid, query } from '../db.js';
+import { generateUuid, query, withTransaction } from '../db.js';
+import { signToken } from '../middleware/auth.js';
 import { config } from './config.js';
+import { setAccessTokenCookie, setRefreshTokenCookie } from './cookies.js';
 import { ForbiddenError, UnauthorizedError } from './httpErrors.js';
 import { createLogger } from './logger.js';
 import { Plan, SubStatus } from './planGate.js';
+import { createRefreshToken } from './refreshTokens.js';
 
 const log = createLogger('oauth');
 
@@ -30,7 +33,7 @@ export function validateState(cookieState: string | undefined, queryState: strin
 }
 
 export function clearOAuthCookies(res: Response): void {
-  for (const name of ['oauth_state', 'oauth_code_verifier', 'oauth_nonce', 'oauth_linking']) {
+  for (const name of ['oauth_state', 'oauth_code_verifier', 'oauth_nonce']) {
     res.clearCookie(name, { path: '/' });
   }
 }
@@ -93,13 +96,18 @@ export async function generateUsername(email: string): Promise<string> {
   const prefix = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').toLowerCase().slice(0, 50);
   const base = prefix || 'user';
 
-  const existing = await query('SELECT 1 FROM users WHERE username = $1', [base]);
-  if (existing.rows.length === 0) return base;
+  // Single query to find all taken usernames matching base or base+N
+  const taken = await query<{ username: string }>(
+    "SELECT username FROM users WHERE username = $1 OR username LIKE $1 || '%'",
+    [base]
+  );
+  const takenSet = new Set(taken.rows.map((r) => r.username));
+
+  if (!takenSet.has(base)) return base;
 
   for (let i = 2; i < 1000; i++) {
     const candidate = `${base}${i}`.slice(0, 50);
-    const check = await query('SELECT 1 FROM users WHERE username = $1', [candidate]);
-    if (check.rows.length === 0) return candidate;
+    if (!takenSet.has(candidate)) return candidate;
   }
 
   return `${base}_${crypto.randomBytes(4).toString('hex')}`;
@@ -160,31 +168,55 @@ export async function findOrCreateOAuthUser(input: OAuthUserInput): Promise<OAut
     }
   }
 
-  // 3. Create new user
+  // 3. Create new user (transactional to prevent partial inserts on concurrent requests)
   const username = await generateUsername(email);
   const userId = generateUuid();
 
-  await query(
-    `INSERT INTO users (id, username, password_hash, display_name, email, plan, sub_status, active_until)
-     VALUES ($1, $2, NULL, $3, $4, $5, $6, $7)`,
-    [
-      userId,
-      username,
-      displayName || username,
-      email,
-      Plan.PLUS,
-      SubStatus.TRIAL,
-      new Date(Date.now() + config.trialPeriodDays * 24 * 60 * 60 * 1000).toISOString(),
-    ]
-  );
+  await withTransaction(async (txQuery) => {
+    await txQuery(
+      `INSERT INTO users (id, username, password_hash, display_name, email, plan, sub_status, active_until)
+       VALUES ($1, $2, NULL, $3, $4, $5, $6, $7)`,
+      [
+        userId,
+        username,
+        displayName || username,
+        email,
+        Plan.PLUS,
+        SubStatus.TRIAL,
+        new Date(Date.now() + config.trialPeriodDays * 24 * 60 * 60 * 1000).toISOString(),
+      ]
+    );
 
-  await query(
-    'INSERT INTO user_oauth_links (id, user_id, provider, provider_user_id, email) VALUES ($1, $2, $3, $4, $5)',
-    [generateUuid(), userId, provider, providerUserId, email]
-  );
+    await txQuery(
+      'INSERT INTO user_oauth_links (id, user_id, provider, provider_user_id, email) VALUES ($1, $2, $3, $4, $5)',
+      [generateUuid(), userId, provider, providerUserId, email]
+    );
+  });
 
   log.info(`Created new user "${username}" via ${provider} OAuth`);
   return { user: { id: userId, username, token_version: 0 }, created: true };
+}
+
+// -- Finalize OAuth login (issue tokens, record history, redirect) --
+
+export async function finalizeOAuthLogin(
+  req: import('express').Request,
+  res: Response,
+  user: { id: string; username: string; token_version: number },
+  provider: string,
+): Promise<void> {
+  const accessToken = await signToken({ id: user.id, username: user.username }, user.token_version);
+  const refresh = await createRefreshToken(user.id);
+  setAccessTokenCookie(res, accessToken);
+  setRefreshTokenCookie(res, refresh.rawToken);
+
+  const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '';
+  const ua = req.headers['user-agent'] || '';
+  query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 1)',
+    [generateUuid(), user.id, ip, ua, provider]).catch(() => {});
+
+  log.info(`User "${user.username}" logged in via ${provider} OAuth`);
+  res.redirect('/?oauth=success');
 }
 
 // -- Available providers --
