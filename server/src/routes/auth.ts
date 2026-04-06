@@ -1,6 +1,8 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import bcrypt from 'bcrypt';
 import { Router } from 'express';
+import * as jose from 'jose';
 import { d, generateUuid, isUniqueViolation, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
@@ -8,6 +10,18 @@ import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '.
 import { getEeHooks } from '../lib/eeHooks.js';
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
 import { createLogger } from '../lib/logger.js';
+import {
+  appleJwks,
+  clearOAuthCookies,
+  findOrCreateOAuthUser,
+  generateNonce,
+  generatePkce,
+  generateState,
+  getCodeVerifier,
+  getOAuthProviders,
+  googleJwks,
+  validateState,
+} from '../lib/oauth.js';
 import { consumeResetToken, createPasswordResetToken } from '../lib/passwordReset.js';
 import { safePath } from '../lib/pathSafety.js';
 import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
@@ -30,6 +44,7 @@ router.get('/status', async (_req, res) => {
     demoMode: config.demoMode,
     qrPayloadMode: config.qrPayloadMode,
     selfHosted: config.selfHosted,
+    oauthProviders: getOAuthProviders(),
   };
   if (config.qrPayloadMode === 'url' && config.baseUrl) {
     body.baseUrl = config.baseUrl;
@@ -682,6 +697,207 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
 
   log.info('Password reset completed via token');
   res.json({ message: 'Password has been reset successfully' });
+}));
+
+// -- OAuth: Google --
+
+router.get('/oauth/google', (req, res) => {
+  if (!config.googleClientId || !config.googleClientSecret) {
+    throw new ValidationError('Google login is not configured');
+  }
+
+  const state = generateState(res);
+  const { codeChallenge } = generatePkce(res);
+
+  const linking = !!(req as any).cookies?.['openbin-access'];
+  if (linking) res.cookie('oauth_linking', '1', { httpOnly: true, secure: config.cookieSecure, sameSite: 'lax', maxAge: 600_000, path: '/' });
+
+  const params = new URLSearchParams({
+    client_id: config.googleClientId,
+    redirect_uri: `${config.baseUrl}/api/auth/oauth/google/callback`,
+    response_type: 'code',
+    scope: 'openid email profile',
+    state,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+    access_type: 'online',
+    prompt: 'select_account',
+  });
+
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+router.get('/oauth/google/callback', asyncHandler(async (req, res) => {
+  const { code, state: queryState, error } = req.query as Record<string, string>;
+
+  if (error) {
+    log.warn(`Google OAuth error: ${error}`);
+    res.redirect('/?oauth=error&reason=provider_denied');
+    return;
+  }
+
+  try {
+    validateState(req.cookies?.oauth_state, queryState);
+    const codeVerifier = getCodeVerifier(req.cookies?.oauth_code_verifier);
+
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: config.googleClientId!,
+        client_secret: config.googleClientSecret!,
+        code,
+        grant_type: 'authorization_code',
+        redirect_uri: `${config.baseUrl}/api/auth/oauth/google/callback`,
+        code_verifier: codeVerifier,
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      const body = await tokenRes.text();
+      log.error(`Google token exchange failed: ${tokenRes.status} ${body}`);
+      res.redirect('/?oauth=error&reason=token_exchange_failed');
+      return;
+    }
+
+    const tokens = await tokenRes.json() as { id_token: string };
+
+    const { payload } = await jose.jwtVerify(tokens.id_token, googleJwks(), {
+      issuer: ['https://accounts.google.com', 'accounts.google.com'],
+      audience: config.googleClientId!,
+    });
+
+    if (!payload.email_verified) {
+      log.warn('Google OAuth: email not verified');
+      res.redirect('/?oauth=error&reason=email_not_verified');
+      return;
+    }
+
+    const email = payload.email as string;
+    const displayName = (payload.name as string) || email.split('@')[0];
+    const sub = payload.sub!;
+
+    clearOAuthCookies(res);
+
+    const { user } = await findOrCreateOAuthUser({
+      provider: 'google',
+      providerUserId: sub,
+      email,
+      displayName,
+    });
+
+    const accessToken = await signToken({ id: user.id, username: user.username }, user.token_version);
+    const refresh = await createRefreshToken(user.id);
+    setAccessTokenCookie(res, accessToken);
+    setRefreshTokenCookie(res, refresh.rawToken);
+
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '';
+    const ua = req.headers['user-agent'] || '';
+    query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 1)',
+      [generateUuid(), user.id, ip, ua, 'google']).catch(() => {});
+
+    log.info(`User "${user.username}" logged in via Google OAuth`);
+    res.redirect('/?oauth=success');
+  } catch (err) {
+    clearOAuthCookies(res);
+    log.error('Google OAuth callback error:', err);
+    res.redirect('/?oauth=error&reason=callback_failed');
+  }
+}));
+
+// -- OAuth: Apple --
+
+router.get('/oauth/apple', (req, res) => {
+  if (!config.appleClientId || !config.appleTeamId || !config.appleKeyId || !config.applePrivateKey) {
+    throw new ValidationError('Apple login is not configured');
+  }
+
+  const state = generateState(res);
+  const { nonceHash } = generateNonce(res);
+
+  const linking = !!(req as any).cookies?.['openbin-access'];
+  if (linking) res.cookie('oauth_linking', '1', { httpOnly: true, secure: config.cookieSecure, sameSite: 'lax', maxAge: 600_000, path: '/' });
+
+  const params = new URLSearchParams({
+    client_id: config.appleClientId,
+    redirect_uri: `${config.baseUrl}/api/auth/oauth/apple/callback`,
+    response_type: 'code id_token',
+    scope: 'name email',
+    state,
+    nonce: nonceHash,
+    response_mode: 'form_post',
+  });
+
+  res.redirect(`https://appleid.apple.com/auth/authorize?${params}`);
+});
+
+router.post('/oauth/apple/callback', asyncHandler(async (req, res) => {
+  const { state: formState, id_token: idToken, error: appleError } = req.body;
+
+  if (appleError) {
+    log.warn(`Apple OAuth error: ${appleError}`);
+    res.redirect('/?oauth=error&reason=provider_denied');
+    return;
+  }
+
+  try {
+    validateState(req.cookies?.oauth_state, formState);
+    const expectedNonce = req.cookies?.oauth_nonce;
+
+    const { payload } = await jose.jwtVerify(idToken, appleJwks(), {
+      issuer: 'https://appleid.apple.com',
+      audience: config.appleClientId!,
+    });
+
+    if (expectedNonce) {
+      const expectedHash = crypto.createHash('sha256').update(expectedNonce).digest('hex');
+      if (payload.nonce !== expectedHash) {
+        log.warn('Apple OAuth: nonce mismatch');
+        res.redirect('/?oauth=error&reason=nonce_mismatch');
+        return;
+      }
+    }
+
+    const email = payload.email as string | undefined;
+    const sub = payload.sub!;
+
+    const appleUser = req.body.user ? (typeof req.body.user === 'string' ? JSON.parse(req.body.user) : req.body.user) : null;
+    const displayName = appleUser?.name
+      ? [appleUser.name.firstName, appleUser.name.lastName].filter(Boolean).join(' ')
+      : email?.split('@')[0] || 'User';
+
+    clearOAuthCookies(res);
+
+    if (!email) {
+      log.warn('Apple OAuth: no email provided');
+      res.redirect('/?oauth=error&reason=no_email');
+      return;
+    }
+
+    const { user } = await findOrCreateOAuthUser({
+      provider: 'apple',
+      providerUserId: sub,
+      email,
+      displayName,
+    });
+
+    const accessToken = await signToken({ id: user.id, username: user.username }, user.token_version);
+    const refresh = await createRefreshToken(user.id);
+    setAccessTokenCookie(res, accessToken);
+    setRefreshTokenCookie(res, refresh.rawToken);
+
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '';
+    const ua = req.headers['user-agent'] || '';
+    query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 1)',
+      [generateUuid(), user.id, ip, ua, 'apple']).catch(() => {});
+
+    log.info(`User "${user.username}" logged in via Apple OAuth`);
+    res.redirect('/?oauth=success');
+  } catch (err) {
+    clearOAuthCookies(res);
+    log.error('Apple OAuth callback error:', err);
+    res.redirect('/?oauth=error&reason=callback_failed');
+  }
 }));
 
 export default router;
