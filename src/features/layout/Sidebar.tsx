@@ -194,12 +194,12 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
           {user && (
             <button
               type="button"
-              onClick={() => { navigate('/profile'); onItemClick?.(); }}
+              onClick={() => { navigate('/settings/account'); onItemClick?.(); }}
               aria-label={user.displayName || user.username}
-              aria-current={location.pathname === '/profile' ? 'page' : undefined}
+              aria-current={location.pathname === '/settings/account' ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full overflow-hidden whitespace-nowrap text-left border',
-                location.pathname === '/profile'
+                location.pathname === '/settings/account'
                   ? 'flat-card text-[var(--text-primary)]'
                   : 'border-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
               )}

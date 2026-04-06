@@ -79,9 +79,7 @@ const AboutSection = lazyWithRetry(() =>
   import('@/features/settings/sections/AboutSection').then((m) => ({ default: m.AboutSection }))
 );
 
-const ProfilePage = lazyWithRetry(() =>
-  import('@/features/profile/ProfilePage').then((m) => ({ default: m.ProfilePage }))
-);
+
 
 const TagsPage = lazyWithRetry(() =>
   import('@/features/tags/TagsPage').then((m) => ({ default: m.TagsPage }))
@@ -386,7 +384,7 @@ export default function App() {
                 <Route path="/locations" element={<RouteWithBoundary><AreasPage /></RouteWithBoundary>} />
                 <Route path="/trash" element={<RouteWithBoundary><TrashPage /></RouteWithBoundary>} />
                 <Route path="/activity" element={<RouteWithBoundary><ActivityPage /></RouteWithBoundary>} />
-                <Route path="/profile" element={<RouteWithBoundary><ProfilePage /></RouteWithBoundary>} />
+
                 <Route path="/reorganize" element={<RouteWithBoundary><ReorganizePage /></RouteWithBoundary>} />
                 <Route path="/capture" element={<RouteWithBoundary><CapturePage /></RouteWithBoundary>} />
                 <Route path="/admin/users" element={<RouteWithBoundary><AdminUsersPage /></RouteWithBoundary>} />
