@@ -1,5 +1,6 @@
 import type express from 'express';
 import { registerEeHooks } from '../lib/eeHooks.js';
+import { startInactivityChecker, stopInactivityChecker } from './inactivityChecker.js';
 import { deleteUserData, notifyManagerNewUser, notifyManagerUserUpdate } from './managerWebhook.js';
 import { adminMetricsRoutes } from './routes/adminMetrics.js';
 import { subscriptionsRoutes } from './routes/subscriptions.js';
@@ -24,10 +25,12 @@ export function startEeJobs(): void {
   startTrialChecker();
   startWebhookOutboxProcessor();
   startUserCleanupJob();
+  startInactivityChecker();
 }
 
 export function stopEeJobs(): void {
   stopTrialChecker();
   stopWebhookOutboxProcessor();
   stopUserCleanupJob();
+  stopInactivityChecker();
 }
