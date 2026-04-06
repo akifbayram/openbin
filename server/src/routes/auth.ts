@@ -5,9 +5,9 @@ import { d, generateUuid, isUniqueViolation, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { config } from '../lib/config.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from '../lib/cookies.js';
+import { getEeHooks } from '../lib/eeHooks.js';
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
 import { createLogger } from '../lib/logger.js';
-import { deleteUserData, notifyManagerNewUser, notifyManagerUserUpdate } from '../lib/managerWebhook.js';
 import { consumeResetToken, createPasswordResetToken } from '../lib/passwordReset.js';
 import { safePath } from '../lib/pathSafety.js';
 import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
@@ -223,7 +223,7 @@ router.post('/register', asyncHandler(async (req, res) => {
   });
 
   // Notify Manager service of new cloud registration (fire-and-forget)
-  notifyManagerNewUser({
+  getEeHooks().onNewUser?.({
     userId: user.id,
     email: user.email,
     username: user.username,
@@ -619,11 +619,11 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
     try { fs.unlinkSync(avatarPath); } catch { /* ignore */ }
   }
 
-  await deleteUserData(userId);
+  await getEeHooks().onDeleteUser?.(userId);
 
   await query('DELETE FROM users WHERE id = $1', [userId]);
 
-  notifyManagerUserUpdate({ userId, action: 'delete_user' });
+  getEeHooks().onUserUpdate?.({ userId, action: 'delete_user' });
 
   clearAuthCookies(res);
 

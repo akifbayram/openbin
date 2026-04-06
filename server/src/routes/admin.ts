@@ -9,10 +9,10 @@ import { getAdminCount } from '../lib/adminHelpers.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { runBackup } from '../lib/backup.js';
 import { config } from '../lib/config.js';
+import { getEeHooks } from '../lib/eeHooks.js';
 import { firePasswordResetEmail } from '../lib/emailSender.js';
 import { ConflictError, ForbiddenError, HttpError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { createLogger } from '../lib/logger.js';
-import { notifyManagerUserUpdate } from '../lib/managerWebhook.js';
 import { getCloudMetrics, getPlanBreakdown } from '../lib/metrics.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { getFeatureMap, invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
@@ -367,7 +367,7 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   }
 
   if (plan !== undefined || typeof subStatus === 'number' || activeUntil !== undefined) {
-    notifyManagerUserUpdate({
+    getEeHooks().onUserUpdate?.({
       userId: targetId,
       action: 'update_subscription',
       ...(plan !== undefined ? { plan } : {}),
@@ -390,10 +390,10 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
       const effectivePlan = plan !== undefined ? plan : target.plan;
 
       if (effectiveStatus === SubStatus.ACTIVE) {
-        const { fireSubscriptionConfirmedEmail } = await import('../lib/emailSender.js');
+        const { fireSubscriptionConfirmedEmail } = await import('../ee/lifecycleEmails.js');
         fireSubscriptionConfirmedEmail(targetId, updatedUser.email, updatedUser.display_name, effectivePlan as PlanTier, updatedUser.active_until);
       } else if (effectiveStatus === SubStatus.INACTIVE) {
-        const { fireSubscriptionExpiredEmail } = await import('../lib/emailSender.js');
+        const { fireSubscriptionExpiredEmail } = await import('../ee/lifecycleEmails.js');
         fireSubscriptionExpiredEmail(targetId, updatedUser.email, updatedUser.display_name);
       }
     }
@@ -432,7 +432,7 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
   );
   invalidateDeletedCache(targetId);
 
-  notifyManagerUserUpdate({ userId: targetId, action: 'delete_user' });
+  getEeHooks().onUserUpdate?.({ userId: targetId, action: 'delete_user' });
 
   log.info(`User ${req.user!.username} soft-deleted user ${target.username}`);
 
