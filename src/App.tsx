@@ -78,6 +78,9 @@ const SettingsDataSection = lazyWithRetry(() =>
 const AboutSection = lazyWithRetry(() =>
   import('@/features/settings/sections/AboutSection').then((m) => ({ default: m.AboutSection }))
 );
+const EESubscriptionSection = __EE__
+  ? lazyWithRetry(() => import('@/ee/SubscriptionSection').then((m) => ({ default: m.SubscriptionSection })))
+  : null;
 
 
 
@@ -373,6 +376,7 @@ export default function App() {
                 <Route path="/print" element={<RouteWithBoundary><PrintPage /></RouteWithBoundary>} />
                 <Route path="/settings" element={<RouteWithBoundary><SettingsLayout /></RouteWithBoundary>}>
                   <Route path="account" element={<AccountSection />} />
+                  {EESubscriptionSection && <Route path="subscription" element={<Suspense fallback={null}><EESubscriptionSection /></Suspense>} />}
                   <Route path="preferences" element={<PreferencesSection />} />
                   <Route path="personalization" element={<SettingsPersonalizationSection />} />
                   <Route path="ai" element={<AiSection />} />
