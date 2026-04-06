@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS users (
   id                 TEXT PRIMARY KEY,
   username           TEXT UNIQUE NOT NULL,
-  password_hash      TEXT NOT NULL,
+  password_hash      TEXT,
   display_name       TEXT NOT NULL DEFAULT '',
   email              TEXT,
   avatar_path        TEXT,
@@ -407,6 +407,18 @@ CREATE TABLE IF NOT EXISTS login_history (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_login_history_user ON login_history(user_id, created_at DESC);
+
+-- OAuth provider links (cloud social login)
+CREATE TABLE IF NOT EXISTS user_oauth_links (
+  id               TEXT PRIMARY KEY,
+  user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider         TEXT NOT NULL,
+  provider_user_id TEXT NOT NULL,
+  email            TEXT,
+  created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_oauth_provider_user ON user_oauth_links(provider, provider_user_id);
+CREATE INDEX IF NOT EXISTS idx_oauth_user_id ON user_oauth_links(user_id);
 
 -- Announcement banners
 CREATE TABLE IF NOT EXISTS announcements (

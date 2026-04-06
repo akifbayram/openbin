@@ -461,6 +461,20 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
     CREATE INDEX IF NOT EXISTS idx_login_history_user ON login_history(user_id, created_at DESC);
   `);
 
+  // OAuth provider links
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_oauth_links (
+      id               TEXT PRIMARY KEY,
+      user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      provider         TEXT NOT NULL,
+      provider_user_id TEXT NOT NULL,
+      email            TEXT,
+      created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_oauth_provider_user ON user_oauth_links(provider, provider_user_id);
+    CREATE INDEX IF NOT EXISTS idx_oauth_user_id ON user_oauth_links(user_id);
+  `);
+
   // Announcement banners
   db.exec(`
     CREATE TABLE IF NOT EXISTS announcements (
@@ -620,7 +634,21 @@ async function runPostgresInit(): Promise<DatabaseEngine> {
       expires_at TEXT, created_by TEXT, created_at TEXT NOT NULL DEFAULT (NOW())
     );
     CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(active) WHERE active = TRUE;
+
+    CREATE TABLE IF NOT EXISTS user_oauth_links (
+      id               TEXT PRIMARY KEY,
+      user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      provider         TEXT NOT NULL,
+      provider_user_id TEXT NOT NULL,
+      email            TEXT,
+      created_at       TEXT NOT NULL DEFAULT (NOW())
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_oauth_provider_user ON user_oauth_links(provider, provider_user_id);
+    CREATE INDEX IF NOT EXISTS idx_oauth_user_id ON user_oauth_links(user_id);
   `);
+
+  // Allow null password_hash for OAuth-only users
+  await pool.query('ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL');
 
   const pgEngine = createPostgresEngine();
 
