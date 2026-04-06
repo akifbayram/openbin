@@ -20,7 +20,7 @@ export const d = {
   },
 
   dateOf(col: string): string {
-    return currentDialect === 'sqlite' ? `date(${col})` : `(${col})::date`;
+    return currentDialect === 'sqlite' ? `date(${col})` : `(${col})::date::text`;
   },
 
   intervalSeconds(param: string): string {
