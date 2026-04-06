@@ -118,7 +118,7 @@ describe('dialect helpers - postgres', () => {
 
   it('dateOf(col)', () => {
     setDialect('postgres');
-    expect(d.dateOf('created_at')).toBe('(created_at)::date');
+    expect(d.dateOf('created_at')).toBe('(created_at)::date::text');
   });
 
   it('intervalSeconds(param)', () => {
