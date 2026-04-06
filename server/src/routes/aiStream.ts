@@ -55,7 +55,7 @@ async function resolveUserModel(userId: string, task: TaskType, isDemoUser = fal
   const settings = await getUserAiSettings(userId);
   const group = TASK_GROUP_MAP[task];
   const taskConfig = group
-    ? await resolveTaskConfig(userId, group)
+    ? await resolveTaskConfig(userId, group, settings.config)
     : getConfigForTask(settings, task);
   const resolvedIps = taskConfig.endpointUrl
     ? await validateEndpointUrl(taskConfig.endpointUrl, isDemoUser)

@@ -24,11 +24,12 @@ export const TASK_GROUP_MAP: Record<string, AiTaskGroup> = {
  * 1. Env group override (AI_VISION_MODEL, etc.)
  * 2. DB task override (user_ai_task_overrides row)
  * 3. Env default (AI_MODEL, etc.)
- * 4. DB user default (user_ai_settings active row)
+ * 4. DB user default — uses `fallbackConfig` when provided (avoids duplicate query)
  */
 export async function resolveTaskConfig(
   userId: string,
   group: AiTaskGroup,
+  fallbackConfig?: AiProviderConfig,
 ): Promise<AiProviderConfig> {
   // Layer 1: env group override
   const envGroup = getEnvGroupOverride(group);
@@ -43,21 +44,25 @@ export async function resolveTaskConfig(
   // Layer 3: env default
   const envDefault = getEnvAiConfig();
 
-  // Layer 4: DB user default (only fetch if needed)
-  interface DbAiRow { provider: string; api_key: string; model: string; endpoint_url: string | null }
-  let dbDefault: DbAiRow | null = null;
+  // Layer 4: DB user default — prefer caller-provided fallback to avoid re-querying
+  let layer4: AiProviderConfig | null = fallbackConfig ?? null;
 
-  const needsDbDefault =
-    !(envGroup.provider && envGroup.apiKey && envGroup.model) &&
-    !(dbRow?.provider && dbRow?.api_key && dbRow?.model) &&
-    !envDefault;
+  if (!layer4) {
+    const needsDbDefault =
+      !(envGroup.provider && envGroup.apiKey && envGroup.model) &&
+      !(dbRow?.provider && dbRow?.api_key && dbRow?.model) &&
+      !envDefault;
 
-  if (needsDbDefault) {
-    const dbDefaultResult = await query<DbAiRow>(
-      'SELECT provider, api_key, model, endpoint_url FROM user_ai_settings WHERE user_id = $1 AND is_active = TRUE',
-      [userId],
-    );
-    dbDefault = dbDefaultResult.rows[0] ?? null;
+    if (needsDbDefault) {
+      const dbDefaultResult = await query<{ provider: string; api_key: string; model: string; endpoint_url: string | null }>(
+        'SELECT provider, api_key, model, endpoint_url FROM user_ai_settings WHERE user_id = $1 AND is_active = TRUE',
+        [userId],
+      );
+      const row = dbDefaultResult.rows[0];
+      if (row) {
+        layer4 = { provider: row.provider as AiProviderType, apiKey: decryptApiKey(row.api_key), model: row.model, endpointUrl: row.endpoint_url };
+      }
+    }
   }
 
   // Resolve each field through the cascade
@@ -65,28 +70,28 @@ export async function resolveTaskConfig(
     envGroup.provider ??
     dbRow?.provider ??
     envDefault?.provider ??
-    dbDefault?.provider ??
+    layer4?.provider ??
     null;
 
   const apiKey =
     envGroup.apiKey ??
     (dbRow?.api_key ? decryptApiKey(dbRow.api_key) : null) ??
     envDefault?.apiKey ??
-    (dbDefault?.api_key ? decryptApiKey(dbDefault.api_key) : null) ??
+    layer4?.apiKey ??
     null;
 
   const model =
     envGroup.model ??
     dbRow?.model ??
     envDefault?.model ??
-    dbDefault?.model ??
+    layer4?.model ??
     null;
 
   const endpointUrl =
     envGroup.endpointUrl ??
     dbRow?.endpoint_url ??
     envDefault?.endpointUrl ??
-    dbDefault?.endpoint_url ??
+    layer4?.endpointUrl ??
     null;
 
   if (!provider || !apiKey || !model) {

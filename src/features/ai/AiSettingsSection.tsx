@@ -12,7 +12,7 @@ import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { cn, getErrorMessage } from '@/lib/utils';
 import type { AiTaskGroup } from '@/types';
-import { AI_PROVIDERS, KEY_PLACEHOLDERS, MODEL_HINTS } from './aiConstants';
+import { AI_PROVIDERS, KEY_PLACEHOLDERS, MODEL_HINTS, TASK_GROUP_META } from './aiConstants';
 import { TaskRoutingSection } from './TaskRoutingSection';
 import { useAiProviderSetup } from './useAiProviderSetup';
 import { deleteAiSettings, deleteTaskOverride, saveAiSettings, saveTaskOverride, testAiConnection, useAiSettings } from './useAiSettings';
@@ -119,19 +119,18 @@ export function AiSettingsSection({ aiEnabled, onToggle }: AiSettingsSectionProp
         requestTimeout: requestTimeout ? Number(requestTimeout) : null,
       });
 
-      // Save task overrides
-      const groups: AiTaskGroup[] = ['vision', 'quickText', 'deepText'];
-      for (const group of groups) {
-        const override = taskOverrides[group];
-        const original = settings?.taskOverrides?.[group];
-        const isEnvLocked = settings?.taskOverridesEnvLocked?.includes(group);
-        if (isEnvLocked) continue;
-        if (override && (override.provider || override.model)) {
-          await saveTaskOverride(group, override);
-        } else if (original) {
-          await deleteTaskOverride(group);
-        }
-      }
+      // Save task overrides in parallel
+      const overrideOps = TASK_GROUP_META.map((g) => g.key)
+        .filter((group) => !settings?.taskOverridesEnvLocked?.includes(group))
+        .map((group) => {
+          const override = taskOverrides[group];
+          const original = settings?.taskOverrides?.[group];
+          if (override && (override.provider || override.model)) return saveTaskOverride(group, override);
+          if (original) return deleteTaskOverride(group);
+          return null;
+        })
+        .filter(Boolean);
+      if (overrideOps.length > 0) await Promise.all(overrideOps);
 
       setSettings(saved);
       showToast({ message: 'AI settings saved', variant: 'success' });

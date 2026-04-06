@@ -38,6 +38,8 @@ const MOCK_AI_SETTINGS = {
   source: 'env' as const,
 } as const;
 
+const VALID_PROVIDERS = ['openai', 'anthropic', 'gemini', 'openai-compatible'] as const;
+
 const router = Router();
 
 // GET /api/ai/default-prompts — public (no auth), returns default prompt strings
@@ -102,7 +104,9 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
     [req.user!.id],
   );
 
-  const taskOverrides: Record<string, { provider: string | null; model: string | null; endpointUrl: string | null; source: 'user' } | null> = {};
+  const taskOverridesEnvLocked = AI_TASK_GROUPS.filter(isGroupEnvLocked);
+
+  const taskOverrides: Record<string, { provider: string | null; model: string | null; endpointUrl: string | null; source: 'env' | 'user' } | null> = {};
   for (const row of overridesResult.rows) {
     taskOverrides[row.task_group] = {
       provider: row.provider || null,
@@ -111,12 +115,10 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
       source: 'user',
     };
   }
-  const taskOverridesEnvLocked: string[] = AI_TASK_GROUPS.filter(isGroupEnvLocked);
-
-  // Populate env override values for env-locked groups
+  // Env-locked groups override DB values with env values
   for (const g of taskOverridesEnvLocked) {
-    const o = getEnvGroupOverride(g as AiTaskGroup);
-    taskOverrides[g] = { provider: o.provider, model: o.model, endpointUrl: o.endpointUrl, source: 'env' as any };
+    const o = getEnvGroupOverride(g);
+    taskOverrides[g] = { provider: o.provider, model: o.model, endpointUrl: o.endpointUrl, source: 'env' };
   }
 
   // Build providerConfigs from all rows
@@ -175,8 +177,7 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     return;
   }
 
-  const validProviders = ['openai', 'anthropic', 'gemini', 'openai-compatible'];
-  if (!validProviders.includes(provider)) {
+  if (!(VALID_PROVIDERS as readonly string[]).includes(provider)) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Invalid provider' });
     return;
   }
@@ -302,7 +303,7 @@ router.post('/analyze-image', memoryPhotoUpload.fields([
   }
 
   const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision');
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision', settings.config);
 
   const images: ImageInput[] = allFiles.map((f) => ({
     base64: f.buffer.toString('base64'),
@@ -342,7 +343,7 @@ router.post('/analyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, ai
   }
 
   const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision');
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision', settings.config);
 
   const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
   if (!loaded) {
@@ -391,7 +392,7 @@ router.post('/reanalyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, 
   }
 
   const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision');
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision', settings.config);
 
   const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
   if (!loaded) {
@@ -420,7 +421,7 @@ router.post('/structure-text', ...aiRateLimiters, requireAiAccess(), checkAiCred
   }
 
   const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = await resolveTaskConfig(req.user!.id, 'quickText');
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'quickText', settings.config);
 
   const request: StructureTextRequest = {
     text,
@@ -478,7 +479,7 @@ router.put('/task-overrides/:taskGroup', requireAiAccess(), aiRouteHandler('save
   }
 
   const { provider, model, endpointUrl } = req.body;
-  if (provider && !['openai', 'anthropic', 'gemini', 'openai-compatible'].includes(provider)) {
+  if (provider && !(VALID_PROVIDERS as readonly string[]).includes(provider)) {
     throw new ValidationError('Invalid provider');
   }
 
