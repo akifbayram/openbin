@@ -43,6 +43,10 @@ const TABLES = [
   'settings',
   'webhook_outbox',
   'job_locks',
+  'admin_audit_log',
+  'user_limit_overrides',
+  'login_history',
+  'announcements',
 ];
 
 afterEach(() => {

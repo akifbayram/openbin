@@ -550,4 +550,32 @@ router.get('/bins/:id', asyncHandler(async (req, res) => {
   });
 }));
 
+// POST /locations/:id/regen-invite
+router.post('/locations/:id/regen-invite', asyncHandler(async (req, res) => {
+  const locationId = req.params.id;
+
+  const locResult = await query<{ id: string; name: string }>(
+    'SELECT id, name FROM locations WHERE id = $1',
+    [locationId],
+  );
+  if (locResult.rows.length === 0) throw new NotFoundError('Location not found');
+  const location = locResult.rows[0];
+
+  const crypto = await import('node:crypto');
+  const newCode = crypto.default.randomBytes(6).toString('base64url');
+
+  await query('UPDATE locations SET invite_code = $1 WHERE id = $2', [newCode, locationId]);
+
+  logAdminAction({
+    actorId: req.user!.id,
+    actorName: req.user!.username,
+    action: 'regen_invite_code',
+    targetType: 'location',
+    targetId: locationId,
+    targetName: location.name,
+  });
+
+  res.json({ inviteCode: newCode });
+}));
+
 export { router as adminSystemRoutes };

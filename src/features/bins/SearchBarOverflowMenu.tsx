@@ -6,19 +6,19 @@ import { useClickOutside } from '@/lib/useClickOutside';
 import { usePopover } from '@/lib/usePopover';
 import { cn } from '@/lib/utils';
 import { FieldToggleList } from './ColumnVisibilityMenu';
-import type { FieldKey } from './useColumnVisibility';
 import type { ViewMode } from './useViewMode';
 import { ViewModeToggle } from './ViewModeToggle';
 
 interface SearchBarOverflowMenuProps {
   viewMode: ViewMode;
   onViewModeChange: (v: ViewMode) => void;
-  applicableFields: FieldKey[];
-  visibility: Record<FieldKey, boolean>;
-  onColumnToggle: (field: FieldKey) => void;
+  applicableFields: string[];
+  visibility: Record<string, boolean>;
+  onColumnToggle: (field: string) => void;
+  customFieldLabels?: Record<string, string>;
 }
 
-export function SearchBarOverflowMenu({ viewMode, onViewModeChange, applicableFields, visibility, onColumnToggle }: SearchBarOverflowMenuProps) {
+export function SearchBarOverflowMenu({ viewMode, onViewModeChange, applicableFields, visibility, onColumnToggle, customFieldLabels }: SearchBarOverflowMenuProps) {
   const { visible, animating, isOpen, close, toggle } = usePopover();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +55,7 @@ export function SearchBarOverflowMenu({ viewMode, onViewModeChange, applicableFi
               <div className="px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide border-t border-[var(--border-subtle)]">
                 Fields
               </div>
-              <FieldToggleList fields={applicableFields} visibility={visibility} onToggle={onColumnToggle} />
+              <FieldToggleList fields={applicableFields} visibility={visibility} onToggle={onColumnToggle} customFieldLabels={customFieldLabels} />
             </>
           )}
         </div>

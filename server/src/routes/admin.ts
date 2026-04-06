@@ -194,7 +194,7 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
     created_at: string; updated_at: string;
     last_active_at: string | null; ai_credits_used: number | null; ai_credits_reset_at: string | null;
   }>(
-    'SELECT id, username, display_name, email, is_admin, plan, sub_status, active_until, deleted_at, suspended_at, created_at, updated_at, last_active_at, ai_credits_used, ai_credits_reset_at FROM users WHERE id = $1',
+    'SELECT id, username, display_name, email, is_admin, plan, sub_status, active_until, deleted_at, suspended_at, force_password_change, created_at, updated_at, last_active_at, ai_credits_used, ai_credits_reset_at FROM users WHERE id = $1',
     [userId],
   );
 
@@ -246,6 +246,7 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
       binsCreated7d: binsCreated7dRes.rows[0].cnt,
       binLimit: features.maxBins,
       storageLimit: features.maxPhotoStorageMb,
+      forcePasswordChange: !!(row as any).force_password_change,
     },
   });
 }));

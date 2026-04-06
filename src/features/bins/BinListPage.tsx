@@ -42,6 +42,7 @@ import { useBulkActions } from './useBulkActions';
 import { useBulkDialogs } from './useBulkDialogs';
 import { useBulkSelection } from './useBulkSelection';
 import { useColumnVisibility } from './useColumnVisibility';
+import { useCustomFields } from './useCustomFields';
 import { usePageSize } from './usePageSize';
 import { useViewMode } from './useViewMode';
 
@@ -93,7 +94,17 @@ export function BinListPage() {
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const getTagStyle = useTagStyle();
   const { viewMode, setViewMode } = useViewMode();
-  const { visibility, toggleField, applicableFields, isVisible } = useColumnVisibility(viewMode);
+  const { fields: customFields } = useCustomFields(activeLocationId);
+  const { visibility, toggleField, applicableFields, isVisible } = useColumnVisibility(
+    viewMode,
+    viewMode === 'table' ? customFields : undefined,
+  );
+  const customFieldLabels = useMemo(() => {
+    if (!customFields?.length) return undefined;
+    const map: Record<string, string> = {};
+    for (const f of customFields) map[`cf_${f.id}`] = f.name;
+    return map;
+  }, [customFields]);
   const hasBadges = activeCount > 0 || !!filters.needsOrganizing;
 
   const bulk = useBulkDialogs();
@@ -151,6 +162,7 @@ export function BinListPage() {
                 applicableFields={applicableFields}
                 visibility={visibility}
                 onColumnToggle={toggleField}
+                customFieldLabels={customFieldLabels}
               />
               <Tooltip content="Scan QR code" side="bottom">
                 <Button
@@ -313,6 +325,7 @@ export function BinListPage() {
                 filters={filters}
                 onTagClick={handleTagClick}
                 isVisible={isVisible}
+                customFields={customFields}
               />
               <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalCount={totalCount} pageSize={pageSize} pageSizeOptions={pageSizeOptions} onPageSizeChange={setPageSize} itemLabel={t.bins} />
             </div>

@@ -1,17 +1,17 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { ColumnVisibilityMenu } from '../ColumnVisibilityMenu';
+import { ColumnVisibilityMenu, FieldToggleList } from '../ColumnVisibilityMenu';
 import { FIELD_LABELS, type FieldKey } from '../useColumnVisibility';
 
-const DEFAULT_VIS: Record<FieldKey, boolean> = {
+const DEFAULT_VIS: Record<string, boolean> = {
   icon: true, area: true, items: true, tags: true,
   updated: true, created: false, notes: false, createdBy: false, customFields: false,
 };
 
 function renderMenu(overrides: {
-  applicableFields?: FieldKey[];
-  visibility?: Record<FieldKey, boolean>;
-  onToggle?: (field: FieldKey) => void;
+  applicableFields?: string[];
+  visibility?: Record<string, boolean>;
+  onToggle?: (field: string) => void;
 } = {}) {
   const props = {
     applicableFields: overrides.applicableFields ?? ['icon', 'area', 'items', 'tags', 'notes'],
@@ -63,5 +63,52 @@ describe('ColumnVisibilityMenu', () => {
 
     const switches = screen.getAllByRole('switch');
     expect(switches).toHaveLength(fields.length);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FieldToggleList with cf_* keys — Slice 3
+// ---------------------------------------------------------------------------
+describe('FieldToggleList with dynamic cf_* keys', () => {
+  it('renders custom field name for cf_* keys via customFieldLabels', () => {
+    const onToggle = vi.fn();
+    render(
+      <FieldToggleList
+        fields={['icon', 'cf_f1', 'cf_f2']}
+        visibility={{ ...DEFAULT_VIS, cf_f1: true, cf_f2: false }}
+        onToggle={onToggle}
+        customFieldLabels={{ cf_f1: 'Serial Number', cf_f2: 'Warranty' }}
+      />,
+    );
+    expect(screen.getByText('Serial Number')).toBeDefined();
+    expect(screen.getByText('Warranty')).toBeDefined();
+    expect(screen.getByText('Icon')).toBeDefined();
+  });
+
+  it('calls onToggle with cf_* key when switch clicked', () => {
+    const onToggle = vi.fn();
+    render(
+      <FieldToggleList
+        fields={['cf_f1']}
+        visibility={{ ...DEFAULT_VIS, cf_f1: true }}
+        onToggle={onToggle}
+        customFieldLabels={{ cf_f1: 'Serial Number' }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('switch'));
+    expect(onToggle).toHaveBeenCalledWith('cf_f1');
+  });
+
+  it('falls back to FIELD_LABELS for static keys when customFieldLabels provided', () => {
+    render(
+      <FieldToggleList
+        fields={['icon', 'cf_f1']}
+        visibility={{ ...DEFAULT_VIS, cf_f1: true }}
+        onToggle={vi.fn()}
+        customFieldLabels={{ cf_f1: 'Serial' }}
+      />,
+    );
+    expect(screen.getByText('Icon')).toBeDefined();
+    expect(screen.getByText('Serial')).toBeDefined();
   });
 });

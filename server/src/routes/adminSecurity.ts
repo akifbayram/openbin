@@ -177,4 +177,45 @@ router.get('/login-history/:id', asyncHandler(async (req, res) => {
   res.json({ results, count: countResult.rows[0].cnt });
 }));
 
+// POST /force-password-change/:id
+router.post('/force-password-change/:id', asyncHandler(async (req, res) => {
+  const targetId = req.params.id;
+  const target = await assertUserExists(targetId);
+  const enabled = req.body.enabled !== false;
+
+  await query(
+    'UPDATE users SET force_password_change = $1 WHERE id = $2',
+    [enabled ? 1 : 0, targetId],
+  );
+
+  logAdminAction({
+    actorId: req.user!.id,
+    actorName: req.user!.username,
+    action: 'force_password_change',
+    targetType: 'user',
+    targetId,
+    targetName: target.username,
+    details: { enabled },
+  });
+
+  res.json({ message: enabled ? 'Password change required on next login' : 'Password change requirement cleared' });
+}));
+
+// POST /force-logout-all
+router.post('/force-logout-all', asyncHandler(async (req, res) => {
+  await Promise.all([
+    query('UPDATE users SET token_version = token_version + 1'),
+    query(`UPDATE refresh_tokens SET revoked_at = ${d.now()} WHERE revoked_at IS NULL`),
+  ]);
+
+  logAdminAction({
+    actorId: req.user!.id,
+    actorName: req.user!.username,
+    action: 'force_logout_all',
+    targetType: 'system',
+  });
+
+  res.json({ message: 'All sessions revoked for all users' });
+}));
+
 export { router as adminSecurityRoutes };

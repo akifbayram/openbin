@@ -29,7 +29,7 @@ import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { cn, getErrorMessage, relativeTime } from '@/lib/utils';
-import { capitalize, clearOverrides, deleteUser, fetchOverrides, grantAiCredits, reactivateUser, regenerateApiKey, resetAiCredits, revokeAllApiKeys, revokeSessions, sendPasswordReset, statusVariant, suspendUser, type UserLimitOverrides, updateOverrides, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
+import { capitalize, clearOverrides, deleteUser, fetchOverrides, forcePasswordChange, grantAiCredits, reactivateUser, regenerateApiKey, resetAiCredits, revokeAllApiKeys, revokeSessions, sendPasswordReset, statusVariant, suspendUser, type UserLimitOverrides, updateOverrides, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
 
 function StatItem({ label, value }: { label: string; value: string | number }) {
   return (
@@ -595,6 +595,24 @@ export function AdminUserDetailPage() {
                 <LogOut className="h-3.5 w-3.5 mr-1.5" />
                 Revoke
               </Button>
+            </div>
+
+            {/* Force password change */}
+            <div className="row-spread py-3">
+              <span className="text-[14px] text-[var(--text-secondary)]">Require password change</span>
+              <Switch
+                checked={!!detail.stats.forcePasswordChange}
+                onCheckedChange={async (checked) => {
+                  try {
+                    await forcePasswordChange(detail.id, checked);
+                    showToast({ message: checked ? 'Password change required' : 'Password change cleared', variant: 'success' });
+                    refresh();
+                  } catch (err) {
+                    showToast({ message: getErrorMessage(err, 'Failed to update'), variant: 'error' });
+                  }
+                }}
+                disabled={isSelf}
+              />
             </div>
 
             {/* Revoke all API keys */}

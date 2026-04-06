@@ -9,38 +9,44 @@ import { cn } from '@/lib/utils';
 import { FIELD_LABELS, type FieldKey } from './useColumnVisibility';
 
 /** Shared field toggle list used by both ColumnVisibilityMenu and SearchBarOverflowMenu */
-export function FieldToggleList({ fields, visibility, onToggle }: {
-  fields: FieldKey[];
-  visibility: Record<FieldKey, boolean>;
-  onToggle: (field: FieldKey) => void;
+export function FieldToggleList({ fields, visibility, onToggle, customFieldLabels }: {
+  fields: string[];
+  visibility: Record<string, boolean>;
+  onToggle: (field: string) => void;
+  customFieldLabels?: Record<string, string>;
 }) {
   return (
     <>
-      {fields.map((field) => (
-        <label
-          key={field}
-          htmlFor={`field-toggle-${field}`}
-          className="w-full row-spread px-3.5 py-2 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
-        >
-          {FIELD_LABELS[field]}
-          <Switch
-            id={`field-toggle-${field}`}
-            checked={visibility[field]}
-            onCheckedChange={() => onToggle(field)}
-          />
-        </label>
-      ))}
+      {fields.map((field) => {
+        const label = customFieldLabels?.[field] ?? FIELD_LABELS[field as FieldKey];
+        const checked = visibility[field] ?? field.startsWith('cf_');
+        return (
+          <label
+            key={field}
+            htmlFor={`field-toggle-${field}`}
+            className="w-full row-spread px-3.5 py-2 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
+          >
+            {label}
+            <Switch
+              id={`field-toggle-${field}`}
+              checked={checked}
+              onCheckedChange={() => onToggle(field)}
+            />
+          </label>
+        );
+      })}
     </>
   );
 }
 
 interface ColumnVisibilityMenuProps {
-  applicableFields: FieldKey[];
-  visibility: Record<FieldKey, boolean>;
-  onToggle: (field: FieldKey) => void;
+  applicableFields: string[];
+  visibility: Record<string, boolean>;
+  onToggle: (field: string) => void;
+  customFieldLabels?: Record<string, string>;
 }
 
-export function ColumnVisibilityMenu({ applicableFields, visibility, onToggle }: ColumnVisibilityMenuProps) {
+export function ColumnVisibilityMenu({ applicableFields, visibility, onToggle, customFieldLabels }: ColumnVisibilityMenuProps) {
   const { visible, animating, close, toggle } = usePopover();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -67,7 +73,7 @@ export function ColumnVisibilityMenu({ applicableFields, visibility, onToggle }:
           <div className="px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
             Visible Fields
           </div>
-          <FieldToggleList fields={applicableFields} visibility={visibility} onToggle={onToggle} />
+          <FieldToggleList fields={applicableFields} visibility={visibility} onToggle={onToggle} customFieldLabels={customFieldLabels} />
         </div>
       )}
     </div>

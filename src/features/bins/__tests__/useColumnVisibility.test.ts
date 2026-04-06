@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
+import type { CustomField } from '@/types';
 import {
   ALL_FIELDS,
   FIELD_LABELS,
@@ -148,10 +149,10 @@ describe('applicableFields per view mode', () => {
     expect(result.current.applicableFields).toEqual(['icon', 'area']);
   });
 
-  it('table returns all 9 fields', () => {
+  it('table returns 8 static fields (no customFields)', () => {
     const { result } = renderHook(() => useColumnVisibility('table'));
-    expect(result.current.applicableFields).toEqual(ALL_FIELDS);
-    expect(result.current.applicableFields).toHaveLength(9);
+    expect(result.current.applicableFields).toEqual(['icon', 'area', 'items', 'tags', 'updated', 'created', 'notes', 'createdBy']);
+    expect(result.current.applicableFields).toHaveLength(8);
   });
 });
 
@@ -180,6 +181,129 @@ describe('isVisible respects applicability', () => {
     const { result } = renderHook(() => useColumnVisibility('compact'));
     // 'items' is not applicable in compact
     expect(result.current.isVisible('items')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dynamic custom field columns (table mode) — Slice 1
+// ---------------------------------------------------------------------------
+describe('dynamic custom field columns (table mode)', () => {
+  // Deliberately out of position order to verify sorting
+  const fields: CustomField[] = [
+    { id: 'f2', location_id: 'loc1', name: 'Warranty', position: 1, created_at: '', updated_at: '' },
+    { id: 'f1', location_id: 'loc1', name: 'Serial Number', position: 0, created_at: '', updated_at: '' },
+  ];
+
+  it('includes cf_<id> keys in applicableFields sorted by position', () => {
+    const { result } = renderHook(() => useColumnVisibility('table', fields));
+    const cfKeys = result.current.applicableFields.filter((f: string) => f.startsWith('cf_'));
+    expect(cfKeys).toEqual(['cf_f1', 'cf_f2']);
+  });
+
+  it('excludes static customFields from table applicableFields', () => {
+    const { result } = renderHook(() => useColumnVisibility('table', fields));
+    expect(result.current.applicableFields).not.toContain('customFields');
+  });
+
+  it('static fields precede cf_ keys in applicableFields', () => {
+    const { result } = renderHook(() => useColumnVisibility('table', fields));
+    const firstCfIdx = result.current.applicableFields.findIndex((f: string) => f.startsWith('cf_'));
+    expect(firstCfIdx).toBeGreaterThan(0);
+    const staticFields = result.current.applicableFields.slice(0, firstCfIdx);
+    expect(staticFields.every((f: string) => !f.startsWith('cf_'))).toBe(true);
+  });
+
+  it('table mode without custom fields has no customFields or cf_ keys', () => {
+    const { result } = renderHook(() => useColumnVisibility('table'));
+    expect(result.current.applicableFields).not.toContain('customFields');
+    expect(result.current.applicableFields.every((f: string) => !f.startsWith('cf_'))).toBe(true);
+  });
+
+  it('reacts to custom field list changes', () => {
+    let cfInput = fields;
+    const { result, rerender } = renderHook(() => useColumnVisibility('table', cfInput));
+    expect(result.current.applicableFields).toContain('cf_f1');
+
+    cfInput = [{ id: 'f3', location_id: 'loc1', name: 'Color', position: 0, created_at: '', updated_at: '' }];
+    rerender();
+    expect(result.current.applicableFields).toContain('cf_f3');
+    expect(result.current.applicableFields).not.toContain('cf_f1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// cf_* visibility and persistence — Slice 2
+// ---------------------------------------------------------------------------
+describe('cf_* visibility and persistence', () => {
+  const fields: CustomField[] = [
+    { id: 'f1', location_id: 'loc1', name: 'Serial', position: 0, created_at: '', updated_at: '' },
+  ];
+
+  it('isVisible defaults to true for cf_* keys', () => {
+    const { result } = renderHook(() => useColumnVisibility('table', fields));
+    expect(result.current.isVisible('cf_f1')).toBe(true);
+  });
+
+  it('toggleField toggles cf_* key off', () => {
+    const { result } = renderHook(() => useColumnVisibility('table', fields));
+    expect(result.current.isVisible('cf_f1')).toBe(true);
+
+    act(() => result.current.toggleField('cf_f1'));
+    expect(result.current.isVisible('cf_f1')).toBe(false);
+  });
+
+  it('toggleField persists cf_* key to localStorage', () => {
+    const { result } = renderHook(() => useColumnVisibility('table', fields));
+
+    act(() => result.current.toggleField('cf_f1'));
+
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
+    const stored = JSON.parse(localStorage.getItem(KEY)!);
+    expect(stored.cf_f1).toBe(false);
+  });
+
+  it('reads persisted cf_* visibility from localStorage', () => {
+    localStorage.setItem(KEY, JSON.stringify({ cf_f1: false }));
+
+    const { result } = renderHook(() => useColumnVisibility('table', fields));
+    expect(result.current.isVisible('cf_f1')).toBe(false);
+  });
+
+  it('toggle back on after toggling off', () => {
+    const { result } = renderHook(() => useColumnVisibility('table', fields));
+
+    act(() => result.current.toggleField('cf_f1'));
+    expect(result.current.isVisible('cf_f1')).toBe(false);
+
+    act(() => result.current.toggleField('cf_f1'));
+    expect(result.current.isVisible('cf_f1')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Grid/compact isolation — Slice 2
+// ---------------------------------------------------------------------------
+describe('grid/compact isolation from custom fields param', () => {
+  const fields: CustomField[] = [
+    { id: 'f1', location_id: 'loc1', name: 'Serial', position: 0, created_at: '', updated_at: '' },
+  ];
+
+  it('grid applicableFields still includes customFields, ignores cf_ keys', () => {
+    const { result } = renderHook(() => useColumnVisibility('grid', fields));
+    expect(result.current.applicableFields).toContain('customFields');
+    expect(result.current.applicableFields.every((f: string) => !f.startsWith('cf_'))).toBe(true);
+  });
+
+  it('compact applicableFields ignores custom fields param', () => {
+    const { result } = renderHook(() => useColumnVisibility('compact', fields));
+    expect(result.current.applicableFields).not.toContain('customFields');
+    expect(result.current.applicableFields.every((f: string) => !f.startsWith('cf_'))).toBe(true);
+  });
+
+  it('grid isVisible for customFields respects stored visibility', () => {
+    localStorage.setItem(KEY, JSON.stringify({ customFields: true }));
+    const { result } = renderHook(() => useColumnVisibility('grid', fields));
+    expect(result.current.isVisible('customFields')).toBe(true);
   });
 });
 

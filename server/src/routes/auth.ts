@@ -247,7 +247,7 @@ router.post('/login', asyncHandler(async (req, res) => {
   }
 
   const result = await query(
-    'SELECT id, username, password_hash, display_name, email, avatar_path, active_location_id, deleted_at, suspended_at, token_version, is_admin FROM users WHERE username = $1',
+    'SELECT id, username, password_hash, display_name, email, avatar_path, active_location_id, deleted_at, suspended_at, token_version, force_password_change, is_admin FROM users WHERE username = $1',
     [username.toLowerCase()]
   );
 
@@ -277,6 +277,12 @@ router.post('/login', asyncHandler(async (req, res) => {
     log.warn(`Login failed: suspended user "${username}"`);
     query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 0)', [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
     throw new ForbiddenError('This account has been suspended');
+  }
+  if (user.force_password_change) {
+    log.info(`Login blocked: force password change required for "${username}"`);
+    query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 0)', [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
+    res.status(403).json({ error: 'FORCE_PASSWORD_CHANGE', message: 'You must change your password before logging in. Please use the password reset flow.' });
+    return;
   }
 
   // Record successful login

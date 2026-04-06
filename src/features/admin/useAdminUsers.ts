@@ -127,6 +127,7 @@ export interface AdminUserDetail {
     binsCreated7d: number;
     binLimit: number | null;
     storageLimit: number | null;
+    forcePasswordChange: boolean;
   };
 }
 
@@ -276,4 +277,16 @@ export async function grantCompPlan(userId: string, plan: number, days: number) 
 
 export async function forceDowngrade(userId: string, plan: number) {
   await apiFetch(`/api/admin/overrides/force-downgrade/${userId}`, { method: 'POST', body: { plan } });
+}
+
+export async function forcePasswordChange(userId: string, enabled = true) {
+  await apiFetch(`/api/admin/security/force-password-change/${userId}`, { method: 'POST', body: { enabled } });
+}
+
+export async function forceLogoutAll() {
+  await apiFetch('/api/admin/security/force-logout-all', { method: 'POST' });
+}
+
+export async function regenInviteCode(locationId: string) {
+  return apiFetch<{ inviteCode: string }>(`/api/admin/system/locations/${locationId}/regen-invite`, { method: 'POST' });
 }

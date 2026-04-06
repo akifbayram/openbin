@@ -9,11 +9,10 @@ import { resolveColor } from '@/lib/colorPalette';
 import { formatDate } from '@/lib/formatTime';
 import { resolveIcon } from '@/lib/iconMap';
 import { cn } from '@/lib/utils';
-import type { Bin } from '@/types';
+import type { Bin, CustomField } from '@/types';
 import { areCommonBinCardPropsEqual } from './binMemoUtils';
 import { useBinCardInteraction } from './useBinCardInteraction';
 import type { BinFilters, SortOption } from './useBins';
-import type { FieldKey } from './useColumnVisibility';
 
 interface BinTableViewProps {
   bins: Bin[];
@@ -27,7 +26,8 @@ interface BinTableViewProps {
   filters?: BinFilters;
   onTagClick: (tag: string) => void;
   onSelectAll?: () => void;
-  isVisible?: (field: FieldKey) => boolean;
+  isVisible?: (field: string) => boolean;
+  customFields?: CustomField[];
 }
 
 export function BinTableView({
@@ -43,8 +43,13 @@ export function BinTableView({
   onTagClick,
   onSelectAll,
   isVisible,
+  customFields,
 }: BinTableViewProps) {
   const allSelected = bins.length > 0 && bins.every((b) => selectedIds.has(b.id));
+  const sortedCustomFields = React.useMemo(
+    () => customFields ? [...customFields].sort((a, b) => a.position - b.position) : [],
+    [customFields],
+  );
 
   return (
     <Table>
@@ -80,8 +85,12 @@ export function BinTableView({
         {isVisible?.('notes') && (
           <span className="hidden lg:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Notes</span>
         )}
-        {isVisible?.('customFields') && (
-          <span className="hidden lg:block flex-1 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Custom Fields</span>
+        {sortedCustomFields.map((field) =>
+          isVisible?.(`cf_${field.id}`) && (
+            <span key={field.id} className="hidden lg:block flex-1 min-w-0 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide truncate">
+              {field.name}
+            </span>
+          ),
         )}
         {isVisible?.('createdBy') && (
           <span className="hidden md:block w-24 text-[12px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">Created By</span>
@@ -108,6 +117,7 @@ export function BinTableView({
           filters={filters}
           onTagClick={onTagClick}
           isVisible={isVisible}
+          customFields={sortedCustomFields}
         />
       ))}
     </Table>
@@ -124,7 +134,8 @@ interface BinTableRowProps {
   sort?: SortOption;
   filters?: BinFilters;
   onTagClick: (tag: string) => void;
-  isVisible?: (field: FieldKey) => boolean;
+  isVisible?: (field: string) => boolean;
+  customFields: CustomField[];
 }
 
 const BinTableRow = React.memo(function BinTableRow({
@@ -138,6 +149,7 @@ const BinTableRow = React.memo(function BinTableRow({
   filters,
   onTagClick,
   isVisible,
+  customFields,
 }: BinTableRowProps) {
   const getTagStyle = useTagStyle();
   const BinIcon = resolveIcon(bin.icon);
@@ -267,15 +279,17 @@ const BinTableRow = React.memo(function BinTableRow({
         </div>
       )}
 
-      {/* Custom Fields */}
-      {isVisible?.('customFields') && (
-        <div className="hidden lg:block flex-1 min-w-0">
-          {bin.custom_fields && Object.keys(bin.custom_fields).length > 0 && (
-            <span className="text-[12px] text-[var(--text-tertiary)] truncate block">
-              {Object.values(bin.custom_fields).filter(Boolean).join(' · ')}
-            </span>
-          )}
-        </div>
+      {/* Custom Fields — one column per field definition */}
+      {customFields.map((field) =>
+        isVisible?.(`cf_${field.id}`) && (
+          <div key={field.id} className="hidden lg:block flex-1 min-w-0">
+            {bin.custom_fields?.[field.id] && (
+              <span className="text-[12px] text-[var(--text-tertiary)] truncate block">
+                {bin.custom_fields[field.id]}
+              </span>
+            )}
+          </div>
+        ),
       )}
 
       {/* Created By */}
@@ -304,6 +318,7 @@ const BinTableRow = React.memo(function BinTableRow({
   return (
     areCommonBinCardPropsEqual(prev, next) &&
     prev.sort === next.sort &&
-    prev.filters === next.filters
+    prev.filters === next.filters &&
+    prev.customFields === next.customFields
   );
 });

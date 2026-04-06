@@ -407,9 +407,10 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
   // Admin usage metrics: last_active_at on users
   addColumnIfNotExists('ALTER TABLE users ADD COLUMN last_active_at TEXT');
 
-  // Admin panel: user suspension and session revocation
+  // Admin panel: user suspension, session revocation, force password change
   addColumnIfNotExists('ALTER TABLE users ADD COLUMN suspended_at TEXT');
   addColumnIfNotExists('ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0');
+  addColumnIfNotExists('ALTER TABLE users ADD COLUMN force_password_change INTEGER NOT NULL DEFAULT 0');
 
   // Admin audit log
   db.exec(`
@@ -577,11 +578,12 @@ async function runPostgresInit(): Promise<DatabaseEngine> {
     END $$;
   `);
 
-  // Admin panel: user suspension and session revocation
+  // Admin panel: user suspension, session revocation, force password change
   await pool.query(`
     DO $$ BEGIN
       ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_at TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN NOT NULL DEFAULT FALSE;
     END $$;
   `);
 
