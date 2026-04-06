@@ -95,11 +95,9 @@ function buildUsageTiles(
 
 function isNearLimit(tile: UsageTile): boolean {
   if (tile.isOver || tile.isExhausted) return true;
-  const limit = typeof tile.limit === 'number' ? tile.limit : parseFloat(tile.limit);
-  if (!Number.isNaN(limit) && limit <= 1) return false;
-  const used = typeof tile.used === 'number' ? tile.used : parseFloat(tile.used);
-  if (Number.isNaN(used) || Number.isNaN(limit) || limit <= 0) return false;
-  return used / limit >= NEAR_LIMIT_THRESHOLD;
+  if (typeof tile.used !== 'number' || typeof tile.limit !== 'number') return false;
+  if (tile.limit <= 1) return false;
+  return tile.used / tile.limit >= NEAR_LIMIT_THRESHOLD;
 }
 
 const PLUS_FEATURES: Array<{ key: keyof PlanFeatures; label: string }> = [
@@ -400,7 +398,10 @@ export function SubscriptionSection() {
   const isFree = planInfo.plan === 'free';
   const isTrialing = planInfo.status === 'trial';
   const tiles = buildUsageTiles(planInfo, usage);
-  const showBilling = !isFree || isTrialing;
+  const hasBillingContent =
+    (planInfo.portalUrl && isSafeExternalUrl(planInfo.portalUrl)) ||
+    planInfo.canDowngradeToFree;
+  const showBilling = (!isFree || isTrialing) && hasBillingContent;
 
   return (
     <>
