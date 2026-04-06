@@ -10,9 +10,7 @@ import { createLogger } from './lib/logger.js';
 import { cleanupOrphanPhotos } from './lib/photoCleanup.js';
 import { purgeExpiredRefreshTokens } from './lib/refreshTokens.js';
 import { closeThumbnailPool } from './lib/thumbnailPool.js';
-import { startTrialChecker, stopTrialChecker } from './lib/trialChecker.js';
 import { startUserCleanupJob, stopUserCleanupJob } from './lib/userCleanup.js';
-import { startWebhookOutboxProcessor, stopWebhookOutboxProcessor } from './lib/webhookOutbox.js';
 
 const log = createLogger('startup');
 
@@ -20,10 +18,18 @@ const log = createLogger('startup');
 await initialize();
 loadEmailTemplates();
 
+let eeModule: typeof import('./ee/index.js') | null = null;
+if (!config.selfHosted) {
+  eeModule = await import('./ee/index.js');
+  eeModule.registerHooks();
+}
+
 // Load persisted maintenance mode state
 import('./middleware/maintenance.js').then(m => m.loadMaintenanceMode()).catch(() => {});
 
-const app = createApp();
+const app = createApp({
+  mountEeRoutes: eeModule ? (a) => eeModule!.initEeRoutes(a) : undefined,
+});
 
 if (config.disableRateLimit && process.env.NODE_ENV !== 'test') {
   log.warn('Rate limiting is disabled (DISABLE_RATE_LIMIT=true)');
@@ -56,9 +62,8 @@ const server = app.listen(config.port, () => {
     setInterval(() => purgeExpiredRefreshTokens().catch((err) => log.error('Token purge failed:', err instanceof Error ? err.message : err)), 24 * 60 * 60 * 1000),
   );
 
-  startTrialChecker();
+  eeModule?.startEeJobs();
   startUserCleanupJob();
-  startWebhookOutboxProcessor();
 
   // Orphan photo cleanup — 30s after startup, then every 6 hours
   timers.timeouts.push(setTimeout(() => {
@@ -78,9 +83,8 @@ const shutdown = () => {
   server.close(() => {
     // Stop all scheduled jobs
     stopBackupScheduler();
-    stopTrialChecker();
+    eeModule?.stopEeJobs();
     stopUserCleanupJob();
-    stopWebhookOutboxProcessor();
     for (const id of timers.timeouts) clearTimeout(id);
     for (const id of timers.intervals) clearInterval(id);
 
