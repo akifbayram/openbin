@@ -4,6 +4,7 @@ import { deleteUserData, notifyManagerNewUser, notifyManagerUserUpdate } from '.
 import { adminMetricsRoutes } from './routes/adminMetrics.js';
 import { subscriptionsRoutes } from './routes/subscriptions.js';
 import { startTrialChecker, stopTrialChecker } from './trialChecker.js';
+import { startUserCleanupJob, stopUserCleanupJob } from './userCleanup.js';
 import { startWebhookOutboxProcessor, stopWebhookOutboxProcessor } from './webhookOutbox.js';
 
 export function registerHooks(): void {
@@ -22,9 +23,11 @@ export function initEeRoutes(app: express.Express): void {
 export function startEeJobs(): void {
   startTrialChecker();
   startWebhookOutboxProcessor();
+  startUserCleanupJob();
 }
 
 export function stopEeJobs(): void {
   stopTrialChecker();
   stopWebhookOutboxProcessor();
+  stopUserCleanupJob();
 }

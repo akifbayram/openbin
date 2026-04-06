@@ -10,7 +10,6 @@ import { createLogger } from './lib/logger.js';
 import { cleanupOrphanPhotos } from './lib/photoCleanup.js';
 import { purgeExpiredRefreshTokens } from './lib/refreshTokens.js';
 import { closeThumbnailPool } from './lib/thumbnailPool.js';
-import { startUserCleanupJob, stopUserCleanupJob } from './lib/userCleanup.js';
 
 const log = createLogger('startup');
 
@@ -63,7 +62,6 @@ const server = app.listen(config.port, () => {
   );
 
   eeModule?.startEeJobs();
-  startUserCleanupJob();
 
   // Orphan photo cleanup — 30s after startup, then every 6 hours
   timers.timeouts.push(setTimeout(() => {
@@ -84,7 +82,6 @@ const shutdown = () => {
     // Stop all scheduled jobs
     stopBackupScheduler();
     eeModule?.stopEeJobs();
-    stopUserCleanupJob();
     for (const id of timers.timeouts) clearTimeout(id);
     for (const id of timers.intervals) clearInterval(id);
 

@@ -1,8 +1,8 @@
 import { d, query, withTransaction } from '../db.js';
-import { config } from './config.js';
-import { acquireJobLock, releaseJobLock } from './jobLock.js';
-import { createLogger } from './logger.js';
-import { storage } from './storage.js';
+import { config } from '../lib/config.js';
+import { acquireJobLock, releaseJobLock } from '../lib/jobLock.js';
+import { createLogger } from '../lib/logger.js';
+import { storage } from '../lib/storage.js';
 
 const log = createLogger('cleanup');
 
