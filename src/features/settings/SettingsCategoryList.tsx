@@ -22,7 +22,7 @@ function CategoryRow({ cat, onClick }: { cat: SettingsCategory; onClick: () => v
       <Icon className="h-5 w-5 shrink-0 text-[var(--text-tertiary)]" />
       <div className="flex-1 min-w-0">
         <div className="text-[15px] font-medium text-[var(--text-primary)]">{cat.label}</div>
-        <div className="text-[13px] text-[var(--text-secondary)]">{cat.description}</div>
+        <div className="text-[13px] text-[var(--text-tertiary)]">{cat.description}</div>
       </div>
       <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
     </button>
@@ -48,7 +48,7 @@ export function SettingsCategoryList({ mainCategories, adminCategories }: Settin
 
       {adminCategories.length > 0 && (
         <div className="mt-6">
-          <span className={cn(categoryHeader, 'mb-2 block')}> Admin</span>
+          <span className={cn(categoryHeader, 'mb-2 block')}>Admin</span>
           <div className="flex flex-col">
             {adminCategories.map((cat) => (
               <CategoryRow

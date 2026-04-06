@@ -18,12 +18,12 @@ export function SettingsSection({
 }: SettingsSectionProps) {
   return (
     <div className="mb-7">
-      <div className="flex items-center justify-between mb-3">
+      <div className={cn('flex items-center justify-between', description ? 'mb-1' : 'mb-3')}>
         <h3 className={cn(categoryHeader, 'px-0', labelClassName)}>{label}</h3>
         {action}
       </div>
       {description && (
-        <p className="text-[13px] text-[var(--text-tertiary)] mb-3 -mt-1">
+        <p className="text-[13px] text-[var(--text-tertiary)] mb-3">
           {description}
         </p>
       )}

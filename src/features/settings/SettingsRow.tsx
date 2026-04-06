@@ -32,7 +32,7 @@ export function SettingsRow({
           className={cn(
             'size-5 shrink-0',
             destructive
-              ? 'text-[var(--danger)]'
+              ? 'text-[var(--destructive)]'
               : 'text-[var(--text-secondary)]',
           )}
         />
@@ -42,7 +42,7 @@ export function SettingsRow({
           className={cn(
             'text-[14px]',
             destructive
-              ? 'text-[var(--danger)]'
+              ? 'text-[var(--destructive)]'
               : 'text-[var(--text-primary)]',
           )}
         >
