@@ -45,7 +45,7 @@ export function maintenanceGate(req: Request, res: Response, next: NextFunction)
 
   // Always allow: admin routes, auth endpoints (login/refresh/logout), health check
   const path = req.path;
-  if (path.startsWith('/api/admin') || path.startsWith('/api/auth/') || path === '/api/health') {
+  if (path.startsWith('/admin') || path.startsWith('/auth/') || path === '/health') {
     next();
     return;
   }
