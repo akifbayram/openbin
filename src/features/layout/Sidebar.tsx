@@ -65,7 +65,9 @@ function NavButton({ path, label, icon: Icon, currentPath, navigate, onClick, co
 }) {
   const isActive = path === '/bins'
     ? currentPath === '/bins' || currentPath.startsWith('/bin/')
-    : currentPath === path;
+    : path === '/settings'
+      ? currentPath === '/settings' || currentPath.startsWith('/settings/')
+      : currentPath === path;
 
   return (
     <button

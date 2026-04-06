@@ -57,8 +57,26 @@ const PrintPage = lazyWithRetry(() =>
   import('@/features/print/PrintPage').then((m) => ({ default: m.PrintPage }))
 );
 
-const SettingsPage = lazyWithRetry(() =>
-  import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage }))
+const SettingsLayout = lazyWithRetry(() =>
+  import('@/features/settings/SettingsLayout').then((m) => ({ default: m.SettingsLayout }))
+);
+const AccountSection = lazyWithRetry(() =>
+  import('@/features/settings/sections/AccountSection').then((m) => ({ default: m.AccountSection }))
+);
+const PreferencesSection = lazyWithRetry(() =>
+  import('@/features/settings/sections/PreferencesSection').then((m) => ({ default: m.PreferencesSection }))
+);
+const SettingsPersonalizationSection = lazyWithRetry(() =>
+  import('@/features/settings/sections/PersonalizationSection').then((m) => ({ default: m.PersonalizationSection }))
+);
+const AiSection = lazyWithRetry(() =>
+  import('@/features/settings/sections/AiSection').then((m) => ({ default: m.AiSection }))
+);
+const SettingsDataSection = lazyWithRetry(() =>
+  import('@/features/settings/sections/DataSection').then((m) => ({ default: m.DataSection }))
+);
+const AboutSection = lazyWithRetry(() =>
+  import('@/features/settings/sections/AboutSection').then((m) => ({ default: m.AboutSection }))
 );
 
 const ProfilePage = lazyWithRetry(() =>
@@ -355,7 +373,14 @@ export default function App() {
                 <Route path="/bin/:id" element={<RouteWithBoundary><BinDetailPage /></RouteWithBoundary>} />
                 <Route path="/scan" element={<ScanRedirect />} />
                 <Route path="/print" element={<RouteWithBoundary><PrintPage /></RouteWithBoundary>} />
-                <Route path="/settings" element={<RouteWithBoundary><SettingsPage /></RouteWithBoundary>} />
+                <Route path="/settings" element={<RouteWithBoundary><SettingsLayout /></RouteWithBoundary>}>
+                  <Route path="account" element={<AccountSection />} />
+                  <Route path="preferences" element={<PreferencesSection />} />
+                  <Route path="personalization" element={<SettingsPersonalizationSection />} />
+                  <Route path="ai" element={<AiSection />} />
+                  <Route path="data" element={<SettingsDataSection />} />
+                  <Route path="about" element={<AboutSection />} />
+                </Route>
                 <Route path="/tags" element={<RouteWithBoundary><TagsPage /></RouteWithBoundary>} />
                 <Route path="/items" element={<RouteWithBoundary><ItemsPage /></RouteWithBoundary>} />
                 <Route path="/locations" element={<RouteWithBoundary><AreasPage /></RouteWithBoundary>} />
