@@ -94,10 +94,9 @@ function buildUsageTiles(
 }
 
 function isNearLimit(tile: UsageTile): boolean {
-  const limit = typeof tile.limit === 'number' ? tile.limit : parseFloat(tile.limit);
-  // Skip tiles with trivially small limits (e.g. 1 location on free plan) — not useful as warnings
-  if (!Number.isNaN(limit) && limit <= 1) return false;
   if (tile.isOver || tile.isExhausted) return true;
+  const limit = typeof tile.limit === 'number' ? tile.limit : parseFloat(tile.limit);
+  if (!Number.isNaN(limit) && limit <= 1) return false;
   const used = typeof tile.used === 'number' ? tile.used : parseFloat(tile.used);
   if (Number.isNaN(used) || Number.isNaN(limit) || limit <= 0) return false;
   return used / limit >= NEAR_LIMIT_THRESHOLD;
