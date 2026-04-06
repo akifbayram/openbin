@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import * as jose from 'jose';
-import { d, query } from '../db.js';
-import { asyncHandler } from '../lib/asyncHandler.js';
-import { config } from '../lib/config.js';
-import { NotFoundError, UnauthorizedError, ValidationError } from '../lib/httpErrors.js';
-import { createLogger } from '../lib/logger.js';
-import { invalidateOverLimitCache, Plan, type PlanTier, SubStatus, type SubStatusType, validatePlanTransition } from '../lib/planGate.js';
+import { d, query } from '../../db.js';
+import { asyncHandler } from '../../lib/asyncHandler.js';
+import { config } from '../../lib/config.js';
+import { NotFoundError, UnauthorizedError, ValidationError } from '../../lib/httpErrors.js';
+import { createLogger } from '../../lib/logger.js';
+import { invalidateOverLimitCache, Plan, type PlanTier, SubStatus, type SubStatusType, validatePlanTransition } from '../../lib/planGate.js';
 
 const router = Router();
 
@@ -86,14 +86,14 @@ router.post('/callback', asyncHandler(async (req, res) => {
   // Fire-and-forget subscription lifecycle emails
   const userRow = (await query('SELECT email, display_name FROM users WHERE id = $1', [userId])).rows[0];
   if (userRow?.email) {
-    const { fireSubscriptionConfirmedEmail, fireSubscriptionExpiredEmail } = await import('../lib/emailSender.js');
+    const { fireSubscriptionConfirmedEmail, fireSubscriptionExpiredEmail } = await import('../../lib/emailSender.js');
     if (status === SubStatus.ACTIVE) {
-      fireSubscriptionConfirmedEmail(userId, userRow.email, userRow.display_name, plan as import('../lib/planGate.js').PlanTier, activeUntil);
+      fireSubscriptionConfirmedEmail(userId, userRow.email, userRow.display_name, plan as import('../../lib/planGate.js').PlanTier, activeUntil);
     } else if (status === SubStatus.INACTIVE) {
       fireSubscriptionExpiredEmail(userId, userRow.email, userRow.display_name);
     }
     if (plan === Plan.PLUS && wasPro) {
-      const { fireDowngradeImpactEmail } = await import('../lib/emailSender.js');
+      const { fireDowngradeImpactEmail } = await import('../../lib/emailSender.js');
       const [locRes, photoRes, memberRes] = await Promise.all([
         query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM locations WHERE created_by = $1', [userId]),
         query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [userId]),
@@ -105,7 +105,7 @@ router.post('/callback', asyncHandler(async (req, res) => {
           [userId],
         ),
       ]);
-      const plusFeatures = (await import('../lib/planGate.js')).getFeatureMap(Plan.PLUS);
+      const plusFeatures = (await import('../../lib/planGate.js')).getFeatureMap(Plan.PLUS);
       const impact = {
         locationCount: locRes.rows[0].cnt,
         maxLocations: plusFeatures.maxLocations ?? 1,
