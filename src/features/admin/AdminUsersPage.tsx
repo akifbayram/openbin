@@ -1,5 +1,5 @@
 import { BarChart3, Globe, Lock, Mail, Search, Settings, UserPlus, Users } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,10 +22,13 @@ import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { getErrorMessage } from '@/lib/utils';
 import { AdminColumnVisibilityMenu } from './AdminColumnVisibilityMenu';
-import { AdminMetricsSection } from './AdminMetricsSection';
 import { AdminUsersTable } from './AdminUsersTable';
 import { useAdminColumnVisibility } from './useAdminColumnVisibility';
 import { type AdminUser, useAdminUsers } from './useAdminUsers';
+
+const AdminMetricsSection = __EE__
+  ? lazy(() => import('@/ee/AdminMetricsSection').then((m) => ({ default: m.AdminMetricsSection })))
+  : (() => null) as React.FC;
 
 const PAGE_SIZE = 25;
 
@@ -138,7 +141,7 @@ export function AdminUsersPage() {
         back
         actions={
           <div className="flex items-center gap-2">
-            {!isSelfHosted && (
+            {__EE__ && !isSelfHosted && (
               <OptionGroup
                 options={[
                   { key: 'users' as const, label: 'Users', icon: Users },
@@ -250,10 +253,12 @@ export function AdminUsersPage() {
         </>
       )}
 
-      {!isSelfHosted && tab === 'metrics' && (
+      {__EE__ && !isSelfHosted && tab === 'metrics' && (
         <>
           {registrationSection}
-          <AdminMetricsSection />
+          <Suspense fallback={null}>
+            <AdminMetricsSection />
+          </Suspense>
         </>
       )}
 

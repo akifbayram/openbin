@@ -13,10 +13,8 @@ import { getEeHooks } from '../lib/eeHooks.js';
 import { firePasswordResetEmail } from '../lib/emailSender.js';
 import { ConflictError, ForbiddenError, HttpError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { createLogger } from '../lib/logger.js';
-import { getCloudMetrics, getPlanBreakdown } from '../lib/metrics.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { getFeatureMap, invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
-import { metricsLimiter } from '../lib/rateLimiters.js';
 import { restoreBackup } from '../lib/restore.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, invalidateDeletedCache } from '../middleware/auth.js';
@@ -492,25 +490,6 @@ router.post('/users/:id/send-password-reset', asyncHandler(async (req, res) => {
   log.info(`User ${req.user!.username} sent password reset for user ${target.username}`);
 
   res.json({ message: 'Password reset email sent' });
-}));
-
-// GET /api/admin/metrics — cloud metrics (cloud mode only)
-router.get('/metrics', metricsLimiter, asyncHandler(async (_req, res) => {
-  if (config.selfHosted) {
-    throw new NotFoundError('Metrics not available in self-hosted mode');
-  }
-
-  const metrics = await getCloudMetrics();
-  res.json(metrics);
-}));
-
-// GET /api/admin/metrics/plan-breakdown — per-plan usage averages
-router.get('/metrics/plan-breakdown', metricsLimiter, asyncHandler(async (_req, res) => {
-  if (config.selfHosted) {
-    throw new NotFoundError('Metrics not available in self-hosted mode');
-  }
-  const breakdown = await getPlanBreakdown();
-  res.json(breakdown);
 }));
 
 // PATCH /api/admin/registration — toggle registration mode
