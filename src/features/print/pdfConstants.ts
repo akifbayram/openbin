@@ -12,8 +12,8 @@ export const SWATCH_BAR_HEIGHT_RATIO = 0.45;
 export const SWATCH_BAR_MIN_PT = 2;
 
 /** Card padding = max(CARD_PAD_MIN_PT, qrSizePt * CARD_PAD_RATIO) */
-export const CARD_PAD_RATIO = 0.07;
-export const CARD_PAD_MIN_PT = 3;
+export const CARD_PAD_RATIO = 0.04;
+export const CARD_PAD_MIN_PT = 2;
 
 /** Card border radius = min(cellWPt, cellHPt) * CARD_RADIUS_RATIO */
 export const CARD_RADIUS_RATIO = 0.08;

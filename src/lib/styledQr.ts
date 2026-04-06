@@ -29,7 +29,7 @@ export async function generateStyledQRDataURL(
     height: size,
     type: 'canvas',
     data: payload,
-    margin: 4,
+    margin: 1,
     qrOptions: {
       errorCorrectionLevel,
     },

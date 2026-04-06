@@ -188,12 +188,13 @@ describe('computeLabelLayout', () => {
       expect(result.qrSizePt).toBeGreaterThan(staticQr);
     });
 
-    it('preserves static QR when optimal is smaller', () => {
+    it('QR stays close to static size for tightly-fit formats', () => {
       // biome-ignore lint/style/noNonNullAssertion: test assertion
       const avery5163 = LABEL_FORMATS.find((f) => f.key === 'avery-5163')!;
       const result = computeLabelLayout(makeInput({ format: avery5163 }));
       const staticQr = parseFloat(avery5163.qrSize) * 72;
-      expect(result.qrSizePt).toBe(staticQr);
+      expect(result.qrSizePt).toBeGreaterThanOrEqual(staticQr);
+      expect(result.qrSizePt).toBeLessThan(staticQr * 1.1);
     });
 
     it('uses at least the static qrSize as minimum', () => {

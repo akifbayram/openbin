@@ -73,7 +73,7 @@ export async function generateQRDataURL(
     height: size,
     type: 'canvas',
     data: payload,
-    margin: 4,
+    margin: 1,
     dotsOptions: { type: 'square', color: dark },
     backgroundOptions: { color: light },
   });
