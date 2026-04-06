@@ -277,6 +277,16 @@ router.post('/login', asyncHandler(async (req, res) => {
   }
 
   const user = result.rows[0];
+
+  // Social-only users have no password
+  if (!user.password_hash) {
+    log.warn(`Login failed: no password set for "${username}" (social-only account)`);
+    query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 0)',
+      [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
+    res.status(401).json({ error: 'NO_PASSWORD', message: 'This account uses social login. Sign in with Google or Apple, or set a password from account settings.' });
+    return;
+  }
+
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
     log.warn(`Login failed: bad password for user "${username}"`);
@@ -409,7 +419,7 @@ router.post('/logout-all', authenticate, asyncHandler(async (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
-    'SELECT id, username, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until, is_admin FROM users WHERE id = $1',
+    'SELECT id, username, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until, is_admin, password_hash FROM users WHERE id = $1',
     [req.user!.id]
   );
 
@@ -446,6 +456,7 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
     subscriptionStatus: subStatusLabel(user.sub_status),
     activeUntil: user.active_until || null,
     isAdmin: !!user.is_admin,
+    hasPassword: !!user.password_hash,
   });
 }));
 
@@ -542,14 +553,28 @@ router.put('/active-location', authenticate, asyncHandler(async (req, res) => {
 router.put('/password', authenticate, asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
-  if (!currentPassword || !newPassword) {
-    throw new ValidationError('Current password and new password are required');
+  if (!newPassword) {
+    throw new ValidationError('New password is required');
   }
   validatePassword(newPassword);
 
   const result = await query('SELECT password_hash FROM users WHERE id = $1', [req.user!.id]);
   if (result.rows.length === 0) {
     throw new NotFoundError('User not found');
+  }
+
+  // Social-only users setting their first password
+  if (!result.rows[0].password_hash) {
+    const hash = await bcrypt.hash(newPassword, config.bcryptRounds);
+    await query('UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3',
+      [hash, new Date().toISOString(), req.user!.id]);
+    await revokeAllUserTokens(req.user!.id);
+    res.json({ message: 'Password set successfully' });
+    return;
+  }
+
+  if (!currentPassword) {
+    throw new ValidationError('Current password is required');
   }
 
   const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
@@ -898,6 +923,49 @@ router.post('/oauth/apple/callback', asyncHandler(async (req, res) => {
     log.error('Apple OAuth callback error:', err);
     res.redirect('/?oauth=error&reason=callback_failed');
   }
+}));
+
+// -- OAuth: Account linking --
+
+router.get('/oauth/links', authenticate, asyncHandler(async (req, res) => {
+  const links = await query<{ provider: string; email: string | null; created_at: string }>(
+    'SELECT provider, email, created_at FROM user_oauth_links WHERE user_id = $1',
+    [req.user!.id]
+  );
+  res.json({ results: links.rows });
+}));
+
+router.delete('/oauth/link/:provider', authenticate, asyncHandler(async (req, res) => {
+  const { provider } = req.params;
+  const userId = req.user!.id;
+
+  const userResult = await query<{ password_hash: string | null }>(
+    'SELECT password_hash FROM users WHERE id = $1',
+    [userId]
+  );
+  const hasPassword = !!userResult.rows[0]?.password_hash;
+
+  const linkCount = await query<{ count: number }>(
+    'SELECT COUNT(*) as count FROM user_oauth_links WHERE user_id = $1',
+    [userId]
+  );
+  const totalLinks = Number(linkCount.rows[0]?.count ?? 0);
+
+  if (!hasPassword && totalLinks <= 1) {
+    throw new ValidationError('Set a password before disconnecting your last login method');
+  }
+
+  const result = await query(
+    'DELETE FROM user_oauth_links WHERE user_id = $1 AND provider = $2',
+    [userId, provider]
+  );
+
+  if ((result as any).rowCount === 0 && (result as any).changes === 0) {
+    throw new NotFoundError('Provider not linked');
+  }
+
+  log.info(`User "${req.user!.username}" unlinked ${provider}`);
+  res.json({ success: true });
 }));
 
 export default router;

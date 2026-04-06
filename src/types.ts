@@ -14,6 +14,7 @@ export interface User {
   subscriptionStatus?: SubscriptionStatus;
   activeUntil?: string | null;
   isAdmin?: boolean;
+  hasPassword?: boolean;
 }
 
 export interface Location {
