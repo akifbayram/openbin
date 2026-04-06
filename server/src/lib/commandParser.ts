@@ -1,10 +1,11 @@
+import { buildTagBlock } from './aiProviders.js';
 import { HARDENING_INSTRUCTION, resolvePrompt, sanitizeForPrompt } from './aiSanitize.js';
 import { DEFAULT_COMMAND_PROMPT } from './defaultPrompts.js';
 
 export interface BinSummary {
   id: string;
   name: string;
-  items: Array<{ id: string; name: string; quantity: number | null }>;
+  items: Array<{ id: string; name: string; quantity?: number } | string>;
   tags: string[];
   area_id: string | null;
   area_name: string;
@@ -48,6 +49,7 @@ export interface CommandRequest {
   text: string;
   context: {
     bins: BinSummary[];
+    other_bins?: Array<{ id: string; name: string }>;
     areas: AreaSummary[];
     trash_bins: Array<{ id: string; name: string }>;
     availableColors: string[];
@@ -60,14 +62,8 @@ export interface CommandResult {
   interpretation: string;
 }
 
-export function buildSystemPrompt(request: CommandRequest, customPrompt?: string, isDemoUser?: boolean): string {
+export function buildSystemPrompt(availableColors: string[], availableIcons: string[], customPrompt?: string, isDemoUser?: boolean): string {
   const basePrompt = resolvePrompt(DEFAULT_COMMAND_PROMPT, customPrompt, isDemoUser);
-
-  // Extract unique tags from bins already in context
-  const existingTags = [...new Set(request.context.bins.flatMap((b) => b.tags))].sort();
-  const tagBlock = existingTags.length > 0
-    ? `\nExisting tags in this inventory: [${existingTags.join(', ')}]\nWhen adding tags (add_tags, create_bin, update_bin), you MUST reuse tags from this list whenever they are even loosely relevant. Only create a new tag when no existing tag covers the category. Do NOT create synonyms or variations of existing tags.`
-    : '';
 
   return `${basePrompt}
 
@@ -94,25 +90,34 @@ Available action types:
 - set_tag_color: Set a tag's display color. Fields: tag, color
 - reorder_items: Reorder items in a bin. Fields: bin_id, bin_name, item_ids[] (item IDs in desired order)
 
-Available colors: ${request.context.availableColors.join(', ')}
-Available icons: ${request.context.availableIcons.join(', ')}
+Available colors: ${availableColors.join(', ')}
+Available icons: ${availableIcons.join(', ')}
 
 IMPORTANT RULES:
 1. Each action object MUST have a "type" field as a top-level property. All other fields are also top-level properties of the action object (NOT nested).
 2. The "interpretation" field is REQUIRED and must always be present.
 3. For create_bin: You MUST include "items" array when the user mentions any contents/items. You MUST include "area_name" when the user mentions a location/room/area. Do NOT put this information only in the interpretation — it must be in the action fields.
+4. Items in the context may appear as strings ("Item Name" or "Item Name (xN)") or objects with id/name/quantity. Match item names regardless of format.
+5. If a user references a bin that only appears in "other_bins" (id+name only), include it in your response. The system will retry with full details if needed.
 
 Example responses:
 {"actions":[{"type":"remove_items","bin_id":"abc","bin_name":"Tools","items":["Hammer"]},{"type":"add_items","bin_id":"def","bin_name":"Garage","items":["Hammer"]}],"interpretation":"Move hammer from Tools to Garage"}
-{"actions":[{"type":"create_bin","name":"Holiday Lights","area_name":"Garage","items":["LED string lights","Extension cord","Light clips"],"tags":["seasonal","holiday"]}],"interpretation":"Create a Holiday Lights bin in the Garage with 3 items."}${tagBlock}${HARDENING_INSTRUCTION}`;
+{"actions":[{"type":"create_bin","name":"Holiday Lights","area_name":"Garage","items":["LED string lights","Extension cord","Light clips"],"tags":["seasonal","holiday"]}],"interpretation":"Create a Holiday Lights bin in the Garage with 3 items."}${HARDENING_INSTRUCTION}`;
 }
 
 export function buildUserMessage(request: CommandRequest): string {
-  const { bins, areas, trash_bins } = request.context;
-  return `Command: ${sanitizeForPrompt(request.text)}
+  const { bins, other_bins, areas, trash_bins } = request.context;
+
+  const existingTags = [...new Set(bins.flatMap((b) => b.tags))].sort();
+  const tagBlock = buildTagBlock(existingTags);
+  const tagSection = tagBlock ? `\n${tagBlock}\n` : '';
+
+  const data: Record<string, unknown> = { bins, areas, trash_bins };
+  if (other_bins?.length) data.other_bins = other_bins;
+  return `Command: ${sanitizeForPrompt(request.text)}${tagSection}
 
 <user_data type="inventory" trust="none">
-${JSON.stringify({ bins, areas, trash_bins })}
+${JSON.stringify(data)}
 </user_data>`;
 }
 
@@ -120,9 +125,9 @@ ${JSON.stringify({ bins, areas, trash_bins })}
  * Build a unified system prompt that handles both commands AND queries.
  * The AI returns `{ actions, interpretation }` for commands or `{ answer, matches }` for queries.
  */
-export function buildUnifiedSystemPrompt(request: CommandRequest, customCommandPrompt?: string, customQueryPrompt?: string, isDemoUser?: boolean, isScoped?: boolean): string {
+export function buildUnifiedSystemPrompt(availableColors: string[], availableIcons: string[], customCommandPrompt?: string, customQueryPrompt?: string, isDemoUser?: boolean, isScoped?: boolean): string {
   // Build the command half (action types, rules, examples)
-  const commandPrompt = buildSystemPrompt(request, customCommandPrompt, isDemoUser);
+  const commandPrompt = buildSystemPrompt(availableColors, availableIcons, customCommandPrompt, isDemoUser);
 
   const defaultQueryBase = 'You are also an inventory search assistant. When the user asks a question (rather than giving a command), search through the inventory context and answer their question.';
   const queryBase = resolvePrompt(defaultQueryBase, customQueryPrompt, isDemoUser);

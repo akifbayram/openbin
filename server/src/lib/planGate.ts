@@ -315,6 +315,12 @@ export async function checkAndIncrementAiCredits(userId: string): Promise<AiCred
   return { allowed: true, used: ai_credits_used + 1, limit, resetsAt: ai_credits_reset_at };
 }
 
+/** Decrement ai_credits_used by 1 (floor 0). No-op on self-hosted or unlimited plans. */
+export async function refundAiCredit(userId: string): Promise<void> {
+  if (config.selfHosted) return;
+  await query('UPDATE users SET ai_credits_used = ai_credits_used - 1 WHERE id = $1 AND ai_credits_used > 0', [userId]);
+}
+
 export async function getAiCredits(userId: string): Promise<AiCreditInfo> {
   if (config.selfHosted) return { used: 0, limit: 0, resetsAt: null };
 

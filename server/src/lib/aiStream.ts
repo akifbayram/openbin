@@ -29,23 +29,16 @@ export function initSseResponse(res: Response): (data: object) => void {
 }
 
 /**
- * Stream AI output as SSE to an Express response.
+ * Core streaming logic: stream AI output to an event writer.
  *
- * When `opts.schema` is provided, uses Output.object() to constrain the model
- * to valid JSON matching the given Zod schema.
- *
- * Protocol: each SSE `data:` event carries one of:
- *   { type: 'delta', text: string }   — incremental text chunk
- *   { type: 'done', text: string }    — full accumulated text on finish
- *   { type: 'error', message: string, code: string } — error event
+ * Returns the final cleaned text on success, or null on error/truncation.
+ * The caller is responsible for sending `done`/managing the SSE lifecycle.
  */
-export async function pipeAiStreamToResponse(
-  res: Response,
+export async function streamAiToWriter(
+  writeEvent: (data: object) => void,
   model: LanguageModel,
-  opts: StreamOptions
-): Promise<void> {
-  const writeEvent = initSseResponse(res);
-
+  opts: StreamOptions,
+): Promise<string | null> {
   try {
     const streamResult = streamText({
       model,
@@ -65,8 +58,6 @@ export async function pipeAiStreamToResponse(
     let finalText = await streamResult.text;
 
     // When structured output is requested, prefer the validated output object.
-    // The text stream may be truncated (e.g. max tokens reached) while the
-    // SDK's output channel still provides the complete, validated object.
     if (opts.schema) {
       try {
         const output = await streamResult.output;
@@ -76,17 +67,22 @@ export async function pipeAiStreamToResponse(
       }
     }
 
-    // Guard against truncated JSON (e.g. model hit max tokens)
+    // Guard against truncated JSON
     if (finalText.trim()) {
+      let cleaned = finalText.trim();
+      const fenced = cleaned.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
+      if (fenced) cleaned = fenced[1].trim();
+
       try {
-        JSON.parse(finalText);
+        JSON.parse(cleaned);
+        finalText = cleaned;
       } catch {
         writeEvent({ type: 'error', message: 'AI response was cut short — try a shorter query or increase max tokens', code: 'TRUNCATED_RESPONSE' });
-        return;
+        return null;
       }
     }
 
-    writeEvent({ type: 'done', text: finalText });
+    return finalText;
   } catch (err) {
     const mapped = mapSdkError(err);
     const safeMessage = toSafeAiMessage(mapped) || 'Provider error — check server logs';
@@ -95,6 +91,31 @@ export async function pipeAiStreamToResponse(
       log.error('Stream error:', safeErr);
     }
     writeEvent({ type: 'error', message: safeMessage, code: mapped.code });
+    return null;
+  }
+}
+
+/**
+ * Stream AI output as SSE to an Express response.
+ *
+ * Convenience wrapper around streamAiToWriter that manages the full SSE
+ * lifecycle (headers, done event, res.end).
+ *
+ * Protocol: each SSE `data:` event carries one of:
+ *   { type: 'delta', text: string }   — incremental text chunk
+ *   { type: 'done', text: string }    — full accumulated text on finish
+ *   { type: 'error', message: string, code: string } — error event
+ */
+export async function pipeAiStreamToResponse(
+  res: Response,
+  model: LanguageModel,
+  opts: StreamOptions
+): Promise<string | null> {
+  const writeEvent = initSseResponse(res);
+  try {
+    const result = await streamAiToWriter(writeEvent, model, opts);
+    if (result) writeEvent({ type: 'done', text: result });
+    return result;
   } finally {
     res.end();
   }
