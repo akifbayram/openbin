@@ -19,6 +19,7 @@ export const EMAIL_TYPES = [
   'subscription_confirmed', 'subscription_expired', 'subscription_expiring',
   'explore_features', 'post_trial_early', 'post_trial_late',
   'password_reset', 'downgrade_impact',
+  'inactivity_warning_30d', 'inactivity_warning_7d',
 ] as const;
 
 export type EmailType = (typeof EMAIL_TYPES)[number];
