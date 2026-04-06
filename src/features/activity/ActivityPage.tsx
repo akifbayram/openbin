@@ -34,8 +34,8 @@ export function ActivityPage() {
   }
 
   return (
-    <>
-      <div className="mb-4">
+    <div className="flex flex-col gap-4">
+      <div>
         <h2 className="text-[20px] font-bold text-[var(--text-primary)]">Activity Log</h2>
         <p className="text-[13px] text-[var(--text-tertiary)]">View changes and actions across your location.</p>
       </div>
@@ -99,6 +99,6 @@ export function ActivityPage() {
           />
         )}
       </Crossfade>
-    </>
+    </div>
   );
 }
