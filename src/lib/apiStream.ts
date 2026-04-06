@@ -17,7 +17,12 @@ export interface StreamErrorEvent {
   code: string;
 }
 
-export type StreamEvent = StreamDeltaEvent | StreamDoneEvent | StreamErrorEvent;
+export interface StreamRetryEvent {
+  type: 'retry';
+  attempt: number;
+}
+
+export type StreamEvent = StreamDeltaEvent | StreamDoneEvent | StreamErrorEvent | StreamRetryEvent;
 
 /**
  * Consume a server-sent event stream from an AI streaming endpoint.

@@ -14,6 +14,7 @@ import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, signToken } from '../middleware/auth.js';
+import { getMaintenanceMessage, isMaintenanceMode } from '../middleware/maintenance.js';
 
 import { getRegistrationMode } from './admin.js';
 
@@ -33,6 +34,23 @@ router.get('/status', async (_req, res) => {
   if (config.qrPayloadMode === 'url' && config.baseUrl) {
     body.baseUrl = config.baseUrl;
   }
+
+  // Include active announcement banner if any
+  try {
+    const announcementResult = await query<{ id: string; text: string; type: string; dismissible: number | boolean }>(
+      "SELECT id, text, type, dismissible FROM announcements WHERE active = TRUE OR active = 1 ORDER BY created_at DESC LIMIT 1",
+    );
+    if (announcementResult.rows.length > 0) {
+      const a = announcementResult.rows[0];
+      body.announcement = { id: a.id, text: a.text, type: a.type, dismissible: !!a.dismissible };
+    }
+  } catch { /* ignore — table may not exist yet */ }
+
+  // Include maintenance mode status
+  if (isMaintenanceMode()) {
+    body.maintenance = { enabled: true, message: getMaintenanceMessage() };
+  }
+
   res.json(body);
 });
 
@@ -229,9 +247,12 @@ router.post('/login', asyncHandler(async (req, res) => {
   }
 
   const result = await query(
-    'SELECT id, username, password_hash, display_name, email, avatar_path, active_location_id, deleted_at, is_admin FROM users WHERE username = $1',
+    'SELECT id, username, password_hash, display_name, email, avatar_path, active_location_id, deleted_at, suspended_at, token_version, is_admin FROM users WHERE username = $1',
     [username.toLowerCase()]
   );
+
+  const ip = req.ip || req.socket.remoteAddress || null;
+  const ua = req.headers['user-agent'] || null;
 
   if (result.rows.length === 0) {
     // Constant-time rejection — prevent timing-based username enumeration
@@ -244,14 +265,24 @@ router.post('/login', asyncHandler(async (req, res) => {
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
     log.warn(`Login failed: bad password for user "${username}"`);
+    // Record failed login
+    query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 0)', [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
     throw new UnauthorizedError('Invalid username or password');
   }
   if (user.deleted_at) {
     log.warn(`Login failed: deleted user "${username}"`);
     throw new UnauthorizedError('Invalid username or password');
   }
+  if (user.suspended_at) {
+    log.warn(`Login failed: suspended user "${username}"`);
+    query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 0)', [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
+    throw new ForbiddenError('This account has been suspended');
+  }
 
-  const token = await signToken({ id: user.id, username: user.username });
+  // Record successful login
+  query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 1)', [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
+
+  const token = await signToken({ id: user.id, username: user.username }, user.token_version ?? 0);
   const refresh = await createRefreshToken(user.id);
 
   setAccessTokenCookie(res, token);
@@ -314,18 +345,22 @@ router.post('/refresh', asyncHandler(async (req, res) => {
     throw new UnauthorizedError('Invalid or expired refresh token');
   }
 
-  // Look up user for new access token (reject soft-deleted users)
-  const userResult = await query<{ id: string; username: string; deleted_at: string | null }>(
-    'SELECT id, username, deleted_at FROM users WHERE id = $1',
+  // Look up user for new access token (reject soft-deleted/suspended users)
+  const userResult = await query<{ id: string; username: string; deleted_at: string | null; suspended_at: string | null; token_version: number }>(
+    'SELECT id, username, deleted_at, suspended_at, token_version FROM users WHERE id = $1',
     [rotated.userId],
   );
   if (userResult.rows.length === 0 || userResult.rows[0].deleted_at !== null) {
     clearAuthCookies(res);
     throw new UnauthorizedError('User not found');
   }
+  if (userResult.rows[0].suspended_at !== null) {
+    clearAuthCookies(res);
+    throw new ForbiddenError('This account has been suspended');
+  }
 
   const user = userResult.rows[0];
-  const accessToken = await signToken({ id: user.id, username: user.username });
+  const accessToken = await signToken({ id: user.id, username: user.username }, user.token_version ?? 0);
 
   setAccessTokenCookie(res, accessToken);
   setRefreshTokenCookie(res, rotated.rawToken);

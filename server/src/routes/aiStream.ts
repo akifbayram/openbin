@@ -2,22 +2,26 @@ import { Router } from 'express';
 import { createPinnedFetch, validateEndpointUrl } from '../lib/aiCaller.js';
 import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
-import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildCorrectionPrompt, buildReanalysisPrompt, buildReanalysisUserContent, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from '../lib/aiProviders.js';
+import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildContextPreamble, buildCorrectionPrompt, buildReanalysisPrompt, buildReanalysisUserContent, buildTagBlock, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { resolvePrompt, sanitizeForPrompt } from '../lib/aiSanitize.js';
 import { QueryResultSchema } from '../lib/aiSchemas.js';
 import type { TaskType, UserAiSettings } from '../lib/aiSettings.js';
 import { getConfigForTask, getUserAiSettings } from '../lib/aiSettings.js';
-import { initSseResponse, pipeAiStreamToResponse } from '../lib/aiStream.js';
+import { initSseResponse, pipeAiStreamToResponse, streamAiToWriter } from '../lib/aiStream.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg, buildUnifiedSystemPrompt } from '../lib/commandParser.js';
 import { config, isDemoUser } from '../lib/config.js';
 import { fetchCustomFieldDefs } from '../lib/customFieldHelpers.js';
+import { ValidationError } from '../lib/httpErrors.js';
+import { classifyIntent } from '../lib/intentClassifier.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
+import { refundAiCredit } from '../lib/planGate.js';
 import { aiRateLimiters } from '../lib/rateLimiters.js';
 import { createSdkModel } from '../lib/sdkProviderFactory.js';
 import { buildPrompt as buildStructurePrompt, STRUCTURE_TEXT_TOKENS } from '../lib/structureText.js';
+import { resolveTaskConfig, TASK_GROUP_MAP } from '../lib/taskRouting.js';
 import { demoMemoryPhotoUpload, memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
 import { demoConnectionLimiter, isDemoUser as isDemoConn } from '../middleware/demoConnectionLimiter.js';
@@ -27,7 +31,6 @@ import { checkAiCredits, requireAiAccess } from '../middleware/requirePlan.js';
 const streamRouter = Router();
 streamRouter.use(authenticate);
 
-/** Fetch existing tags and custom field definitions for a location (used by analysis/correction routes). */
 async function fetchLocationAiMeta(locationId: string | undefined) {
   const [existingTags, customFieldDefs] = await Promise.all([
     locationId ? fetchExistingTags(locationId) : Promise.resolve(undefined),
@@ -36,7 +39,6 @@ async function fetchLocationAiMeta(locationId: string | undefined) {
   return { existingTags, customFieldDefs };
 }
 
-/** Stream a JSON object as fake SSE chunks (mock mode). */
 async function sendMockJsonStream(res: import('express').Response, data: object): Promise<void> {
   const writeEvent = initSseResponse(res);
   const json = JSON.stringify(data);
@@ -49,10 +51,12 @@ async function sendMockJsonStream(res: import('express').Response, data: object)
   res.end();
 }
 
-/** Resolve a user's AI model (settings + SSRF check + SDK model). */
 async function resolveUserModel(userId: string, task: TaskType, isDemoUser = false) {
   const settings = await getUserAiSettings(userId);
-  const taskConfig = getConfigForTask(settings, task);
+  const group = TASK_GROUP_MAP[task];
+  const taskConfig = group
+    ? await resolveTaskConfig(userId, group, settings.config)
+    : getConfigForTask(settings, task);
   const resolvedIps = taskConfig.endpointUrl
     ? await validateEndpointUrl(taskConfig.endpointUrl, isDemoUser)
     : undefined;
@@ -61,7 +65,6 @@ async function resolveUserModel(userId: string, task: TaskType, isDemoUser = fal
   return { settings, model };
 }
 
-/** Build common StreamOptions from user AI settings. */
 function streamOpts(settings: UserAiSettings, overrides?: { maxTokens?: number; temperature?: number }) {
   return {
     maxTokens: overrides?.maxTokens ?? settings.max_tokens ?? 4096,
@@ -71,12 +74,17 @@ function streamOpts(settings: UserAiSettings, overrides?: { maxTokens?: number; 
   };
 }
 
-/** Validate and sanitize optional binIds from request body. */
+function assertBinsFound(binIds: string[] | undefined, bins: { length: number }): void {
+  if (binIds?.length && bins.length === 0) {
+    throw new ValidationError('No matching bins found for the provided IDs');
+  }
+}
+
 function validateBinIds(binIds: unknown): string[] | undefined {
   if (!binIds) return undefined;
   if (!Array.isArray(binIds)) return undefined;
   const valid = binIds
-    .filter((id): id is string => typeof id === 'string' && /^[a-zA-Z0-9]{1,10}$/.test(id))
+    .filter((id): id is string => typeof id === 'string' && /^[a-zA-Z0-9-]{1,36}$/.test(id))
     .slice(0, 100);
   return valid.length > 0 ? valid : undefined;
 }
@@ -87,7 +95,7 @@ streamRouter.post('/query/stream', ...aiRateLimiters, requireAiAccess(), checkAi
   const { locationId } = req.body;
   const [{ settings, model }, context] = await Promise.all([
     resolveUserModel(req.user!.id, 'query', isDemoUser(req)),
-    buildInventoryContext(locationId, req.user!.id),
+    buildInventoryContext(locationId, req.user!.id, undefined, question),
   ]);
 
   await pipeAiStreamToResponse(res, model, {
@@ -104,7 +112,7 @@ streamRouter.post('/command/stream', ...aiRateLimiters, requireAiAccess(), check
   const { locationId } = req.body;
   const [{ settings, model }, context] = await Promise.all([
     resolveUserModel(req.user!.id, 'command', isDemoUser(req)),
-    buildCommandContext(locationId, req.user!.id),
+    buildCommandContext(locationId, req.user!.id, undefined, text),
   ]);
   const request: CommandRequest = { text, context };
 
@@ -112,7 +120,7 @@ streamRouter.post('/command/stream', ...aiRateLimiters, requireAiAccess(), check
   // reliable JSON, and structured-output mode causes providers like Gemini
   // to aggressively omit optional fields (items, area_name in create_bin).
   await pipeAiStreamToResponse(res, model, {
-    system: buildCommandSysPrompt(request, settings.command_prompt ?? undefined, isDemoUser(req)),
+    system: buildCommandSysPrompt(context.availableColors, context.availableIcons, settings.command_prompt ?? undefined, isDemoUser(req)),
     userContent: buildCommandUserMsg(request),
     ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
   });
@@ -123,25 +131,43 @@ streamRouter.post('/ask/stream', ...aiRateLimiters, requireAiAccess(), checkAiCr
   const text = validateTextInput(req.body.text, 'text');
   const { locationId, binIds: rawBinIds } = req.body;
   const binIds = validateBinIds(rawBinIds);
-
-  const [{ settings, model }, context] = await Promise.all([
-    resolveUserModel(req.user!.id, 'command', isDemoUser(req)),
-    buildCommandContext(locationId, req.user!.id, binIds),
-  ]);
-
-  if (binIds?.length && context.bins.length === 0) {
-    const { ValidationError } = await import('../lib/httpErrors.js');
-    throw new ValidationError('No matching bins found for the provided IDs');
-  }
-
   const isScoped = (binIds?.length ?? 0) > 0;
-  const request: CommandRequest = { text, context };
 
-  await pipeAiStreamToResponse(res, model, {
-    system: buildUnifiedSystemPrompt(request, settings.command_prompt ?? undefined, settings.query_prompt ?? undefined, isDemoUser(req), isScoped),
-    userContent: buildCommandUserMsg(request),
-    ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
-  });
+  const scopeNote = isScoped
+    ? '\nSELECTION SCOPE: The user selected specific bins. The inventory context below contains ONLY these bins. Apply actions or answer based only on the bins provided.\n'
+    : '';
+  const intent = classifyIntent(text);
+
+  if (intent === 'query') {
+    const [{ settings, model }, queryContext] = await Promise.all([
+      resolveUserModel(req.user!.id, 'query', isDemoUser(req)),
+      buildInventoryContext(locationId, req.user!.id, binIds, text),
+    ]);
+    assertBinsFound(binIds, queryContext.bins);
+
+    await pipeAiStreamToResponse(res, model, {
+      schema: QueryResultSchema,
+      system: buildQuerySysPrompt(settings.query_prompt ?? undefined, isDemoUser(req)),
+      userContent: buildQueryUserMsg(`${scopeNote}${text}`, queryContext),
+      ...streamOpts(settings, { maxTokens: 4096 }),
+    });
+  } else {
+    const [{ settings, model }, context] = await Promise.all([
+      resolveUserModel(req.user!.id, 'command', isDemoUser(req)),
+      buildCommandContext(locationId, req.user!.id, binIds, text),
+    ]);
+    assertBinsFound(binIds, context.bins);
+
+    const system = intent === 'command'
+      ? buildCommandSysPrompt(context.availableColors, context.availableIcons, settings.command_prompt ?? undefined, isDemoUser(req))
+      : buildUnifiedSystemPrompt(context.availableColors, context.availableIcons, settings.command_prompt ?? undefined, settings.query_prompt ?? undefined, isDemoUser(req), isScoped);
+    const request: CommandRequest = { text: intent === 'command' ? `${scopeNote}${text}` : text, context };
+    await pipeAiStreamToResponse(res, model, {
+      system,
+      userContent: buildCommandUserMsg(request),
+      ...streamOpts(settings, { maxTokens: 2500, temperature: 0.2 }),
+    });
+  }
 }));
 
 // POST /api/ai/structure-text/stream
@@ -211,9 +237,10 @@ streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnaly
     mimeType: f.mimetype,
   }));
 
+  const preamble = buildContextPreamble(existingTags, customFieldDefs);
   await pipeAiStreamToResponse(res, model, {
-    system: buildAnalysisPrompt(existingTags, settings.custom_prompt, customFieldDefs, isDemoUser(req)),
-    userContent: [...imageParts, { type: 'text' as const, text: buildAnalysisUserText(allFiles.length) }],
+    system: buildAnalysisPrompt(settings.custom_prompt, isDemoUser(req)),
+    userContent: [...imageParts, { type: 'text' as const, text: preamble + buildAnalysisUserText(allFiles.length) }],
     ...streamOpts(settings, { maxTokens: allFiles.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE }),
   });
 }));
@@ -251,9 +278,10 @@ streamRouter.post('/analyze/stream', ...aiRateLimiters, requireAiAccess(), check
     mimeType: img.mimeType,
   }));
 
+  const preambleStored = buildContextPreamble(loaded.existingTags, loaded.customFieldDefs);
   await pipeAiStreamToResponse(res, model, {
-    system: buildAnalysisPrompt(loaded.existingTags, settings.custom_prompt, loaded.customFieldDefs, isDemoUser(req)),
-    userContent: [...imageParts, { type: 'text' as const, text: buildAnalysisUserText(loaded.images.length) }],
+    system: buildAnalysisPrompt(settings.custom_prompt, isDemoUser(req)),
+    userContent: [...imageParts, { type: 'text' as const, text: preambleStored + buildAnalysisUserText(loaded.images.length) }],
     ...streamOpts(settings, { maxTokens: loaded.images.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE }),
   });
 }));
@@ -292,10 +320,11 @@ streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), check
   }
   const { existingTags, customFieldDefs } = await fetchLocationAiMeta(locationId);
 
-  const system = buildCorrectionPrompt(existingTags, customFieldDefs);
+  const system = buildCorrectionPrompt();
 
+  const correctionPreamble = buildContextPreamble(existingTags, customFieldDefs);
   const sanitizedCorrection = sanitizeForPrompt(correctionText);
-  const userMessage = `<user_data type="previous_result" trust="none">\n${JSON.stringify(safePrevious, null, 2)}\n</user_data>\n\n<user_data type="correction" trust="none">\n${sanitizedCorrection}\n</user_data>`;
+  const userMessage = `${correctionPreamble}<user_data type="previous_result" trust="none">\n${JSON.stringify(safePrevious, null, 2)}\n</user_data>\n\n<user_data type="correction" trust="none">\n${sanitizedCorrection}\n</user_data>`;
 
   await pipeAiStreamToResponse(res, model, {
     system,
@@ -382,9 +411,10 @@ streamRouter.post('/reanalyze/stream', ...aiRateLimiters, requireAiAccess(), che
 
   const safePrevious = sanitizePreviousResult(previousResult);
 
+  const reanalyzePreamble = buildContextPreamble(loaded.existingTags, loaded.customFieldDefs);
   await pipeAiStreamToResponse(res, model, {
-    system: buildReanalysisPrompt(loaded.existingTags, loaded.customFieldDefs),
-    userContent: buildReanalysisUserContent(safePrevious, imageParts),
+    system: buildReanalysisPrompt(),
+    userContent: buildReanalysisUserContent(safePrevious, imageParts, reanalyzePreamble),
     ...streamOpts(settings, { maxTokens: loaded.images.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE }),
   });
 }));
@@ -440,9 +470,10 @@ streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
 
   const safePrevious = sanitizePreviousResult(previousResult);
 
+  const reanalyzeImagePreamble = buildContextPreamble(existingTags, customFieldDefs);
   await pipeAiStreamToResponse(res, model, {
-    system: buildReanalysisPrompt(existingTags, customFieldDefs),
-    userContent: buildReanalysisUserContent(safePrevious, imageParts),
+    system: buildReanalysisPrompt(),
+    userContent: buildReanalysisUserContent(safePrevious, imageParts, reanalyzeImagePreamble),
     ...streamOpts(settings, { maxTokens: allFiles.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE }),
   });
 }));
@@ -511,14 +542,11 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requireAiAccess(), ch
 
   const notesInstruction = userNotes?.trim() ? `Additional user guidance: ${sanitizeForPrompt(userNotes.trim())}` : '';
 
-  // Extract unique tags from input bins for reuse guidance
   const existingTags = [...new Set(
     inputBins.flatMap((b: { tags?: string[] }) => b.tags ?? [])
   )].sort();
-
-  const tagBlock = existingTags.length > 0
-    ? `EXISTING TAGS from these bins: [${existingTags.join(', ')}]\nYou MUST reuse these tags whenever they are even loosely relevant. Only create a new tag when no existing tag covers the category.`
-    : '';
+  const reorgTagBlock = buildTagBlock(existingTags);
+  const reorgTagSection = reorgTagBlock ? `${reorgTagBlock}\n\n` : '';
 
   const system = basePrompt
     .replace('{max_bins_instruction}', maxBinsInstruction)
@@ -530,13 +558,14 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requireAiAccess(), ch
     .replace('{outliers_instruction}', outliersInstruction)
     .replace('{items_per_bin_instruction}', itemsPerBinInstruction)
     .replace('{notes_instruction}', notesInstruction)
-    .replace('{available_tags}', tagBlock);
+    .replace('{available_tags}', '');
 
-  // Build user message: list of bins with items (sanitized)
+  // Build user message: list of bins with items (sanitized), tag context prepended
   const binDescriptions = inputBins.map((b: { name: string; items: string[] }) =>
     `- ${sanitizeForPrompt(b.name)}: ${b.items.length > 0 ? b.items.map((i: string) => sanitizeForPrompt(i)).join(', ') : '(empty)'}`
   ).join('\n');
-  const userContent = `Here are the bins to reorganize:\n\n${binDescriptions}`;
+  const totalInputItems = inputBins.reduce((sum: number, b: { items: string[] }) => sum + b.items.length, 0);
+  const userContent = `${reorgTagSection}Here are the bins to reorganize (${totalInputItems} items total):\n\n${binDescriptions}\n\nIMPORTANT: The input contains exactly ${totalInputItems} items. Your output MUST contain exactly ${totalInputItems} items total across all bins.`;
 
   if (config.aiMock) {
     await sendMockJsonStream(res, {
@@ -546,11 +575,44 @@ streamRouter.post('/reorganize/stream', ...aiRateLimiters, requireAiAccess(), ch
     return;
   }
 
-  await pipeAiStreamToResponse(res, model, {
-    system,
-    userContent,
-    ...streamOpts(settings, { temperature: 0.3, maxTokens: 16000 }),
-  });
+  // Retry up to 3 times if the AI drops or duplicates items
+  const MAX_ATTEMPTS = 3;
+  const writeEvent = initSseResponse(res);
+  const sOpts = streamOpts(settings, { temperature: 0.3, maxTokens: 16000 });
+  let finalText: string | null = null;
+  let mismatch = false;
+
+  try {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      if (attempt > 1) writeEvent({ type: 'retry', attempt });
+
+      finalText = await streamAiToWriter(writeEvent, model, {
+        system,
+        userContent,
+        ...sOpts,
+      });
+
+      if (!finalText) break; // error or truncation — stop retrying
+
+      try {
+        const parsed = JSON.parse(finalText);
+        const outputItems = Array.isArray(parsed.bins)
+          ? parsed.bins.reduce((sum: number, b: { items?: string[] }) => sum + (b.items?.length ?? 0), 0)
+          : 0;
+        mismatch = outputItems !== totalInputItems;
+      } catch {
+        finalText = null;
+        break;
+      }
+
+      if (!mismatch) break; // counts match — done
+    }
+
+    if (finalText) writeEvent({ type: 'done', text: finalText });
+    if (mismatch) await refundAiCredit(req.user!.id);
+  } finally {
+    res.end();
+  }
 }));
 
 export { streamRouter };

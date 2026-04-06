@@ -25,7 +25,7 @@ export interface ReorgOptions {
 
 export function useReorganize() {
   const { activeLocationId } = useAuth();
-  const { result, isStreaming, error, partialText, stream, cancel, clear } =
+  const { result, isStreaming, error, partialText, retryCount, stream, cancel, clear } =
     useAiStream<ReorgResponse>('/api/ai/reorganize/stream', 'Failed to generate reorganization');
   const [isApplying, setIsApplying] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
@@ -93,6 +93,7 @@ export function useReorganize() {
     error,
     applyError,
     isApplying,
+    retryCount,
     startReorg,
     apply,
     cancel,

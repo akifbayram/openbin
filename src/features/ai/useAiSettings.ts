@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
-import type { AiProvider, AiSettings } from '@/types';
+import type { AiProvider, AiSettings, AiTaskGroup } from '@/types';
 
 export function useAiSettings() {
   const { token } = useAuth();
@@ -73,7 +73,6 @@ export async function saveAiSettings(opts: {
   maxTokens?: number | null;
   topP?: number | null;
   requestTimeout?: number | null;
-  taskModelOverrides?: Partial<Record<string, string>> | null;
 }): Promise<AiSettings> {
   const result = await apiFetch<AiSettings>('/api/ai/settings', {
     method: 'PUT',
@@ -98,4 +97,20 @@ export async function testAiConnection(opts: {
     method: 'POST',
     body: opts,
   });
+}
+
+export async function saveTaskOverride(
+  taskGroup: AiTaskGroup,
+  override: { provider?: string | null; model?: string | null; endpointUrl?: string | null },
+): Promise<void> {
+  await apiFetch(`/api/ai/task-overrides/${taskGroup}`, {
+    method: 'PUT',
+    body: override,
+  });
+  notifyAiSettingsChanged();
+}
+
+export async function deleteTaskOverride(taskGroup: AiTaskGroup): Promise<void> {
+  await apiFetch(`/api/ai/task-overrides/${taskGroup}`, { method: 'DELETE' });
+  notifyAiSettingsChanged();
 }

@@ -145,6 +145,22 @@ export const config = Object.freeze({
   aiModel: process.env.AI_MODEL || null,
   aiEndpointUrl: process.env.AI_ENDPOINT_URL || null,
 
+  // Per-task-group AI overrides (each field cascades independently to the default AI_* values)
+  aiVisionProvider: (process.env.AI_VISION_PROVIDER as AiProviderType) || null,
+  aiVisionApiKey: process.env.AI_VISION_API_KEY || null,
+  aiVisionModel: process.env.AI_VISION_MODEL || null,
+  aiVisionEndpointUrl: process.env.AI_VISION_ENDPOINT_URL || null,
+
+  aiQuickTextProvider: (process.env.AI_QUICK_TEXT_PROVIDER as AiProviderType) || null,
+  aiQuickTextApiKey: process.env.AI_QUICK_TEXT_API_KEY || null,
+  aiQuickTextModel: process.env.AI_QUICK_TEXT_MODEL || null,
+  aiQuickTextEndpointUrl: process.env.AI_QUICK_TEXT_ENDPOINT_URL || null,
+
+  aiDeepTextProvider: (process.env.AI_DEEP_TEXT_PROVIDER as AiProviderType) || null,
+  aiDeepTextApiKey: process.env.AI_DEEP_TEXT_API_KEY || null,
+  aiDeepTextModel: process.env.AI_DEEP_TEXT_MODEL || null,
+  aiDeepTextEndpointUrl: process.env.AI_DEEP_TEXT_ENDPOINT_URL || null,
+
   // Backup
   backupEnabled: parseBool(process.env.BACKUP_ENABLED, false),
   backupInterval: process.env.BACKUP_INTERVAL || 'daily',
@@ -223,6 +239,46 @@ export function getEnvAiConfig(): AiProviderConfig | null {
     model: config.aiModel!,
     endpointUrl: config.aiEndpointUrl,
   };
+}
+
+export type AiTaskGroup = 'vision' | 'quickText' | 'deepText';
+export const AI_TASK_GROUPS: AiTaskGroup[] = ['vision', 'quickText', 'deepText'];
+
+interface EnvGroupOverride {
+  provider: AiProviderType | null;
+  apiKey: string | null;
+  model: string | null;
+  endpointUrl: string | null;
+}
+
+const ENV_GROUP_MAP: Record<AiTaskGroup, EnvGroupOverride> = {
+  vision: {
+    provider: config.aiVisionProvider,
+    apiKey: config.aiVisionApiKey,
+    model: config.aiVisionModel,
+    endpointUrl: config.aiVisionEndpointUrl,
+  },
+  quickText: {
+    provider: config.aiQuickTextProvider,
+    apiKey: config.aiQuickTextApiKey,
+    model: config.aiQuickTextModel,
+    endpointUrl: config.aiQuickTextEndpointUrl,
+  },
+  deepText: {
+    provider: config.aiDeepTextProvider,
+    apiKey: config.aiDeepTextApiKey,
+    model: config.aiDeepTextModel,
+    endpointUrl: config.aiDeepTextEndpointUrl,
+  },
+};
+
+export function getEnvGroupOverride(group: AiTaskGroup): EnvGroupOverride {
+  return ENV_GROUP_MAP[group];
+}
+
+export function isGroupEnvLocked(group: AiTaskGroup): boolean {
+  const o = ENV_GROUP_MAP[group];
+  return !!(o.provider || o.apiKey || o.model || o.endpointUrl);
 }
 
 /** Returns true if the request user is in the DEMO_USERNAMES list. */

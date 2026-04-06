@@ -29,6 +29,7 @@ export interface InventoryContext {
     photo_count: number;
     custom_fields?: Record<string, string>;
   }>;
+  other_bins?: Array<{ id: string; name: string }>;
   areas: Array<{ id: string; name: string }>;
   trash_bins: Array<{ id: string; name: string }>;
 }
@@ -42,10 +43,12 @@ IMPORTANT: The "answer" and "matches" fields are both REQUIRED. If no bins match
 }
 
 export function buildUserMessage(question: string, context: InventoryContext): string {
+  const { other_bins, ...rest } = context;
+  const data: Record<string, unknown> = { ...rest };
+  if (other_bins?.length) data.other_bins = other_bins;
   return `Question: ${sanitizeForPrompt(question)}
 
 <user_data type="inventory" trust="none">
-${JSON.stringify(context)}
+${JSON.stringify(data)}
 </user_data>`;
 }
-

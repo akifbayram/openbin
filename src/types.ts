@@ -209,6 +209,15 @@ export type ExportData = ExportDataV2;
 
 export type AiProvider = 'openai' | 'anthropic' | 'gemini' | 'openai-compatible';
 
+export type AiTaskGroup = 'vision' | 'quickText' | 'deepText';
+
+export interface AiTaskOverride {
+  provider: AiProvider | null;
+  model: string | null;
+  endpointUrl: string | null;
+  source: 'env' | 'user';
+}
+
 export interface AiSettings {
   id: string;
   provider: AiProvider;
@@ -224,13 +233,14 @@ export interface AiSettings {
   maxTokens: number | null;
   topP: number | null;
   requestTimeout: number | null;
-  taskModelOverrides?: Partial<Record<string, string>> | null;
   providerConfigs?: Partial<Record<AiProvider, {
     apiKey: string;
     model: string;
     endpointUrl: string | null;
   }>>;
   source?: 'user' | 'env';
+  taskOverrides?: Partial<Record<AiTaskGroup, AiTaskOverride | null>>;
+  taskOverridesEnvLocked?: AiTaskGroup[];
 }
 
 export interface ApiKey {

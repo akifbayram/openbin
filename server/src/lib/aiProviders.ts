@@ -44,47 +44,54 @@ export interface ImageInput {
   mimeType: string;
 }
 
-function buildTagBlock(existingTags?: string[]): string {
+/** Build a tag-reuse instruction block from existing tags. */
+export function buildTagBlock(existingTags?: string[]): string {
   if (!existingTags || existingTags.length === 0) return '';
   return `EXISTING TAGS in this inventory: [${existingTags.join(', ')}]
 You MUST use tags from this list whenever they are even loosely relevant. Do NOT create synonyms, abbreviations, or variations of existing tags (e.g., if "tools" exists, never output "tool", "tooling", or "hand-tools"). Only create a new tag when the bin's contents represent a category not covered by ANY existing tag. New tags should be rare.`;
 }
 
-function appendCustomFieldsDef(prompt: string, customFieldDefs?: CustomFieldDef[]): string {
-  if (!customFieldDefs || customFieldDefs.length === 0) return prompt;
+function buildCustomFieldsBlock(customFieldDefs?: CustomFieldDef[]): string {
+  if (!customFieldDefs || customFieldDefs.length === 0) return '';
   const fieldList = customFieldDefs.map((f) => `"${f.name}" (id: ${f.id})`).join(', ');
-  return `${prompt}\n\nCUSTOM FIELDS defined for this location: [${fieldList}]
+  return `CUSTOM FIELDS defined for this location: [${fieldList}]
 If any of these fields are relevant to the bin's contents, include a "customFields" object in your response mapping field IDs to suggested values. Only include fields where you can provide a meaningful value.`;
 }
 
-function injectTagBlock(basePrompt: string, tagBlock: string): string {
-  if (!tagBlock) return basePrompt.replace(/\{available_tags\}/g, '');
-  if (basePrompt.includes('{available_tags}')) return basePrompt.replace(/\{available_tags\}/g, tagBlock);
-  return `${basePrompt}\n\n${tagBlock}`;
+/** Build a user-message preamble with per-request tag and custom-field context. */
+export function buildContextPreamble(existingTags?: string[], customFieldDefs?: CustomFieldDef[]): string {
+  const parts: string[] = [];
+  const tagBlock = buildTagBlock(existingTags);
+  if (tagBlock) parts.push(tagBlock);
+  const cfBlock = buildCustomFieldsBlock(customFieldDefs);
+  if (cfBlock) parts.push(cfBlock);
+  return parts.length > 0 ? `${parts.join('\n\n')}\n\n` : '';
 }
 
-export function buildSystemPrompt(existingTags?: string[], customPrompt?: string | null, customFieldDefs?: CustomFieldDef[], isDemoUser?: boolean): string {
+function stripTagPlaceholder(prompt: string): string {
+  return prompt.replace(/\{available_tags\}/g, '');
+}
+
+export function buildSystemPrompt(customPrompt?: string | null, isDemoUser?: boolean): string {
   const basePrompt = resolvePrompt(DEFAULT_AI_PROMPT, customPrompt, isDemoUser);
-  const prompt = injectTagBlock(basePrompt, buildTagBlock(existingTags));
-  return appendCustomFieldsDef(prompt, customFieldDefs) + HARDENING_INSTRUCTION;
+  return stripTagPlaceholder(basePrompt) + HARDENING_INSTRUCTION;
 }
 
-export function buildCorrectionPrompt(existingTags?: string[], customFieldDefs?: CustomFieldDef[]): string {
-  const prompt = injectTagBlock(AI_CORRECTION_PROMPT, buildTagBlock(existingTags));
-  return appendCustomFieldsDef(prompt, customFieldDefs) + HARDENING_INSTRUCTION;
+export function buildCorrectionPrompt(): string {
+  return stripTagPlaceholder(AI_CORRECTION_PROMPT) + HARDENING_INSTRUCTION;
 }
 
-export function buildReanalysisPrompt(existingTags?: string[], customFieldDefs?: CustomFieldDef[]): string {
-  const prompt = injectTagBlock(AI_REANALYSIS_PROMPT, buildTagBlock(existingTags));
-  return appendCustomFieldsDef(prompt, customFieldDefs);
+export function buildReanalysisPrompt(): string {
+  return stripTagPlaceholder(AI_REANALYSIS_PROMPT);
 }
 
 /** Build the user-facing content parts for a reanalysis request (previous result JSON + instruction + images). */
 export function buildReanalysisUserContent(
   previousResult: object,
   imageParts: Array<{ type: 'image'; image: Buffer; mimeType: string }>,
+  contextPreamble?: string,
 ): Array<{ type: 'image'; image: Buffer; mimeType: string } | { type: 'text'; text: string }> {
-  const contextText = `Previous analysis result:\n${JSON.stringify(previousResult, null, 2)}\n\nRe-examine these photos. Be more thorough than last time.`;
+  const contextText = `${contextPreamble ?? ''}Previous analysis result:\n${JSON.stringify(previousResult, null, 2)}\n\nRe-examine these photos. Be more thorough than last time.`;
   return [
     { type: 'text' as const, text: contextText },
     ...imageParts,
@@ -163,7 +170,8 @@ export async function analyzeImages(
 
   const model = createSdkModel(config, pinnedFetch);
 
-  const userText = buildAnalysisUserText(images.length);
+  const preamble = buildContextPreamble(existingTags);
+  const userText = preamble + buildAnalysisUserText(images.length);
 
   const imageParts = images.map((img) => ({
     type: 'image' as const,
@@ -175,7 +183,7 @@ export async function analyzeImages(
     const result = await generateObject({
       model,
       schema: AiSuggestionsSchema,
-      system: buildSystemPrompt(existingTags, customPrompt, undefined, isDemoUser),
+      system: buildSystemPrompt(customPrompt, isDemoUser),
       messages: [{
         role: 'user' as const,
         content: [...imageParts, { type: 'text' as const, text: userText }],
@@ -216,13 +224,14 @@ export async function reanalyzeImages(
     mimeType: img.mimeType,
   }));
 
-  const userContent = buildReanalysisUserContent(previousResult, imageParts);
+  const preamble = buildContextPreamble(existingTags, customFieldDefs);
+  const userContent = buildReanalysisUserContent(previousResult, imageParts, preamble);
 
   try {
     const result = await generateObject({
       model,
       schema: AiSuggestionsSchema,
-      system: buildReanalysisPrompt(existingTags, customFieldDefs),
+      system: buildReanalysisPrompt(),
       messages: [{
         role: 'user' as const,
         content: userContent,
@@ -239,4 +248,3 @@ export async function reanalyzeImages(
     throw mapSdkError(err);
   }
 }
-

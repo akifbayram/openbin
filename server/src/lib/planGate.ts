@@ -163,11 +163,60 @@ export function getFeatureMap(plan: PlanTier): PlanFeatures {
   };
 }
 
+export interface UserLimitOverrides {
+  maxBins: number | null;
+  maxLocations: number | null;
+  maxPhotoStorageMb: number | null;
+  maxMembersPerLocation: number | null;
+  activityRetentionDays: number | null;
+  aiCreditsPerMonth: number | null;
+  aiEnabled: boolean | null;
+}
+
+/** Fetch per-user limit overrides. Returns null if no overrides set. */
+export async function getUserLimitOverrides(userId: string): Promise<UserLimitOverrides | null> {
+  const result = await query<{
+    max_bins: number | null; max_locations: number | null;
+    max_photo_storage_mb: number | null; max_members_per_location: number | null;
+    activity_retention_days: number | null; ai_credits_per_month: number | null;
+    ai_enabled: number | null;
+  }>('SELECT max_bins, max_locations, max_photo_storage_mb, max_members_per_location, activity_retention_days, ai_credits_per_month, ai_enabled FROM user_limit_overrides WHERE user_id = $1', [userId]);
+  if (result.rows.length === 0) return null;
+  const r = result.rows[0];
+  return {
+    maxBins: r.max_bins,
+    maxLocations: r.max_locations,
+    maxPhotoStorageMb: r.max_photo_storage_mb,
+    maxMembersPerLocation: r.max_members_per_location,
+    activityRetentionDays: r.activity_retention_days,
+    aiCreditsPerMonth: r.ai_credits_per_month,
+    aiEnabled: r.ai_enabled === null ? null : r.ai_enabled === 1,
+  };
+}
+
+/** Merge plan features with per-user overrides. Override values take precedence. */
+function applyOverrides(features: PlanFeatures, overrides: UserLimitOverrides): PlanFeatures {
+  return {
+    ...features,
+    maxBins: overrides.maxBins ?? features.maxBins,
+    maxLocations: overrides.maxLocations ?? features.maxLocations,
+    maxPhotoStorageMb: overrides.maxPhotoStorageMb ?? features.maxPhotoStorageMb,
+    maxMembersPerLocation: overrides.maxMembersPerLocation ?? features.maxMembersPerLocation,
+    activityRetentionDays: overrides.activityRetentionDays ?? features.activityRetentionDays,
+    aiCreditsPerMonth: overrides.aiCreditsPerMonth ?? features.aiCreditsPerMonth,
+    ai: overrides.aiEnabled ?? features.ai,
+  };
+}
+
 export async function getUserFeatures(userId: string): Promise<PlanFeatures> {
   if (config.selfHosted) return getFeatureMap(Plan.PRO);
-  const planInfo = await getUserPlanInfo(userId);
+  const [planInfo, overrides] = await Promise.all([
+    getUserPlanInfo(userId),
+    getUserLimitOverrides(userId),
+  ]);
   if (!planInfo) return getFeatureMap(Plan.PRO);
-  return getFeatureMap(planInfo.plan);
+  const base = getFeatureMap(planInfo.plan);
+  return overrides ? applyOverrides(base, overrides) : base;
 }
 
 export async function getLocationOwnerFeatures(locationId: string): Promise<PlanFeatures> {
@@ -313,6 +362,12 @@ export async function checkAndIncrementAiCredits(userId: string): Promise<AiCred
 
   await query('UPDATE users SET ai_credits_used = ai_credits_used + 1 WHERE id = $1', [userId]);
   return { allowed: true, used: ai_credits_used + 1, limit, resetsAt: ai_credits_reset_at };
+}
+
+/** Decrement ai_credits_used by 1 (floor 0). No-op on self-hosted or unlimited plans. */
+export async function refundAiCredit(userId: string): Promise<void> {
+  if (config.selfHosted) return;
+  await query('UPDATE users SET ai_credits_used = ai_credits_used - 1 WHERE id = $1 AND ai_credits_used > 0', [userId]);
 }
 
 export async function getAiCredits(userId: string): Promise<AiCreditInfo> {

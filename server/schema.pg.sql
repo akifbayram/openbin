@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS users (
   ai_credits_reset_at TEXT,
   last_active_at TEXT,
   is_admin           BOOLEAN NOT NULL DEFAULT FALSE,
+  suspended_at       TEXT,
+  token_version      INTEGER NOT NULL DEFAULT 0,
   deleted_at         TEXT,
   created_at         TEXT NOT NULL DEFAULT (NOW()),
   updated_at         TEXT NOT NULL DEFAULT (NOW())
@@ -143,6 +145,20 @@ CREATE TABLE IF NOT EXISTS user_ai_settings (
   UNIQUE(user_id, provider)
 );
 CREATE INDEX IF NOT EXISTS idx_user_ai_settings_user ON user_ai_settings(user_id);
+
+CREATE TABLE IF NOT EXISTS user_ai_task_overrides (
+  id              TEXT PRIMARY KEY,
+  user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  task_group      TEXT NOT NULL CHECK (task_group IN ('vision', 'quickText', 'deepText')),
+  provider        TEXT CHECK (provider IN ('openai', 'anthropic', 'gemini', 'openai-compatible')),
+  api_key         TEXT,
+  model           TEXT,
+  endpoint_url    TEXT,
+  created_at      TEXT NOT NULL DEFAULT (now()),
+  updated_at      TEXT NOT NULL DEFAULT (now()),
+  UNIQUE(user_id, task_group)
+);
+CREATE INDEX IF NOT EXISTS idx_user_ai_task_overrides_user ON user_ai_task_overrides(user_id);
 
 CREATE TABLE IF NOT EXISTS user_print_settings (
   id         TEXT PRIMARY KEY,
@@ -364,3 +380,59 @@ CREATE TABLE IF NOT EXISTS job_locks (
   locked_at  TEXT NOT NULL DEFAULT (NOW()),
   expires_at TEXT NOT NULL
 );
+
+-- Admin audit log (global admin actions, not location-scoped activity_log)
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+  id          TEXT PRIMARY KEY,
+  actor_id    TEXT NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+  actor_name  TEXT NOT NULL,
+  action      TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id   TEXT,
+  target_name TEXT,
+  details     JSONB,
+  created_at  TEXT NOT NULL DEFAULT (NOW())
+);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_log_created ON admin_audit_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_log_actor ON admin_audit_log(actor_id);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_log_action ON admin_audit_log(action);
+
+-- Per-user limit overrides (null = use plan default)
+CREATE TABLE IF NOT EXISTS user_limit_overrides (
+  id                       TEXT PRIMARY KEY,
+  user_id                  TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  max_bins                 INTEGER,
+  max_locations            INTEGER,
+  max_photo_storage_mb     INTEGER,
+  max_members_per_location INTEGER,
+  activity_retention_days  INTEGER,
+  ai_credits_per_month     INTEGER,
+  ai_enabled               INTEGER,
+  created_at               TEXT NOT NULL DEFAULT (NOW()),
+  updated_at               TEXT NOT NULL DEFAULT (NOW())
+);
+
+-- Login history for security auditing
+CREATE TABLE IF NOT EXISTS login_history (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ip_address TEXT,
+  user_agent TEXT,
+  method     TEXT NOT NULL DEFAULT 'password',
+  success    BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TEXT NOT NULL DEFAULT (NOW())
+);
+CREATE INDEX IF NOT EXISTS idx_login_history_user ON login_history(user_id, created_at DESC);
+
+-- Announcement banners
+CREATE TABLE IF NOT EXISTS announcements (
+  id           TEXT PRIMARY KEY,
+  text         TEXT NOT NULL,
+  type         TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('info', 'warning', 'critical')),
+  dismissible  BOOLEAN NOT NULL DEFAULT TRUE,
+  active       BOOLEAN NOT NULL DEFAULT TRUE,
+  expires_at   TEXT,
+  created_by   TEXT REFERENCES users(id) ON DELETE SET NULL,
+  created_at   TEXT NOT NULL DEFAULT (NOW())
+);
+CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(active) WHERE active = TRUE;

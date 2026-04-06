@@ -1,4 +1,4 @@
-import type { AiProvider } from '@/types';
+import type { AiProvider, AiTaskGroup } from '@/types';
 
 export const AI_PROVIDERS: { key: AiProvider; label: string }[] = [
   { key: 'openai', label: 'OpenAI' },
@@ -27,3 +27,9 @@ export const KEY_PLACEHOLDERS: Record<AiProvider, string> = {
   gemini: 'AIza...',
   'openai-compatible': 'API key (if required)',
 };
+
+export const TASK_GROUP_META: { key: AiTaskGroup; label: string; description: string }[] = [
+  { key: 'vision', label: 'Vision', description: 'Photo Scan' },
+  { key: 'quickText', label: 'Quick Text', description: 'Commands, Text Extraction' },
+  { key: 'deepText', label: 'Deep Text', description: 'Queries, Reorganize' },
+];

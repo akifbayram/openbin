@@ -6,15 +6,16 @@ import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLo
 import type { ImageInput } from '../lib/aiProviders.js';
 import { analyzeImages, reanalyzeImages } from '../lib/aiProviders.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
-import { getConfigForTask, getUserAiSettings, parseTaskModelOverrides, TASK_TYPES } from '../lib/aiSettings.js';
+import { getUserAiSettings } from '../lib/aiSettings.js';
 import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
-import { config, getEnvAiConfig, isDemoUser } from '../lib/config.js';
+import { AI_TASK_GROUPS, type AiTaskGroup, config, getEnvAiConfig, getEnvGroupOverride, isDemoUser, isGroupEnvLocked } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
 import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
 import { HttpError, ValidationError } from '../lib/httpErrors.js';
 import { aiRateLimiters } from '../lib/rateLimiters.js';
 import type { StructureTextRequest } from '../lib/structureText.js';
 import { structureText } from '../lib/structureText.js';
+import { resolveTaskConfig } from '../lib/taskRouting.js';
 import { memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
 import { checkAiCredits, requireAiAccess } from '../middleware/requirePlan.js';
@@ -36,6 +37,8 @@ const MOCK_AI_SETTINGS = {
   requestTimeout: null,
   source: 'env' as const,
 } as const;
+
+const VALID_PROVIDERS = ['openai', 'anthropic', 'gemini', 'openai-compatible'] as const;
 
 const router = Router();
 
@@ -73,6 +76,13 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
         maxTokens: null,
         topP: null,
         requestTimeout: null,
+        taskOverrides: Object.fromEntries(
+          AI_TASK_GROUPS.filter(isGroupEnvLocked).map((g) => {
+            const o = getEnvGroupOverride(g);
+            return [g, { provider: o.provider, model: o.model, endpointUrl: o.endpointUrl, source: 'env' as const }];
+          }),
+        ),
+        taskOverridesEnvLocked: AI_TASK_GROUPS.filter(isGroupEnvLocked),
         source: 'env' as const,
       });
       return;
@@ -87,6 +97,29 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
   }
 
   const activeRow = result.rows.find((r: any) => !!r.is_active) || result.rows[0];
+
+  // Fetch task overrides for this user
+  const overridesResult = await query(
+    'SELECT task_group, provider, model, endpoint_url FROM user_ai_task_overrides WHERE user_id = $1',
+    [req.user!.id],
+  );
+
+  const taskOverridesEnvLocked = AI_TASK_GROUPS.filter(isGroupEnvLocked);
+
+  const taskOverrides: Record<string, { provider: string | null; model: string | null; endpointUrl: string | null; source: 'env' | 'user' } | null> = {};
+  for (const row of overridesResult.rows) {
+    taskOverrides[row.task_group] = {
+      provider: row.provider || null,
+      model: row.model || null,
+      endpointUrl: row.endpoint_url || null,
+      source: 'user',
+    };
+  }
+  // Env-locked groups override DB values with env values
+  for (const g of taskOverridesEnvLocked) {
+    const o = getEnvGroupOverride(g);
+    taskOverrides[g] = { provider: o.provider, model: o.model, endpointUrl: o.endpointUrl, source: 'env' };
+  }
 
   // Build providerConfigs from all rows
   const providerConfigs: Record<string, { apiKey: string; model: string; endpointUrl: string | null }> = {};
@@ -113,8 +146,9 @@ router.get('/settings', requireAiAccess(), aiRouteHandler('get AI settings', asy
     maxTokens: activeRow.max_tokens ?? null,
     topP: activeRow.top_p ?? null,
     requestTimeout: activeRow.request_timeout ?? null,
-    taskModelOverrides: parseTaskModelOverrides(activeRow.task_model_overrides),
     providerConfigs,
+    taskOverrides,
+    taskOverridesEnvLocked,
     source: 'user' as const,
   });
 }));
@@ -133,12 +167,9 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     if (PROMPT_FIELDS.some(f => req.body[f] != null)) {
       throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot customize AI prompts');
     }
-    if (req.body.taskModelOverrides && Object.values(req.body.taskModelOverrides).some((v: unknown) => v)) {
-      throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot set model overrides');
-    }
   }
 
-  const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt, reorganizationPrompt, taskModelOverrides: rawOverrides } = req.body;
+  const { provider, apiKey, model, endpointUrl, customPrompt, commandPrompt, queryPrompt, structurePrompt, reorganizationPrompt } = req.body;
   const { temperature: rawTemp, maxTokens: rawMaxTokens, topP: rawTopP, requestTimeout: rawTimeout } = req.body;
 
   if (!provider || !apiKey || !model) {
@@ -146,8 +177,7 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     return;
   }
 
-  const validProviders = ['openai', 'anthropic', 'gemini', 'openai-compatible'];
-  if (!validProviders.includes(provider)) {
+  if (!(VALID_PROVIDERS as readonly string[]).includes(provider)) {
     res.status(422).json({ error: 'VALIDATION_ERROR', message: 'Invalid provider' });
     return;
   }
@@ -183,21 +213,6 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     return;
   }
 
-  // Validate and serialize task model overrides
-  let finalOverrides: string | null = null;
-  if (rawOverrides && typeof rawOverrides === 'object' && !Array.isArray(rawOverrides)) {
-    const cleaned: Record<string, string> = {};
-    for (const [key, value] of Object.entries(rawOverrides)) {
-      if (!(TASK_TYPES as readonly string[]).includes(key)) continue;
-      if (value === null || value === undefined || value === '') continue;
-      if (typeof value !== 'string') {
-        throw new ValidationError(`taskModelOverrides.${key} must be a string`);
-      }
-      cleaned[key] = value;
-    }
-    finalOverrides = Object.keys(cleaned).length > 0 ? JSON.stringify(cleaned) : null;
-  }
-
   const finalApiKey = await resolveMaskedApiKey(apiKey, req.user!.id, provider);
   const encryptedKey = encryptApiKey(finalApiKey);
   const finalCustomPrompt = (customPrompt && typeof customPrompt === 'string' && customPrompt.trim()) ? customPrompt.trim() : null;
@@ -220,7 +235,7 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
      ON CONFLICT (user_id, provider) DO UPDATE SET
        api_key = $4, model = $5, endpoint_url = $6, custom_prompt = $7, command_prompt = $8, query_prompt = $9, structure_prompt = $10, reorganization_prompt = $11, temperature = $12, max_tokens = $13, top_p = $14, request_timeout = $15, task_model_overrides = $16, is_active = TRUE, updated_at = ${d.now()}
      RETURNING id, provider, api_key, model, endpoint_url, custom_prompt, command_prompt, query_prompt, structure_prompt, reorganization_prompt, temperature, max_tokens, top_p, request_timeout, task_model_overrides`,
-    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt, finalReorganizationPrompt, finalTemperature, finalMaxTokens, finalTopP, finalTimeout, finalOverrides]
+    [newId, req.user!.id, provider, encryptedKey, model, endpointUrl || null, finalCustomPrompt, finalCommandPrompt, finalQueryPrompt, finalStructurePrompt, finalReorganizationPrompt, finalTemperature, finalMaxTokens, finalTopP, finalTimeout, null]
   );
 
   // Fetch all rows to build providerConfigs
@@ -253,7 +268,6 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
     maxTokens: row.max_tokens ?? null,
     topP: row.top_p ?? null,
     requestTimeout: row.request_timeout ?? null,
-    taskModelOverrides: parseTaskModelOverrides(row.task_model_overrides),
     providerConfigs,
     source: 'user' as const,
   });
@@ -261,6 +275,7 @@ router.put('/settings', requireAiAccess(), aiRouteHandler('save AI settings', as
 
 // DELETE /api/ai/settings — remove AI config
 router.delete('/settings', requireAiAccess(), aiRouteHandler('delete AI settings', async (req, res) => {
+  await query('DELETE FROM user_ai_task_overrides WHERE user_id = $1', [req.user!.id]);
   await query('DELETE FROM user_ai_settings WHERE user_id = $1', [req.user!.id]);
   res.json({ deleted: true });
 }));
@@ -288,7 +303,7 @@ router.post('/analyze-image', memoryPhotoUpload.fields([
   }
 
   const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = getConfigForTask(settings, 'analysis');
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision', settings.config);
 
   const images: ImageInput[] = allFiles.map((f) => ({
     base64: f.buffer.toString('base64'),
@@ -328,7 +343,7 @@ router.post('/analyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, ai
   }
 
   const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = getConfigForTask(settings, 'analysis');
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision', settings.config);
 
   const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
   if (!loaded) {
@@ -377,7 +392,7 @@ router.post('/reanalyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, 
   }
 
   const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = getConfigForTask(settings, 'analysis');
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'vision', settings.config);
 
   const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
   if (!loaded) {
@@ -406,7 +421,7 @@ router.post('/structure-text', ...aiRateLimiters, requireAiAccess(), checkAiCred
   }
 
   const settings = await getUserAiSettings(req.user!.id);
-  const taskConfig = getConfigForTask(settings, 'structure');
+  const taskConfig = await resolveTaskConfig(req.user!.id, 'quickText', settings.config);
 
   const request: StructureTextRequest = {
     text,
@@ -448,6 +463,48 @@ router.post('/test', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRou
     endpointUrl: endpointUrl || null,
   }, isDemoUser(req));
   res.json({ success: true });
+}));
+
+// PUT /api/ai/task-overrides/:taskGroup
+router.put('/task-overrides/:taskGroup', requireAiAccess(), aiRouteHandler('save task override', async (req, res) => {
+  const group = req.params.taskGroup as AiTaskGroup;
+  if (!(AI_TASK_GROUPS as readonly string[]).includes(group)) {
+    throw new ValidationError(`Invalid task group: ${group}. Valid: ${AI_TASK_GROUPS.join(', ')}`);
+  }
+  if (isGroupEnvLocked(group)) {
+    throw new HttpError(409, 'ENV_LOCKED', `Task routing for ${group} is configured by server environment`);
+  }
+  if (isDemoUser(req)) {
+    throw new HttpError(403, 'DEMO_RESTRICTION', 'Demo accounts cannot configure task routing');
+  }
+
+  const { provider, model, endpointUrl } = req.body;
+  if (provider && !(VALID_PROVIDERS as readonly string[]).includes(provider)) {
+    throw new ValidationError('Invalid provider');
+  }
+
+  const id = generateUuid();
+  await query(
+    `INSERT INTO user_ai_task_overrides (id, user_id, task_group, provider, model, endpoint_url)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (user_id, task_group) DO UPDATE SET
+       provider = $4, model = $5, endpoint_url = $6, updated_at = ${d.now()}`,
+    [id, req.user!.id, group, provider || null, model || null, endpointUrl || null],
+  );
+  res.json({ taskGroup: group, provider: provider || null, model: model || null, endpointUrl: endpointUrl || null });
+}));
+
+// DELETE /api/ai/task-overrides/:taskGroup
+router.delete('/task-overrides/:taskGroup', requireAiAccess(), aiRouteHandler('delete task override', async (req, res) => {
+  const group = req.params.taskGroup as AiTaskGroup;
+  if (!(AI_TASK_GROUPS as readonly string[]).includes(group)) {
+    throw new ValidationError(`Invalid task group: ${group}`);
+  }
+  if (isGroupEnvLocked(group)) {
+    throw new HttpError(409, 'ENV_LOCKED', `Task routing for ${group} is configured by server environment`);
+  }
+  await query('DELETE FROM user_ai_task_overrides WHERE user_id = $1 AND task_group = $2', [req.user!.id, group]);
+  res.json({ deleted: true });
 }));
 
 export default router;

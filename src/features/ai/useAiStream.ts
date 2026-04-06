@@ -18,6 +18,7 @@ export function useAiStream<T>(
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [partialText, setPartialText] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
   const stream = useCallback(async (body: object): Promise<T | null> => {
@@ -29,6 +30,7 @@ export function useAiStream<T>(
     setError(null);
     setResult(null);
     setPartialText('');
+    setRetryCount(0);
 
     try {
       for await (const event of apiStream(endpoint, {
@@ -39,10 +41,7 @@ export function useAiStream<T>(
           setPartialText(prev => prev + event.text);
         } else if (event.type === 'done') {
           try {
-            // Strip markdown code block wrappers if present
-            let text = event.text.trim();
-            const fenced = text.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
-            if (fenced) text = fenced[1].trim();
+            const text = event.text.trim();
             if (!text) {
               setError(`${errorFallback} — empty response from AI`);
               return null;
@@ -54,6 +53,9 @@ export function useAiStream<T>(
           } catch {
             setError(`${errorFallback} — unexpected response format`);
           }
+        } else if (event.type === 'retry') {
+          setPartialText('');
+          setRetryCount(c => c + 1);
         } else if (event.type === 'error') {
           setError(event.message);
         }
@@ -77,5 +79,5 @@ export function useAiStream<T>(
     setPartialText('');
   }, []);
 
-  return { result, isStreaming, error, partialText, stream, cancel, clear };
+  return { result, isStreaming, error, partialText, retryCount, stream, cancel, clear };
 }

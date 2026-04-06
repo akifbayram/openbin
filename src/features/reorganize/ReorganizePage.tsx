@@ -75,6 +75,7 @@ export function ReorganizePage() {
     error,
     applyError,
     isApplying,
+    retryCount,
     startReorg,
     apply,
     cancel,
@@ -464,7 +465,7 @@ export function ReorganizePage() {
                 <AiProgressBar
                   active={isStreaming}
                   complete={progressComplete}
-                  label={isStreaming ? `Reorganizing ${t.bins}` : 'Complete'}
+                  label={isStreaming ? (retryCount > 0 ? `Retrying (attempt ${retryCount + 1} of 3)` : `Reorganizing ${t.bins}`) : 'Complete'}
                 />
                 {isStreaming && (
                   <div className="flex justify-end mt-3">
@@ -486,6 +487,7 @@ export function ReorganizePage() {
                   isStreaming={isStreaming}
                   isApplying={isApplying}
                   originalCount={selection.selectedIds.size}
+                  originalItemCount={itemCount}
                   onAccept={() => setConfirmOpen(true)}
                   onCancel={handleCancel}
                   onRegenerate={handleRegenerate}

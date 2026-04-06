@@ -10,6 +10,92 @@ export const AVAILABLE_ICONS = [
   'Scissors', 'Hammer', 'Paintbrush', 'Leaf', 'Apple', 'Coffee', 'Wine', 'Baby', 'Dog', 'Cat',
 ];
 
+function formatItem(item: { name: string; quantity?: number | null }): string {
+  return item.quantity ? `${item.name} (×${item.quantity})` : item.name;
+}
+
+/** Primitive defaults — if a field matches, it's omitted from AI context. */
+const BIN_DEFAULTS: Record<string, unknown> = {
+  notes: '', area_id: null, area_name: '', color: '',
+  visibility: 'location', is_pinned: false, photo_count: 0,
+};
+
+/** Icon has two default forms. */
+const DEFAULT_ICONS = new Set(['Package', '']);
+
+function compactBin<T extends Record<string, unknown>>(bin: T): T {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(bin)) {
+    if (key in BIN_DEFAULTS && value === BIN_DEFAULTS[key]) continue;
+    if (key === 'icon' && DEFAULT_ICONS.has(value as string)) continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    if (key === 'custom_fields' && typeof value === 'object' && value !== null && Object.keys(value as Record<string, unknown>).length === 0) continue;
+    out[key] = value;
+  }
+  return out as T;
+}
+
+export function filterRelevantBins<T extends { id: string; name: string; items: Array<{ name: string } | string>; tags: string[]; area_name?: string }>(
+  bins: T[],
+  userText: string,
+  limit = 30,
+): { relevant: T[]; rest: Array<{ id: string; name: string }> } {
+  const keywords = userText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+
+  if (keywords.length === 0 || bins.length <= limit) {
+    return { relevant: bins, rest: [] };
+  }
+
+  const scored = bins.map(bin => {
+    const itemNames = bin.items.map(i => typeof i === 'string' ? i : i.name);
+    const searchText = [bin.name, ...itemNames, ...bin.tags, bin.area_name ?? ''].join(' ').toLowerCase();
+    const score = keywords.reduce((s, kw) => s + (searchText.includes(kw) ? 1 : 0), 0);
+    return { bin, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+
+  const relevant = scored.filter(s => s.score > 0).map(s => s.bin);
+  const unscored = scored.filter(s => s.score === 0);
+
+  const filler = unscored.slice(0, Math.max(0, limit - relevant.length)).map(s => s.bin);
+  const rest = unscored.slice(Math.max(0, limit - relevant.length)).map(s => ({ id: s.bin.id, name: s.bin.name }));
+
+  return { relevant: [...relevant, ...filler], rest };
+}
+
+/** ~4 chars per token. */
+export const CONTEXT_TOKEN_BUDGET = 6000;
+
+function estimateTokens(obj: unknown): number {
+  return Math.ceil(JSON.stringify(obj).length / 4);
+}
+
+export function budgetContext<T extends { id: string; name: string }>(
+  bins: T[],
+  existingOtherBins: Array<{ id: string; name: string }>,
+  budget = CONTEXT_TOKEN_BUDGET,
+): { bins: T[]; other_bins: Array<{ id: string; name: string }> } {
+  let used = 0;
+  const full: T[] = [];
+  const overflow: Array<{ id: string; name: string }> = [];
+
+  for (const bin of bins) {
+    const cost = estimateTokens(bin);
+    if (used + cost <= budget) {
+      full.push(bin);
+      used += cost;
+    } else {
+      overflow.push({ id: bin.id, name: bin.name });
+    }
+  }
+
+  return {
+    bins: full,
+    other_bins: [...existingOtherBins, ...overflow],
+  };
+}
+
 function appendInClause(sql: string, column: string, startIndex: number, ids: string[]): { sql: string; params: string[] } {
   const placeholders = ids.map((_, i) => `$${startIndex + i}`).join(', ');
   return { sql: `${sql} AND ${column} IN (${placeholders})`, params: ids };
@@ -59,7 +145,6 @@ async function fetchLocationData(locationId: string, userId: string, binIds?: st
     query<{ bin_id: string; field_name: string; value: string }>(cfSql, cfParams),
   ]);
 
-  // Build a map: binId -> Record<fieldName, value>
   const customFieldsByBin = new Map<string, Record<string, string>>();
   for (const row of cfResult.rows) {
     let map = customFieldsByBin.get(row.bin_id);
@@ -75,17 +160,37 @@ function truncateNotes(notes: unknown): string {
   return (notes as string) || '';
 }
 
+/** Apply relevance filtering and token budget to a bins array. */
+function applyContextLimits<T extends { id: string; name: string; items: Array<{ name: string } | string>; tags: string[]; area_name?: string }>(
+  allBins: T[],
+  userText?: string,
+): { bins: T[]; other_bins: Array<{ id: string; name: string }> } {
+  let bins = allBins;
+  let other_bins: Array<{ id: string; name: string }> = [];
+  if (userText) {
+    const filtered = filterRelevantBins(allBins, userText);
+    bins = filtered.relevant;
+    other_bins = filtered.rest;
+  }
+  return budgetContext(bins, other_bins);
+}
+
+const REORDER_INTENT = /reorder|rearrange|sort|move.*(?:up|down|first|last|before|after)/i;
+
 /** Build context for command/execute endpoints. */
-export async function buildCommandContext(locationId: string, userId: string, binIds?: string[]): Promise<CommandRequest['context']> {
+export async function buildCommandContext(locationId: string, userId: string, binIds?: string[], userText?: string): Promise<CommandRequest['context']> {
   const { binsResult, areasResult, trashResult, customFieldsByBin } = await fetchLocationData(locationId, userId, binIds);
 
-  const bins = binsResult.rows.map((r) => {
+  const needsItemIds = userText ? REORDER_INTENT.test(userText) : false;
+
+  const allBins = binsResult.rows.map((r) => {
     const binId = r.id as string;
     const cf = customFieldsByBin.get(binId);
-    return sanitizeBinForContext({
+    const rawItems = r.items as Array<{ id: string; name: string; quantity: number | null }>;
+    const sanitized = sanitizeBinForContext({
       id: binId,
       name: r.name as string,
-      items: r.items as Array<{ id: string; name: string; quantity: number | null }>,
+      items: rawItems,
       tags: r.tags as string[],
       area_id: r.area_id as string | null,
       area_name: r.area_name as string,
@@ -96,6 +201,53 @@ export async function buildCommandContext(locationId: string, userId: string, bi
       is_pinned: !!(r.is_pinned as number),
       photo_count: (r.photo_count as number) || 0,
       ...(cf ? { custom_fields: cf } : {}),
+    });
+    const items: Array<{ id: string; name: string; quantity?: number } | string> = needsItemIds
+      ? sanitized.items.map((i) => {
+          const item: { id: string; name: string; quantity?: number } = { id: i.id, name: i.name };
+          if (i.quantity != null) item.quantity = i.quantity;
+          return item;
+        })
+      : sanitized.items.map(formatItem);
+    return compactBin({ ...sanitized, items });
+  });
+
+  const areas = areasResult.rows.map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+  }));
+
+  const trash_bins = trashResult.rows.map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+  }));
+
+  const budgeted = applyContextLimits(allBins, userText);
+  return { ...budgeted, areas, trash_bins, availableColors: AVAILABLE_COLORS, availableIcons: AVAILABLE_ICONS };
+}
+
+/** Build context for the query (read-only) endpoint. */
+export async function buildInventoryContext(locationId: string, userId: string, binIds?: string[], userText?: string): Promise<InventoryContext> {
+  const { binsResult, areasResult, trashResult, customFieldsByBin } = await fetchLocationData(locationId, userId, binIds);
+
+  const allBins = binsResult.rows.map((r) => {
+    const binId = r.id as string;
+    const cf = customFieldsByBin.get(binId);
+    const sanitized = sanitizeBinForContext({
+      id: binId,
+      name: r.name as string,
+      items: r.items as Array<{ id: string; name: string; quantity: number | null }>,
+      tags: r.tags as string[],
+      area_name: r.area_name as string,
+      notes: truncateNotes(r.notes),
+      visibility: (r.visibility as string) || 'location',
+      is_pinned: !!(r.is_pinned as number),
+      photo_count: (r.photo_count as number) || 0,
+      ...(cf ? { custom_fields: cf } : {}),
+    });
+    return compactBin({
+      ...sanitized,
+      items: sanitized.items.map(formatItem),
     });
   });
 
@@ -109,43 +261,8 @@ export async function buildCommandContext(locationId: string, userId: string, bi
     name: r.name as string,
   }));
 
-  return { bins, areas, trash_bins, availableColors: AVAILABLE_COLORS, availableIcons: AVAILABLE_ICONS };
-}
-
-/** Build context for the query (read-only) endpoint. */
-export async function buildInventoryContext(locationId: string, userId: string, binIds?: string[]): Promise<InventoryContext> {
-  const { binsResult, areasResult, trashResult, customFieldsByBin } = await fetchLocationData(locationId, userId, binIds);
-
-  return {
-    bins: binsResult.rows.map((r) => {
-      const binId = r.id as string;
-      const cf = customFieldsByBin.get(binId);
-      const sanitized = sanitizeBinForContext({
-        id: binId,
-        name: r.name as string,
-        items: r.items as Array<{ id: string; name: string; quantity: number | null }>,
-        tags: r.tags as string[],
-        area_name: r.area_name as string,
-        notes: truncateNotes(r.notes),
-        visibility: (r.visibility as string) || 'location',
-        is_pinned: !!(r.is_pinned as number),
-        photo_count: (r.photo_count as number) || 0,
-        ...(cf ? { custom_fields: cf } : {}),
-      });
-      return {
-        ...sanitized,
-        items: sanitized.items.map((i) => i.quantity ? `${i.name} (×${i.quantity})` : i.name),
-      };
-    }),
-    areas: areasResult.rows.map((r) => ({
-      id: r.id as string,
-      name: r.name as string,
-    })),
-    trash_bins: trashResult.rows.map((r) => ({
-      id: r.id as string,
-      name: r.name as string,
-    })),
-  };
+  const budgeted = applyContextLimits(allBins, userText);
+  return { ...budgeted, areas, trash_bins };
 }
 
 /** Fetch distinct tags for a location (for tag reuse suggestions). */

@@ -1,4 +1,4 @@
-import { ChevronDown, Loader2, Package, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Loader2, Package, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ interface ReorganizePreviewProps {
   isStreaming: boolean;
   isApplying: boolean;
   originalCount: number;
+  originalItemCount: number;
   onAccept: () => void;
   onCancel: () => void;
   onRegenerate?: () => void;
@@ -27,6 +28,7 @@ export function ReorganizePreview({
   isStreaming,
   isApplying,
   originalCount,
+  originalItemCount,
   onAccept,
   onCancel,
   onRegenerate,
@@ -38,6 +40,7 @@ export function ReorganizePreview({
   if (displayBins.length === 0 && !isStreaming) return null;
 
   const totalItems = displayBins.reduce((sum, b) => sum + b.items.length, 0);
+  const itemMismatch = !isStreaming && result && totalItems !== originalItemCount;
 
   return (
     <div className="space-y-4">
@@ -52,6 +55,19 @@ export function ReorganizePreview({
 
       {summary && (
         <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">{summary}</p>
+      )}
+
+      {itemMismatch && (
+        <div role="alert" className="flex items-start gap-2.5 rounded-[var(--radius-sm)] bg-[var(--destructive-soft)] px-3 py-2.5">
+          <AlertTriangle className="h-4 w-4 text-[var(--destructive)] shrink-0 mt-0.5" />
+          <p className="text-[13px] text-[var(--text-secondary)]">
+            Item count mismatch: expected {originalItemCount}, got {totalItems}.
+            {totalItems < originalItemCount
+              ? ` ${originalItemCount - totalItems} item${originalItemCount - totalItems !== 1 ? 's' : ''} may have been dropped.`
+              : ` ${totalItems - originalItemCount} extra item${totalItems - originalItemCount !== 1 ? 's' : ''} added.`}
+            {' '}Try regenerating. This attempt did not count against your AI credits.
+          </p>
+        </div>
       )}
 
       <ul className="grid gap-3 sm:grid-cols-2" aria-label="Proposed bins">
