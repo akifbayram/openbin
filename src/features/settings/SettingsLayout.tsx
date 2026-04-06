@@ -55,7 +55,7 @@ export function SettingsLayout() {
 
   // Sub-pages that live under a parent category (e.g. /settings/activity → Data)
   const SUB_PAGE_META: Record<string, { label: string; backTo: string }> = {
-    activity: { label: 'Activity', backTo: '/settings/data' },
+    activity: { label: 'Activity Log', backTo: '/settings/data' },
     trash: { label: 'Trash', backTo: '/settings/data' },
   };
   const subPage = lastSegment ? SUB_PAGE_META[lastSegment] : undefined;

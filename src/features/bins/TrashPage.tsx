@@ -62,9 +62,12 @@ export function TrashPage() {
 
   return (
     <>
-      <p className="text-[13px] text-[var(--text-tertiary)]">
-        Deleted {t.bins} are kept for {retentionDays} day{retentionDays !== 1 ? 's' : ''} before being permanently removed.
-      </p>
+      <div className="mb-4">
+        <h2 className="text-[20px] font-bold text-[var(--text-primary)]">Trash</h2>
+        <p className="text-[13px] text-[var(--text-tertiary)]">
+          Deleted {t.bins} are kept for {retentionDays} day{retentionDays !== 1 ? 's' : ''} before being permanently removed.
+        </p>
+      </div>
 
       {isLoading ? (
         <SkeletonList count={3} className="flex flex-col gap-3">
