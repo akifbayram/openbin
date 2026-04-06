@@ -180,6 +180,27 @@ describe('POST /api/plan/downgrade-to-free', () => {
     expect(res.body.message).toBe('Cancel your paid subscription before downgrading to Free');
   });
 
+  it('allows downgrade when subStatus is ACTIVE but activeUntil is expired (passively locked)', async () => {
+    const { token, user } = await createTestUser(app);
+    // Plus=0, Active=1, but activeUntil in the past → effectively locked
+    const pastDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    await setUserPlan(user.id, 0, 1, pastDate);
+
+    const res = await request(app)
+      .post('/api/plan/downgrade-to-free')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+
+    const dbResult = await query<{ plan: number; sub_status: number }>(
+      'SELECT plan, sub_status FROM users WHERE id = $1',
+      [user.id],
+    );
+    expect(dbResult.rows[0].plan).toBe(2);       // FREE
+    expect(dbResult.rows[0].sub_status).toBe(1);  // ACTIVE
+  });
+
   it('rejects in self-hosted mode', async () => {
     const { config: mockConfig } = await import('../lib/config.js');
     const original = mockConfig.selfHosted;

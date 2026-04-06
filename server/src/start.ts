@@ -19,8 +19,12 @@ loadEmailTemplates();
 
 let eeModule: typeof import('./ee/index.js') | null = null;
 if (!config.selfHosted) {
-  eeModule = await import('./ee/index.js');
-  eeModule.registerHooks();
+  try {
+    eeModule = await import('./ee/index.js');
+    eeModule.registerHooks();
+  } catch {
+    log.warn('EE module not found — running in community mode. Set SELF_HOSTED=true or rebuild with BUILD_EDITION=cloud.');
+  }
 }
 
 // Load persisted maintenance mode state

@@ -57,7 +57,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     subscribePlanUrl: planInfo.subStatus === SubStatus.TRIAL
       ? await generateUpgradePlanUrl(userId, email, planLabel(planInfo.plan) as 'plus' | 'pro') : null,
     portalUrl: isPaidActive ? await generatePortalUrl(userId, email) : null,
-    canDowngradeToFree: planInfo.plan !== Plan.FREE && planInfo.subStatus !== SubStatus.ACTIVE,
+    canDowngradeToFree: planInfo.plan !== Plan.FREE && !isPaidActive,
     aiCredits,
   });
 }));
@@ -110,7 +110,9 @@ router.post('/downgrade-to-free', authenticate, asyncHandler(async (req, res) =>
   }
 
   // Block if user has an active paid subscription (must cancel in Stripe first)
-  if (planInfo.subStatus === SubStatus.ACTIVE) {
+  // Check both subStatus AND activeUntil — a user with ACTIVE status but expired
+  // activeUntil is effectively locked and should be allowed to downgrade.
+  if (isSubscriptionActive(planInfo) && planInfo.subStatus === SubStatus.ACTIVE) {
     throw new ValidationError('Cancel your paid subscription before downgrading to Free');
   }
 

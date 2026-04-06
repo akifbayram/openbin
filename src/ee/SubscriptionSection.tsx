@@ -5,7 +5,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { useToast } from '@/components/ui/toast';
 import { apiFetch } from '@/lib/api';
-import { Events, notify } from '@/lib/eventBus';
 import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
 import { cn, focusRing } from '@/lib/utils';
 
@@ -190,7 +189,6 @@ export function SubscriptionSection() {
       await apiFetch('/api/plan/downgrade-to-free', { method: 'POST' });
       await refresh();
       refreshUsage();
-      notify(Events.PLAN);
       showToast({ message: 'Switched to the Free plan', variant: 'success' });
     } catch {
       showToast({ message: 'Failed to switch to Free plan', variant: 'error' });
