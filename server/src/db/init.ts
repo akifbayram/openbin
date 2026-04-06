@@ -407,6 +407,74 @@ async function runSqliteInit(): Promise<DatabaseEngine> {
   // Admin usage metrics: last_active_at on users
   addColumnIfNotExists('ALTER TABLE users ADD COLUMN last_active_at TEXT');
 
+  // Admin panel: user suspension and session revocation
+  addColumnIfNotExists('ALTER TABLE users ADD COLUMN suspended_at TEXT');
+  addColumnIfNotExists('ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0');
+
+  // Admin audit log
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_audit_log (
+      id          TEXT PRIMARY KEY,
+      actor_id    TEXT NOT NULL,
+      actor_name  TEXT NOT NULL,
+      action      TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id   TEXT,
+      target_name TEXT,
+      details     TEXT,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_log_created ON admin_audit_log(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_log_actor ON admin_audit_log(actor_id);
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_log_action ON admin_audit_log(action);
+  `);
+
+  // Per-user limit overrides
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_limit_overrides (
+      id                       TEXT PRIMARY KEY,
+      user_id                  TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      max_bins                 INTEGER,
+      max_locations            INTEGER,
+      max_photo_storage_mb     INTEGER,
+      max_members_per_location INTEGER,
+      activity_retention_days  INTEGER,
+      ai_credits_per_month     INTEGER,
+      ai_enabled               INTEGER,
+      created_at               TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at               TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  // Login history
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS login_history (
+      id         TEXT PRIMARY KEY,
+      user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      ip_address TEXT,
+      user_agent TEXT,
+      method     TEXT NOT NULL DEFAULT 'password',
+      success    INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_login_history_user ON login_history(user_id, created_at DESC);
+  `);
+
+  // Announcement banners
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS announcements (
+      id           TEXT PRIMARY KEY,
+      text         TEXT NOT NULL,
+      type         TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('info', 'warning', 'critical')),
+      dismissible  INTEGER NOT NULL DEFAULT 1,
+      active       INTEGER NOT NULL DEFAULT 1,
+      expires_at   TEXT,
+      created_by   TEXT,
+      created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(active) WHERE active = 1;
+  `);
+
   } catch (e) {
     log.error('Migration failed — exiting to prevent corrupt state:', e instanceof Error ? e.message : e);
     process.exit(1);
@@ -507,6 +575,49 @@ async function runPostgresInit(): Promise<DatabaseEngine> {
           FOREIGN KEY (api_key_id) REFERENCES api_keys(id) ON DELETE CASCADE;
       END IF;
     END $$;
+  `);
+
+  // Admin panel: user suspension and session revocation
+  await pool.query(`
+    DO $$ BEGIN
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_at TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
+    END $$;
+  `);
+
+  // New admin tables (idempotent via IF NOT EXISTS in schema.pg.sql, but handle existing DBs)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_audit_log (
+      id TEXT PRIMARY KEY, actor_id TEXT NOT NULL, actor_name TEXT NOT NULL,
+      action TEXT NOT NULL, target_type TEXT NOT NULL, target_id TEXT,
+      target_name TEXT, details JSONB, created_at TEXT NOT NULL DEFAULT (NOW())
+    );
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_log_created ON admin_audit_log(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_log_actor ON admin_audit_log(actor_id);
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_log_action ON admin_audit_log(action);
+
+    CREATE TABLE IF NOT EXISTS user_limit_overrides (
+      id TEXT PRIMARY KEY, user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      max_bins INTEGER, max_locations INTEGER, max_photo_storage_mb INTEGER,
+      max_members_per_location INTEGER, activity_retention_days INTEGER,
+      ai_credits_per_month INTEGER, ai_enabled INTEGER,
+      created_at TEXT NOT NULL DEFAULT (NOW()), updated_at TEXT NOT NULL DEFAULT (NOW())
+    );
+
+    CREATE TABLE IF NOT EXISTS login_history (
+      id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      ip_address TEXT, user_agent TEXT, method TEXT NOT NULL DEFAULT 'password',
+      success BOOLEAN NOT NULL DEFAULT TRUE, created_at TEXT NOT NULL DEFAULT (NOW())
+    );
+    CREATE INDEX IF NOT EXISTS idx_login_history_user ON login_history(user_id, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS announcements (
+      id TEXT PRIMARY KEY, text TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('info', 'warning', 'critical')),
+      dismissible BOOLEAN NOT NULL DEFAULT TRUE, active BOOLEAN NOT NULL DEFAULT TRUE,
+      expires_at TEXT, created_by TEXT, created_at TEXT NOT NULL DEFAULT (NOW())
+    );
+    CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(active) WHERE active = TRUE;
   `);
 
   const pgEngine = createPostgresEngine();

@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import { Router } from 'express';
 import multer from 'multer';
 import { d, generateUuid, isUniqueViolation, query } from '../db.js';
+import { getAdminCount } from '../lib/adminHelpers.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { runBackup } from '../lib/backup.js';
 import { config } from '../lib/config.js';
@@ -23,11 +24,6 @@ import { requireAdmin } from '../middleware/requireAdmin.js';
 
 const log = createLogger('admin');
 const router = Router();
-
-async function getAdminCount(): Promise<number> {
-  const result = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM users WHERE is_admin = TRUE');
-  return result.rows[0].cnt;
-}
 
 // All admin routes require authentication + admin role
 router.use(authenticate, requireAdmin);
@@ -81,7 +77,7 @@ router.get('/users', asyncHandler(async (req, res) => {
 
   const usersResult = await query(
     `SELECT u.id, u.username, u.display_name, u.email, u.is_admin, u.plan, u.sub_status,
-       u.active_until, u.deleted_at, u.created_at, u.last_active_at,
+       u.active_until, u.deleted_at, u.suspended_at, u.created_at, u.last_active_at,
        u.ai_credits_used, u.ai_credits_reset_at,
        (SELECT COUNT(*) FROM bins b JOIN location_members lm ON b.location_id = lm.location_id WHERE lm.user_id = u.id AND b.deleted_at IS NULL) AS bin_count,
        (SELECT COUNT(DISTINCT lm.location_id) FROM location_members lm WHERE lm.user_id = u.id) AS location_count,
@@ -110,6 +106,7 @@ router.get('/users', asyncHandler(async (req, res) => {
       status: subStatusLabel(u.sub_status),
       activeUntil: u.active_until || null,
       deletedAt: u.deleted_at || null,
+      suspendedAt: u.suspended_at || null,
       createdAt: u.created_at,
       binCount: u.bin_count ?? 0,
       locationCount: u.location_count ?? 0,
@@ -195,10 +192,11 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
   const userResult = await query<{
     id: string; username: string; display_name: string; email: string | null;
     is_admin: number; plan: PlanTier; sub_status: SubStatusType;
-    active_until: string | null; deleted_at: string | null; created_at: string; updated_at: string;
+    active_until: string | null; deleted_at: string | null; suspended_at: string | null;
+    created_at: string; updated_at: string;
     last_active_at: string | null; ai_credits_used: number | null; ai_credits_reset_at: string | null;
   }>(
-    'SELECT id, username, display_name, email, is_admin, plan, sub_status, active_until, deleted_at, created_at, updated_at, last_active_at, ai_credits_used, ai_credits_reset_at FROM users WHERE id = $1',
+    'SELECT id, username, display_name, email, is_admin, plan, sub_status, active_until, deleted_at, suspended_at, created_at, updated_at, last_active_at, ai_credits_used, ai_credits_reset_at FROM users WHERE id = $1',
     [userId],
   );
 
@@ -230,6 +228,7 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
     status: subStatusLabel(row.sub_status),
     activeUntil: row.active_until || null,
     deletedAt: row.deleted_at || null,
+    suspendedAt: row.suspended_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lastActiveAt: row.last_active_at || null,

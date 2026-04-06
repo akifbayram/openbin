@@ -1,4 +1,4 @@
-import { BarChart3, Globe, Lock, Mail, Search, UserPlus, Users } from 'lucide-react';
+import { BarChart3, Globe, Lock, Mail, Search, Settings, UserPlus, Users } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -148,6 +148,10 @@ export function AdminUsersPage() {
                 onChange={setTab}
               />
             )}
+            <Button variant="outline" size="sm" onClick={() => navigate('/admin/system')}>
+              <Settings className="h-3.5 w-3.5 mr-1.5" />
+              System
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
               <UserPlus className="h-3.5 w-3.5 mr-1.5" />
               Create User

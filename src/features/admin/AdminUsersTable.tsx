@@ -150,7 +150,7 @@ export function AdminUsersTable({
             onClick={() => onClickUser(u.id)}
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter') onClickUser(u.id); }}
-            className={cn(u.deletedAt && 'opacity-50')}
+            className={cn((u.deletedAt || u.suspendedAt) && 'opacity-50')}
           >
             <div className="flex-1 min-w-0">
               <div className="font-medium text-[14px] text-[var(--text-primary)] truncate">{u.displayName || u.username}</div>
@@ -170,6 +170,7 @@ export function AdminUsersTable({
             <div className="w-24 text-[14px]">
               <span className="flex items-center gap-1.5">
                 {u.deletedAt && <Badge variant="destructive" className="text-[11px]">Deleted</Badge>}
+                {u.suspendedAt && <Badge variant="destructive" className="text-[11px]">Suspended</Badge>}
                 <Badge variant={statusVariant(u.status)} className="text-[11px]">{capitalize(u.status)}</Badge>
               </span>
             </div>

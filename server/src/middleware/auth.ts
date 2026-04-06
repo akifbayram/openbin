@@ -28,10 +28,17 @@ function extractToken(req: Request): string | undefined {
   return cookie;
 }
 
-async function verifyJwt(token: string): Promise<AuthUser | null> {
+interface JwtPayload {
+  id: string;
+  username: string;
+  tv?: number; // token_version
+}
+
+async function verifyJwt(token: string): Promise<(AuthUser & { tokenVersion: number }) | null> {
   try {
     const { payload } = await jose.jwtVerify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] });
-    return { id: payload.id as string, username: payload.username as string };
+    const p = payload as unknown as JwtPayload;
+    return { id: p.id, username: p.username, tokenVersion: p.tv ?? 0 };
   } catch {
     return null;
   }
@@ -56,9 +63,9 @@ export function tryAuthenticate(req: Request, _res: Response, next: NextFunction
   next();
 }
 
-// Short-lived cache so soft-delete checks don't hit the DB on every request.
-// Soft-deletes are rare admin actions; 60 s staleness is acceptable.
-const deletedCache = new Map<string, { deleted: boolean; expires: number }>();
+// Short-lived cache so status checks don't hit the DB on every request.
+// Soft-deletes/suspensions are rare admin actions; 60 s staleness is acceptable.
+const deletedCache = new Map<string, { status: 'ok' | 'deleted' | 'suspended'; tokenVersion: number; expires: number }>();
 const DELETED_CACHE_TTL = 60_000;
 
 // Debounce last_active_at writes to once per 5 minutes per user
@@ -75,17 +82,34 @@ function maybeUpdateLastActive(userId: string): void {
   query(`UPDATE users SET last_active_at = ${d.now()} WHERE id = $1`, [userId]).catch(() => {});
 }
 
-function checkSoftDeleted(userId: string): Promise<boolean> {
-  const cached = deletedCache.get(userId);
-  if (cached && cached.expires > Date.now()) return Promise.resolve(cached.deleted);
+interface UserStatusRow {
+  deleted_at: string | null;
+  suspended_at: string | null;
+  token_version: number;
+}
 
-  return query<{ deleted_at: string | null }>(
-    'SELECT deleted_at FROM users WHERE id = $1',
+type UserStatus = 'ok' | 'deleted' | 'suspended';
+
+function checkUserStatus(userId: string): Promise<{ status: UserStatus; tokenVersion: number }> {
+  const cached = deletedCache.get(userId);
+  if (cached && cached.expires > Date.now()) return Promise.resolve(cached);
+
+  return query<UserStatusRow>(
+    'SELECT deleted_at, suspended_at, token_version FROM users WHERE id = $1',
     [userId],
   ).then((result) => {
-    const deleted = result.rows.length === 0 || result.rows[0].deleted_at !== null;
-    deletedCache.set(userId, { deleted, expires: Date.now() + DELETED_CACHE_TTL });
-    return deleted;
+    if (result.rows.length === 0) {
+      const entry = { status: 'deleted' as const, tokenVersion: 0, expires: Date.now() + DELETED_CACHE_TTL };
+      deletedCache.set(userId, entry);
+      return entry;
+    }
+    const row = result.rows[0];
+    let status: UserStatus = 'ok';
+    if (row.deleted_at !== null) status = 'deleted';
+    else if (row.suspended_at !== null) status = 'suspended';
+    const entry = { status, tokenVersion: row.token_version ?? 0, expires: Date.now() + DELETED_CACHE_TTL };
+    deletedCache.set(userId, entry);
+    return entry;
   });
 }
 
@@ -94,16 +118,31 @@ export function invalidateDeletedCache(userId: string): void {
   deletedCache.delete(userId);
 }
 
+function handleUserStatus(
+  res: Response,
+  status: 'ok' | 'deleted' | 'suspended',
+  req: Request,
+): boolean {
+  if (status === 'deleted') {
+    req.user = undefined;
+    req.authMethod = undefined;
+    res.status(401).json({ error: 'ACCOUNT_DELETED', message: 'This account has been deleted' });
+    return true;
+  }
+  if (status === 'suspended') {
+    req.user = undefined;
+    req.authMethod = undefined;
+    res.status(403).json({ error: 'ACCOUNT_SUSPENDED', message: 'This account has been suspended' });
+    return true;
+  }
+  return false;
+}
+
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   if (req.user) {
     const userId = req.user.id;
-    checkSoftDeleted(userId).then((deleted) => {
-      if (deleted) {
-        req.user = undefined;
-        req.authMethod = undefined;
-        res.status(401).json({ error: 'ACCOUNT_DELETED', message: 'This account has been deleted' });
-        return;
-      }
+    checkUserStatus(userId).then(({ status }) => {
+      if (handleUserStatus(res, status, req)) return;
       maybeUpdateLastActive(userId);
       next();
     }).catch(next);
@@ -120,7 +159,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   if (token.startsWith('sk_openbin_')) {
     const keyHash = crypto.createHash('sha256').update(token).digest('hex');
     query(
-      `SELECT ak.id AS key_id, u.id, u.username, u.deleted_at, u.plan
+      `SELECT ak.id AS key_id, u.id, u.username, u.deleted_at, u.suspended_at, u.plan
        FROM api_keys ak
        JOIN users u ON u.id = ak.user_id
        WHERE ak.key_hash = $1 AND ak.revoked_at IS NULL`,
@@ -130,9 +169,13 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
         res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid API key' });
         return;
       }
-      const row = result.rows[0] as { key_id: string; id: string; username: string; deleted_at: string | null; plan: number };
+      const row = result.rows[0] as { key_id: string; id: string; username: string; deleted_at: string | null; suspended_at: string | null; plan: number };
       if (row.deleted_at) {
         res.status(401).json({ error: 'ACCOUNT_DELETED', message: 'This account has been deleted' });
+        return;
+      }
+      if (row.suspended_at) {
+        res.status(403).json({ error: 'ACCOUNT_SUSPENDED', message: 'This account has been suspended' });
         return;
       }
       if (!config.selfHosted && row.plan === 0) {
@@ -156,12 +199,14 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   // JWT path
   verifyJwt(token).then((user) => {
     if (user) {
-      checkSoftDeleted(user.id).then((deleted) => {
-        if (deleted) {
-          res.status(401).json({ error: 'ACCOUNT_DELETED', message: 'This account has been deleted' });
+      checkUserStatus(user.id).then(({ status, tokenVersion }) => {
+        if (handleUserStatus(res, status, req)) return;
+        // Check token_version — if the token was issued before a revocation, reject it
+        if (user.tokenVersion < tokenVersion) {
+          res.status(401).json({ error: 'SESSION_REVOKED', message: 'Session has been revoked. Please log in again.' });
           return;
         }
-        req.user = user;
+        req.user = { id: user.id, username: user.username };
         req.authMethod = 'jwt';
         maybeUpdateLastActive(user.id);
         next();
@@ -172,9 +217,14 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   });
 }
 
-export async function signToken(user: AuthUser): Promise<string> {
-  return new jose.SignJWT({ id: user.id, username: user.username })
+export async function signToken(user: AuthUser, tokenVersion = 0): Promise<string> {
+  return new jose.SignJWT({ id: user.id, username: user.username, tv: tokenVersion })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime(config.accessTokenExpiresIn)
     .sign(JWT_SECRET_KEY);
+}
+
+/** Invalidate the user status cache (call after suspension, deletion, or token_version bump). */
+export function invalidateUserStatusCache(userId: string): void {
+  deletedCache.delete(userId);
 }

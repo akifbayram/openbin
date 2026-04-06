@@ -10,6 +10,7 @@ export interface AdminUser {
   plan: 'free' | 'plus' | 'pro';
   status: 'active' | 'inactive' | 'trial';
   activeUntil: string | null;
+  suspendedAt: string | null;
   deletedAt: string | null;
   createdAt: string;
   binCount: number;
@@ -105,6 +106,7 @@ export interface AdminUserDetail {
   plan: 'free' | 'plus' | 'pro';
   status: 'active' | 'inactive' | 'trial';
   activeUntil: string | null;
+  suspendedAt: string | null;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -202,4 +204,76 @@ export function useAdminUserDetail(id: string) {
   }, [id]);
 
   return { detail, isLoading, notFound, refresh };
+}
+
+export interface LoginHistoryEntry {
+  id: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  method: string;
+  success: boolean;
+  createdAt: string;
+}
+
+export interface UserLimitOverrides {
+  userId: string;
+  maxBins: number | null;
+  maxLocations: number | null;
+  maxPhotoStorageMb: number | null;
+  maxMembersPerLocation: number | null;
+  activityRetentionDays: number | null;
+  aiCreditsPerMonth: number | null;
+  aiEnabled: boolean | null;
+}
+
+export async function suspendUser(id: string, reason?: string) {
+  await apiFetch(`/api/admin/security/suspend/${id}`, { method: 'POST', body: { reason } });
+}
+
+export async function reactivateUser(id: string) {
+  await apiFetch(`/api/admin/security/reactivate/${id}`, { method: 'POST' });
+}
+
+export async function revokeSessions(id: string) {
+  await apiFetch(`/api/admin/security/revoke-sessions/${id}`, { method: 'POST' });
+}
+
+export async function revokeAllApiKeys(id: string) {
+  return apiFetch<{ message: string; count: number }>(`/api/admin/security/revoke-all-api-keys/${id}`, { method: 'POST' });
+}
+
+export async function fetchLoginHistory(id: string, page = 1, limit = 50) {
+  return apiFetch<{ results: LoginHistoryEntry[]; count: number }>(`/api/admin/security/login-history/${id}?page=${page}&limit=${limit}`);
+}
+
+export async function fetchOverrides(userId: string) {
+  return apiFetch<UserLimitOverrides>(`/api/admin/overrides/overrides/${userId}`);
+}
+
+export async function updateOverrides(userId: string, overrides: Partial<UserLimitOverrides>) {
+  await apiFetch(`/api/admin/overrides/overrides/${userId}`, { method: 'PUT', body: overrides });
+}
+
+export async function clearOverrides(userId: string) {
+  await apiFetch(`/api/admin/overrides/overrides/${userId}`, { method: 'DELETE' });
+}
+
+export async function grantAiCredits(userId: string, amount: number) {
+  await apiFetch(`/api/admin/overrides/ai-credits/grant/${userId}`, { method: 'POST', body: { amount } });
+}
+
+export async function resetAiCredits(userId: string) {
+  await apiFetch(`/api/admin/overrides/ai-credits/reset/${userId}`, { method: 'POST' });
+}
+
+export async function extendTrial(userId: string, days: number) {
+  return apiFetch<{ message: string; activeUntil: string }>(`/api/admin/overrides/extend-trial/${userId}`, { method: 'POST', body: { days } });
+}
+
+export async function grantCompPlan(userId: string, plan: number, days: number) {
+  return apiFetch<{ message: string; activeUntil: string }>(`/api/admin/overrides/grant-comp/${userId}`, { method: 'POST', body: { plan, days } });
+}
+
+export async function forceDowngrade(userId: string, plan: number) {
+  await apiFetch(`/api/admin/overrides/force-downgrade/${userId}`, { method: 'POST', body: { plan } });
 }

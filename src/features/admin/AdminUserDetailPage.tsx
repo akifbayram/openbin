@@ -1,7 +1,9 @@
 import {
   KeyRound,
+  LogOut,
   Mail,
   Pencil,
+  ShieldOff,
   Trash2,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -27,7 +29,7 @@ import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
 import { usePlan } from '@/lib/usePlan';
 import { cn, getErrorMessage, relativeTime } from '@/lib/utils';
-import { capitalize, deleteUser, regenerateApiKey, sendPasswordReset, statusVariant, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
+import { capitalize, clearOverrides, deleteUser, fetchOverrides, grantAiCredits, reactivateUser, regenerateApiKey, resetAiCredits, revokeAllApiKeys, revokeSessions, sendPasswordReset, statusVariant, suspendUser, type UserLimitOverrides, updateOverrides, updateUser, useAdminCount, useAdminUserDetail } from './useAdminUsers';
 
 function StatItem({ label, value }: { label: string; value: string | number }) {
   return (
@@ -77,6 +79,12 @@ export function AdminUserDetailPage() {
   const [editForm, setEditForm] = useState({ email: '', displayName: '', password: '' });
   const [activeUntilInput, setActiveUntilInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [suspendOpen, setSuspendOpen] = useState(false);
+  const [revokeSessionsOpen, setRevokeSessionsOpen] = useState(false);
+  const [revokeKeysOpen, setRevokeKeysOpen] = useState(false);
+  const [overrides, setOverrides] = useState<Partial<UserLimitOverrides>>({});
+  const [savingOverrides, setSavingOverrides] = useState(false);
+  const [grantAmount, setGrantAmount] = useState('');
 
   useEffect(() => {
     if (notFound) navigate('/admin/users');
@@ -85,6 +93,12 @@ export function AdminUserDetailPage() {
   useEffect(() => {
     if (detail) setActiveUntilInput(detail.activeUntil ? detail.activeUntil.slice(0, 16) : '');
   }, [detail]);
+
+  // Load overrides when detail loads
+  useEffect(() => {
+    if (!detail || planInfo.selfHosted) return;
+    fetchOverrides(detail.id).then(o => setOverrides(o)).catch(() => {});
+  }, [detail, planInfo.selfHosted]);
 
   const handleSaveActiveUntil = useCallback(async () => {
     if (!detail) return;
@@ -208,6 +222,101 @@ export function AdminUserDetailPage() {
     }
   }, [detail, showToast]);
 
+  const handleSuspend = useCallback(async () => {
+    if (!detail) return;
+    try {
+      await suspendUser(detail.id);
+      showToast({ message: `User ${detail.username} suspended`, variant: 'success' });
+      refresh();
+      setSuspendOpen(false);
+    } catch (err) {
+      showToast({ message: getErrorMessage(err, 'Failed to suspend user'), variant: 'error' });
+    }
+  }, [detail, showToast, refresh]);
+
+  const handleReactivate = useCallback(async () => {
+    if (!detail) return;
+    try {
+      await reactivateUser(detail.id);
+      showToast({ message: `User ${detail.username} reactivated`, variant: 'success' });
+      refresh();
+    } catch (err) {
+      showToast({ message: getErrorMessage(err, 'Failed to reactivate user'), variant: 'error' });
+    }
+  }, [detail, showToast, refresh]);
+
+  const handleRevokeSessions = useCallback(async () => {
+    if (!detail) return;
+    try {
+      await revokeSessions(detail.id);
+      showToast({ message: 'All sessions revoked', variant: 'success' });
+      setRevokeSessionsOpen(false);
+    } catch (err) {
+      showToast({ message: getErrorMessage(err, 'Failed to revoke sessions'), variant: 'error' });
+    }
+  }, [detail, showToast]);
+
+  const handleRevokeAllApiKeys = useCallback(async () => {
+    if (!detail) return;
+    try {
+      const result = await revokeAllApiKeys(detail.id);
+      showToast({ message: `${result.count} API keys revoked`, variant: 'success' });
+      setRevokeKeysOpen(false);
+      refresh();
+    } catch (err) {
+      showToast({ message: getErrorMessage(err, 'Failed to revoke API keys'), variant: 'error' });
+    }
+  }, [detail, showToast, refresh]);
+
+  const handleSaveOverrides = useCallback(async () => {
+    if (!detail) return;
+    setSavingOverrides(true);
+    try {
+      await updateOverrides(detail.id, overrides);
+      showToast({ message: 'Overrides saved', variant: 'success' });
+      refresh();
+    } catch (err) {
+      showToast({ message: getErrorMessage(err, 'Failed to save overrides'), variant: 'error' });
+    } finally {
+      setSavingOverrides(false);
+    }
+  }, [detail, overrides, showToast, refresh]);
+
+  const handleClearOverrides = useCallback(async () => {
+    if (!detail) return;
+    try {
+      await clearOverrides(detail.id);
+      setOverrides({});
+      showToast({ message: 'Overrides cleared', variant: 'success' });
+      refresh();
+    } catch (err) {
+      showToast({ message: getErrorMessage(err, 'Failed to clear overrides'), variant: 'error' });
+    }
+  }, [detail, showToast, refresh]);
+
+  const handleGrantCredits = useCallback(async () => {
+    if (!detail || !grantAmount) return;
+    try {
+      await grantAiCredits(detail.id, Number(grantAmount));
+      showToast({ message: `${grantAmount} AI credits granted`, variant: 'success' });
+      setGrantAmount('');
+      refresh();
+    } catch (err) {
+      showToast({ message: getErrorMessage(err, 'Failed to grant credits'), variant: 'error' });
+    }
+  }, [detail, grantAmount, showToast, refresh]);
+
+  const handleResetCredits = useCallback(async () => {
+    if (!detail) return;
+    try {
+      await resetAiCredits(detail.id);
+      showToast({ message: 'AI credits reset', variant: 'success' });
+      refresh();
+    } catch (err) {
+      showToast({ message: getErrorMessage(err, 'Failed to reset credits'), variant: 'error' });
+    }
+  }, [detail, showToast, refresh]);
+
   // Prevent flash of admin content for non-admins
   if (currentUser && !currentUser.isAdmin) return null;
 
@@ -268,6 +377,7 @@ export function AdminUserDetailPage() {
           <CardTitle>Identity</CardTitle>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             {detail.deletedAt && <Badge variant="destructive">Deleted</Badge>}
+            {detail.suspendedAt && <Badge variant="destructive">Suspended</Badge>}
             {detail.isAdmin && <Badge variant="default">Admin</Badge>}
             <Badge variant="secondary">{capitalize(detail.plan)}</Badge>
             <Badge variant={statusVariant(detail.status)}>{capitalize(detail.status)}</Badge>
@@ -345,7 +455,7 @@ export function AdminUserDetailPage() {
           <CardTitle>Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col divide-y divide-[var(--border-flat)]">
+          <div className="flex flex-col divide-y divide-[var(--border-subtle)]">
             <div className="row-spread py-3 first:pt-0">
               <span className="text-[14px] text-[var(--text-secondary)]">Admin role</span>
               <span className={cn('flex items-center gap-1.5', adminDisabled && 'opacity-50')}>
@@ -446,6 +556,166 @@ export function AdminUserDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Security */}
+      <Card>
+        <CardHeader><CardTitle>Security</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex flex-col divide-y divide-[var(--border-subtle)]">
+            {/* Suspend/Reactivate */}
+            <div className="row-spread py-3 first:pt-0">
+              <div>
+                <span className="text-[14px] text-[var(--text-secondary)]">Account status</span>
+                {detail.suspendedAt && (
+                  <p className="text-[12px] text-[var(--destructive)]">
+                    Suspended {new Date(detail.suspendedAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+              {detail.suspendedAt ? (
+                <Button variant="outline" size="sm" onClick={handleReactivate}>Reactivate</Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSuspendOpen(true)}
+                  disabled={isSelf}
+                  className="text-[var(--destructive)] hover:text-[var(--destructive)]"
+                >
+                  <ShieldOff className="h-3.5 w-3.5 mr-1.5" />
+                  Suspend
+                </Button>
+              )}
+            </div>
+
+            {/* Revoke sessions */}
+            <div className="row-spread py-3">
+              <span className="text-[14px] text-[var(--text-secondary)]">Revoke all sessions</span>
+              <Button variant="outline" size="sm" onClick={() => setRevokeSessionsOpen(true)}>
+                <LogOut className="h-3.5 w-3.5 mr-1.5" />
+                Revoke
+              </Button>
+            </div>
+
+            {/* Revoke all API keys */}
+            <div className="row-spread py-3 last:pb-0">
+              <span className="text-[14px] text-[var(--text-secondary)]">Revoke all API keys</span>
+              <Button variant="outline" size="sm" onClick={() => setRevokeKeysOpen(true)}>
+                <KeyRound className="h-3.5 w-3.5 mr-1.5" />
+                Revoke All
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Limit Overrides (cloud only) */}
+      {!planInfo.selfHosted && (
+        <Card>
+          <CardHeader><CardTitle>Limit Overrides</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-[13px] text-[var(--text-tertiary)] mb-3">
+              Override plan limits for this user. Leave blank to use plan defaults.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <FormField label="Max Bins" htmlFor="ov-bins">
+                <Input id="ov-bins" type="number" min={0} placeholder="Plan default" value={overrides.maxBins ?? ''} onChange={(e) => setOverrides(o => ({ ...o, maxBins: e.target.value ? Number(e.target.value) : null }))} className="h-8 text-[14px]" />
+              </FormField>
+              <FormField label="Max Locations" htmlFor="ov-locs">
+                <Input id="ov-locs" type="number" min={0} placeholder="Plan default" value={overrides.maxLocations ?? ''} onChange={(e) => setOverrides(o => ({ ...o, maxLocations: e.target.value ? Number(e.target.value) : null }))} className="h-8 text-[14px]" />
+              </FormField>
+              <FormField label="Photo Storage (MB)" htmlFor="ov-storage">
+                <Input id="ov-storage" type="number" min={0} placeholder="Plan default" value={overrides.maxPhotoStorageMb ?? ''} onChange={(e) => setOverrides(o => ({ ...o, maxPhotoStorageMb: e.target.value ? Number(e.target.value) : null }))} className="h-8 text-[14px]" />
+              </FormField>
+              <FormField label="Members/Location" htmlFor="ov-members">
+                <Input id="ov-members" type="number" min={0} placeholder="Plan default" value={overrides.maxMembersPerLocation ?? ''} onChange={(e) => setOverrides(o => ({ ...o, maxMembersPerLocation: e.target.value ? Number(e.target.value) : null }))} className="h-8 text-[14px]" />
+              </FormField>
+              <FormField label="AI Credits/Month" htmlFor="ov-ai">
+                <Input id="ov-ai" type="number" min={0} placeholder="Plan default" value={overrides.aiCreditsPerMonth ?? ''} onChange={(e) => setOverrides(o => ({ ...o, aiCreditsPerMonth: e.target.value ? Number(e.target.value) : null }))} className="h-8 text-[14px]" />
+              </FormField>
+              <FormField label="Retention (days)" htmlFor="ov-retention">
+                <Input id="ov-retention" type="number" min={0} placeholder="Plan default" value={overrides.activityRetentionDays ?? ''} onChange={(e) => setOverrides(o => ({ ...o, activityRetentionDays: e.target.value ? Number(e.target.value) : null }))} className="h-8 text-[14px]" />
+              </FormField>
+            </div>
+            <div className="flex items-center gap-2 mt-4">
+              <Button size="sm" onClick={handleSaveOverrides} disabled={savingOverrides}>
+                {savingOverrides ? 'Saving...' : 'Save Overrides'}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleClearOverrides}>Clear All</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI Credits (cloud only) */}
+      {!planInfo.selfHosted && detail.stats.aiCreditsLimit > 0 && (
+        <Card>
+          <CardHeader><CardTitle>AI Credits</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex flex-col divide-y divide-[var(--border-subtle)]">
+              <div className="row-spread py-3 first:pt-0">
+                <span className="text-[14px] text-[var(--text-secondary)]">Grant credits</span>
+                <div className="flex items-center gap-2">
+                  <Input type="number" min={1} max={10000} placeholder="Amount" value={grantAmount} onChange={(e) => setGrantAmount(e.target.value)} className="w-24 h-8 text-[14px]" />
+                  <Button size="sm" onClick={handleGrantCredits} disabled={!grantAmount}>Grant</Button>
+                </div>
+              </div>
+              <div className="row-spread py-3 last:pb-0">
+                <span className="text-[14px] text-[var(--text-secondary)]">Reset credits to 0</span>
+                <Button variant="outline" size="sm" onClick={handleResetCredits}>Reset</Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Suspend confirmation dialog */}
+      <Dialog open={suspendOpen} onOpenChange={(open) => !open && setSuspendOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Suspend User</DialogTitle>
+            <DialogDescription>
+              Suspend <strong>{detail.username}</strong>? They will be immediately logged out and unable to access the app.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSuspendOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleSuspend}>Suspend</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke sessions confirmation */}
+      <Dialog open={revokeSessionsOpen} onOpenChange={(open) => !open && setRevokeSessionsOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke All Sessions</DialogTitle>
+            <DialogDescription>
+              This will log <strong>{detail.username}</strong> out of all devices immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRevokeSessionsOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRevokeSessions}>Revoke Sessions</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke all API keys confirmation */}
+      <Dialog open={revokeKeysOpen} onOpenChange={(open) => !open && setRevokeKeysOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke All API Keys</DialogTitle>
+            <DialogDescription>
+              This will immediately invalidate all API keys for <strong>{detail.username}</strong>. Any integrations using these keys will stop working.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRevokeKeysOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRevokeAllApiKeys}>Revoke All Keys</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation dialog */}
       <Dialog open={deleteOpen} onOpenChange={(open) => !open && setDeleteOpen(false)}>

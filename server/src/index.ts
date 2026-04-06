@@ -13,10 +13,14 @@ import { createLogger } from './lib/logger.js';
 import { apiLimiter, authLimiter, joinLimiter, registerLimiter, sensitiveAuthLimiter } from './lib/rateLimiters.js';
 import { isRestoreInProgress } from './lib/restore.js';
 import { tryAuthenticate } from './middleware/auth.js';
+import { maintenanceGate } from './middleware/maintenance.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { requireActiveSubscription } from './middleware/requirePlan.js';
 import activityRoutes from './routes/activity.js';
 import { adminRoutes } from './routes/admin.js';
+import { adminOverridesRoutes } from './routes/adminOverrides.js';
+import { adminSecurityRoutes } from './routes/adminSecurity.js';
+import { adminSystemRoutes } from './routes/adminSystem.js';
 import aiRoutes from './routes/ai.js';
 import { streamRouter as aiStreamRoutes } from './routes/aiStream.js';
 import apiKeysRoutes from './routes/apiKeys.js';
@@ -120,7 +124,7 @@ export function createApp(): express.Express {
 
   // Routes
   app.use('/api', apiLimiter);
-  app.use('/api', tryAuthenticate, requireActiveSubscription());
+  app.use('/api', tryAuthenticate, maintenanceGate, requireActiveSubscription());
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/demo-login', authLimiter);
   app.use('/api/auth/register', registerLimiter);
@@ -158,6 +162,9 @@ export function createApp(): express.Express {
   app.use('/api/items', itemsRoutes);
   app.use('/api', batchRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/admin/security', adminSecurityRoutes);
+  app.use('/api/admin/overrides', adminOverridesRoutes);
+  app.use('/api/admin/system', adminSystemRoutes);
 
   // Global error handler
   app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

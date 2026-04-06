@@ -20,6 +20,9 @@ const log = createLogger('startup');
 await initialize();
 loadEmailTemplates();
 
+// Load persisted maintenance mode state
+import('./middleware/maintenance.js').then(m => m.loadMaintenanceMode()).catch(() => {});
+
 const app = createApp();
 
 if (config.disableRateLimit && process.env.NODE_ENV !== 'test') {
