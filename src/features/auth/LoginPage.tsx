@@ -13,6 +13,8 @@ import { useAppSettings } from '@/lib/appSettings';
 import { useAuth } from '@/lib/auth';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
 import { cn, focusRing, getErrorMessage } from '@/lib/utils';
+import { useOAuthReturn } from './OAuthReturn';
+import { SocialButtons, SocialDivider } from './SocialButtons';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -28,8 +30,11 @@ export function LoginPage() {
   const [demoMode, setDemoMode] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [formError, setFormError] = useState('');
+  const [oauthProviders, setOAuthProviders] = useState<string[]>([]);
   const usernameRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
+
+  useOAuthReturn();
 
   useEffect(() => {
     fetch('/api/auth/status')
@@ -37,6 +42,7 @@ export function LoginPage() {
       .then((data) => {
         setRegistrationEnabled(data.registrationEnabled !== false);
         if (data.demoMode) setDemoMode(true);
+        if (Array.isArray(data.oauthProviders)) setOAuthProviders(data.oauthProviders);
       })
       .catch(() => {});
   }, []);
@@ -121,6 +127,8 @@ export function LoginPage() {
           <>
             <Card>
               <CardContent className="py-6">
+                <SocialButtons providers={oauthProviders} />
+                {oauthProviders.length > 0 && <SocialDivider />}
                 <form onSubmit={handleSubmit} className="space-y-5" noValidate>
                   {formError && (
                     <p role="alert" className="text-[13px] text-[var(--destructive)] bg-[var(--destructive-soft)] px-3.5 py-2.5 rounded-[var(--radius-sm)]">
