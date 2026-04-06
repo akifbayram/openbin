@@ -387,12 +387,16 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
       const effectiveStatus = typeof subStatus === 'number' ? subStatus : target.sub_status;
       const effectivePlan = plan !== undefined ? plan : target.plan;
 
-      if (effectiveStatus === SubStatus.ACTIVE) {
-        const { fireSubscriptionConfirmedEmail } = await import('../ee/lifecycleEmails.js');
-        fireSubscriptionConfirmedEmail(targetId, updatedUser.email, updatedUser.display_name, effectivePlan as PlanTier, updatedUser.active_until);
-      } else if (effectiveStatus === SubStatus.INACTIVE) {
-        const { fireSubscriptionExpiredEmail } = await import('../ee/lifecycleEmails.js');
-        fireSubscriptionExpiredEmail(targetId, updatedUser.email, updatedUser.display_name);
+      try {
+        if (effectiveStatus === SubStatus.ACTIVE) {
+          const { fireSubscriptionConfirmedEmail } = await import('../ee/lifecycleEmails.js');
+          fireSubscriptionConfirmedEmail(targetId, updatedUser.email, updatedUser.display_name, effectivePlan as PlanTier, updatedUser.active_until);
+        } else if (effectiveStatus === SubStatus.INACTIVE) {
+          const { fireSubscriptionExpiredEmail } = await import('../ee/lifecycleEmails.js');
+          fireSubscriptionExpiredEmail(targetId, updatedUser.email, updatedUser.display_name);
+        }
+      } catch {
+        // EE module not available — lifecycle emails skipped
       }
     }
   }
