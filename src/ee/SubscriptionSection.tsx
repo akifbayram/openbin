@@ -6,7 +6,7 @@ import { SettingsRow } from '@/features/settings/SettingsRow';
 import { SettingsSection } from '@/features/settings/SettingsSection';
 import { apiFetch } from '@/lib/api';
 import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
-import { cn, focusRing, isSafeExternalUrl } from '@/lib/utils';
+import { cn, focusRing, isSafeExternalUrl, plural } from '@/lib/utils';
 import type { PlanFeatures, PlanTier } from '@/types';
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -200,7 +200,7 @@ function PlanHeader({
             Trial
           </span>
         )}
-        {isActive && !isTrialing && (
+        {isActive && (
           <span className="rounded-[var(--radius-sm)] bg-[var(--color-success-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-success)]">
             Active
           </span>
@@ -218,7 +218,7 @@ function PlanHeader({
 
       {isTrialing && daysRemaining !== null && (
         <p className="text-[12px] text-[var(--color-warning)] mt-2">
-          {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} remaining
+          {daysRemaining} {plural(daysRemaining, 'day')} remaining
         </p>
       )}
 
@@ -295,7 +295,6 @@ function UnlockSection({
 
   const isFreePlan = plan === 'free';
   const label = isFreePlan ? 'Unlock with Plus' : 'Unlock with Pro';
-  // For free plan, the PlanHeader already shows the primary upgrade CTA; skip the button here
   const upgradeHref = isFreePlan ? null : planInfo.upgradeProUrl;
 
   return (
@@ -315,7 +314,7 @@ function UnlockSection({
           rel="noopener noreferrer"
           className={actionSecondary}
         >
-          {isFreePlan ? 'Upgrade to Plus' : 'Upgrade to Pro'}
+          Upgrade to Pro
           <ArrowUpRight className="h-3 w-3" />
         </a>
       )}
@@ -365,7 +364,8 @@ export function SubscriptionSection() {
     }
 
     return () => clearTimeout(pollRef.current);
-  }, [searchParams, setSearchParams, showToast, refresh, planInfo.status]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- planInfo.status is captured once as previousStatus; re-running would cancel the poll
+  }, [searchParams, setSearchParams, showToast, refresh]);
 
   useEffect(() => {
     const onVisible = () => {
