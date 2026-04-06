@@ -1,9 +1,11 @@
 import { ArrowUpRight, Clock, CreditCard } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { useToast } from '@/components/ui/toast';
+import { apiFetch } from '@/lib/api';
+import { Events, notify } from '@/lib/eventBus';
 import { getLockedCta, getLockedMessage, usePlan } from '@/lib/usePlan';
 import { cn, focusRing } from '@/lib/utils';
 
@@ -181,6 +183,22 @@ export function SubscriptionSection() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [refresh, refreshUsage]);
 
+  const [downgrading, setDowngrading] = useState(false);
+  const handleDowngradeToFree = useCallback(async () => {
+    setDowngrading(true);
+    try {
+      await apiFetch('/api/plan/downgrade-to-free', { method: 'POST' });
+      await refresh();
+      refreshUsage();
+      notify(Events.PLAN);
+      showToast({ message: 'Switched to the Free plan', variant: 'success' });
+    } catch {
+      showToast({ message: 'Failed to switch to Free plan', variant: 'error' });
+    } finally {
+      setDowngrading(false);
+    }
+  }, [refresh, refreshUsage, showToast]);
+
   if (isSelfHosted || isLoading) return null;
 
   const isTrialing = planInfo.status === 'trial';
@@ -294,6 +312,18 @@ export function SubscriptionSection() {
                 </a>
               ))}
             </div>
+          )}
+
+          {/* Downgrade to Free */}
+          {planInfo.canDowngradeToFree && (
+            <button
+              type="button"
+              disabled={downgrading}
+              onClick={handleDowngradeToFree}
+              className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors text-center"
+            >
+              {isLocked ? 'Continue with Free Plan' : 'Switch to Free Plan'}
+            </button>
           )}
         </div>
         </Disclosure>

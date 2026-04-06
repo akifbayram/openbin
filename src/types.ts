@@ -307,5 +307,6 @@ export interface PlanInfo {
   upgradeProUrl: string | null;
   portalUrl: string | null;
   subscribePlanUrl: string | null;
+  canDowngradeToFree: boolean;
   aiCredits: { used: number; limit: number; resetsAt: string | null } | null;
 }

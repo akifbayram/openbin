@@ -273,7 +273,7 @@ router.get('/audit-log', asyncHandler(async (req, res) => {
     targetType: row.target_type,
     targetId: row.target_id ?? null,
     targetName: row.target_name ?? null,
-    details: row.details ? JSON.parse(row.details) : null,
+    details: typeof row.details === 'string' ? JSON.parse(row.details) : (row.details ?? null),
     createdAt: row.created_at,
   }));
 

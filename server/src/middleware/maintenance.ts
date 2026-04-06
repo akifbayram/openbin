@@ -35,7 +35,7 @@ export async function loadMaintenanceMode(): Promise<void> {
 
 /**
  * Express middleware that returns 503 for non-admin requests when maintenance mode is on.
- * Admin routes (/api/admin/*) and auth status are always allowed through.
+ * Admin routes (/admin/*) and auth endpoints are always allowed through.
  */
 export function maintenanceGate(req: Request, res: Response, next: NextFunction): void {
   if (!maintenanceMode) {

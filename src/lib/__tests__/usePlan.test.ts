@@ -54,6 +54,7 @@ const SELF_HOSTED_PLAN: PlanInfo = {
   upgradeProUrl: null,
   portalUrl: null,
   subscribePlanUrl: null,
+  canDowngradeToFree: false,
   aiCredits: null,
 };
 
@@ -83,6 +84,7 @@ const FREE_PLAN: PlanInfo = {
   upgradeProUrl: 'https://example.com/auth/openbin?token=abc&plan=pro',
   portalUrl: null,
   subscribePlanUrl: null,
+  canDowngradeToFree: false,
   aiCredits: null,
 };
 
@@ -112,6 +114,7 @@ const PLUS_PLAN: PlanInfo = {
   upgradeProUrl: 'https://example.com/auth/openbin?token=abc&plan=pro',
   portalUrl: 'https://example.com/portal?token=abc',
   subscribePlanUrl: null,
+  canDowngradeToFree: false,
   aiCredits: { used: 5, limit: 25, resetsAt: null },
 };
 
@@ -141,6 +144,7 @@ const PRO_PLAN: PlanInfo = {
   upgradeProUrl: null,
   portalUrl: 'https://example.com/portal?token=abc',
   subscribePlanUrl: null,
+  canDowngradeToFree: false,
   aiCredits: null,
 };
 

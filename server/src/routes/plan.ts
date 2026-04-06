@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { query } from '../db.js';
+import { d, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { NotFoundError } from '../lib/httpErrors.js';
-import { computeOverLimits, generatePortalUrl, generateUpgradePlanUrl, generateUpgradeUrl, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, isSelfHosted, isSubscriptionActive, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
+import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { computeOverLimits, generatePortalUrl, generateUpgradePlanUrl, generateUpgradeUrl, getAiCredits, getFeatureMap, getUserPlanInfo, getUserUsage, invalidateOverLimitCache, isSelfHosted, isSubscriptionActive, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -57,6 +57,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     subscribePlanUrl: planInfo.subStatus === SubStatus.TRIAL
       ? await generateUpgradePlanUrl(userId, email, planLabel(planInfo.plan) as 'plus' | 'pro') : null,
     portalUrl: isPaidActive ? await generatePortalUrl(userId, email) : null,
+    canDowngradeToFree: planInfo.plan !== Plan.FREE && planInfo.subStatus !== SubStatus.ACTIVE,
     aiCredits,
   });
 }));
@@ -93,6 +94,34 @@ router.get('/usage-summary', authenticate, asyncHandler(async (req, res) => {
     aiCreditsLimit: aiCredits.limit,
     aiCreditsResetsAt: aiCredits.resetsAt,
   });
+}));
+
+router.post('/downgrade-to-free', authenticate, asyncHandler(async (req, res) => {
+  if (isSelfHosted()) {
+    throw new NotFoundError('Not available in self-hosted mode');
+  }
+
+  const userId = req.user!.id;
+  const planInfo = await getUserPlanInfo(userId);
+  if (!planInfo) throw new NotFoundError('User not found');
+
+  if (planInfo.plan === Plan.FREE) {
+    throw new ValidationError('Already on the Free plan');
+  }
+
+  // Block if user has an active paid subscription (must cancel in Stripe first)
+  if (planInfo.subStatus === SubStatus.ACTIVE) {
+    throw new ValidationError('Cancel your paid subscription before downgrading to Free');
+  }
+
+  await query(
+    `UPDATE users SET plan = $1, sub_status = $2, active_until = NULL, previous_sub_status = NULL, updated_at = ${d.now()} WHERE id = $3`,
+    [Plan.FREE, SubStatus.ACTIVE, userId],
+  );
+
+  invalidateOverLimitCache(userId);
+
+  res.json({ ok: true });
 }));
 
 export { router as planRoutes };

@@ -40,6 +40,7 @@ const SELF_HOSTED_PLAN: PlanInfo = {
   upgradeProUrl: null,
   portalUrl: null,
   subscribePlanUrl: null,
+  canDowngradeToFree: false,
   aiCredits: null,
 };
 
@@ -70,6 +71,7 @@ const LOCKED_FALLBACK: PlanInfo = {
   upgradeProUrl: null,
   portalUrl: null,
   subscribePlanUrl: null,
+  canDowngradeToFree: false,
   aiCredits: null,
 };
 

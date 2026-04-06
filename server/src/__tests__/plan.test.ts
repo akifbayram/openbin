@@ -285,6 +285,96 @@ describe('GET /api/plan', () => {
     expect(res.body.portalUrl).toBe('https://manager.example.com/portal');
   });
 
+  it('returns canDowngradeToFree=true for Plus trial user', async () => {
+    vi.mocked(isSelfHosted).mockReturnValue(false);
+    vi.mocked(getUserPlanInfo).mockResolvedValue({
+      plan: Plan.PLUS,
+      subStatus: SubStatus.TRIAL,
+      activeUntil: '2027-01-01T00:00:00.000Z',
+      email: 'trial@example.com',
+      previousSubStatus: null,
+    });
+    vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    vi.mocked(generateUpgradePlanUrl).mockResolvedValue('https://manager.example.com/checkout');
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .get('/api/plan')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.canDowngradeToFree).toBe(true);
+  });
+
+  it('returns canDowngradeToFree=true for locked post-trial user', async () => {
+    vi.mocked(isSelfHosted).mockReturnValue(false);
+    vi.mocked(getUserPlanInfo).mockResolvedValue({
+      plan: Plan.PLUS,
+      subStatus: SubStatus.INACTIVE,
+      activeUntil: null,
+      email: 'expired@example.com',
+      previousSubStatus: SubStatus.TRIAL,
+    });
+    vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .get('/api/plan')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.canDowngradeToFree).toBe(true);
+  });
+
+  it('returns canDowngradeToFree=false for Free user', async () => {
+    vi.mocked(isSelfHosted).mockReturnValue(false);
+    vi.mocked(getUserPlanInfo).mockResolvedValue({
+      plan: Plan.FREE,
+      subStatus: SubStatus.ACTIVE,
+      activeUntil: null,
+      email: 'free@example.com',
+      previousSubStatus: null,
+    });
+    vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue('https://manager.example.com/upgrade');
+    vi.mocked(generateUpgradePlanUrl).mockImplementation(async (_uid, _email, plan) =>
+      `https://manager.example.com/checkout-${plan}`);
+    vi.mocked(generatePortalUrl).mockResolvedValue(null);
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .get('/api/plan')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.canDowngradeToFree).toBe(false);
+  });
+
+  it('returns canDowngradeToFree=false for active paid Plus user', async () => {
+    vi.mocked(isSelfHosted).mockReturnValue(false);
+    vi.mocked(getUserPlanInfo).mockResolvedValue({
+      plan: Plan.PLUS,
+      subStatus: SubStatus.ACTIVE,
+      activeUntil: null,
+      email: 'plus@example.com',
+      previousSubStatus: null,
+    });
+    vi.mocked(getFeatureMap).mockReturnValue(PLUS_FEATURES);
+    vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
+    vi.mocked(generateUpgradePlanUrl).mockResolvedValue('https://manager.example.com/checkout-pro');
+    vi.mocked(generatePortalUrl).mockResolvedValue('https://manager.example.com/portal');
+    const { token } = await createTestUser(app);
+
+    const res = await request(app)
+      .get('/api/plan')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.canDowngradeToFree).toBe(false);
+  });
+
   it('returns upgradePlusUrl and upgradeProUrl for Free user', async () => {
     vi.mocked(isSelfHosted).mockReturnValue(false);
     vi.mocked(getUserPlanInfo).mockResolvedValue({

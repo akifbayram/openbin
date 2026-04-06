@@ -48,7 +48,7 @@ function requirePlanAccess(
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const EXEMPT_PREFIXES = ['/api/auth/', '/api/subscriptions/'];
-const EXEMPT_EXACT = ['/api/auth', '/api/subscriptions'];
+const EXEMPT_EXACT = ['/api/auth', '/api/subscriptions', '/api/plan/downgrade-to-free'];
 
 /**
  * Global middleware: blocks all mutation requests for users with expired subscriptions.
