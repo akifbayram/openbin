@@ -230,6 +230,58 @@ export function subscriptionExpiringEmail(params: { displayName: string; expiryD
   };
 }
 
+export function inactivityWarning30dEmail(params: { displayName: string; loginUrl: string; daysInactive: number }): EmailTemplate {
+  return {
+    subject: 'Your OpenBin account will be deleted in 30 days',
+    html: wrap([
+      h1('Your account will be deleted'),
+      greeting(params.displayName),
+      p(`Your OpenBin account has been inactive for ${params.daysInactive} days. It will be <strong>permanently deleted in 30 days</strong> unless you log in.`),
+      p('When deleted, all your bins, items, photos, and settings will be permanently removed and cannot be recovered.'),
+      divider,
+      btn(params.loginUrl, 'Log In to Keep Your Account'),
+      p('<small>You can also prevent deletion by subscribing to a paid plan.</small>'),
+    ].join('')),
+    text: [
+      `Hi ${params.displayName},`,
+      '',
+      `Your OpenBin account has been inactive for ${params.daysInactive} days. It will be permanently deleted in 30 days unless you log in.`,
+      '',
+      'When deleted, all your bins, items, photos, and settings will be permanently removed and cannot be recovered.',
+      '',
+      `Log in to keep your account: ${params.loginUrl}`,
+      '',
+      'You can also prevent deletion by subscribing to a paid plan.',
+    ].join('\n'),
+  };
+}
+
+export function inactivityWarning7dEmail(params: { displayName: string; loginUrl: string; daysInactive: number }): EmailTemplate {
+  return {
+    subject: 'Final warning: Your OpenBin account will be deleted in 7 days',
+    html: wrap([
+      h1('Final warning'),
+      greeting(params.displayName),
+      p(`Your OpenBin account has been inactive for ${params.daysInactive} days. It will be <strong>permanently deleted in 7 days</strong>.`),
+      p('All your bins, items, photos, and settings will be permanently removed and cannot be recovered. This is your last warning.'),
+      divider,
+      btn(params.loginUrl, 'Log In Now'),
+      p('<small>You can also prevent deletion by subscribing to a paid plan.</small>'),
+    ].join('')),
+    text: [
+      `Hi ${params.displayName},`,
+      '',
+      `Your OpenBin account has been inactive for ${params.daysInactive} days. It will be permanently deleted in 7 days.`,
+      '',
+      'All your bins, items, photos, and settings will be permanently removed and cannot be recovered. This is your last warning.',
+      '',
+      `Log in now: ${params.loginUrl}`,
+      '',
+      'You can also prevent deletion by subscribing to a paid plan.',
+    ].join('\n'),
+  };
+}
+
 export function downgradeImpactEmail(params: { displayName: string; impact: DowngradeImpact; upgradeUrl: string }): EmailTemplate {
   const { impact } = params;
   const lines: string[] = [];
