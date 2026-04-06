@@ -76,6 +76,15 @@ export const config = Object.freeze({
   managerUrl: process.env.MANAGER_URL || null,
   subscriptionJwtSecret: process.env.SUBSCRIPTION_JWT_SECRET || null,
   subscriptionWebhookSecret: process.env.SUBSCRIPTION_WEBHOOK_SECRET || null,
+
+  // OAuth (cloud only)
+  googleClientId: process.env.GOOGLE_CLIENT_ID || null,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || null,
+  appleClientId: process.env.APPLE_CLIENT_ID || null,
+  appleTeamId: process.env.APPLE_TEAM_ID || null,
+  appleKeyId: process.env.APPLE_KEY_ID || null,
+  applePrivateKey: process.env.APPLE_PRIVATE_KEY?.replace(/\\n/g, '\n') || null,
+
   trialPeriodDays: clamp(parseInt(process.env.TRIAL_PERIOD_DAYS || '7', 10), 1, 90, 7),
   planLimits: Object.freeze({
     // Free tier
