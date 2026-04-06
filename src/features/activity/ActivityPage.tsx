@@ -36,7 +36,7 @@ export function ActivityPage() {
 
   return (
     <div className="page-content">
-      <PageHeader title="Activity" />
+      <PageHeader title="Activity" backTo="/settings/data" />
 
       <OptionGroup
         options={filterOptions}

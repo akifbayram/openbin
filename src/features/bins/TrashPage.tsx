@@ -63,7 +63,7 @@ export function TrashPage() {
 
   return (
     <div className="page-content">
-      <PageHeader title="Trash" />
+      <PageHeader title="Trash" backTo="/settings/data" />
       <p className="text-[13px] text-[var(--text-tertiary)]">
         Deleted {t.bins} are kept for {retentionDays} day{retentionDays !== 1 ? 's' : ''} before being permanently removed.
       </p>
