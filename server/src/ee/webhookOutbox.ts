@@ -1,9 +1,9 @@
 import * as jose from 'jose';
 import { d, generateUuid, query } from '../db.js';
-import { config } from './config.js';
-import { acquireJobLock, releaseJobLock } from './jobLock.js';
-import { createLogger } from './logger.js';
-import { getSubscriptionSecretKey } from './planGate.js';
+import { config } from '../lib/config.js';
+import { acquireJobLock, releaseJobLock } from '../lib/jobLock.js';
+import { createLogger } from '../lib/logger.js';
+import { getSubscriptionSecretKey } from '../lib/planGate.js';
 
 const log = createLogger('webhookOutbox');
 

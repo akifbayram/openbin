@@ -9,14 +9,12 @@ import { getAdminCount } from '../lib/adminHelpers.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { runBackup } from '../lib/backup.js';
 import { config } from '../lib/config.js';
+import { getEeHooks } from '../lib/eeHooks.js';
 import { firePasswordResetEmail } from '../lib/emailSender.js';
 import { ConflictError, ForbiddenError, HttpError, NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { createLogger } from '../lib/logger.js';
-import { notifyManagerUserUpdate } from '../lib/managerWebhook.js';
-import { getCloudMetrics, getPlanBreakdown } from '../lib/metrics.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { getFeatureMap, invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
-import { metricsLimiter } from '../lib/rateLimiters.js';
 import { restoreBackup } from '../lib/restore.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
 import { authenticate, invalidateDeletedCache } from '../middleware/auth.js';
@@ -367,7 +365,7 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   }
 
   if (plan !== undefined || typeof subStatus === 'number' || activeUntil !== undefined) {
-    notifyManagerUserUpdate({
+    getEeHooks().onUserUpdate?.({
       userId: targetId,
       action: 'update_subscription',
       ...(plan !== undefined ? { plan } : {}),
@@ -389,12 +387,16 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
       const effectiveStatus = typeof subStatus === 'number' ? subStatus : target.sub_status;
       const effectivePlan = plan !== undefined ? plan : target.plan;
 
-      if (effectiveStatus === SubStatus.ACTIVE) {
-        const { fireSubscriptionConfirmedEmail } = await import('../lib/emailSender.js');
-        fireSubscriptionConfirmedEmail(targetId, updatedUser.email, updatedUser.display_name, effectivePlan as PlanTier, updatedUser.active_until);
-      } else if (effectiveStatus === SubStatus.INACTIVE) {
-        const { fireSubscriptionExpiredEmail } = await import('../lib/emailSender.js');
-        fireSubscriptionExpiredEmail(targetId, updatedUser.email, updatedUser.display_name);
+      try {
+        if (effectiveStatus === SubStatus.ACTIVE) {
+          const { fireSubscriptionConfirmedEmail } = await import('../ee/lifecycleEmails.js');
+          fireSubscriptionConfirmedEmail(targetId, updatedUser.email, updatedUser.display_name, effectivePlan as PlanTier, updatedUser.active_until);
+        } else if (effectiveStatus === SubStatus.INACTIVE) {
+          const { fireSubscriptionExpiredEmail } = await import('../ee/lifecycleEmails.js');
+          fireSubscriptionExpiredEmail(targetId, updatedUser.email, updatedUser.display_name);
+        }
+      } catch {
+        // EE module not available — lifecycle emails skipped
       }
     }
   }
@@ -432,7 +434,7 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
   );
   invalidateDeletedCache(targetId);
 
-  notifyManagerUserUpdate({ userId: targetId, action: 'delete_user' });
+  getEeHooks().onUserUpdate?.({ userId: targetId, action: 'delete_user' });
 
   log.info(`User ${req.user!.username} soft-deleted user ${target.username}`);
 
@@ -492,25 +494,6 @@ router.post('/users/:id/send-password-reset', asyncHandler(async (req, res) => {
   log.info(`User ${req.user!.username} sent password reset for user ${target.username}`);
 
   res.json({ message: 'Password reset email sent' });
-}));
-
-// GET /api/admin/metrics — cloud metrics (cloud mode only)
-router.get('/metrics', metricsLimiter, asyncHandler(async (_req, res) => {
-  if (config.selfHosted) {
-    throw new NotFoundError('Metrics not available in self-hosted mode');
-  }
-
-  const metrics = await getCloudMetrics();
-  res.json(metrics);
-}));
-
-// GET /api/admin/metrics/plan-breakdown — per-plan usage averages
-router.get('/metrics/plan-breakdown', metricsLimiter, asyncHandler(async (_req, res) => {
-  if (config.selfHosted) {
-    throw new NotFoundError('Metrics not available in self-hosted mode');
-  }
-  const breakdown = await getPlanBreakdown();
-  res.json(breakdown);
 }));
 
 // PATCH /api/admin/registration — toggle registration mode

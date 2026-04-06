@@ -8,6 +8,7 @@ import pkg from './package.json' with { type: 'json' }
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __EE__: JSON.stringify(process.env.BUILD_EDITION === 'cloud'),
   },
   plugins: [
     react(),

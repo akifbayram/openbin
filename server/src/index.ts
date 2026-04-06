@@ -42,14 +42,13 @@ import printSettingsRoutes from './routes/printSettings.js';
 import savedViewsRoutes from './routes/savedViews.js';
 import scanHistoryRoutes from './routes/scanHistory.js';
 import { sharedRoutes } from './routes/shared.js';
-import { subscriptionsRoutes } from './routes/subscriptions.js';
 import tagColorsRoutes from './routes/tagColors.js';
 import tagsRoutes from './routes/tags.js';
 import userPreferencesRoutes from './routes/userPreferences.js';
 
 const STATIC_DIR = path.join(import.meta.dirname, '..', 'public');
 
-export function createApp(): express.Express {
+export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => void }): express.Express {
   const app = express();
   if (config.trustProxy) app.set('trust proxy', 1);
   app.disable('x-powered-by');
@@ -153,7 +152,7 @@ export function createApp(): express.Express {
   app.use('/api/scan-history', scanHistoryRoutes);
   app.use('/api/plan', planRoutes);
   app.use('/api/shared', sharedRoutes);
-  app.use('/api/subscriptions', subscriptionsRoutes);
+  opts?.mountEeRoutes?.(app);
   app.use('/api', exportRoutes);
   app.use('/api/ai', aiRoutes);
   app.use('/api/ai', aiStreamRoutes);

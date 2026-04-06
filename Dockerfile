@@ -1,5 +1,6 @@
 # ── Stage 1: Build frontend ──────────────────
 FROM node:22-alpine AS frontend-builder
+ARG BUILD_EDITION=selfhosted
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -7,10 +8,11 @@ COPY index.html vite.config.ts tsconfig*.json ./
 COPY src ./src
 COPY public ./public
 COPY server/openapi.yaml ./server/openapi.yaml
-RUN npx vite build
+RUN BUILD_EDITION=$BUILD_EDITION npx vite build
 
 # ── Stage 2: Build server ────────────────────
 FROM node:22-alpine AS server-builder
+ARG BUILD_EDITION=selfhosted
 RUN apk add --no-cache python3 make g++
 WORKDIR /app
 COPY server/package.json server/package-lock.json* ./
@@ -18,6 +20,7 @@ RUN npm ci
 COPY server/tsconfig.json ./
 COPY server/src ./src
 RUN npm run build
+RUN if [ "$BUILD_EDITION" != "cloud" ]; then rm -rf dist/ee; fi
 
 # ── Stage 3: Runtime ─────────────────────────
 FROM node:22-alpine

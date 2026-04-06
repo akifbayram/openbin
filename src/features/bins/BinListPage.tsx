@@ -6,7 +6,7 @@ import {
   ScanLine,
   Sparkles,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,6 @@ import { Pagination } from '@/components/ui/pagination';
 import type { SortDirection } from '@/components/ui/sort-header';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
-import { UpgradeDialog } from '@/components/ui/upgrade-dialog';
 import { setCommandSelectedBinIds } from '@/features/ai/commandSelectedBins';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
@@ -45,6 +44,10 @@ import { useBulkSelection } from './useBulkSelection';
 import { useColumnVisibility } from './useColumnVisibility';
 import { usePageSize } from './usePageSize';
 import { useViewMode } from './useViewMode';
+
+const UpgradeDialog = __EE__
+  ? lazy(() => import('@/ee/UpgradeDialog').then(m => ({ default: m.UpgradeDialog })))
+  : (() => null) as React.FC<Record<string, unknown>>;
 
 export function BinListPage() {
   const t = useTerminology();
@@ -390,12 +393,16 @@ export function BinListPage() {
         />
       )}
 
-      <UpgradeDialog
-        open={upgradeOpen}
-        onOpenChange={setUpgradeOpen}
-        feature="AI Features"
-        description="AI-powered commands, analysis, and suggestions are available on the Pro plan."
-      />
+      {__EE__ && (
+        <Suspense fallback={null}>
+          <UpgradeDialog
+            open={upgradeOpen}
+            onOpenChange={setUpgradeOpen}
+            feature="AI Features"
+            description="AI-powered commands, analysis, and suggestions are available on the Pro plan."
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

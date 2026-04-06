@@ -1,5 +1,5 @@
 import { Bookmark, ChevronRight, Clock, Inbox, MapPin, Package, Pin, Plus, Printer, QrCode, ScanLine, Sparkles } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { SavedViewChips } from '@/components/saved-view-chips';
@@ -11,7 +11,6 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
-import { UpgradeDialog } from '@/components/ui/upgrade-dialog';
 import { BinCard } from '@/features/bins/BinCard';
 import { buildViewSearchParams } from '@/features/bins/useBinSearchParams';
 import { useAllTags } from '@/features/bins/useBins';
@@ -38,6 +37,10 @@ import { DashboardSettingsMenu } from './DashboardSettingsMenu';
 import { DashboardSkeleton } from './DashboardSkeleton';
 import { SectionHeader, StatCard } from './DashboardWidgets';
 import { useDashboard } from './useDashboard';
+
+const UpgradeDialog = __EE__
+  ? lazy(() => import('@/ee/UpgradeDialog').then(m => ({ default: m.UpgradeDialog })))
+  : (() => null) as React.FC<Record<string, unknown>>;
 
 export function DashboardPage() {
   const t = useTerminology();
@@ -372,12 +375,16 @@ export function DashboardPage() {
         pinLabel={pinLabel} isBusy={isBusy} bins={allDashboardBins} t={t}
       />
 
-      <UpgradeDialog
-        open={upgradeOpen}
-        onOpenChange={setUpgradeOpen}
-        feature="AI Features"
-        description="AI-powered commands, analysis, and suggestions are available on the Pro plan."
-      />
+      {__EE__ && (
+        <Suspense fallback={null}>
+          <UpgradeDialog
+            open={upgradeOpen}
+            onOpenChange={setUpgradeOpen}
+            feature="AI Features"
+            description="AI-powered commands, analysis, and suggestions are available on the Pro plan."
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

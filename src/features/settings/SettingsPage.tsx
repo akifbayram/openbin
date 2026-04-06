@@ -9,7 +9,7 @@ import {
   Sparkles,
   Sun,
 } from 'lucide-react';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { lazy, type ReactNode, Suspense, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -17,7 +17,6 @@ import { OptionGroup } from '@/components/ui/option-group';
 import { PageHeader } from '@/components/ui/page-header';
 import { SearchInput } from '@/components/ui/search-input';
 import { Switch } from '@/components/ui/switch';
-import { UpgradePrompt } from '@/components/ui/upgrade-prompt';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { useLocationList } from '@/features/locations/useLocations';
@@ -37,8 +36,14 @@ import { DangerZoneSection } from './DangerZoneSection';
 import { DashboardSection } from './DashboardSection';
 import { DataSection } from './DataSection';
 import { PersonalizationSection } from './PersonalizationSection';
-import { SubscriptionSection } from './SubscriptionSection';
 import { useDataSectionActions } from './useDataSectionActions';
+
+const UpgradePrompt = __EE__
+  ? lazy(() => import('@/ee/UpgradePrompt').then(m => ({ default: m.UpgradePrompt })))
+  : (() => null) as React.FC<Record<string, unknown>>;
+const SubscriptionSection = __EE__
+  ? lazy(() => import('@/ee/SubscriptionSection').then(m => ({ default: m.SubscriptionSection })))
+  : (() => null) as React.FC;
 
 const SEARCH_KEYWORDS: Record<string, string[]> = {
   account: ['profile', 'admin', 'subscription', 'plan', 'billing', 'upgrade', 'pro', 'plus', 'free', 'trial', 'avatar', 'password'],
@@ -180,7 +185,11 @@ export function SettingsPage() {
             </Card>
           )}
 
-          <SubscriptionSection />
+          {__EE__ && (
+            <Suspense fallback={null}>
+              <SubscriptionSection />
+            </Suspense>
+          )}
         </SettingsGroup>
       )}
 
@@ -230,21 +239,29 @@ export function SettingsPage() {
       {isVisible('integrations') && (isAdmin || permissionsLoading) && (
         <SettingsGroup id="integrations" label="Integrations">
           {aiGated ? (
-            <UpgradePrompt
-              feature="AI Features"
-              description="Enable AI-powered suggestions and commands."
-              upgradeUrl={planInfo.upgradeUrl}
-            />
+            __EE__ && (
+              <Suspense fallback={null}>
+                <UpgradePrompt
+                  feature="AI Features"
+                  description="Enable AI-powered suggestions and commands."
+                  upgradeUrl={planInfo.upgradeUrl}
+                />
+              </Suspense>
+            )
           ) : (
             <AiSettingsSection aiEnabled={aiEnabled} onToggle={setAiEnabled} />
           )}
           {aiEnabled &&
             (apiKeysGated ? (
-              <UpgradePrompt
-                feature="API Keys"
-                description="Create API keys to integrate with external tools."
-                upgradeUrl={planInfo.upgradeUrl}
-              />
+              __EE__ && (
+                <Suspense fallback={null}>
+                  <UpgradePrompt
+                    feature="API Keys"
+                    description="Create API keys to integrate with external tools."
+                    upgradeUrl={planInfo.upgradeUrl}
+                  />
+                </Suspense>
+              )
             ) : (
               <ApiKeysSection />
             ))}

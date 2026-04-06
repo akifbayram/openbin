@@ -1,9 +1,9 @@
 import { d, query } from '../db.js';
-import { config } from './config.js';
-import { fireExploreFeaturesEmail, firePostTrialEarlyEmail, firePostTrialLateEmail, fireSubscriptionExpiringEmail, fireTrialExpiredEmail, fireTrialExpiringEmail } from './emailSender.js';
-import { acquireJobLock, releaseJobLock } from './jobLock.js';
-import { createLogger } from './logger.js';
-import { SubStatus } from './planGate.js';
+import { config } from '../lib/config.js';
+import { acquireJobLock, releaseJobLock } from '../lib/jobLock.js';
+import { createLogger } from '../lib/logger.js';
+import { SubStatus } from '../lib/planGate.js';
+import { fireExploreFeaturesEmail, firePostTrialEarlyEmail, firePostTrialLateEmail, fireSubscriptionExpiringEmail, fireTrialExpiredEmail, fireTrialExpiringEmail } from './lifecycleEmails.js';
 
 const log = createLogger('trialChecker');
 

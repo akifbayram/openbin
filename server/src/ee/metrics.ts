@@ -1,6 +1,6 @@
 import { d, query } from '../db.js';
-import { config } from './config.js';
-import { getFeatureMap, Plan, SubStatus } from './planGate.js';
+import { config } from '../lib/config.js';
+import { getFeatureMap, Plan, SubStatus } from '../lib/planGate.js';
 
 export interface CloudMetrics {
   generatedAt: string;
@@ -305,7 +305,7 @@ export async function getPlanBreakdown(): Promise<PlanBreakdownResponse> {
   function buildTier(planId: number, users: typeof result.rows): PlanBreakdownTier {
     const n = users.length;
     if (n === 0) return emptyTier();
-    const features = getFeatureMap(planId as import('./planGate.js').PlanTier);
+    const features = getFeatureMap(planId as import('../lib/planGate.js').PlanTier);
     const sum = { bins: 0, items: 0, photos: 0, storageMb: 0, locations: 0, aiCredits: 0, apiKeys: 0, apiReqs: 0, scans: 0 };
     let atBinLimit = 0;
     let atStorageLimit = 0;

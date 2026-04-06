@@ -397,7 +397,7 @@ export function AdminUserDetailPage() {
               <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Email</span>
               <p className="text-[15px] text-[var(--text-primary)]">{detail.email || '—'}</p>
             </div>
-            {!planInfo.selfHosted && (
+            {__EE__ && !planInfo.selfHosted && (
               <div>
                 <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Active Until</span>
                 <p className="text-[15px] text-[var(--text-primary)]">{detail.activeUntil ? new Date(detail.activeUntil).toLocaleString() : '—'}</p>
@@ -475,7 +475,7 @@ export function AdminUserDetailPage() {
               </Button>
             </div>
 
-            {!planInfo.selfHosted && (
+            {__EE__ && !planInfo.selfHosted && (
               <div className="row-spread py-3">
                 <span className="text-[14px] text-[var(--text-secondary)]">Plan tier</span>
                 <OptionGroup
@@ -491,7 +491,7 @@ export function AdminUserDetailPage() {
               </div>
             )}
 
-            {!planInfo.selfHosted && (
+            {__EE__ && !planInfo.selfHosted && (
               <div className="row-spread py-3">
                 <span className="text-[14px] text-[var(--text-secondary)]">Subscription</span>
                 <OptionGroup
@@ -507,7 +507,7 @@ export function AdminUserDetailPage() {
               </div>
             )}
 
-            {!planInfo.selfHosted && (
+            {__EE__ && !planInfo.selfHosted && (
               <div className="row-spread py-3">
                 <span className="text-[14px] text-[var(--text-secondary)]">Active until</span>
                 <div className="flex items-center gap-2">
@@ -610,7 +610,7 @@ export function AdminUserDetailPage() {
       </Card>
 
       {/* Limit Overrides (cloud only) */}
-      {!planInfo.selfHosted && (
+      {__EE__ && !planInfo.selfHosted && (
         <Card>
           <CardHeader><CardTitle>Limit Overrides</CardTitle></CardHeader>
           <CardContent>
@@ -648,7 +648,7 @@ export function AdminUserDetailPage() {
       )}
 
       {/* AI Credits (cloud only) */}
-      {!planInfo.selfHosted && detail.stats.aiCreditsLimit > 0 && (
+      {__EE__ && !planInfo.selfHosted && detail.stats.aiCreditsLimit > 0 && (
         <Card>
           <CardHeader><CardTitle>AI Credits</CardTitle></CardHeader>
           <CardContent>

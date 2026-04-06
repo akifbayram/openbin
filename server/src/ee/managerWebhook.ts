@@ -1,6 +1,6 @@
 import { query } from '../db.js';
-import { config } from './config.js';
-import { createLogger } from './logger.js';
+import { config } from '../lib/config.js';
+import { createLogger } from '../lib/logger.js';
 import { enqueueWebhook } from './webhookOutbox.js';
 
 const log = createLogger('managerWebhook');
