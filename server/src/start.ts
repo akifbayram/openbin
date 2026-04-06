@@ -27,7 +27,7 @@ if (!config.selfHosted) {
 import('./middleware/maintenance.js').then(m => m.loadMaintenanceMode()).catch(() => {});
 
 const app = createApp({
-  mountEeRoutes: eeModule ? (a) => eeModule!.initEeRoutes(a) : undefined,
+  mountEeRoutes: eeModule ? (a) => eeModule.initEeRoutes(a) : undefined,
 });
 
 if (config.disableRateLimit && process.env.NODE_ENV !== 'test') {

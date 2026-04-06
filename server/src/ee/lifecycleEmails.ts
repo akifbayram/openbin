@@ -1,6 +1,5 @@
 import { config } from '../lib/config.js';
-import { safeSend } from '../lib/emailSender.js';
-import { getTemplateOverride } from '../lib/emailTemplateLoader.js';
+import { resolveTemplate, safeSend } from '../lib/emailSender.js';
 import { generateUpgradeUrl, type PlanTier, planLabel } from '../lib/planGate.js';
 import {
   type DowngradeImpact,
@@ -16,14 +15,6 @@ import {
 } from './emailTemplates.js';
 
 export type { DowngradeImpact };
-
-function resolveTemplate(
-  type: string,
-  vars: Record<string, string>,
-  builtIn: { subject: string; html: string; text: string },
-): { subject: string; html: string; text: string } {
-  return getTemplateOverride(type, vars) ?? builtIn;
-}
 
 export function fireSubscriptionConfirmedEmail(userId: string, email: string, displayName: string, plan: PlanTier, activeUntil: string | null): void {
   const vars = { displayName, plan: planLabel(plan), activeUntil: activeUntil ?? '' };

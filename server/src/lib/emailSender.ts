@@ -43,7 +43,7 @@ export async function safeSend(userId: string, emailType: EmailType, to: string,
   }
 }
 
-function resolveTemplate(
+export function resolveTemplate(
   type: string,
   vars: Record<string, string>,
   builtIn: { subject: string; html: string; text: string },
