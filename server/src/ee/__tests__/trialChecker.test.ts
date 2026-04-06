@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { query } from '../../db.js';
-import { SubStatus } from '../planGate.js';
+import { SubStatus } from '../../lib/planGate.js';
 
-vi.mock('../logger.js', () => ({
+vi.mock('../../lib/logger.js', () => ({
   createLogger: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }),
 }));
-vi.mock('../config.js', () => ({ config: { selfHosted: true, emailEnabled: false } }));
-vi.mock('../emailSender.js', () => ({
+vi.mock('../../lib/config.js', () => ({ config: { selfHosted: true, emailEnabled: false } }));
+vi.mock('../lifecycleEmails.js', () => ({
   fireTrialExpiringEmail: vi.fn(),
   fireSubscriptionExpiringEmail: vi.fn(),
   fireTrialExpiredEmail: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock('../emailSender.js', () => ({
   firePostTrialEarlyEmail: vi.fn(),
   firePostTrialLateEmail: vi.fn(),
 }));
-vi.mock('../jobLock.js', () => ({
+vi.mock('../../lib/jobLock.js', () => ({
   acquireJobLock: vi.fn().mockReturnValue(true),
   releaseJobLock: vi.fn(),
 }));

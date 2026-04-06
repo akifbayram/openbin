@@ -7,12 +7,12 @@ vi.mock('../../db.js', () => ({
   query: (...args: unknown[]) => mockQuery(...args),
   generateUuid: () => mockGenerateUuid(),
 }));
-vi.mock('../config.js', () => ({ config: { selfHosted: true, managerUrl: '' } }));
-vi.mock('../jobLock.js', () => ({
+vi.mock('../../lib/config.js', () => ({ config: { selfHosted: true, managerUrl: '' } }));
+vi.mock('../../lib/jobLock.js', () => ({
   acquireJobLock: vi.fn().mockReturnValue(true),
   releaseJobLock: vi.fn(),
 }));
-vi.mock('../logger.js', () => ({
+vi.mock('../../lib/logger.js', () => ({
   createLogger: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }),
 }));
 
