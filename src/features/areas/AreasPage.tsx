@@ -1,5 +1,5 @@
 import { Box, Check, Copy, Download, Eye, FolderOpen, LogIn, MapPin, MapPinned, Plus, QrCode, Share2, Shield, User, Users } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Crossfade } from '@/components/ui/crossfade';
@@ -15,7 +15,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
-import { UpgradePrompt } from '@/components/ui/upgrade-prompt';
 import { CustomFieldsDialog } from '@/features/bins/CustomFieldsDialog';
 import { LocationCreateDialog, LocationDeleteDialog, LocationJoinDialog, LocationRenameDialog } from '@/features/locations/LocationDialogs';
 import { LocationMembersDialog } from '@/features/locations/LocationMembersDialog';
@@ -33,6 +32,10 @@ import { CreateAreaDialog, DeleteAreaDialog } from './AreaDialogs';
 import { LocationSettingsMenu } from './LocationSettingsMenu';
 import { LocationTabs } from './LocationTabs';
 import { type AreaTreeNode, flattenAreaTree, updateArea, useAreaList } from './useAreas';
+
+const UpgradePrompt = __EE__
+  ? lazy(() => import('@/ee/UpgradePrompt').then(m => ({ default: m.UpgradePrompt })))
+  : (() => null) as React.FC<Record<string, unknown>>;
 
 export function AreasPage() {
   const t = useTerminology();
@@ -470,7 +473,11 @@ export function AreasPage() {
       {customFieldsGated ? (
         <Dialog open={!!customFieldsLocationId} onOpenChange={(open) => !open && setCustomFieldsLocationId(null)}>
           <DialogContent>
-            <UpgradePrompt feature="Custom Fields" description="Define custom fields for your bins." upgradeUrl={planInfo.upgradeUrl} />
+            {__EE__ && (
+              <Suspense fallback={null}>
+                <UpgradePrompt feature="Custom Fields" description="Define custom fields for your bins." upgradeUrl={planInfo.upgradeUrl} />
+              </Suspense>
+            )}
           </DialogContent>
         </Dialog>
       ) : (

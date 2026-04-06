@@ -1,11 +1,10 @@
 import { PackageOpen } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { EmptyState } from '@/components/ui/empty-state';
-import { UpgradeDialog } from '@/components/ui/upgrade-dialog';
 import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { resolveIcon } from '@/lib/iconMap';
@@ -23,6 +22,10 @@ import { useBinDetailActions } from './useBinDetailActions';
 import type { BinFilters, SortOption } from './useBins';
 import { useAllTags, useBin, useBinList } from './useBins';
 import { useCustomFields } from './useCustomFields';
+
+const UpgradeDialog = __EE__
+  ? lazy(() => import('@/ee/UpgradeDialog').then(m => ({ default: m.UpgradeDialog })))
+  : (() => null) as React.FC<Record<string, unknown>>;
 
 interface BinDetailLocationState {
   backPath?: string;
@@ -185,12 +188,16 @@ export function BinDetailPage() {
 
       <AiSetupDialog open={actions.aiSetupOpen} onOpenChange={actions.setAiSetupOpen} />
 
-      <UpgradeDialog
-        open={upgradeOpen}
-        onOpenChange={setUpgradeOpen}
-        feature="AI Features"
-        description="AI-powered analysis and suggestions are available on the Pro plan."
-      />
+      {__EE__ && (
+        <Suspense fallback={null}>
+          <UpgradeDialog
+            open={upgradeOpen}
+            onOpenChange={setUpgradeOpen}
+            feature="AI Features"
+            description="AI-powered analysis and suggestions are available on the Pro plan."
+          />
+        </Suspense>
+      )}
 
       <ChangeCodeDialog
         open={actions.changeCodeOpen}

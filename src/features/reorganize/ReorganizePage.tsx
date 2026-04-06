@@ -1,5 +1,5 @@
 import { AlertCircle, ChevronDown, SlidersHorizontal, Sparkles, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,6 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
-import { UpgradePrompt } from '@/components/ui/upgrade-prompt';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useBinList } from '@/features/bins/useBins';
 import { BinSelectorCard } from '@/features/print/BinSelectorCard';
@@ -33,6 +32,10 @@ import { cn } from '@/lib/utils';
 import { ReorganizePreview } from './ReorganizePreview';
 import type { ReorgOptions } from './useReorganize';
 import { useReorganize } from './useReorganize';
+
+const UpgradePrompt = __EE__
+  ? lazy(() => import('@/ee/UpgradePrompt').then(m => ({ default: m.UpgradePrompt })))
+  : (() => null) as React.FC<Record<string, unknown>>;
 
 interface OptionFieldConfig<K extends string> {
   legend: string;
@@ -236,11 +239,15 @@ export function ReorganizePage() {
     return (
       <div className="page-content max-w-6xl">
         <PageHeader title="Reorganize" back />
-        <UpgradePrompt
-          feature="Reorganize"
-          description={`AI-powered ${t.bin} reorganization is available on the Pro plan.`}
-          upgradeUrl={planInfo.upgradeUrl}
-        />
+        {__EE__ && (
+          <Suspense fallback={null}>
+            <UpgradePrompt
+              feature="Reorganize"
+              description={`AI-powered ${t.bin} reorganization is available on the Pro plan.`}
+              upgradeUrl={planInfo.upgradeUrl}
+            />
+          </Suspense>
+        )}
       </div>
     );
   }

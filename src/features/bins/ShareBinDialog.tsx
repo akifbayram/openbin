@@ -1,12 +1,15 @@
 import { Check, Copy, Eye, Globe, Link2, Loader2, Lock, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
-import { UpgradePrompt } from '@/components/ui/upgrade-prompt';
 import { usePlan } from '@/lib/usePlan';
 import { cn, getErrorMessage } from '@/lib/utils';
 import { type BinShare, createShare, revokeShare, useBinShare } from './useBinShare';
+
+const UpgradePrompt = __EE__
+  ? lazy(() => import('@/ee/UpgradePrompt').then(m => ({ default: m.UpgradePrompt })))
+  : (() => null) as React.FC<Record<string, unknown>>;
 
 interface ShareBinDialogProps {
   binId: string;
@@ -72,11 +75,15 @@ export function ShareBinDialog({ binId, open, onOpenChange }: ShareBinDialogProp
         </DialogHeader>
 
         {sharingGated ? (
-          <UpgradePrompt
-            feature="Bin Sharing"
-            description="Generate public or unlisted links to share bins with anyone."
-            upgradeUrl={planInfo.upgradeUrl}
-          />
+          __EE__ && (
+            <Suspense fallback={null}>
+              <UpgradePrompt
+                feature="Bin Sharing"
+                description="Generate public or unlisted links to share bins with anyone."
+                upgradeUrl={planInfo.upgradeUrl}
+              />
+            </Suspense>
+          )
         ) : isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-[var(--text-tertiary)]" />
