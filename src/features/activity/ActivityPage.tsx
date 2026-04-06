@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { Crossfade } from '@/components/ui/crossfade';
 import { EmptyState } from '@/components/ui/empty-state';
 import { OptionGroup, type OptionGroupOption } from '@/components/ui/option-group';
-import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useTerminology } from '@/lib/terminology';
@@ -35,9 +34,7 @@ export function ActivityPage() {
   }
 
   return (
-    <div className="page-content">
-      <PageHeader title="Activity" backTo="/settings/data" />
-
+    <>
       <OptionGroup
         options={filterOptions}
         value={entityTypeFilter}
@@ -97,6 +94,6 @@ export function ActivityPage() {
           />
         )}
       </Crossfade>
-    </div>
+    </>
   );
 }

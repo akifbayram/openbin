@@ -53,19 +53,28 @@ export function SettingsLayout() {
   const lastSegment = pathname.split('/').filter(Boolean).pop();
   const currentCategory = SETTINGS_CATEGORIES.find((c) => c.path === lastSegment);
 
+  // Sub-pages that live under a parent category (e.g. /settings/activity → Data)
+  const SUB_PAGE_META: Record<string, { label: string; backTo: string }> = {
+    activity: { label: 'Activity', backTo: '/settings/data' },
+    trash: { label: 'Trash', backTo: '/settings/data' },
+  };
+  const subPage = lastSegment ? SUB_PAGE_META[lastSegment] : undefined;
+  const pageLabel = currentCategory?.label ?? subPage?.label;
+  const backTo = subPage?.backTo ?? '/settings';
+
   return (
     <div className="page-content">
       <div className="mb-4 flex items-center gap-2">
         <button
           type="button"
-          onClick={() => navigate('/settings')}
+          onClick={() => navigate(backTo)}
           className={cn('flex items-center justify-center rounded-[var(--radius-xs)] p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]', focusRing)}
           aria-label="Back to settings"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        {currentCategory && (
-          <h1 className="text-[18px] font-bold text-[var(--text-primary)]">{currentCategory.label}</h1>
+        {pageLabel && (
+          <h1 className="text-[18px] font-bold text-[var(--text-primary)]">{pageLabel}</h1>
         )}
       </div>
       <Outlet />

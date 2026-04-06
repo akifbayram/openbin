@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { useToast } from '@/components/ui/toast';
@@ -62,8 +61,7 @@ export function TrashPage() {
   }
 
   return (
-    <div className="page-content">
-      <PageHeader title="Trash" backTo="/settings/data" />
+    <>
       <p className="text-[13px] text-[var(--text-tertiary)]">
         Deleted {t.bins} are kept for {retentionDays} day{retentionDays !== 1 ? 's' : ''} before being permanently removed.
       </p>
@@ -170,6 +168,6 @@ export function TrashPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

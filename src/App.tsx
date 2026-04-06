@@ -381,13 +381,15 @@ export default function App() {
                   <Route path="personalization" element={<SettingsPersonalizationSection />} />
                   <Route path="ai" element={<AiSection />} />
                   <Route path="data" element={<SettingsDataSection />} />
+                  <Route path="activity" element={<ActivityPage />} />
+                  <Route path="trash" element={<TrashPage />} />
                   <Route path="about" element={<AboutSection />} />
                 </Route>
                 <Route path="/tags" element={<RouteWithBoundary><TagsPage /></RouteWithBoundary>} />
                 <Route path="/items" element={<RouteWithBoundary><ItemsPage /></RouteWithBoundary>} />
                 <Route path="/locations" element={<RouteWithBoundary><AreasPage /></RouteWithBoundary>} />
-                <Route path="/trash" element={<RouteWithBoundary><TrashPage /></RouteWithBoundary>} />
-                <Route path="/activity" element={<RouteWithBoundary><ActivityPage /></RouteWithBoundary>} />
+                <Route path="/trash" element={<Navigate to="/settings/trash" replace />} />
+                <Route path="/activity" element={<Navigate to="/settings/activity" replace />} />
 
                 <Route path="/reorganize" element={<RouteWithBoundary><ReorganizePage /></RouteWithBoundary>} />
                 <Route path="/capture" element={<RouteWithBoundary><CapturePage /></RouteWithBoundary>} />

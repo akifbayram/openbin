@@ -111,13 +111,13 @@ export function DataSection() {
           icon={Clock}
           label="Activity Log"
           description="View changes and actions"
-          onClick={() => navigate('/activity')}
+          onClick={() => navigate('/settings/activity')}
         />
         <SettingsRow
           icon={Trash2}
           label="Trash"
           description="Recover or remove deleted bins"
-          onClick={() => navigate('/trash')}
+          onClick={() => navigate('/settings/trash')}
         />
       </SettingsSection>
 
