@@ -86,6 +86,13 @@ function buildUsageTiles(
   return tiles;
 }
 
+/** Hide tiles that convey no useful info (e.g. 0/0 photos, 1/1 locations on free/plus). */
+function isRedundantTile(tile: UsageTile): boolean {
+  if (tile.isOver) return false;
+  const limit = typeof tile.limit === 'number' ? tile.limit : null;
+  return limit !== null && limit <= 1;
+}
+
 interface ActionButton {
   label: string;
   href: string;
@@ -99,6 +106,11 @@ function buildActions(planInfo: ReturnType<typeof usePlan>['planInfo'], isLocked
     const label = getLockedCta(planInfo.previousSubStatus);
     const href = planInfo.subscribePlanUrl ?? planInfo.upgradeUrl;
     if (href) actions.push({ label, href, variant: 'primary' });
+    return actions;
+  }
+
+  if (planInfo.plan === 'free' && planInfo.upgradeUrl) {
+    actions.push({ label: 'Upgrade', href: planInfo.upgradeUrl, variant: 'primary' });
     return actions;
   }
 
@@ -203,7 +215,7 @@ export function SubscriptionSection() {
   const daysRemaining = planInfo.activeUntil
     ? Math.max(0, Math.ceil((new Date(planInfo.activeUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
-  const tiles = buildUsageTiles(planInfo, usage);
+  const tiles = buildUsageTiles(planInfo, usage).filter(t => isPro || !isRedundantTile(t));
   const actions = buildActions(planInfo, isLocked);
 
   return (

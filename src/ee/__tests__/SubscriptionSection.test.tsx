@@ -128,4 +128,24 @@ describe('SubscriptionSection', () => {
     expect(screen.queryByText('Switch to Free Plan')).toBeNull();
     expect(screen.queryByText('Continue with Free Plan')).toBeNull();
   });
+
+  it('shows single "Upgrade" button for free plan users instead of "Manage Subscription"', () => {
+    setupMock(makePlanInfo({
+      plan: 'free',
+      status: 'inactive',
+      portalUrl: 'https://billing.example.com/portal',
+      upgradeUrl: 'https://billing.example.com/upgrade',
+      upgradePlusUrl: 'https://billing.example.com/plus',
+      upgradeProUrl: 'https://billing.example.com/pro',
+    }));
+
+    renderSection();
+
+    expect(screen.queryByText('Manage Subscription')).toBeNull();
+    const upgradeLink = screen.getByText('Upgrade');
+    expect(upgradeLink).toBeDefined();
+    expect(upgradeLink.closest('a')?.getAttribute('href')).toBe('https://billing.example.com/upgrade');
+    expect(screen.queryByText('Upgrade to Plus')).toBeNull();
+    expect(screen.queryByText('Upgrade to Pro')).toBeNull();
+  });
 });
