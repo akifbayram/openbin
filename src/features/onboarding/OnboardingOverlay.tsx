@@ -1,5 +1,5 @@
 import '@/components/ui/animations.css';
-import { PackagePlus, Printer, QrCode, Settings, Sparkles, X } from 'lucide-react';
+import { Cloud, PackagePlus, Printer, QrCode, Server, Settings, Sparkles, X } from 'lucide-react';
 import { BrandIcon } from '@/components/BrandIcon';
 import { AnimatedHeight } from '@/components/ui/animated-height';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,11 @@ const DEMO_COMPLETION_ACTIONS: CompletionAction[] = [
   { icon: Printer, label: 'Print labels', description: 'Generate QR labels for your bins', path: '/print' },
   { icon: QrCode, label: 'Scan a QR code', description: 'Try scanning a label with your camera', path: '/scan' },
   { icon: Settings, label: 'Explore settings', description: 'Customize terminology, AI, and more', path: '/settings' },
+];
+
+const DEMO_CTA_ACTIONS: CompletionAction[] = [
+  { icon: Cloud, label: 'Sign up for Cloud', description: 'Managed hosting, automatic updates', path: 'https://cloud.openbin.app/register' },
+  { icon: Server, label: 'Self-host with Docker', description: 'Free, open source, full control', path: 'https://github.com/akifbayram/openbin' },
 ];
 
 const PROD_COMPLETION_ACTIONS: CompletionAction[] = [
@@ -122,6 +127,16 @@ export function OnboardingOverlay(props: OnboardingActions) {
               subtitle="That's the essentials. Dive in and explore."
               actions={DEMO_COMPLETION_ACTIONS}
               onAction={handleNavigate}
+              onDashboard={() => handleNavigate('/')}
+            />
+          )}
+          {displayedStep === 4 && demoMode && (
+            <CompletionStep
+              icon={<BrandIcon className="h-16 w-16 text-[var(--accent)] mb-5" />}
+              title="Ready to get started?"
+              subtitle="Take OpenBin home with you."
+              actions={DEMO_CTA_ACTIONS}
+              onAction={(path) => window.open(path, '_blank', 'noopener')}
               onDashboard={() => handleNavigate('/')}
             />
           )}
