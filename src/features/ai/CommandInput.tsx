@@ -193,7 +193,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
         ) : !aiSettingsLoading && !isAiReady ? (
           <div key="setup">
             <AiSetupView
-              onNavigate={() => { handleClose(false); navigate('/settings#ai-settings'); }}
+              onNavigate={() => { handleClose(false); navigate('/settings/ai'); }}
               onDismiss={() => handleClose(false)}
             />
           </div>

@@ -127,7 +127,7 @@ export function OnboardingOverlay(props: OnboardingActions) {
           )}
           {displayedStep === 3 && !demoMode && (
             <AiShowcaseStep
-              onSetUpNow={() => handleNavigate('/settings#ai-settings')}
+              onSetUpNow={() => handleNavigate('/settings/ai')}
               onSkip={advanceStep}
             />
           )}

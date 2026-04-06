@@ -21,7 +21,7 @@ export function AiSetupDialog({ open, onOpenChange, onNavigate }: AiSetupDialogP
           onNavigate={() => {
             onOpenChange(false);
             onNavigate?.();
-            navigate('/settings#ai-settings');
+            navigate('/settings/ai');
           }}
           onDismiss={() => onOpenChange(false)}
         />
