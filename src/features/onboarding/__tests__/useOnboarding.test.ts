@@ -127,7 +127,7 @@ describe('useOnboarding', () => {
     expect(result.current.isOnboarding).toBe(false);
   });
 
-  it('advanceStep on last demo step (3) completes onboarding in demo mode', async () => {
+  it('advanceStep on last demo step (4) completes onboarding in demo mode', async () => {
     mockApiFetch.mockResolvedValue({
       onboarding_completed: false,
       onboarding_step: DEMO_ONBOARDING_TOTAL_STEPS - 1,
