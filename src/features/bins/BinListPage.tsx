@@ -390,6 +390,7 @@ export function BinListPage() {
           aiGated={aiGated}
           onAskAi={() => aiGated ? setUpgradeOpen(true) : getCommandInputRef().current?.open()}
           onReorganize={() => navigate(`/reorganize?ids=${[...selectedIds].join(',')}`)}
+          onPrint={() => navigate(`/print?ids=${[...selectedIds].join(',')}`)}
         />
       )}
 

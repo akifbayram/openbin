@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/toast';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 import { BulkActionBar } from '@/features/bins/BulkActionBar';
@@ -40,6 +41,7 @@ export function DashboardDialogs({
   bulkDelete, bulkPinToggle, bulkDuplicate, pinLabel, isBusy,
   bins, t,
 }: DashboardDialogsProps) {
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [copiedStyle, setCopiedStyle] = useState<{ icon: string; color: string; card_style: string } | null>(null);
@@ -86,6 +88,7 @@ export function DashboardDialogs({
           canCopyStyle={selectedIds.size === 1}
           canPasteStyle={copiedStyle !== null}
           isBusy={isBusy}
+          onPrint={() => navigate(`/print?ids=${[...selectedIds].join(',')}`)}
         />
       )}
       <BulkTagDialog open={bulk.isOpen('tag')} onOpenChange={(v) => v ? bulk.open('tag') : bulk.close()} binIds={[...selectedIds]} onDone={clearSelection} allTags={allTags} />
