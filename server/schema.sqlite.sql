@@ -89,6 +89,22 @@ CREATE TABLE IF NOT EXISTS bin_items (
 );
 CREATE INDEX IF NOT EXISTS idx_bin_items_bin_id ON bin_items(bin_id, position);
 
+CREATE TABLE IF NOT EXISTS item_checkouts (
+  id              TEXT PRIMARY KEY,
+  item_id         TEXT NOT NULL REFERENCES bin_items(id) ON DELETE CASCADE,
+  origin_bin_id   TEXT NOT NULL,
+  location_id     TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+  checked_out_by  TEXT NOT NULL REFERENCES users(id),
+  checked_out_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  returned_at     TEXT,
+  returned_by     TEXT REFERENCES users(id),
+  return_bin_id   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_item_checkouts_active
+  ON item_checkouts(location_id) WHERE returned_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_item_checkouts_item
+  ON item_checkouts(item_id, returned_at);
+
 CREATE TABLE IF NOT EXISTS photos (
   id            TEXT PRIMARY KEY,
   bin_id        TEXT NOT NULL REFERENCES bins(id) ON DELETE CASCADE,
