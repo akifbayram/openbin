@@ -16,6 +16,9 @@ router.get('/:locationId/activity', requireLocationMember('locationId'), asyncHa
   const offset = parseInt(req.query.offset as string, 10) || 0;
   const entityType = req.query.entity_type as string | undefined;
   const entityId = req.query.entity_id as string | undefined;
+  const userId = req.query.user_id as string | undefined;
+  const from = req.query.from as string | undefined;
+  const to = req.query.to as string | undefined;
 
   let whereClause = 'WHERE al.location_id = $1';
   const params: unknown[] = [locationId];
@@ -33,6 +36,18 @@ router.get('/:locationId/activity', requireLocationMember('locationId'), asyncHa
   if (entityId) {
     whereClause += ` AND al.entity_id = $${paramIdx++}`;
     params.push(entityId);
+  }
+  if (userId) {
+    whereClause += ` AND al.user_id = $${paramIdx++}`;
+    params.push(userId);
+  }
+  if (from) {
+    whereClause += ` AND al.created_at >= $${paramIdx++}`;
+    params.push(from);
+  }
+  if (to) {
+    whereClause += ` AND al.created_at < $${paramIdx++}`;
+    params.push(to);
   }
 
   // Get total count
