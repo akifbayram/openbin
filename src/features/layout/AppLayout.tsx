@@ -319,6 +319,7 @@ export function AppLayout() {
           complete={onboarding.complete}
           demoMode={demoMode}
           activeLocationId={activeLocationId ?? undefined}
+          isSelfHosted={isSelfHosted}
         />
       )}
       {demoMode && <DemoCtaOverlay />}

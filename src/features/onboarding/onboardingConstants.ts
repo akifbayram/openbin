@@ -9,6 +9,7 @@ export interface OnboardingActions {
   complete: () => void;
   demoMode?: boolean;
   activeLocationId?: string;
+  isSelfHosted?: boolean;
 }
 
 export const AI_FEATURES = [
