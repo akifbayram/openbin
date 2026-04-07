@@ -74,12 +74,12 @@ export function DashboardChecklist({ totalBins, totalItems, onDismiss }: Dashboa
         {items.map((item) => (
           <div key={item.label} className="flex items-center gap-3 py-1.5">
             <div className={cn(
-              'h-5 w-5 rounded-full flex items-center justify-center shrink-0 border',
+              'h-5 w-5 rounded-full flex items-center justify-center shrink-0 border-2',
               item.done
                 ? 'bg-[var(--accent)] border-[var(--accent)]'
-                : 'border-[var(--border-flat)]',
+                : 'border-[var(--text-tertiary)]',
             )}>
-              {item.done && <Check className="h-3 w-3 text-[var(--text-on-accent)]" />}
+              {item.done && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
             </div>
             <span className={cn(
               'flex-1 text-[14px]',

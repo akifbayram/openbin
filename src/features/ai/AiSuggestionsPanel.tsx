@@ -130,10 +130,10 @@ export function AiSuggestionsPanel({
             nameDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
           )}>
             <span className={cn(
-              'shrink-0 mt-1 h-4 w-4 rounded border flex items-center justify-center transition-colors',
-              acceptName ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--border-primary)] bg-transparent',
+              'shrink-0 mt-1 h-4 w-4 rounded border-2 flex items-center justify-center transition-colors',
+              acceptName ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)] bg-transparent',
             )}>
-              {acceptName && <Check className="h-3 w-3 text-white" />}
+              {acceptName && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
             </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
@@ -155,10 +155,10 @@ export function AiSuggestionsPanel({
             itemsDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
           )}>
             <span className={cn(
-              'shrink-0 mt-1 h-4 w-4 rounded border flex items-center justify-center transition-colors',
-              acceptItems ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--border-primary)] bg-transparent',
+              'shrink-0 mt-1 h-4 w-4 rounded border-2 flex items-center justify-center transition-colors',
+              acceptItems ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)] bg-transparent',
             )}>
-              {acceptItems && <Check className="h-3 w-3 text-white" />}
+              {acceptItems && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
             </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
@@ -192,10 +192,10 @@ export function AiSuggestionsPanel({
             tagsDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
           )}>
             <span className={cn(
-              'shrink-0 mt-1 h-4 w-4 rounded border flex items-center justify-center transition-colors',
-              acceptTags ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--border-primary)] bg-transparent',
+              'shrink-0 mt-1 h-4 w-4 rounded border-2 flex items-center justify-center transition-colors',
+              acceptTags ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)] bg-transparent',
             )}>
-              {acceptTags && <Check className="h-3 w-3 text-white" />}
+              {acceptTags && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
             </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
@@ -225,10 +225,10 @@ export function AiSuggestionsPanel({
             notesDidChange && 'border-l-2 border-l-[var(--accent)] pl-3',
           )}>
             <span className={cn(
-              'shrink-0 mt-1 h-4 w-4 rounded border flex items-center justify-center transition-colors',
-              acceptNotes ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--border-primary)] bg-transparent',
+              'shrink-0 mt-1 h-4 w-4 rounded border-2 flex items-center justify-center transition-colors',
+              acceptNotes ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)] bg-transparent',
             )}>
-              {acceptNotes && <Check className="h-3 w-3 text-white" />}
+              {acceptNotes && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
             </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
@@ -249,10 +249,10 @@ export function AiSuggestionsPanel({
         {hasCustomFields && (
           <button type="button" onClick={() => setAcceptCustomFields(!acceptCustomFields)} className="flex items-start gap-3 cursor-pointer text-left w-full">
             <span className={cn(
-              'shrink-0 mt-1 h-4 w-4 rounded border flex items-center justify-center transition-colors',
-              acceptCustomFields ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--border-primary)] bg-transparent',
+              'shrink-0 mt-1 h-4 w-4 rounded border-2 flex items-center justify-center transition-colors',
+              acceptCustomFields ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)] bg-transparent',
             )}>
-              {acceptCustomFields && <Check className="h-3 w-3 text-white" />}
+              {acceptCustomFields && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-medium text-[var(--text-secondary)]">Custom Fields</p>

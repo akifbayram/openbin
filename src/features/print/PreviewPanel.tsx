@@ -68,7 +68,7 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [pageWidthPx]);
+  }, [pageWidthPx, hasSelection]);
 
   const pageCountLabel = pageCount > 0 ? ` (${pageCount} ${pageCount !== 1 ? 'pages' : 'page'})` : '';
 

@@ -54,7 +54,7 @@ export function ItemsPage() {
                     <Skeleton className={cn('h-4 flex-[2]', i % 3 === 0 ? 'w-2/3' : i % 3 === 1 ? 'w-1/2' : 'w-3/5')} />
                     <Skeleton className="h-4 w-6 shrink-0" />
                     <div className="flex-1 min-w-0 flex items-center gap-2">
-                      <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                      <Skeleton className="h-5 w-5 rounded-[var(--radius-xs)] shrink-0" />
                       <Skeleton className={cn('h-4', i % 2 === 0 ? 'w-1/2' : 'w-2/5')} />
                     </div>
                   </div>

@@ -99,6 +99,8 @@ export interface ItemCheckout {
 export interface ItemCheckoutWithContext extends ItemCheckout {
   item_name: string;
   origin_bin_name: string;
+  origin_bin_icon: string;
+  origin_bin_color: string;
 }
 
 export interface Bin {

@@ -1,6 +1,7 @@
 import { Check, Lock } from 'lucide-react';
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
+import { BinIconBadge } from '@/components/ui/bin-icon-badge';
 import { Highlight } from '@/components/ui/highlight';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { TableRow as BaseTableRow, Table, TableHeader } from '@/components/ui/table';
@@ -55,24 +56,24 @@ export function BinTableView({
     <Table>
       {/* Header */}
       <TableHeader>
-        {/* Checkbox */}
-        <div className="w-8 shrink-0 flex justify-center">
+        <div className="flex-[2] flex items-center gap-2">
           {selectable && onSelectAll && (
             <button
               type="button"
               onClick={onSelectAll}
-              className="h-8 w-8 flex items-center justify-center rounded-full"
+              className={cn(
+                'shrink-0 h-5 w-5 rounded-[var(--radius-xs)] border-2 transition-all duration-200 flex items-center justify-center',
+                allSelected
+                  ? 'bg-[var(--accent)] border-[var(--accent)]'
+                  : 'border-[var(--text-tertiary)]',
+              )}
+              aria-label={allSelected ? 'Deselect all' : 'Select all'}
             >
-              <div className={cn(
-                'h-4 w-4 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
-                allSelected ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)]',
-              )}>
-                {allSelected && <Check className="h-2.5 w-2.5 text-[var(--text-on-accent)]" strokeWidth={3} />}
-              </div>
+              {allSelected && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
             </button>
           )}
+          <SortHeader label="Name" column="name" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="flex-1" />
         </div>
-        <SortHeader label="Name" column="name" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="flex-[2]" />
         {isVisible?.('area') !== false && (
           <SortHeader label="Area" column="area" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSortChange} className="hidden md:flex flex-1" />
         )}
@@ -166,7 +167,7 @@ const BinTableRow = React.memo(function BinTableRow({
       role="button"
       aria-label={bin.name}
       aria-selected={selectable ? selected : undefined}
-      className={cn('select-none', selected && 'bg-[var(--bg-active)]')}
+      className={cn('select-none group', selected && 'bg-[var(--bg-active)]')}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onTouchStart={longPress.onTouchStart}
@@ -174,48 +175,18 @@ const BinTableRow = React.memo(function BinTableRow({
       onTouchMove={longPress.onTouchMove}
       onContextMenu={longPress.onContextMenu}
     >
-      {/* Checkbox */}
-      <div className="w-8 shrink-0 flex justify-center">
-        {selectable ? (
-          <button
-            type="button"
-            tabIndex={0}
-            className="h-8 w-8 flex items-center justify-center rounded-full appearance-none bg-transparent p-0"
-            onClick={(e) => { e.stopPropagation(); onSelect(bin.id, index, e.shiftKey); }}
-            aria-label="Select"
-          >
-            <div className={cn(
-              'h-4 w-4 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
-              selected ? 'bg-[var(--accent)] border-[var(--accent)]' : 'border-[var(--text-tertiary)]',
-            )}>
-              {selected && <Check className="h-2.5 w-2.5 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
-            </div>
-          </button>
-        ) : (
-          <button
-            type="button"
-            tabIndex={0}
-            className="relative h-8 w-8 appearance-none bg-transparent border-none p-0 flex items-center justify-center"
-            onClick={(e) => { e.stopPropagation(); onSelect(bin.id, index, e.shiftKey); }}
-            aria-label="Select"
-          >
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100">
-              <div className="h-4 w-4 rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center" />
-            </div>
-          </button>
-        )}
-      </div>
-
-      {/* Name (with icon) */}
+      {/* Name (with icon as selection toggle) */}
       <div className="flex-[2] min-w-0 row">
-        {isVisible?.('icon') !== false && (
-          <div
-            data-testid="bin-icon-badge"
-            className="h-5 w-5 shrink-0 flex items-center justify-center rounded-[var(--radius-xs)]"
-            style={colorPreset ? { backgroundColor: colorPreset.dot } : { backgroundColor: 'var(--text-tertiary)' }}
+        {(isVisible?.('icon') !== false || selectable) && (
+          <button
+            type="button"
+            tabIndex={-1}
+            className="shrink-0 appearance-none bg-transparent p-0 border-none"
+            onClick={(e) => { e.stopPropagation(); onSelect(bin.id, index, e.shiftKey); }}
+            aria-label="Select"
           >
-            <BinIcon className="h-3 w-3 text-white" />
-          </div>
+            <BinIconBadge icon={BinIcon} colorPreset={colorPreset} selected={selectable ? selected : undefined} />
+          </button>
         )}
         <span className="truncate font-medium text-[14px] text-[var(--text-primary)]">
           <Highlight text={bin.name} query={searchQuery} />

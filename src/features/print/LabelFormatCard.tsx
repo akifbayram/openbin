@@ -1,4 +1,4 @@
-import { CheckCircle2, ChevronDown, Circle, LayoutGrid, RectangleHorizontal, RectangleVertical, Save, Search, Trash2, X } from 'lucide-react';
+import { Check, ChevronDown, LayoutGrid, RectangleHorizontal, RectangleVertical, Save, Search, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -110,11 +110,14 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                         className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 flex-1 min-w-0 text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
                         onClick={() => f.handleFormatChange(fmt.key)}
                       >
-                        {f.formatKey === fmt.key ? (
-                          <CheckCircle2 className="h-[20px] w-[20px] text-[var(--accent)] shrink-0" />
-                        ) : (
-                          <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
-                        )}
+                        <div className={cn(
+                          'h-5 w-5 shrink-0 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
+                          f.formatKey === fmt.key
+                            ? 'bg-[var(--accent)] border-[var(--accent)]'
+                            : 'border-[var(--text-tertiary)]',
+                        )}>
+                          {f.formatKey === fmt.key && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
+                        </div>
                         <FormatThumbnail columns={fmt.columns} perPage={perPage} />
                         <div className="min-w-0 truncate">
                           <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>
@@ -152,11 +155,14 @@ export function LabelFormatCard({ format: f, expanded, onExpandedChange }: Label
                       className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
                       onClick={() => f.handleFormatChange(fmt.key)}
                     >
-                      {f.formatKey === fmt.key ? (
-                        <CheckCircle2 className="h-[20px] w-[20px] text-[var(--accent)] shrink-0" />
-                      ) : (
-                        <Circle className="h-[20px] w-[20px] text-[var(--text-tertiary)] shrink-0" />
-                      )}
+                      <div className={cn(
+                        'h-5 w-5 shrink-0 rounded-full border-2 transition-all duration-200 flex items-center justify-center',
+                        f.formatKey === fmt.key
+                          ? 'bg-[var(--accent)] border-[var(--accent)]'
+                          : 'border-[var(--text-tertiary)]',
+                      )}>
+                        {f.formatKey === fmt.key && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
+                      </div>
                       <FormatThumbnail columns={fmt.columns} perPage={perPage} />
                       <div className="min-w-0">
                         <span className="text-[15px] text-[var(--text-primary)]">{fmt.name}</span>

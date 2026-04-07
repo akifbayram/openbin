@@ -219,12 +219,14 @@ locationCheckoutsRouter.get('/:locationId/checkouts', requireLocationMember('loc
     item_name: string;
     origin_bin_id: string;
     origin_bin_name: string;
+    origin_bin_icon: string;
+    origin_bin_color: string;
     location_id: string;
     checked_out_by: string;
     checked_out_by_name: string;
     checked_out_at: string;
   }>(
-    `SELECT ic.*, bi.name AS item_name, b.name AS origin_bin_name, u.display_name AS checked_out_by_name
+    `SELECT ic.*, bi.name AS item_name, b.name AS origin_bin_name, b.icon AS origin_bin_icon, b.color AS origin_bin_color, u.display_name AS checked_out_by_name
      FROM item_checkouts ic
      JOIN bin_items bi ON bi.id = ic.item_id
      JOIN bins b ON b.id = ic.origin_bin_id

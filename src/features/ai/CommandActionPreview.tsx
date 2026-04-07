@@ -75,15 +75,15 @@ export function CommandActionPreview({
                   <span
                     key={`check-${i}-${checked}`}
                     className={cn(
-                      'shrink-0 mt-0.5 h-4.5 w-4.5 rounded border flex items-center justify-center transition-colors',
+                      'shrink-0 mt-0.5 h-4.5 w-4.5 rounded border-2 flex items-center justify-center transition-colors',
                       checked
                         ? destructive
                           ? 'bg-[var(--destructive)] border-[var(--destructive)]'
                           : 'bg-[var(--accent)] border-[var(--accent)] ai-check-pop'
-                        : 'border-[var(--border-primary)] bg-transparent',
+                        : 'border-[var(--text-tertiary)] bg-transparent',
                     )}
                   >
-                    {checked && <Check className="h-3 w-3 text-white" />}
+                    {checked && <Check className="h-3 w-3 text-[var(--text-on-accent)] animate-check-pop" strokeWidth={3} />}
                   </span>
                   <Icon className={cn(
                     'h-4 w-4 shrink-0 mt-0.5',

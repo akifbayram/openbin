@@ -1,9 +1,11 @@
-import { CheckCircle2, ChevronDown, Circle, Package } from 'lucide-react';
+import { ChevronDown, Package } from 'lucide-react';
 import { useMemo } from 'react';
+import { BinIconBadge } from '@/components/ui/bin-icon-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { resolveColor } from '@/lib/colorPalette';
+import { resolveIcon } from '@/lib/iconMap';
 import { useTerminology } from '@/lib/terminology';
 import { categoryHeader, cn } from '@/lib/utils';
 import type { Area, Bin } from '@/types';
@@ -123,24 +125,15 @@ export function BinSelectorCard({
                       {group.bins.map((bin) => {
                         const checked = selectedIds.has(bin.id);
                         const colorPreset = bin.color ? resolveColor(bin.color) : null;
+                        const BinIcon = resolveIcon(bin.icon);
                         return (
                           <button
                             type="button"
                             key={bin.id}
-                            className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-3 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
+                            className="group flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-3 w-full text-left hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)] transition-colors"
                             onClick={() => toggleBin(bin.id)}
                           >
-                            {checked ? (
-                              <CheckCircle2 className="h-[22px] w-[22px] text-[var(--accent)] shrink-0" />
-                            ) : (
-                              <Circle className="h-[22px] w-[22px] text-[var(--text-tertiary)] shrink-0" />
-                            )}
-                            {colorPreset && (
-                              <div
-                                className="h-3.5 w-3.5 rounded-full shrink-0 ring-1 ring-[var(--border-subtle)]"
-                                style={{ backgroundColor: colorPreset.bg }}
-                              />
-                            )}
+                            <BinIconBadge icon={BinIcon} colorPreset={colorPreset} selected={checked} />
                             <span className="text-[15px] text-[var(--text-primary)] truncate">{bin.name}</span>
                           </button>
                         );

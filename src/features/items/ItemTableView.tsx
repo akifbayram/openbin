@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { BinIconBadge } from '@/components/ui/bin-icon-badge';
 import { Highlight } from '@/components/ui/highlight';
 import { LoadMoreSentinel } from '@/components/ui/load-more-sentinel';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
@@ -69,11 +70,7 @@ export function ItemTableView({
                 {entry.quantity != null ? entry.quantity : '\u2014'}
               </span>
               <div className="flex-1 min-w-0 row">
-                <div
-                  className="h-2 w-2 rounded-full shrink-0"
-                  style={colorPreset ? { backgroundColor: colorPreset.dot } : { backgroundColor: 'var(--text-tertiary)' }}
-                />
-                <BinIcon className="hidden sm:block h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+                <BinIconBadge icon={BinIcon} colorPreset={colorPreset} />
                 <span className="truncate text-[13px] text-[var(--text-tertiary)]">
                   <Highlight text={entry.bin_name} query={searchQuery} />
                 </span>
