@@ -444,8 +444,10 @@ export async function getManagerToken(userId: string, email: string | null): Pro
     .sign(getSubscriptionSecretKey());
 }
 
-export function buildUpgradeUrl(token: string): string {
-  return `${config.managerUrl}/plans?token=${token}&origin=${encodeURIComponent(config.corsOrigin)}`;
+export function buildUpgradeUrl(token: string, returning?: boolean): string {
+  let url = `${config.managerUrl}/plans?token=${token}&origin=${encodeURIComponent(config.corsOrigin)}`;
+  if (returning) url += '&returning=1';
+  return url;
 }
 
 export function buildUpgradePlanUrl(token: string, plan: 'plus' | 'pro'): string {
@@ -456,9 +458,9 @@ export function buildPortalUrl(token: string): string {
   return `${config.managerUrl}/portal?token=${token}`;
 }
 
-export async function generateUpgradeUrl(userId: string, email: string | null): Promise<string | null> {
+export async function generateUpgradeUrl(userId: string, email: string | null, returning?: boolean): Promise<string | null> {
   const token = await getManagerToken(userId, email);
-  return token ? buildUpgradeUrl(token) : null;
+  return token ? buildUpgradeUrl(token, returning) : null;
 }
 
 export async function generateUpgradePlanUrl(userId: string, email: string | null, plan: 'plus' | 'pro'): Promise<string | null> {

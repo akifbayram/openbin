@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -256,11 +257,16 @@ export function BinCreateForm({
 
       {/* Custom Fields (full mode only) */}
       {isFull && customFieldDefs.length > 0 && (
-        <CustomFieldsEditCard
-          fields={customFieldDefs}
-          values={customFields}
-          onChange={setCustomFields}
-        />
+        <Card>
+          <CardContent className="space-y-4 pt-3 pb-4">
+            <Label>Custom Fields</Label>
+            <CustomFieldsEditCard
+              fields={customFieldDefs}
+              values={customFields}
+              onChange={setCustomFields}
+            />
+          </CardContent>
+        </Card>
       )}
 
       {/* AI Suggestions (full mode only) */}

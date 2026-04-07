@@ -46,7 +46,13 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
     rafRef.current = requestAnimationFrame(() => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+      const vv = window.visualViewport;
+      const vvTop = vv?.offsetTop ?? 0;
+      const vvLeft = vv?.offsetLeft ?? 0;
+      const t = rect.bottom + 4 + vvTop;
+      const l = rect.left + vvLeft;
+      const w = rect.width;
+      setPos((prev) => prev && prev.top === t && prev.left === l && prev.width === w ? prev : { top: t, left: l, width: w });
     });
   }, []);
 
@@ -64,10 +70,15 @@ export function AreaPicker({ locationId, value, onChange }: AreaPickerProps) {
     }
     window.addEventListener('scroll', reposition, true);
     window.addEventListener('resize', reposition);
+    window.visualViewport?.addEventListener('resize', reposition);
+    window.visualViewport?.addEventListener('scroll', reposition);
     document.addEventListener('mousedown', handleClick);
     return () => {
+      cancelAnimationFrame(rafRef.current);
       window.removeEventListener('scroll', reposition, true);
       window.removeEventListener('resize', reposition);
+      window.visualViewport?.removeEventListener('resize', reposition);
+      window.visualViewport?.removeEventListener('scroll', reposition);
       document.removeEventListener('mousedown', handleClick);
     };
   }, [open, reposition]);

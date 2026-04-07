@@ -199,11 +199,6 @@ const BinTableRow = React.memo(function BinTableRow({
             onClick={(e) => { e.stopPropagation(); onSelect(bin.id, index, e.shiftKey); }}
             aria-label="Select"
           >
-            {/* Color dot + icon — fades out on hover */}
-            <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-0">
-              <div className="h-4 w-4 rounded-full shrink-0" style={colorPreset ? { backgroundColor: colorPreset.dot } : { backgroundColor: 'var(--text-tertiary)' }} />
-            </div>
-            {/* Checkbox revealed on hover */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 [@media(hover:hover)]:group-hover:opacity-100">
               <div className="h-4 w-4 rounded-full border-2 border-[var(--text-tertiary)] flex items-center justify-center" />
             </div>
@@ -214,7 +209,13 @@ const BinTableRow = React.memo(function BinTableRow({
       {/* Name (with icon) */}
       <div className="flex-[2] min-w-0 row">
         {isVisible?.('icon') !== false && (
-          <BinIcon className="h-4 w-4 shrink-0 text-[var(--text-tertiary)]" />
+          <div
+            data-testid="bin-icon-badge"
+            className="h-5 w-5 shrink-0 flex items-center justify-center rounded-[var(--radius-xs)]"
+            style={colorPreset ? { backgroundColor: colorPreset.dot } : { backgroundColor: 'var(--text-tertiary)' }}
+          >
+            <BinIcon className="h-3 w-3 text-white" />
+          </div>
         )}
         <span className="truncate font-medium text-[14px] text-[var(--text-primary)]">
           <Highlight text={bin.name} query={searchQuery} />

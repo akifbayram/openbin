@@ -147,7 +147,16 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
     rafRef.current = requestAnimationFrame(() => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+      // On iOS Safari, getBoundingClientRect() is relative to the visual viewport
+      // but position:fixed is relative to the layout viewport. When the keyboard
+      // is visible these diverge, so add the visual viewport offset to compensate.
+      const vv = window.visualViewport;
+      const vvTop = vv?.offsetTop ?? 0;
+      const vvLeft = vv?.offsetLeft ?? 0;
+      const t = rect.bottom + 4 + vvTop;
+      const l = rect.left + vvLeft;
+      const w = rect.width;
+      setPos((prev) => prev && prev.top === t && prev.left === l && prev.width === w ? prev : { top: t, left: l, width: w });
     });
   }, []);
 
@@ -173,10 +182,15 @@ export function TagInput({ tags, onChange, suggestions = [] }: TagInputProps) {
     }
     window.addEventListener('scroll', reposition, true);
     window.addEventListener('resize', reposition);
+    window.visualViewport?.addEventListener('resize', reposition);
+    window.visualViewport?.addEventListener('scroll', reposition);
     document.addEventListener('mousedown', handleClick);
     return () => {
+      cancelAnimationFrame(rafRef.current);
       window.removeEventListener('scroll', reposition, true);
       window.removeEventListener('resize', reposition);
+      window.visualViewport?.removeEventListener('resize', reposition);
+      window.visualViewport?.removeEventListener('scroll', reposition);
       document.removeEventListener('mousedown', handleClick);
     };
   }, [showSuggestions, reposition]);

@@ -91,3 +91,42 @@ describe('BinTableView custom field columns', () => {
     expect(screen.queryByText('Custom Fields')).toBeNull();
   });
 });
+
+describe('BinTableView combined color+icon badge', () => {
+  it('renders icon inside a colored badge with background-color', () => {
+    const { container } = renderTable({
+      bins: [makeBin({ color: '0-2', icon: 'box' })],
+    });
+    const badge = container.querySelector('[data-testid="bin-icon-badge"]');
+    expect(badge).not.toBeNull();
+    expect(badge?.getAttribute('style')).toContain('background-color');
+  });
+
+  it('uses tertiary fallback color when bin has no color', () => {
+    const { container } = renderTable({
+      bins: [makeBin({ color: '' })],
+    });
+    const badge = container.querySelector('[data-testid="bin-icon-badge"]');
+    expect(badge).not.toBeNull();
+    expect(badge?.getAttribute('style')).toContain('--text-tertiary');
+  });
+
+  it('hides badge when icon visibility is off', () => {
+    const { container } = renderTable({
+      bins: [makeBin({ color: '0-2' })],
+      isVisible: (f) => f !== 'icon',
+    });
+    const badge = container.querySelector('[data-testid="bin-icon-badge"]');
+    expect(badge).toBeNull();
+  });
+
+  it('does not render a standalone color dot in the checkbox area', () => {
+    const { container } = renderTable({
+      bins: [makeBin({ color: '0-2' })],
+    });
+    // The select button should not contain any element with a background-color style
+    const selectBtn = container.querySelector('[aria-label="Select"]');
+    const coloredChildren = selectBtn?.querySelectorAll('[style*="background-color"]') ?? [];
+    expect(coloredChildren.length).toBe(0);
+  });
+});

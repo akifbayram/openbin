@@ -250,17 +250,32 @@ export function BinDetailContent({
         </Card>
 
         {/* Custom Fields */}
-        {canEdit ? (
-          <CustomFieldsEditCard
-            fields={customFields}
-            values={localCustomFields}
-            onChange={(values) => {
-              setLocalCustomFields(values);
-              autoSave.saveCustomFields(values);
-            }}
-          />
-        ) : (
-          <CustomFieldsViewCard fields={customFields} values={bin.custom_fields} />
+        {(canEdit ? customFields.length > 0 : customFields.some((f) => bin.custom_fields[f.id]?.trim())) && (
+          <Card>
+            <CardContent className="!py-0">
+              <Disclosure
+                label="Custom Fields"
+                labelClassName={disclosureSectionLabel}
+                defaultOpen={localStorage.getItem('openbin-custom-fields-expanded') !== 'false'}
+                onOpenChange={(v) => localStorage.setItem('openbin-custom-fields-expanded', String(v))}
+              >
+                <div className="pb-4">
+                  {canEdit ? (
+                    <CustomFieldsEditCard
+                      fields={customFields}
+                      values={localCustomFields}
+                      onChange={(values) => {
+                        setLocalCustomFields(values);
+                        autoSave.saveCustomFields(values);
+                      }}
+                    />
+                  ) : (
+                    <CustomFieldsViewCard fields={customFields} values={bin.custom_fields} />
+                  )}
+                </div>
+              </Disclosure>
+            </CardContent>
+          </Card>
         )}
 
         {/* Appearance disclosure — edit only */}
