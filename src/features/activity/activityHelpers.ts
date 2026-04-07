@@ -56,6 +56,28 @@ export function getActionColor(action: string): string {
   return 'text-[var(--text-tertiary)]';
 }
 
+const ACTION_BADGE_LABELS: Record<string, string> = {
+  create: 'Created',
+  update: 'Updated',
+  delete: 'Deleted',
+  permanent_delete: 'Deleted',
+  restore: 'Restored',
+  add_photo: 'Photo',
+  delete_photo: 'Photo',
+  move_in: 'Moved',
+  move_out: 'Moved',
+  join: 'Joined',
+  leave: 'Left',
+  remove_member: 'Removed',
+  change_role: 'Role',
+  regenerate_invite: 'Invite',
+};
+
+export function getActionBadgeLabel(action: string): string {
+  if (ACTION_BADGE_LABELS[action]) return ACTION_BADGE_LABELS[action];
+  return action.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+}
+
 export function getActionLabel(entry: ActivityLogEntry, t: Terminology): string {
   const name = entry.entity_name ? `"${entry.entity_name}"` : '';
   const { action, entity_type } = entry;
@@ -136,23 +158,79 @@ const SKIP_FIELDS = new Set(['location', 'area_id']);
 
 export function renderChangeDiff(entry: ActivityLogEntry): { field: string; old: string; new: string }[] | null {
   if (!entry.changes) return null;
-  const fields = Object.entries(entry.changes).filter(([f]) => !ITEM_FIELDS.has(f) && !SKIP_FIELDS.has(f));
-  if (fields.length === 0) return null;
 
-  return fields.map(([field, diff]) => {
-    const label =
-      field === 'area' ? 'area' : field === 'name' ? 'name' : field === 'card_style' ? 'style' : field;
-    const formatVal = (val: unknown) => {
-      if (field === 'card_style') {
-        try {
-          const parsed = typeof val === 'string' ? JSON.parse(val) : val;
-          return (parsed?.variant as string) || 'default';
-        } catch {
-          return String(val || 'default');
+  const fieldDiffs = Object.entries(entry.changes)
+    .filter(([f]) => !ITEM_FIELDS.has(f) && !SKIP_FIELDS.has(f))
+    .map(([field, diff]) => {
+      const label =
+        field === 'area' ? 'area' : field === 'name' ? 'name' : field === 'card_style' ? 'style' : field;
+      const formatVal = (val: unknown) => {
+        if (field === 'card_style') {
+          try {
+            const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+            return (parsed?.variant as string) || 'default';
+          } catch {
+            return String(val || 'default');
+          }
         }
-      }
-      return String(val ?? 'none');
-    };
-    return { field: label, old: formatVal(diff.old), new: formatVal(diff.new) };
-  });
+        return String(val ?? 'none');
+      };
+      return { field: label, old: formatVal(diff.old), new: formatVal(diff.new) };
+    });
+
+  const itemDiffs: { field: string; old: string; new: string }[] = [];
+  const c = entry.changes;
+
+  if (c.items_added) {
+    const added = c.items_added.new as string[] | null;
+    if (added && added.length > 0) {
+      itemDiffs.push({ field: '+ items', old: '', new: added.join(', ') });
+    }
+  }
+  if (c.items_removed) {
+    const removed = c.items_removed.old as string[] | null;
+    if (removed && removed.length > 0) {
+      itemDiffs.push({ field: '− items', old: removed.join(', '), new: '' });
+    }
+  }
+  if (c.items_renamed) {
+    itemDiffs.push({
+      field: 'renamed',
+      old: String(c.items_renamed.old ?? ''),
+      new: String(c.items_renamed.new ?? ''),
+    });
+  }
+
+  const allDiffs = [...fieldDiffs, ...itemDiffs];
+  return allDiffs.length > 0 ? allDiffs : null;
+}
+
+export function getEntityDescription(entry: ActivityLogEntry, t: Terminology): string {
+  const name = entry.entity_name ? `"${entry.entity_name}"` : '';
+  const { action, entity_type } = entry;
+
+  if (entity_type === 'bin') {
+    if (action === 'move_in' || action === 'move_out') {
+      const from = entry.changes?.location?.old;
+      const to = entry.changes?.location?.new;
+      return `${t.bin} ${name} from ${from ?? '?'} to ${to ?? '?'}`;
+    }
+    if (action === 'add_photo' || action === 'delete_photo') {
+      return `photo on ${t.bin} ${name}`;
+    }
+    return `${t.bin} ${name}`;
+  }
+  if (entity_type === 'area') return `${t.area} ${name}`;
+  if (entity_type === 'member') {
+    if (action === 'join') return `the ${t.location}`;
+    if (action === 'leave') return `the ${t.location}`;
+    if (action === 'remove_member') return name;
+    if (action === 'change_role') return `role for ${name}`;
+    return name;
+  }
+  if (entity_type === 'location') {
+    if (action === 'regenerate_invite') return 'invite code';
+    return `${t.location} ${name}`;
+  }
+  return `${entity_type} ${name}`;
 }

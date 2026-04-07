@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_TERMINOLOGY } from '@/lib/terminology';
 import type { ActivityLogEntry } from '@/types';
 import {
+  getActionBadgeLabel,
   getActionColor,
   getActionIcon,
   getActionLabel,
@@ -260,14 +261,17 @@ describe('renderChangeDiff', () => {
     expect(renderChangeDiff(entry({ changes: null }))).toBeNull();
   });
 
-  it('returns null when only ITEM_FIELDS are present', () => {
+  it('returns item entries when only ITEM_FIELDS are present', () => {
     const e = entry({
       changes: {
         items_added: { old: null, new: ['A'] },
         items_removed: { old: ['B'], new: null },
       },
     });
-    expect(renderChangeDiff(e)).toBeNull();
+    expect(renderChangeDiff(e)).toEqual([
+      { field: '+ items', old: '', new: 'A' },
+      { field: '− items', old: 'B', new: '' },
+    ]);
   });
 
   it('returns null when only SKIP_FIELDS are present', () => {
@@ -314,5 +318,99 @@ describe('renderChangeDiff', () => {
       changes: { area: { old: 'Kitchen', new: 'Garage' } },
     });
     expect(renderChangeDiff(e)).toEqual([{ field: 'area', old: 'Kitchen', new: 'Garage' }]);
+  });
+
+  it('returns item additions as structured entries', () => {
+    const e = entry({
+      changes: {
+        items_added: { old: null, new: ['Cable', 'Wire'] },
+      },
+    });
+    expect(renderChangeDiff(e)).toEqual([
+      { field: '+ items', old: '', new: 'Cable, Wire' },
+    ]);
+  });
+
+  it('returns item removals as structured entries', () => {
+    const e = entry({
+      changes: {
+        items_removed: { old: ['Cable'], new: null },
+      },
+    });
+    expect(renderChangeDiff(e)).toEqual([
+      { field: '− items', old: 'Cable', new: '' },
+    ]);
+  });
+
+  it('returns item renames as structured entries', () => {
+    const e = entry({
+      changes: {
+        items_renamed: { old: 'Old Name', new: 'New Name' },
+      },
+    });
+    expect(renderChangeDiff(e)).toEqual([
+      { field: 'renamed', old: 'Old Name', new: 'New Name' },
+    ]);
+  });
+
+  it('returns both field changes and item changes', () => {
+    const e = entry({
+      changes: {
+        name: { old: 'A', new: 'B' },
+        items_added: { old: null, new: ['Cable'] },
+      },
+    });
+    const result = renderChangeDiff(e)!;
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ field: 'name', old: 'A', new: 'B' });
+    expect(result[1]).toEqual({ field: '+ items', old: '', new: 'Cable' });
+  });
+});
+
+describe('getActionBadgeLabel', () => {
+  it('capitalizes create', () => {
+    expect(getActionBadgeLabel('create')).toBe('Created');
+  });
+  it('capitalizes update', () => {
+    expect(getActionBadgeLabel('update')).toBe('Updated');
+  });
+  it('capitalizes delete', () => {
+    expect(getActionBadgeLabel('delete')).toBe('Deleted');
+  });
+  it('returns Deleted for permanent_delete', () => {
+    expect(getActionBadgeLabel('permanent_delete')).toBe('Deleted');
+  });
+  it('capitalizes restore', () => {
+    expect(getActionBadgeLabel('restore')).toBe('Restored');
+  });
+  it('returns Photo for add_photo', () => {
+    expect(getActionBadgeLabel('add_photo')).toBe('Photo');
+  });
+  it('returns Photo for delete_photo', () => {
+    expect(getActionBadgeLabel('delete_photo')).toBe('Photo');
+  });
+  it('returns Moved for move_in', () => {
+    expect(getActionBadgeLabel('move_in')).toBe('Moved');
+  });
+  it('returns Moved for move_out', () => {
+    expect(getActionBadgeLabel('move_out')).toBe('Moved');
+  });
+  it('returns Joined for join', () => {
+    expect(getActionBadgeLabel('join')).toBe('Joined');
+  });
+  it('returns Left for leave', () => {
+    expect(getActionBadgeLabel('leave')).toBe('Left');
+  });
+  it('returns Removed for remove_member', () => {
+    expect(getActionBadgeLabel('remove_member')).toBe('Removed');
+  });
+  it('returns Role for change_role', () => {
+    expect(getActionBadgeLabel('change_role')).toBe('Role');
+  });
+  it('returns Invite for regenerate_invite', () => {
+    expect(getActionBadgeLabel('regenerate_invite')).toBe('Invite');
+  });
+  it('capitalizes unknown action', () => {
+    expect(getActionBadgeLabel('some_action')).toBe('Some action');
   });
 });
