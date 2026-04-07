@@ -13,7 +13,7 @@ import { useTagStyle } from '@/features/tags/useTagStyle';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { useTerminology } from '@/lib/terminology';
 import { cn, disclosureSectionLabel } from '@/lib/utils';
-import type { AiSuggestions, Bin, CustomField, Photo } from '@/types';
+import type { AiSuggestions, Bin, CustomField, ItemCheckout, Photo } from '@/types';
 import { BinPreviewCard } from './BinPreviewCard';
 import { ColorPicker } from './ColorPicker';
 import { CustomFieldsEditCard } from './CustomFieldsEditCard';
@@ -48,6 +48,7 @@ interface BinDetailContentProps {
   customFields: CustomField[];
   photos: Photo[];
   activeLocationId: string | undefined;
+  checkouts?: ItemCheckout[];
   onApplySuggestions: (changes: Partial<{ name: string; items: { name: string; quantity?: number | null }[]; tags: string[]; notes: string; customFields: Record<string, string> }>) => void;
   onClearSuggestions: () => void;
 }
@@ -69,6 +70,7 @@ export function BinDetailContent({
   customFields,
   photos,
   activeLocationId,
+  checkouts,
   onApplySuggestions,
   onClearSuggestions,
 }: BinDetailContentProps) {
@@ -133,7 +135,7 @@ export function BinDetailContent({
         {/* Items card */}
         <Card>
           <CardContent className="pt-3 pb-4">
-            <ItemList items={bin.items} binId={bin.id} readOnly={!canEdit} collapsible />
+            <ItemList items={bin.items} binId={bin.id} readOnly={!canEdit} collapsible checkouts={checkouts} />
             {canEdit && <QuickAddWidget quickAdd={quickAdd} aiEnabled={aiEnabled} aiGated={aiGated} onUpgrade={onUpgrade} />}
           </CardContent>
         </Card>

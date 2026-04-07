@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
+import { useCheckouts } from '@/features/checkouts/useCheckouts';
 import { PhotoGallery } from '@/features/photos/PhotoGallery';
 import { resolveIcon } from '@/lib/iconMap';
 import { useTerminology } from '@/lib/terminology';
@@ -40,6 +41,7 @@ export function BinDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { bin, isLoading } = useBin(id);
+  const { checkouts } = useCheckouts(id);
   const allTags = useAllTags();
   const t = useTerminology();
   const backState = location.state as BinDetailLocationState | null;
@@ -174,6 +176,7 @@ export function BinDetailPage() {
         customFields={customFieldDefs}
         photos={actions.photos}
         activeLocationId={actions.activeLocationId ?? undefined}
+        checkouts={checkouts}
         onApplySuggestions={actions.handleApplySuggestions}
         onClearSuggestions={actions.clearSuggestions}
       />

@@ -1,11 +1,13 @@
-import { ChevronDown, Search, Trash2, X } from 'lucide-react';
+import { ChevronDown, PackageMinus, Search, Trash2, Undo2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
+import { checkoutItem, returnItem } from '@/features/checkouts/useCheckouts';
+import { usePermissions } from '@/lib/usePermissions';
 import { cn, rowAction } from '@/lib/utils';
-import type { BinItem } from '@/types';
+import type { BinItem, ItemCheckout } from '@/types';
 import { removeItemFromBin, renameItem, reorderItems } from './useBins';
 import { useCollapsibleList } from './useCollapsibleList';
 
@@ -15,7 +17,19 @@ interface ItemListProps {
   readOnly?: boolean;
   hideWhenEmpty?: boolean;
   collapsible?: boolean;
+  checkouts?: ItemCheckout[];
   onItemsChange?: (items: BinItem[]) => void;
+}
+
+function formatRelativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
 }
 
 interface ItemRowProps {
@@ -23,6 +37,7 @@ interface ItemRowProps {
   quantity: number | null;
   isEditing: boolean;
   saved?: boolean;
+  checkoutButton?: React.ReactNode;
   onStartEdit: () => void;
   onSave: (value: string, quantity: number | null) => void;
   onCancel: () => void;
@@ -31,7 +46,7 @@ interface ItemRowProps {
 
 const SWIPE_THRESHOLD = 80;
 
-function ItemRow({ text, quantity, isEditing, saved, onStartEdit, onSave, onCancel, onDelete }: ItemRowProps) {
+function ItemRow({ text, quantity, isEditing, saved, checkoutButton, onStartEdit, onSave, onCancel, onDelete }: ItemRowProps) {
   const [editValue, setEditValue] = useState(text);
   const [editQuantity, setEditQuantity] = useState<string>(quantity != null ? String(quantity) : '');
   const [inlineQty, setInlineQty] = useState(quantity != null ? String(quantity) : '');
@@ -198,34 +213,44 @@ function ItemRow({ text, quantity, isEditing, saved, onStartEdit, onSave, onCanc
           </button>
         )}
 
-        {/* Desktop delete button — spacer preserves row width during edit */}
+        {/* Desktop action buttons — spacer preserves row width during edit */}
         {isEditing ? (
           <div className="size-9 shrink-0" />
         ) : (
-          <Tooltip content="Remove item">
-            <button
-              type="button"
-              onClick={onDelete}
-              className={rowAction}
-              aria-label="Remove item"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </Tooltip>
+          <>
+            {checkoutButton}
+            <Tooltip content="Remove item">
+              <button
+                type="button"
+                onClick={onDelete}
+                className={rowAction}
+                aria-label="Remove item"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
+          </>
         )}
       </div>
     </div>
   );
 }
 
-export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, onItemsChange }: ItemListProps) {
+export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, checkouts = [], onItemsChange }: ItemListProps) {
   const storageKey = collapsible && binId ? `openbin-items-collapsed-${binId}` : null;
   const [collapsed, setCollapsed] = useState(() => storageKey ? localStorage.getItem(storageKey) === 'true' : false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState<'' | 'name' | 'qty'>('');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { showToast } = useToast();
+  const { canWrite } = usePermissions();
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
+
+  const checkoutMap = useMemo(() => {
+    const map = new Map<string, ItemCheckout>();
+    for (const co of checkouts) map.set(co.item_id, co);
+    return map;
+  }, [checkouts]);
   const pendingDeletesRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
@@ -372,6 +397,26 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, o
     });
   }
 
+  async function handleCheckout(itemId: string) {
+    if (!binId) return;
+    try {
+      await checkoutItem(binId, itemId);
+      showToast({ message: 'Item checked out' });
+    } catch {
+      showToast({ message: 'Failed to check out item' });
+    }
+  }
+
+  async function handleReturn(itemId: string) {
+    if (!binId) return;
+    try {
+      await returnItem(binId, itemId);
+      showToast({ message: 'Item returned' });
+    } catch {
+      showToast({ message: 'Failed to return item' });
+    }
+  }
+
   // Flush all pending deletes on unmount (navigation away or edit mode transition)
   useEffect(() => {
     const ref = pendingDeletesRef;
@@ -418,6 +463,7 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, o
           {filterQuery
             ? `${filteredCount} of ${displayItems.length} ${displayItems.length === 1 ? 'Item' : 'Items'}`
             : `${displayItems.length} ${displayItems.length === 1 ? 'Item' : 'Items'}`}
+          {checkouts.length > 0 && ` \u00b7 ${checkouts.length} out`}
         </Label>
         {collapsible && (
           <button
@@ -488,6 +534,7 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, o
           ) : (
             visibleIndices.map((idx, i) => {
               const item = displayItems[idx];
+              const checkout = checkoutMap.get(item.id);
               const isNewlyRevealed = revealFrom !== null && i >= revealFrom;
               const staggerDelay = isNewlyRevealed ? Math.min((i - revealFrom) * 30, 500) : undefined;
               return (
@@ -497,7 +544,29 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, o
                   style={staggerDelay != null ? { animationDelay: `${staggerDelay}ms` } : undefined}
                 >
                   {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
-                  {readOnly ? (
+                  {checkout ? (
+                    <div className="row-tight px-3.5 py-1 opacity-50">
+                      <span className="shrink-0 w-8" />
+                      <span className="flex-1 min-w-0 text-[15px] text-[var(--text-tertiary)] leading-relaxed line-through">
+                        {item.name}
+                      </span>
+                      <span className="shrink-0 text-[12px] text-[var(--text-tertiary)]">
+                        Out &middot; {checkout.checked_out_by_name} &middot; {formatRelativeTime(checkout.checked_out_at)}
+                      </span>
+                      {canWrite && binId && !readOnly && (
+                        <Tooltip content="Return item">
+                          <button
+                            type="button"
+                            onClick={() => handleReturn(item.id)}
+                            className={rowAction}
+                            aria-label="Return item"
+                          >
+                            <Undo2 className="h-3.5 w-3.5" />
+                          </button>
+                        </Tooltip>
+                      )}
+                    </div>
+                  ) : readOnly ? (
                     <div className={cn('row-tight px-3.5 py-1', savedIds.has(item.id) && 'animate-save-flash')}>
                       {item.quantity != null && (
                         <span className="shrink-0 w-8 text-center text-[13px] text-[var(--text-primary)] tabular-nums">
@@ -518,6 +587,18 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, o
                       onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
                       onCancel={() => setEditingId(null)}
                       onDelete={() => handleDelete(item.id)}
+                      checkoutButton={canWrite && binId ? (
+                        <Tooltip content="Check out">
+                          <button
+                            type="button"
+                            onClick={() => handleCheckout(item.id)}
+                            className={rowAction}
+                            aria-label="Check out item"
+                          >
+                            <PackageMinus className="h-3.5 w-3.5" />
+                          </button>
+                        </Tooltip>
+                      ) : undefined}
                     />
                   )}
                 </div>
