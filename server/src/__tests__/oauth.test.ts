@@ -199,6 +199,37 @@ describe('OAuth routes', () => {
     expect(check.rows).toHaveLength(0);
   });
 
+  it('OAuth-only user can delete account with no request body', async () => {
+    const { user } = await findOrCreateOAuthUser({
+      provider: 'google',
+      providerUserId: `delete-nobody-${Date.now()}`,
+      email: `deletenobody${Date.now()}@example.com`,
+      displayName: 'Delete No Body',
+    });
+    const token = await signToken(user);
+    // No .send() — matches real client behavior when apiFetch sends body: undefined
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Account deleted');
+  });
+
+  it('OAuth-only user hasPassword is false on /me', async () => {
+    const { user } = await findOrCreateOAuthUser({
+      provider: 'google',
+      providerUserId: `me-oauth-${Date.now()}`,
+      email: `meoauth${Date.now()}@example.com`,
+      displayName: 'Me OAuth',
+    });
+    const token = await signToken(user);
+    const res = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.hasPassword).toBe(false);
+  });
+
   it('password user cannot delete account without password', async () => {
     const { token } = await createTestUser(app);
     const res = await request(app)

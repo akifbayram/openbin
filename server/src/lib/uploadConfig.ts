@@ -27,7 +27,12 @@ const binPhotoStorageEngine =
         destination: (req, _file, cb) => {
           const binId = req.params.id;
           const dir = path.join(PHOTO_STORAGE_PATH, binId);
-          fs.mkdirSync(dir, { recursive: true });
+          try {
+            fs.mkdirSync(dir, { recursive: true });
+          } catch (err) {
+            cb(err as Error, '');
+            return;
+          }
           cb(null, dir);
         },
         filename: (_req, file, cb) => {
@@ -52,7 +57,12 @@ export const binPhotoUpload = multer({
 /** Multer storage for user avatars. */
 export const avatarStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    fs.mkdirSync(AVATAR_STORAGE_PATH, { recursive: true });
+    try {
+      fs.mkdirSync(AVATAR_STORAGE_PATH, { recursive: true });
+    } catch (err) {
+      cb(err as Error, '');
+      return;
+    }
     cb(null, AVATAR_STORAGE_PATH);
   },
   filename: (_req, file, cb) => {

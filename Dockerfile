@@ -32,7 +32,7 @@ COPY --chown=node:node --from=server-builder /app/node_modules ./node_modules
 COPY --chown=node:node --from=server-builder /app/dist ./dist
 COPY --chown=node:node server/schema.sqlite.sql server/schema.pg.sql ./
 COPY --chown=node:node --from=frontend-builder /app/dist ./public
-RUN mkdir -p /data/photos /data/backups && chown -R node:node /data
+RUN mkdir -p /data/photos /data/photos/avatars /data/backups && chown -R node:node /data
 USER node
 EXPOSE 1453
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

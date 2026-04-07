@@ -1,6 +1,8 @@
 import { AlertTriangle, ArrowUpRight, Check, Clock } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { SettingsPageHeader } from '@/features/settings/SettingsPageHeader';
 import { SettingsRow } from '@/features/settings/SettingsRow';
@@ -380,12 +382,14 @@ export function SubscriptionSection() {
   }, [refresh, refreshUsage]);
 
   const [downgrading, setDowngrading] = useState(false);
+  const [showDowngradeConfirm, setShowDowngradeConfirm] = useState(false);
   const handleDowngradeToFree = useCallback(async () => {
     setDowngrading(true);
     try {
       await apiFetch('/api/plan/downgrade-to-free', { method: 'POST' });
       await refresh();
       refreshUsage();
+      setShowDowngradeConfirm(false);
       showToast({ message: 'Switched to the Free plan', variant: 'success' });
     } catch {
       showToast({ message: 'Failed to switch to Free plan', variant: 'error' });
@@ -431,14 +435,39 @@ export function SubscriptionSection() {
             />
           )}
           {planInfo.canDowngradeToFree && (
-            <button
-              type="button"
-              disabled={downgrading}
-              onClick={handleDowngradeToFree}
-              className={cn('mt-2 rounded-[var(--radius-xs)] text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50', focusRing)}
-            >
-              {isLocked ? 'Continue with Free Plan' : 'Switch to Free Plan'}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowDowngradeConfirm(true)}
+                className={cn('mt-2 rounded-[var(--radius-xs)] text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors', focusRing)}
+              >
+                {isLocked ? 'Continue with Free Plan' : 'Switch to Free Plan'}
+              </button>
+              <Dialog open={showDowngradeConfirm} onOpenChange={setShowDowngradeConfirm}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Switch to Free Plan?</DialogTitle>
+                    <DialogDescription>
+                      {isTrialing
+                        ? "Your trial will end immediately and you'll lose access to paid features. This cannot be undone."
+                        : "You'll lose access to paid features right away. You can upgrade again later."}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className={cn('flex items-start gap-2.5 rounded-[var(--radius-sm)] bg-[var(--destructive-soft)] px-3.5 py-3 text-[13px] text-[var(--destructive)]')}>
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>Features like AI, custom fields, and expanded limits will be removed.</span>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowDowngradeConfirm(false)}>
+                      Keep Current Plan
+                    </Button>
+                    <Button variant="destructive" disabled={downgrading} onClick={handleDowngradeToFree}>
+                      {downgrading ? 'Switching…' : 'Switch to Free'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
         </SettingsSection>
       )}

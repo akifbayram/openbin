@@ -302,75 +302,77 @@ export function AccountSection() {
         </form>
       </SettingsSection>
 
-      {/* Change password */}
-      <SettingsSection label="Password">
-        <form onSubmit={handleChangePassword} className="flex flex-col gap-3 py-2">
-          <FormField label="Current Password" htmlFor="current-password">
-            <Input
-              id="current-password"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-          </FormField>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <FormField label="New Password" htmlFor="new-password">
-              <div className="relative">
-                <Input
-                  id="new-password"
-                  type={showNewPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => {
-                    setNewPassword(e.target.value);
-                    if (passwordError) setPasswordError('');
-                  }}
-                  autoComplete="new-password"
-                  className="pr-10"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword((v) => !v)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors duration-150"
-                  aria-label={showNewPassword ? 'Hide password' : 'Show password'}
-                  tabIndex={-1}
-                >
-                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </FormField>
-            <FormField label="Confirm Password" htmlFor="confirm-password">
+      {/* Change password — hidden for OAuth-only users */}
+      {hasPassword && (
+        <SettingsSection label="Password">
+          <form onSubmit={handleChangePassword} className="flex flex-col gap-3 py-2">
+            <FormField label="Current Password" htmlFor="current-password">
               <Input
-                id="confirm-password"
+                id="current-password"
                 type="password"
-                value={confirmPassword}
-                onChange={(e) => {
-                  setConfirmPassword(e.target.value);
-                  if (passwordError) setPasswordError('');
-                }}
-                autoComplete="new-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
                 required
               />
             </FormField>
-          </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <FormField label="New Password" htmlFor="new-password">
+                <div className="relative">
+                  <Input
+                    id="new-password"
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      if (passwordError) setPasswordError('');
+                    }}
+                    autoComplete="new-password"
+                    className="pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((v) => !v)}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors duration-150"
+                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                    tabIndex={-1}
+                  >
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </FormField>
+              <FormField label="Confirm Password" htmlFor="confirm-password">
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (passwordError) setPasswordError('');
+                  }}
+                  autoComplete="new-password"
+                  required
+                />
+              </FormField>
+            </div>
 
-          {newPassword && <PasswordChecklist checks={passwordChecks} />}
+            {newPassword && <PasswordChecklist checks={passwordChecks} />}
 
-          {passwordError && (
-            <p role="alert" className="text-[13px] text-[var(--destructive)]">{passwordError}</p>
-          )}
+            {passwordError && (
+              <p role="alert" className="text-[13px] text-[var(--destructive)]">{passwordError}</p>
+            )}
 
-          <Button
-            type="submit"
-            disabled={savingPassword || !currentPassword || !newPassword || !confirmPassword}
-            className="self-start mt-1"
-          >
-            {savingPassword ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Updating...</> : 'Update Password'}
-          </Button>
-        </form>
-      </SettingsSection>
+            <Button
+              type="submit"
+              disabled={savingPassword || !currentPassword || !newPassword || !confirmPassword}
+              className="self-start mt-1"
+            >
+              {savingPassword ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Updating...</> : 'Update Password'}
+            </Button>
+          </form>
+        </SettingsSection>
+      )}
 
       {/* Connected accounts */}
       {oauthProviders.length > 0 && (
