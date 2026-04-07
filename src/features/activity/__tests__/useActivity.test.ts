@@ -86,4 +86,44 @@ describe('usePaginatedActivityLog', () => {
     expect(result.current.entries).toEqual(mockEntries);
     expect(result.current.totalCount).toBe(1);
   });
+
+  it('appends user_id filter to basePath', () => {
+    renderHook(() => usePaginatedActivityLog('', 'user-123'));
+
+    expect(mockUsePaginatedList).toHaveBeenCalledWith(
+      '/api/locations/loc-1/activity?user_id=user-123',
+      [],
+      50,
+    );
+  });
+
+  it('appends date range filters to basePath', () => {
+    renderHook(() => usePaginatedActivityLog('', '', '2026-04-01', '2026-04-07'));
+
+    expect(mockUsePaginatedList).toHaveBeenCalledWith(
+      '/api/locations/loc-1/activity?from=2026-04-01&to=2026-04-07',
+      [],
+      50,
+    );
+  });
+
+  it('combines entity_type and user_id filters', () => {
+    renderHook(() => usePaginatedActivityLog('bin', 'user-123'));
+
+    expect(mockUsePaginatedList).toHaveBeenCalledWith(
+      '/api/locations/loc-1/activity?entity_type=bin&user_id=user-123',
+      [],
+      50,
+    );
+  });
+
+  it('combines all filters', () => {
+    renderHook(() => usePaginatedActivityLog('bin', 'user-123', '2026-04-01', '2026-04-07'));
+
+    expect(mockUsePaginatedList).toHaveBeenCalledWith(
+      '/api/locations/loc-1/activity?entity_type=bin&user_id=user-123&from=2026-04-01&to=2026-04-07',
+      [],
+      50,
+    );
+  });
 });
