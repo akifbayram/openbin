@@ -10,6 +10,7 @@ export const Events = {
   SCAN_HISTORY: 'scan-history-changed',
   CUSTOM_FIELDS: 'custom-fields-changed',
   PLAN: 'plan-changed',
+  CHECKOUTS: 'checkouts-changed',
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];

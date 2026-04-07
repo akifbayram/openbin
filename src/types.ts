@@ -83,6 +83,24 @@ export interface BinItem {
   quantity: number | null;
 }
 
+export interface ItemCheckout {
+  id: string;
+  item_id: string;
+  origin_bin_id: string;
+  location_id: string;
+  checked_out_by: string;
+  checked_out_by_name: string;
+  checked_out_at: string;
+  returned_at: string | null;
+  returned_by: string | null;
+  return_bin_id: string | null;
+}
+
+export interface ItemCheckoutWithContext extends ItemCheckout {
+  item_name: string;
+  origin_bin_name: string;
+}
+
 export interface Bin {
   id: string;
   short_code: string;
