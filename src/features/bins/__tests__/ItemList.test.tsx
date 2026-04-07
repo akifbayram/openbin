@@ -6,6 +6,13 @@ import { ItemList } from '../ItemList';
 vi.mock('@/lib/api', () => ({ apiFetch: vi.fn() }));
 vi.mock('@/lib/auth', () => ({ useAuth: vi.fn(() => ({ activeLocationId: 'loc-1', token: 'test' })) }));
 vi.mock('@/components/ui/toast', () => ({ useToast: vi.fn(() => ({ showToast: vi.fn() })) }));
+vi.mock('@/lib/usePermissions', () => ({
+  usePermissions: vi.fn(() => ({ canWrite: true })),
+}));
+vi.mock('@/features/checkouts/useCheckouts', () => ({
+  checkoutItem: vi.fn().mockResolvedValue(undefined),
+  returnItem: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('../useBins', () => ({
   removeItemFromBin: vi.fn().mockResolvedValue(undefined),
   renameItem: vi.fn().mockResolvedValue(undefined),
