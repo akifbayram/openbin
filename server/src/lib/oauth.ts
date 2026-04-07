@@ -17,7 +17,9 @@ const log = createLogger('oauth');
 const OAUTH_STATE_MAX_AGE = 10 * 60; // 10 minutes in seconds
 
 function cookieOpts(maxAge: number): import('express').CookieOptions {
-  return { httpOnly: true, secure: config.cookieSecure, sameSite: 'lax', maxAge: maxAge * 1000, path: '/' };
+  // SameSite=None required for Apple Sign In — Apple's callback is a cross-site POST,
+  // and Lax cookies are not sent on cross-site POST requests.
+  return { httpOnly: true, secure: config.cookieSecure, sameSite: 'none', maxAge: maxAge * 1000, path: '/' };
 }
 
 export function generateState(res: Response): string {
