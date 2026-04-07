@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
-import type { ItemCheckout } from '@/types';
 import { returnItem } from './useCheckouts';
 
 interface ReturnItemDialogProps {
@@ -18,7 +17,6 @@ interface ReturnItemDialogProps {
   itemName: string;
   binId: string;
   itemId: string;
-  checkout: ItemCheckout;
 }
 
 export function ReturnItemDialog({ open, onOpenChange, itemName, binId, itemId }: ReturnItemDialogProps) {

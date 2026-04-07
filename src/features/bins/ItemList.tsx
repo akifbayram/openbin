@@ -5,7 +5,7 @@ import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { checkoutItem, returnItem } from '@/features/checkouts/useCheckouts';
-import { usePermissions } from '@/lib/usePermissions';
+import { formatTimeAgo } from '@/lib/formatTime';
 import { cn, rowAction } from '@/lib/utils';
 import type { BinItem, ItemCheckout } from '@/types';
 import { removeItemFromBin, renameItem, reorderItems } from './useBins';
@@ -19,17 +19,6 @@ interface ItemListProps {
   collapsible?: boolean;
   checkouts?: ItemCheckout[];
   onItemsChange?: (items: BinItem[]) => void;
-}
-
-function formatRelativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
 }
 
 interface ItemRowProps {
@@ -243,7 +232,6 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, c
   const [sortColumn, setSortColumn] = useState<'' | 'name' | 'qty'>('');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { showToast } = useToast();
-  const { canWrite } = usePermissions();
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
 
   const checkoutMap = useMemo(() => {
@@ -551,9 +539,9 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, c
                         {item.name}
                       </span>
                       <span className="shrink-0 text-[12px] text-[var(--text-tertiary)]">
-                        Out &middot; {checkout.checked_out_by_name} &middot; {formatRelativeTime(checkout.checked_out_at)}
+                        Out &middot; {checkout.checked_out_by_name} &middot; {formatTimeAgo(checkout.checked_out_at)}
                       </span>
-                      {canWrite && binId && !readOnly && (
+                      {!readOnly && binId && (
                         <Tooltip content="Return item">
                           <button
                             type="button"
@@ -587,7 +575,7 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, c
                       onSave={(value, qty) => handleSaveEdit(item.id, value, qty)}
                       onCancel={() => setEditingId(null)}
                       onDelete={() => handleDelete(item.id)}
-                      checkoutButton={canWrite && binId ? (
+                      checkoutButton={!readOnly && binId ? (
                         <Tooltip content="Check out">
                           <button
                             type="button"

@@ -9,21 +9,11 @@ import { SkeletonList } from '@/components/ui/skeleton-list';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { useToast } from '@/components/ui/toast';
 import { useAuth } from '@/lib/auth';
+import { formatTimeAgo } from '@/lib/formatTime';
 import { usePermissions } from '@/lib/usePermissions';
 import { cn, flatCard } from '@/lib/utils';
 import type { ItemCheckoutWithContext } from '@/types';
 import { returnItem, useLocationCheckouts } from './useCheckouts';
-
-function formatRelativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-}
 
 export function CheckoutsPage() {
   const { activeLocationId } = useAuth();
@@ -32,7 +22,6 @@ export function CheckoutsPage() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [sortColumn, setSortColumn] = useState<'time' | ''>('time');
   const [sortDir, setSortDir] = useState<SortDirection>('desc');
 
   const filtered = useMemo(() => {
@@ -85,7 +74,7 @@ export function CheckoutsPage() {
         <div className={cn(flatCard, 'divide-y divide-[var(--border-subtle)]')}>
           <div className="flex items-center justify-between px-4 py-2 text-[13px] text-[var(--text-tertiary)]">
             <span>{filtered.length} item{filtered.length !== 1 ? 's' : ''} checked out</span>
-            <SortHeader label="Time" column="time" currentColumn={sortColumn} currentDirection={sortDir} onSort={(_col, dir) => { setSortColumn('time'); setSortDir(dir); }} />
+            <SortHeader label="Time" column="time" currentColumn="time" currentDirection={sortDir} onSort={(_col, dir) => setSortDir(dir)} />
           </div>
           {filtered.map((co) => (
             <div key={co.id} className="flex items-center gap-3 px-4 py-3">
@@ -95,7 +84,7 @@ export function CheckoutsPage() {
                   <button type="button" onClick={() => navigate(`/bin/${co.origin_bin_id}`)} className="hover:underline">
                     {co.origin_bin_name}
                   </button>
-                  {' \u00b7 '}{co.checked_out_by_name}{' \u00b7 '}{formatRelativeTime(co.checked_out_at)}
+                  {' \u00b7 '}{co.checked_out_by_name}{' \u00b7 '}{formatTimeAgo(co.checked_out_at)}
                 </p>
               </div>
               {canWrite && (

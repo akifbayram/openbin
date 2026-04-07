@@ -105,9 +105,12 @@ router.post('/:id/items/:itemId/return', asyncHandler(async (req, res) => {
     [userId, returnBinId, checkoutRow.id]
   );
 
+  // Get item name for activity logging (used in both branches)
+  const itemResult = await query<{ name: string }>('SELECT name FROM bin_items WHERE id = $1', [itemId]);
+  const itemName = itemResult.rows[0]?.name ?? 'Unknown item';
+
   // If returning to a different bin, move the item
   if (returnBinId !== checkoutRow.origin_bin_id) {
-    // Get max position in target bin
     const maxResult = await query<{ max_pos: number | null }>(
       'SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1',
       [returnBinId]
@@ -119,13 +122,11 @@ router.post('/:id/items/:itemId/return', asyncHandler(async (req, res) => {
       [returnBinId, nextPos, itemId]
     );
 
-    // Update timestamps on both bins
-    await query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [checkoutRow.origin_bin_id]);
+    const [, targetBinResult] = await Promise.all([
+      query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [checkoutRow.origin_bin_id]),
+      query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [returnBinId]),
+    ]);
     await query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [returnBinId]);
-
-    // Get item name and target bin name for activity logging
-    const itemResult = await query<{ name: string }>('SELECT name FROM bin_items WHERE id = $1', [itemId]);
-    const targetBinResult = await query<{ name: string }>('SELECT name FROM bins WHERE id = $1', [returnBinId]);
 
     logRouteActivity(req, {
       locationId: access.locationId,
@@ -141,18 +142,16 @@ router.post('/:id/items/:itemId/return', asyncHandler(async (req, res) => {
       entityType: 'bin',
       entityId: returnBinId,
       entityName: targetBinResult.rows[0]?.name,
-      changes: { item_received: { old: null, new: itemResult.rows[0]?.name } },
+      changes: { item_received: { old: null, new: itemName } },
     });
   } else {
-    // Get item name for activity logging
-    const itemResult = await query<{ name: string }>('SELECT name FROM bin_items WHERE id = $1', [itemId]);
     logRouteActivity(req, {
       locationId: access.locationId,
       action: 'update',
       entityType: 'bin',
       entityId: binId,
       entityName: access.name,
-      changes: { item_returned: { old: null, new: itemResult.rows[0]?.name } },
+      changes: { item_returned: { old: null, new: itemName } },
     });
   }
 
