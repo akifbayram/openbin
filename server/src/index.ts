@@ -91,6 +91,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
     credentials: true,
   }));
   app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: false }));
   app.use(cookieParser());
   app.use(requestLogger);
 

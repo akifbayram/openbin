@@ -597,21 +597,22 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
 // DELETE /api/auth/account — permanently delete account
 router.delete('/account', authenticate, asyncHandler(async (req, res) => {
   const { password } = req.body;
-  if (!password) {
-    throw new ValidationError('Password is required');
-  }
-
   const userId = req.user!.id;
 
-  // Verify password
   const userResult = await query('SELECT password_hash, avatar_path, is_admin FROM users WHERE id = $1', [userId]);
   if (userResult.rows.length === 0) {
     throw new NotFoundError('User not found');
   }
 
-  const valid = await bcrypt.compare(password, userResult.rows[0].password_hash);
-  if (!valid) {
-    throw new UnauthorizedError('Incorrect password');
+  // Verify password when user has one; OAuth-only users (no password_hash) skip this check
+  if (userResult.rows[0].password_hash) {
+    if (!password) {
+      throw new ValidationError('Password is required');
+    }
+    const valid = await bcrypt.compare(password, userResult.rows[0].password_hash);
+    if (!valid) {
+      throw new UnauthorizedError('Incorrect password');
+    }
   }
 
   const avatarPath = userResult.rows[0].avatar_path;

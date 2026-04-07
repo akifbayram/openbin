@@ -186,10 +186,10 @@ export function AccountSection() {
 
   async function handleDeleteAccount(e: React.FormEvent) {
     e.preventDefault();
-    if (!deletePassword) return;
+    if (hasPassword && !deletePassword) return;
     setDeleting(true);
     try {
-      await deleteAccount(deletePassword);
+      await deleteAccount(hasPassword ? deletePassword : undefined);
     } catch (err) {
       showToast({ message: getErrorMessage(err, 'Failed to delete account'), variant: 'error' });
       setDeleting(false);
@@ -462,21 +462,27 @@ export function AccountSection() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleDeleteAccount} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="delete-password">Enter your password to confirm</Label>
-              <Input
-                id="delete-password"
-                type="password"
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                placeholder="Password"
-                autoFocus
-                required
-              />
-            </div>
+            {hasPassword ? (
+              <div className="space-y-2">
+                <Label htmlFor="delete-password">Enter your password to confirm</Label>
+                <Input
+                  id="delete-password"
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Password"
+                  autoFocus
+                  required
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--text-secondary)]">
+                Are you sure you want to continue?
+              </p>
+            )}
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => { setDeleteOpen(false); setDeletePassword(''); }}>Cancel</Button>
-              <Button type="submit" variant="destructive" disabled={!deletePassword || deleting}>
+              <Button type="submit" variant="destructive" disabled={(hasPassword && !deletePassword) || deleting}>
                 {deleting ? 'Deleting...' : 'Delete Account'}
               </Button>
             </DialogFooter>

@@ -146,20 +146,22 @@ export async function findOrCreateOAuthUser(input: OAuthUserInput): Promise<OAut
       [userId]
     );
     const user = userResult.rows[0];
-    if (!user || user.deleted_at) throw new UnauthorizedError('Account not found');
-    if (user.suspended_at) throw new ForbiddenError('This account has been suspended');
-    return { user: { id: user.id, username: user.username, token_version: user.token_version }, created: false };
+    if (user && !user.deleted_at) {
+      if (user.suspended_at) throw new ForbiddenError('This account has been suspended');
+      return { user: { id: user.id, username: user.username, token_version: user.token_version }, created: false };
+    }
+    // User deleted or missing — remove stale link so a fresh account can be created
+    await query('DELETE FROM user_oauth_links WHERE provider = $1 AND provider_user_id = $2', [provider, providerUserId]);
   }
 
   // 2. Check if email matches an existing user (auto-link)
   if (email) {
     const emailResult = await query<{ id: string; username: string; token_version: number; deleted_at: string | null; suspended_at: string | null }>(
-      'SELECT id, username, token_version, deleted_at, suspended_at FROM users WHERE LOWER(email) = LOWER($1)',
+      'SELECT id, username, token_version, deleted_at, suspended_at FROM users WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL',
       [email]
     );
     if (emailResult.rows.length > 0) {
       const user = emailResult.rows[0];
-      if (user.deleted_at) throw new UnauthorizedError('Account not found');
       if (user.suspended_at) throw new ForbiddenError('This account has been suspended');
 
       await query(

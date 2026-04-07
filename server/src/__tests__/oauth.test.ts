@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { generateUuid, query } from '../db.js';
 import { createApp } from '../index.js';
 import { findOrCreateOAuthUser, generateUsername } from '../lib/oauth.js';
+import { signToken } from '../middleware/auth.js';
 import { createTestUser } from './helpers.js';
 
 let app: Express;
@@ -177,5 +178,54 @@ describe('OAuth routes', () => {
       .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.hasPassword).toBe(true);
+  });
+
+  it('OAuth-only user can delete account without password', async () => {
+    const { user } = await findOrCreateOAuthUser({
+      provider: 'google',
+      providerUserId: `delete-oauth-${Date.now()}`,
+      email: `deleteoauth${Date.now()}@example.com`,
+      displayName: 'Delete OAuth',
+    });
+    const token = await signToken(user);
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Account deleted');
+    // Verify user is gone
+    const check = await query('SELECT id FROM users WHERE id = $1', [user.id]);
+    expect(check.rows).toHaveLength(0);
+  });
+
+  it('password user cannot delete account without password', async () => {
+    const { token } = await createTestUser(app);
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(422);
+  });
+
+  it('password user cannot delete account with wrong password', async () => {
+    const { token } = await createTestUser(app);
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'WrongPassword123!' });
+    expect(res.status).toBe(401);
+  });
+
+  it('password user can delete account with correct password', async () => {
+    const { token, password, user } = await createTestUser(app);
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Account deleted');
+    const check = await query('SELECT id FROM users WHERE id = $1', [user.id]);
+    expect(check.rows).toHaveLength(0);
   });
 });

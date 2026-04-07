@@ -18,7 +18,7 @@ interface AuthContextValue extends AuthState {
   refreshSession: () => Promise<void>;
   setActiveLocationId: (id: string | null) => void;
   updateUser: (user: User) => void;
-  deleteAccount: (password: string) => Promise<void>;
+  deleteAccount: (password?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -203,8 +203,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, user }));
   }, []);
 
-  const deleteAccount = useCallback(async (password: string) => {
-    await apiFetch('/api/auth/account', { method: 'DELETE', body: { password } });
+  const deleteAccount = useCallback(async (password?: string) => {
+    await apiFetch('/api/auth/account', { method: 'DELETE', body: password ? { password } : undefined });
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_LOCATION);
     setState({ user: null, token: null, activeLocationId: null, demoMode: false, loading: false });
   }, []);
