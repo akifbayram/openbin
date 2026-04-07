@@ -6,6 +6,7 @@ import { cn, focusRing, iconButton } from '@/lib/utils';
 import type { OnboardingActions } from './onboardingConstants';
 import { markDemoTourDone } from './onboardingConstants';
 import { AiShowcaseStep } from './steps/AiShowcaseStep';
+import { CloudAiShowcaseStep } from './steps/CloudAiShowcaseStep';
 import type { CompletionAction } from './steps/CompletionStep';
 import { CompletionStep } from './steps/CompletionStep';
 import { CreateBinStep } from './steps/CreateBinStep';
@@ -32,7 +33,7 @@ const PROD_COMPLETION_ACTIONS: CompletionAction[] = [
 ];
 
 export function OnboardingOverlay(props: OnboardingActions) {
-  const { step, totalSteps, locationId, advanceWithLocation, advanceStep, complete, demoMode, activeLocationId } = props;
+  const { step, totalSteps, locationId, advanceWithLocation, advanceStep, complete, demoMode, activeLocationId, isSelfHosted } = props;
   const state = useOnboardingActions(props);
   const { displayedStep, transitioning, loading, navigate } = state;
   const dots = Array.from({ length: totalSteps });
@@ -127,11 +128,14 @@ export function OnboardingOverlay(props: OnboardingActions) {
               onDashboard={() => handleNavigate('/')}
             />
           )}
-          {displayedStep === 3 && !demoMode && (
+          {displayedStep === 3 && !demoMode && isSelfHosted && (
             <AiShowcaseStep
               onSetUpNow={() => handleNavigate('/settings/ai')}
               onSkip={advanceStep}
             />
+          )}
+          {displayedStep === 3 && !demoMode && !isSelfHosted && (
+            <CloudAiShowcaseStep onNext={advanceStep} />
           )}
           {displayedStep === 4 && !demoMode && (
             <CompletionStep
