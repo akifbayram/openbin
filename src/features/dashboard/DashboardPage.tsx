@@ -17,6 +17,7 @@ import { useAllTags } from '@/features/bins/useBins';
 import { useBulkActions } from '@/features/bins/useBulkActions';
 import { useBulkDialogs } from '@/features/bins/useBulkDialogs';
 import { useBulkSelection } from '@/features/bins/useBulkSelection';
+import { useReopenCreateOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { getCommandInputRef } from '@/features/tour/TourProvider';
 import { useAiEnabled } from '@/lib/aiToggle';
@@ -52,7 +53,7 @@ export function DashboardPage() {
   const aiAvailable = aiEnabled && (isSelfHosted || !isGated('ai'));
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const { showToast } = useToast();
-  const { totalBins, totalItems, totalAreas, needsOrganizing, recentlyScanned, scanTimeMap, recentlyUpdated, pinnedBins, isLoading } =
+  const { totalBins, totalItems, totalAreas, needsOrganizing, checkoutCount, recentlyScanned, scanTimeMap, recentlyUpdated, pinnedBins, isLoading } =
     useDashboard();
   const { settings: dashSettings, updateSettings: updateDashSettings } = useDashboardSettings();
   const { preferences, updatePreferences } = useUserPreferences();
@@ -60,6 +61,7 @@ export function DashboardPage() {
   const debouncedSearch = useDebounce(search, 300);
   const { views: savedViews } = useSavedViews();
   const [createOpen, setCreateOpen] = useState(false);
+  useReopenCreateOnCapture(setCreateOpen);
 
   // Bulk selection
   const allDashboardBins = useMemo(() => {
@@ -202,6 +204,14 @@ export function DashboardPage() {
                 label={t.Areas}
                 value={totalAreas}
                 onClick={() => navigate('/locations')}
+              />
+            )}
+            {checkoutCount > 0 && (
+              <StatCard
+                label="Checked Out"
+                value={checkoutCount}
+                variant="warning"
+                onClick={() => navigate('/checkouts')}
               />
             )}
           </div>

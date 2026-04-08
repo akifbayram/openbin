@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAreaList } from '@/features/areas/useAreas';
 import { useBinList } from '@/features/bins/useBins';
+import { useLocationCheckouts } from '@/features/checkouts/useCheckouts';
 import { usePinnedBins } from '@/features/pins/usePins';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -46,6 +47,7 @@ export function useDashboard() {
   const { settings: dashSettings } = useDashboardSettings();
   const { history: scanHistory } = useScanHistory(dashSettings.recentBinsCount);
   const { stats, isLoading: statsLoading } = useDashboardStats(activeLocationId);
+  const { checkouts, isLoading: checkoutsLoading } = useLocationCheckouts(activeLocationId ?? undefined);
 
   // Client-side fallbacks (used until server stats arrive)
   const clientTotalItems = useMemo(
@@ -92,7 +94,7 @@ export function useDashboard() {
     return map;
   }, [scanHistory]);
 
-  const isLoading = binsLoading || statsLoading;
+  const isLoading = binsLoading || statsLoading || checkoutsLoading;
 
-  return { totalBins, totalItems, totalAreas, needsOrganizing, recentlyUpdated, recentlyScanned, scanTimeMap, pinnedBins, isLoading };
+  return { totalBins, totalItems, totalAreas, needsOrganizing, checkoutCount: checkouts.length, recentlyUpdated, recentlyScanned, scanTimeMap, pinnedBins, isLoading };
 }
