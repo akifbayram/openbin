@@ -27,6 +27,10 @@ export function PrintPage() {
     itemListOptions, handleUpdateItemListOption,
     itemSheetProps,
     nameCardOptions, handleUpdateNameCardOption,
+    copies,
+    updateCopies,
+    expandedBins,
+    expandedBinCount,
     nameSheetProps,
     ui,
     pdfLoading, handleDownloadPDF,
@@ -133,6 +137,8 @@ export function PrintPage() {
               <LabelOptionsCard
                 labelOptions={labelOptions}
                 onUpdateOption={handleUpdateLabelOption}
+                copies={copies}
+                onUpdateCopies={updateCopies}
                 expanded={ui.optionsExpanded}
                 onExpandedChange={ui.setOptionsExpanded}
               />
@@ -150,6 +156,8 @@ export function PrintPage() {
             <NameCardOptionsCard
               options={nameCardOptions}
               onUpdate={handleUpdateNameCardOption}
+              copies={copies}
+              onUpdateCopies={updateCopies}
               expanded={ui.nameCardOptionsExpanded}
               onExpandedChange={ui.setNameCardOptionsExpanded}
             />
@@ -169,6 +177,8 @@ export function PrintPage() {
         <div className="lg:sticky lg:top-6 flex flex-col gap-4">
           <PreviewPanel
             selectedBins={selection.selectedBins}
+            expandedBins={expandedBins}
+            expandedBinCount={expandedBinCount}
             pdfLoading={pdfLoading}
             onDownloadPDF={handleDownloadPDF}
             labelSheetProps={labelSheetProps}

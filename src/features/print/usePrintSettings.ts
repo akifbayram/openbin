@@ -98,6 +98,7 @@ export interface PrintSettings {
   printMode?: PrintMode;
   itemListOptions?: ItemListOptions;
   nameCardOptions?: NameCardOptions;
+  copies?: number;
 }
 
 export const DEFAULT_LABEL_OPTIONS: LabelOptions = {
@@ -229,6 +230,10 @@ export function usePrintSettings() {
     update({ nameCardOptions });
   }
 
+  function updateCopies(copies: number) {
+    update({ copies: Math.max(1, Math.min(10, copies)) });
+  }
+
   return {
     settings,
     isLoading,
@@ -243,5 +248,6 @@ export function usePrintSettings() {
     updatePrintMode,
     updateItemListOptions,
     updateNameCardOptions,
+    updateCopies,
   };
 }

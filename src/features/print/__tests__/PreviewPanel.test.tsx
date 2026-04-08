@@ -48,6 +48,8 @@ describe('PreviewPanel scaling', () => {
   });
 
   const baseProps = {
+    expandedBins: [] as Bin[],
+    expandedBinCount: 0,
     pdfLoading: false,
     onDownloadPDF: vi.fn(),
     labelSheetProps: { bins: [] as Bin[] } as React.ComponentProps<typeof import('../LabelSheet').LabelSheet>,
@@ -66,7 +68,7 @@ describe('PreviewPanel scaling', () => {
     // Re-render with bins — preview container now in DOM
     const bins = [makeBin()];
     rerender(
-      <PreviewPanel {...baseProps} selectedBins={bins} />,
+      <PreviewPanel {...baseProps} selectedBins={bins} expandedBins={bins} expandedBinCount={bins.length} />,
     );
 
     // ResizeObserver should now observe the preview container

@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { OptionGroup } from '@/components/ui/option-group';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
+import { CopiesStepper } from './CopiesStepper';
 import type { LabelDirection, LabelOptions } from './usePrintSettings';
 
 const FONT_SCALE_PRESETS = [
@@ -17,11 +18,13 @@ const FONT_SCALE_PRESETS = [
 interface LabelOptionsCardProps {
   labelOptions: LabelOptions;
   onUpdateOption: <K extends keyof LabelOptions>(key: K, value: LabelOptions[K]) => void;
+  copies: number;
+  onUpdateCopies: (copies: number) => void;
   expanded: boolean;
   onExpandedChange: (v: boolean) => void;
 }
 
-export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExpandedChange }: LabelOptionsCardProps) {
+export function LabelOptionsCard({ labelOptions, onUpdateOption, copies, onUpdateCopies, expanded, onExpandedChange }: LabelOptionsCardProps) {
   const t = useTerminology();
 
   return (
@@ -102,6 +105,8 @@ export function LabelOptionsCard({ labelOptions, onUpdateOption, expanded, onExp
                 </label>
               ))}
             </div>
+
+            <CopiesStepper label="Copies per label" value={copies} onChange={onUpdateCopies} />
           </div>
         )}
       </CardContent>
