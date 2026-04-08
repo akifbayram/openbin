@@ -1,7 +1,7 @@
 import { Camera, Image, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
-import { cn } from '@/lib/utils';
+import { cn, focusRing } from '@/lib/utils';
 
 interface PhotoUploadSectionProps {
 	photos: File[];
@@ -47,7 +47,7 @@ export function PhotoUploadSection({
 	}
 
 	return (
-		<div className="space-y-2">
+		<div className="space-y-2 min-h-[11rem]">
 			<input
 				ref={fileInputRef as React.RefObject<HTMLInputElement>}
 				type="file"
@@ -58,51 +58,57 @@ export function PhotoUploadSection({
 			/>
 
 			{photos.length === 0 ? (
-				// biome-ignore lint/a11y/noStaticElementInteractions: drag-and-drop zone, buttons inside provide keyboard access
+				// biome-ignore lint/a11y/useSemanticElements: button can't receive drag events needed for drop zone
 				<div
+					role="button"
+					tabIndex={0}
+					aria-label="Add photos"
 					onDragOver={handleDragOver}
 					onDragLeave={handleDragLeave}
 					onDrop={handleDrop}
+					onClick={() => fileInputRef.current?.click()}
+					onKeyDown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							fileInputRef.current?.click();
+						}
+					}}
 					className={cn(
-						'flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border-2 border-dashed py-8 px-4 transition-colors text-center',
+						'flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border-2 border-dashed min-h-[11rem] px-4 transition-colors text-center cursor-pointer',
+						focusRing,
 						isDragging
 							? 'border-[var(--accent)] bg-[var(--accent)]/5 text-[var(--accent)]'
-							: 'border-[var(--border-subtle)] text-[var(--text-tertiary)]'
+							: 'border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] active:border-[var(--accent)] active:bg-[var(--accent)]/5 active:text-[var(--accent)]'
 					)}
 				>
+					<Image className="h-6 w-6" />
 					<div>
 						<p className="text-[14px] font-medium">
-							<span className="sm:hidden">Add photos</span>
-							<span className="hidden sm:inline">Drag &amp; drop photos here</span>
+							<span className="sm:hidden">Tap to add photos</span>
+							<span className="hidden sm:inline">Drag &amp; drop or click to add photos</span>
 						</p>
 						<p className="text-[12px] mt-0.5 text-[var(--text-tertiary)]">
 							Multiple photos improve AI accuracy
 						</p>
 					</div>
-					<div className="flex gap-2.5 mt-2">
-						{onCameraClick && (
-							<button
-								type="button"
-								onClick={onCameraClick}
-								className={cn(
-									'flex-1 flex items-center justify-center gap-2 rounded-[var(--radius-md)] min-h-[44px] px-5 py-2.5 text-[14px] font-medium transition-colors',
-									'sm:border sm:border-[var(--border-flat)] sm:bg-transparent sm:text-[var(--text-secondary)] sm:hover:border-[var(--accent)] sm:hover:text-[var(--accent)]',
-									'bg-[var(--accent)] text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] sm:bg-transparent sm:text-[var(--text-secondary)]'
-								)}
-							>
-								<Camera className="h-4 w-4" />
-								Camera
-							</button>
-						)}
+					{onCameraClick && (
 						<button
 							type="button"
-							onClick={() => fileInputRef.current?.click()}
-							className="flex-1 flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-flat)] min-h-[44px] px-5 py-2.5 text-[14px] font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+							onClick={(e) => {
+								e.stopPropagation();
+								onCameraClick();
+							}}
+							onKeyDown={(e) => e.stopPropagation()}
+							className={cn(
+								'flex items-center justify-center gap-2 rounded-[var(--radius-md)] min-h-[44px] px-5 py-2.5 text-[14px] font-medium transition-colors mt-1',
+								'sm:border sm:border-[var(--border-flat)] sm:bg-transparent sm:text-[var(--text-secondary)] sm:hover:border-[var(--accent)] sm:hover:text-[var(--accent)]',
+								'bg-[var(--accent)] text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] sm:bg-transparent sm:text-[var(--text-secondary)]'
+							)}
 						>
-							<Image className="h-4 w-4" />
-							Gallery
+							<Camera className="h-4 w-4" />
+							Camera
 						</button>
-					</div>
+					)}
 				</div>
 			) : (
 				<div className="space-y-2">
@@ -111,10 +117,7 @@ export function PhotoUploadSection({
 							<div
 								// biome-ignore lint/suspicious/noArrayIndexKey: preview blobs have no stable identity
 								key={i}
-								className={cn(
-									'relative aspect-square',
-									analyzing && 'ai-photo-shimmer'
-								)}
+								className="group relative aspect-square"
 							>
 								<img
 									src={preview}
@@ -126,7 +129,7 @@ export function PhotoUploadSection({
 										type="button"
 										onClick={() => onRemovePhoto(i)}
 										aria-label={`Remove photo ${i + 1}`}
-										className="absolute top-1 right-1 size-9 flex items-center justify-center rounded-[var(--radius-xs)] bg-black/50 text-white hover:bg-[var(--destructive)] transition-colors"
+										className="absolute top-1 right-1 size-9 flex items-center justify-center rounded-[var(--radius-xs)] bg-[var(--overlay-button)] text-white opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity hover:bg-[var(--overlay-button-hover)] hover:text-[var(--destructive)]"
 									>
 										<X className="h-3.5 w-3.5" />
 									</button>
