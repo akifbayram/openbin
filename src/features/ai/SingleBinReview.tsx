@@ -391,7 +391,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             onClick={() => setCorrectionOpen(!correctionOpen)}
             title="Adjust AI suggestions"
             className={cn(
-              'absolute top-2 right-2 p-1.5 rounded-full transition-colors',
+              'absolute top-2 right-2 p-1.5 rounded-full transition-colors animate-fade-in',
               correctionOpen
                 ? 'bg-[var(--ai-accent)] text-white'
                 : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
@@ -412,7 +412,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
           />
         </div>
       ) : (
-        <>
+        <div className="animate-fade-in space-y-5">
           {/* AI action bar (correction + reanalyze) */}
           <div className={correctionOpen && name ? 'ai-correction-enter' : 'hidden'}>
             <div className="space-y-2">
@@ -562,7 +562,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               )}
             </Button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

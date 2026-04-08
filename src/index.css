@@ -552,6 +552,16 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .ai-field-fill { animation: none !important; opacity: 1 !important; }
+  .animate-fade-in { animation: none !important; opacity: 1 !important; }
+}
+
+/* --- Fade In (generic mount animation) --- */
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out both;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* --- AI Correction Panel Expand --- */

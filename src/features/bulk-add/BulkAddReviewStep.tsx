@@ -1,11 +1,13 @@
 import { ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SkipForward, Sparkles } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { LabelThreshold } from '@/components/ui/ai-progress-bar';
+import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
-import { AiAnalyzeError, AiStreamingPreview } from '@/features/ai/AiStreamingPreview';
+import { AiAnalyzeError } from '@/features/ai/AiStreamingPreview';
 import { mapErrorMessage } from '@/features/ai/useAiAnalysis';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useAiStream } from '@/features/ai/useAiStream';
@@ -22,8 +24,35 @@ import { useAuth } from '@/lib/auth';
 import { aiItemsToBinItems } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
-import type { AiSuggestions } from '@/types';
+import type { AiSuggestions, BinItem } from '@/types';
 import type { BulkAddAction, BulkAddPhoto } from './useBulkAdd';
+
+const ANALYZE_LABELS: LabelThreshold[] = [
+  [0, 'Analyzing photo...'],
+  [15, 'Identifying items...'],
+  [45, 'Generating details...'],
+  [75, 'Almost done...'],
+];
+const REANALYSIS_LABELS: LabelThreshold[] = [
+  [0, 'Preparing reanalysis...'],
+  [15, 'Comparing changes...'],
+  [45, 'Updating suggestions...'],
+  [75, 'Almost done...'],
+];
+const CORRECTION_LABELS: LabelThreshold[] = [
+  [0, 'Applying correction...'],
+  [15, 'Reprocessing...'],
+  [45, 'Updating results...'],
+  [75, 'Almost done...'],
+];
+
+interface PendingResult {
+  id: string;
+  name: string;
+  items: BinItem[];
+  tags: string[];
+  notes: string;
+}
 
 interface BulkAddReviewStepProps {
   photos: BulkAddPhoto[];
@@ -45,14 +74,52 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
   const [correctionText, setCorrectionText] = useState('');
   const MAX_CORRECTIONS = 3;
 
+  // Completion flash: defer result dispatch until after 600ms green bar
+  const [analyzeComplete, setAnalyzeComplete] = useState(false);
+  const pendingResult = useRef<PendingResult | null>(null);
+  const pendingCorrectionMeta = useRef<{ increment: boolean } | null>(null);
+
+  const applyPendingResult = useCallback(() => {
+    const result = pendingResult.current;
+    if (!result) return;
+    pendingResult.current = null;
+
+    dispatch({
+      type: 'SET_ANALYZE_RESULT',
+      id: result.id,
+      name: result.name,
+      items: result.items,
+      tags: result.tags,
+      notes: result.notes,
+    });
+
+    if (pendingCorrectionMeta.current?.increment) {
+      dispatch({ type: 'INCREMENT_CORRECTION', id: result.id });
+      setCorrectionText('');
+      setCorrectionOpen(false);
+    }
+    pendingCorrectionMeta.current = null;
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!analyzeComplete) return;
+    const timer = setTimeout(() => {
+      setAnalyzeComplete(false);
+      applyPendingResult();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [analyzeComplete, applyPendingResult]);
+
   const {
     isStreaming: isCorrecting,
+    error: correctionError,
     stream: streamCorrection,
     cancel: cancelCorrection,
   } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
 
   const {
     isStreaming: isReanalyzing,
+    error: reanalyzeError,
     stream: streamReanalyze,
     cancel: cancelReanalyze,
   } = useAiStream<AiSuggestions>('/api/ai/reanalyze-image/stream', "Couldn't reanalyze — try again");
@@ -67,12 +134,14 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
       cancelCorrection();
       cancelReanalyze();
     };
-  }, []);
+  }, [cancelCorrection, cancelReanalyze]);
 
   // Reset correction state when navigating between photos
   useEffect(() => {
     setCorrectionOpen(false);
     setCorrectionText('');
+    setAnalyzeComplete(false);
+    pendingResult.current = null;
   }, [currentIndex]);
 
   // Auto-analyze on first visit to each photo
@@ -90,6 +159,9 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
   const reviewedCount = photos.filter((p) => p.status === 'reviewed' || p.status === 'skipped').length;
 
   const isStreaming = photo.status === 'analyzing' || isReanalyzing;
+  const isAnyActive = isStreaming || isCorrecting;
+  const showProgressBar = isAnyActive || analyzeComplete;
+  const anyError = photo.analyzeError || correctionError || reanalyzeError;
 
   async function triggerAnalyze(target: BulkAddPhoto) {
     if (!aiSettings) {
@@ -117,14 +189,15 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
       for await (const event of apiStream('/api/ai/analyze-image/stream', { body: formData, signal: controller.signal })) {
         if (event.type === 'done') {
           const result: AiSuggestions = JSON.parse(event.text);
-          dispatch({
-            type: 'SET_ANALYZE_RESULT',
+          pendingResult.current = {
             id: target.id,
             name: result.name,
             items: aiItemsToBinItems(result.items),
             tags: result.tags,
             notes: result.notes,
-          });
+          };
+          pendingCorrectionMeta.current = null;
+          setAnalyzeComplete(true);
         } else if (event.type === 'error') {
           dispatch({ type: 'SET_ANALYZE_ERROR', id: target.id, error: event.message });
         }
@@ -167,14 +240,15 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
 
       const result = await streamReanalyze(formData);
       if (result) {
-        dispatch({
-          type: 'SET_ANALYZE_RESULT',
+        pendingResult.current = {
           id: target.id,
           name: result.name,
           items: result.items.map((i, idx) => ({ id: `ai-${target.id}-${idx}`, name: i.name, quantity: i.quantity ?? null })),
           tags: result.tags,
           notes: result.notes,
-        });
+        };
+        pendingCorrectionMeta.current = null;
+        setAnalyzeComplete(true);
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
@@ -201,17 +275,15 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
     });
 
     if (result) {
-      dispatch({
-        type: 'SET_ANALYZE_RESULT',
+      pendingResult.current = {
         id: target.id,
         name: result.name,
         items: result.items.map((i, idx) => ({ id: `ai-${target.id}-${idx}`, name: i.name, quantity: i.quantity ?? null })),
         tags: result.tags,
         notes: result.notes,
-      });
-      dispatch({ type: 'INCREMENT_CORRECTION', id: target.id });
-      setCorrectionText('');
-      setCorrectionOpen(false);
+      };
+      pendingCorrectionMeta.current = { increment: true };
+      setAnalyzeComplete(true);
     }
   }
 
@@ -276,46 +348,51 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
         </div>
       )}
 
-      {(isStreaming || isCorrecting) ? (
-        <AiStreamingPreview
-          previewUrls={[photo.previewUrl]}
-          streamedName=""
-          streamedItems={[]}
-          initialStatusLabel={isCorrecting ? 'Applying correction...' : isReanalyzing ? 'Reanalyzing photo...' : 'Analyzing photo...'}
+      {/* Photo preview — always visible */}
+      <div className="relative">
+        <img
+          src={photo.previewUrl}
+          alt={`Preview ${currentIndex + 1}`}
+          className={cn(
+            'w-full rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
+            (photo.status === 'reviewed' || showProgressBar) ? 'max-h-20 opacity-80' : 'aspect-square',
+          )}
         />
-      ) : (
-        <>
-          {/* Phase C: Reviewed / editable form */}
-          {/* Photo preview (compact if reviewed) */}
-          <div className="relative">
-            <img
-              src={photo.previewUrl}
-              alt={`Preview ${currentIndex + 1}`}
-              className={cn(
-                'w-full rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
-                photo.status === 'reviewed' ? 'max-h-20 object-cover opacity-80' : 'aspect-square object-cover',
-              )}
-            />
-            {aiEnabled && photo.status === 'reviewed' && (
-              <button
-                type="button"
-                onClick={() => setCorrectionOpen(!correctionOpen)}
-                title="Adjust AI suggestions"
-                className={cn(
-                  'absolute top-2 right-2 p-1.5 rounded-full transition-colors',
-                  correctionOpen
-                    ? 'bg-[var(--ai-accent)] text-white'
-                    : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
-                )}
-              >
-                <Sparkles className="h-4 w-4" />
-              </button>
+        {aiEnabled && photo.status === 'reviewed' && !showProgressBar && (
+          <button
+            type="button"
+            onClick={() => setCorrectionOpen(!correctionOpen)}
+            title="Adjust AI suggestions"
+            className={cn(
+              'absolute top-2 right-2 p-1.5 rounded-full transition-colors animate-fade-in',
+              correctionOpen
+                ? 'bg-[var(--ai-accent)] text-white'
+                : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
             )}
-          </div>
+          >
+            <Sparkles className="h-4 w-4" />
+          </button>
+        )}
+      </div>
 
+      {showProgressBar ? (
+        <div className="flex items-center justify-center min-h-[44px]">
+          <AiProgressBar
+            active={isAnyActive}
+            complete={analyzeComplete}
+            labels={isCorrecting
+              ? CORRECTION_LABELS
+              : isReanalyzing
+                ? REANALYSIS_LABELS
+                : ANALYZE_LABELS}
+            className="w-full"
+          />
+        </div>
+      ) : (
+        <div className="animate-fade-in space-y-5">
           {/* AI action bar (correction + reanalyze) */}
           {correctionOpen && photo.status === 'reviewed' && (
-            <div className="space-y-1.5">
+            <div className="animate-fade-in space-y-1.5">
               {photo.correctionCount >= MAX_CORRECTIONS ? (
                 <p className="text-[12px] text-[var(--text-tertiary)] italic">
                   You can still edit any field below.
@@ -352,8 +429,8 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
           )}
 
           {/* AI Error */}
-          {photo.analyzeError && (
-            <AiAnalyzeError error={photo.analyzeError} onRetry={() => triggerAnalyze(photo)} />
+          {anyError && (
+            <AiAnalyzeError error={anyError} onRetry={() => triggerAnalyze(photo)} />
           )}
 
           {/* Configure AI provider */}
@@ -478,14 +555,14 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
                   Done
                 </Button>
               ) : (
-                <Button onClick={handleNext}>
+                <Button onClick={handleNext} disabled={showProgressBar}>
                   {isLast ? 'Review all' : 'Next'}
                   {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}
                 </Button>
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
