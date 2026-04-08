@@ -19,6 +19,7 @@ import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { setCommandSelectedBinIds } from '@/features/ai/commandSelectedBins';
 import { useAreaList } from '@/features/areas/useAreas';
+import { useReopenCreateOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { useTagStyle } from '@/features/tags/useTagStyle';
 import { getCommandInputRef, useTourContext } from '@/features/tour/TourProvider';
@@ -56,6 +57,7 @@ export function BinListPage() {
   const { search, setSearch, debouncedSearch, sort, setSort, sortDir, setSortDir, filters, setFilters, page, setPage, clearAll } = useBinSearchParams();
 
   const [createOpen, setCreateOpen] = useState(false);
+  useReopenCreateOnCapture(setCreateOpen);
   const [filterOpen, setFilterOpen] = useState(false);
   const tourCtx = useTourContext();
 

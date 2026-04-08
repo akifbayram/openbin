@@ -7,7 +7,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
-import { AiSetupDialog } from '@/features/ai/AiSetupDialog';
 import { compressImage } from '@/features/photos/compressImage';
 import { addPhoto } from '@/features/photos/usePhotos';
 import { useAuth } from '@/lib/auth';
@@ -33,7 +32,6 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
   const { showToast } = useToast();
 
   const [loading, setLoading] = useState(false);
-  const [aiSetupOpen, setAiSetupOpen] = useState(false);
   const [successInfo, setSuccessInfo] = useState<CreatedBinInfo[] | null>(null);
 
   // Reset success state when dialog opens (not on close, to avoid flash during exit animation)
@@ -93,15 +91,14 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
   }
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            {!successInfo && <DialogTitle>New {t.Bin}</DialogTitle>}
-            {!successInfo && (
-              <DialogDescription>Add a new storage {t.bin} to your inventory.</DialogDescription>
-            )}
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent fullScreenMobile>
+          {!successInfo && (
+            <DialogHeader>
+              <DialogTitle>New {t.Bin}</DialogTitle>
+              <DialogDescription className="text-[13px]">Add a new storage {t.bin} to your inventory.</DialogDescription>
+            </DialogHeader>
+          )}
           {activeLocationId && (
             successInfo ? (
               <BinCreateSuccess
@@ -117,16 +114,12 @@ export function BinCreateDialog({ open, onOpenChange, prefillName, allTags: allT
                 submitting={loading}
                 showCancel
                 onCancel={() => handleOpenChange(false)}
-                onAiSetupRedirect={() => setAiSetupOpen(true)}
                 prefillName={prefillName}
                 allTags={allTags}
               />
             )
           )}
         </DialogContent>
-      </Dialog>
-
-      <AiSetupDialog open={aiSetupOpen} onOpenChange={setAiSetupOpen} onNavigate={() => handleOpenChange(false)} />
-    </>
+    </Dialog>
   );
 }

@@ -4,6 +4,7 @@ import { cn, focusRing } from '@/lib/utils';
 
 interface DisclosureProps {
   label: ReactNode;
+  open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   indicator?: boolean;
@@ -11,15 +12,21 @@ interface DisclosureProps {
   children: ReactNode;
 }
 
-export function Disclosure({ label, defaultOpen = false, onOpenChange, indicator, labelClassName, children }: DisclosureProps) {
-  const [open, setOpen] = useState(defaultOpen);
+export function Disclosure({ label, open: controlledOpen, defaultOpen = false, onOpenChange, indicator, labelClassName, children }: DisclosureProps) {
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
   const contentId = useId();
 
   return (
     <div>
       <button
         type="button"
-        onClick={() => { const next = !open; setOpen(next); onOpenChange?.(next); }}
+        onClick={() => {
+          const next = !open;
+          if (!isControlled) setInternalOpen(next);
+          onOpenChange?.(next);
+        }}
         aria-expanded={open}
         aria-controls={contentId}
         className={cn('flex items-center justify-between w-full text-[13px] text-[var(--text-secondary)] font-medium rounded-[var(--radius-xs)]', focusRing, labelClassName)}

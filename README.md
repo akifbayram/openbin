@@ -1,7 +1,7 @@
 <div align="center">
   <p>
     <a href="https://demo.openbin.app"><img alt="Demo" src="https://img.shields.io/badge/Demo-Live-f97316?style=for-the-badge&logo=googlechrome&logoColor=white" /></a>&nbsp;
-    <a href="https://akifbayram.github.io/openbin/"><img alt="Docs" src="https://img.shields.io/badge/Docs-Site-green?style=for-the-badge&logo=readthedocs&logoColor=white" /></a>&nbsp;
+    <a href="https://openbin.app/docs/"><img alt="Docs" src="https://img.shields.io/badge/Docs-Site-green?style=for-the-badge&logo=readthedocs&logoColor=white" /></a>&nbsp;
     <a href="https://github.com/akifbayram/openbin/actions/workflows/ci.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/akifbayram/openbin/ci.yml?style=for-the-badge&logo=githubactions&logoColor=white&label=Build" /></a>&nbsp;
     <a href="https://github.com/akifbayram/openbin/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/v/release/akifbayram/openbin?style=for-the-badge&logo=github&color=blue" /></a>&nbsp;
     <a href="https://discord.gg/W6JPZCqqx9"><img alt="Discord" src="https://img.shields.io/discord/1476024745886744739?style=for-the-badge&logo=discord&logoColor=white&label=Discord&color=5865F2" /></a>&nbsp;
@@ -129,7 +129,7 @@ The `/data` Docker volume contains everything persistent:
 
 ## API Documentation
 
-OpenAPI spec at [`server/openapi.yaml`](server/openapi.yaml). See the full [API reference](https://akifbayram.github.io/openbin/api/) in the docs.
+OpenAPI spec at [`server/openapi.yaml`](server/openapi.yaml). See the full [API reference](https://openbin.app/docs/api/) in the docs.
 
 ## Local Development
 

@@ -76,6 +76,11 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade }: Quic
             disabled={quickAdd.isStructuring}
             className="w-full min-h-[80px] bg-[var(--bg-elevated)] rounded-[var(--radius-sm)] px-3 py-2 text-base text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none resize-none disabled:opacity-50"
           />
+          {!quickAdd.isStructuring && !quickAdd.structureError && (
+            <p className="text-[12px] text-[var(--text-quaternary)] -mt-0.5">
+              Paste or type freely — AI will clean it up
+            </p>
+          )}
           {quickAdd.isStructuring && (
             <AiProgressBar active complete={false} compact label="Extracting items..." />
           )}
@@ -103,7 +108,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade }: Quic
               ) : (
                 <Sparkles className="h-3.5 w-3.5" />
               )}
-              {quickAdd.isStructuring ? 'Thinking...' : 'Go'}
+              {quickAdd.isStructuring ? 'Extracting...' : 'Extract Items'}
             </Button>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { analyzeImageFiles, MAX_AI_PHOTOS } from '@/features/ai/useAiAnalysis';
 import { compressImage } from '@/features/photos/compressImage';
 import { getErrorMessage } from '@/lib/utils';
@@ -6,7 +6,6 @@ import type { AiSuggestions } from '@/types';
 
 interface UsePhotoAnalysisOptions {
   locationId: string;
-  mode: 'full' | 'onboarding';
   aiConfigured: boolean;
   onApplyDirect?: (result: AiSuggestions) => void;
   onAiSetupNeeded?: () => void;
@@ -14,7 +13,6 @@ interface UsePhotoAnalysisOptions {
 
 export function usePhotoAnalysis({
   locationId,
-  mode,
   aiConfigured,
   onApplyDirect,
   onAiSetupNeeded,
@@ -24,7 +22,6 @@ export function usePhotoAnalysis({
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<AiSuggestions | null>(null);
 
   useEffect(() => {
     return () => {
@@ -40,7 +37,6 @@ export function usePhotoAnalysis({
     const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
     setPhotos((prev) => [...prev, ...newFiles]);
     setPhotoPreviews((prev) => [...prev, ...newPreviews]);
-    setSuggestions(null);
     setAnalyzeError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
@@ -49,9 +45,20 @@ export function usePhotoAnalysis({
     URL.revokeObjectURL(photoPreviews[index]);
     setPhotos((prev) => prev.filter((_, i) => i !== index));
     setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
-    setSuggestions(null);
     setAnalyzeError(null);
   }
+
+  const addPhotosFromFiles = useCallback((files: File[]) => {
+    setPhotos((prev) => {
+      const remaining = MAX_AI_PHOTOS - prev.length;
+      if (remaining <= 0) return prev;
+      const newFiles = files.slice(0, remaining);
+      const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
+      setPhotoPreviews((prevPreviews) => [...prevPreviews, ...newPreviews]);
+      setAnalyzeError(null);
+      return [...prev, ...newFiles];
+    });
+  }, []);
 
   async function handleAnalyze() {
     if (photos.length === 0) return;
@@ -71,20 +78,12 @@ export function usePhotoAnalysis({
         })
       );
       const result = await analyzeImageFiles(compressedFiles, locationId);
-      if (mode === 'onboarding') {
-        onApplyDirect?.(result);
-      } else {
-        setSuggestions(result);
-      }
+      onApplyDirect?.(result);
     } catch (err) {
       setAnalyzeError(getErrorMessage(err, 'Failed to analyze photos'));
     } finally {
       setAnalyzing(false);
     }
-  }
-
-  function dismissSuggestions() {
-    setSuggestions(null);
   }
 
   return {
@@ -93,10 +92,9 @@ export function usePhotoAnalysis({
     photoPreviews,
     analyzing,
     analyzeError,
-    suggestions,
-    dismissSuggestions,
     handlePhotoSelect,
     handleRemovePhoto,
     handleAnalyze,
+    addPhotosFromFiles,
   };
 }
