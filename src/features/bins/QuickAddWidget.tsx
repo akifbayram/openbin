@@ -1,5 +1,6 @@
 import { Check, ChevronLeft, Loader2, Plus, Sparkles } from 'lucide-react';
 import { useRef } from 'react';
+import type { LabelThreshold } from '@/components/ui/ai-progress-bar';
 import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,13 @@ interface QuickAddWidgetProps {
   aiGated?: boolean;
   onUpgrade?: () => void;
 }
+
+const QUICK_ADD_LABELS: LabelThreshold[] = [
+  [0, 'Processing text...'],
+  [15, 'Extracting items...'],
+  [45, 'Structuring results...'],
+  [75, 'Almost done...'],
+];
 
 export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade }: QuickAddWidgetProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -82,7 +90,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade }: Quic
             </p>
           )}
           {quickAdd.isStructuring && (
-            <AiProgressBar active complete={false} compact label="Extracting items..." />
+            <AiProgressBar active compact labels={QUICK_ADD_LABELS} />
           )}
           {quickAdd.structureError && (
             <p className="text-[13px] text-[var(--destructive)]">{quickAdd.structureError}</p>
