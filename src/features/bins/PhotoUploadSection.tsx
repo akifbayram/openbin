@@ -47,7 +47,7 @@ export function PhotoUploadSection({
 	}
 
 	return (
-		<div className="space-y-2 min-h-[11rem]">
+		<div className="space-y-2">
 			<input
 				ref={fileInputRef as React.RefObject<HTMLInputElement>}
 				type="file"
@@ -74,7 +74,7 @@ export function PhotoUploadSection({
 						}
 					}}
 					className={cn(
-						'flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border-2 border-dashed min-h-[11rem] px-4 transition-colors text-center cursor-pointer',
+						'flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border-2 border-dashed py-4 px-4 transition-colors text-center cursor-pointer',
 						focusRing,
 						isDragging
 							? 'border-[var(--accent)] bg-[var(--accent)]/5 text-[var(--accent)]'

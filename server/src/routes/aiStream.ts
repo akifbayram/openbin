@@ -1,19 +1,18 @@
 import { Router } from 'express';
 import { createPinnedFetch, validateEndpointUrl } from '../lib/aiCaller.js';
-import { buildCommandContext, buildInventoryContext, fetchExistingTags } from '../lib/aiContext.js';
+import { buildCommandContext, buildInventoryContext } from '../lib/aiContext.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
 import { buildSystemPrompt as buildAnalysisPrompt, buildAnalysisUserText, buildContextPreamble, buildCorrectionPrompt, buildReanalysisPrompt, buildReanalysisUserContent, buildTagBlock, IMAGE_TOKENS_MULTI, IMAGE_TOKENS_SINGLE } from '../lib/aiProviders.js';
+import { extractPhotoIds, extractUploadedFiles, sanitizePreviousResult, validatePreviousResult, verifyLocationAndFetchMeta } from '../lib/aiRequestHelpers.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { resolvePrompt, sanitizeForPrompt } from '../lib/aiSanitize.js';
 import { QueryResultSchema } from '../lib/aiSchemas.js';
 import type { TaskType, UserAiSettings } from '../lib/aiSettings.js';
 import { getConfigForTask, getUserAiSettings } from '../lib/aiSettings.js';
 import { initSseResponse, pipeAiStreamToResponse, streamAiToWriter } from '../lib/aiStream.js';
-import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import type { CommandRequest } from '../lib/commandParser.js';
 import { buildSystemPrompt as buildCommandSysPrompt, buildUserMessage as buildCommandUserMsg, buildUnifiedSystemPrompt } from '../lib/commandParser.js';
 import { config, isDemoUser } from '../lib/config.js';
-import { fetchCustomFieldDefs } from '../lib/customFieldHelpers.js';
 import { ValidationError } from '../lib/httpErrors.js';
 import { classifyIntent } from '../lib/intentClassifier.js';
 import { buildSystemPrompt as buildQuerySysPrompt, buildUserMessage as buildQueryUserMsg } from '../lib/inventoryQuery.js';
@@ -30,14 +29,6 @@ import { checkAiCredits, requireAiAccess } from '../middleware/requirePlan.js';
 
 const streamRouter = Router();
 streamRouter.use(authenticate);
-
-async function fetchLocationAiMeta(locationId: string | undefined) {
-  const [existingTags, customFieldDefs] = await Promise.all([
-    locationId ? fetchExistingTags(locationId) : Promise.resolve(undefined),
-    locationId ? fetchCustomFieldDefs(locationId) : Promise.resolve(undefined),
-  ]);
-  return { existingTags, customFieldDefs };
-}
 
 async function sendMockJsonStream(res: import('express').Response, data: object): Promise<void> {
   const writeEvent = initSseResponse(res);
@@ -208,28 +199,12 @@ function demoAwareAnalyzeUpload(req: import('express').Request, res: import('exp
 
 // POST /api/ai/analyze-image/stream
 streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnalyzeUpload, ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('stream analyze image', async (req, res) => {
-  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-  const allFiles = [
-    ...(files?.photo || []),
-    ...(files?.photos || []),
-  ].slice(0, 5);
+  const allFiles = extractUploadedFiles(req);
 
-  if (allFiles.length === 0) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photo file is required (JPEG, PNG, WebP, or GIF, max 5MB)' });
-    return;
-  }
-
-  // Mock mode: return fake AI response without calling any provider
   if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
 
   const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
-
-  const locationId = req.body?.locationId;
-  if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
-    res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
-    return;
-  }
-  const { existingTags, customFieldDefs } = await fetchLocationAiMeta(locationId);
+  const { existingTags, customFieldDefs } = await verifyLocationAndFetchMeta(req.body?.locationId, req.user!.id);
 
   const imageParts = allFiles.map((f) => ({
     type: 'image' as const,
@@ -247,21 +222,8 @@ streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnaly
 
 // POST /api/ai/analyze/stream — stream analysis of stored photos
 streamRouter.post('/analyze/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('stream analyze photo', async (req, res) => {
-  const { photoId, photoIds } = req.body;
+  const ids = extractPhotoIds(req.body);
 
-  let ids: string[] = [];
-  if (Array.isArray(photoIds) && photoIds.length > 0) {
-    ids = photoIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, 5);
-  } else if (typeof photoId === 'string') {
-    ids = [photoId];
-  }
-
-  if (ids.length === 0) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photoId or photoIds is required' });
-    return;
-  }
-
-  // Mock mode: return fake AI response without calling any provider
   if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
 
   const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
@@ -288,19 +250,11 @@ streamRouter.post('/analyze/stream', ...aiRateLimiters, requireAiAccess(), check
 
 // POST /api/ai/correct/stream — correct a previous analysis result
 streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('stream correction', async (req, res) => {
-  const { previousResult: rawPrev, correction, locationId } = req.body;
+  const { correction, locationId } = req.body;
 
-  const validatedPrev = validatePreviousResult(rawPrev);
-  if (!validatedPrev) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'previousResult must have name (string) and items (array)' });
-    return;
-  }
-
+  const safePrevious = sanitizePreviousResult(validatePreviousResult(req.body.previousResult));
   const correctionText = validateTextInput(correction, 'correction', 1000);
 
-  const safePrevious = sanitizePreviousResult(validatedPrev);
-
-  // Mock mode
   if (config.aiMock) {
     await sendMockJsonStream(res, {
       name: safePrevious.name,
@@ -312,110 +266,16 @@ streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), check
   }
 
   const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
-
-  // Optional location membership check + tag fetch
-  if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
-    res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
-    return;
-  }
-  const { existingTags, customFieldDefs } = await fetchLocationAiMeta(locationId);
-
-  const system = buildCorrectionPrompt();
+  const { existingTags, customFieldDefs } = await verifyLocationAndFetchMeta(locationId, req.user!.id);
 
   const correctionPreamble = buildContextPreamble(existingTags, customFieldDefs);
   const sanitizedCorrection = sanitizeForPrompt(correctionText);
   const userMessage = `${correctionPreamble}<user_data type="previous_result" trust="none">\n${JSON.stringify(safePrevious, null, 2)}\n</user_data>\n\n<user_data type="correction" trust="none">\n${sanitizedCorrection}\n</user_data>`;
 
   await pipeAiStreamToResponse(res, model, {
-    system,
+    system: buildCorrectionPrompt(),
     userContent: userMessage,
     ...streamOpts(settings, { maxTokens: 2500 }),
-  });
-}));
-
-/** Validate that previousResult has the expected shape. Returns the validated object or null. */
-function validatePreviousResult(value: unknown): Record<string, unknown> | null {
-  if (
-    !value ||
-    typeof value !== 'object' ||
-    typeof (value as Record<string, unknown>).name !== 'string' ||
-    !Array.isArray((value as Record<string, unknown>).items)
-  ) {
-    return null;
-  }
-  return value as Record<string, unknown>;
-}
-
-/** Sanitize a previousResult object to prevent oversized prompts. */
-function sanitizePreviousResult(previousResult: Record<string, unknown>) {
-  return {
-    name: String(previousResult.name ?? '').slice(0, 255),
-    items: Array.isArray(previousResult.items)
-      ? (previousResult.items as unknown[]).slice(0, 100).map((i) => {
-          if (typeof i === 'string') return { name: i.slice(0, 500) };
-          if (i && typeof i === 'object') {
-            const obj = i as Record<string, unknown>;
-            return {
-              name: String(obj.name ?? '').slice(0, 500),
-              ...(typeof obj.quantity === 'number' ? { quantity: obj.quantity } : {}),
-            };
-          }
-          return { name: String(i).slice(0, 500) };
-        })
-      : [],
-    tags: Array.isArray(previousResult.tags)
-      ? (previousResult.tags as unknown[]).filter((t): t is string => typeof t === 'string').slice(0, 20)
-      : [],
-    notes: typeof previousResult.notes === 'string' ? previousResult.notes.slice(0, 2000) : '',
-    ...(previousResult.customFields && typeof previousResult.customFields === 'object'
-      ? { customFields: previousResult.customFields }
-      : {}),
-  };
-}
-
-// POST /api/ai/reanalyze/stream — reanalyze stored photos with previous result context
-streamRouter.post('/reanalyze/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('stream reanalyze photo', async (req, res) => {
-  const { photoIds, previousResult: rawPrev } = req.body;
-
-  const previousResult = validatePreviousResult(rawPrev);
-  if (!previousResult) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'previousResult must have name (string) and items (array)' });
-    return;
-  }
-
-  let ids: string[] = [];
-  if (Array.isArray(photoIds) && photoIds.length > 0) {
-    ids = photoIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, 5);
-  }
-
-  if (ids.length === 0) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photoIds is required' });
-    return;
-  }
-
-  if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
-
-  const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
-
-  const loaded = await loadPhotosForAnalysis(ids, req.user!.id);
-  if (!loaded) {
-    res.status(404).json({ error: 'NOT_FOUND', message: 'Photo not found or access denied' });
-    return;
-  }
-
-  const imageParts = loaded.images.map((img) => ({
-    type: 'image' as const,
-    image: img.buffer,
-    mimeType: img.mimeType,
-  }));
-
-  const safePrevious = sanitizePreviousResult(previousResult);
-
-  const reanalyzePreamble = buildContextPreamble(loaded.existingTags, loaded.customFieldDefs);
-  await pipeAiStreamToResponse(res, model, {
-    system: buildReanalysisPrompt(),
-    userContent: buildReanalysisUserContent(safePrevious, imageParts, reanalyzePreamble),
-    ...streamOpts(settings, { maxTokens: loaded.images.length > 1 ? IMAGE_TOKENS_MULTI : IMAGE_TOKENS_SINGLE }),
   });
 }));
 
@@ -424,16 +284,7 @@ streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'photos', maxCount: 5 },
 ]), ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('stream reanalyze image', async (req, res) => {
-  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-  const allFiles = [
-    ...(files?.photo || []),
-    ...(files?.photos || []),
-  ].slice(0, 5);
-
-  if (allFiles.length === 0) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photo file is required (JPEG, PNG, WebP, or GIF, max 5MB)' });
-    return;
-  }
+  const allFiles = extractUploadedFiles(req);
 
   let rawPrev: unknown = null;
   try {
@@ -441,34 +292,21 @@ streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
       ? JSON.parse(req.body.previousResult)
       : req.body?.previousResult;
   } catch {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'previousResult must be valid JSON' });
-    return;
+    throw new ValidationError('previousResult must be valid JSON');
   }
 
-  const previousResult = validatePreviousResult(rawPrev);
-  if (!previousResult) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'previousResult must have name (string) and items (array)' });
-    return;
-  }
+  const safePrevious = sanitizePreviousResult(validatePreviousResult(rawPrev));
 
   if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
 
   const { settings, model } = await resolveUserModel(req.user!.id, 'analysis', isDemoUser(req));
-
-  const locationId = req.body?.locationId;
-  if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
-    res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
-    return;
-  }
-  const { existingTags, customFieldDefs } = await fetchLocationAiMeta(locationId);
+  const { existingTags, customFieldDefs } = await verifyLocationAndFetchMeta(req.body?.locationId, req.user!.id);
 
   const imageParts = allFiles.map((f) => ({
     type: 'image' as const,
     image: f.buffer,
     mimeType: f.mimetype,
   }));
-
-  const safePrevious = sanitizePreviousResult(previousResult);
 
   const reanalyzeImagePreamble = buildContextPreamble(existingTags, customFieldDefs);
   await pipeAiStreamToResponse(res, model, {

@@ -1,6 +1,8 @@
-import { AlertTriangle, Check, Clock, Loader2, Sparkles, X } from 'lucide-react';
+import { AlertTriangle, Check, Clock, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import type { LabelThreshold } from '@/components/ui/ai-progress-bar';
+import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -18,7 +20,7 @@ import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { aiItemsToBinItems, binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { cn, plural } from '@/lib/utils';
-import type { AiSuggestedItem, BinItem, BinVisibility } from '@/types';
+import type { AiSuggestions, BinItem, BinVisibility } from '@/types';
 import { AiBadge } from './AiBadge';
 import { BinPreviewCard } from './BinPreviewCard';
 import { ColorPicker } from './ColorPicker';
@@ -104,13 +106,10 @@ export function BinCreateForm({
 
   const { fields: customFieldDefs } = useCustomFields(locationId);
 
-  function applyAiItems(aiItems: AiSuggestedItem[]) {
-    setItems(aiItemsToBinItems(aiItems));
-  }
-
   // AI inline auto-populate state
   type AiField = 'name' | 'items' | 'tags' | 'notes';
   const [aiFilledFields, setAiFilledFields] = useState<Set<AiField>>(new Set());
+  const [aiFillCycle, setAiFillCycle] = useState(0);
   const preAiValues = useRef<{ name: string; items: BinItem[]; tags: string[]; notes: string } | null>(null);
 
   // Progressive disclosure
@@ -140,6 +139,46 @@ export function BinCreateForm({
     }
   };
 
+  // Deferred AI result: store result during analysis, apply after completion flash
+  const pendingAiResult = useRef<AiSuggestions | null>(null);
+
+  function applyPendingAiResult() {
+    const result = pendingAiResult.current;
+    if (!result) return;
+    pendingAiResult.current = null;
+
+    // preAiValues was snapshotted when the result arrived (in onApplyDirect)
+    const filled = new Set<AiField>();
+
+    if (result.name) {
+      setName(result.name);
+      filled.add('name');
+    }
+    if (result.items?.length) {
+      setItems(aiItemsToBinItems(result.items));
+      filled.add('items');
+    }
+    if (result.tags?.length) {
+      const prev = preAiValues.current?.tags ?? [];
+      setTags([...new Set([...prev, ...result.tags.map(t => t.toLowerCase())])]);
+      filled.add('tags');
+    }
+    if (result.notes) {
+      setNotes(result.notes);
+      filled.add('notes');
+    }
+    if (result.customFields && Object.keys(result.customFields).length > 0) {
+      setCustomFields(result.customFields);
+    }
+
+    setAiFilledFields(filled);
+    setAiFillCycle(c => c + 1);
+
+    if (filled.has('tags') || filled.has('notes')) {
+      setMoreOptionsOpen(true);
+    }
+  }
+
   const {
     fileInputRef,
     photos,
@@ -150,44 +189,37 @@ export function BinCreateForm({
     handleRemovePhoto,
     addPhotosFromFiles,
     handleAnalyze,
+    handleReanalyze,
   } = usePhotoAnalysis({
     locationId,
     aiConfigured: isFull ? aiReady : aiConfiguredInline,
     onApplyDirect: (result) => {
-      // Snapshot current values for undo
+      // Snapshot current values for undo before the 600ms flash
       preAiValues.current = { name, items, tags, notes };
-      const filled = new Set<AiField>();
-
-      if (result.name) {
-        setName(result.name);
-        filled.add('name');
-      }
-      if (result.items?.length) {
-        applyAiItems(result.items);
-        filled.add('items');
-      }
-      if (result.tags?.length) {
-        const merged = [...new Set([...tags, ...result.tags.map(t => t.toLowerCase())])];
-        setTags(merged);
-        filled.add('tags');
-      }
-      if (result.notes) {
-        setNotes(result.notes);
-        filled.add('notes');
-      }
-      if (result.customFields && Object.keys(result.customFields).length > 0) {
-        setCustomFields({ ...customFields, ...result.customFields });
-      }
-
-      setAiFilledFields(filled);
-
-      // Auto-expand more options if AI filled any collapsed field
-      if (filled.has('tags') || filled.has('notes')) {
-        setMoreOptionsOpen(true);
-      }
+      pendingAiResult.current = result;
+      setAnalyzeComplete(true);
     },
     onAiSetupNeeded: handleAiSetupNeeded,
   });
+
+  // Completion flash: hold progress bar at 100% briefly, then apply AI result
+  const [analyzeComplete, setAnalyzeComplete] = useState(false);
+  useEffect(() => {
+    if (!analyzeComplete) return;
+    const timer = setTimeout(() => {
+      setAnalyzeComplete(false);
+      applyPendingAiResult();
+    }, 600);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- applyPendingAiResult reads from refs, no stale closure risk
+  }, [analyzeComplete]);
+
+  // Clear AI success banner when all photos are removed so the user can re-analyze with new photos
+  useEffect(() => {
+    if (photos.length === 0) {
+      setAiFilledFields(new Set());
+    }
+  }, [photos.length]);
 
   useEffect(() => {
     function checkCapturedPhotos() {
@@ -313,38 +345,62 @@ export function BinCreateForm({
               );
             }
 
-            // Success banner (after AI fill)
-            if (aiFilledFields.size > 0 && !analyzing) {
+            // Success banner (after AI fill) — wait for completion flash
+            if (aiFilledFields.size > 0 && !analyzing && !analyzeComplete) {
               return (
-                <output className="rounded-[var(--radius-md)] bg-emerald-500/8 border border-emerald-500/20 px-3.5 py-2.5 text-[13px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1.5">
-                  <Check className="h-3.5 w-3.5" />
-                  AI filled {aiFilledFields.size} {plural(aiFilledFields.size, 'field')} — edit anything below
+                <output className="rounded-[var(--radius-md)] bg-emerald-500/8 border border-emerald-500/20 px-3.5 py-2.5 text-[13px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 shrink-0" />
+                  <span className="flex-1 min-w-0">AI filled {aiFilledFields.size} {plural(aiFilledFields.size, 'field')}</span>
+                  {photos.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleReanalyze({
+                        name,
+                        items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
+                        tags,
+                        notes,
+                      })}
+                      className="shrink-0 inline-flex items-center gap-1 text-[12px] text-[var(--ai-accent)] hover:underline"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Reanalyze
+                    </button>
+                  )}
                 </output>
               );
             }
 
-            // AI Fill button
+            // AI Fill button / progress bar
             if (aiReady) {
+              if (analyzing || analyzeComplete) {
+                const photoLabels: LabelThreshold[] = [
+                  [0, `Uploading ${photos.length} ${plural(photos.length, 'photo')}...`],
+                  [15, 'Identifying items...'],
+                  [45, 'Generating details...'],
+                  [75, 'Almost done...'],
+                ];
+                return (
+                  <div className="flex items-center justify-center min-h-[44px]">
+                    <AiProgressBar
+                      active={analyzing}
+                      complete={analyzeComplete}
+                      labels={photoLabels}
+                      className="w-full"
+                    />
+                  </div>
+                );
+              }
               return (
                 <Button
                   type="button"
                   onClick={handleAnalyze}
-                  disabled={analyzing || photos.length === 0}
+                  disabled={photos.length === 0}
                   className="w-full gap-1.5 bg-[var(--ai-accent)] hover:bg-[var(--ai-accent-hover)] text-[var(--text-on-accent)] min-h-[44px]"
                 >
-                  {analyzing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Analyzing photos...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      {photos.length > 0
-                        ? `AI Fill from ${photos.length} ${plural(photos.length, 'photo')}`
-                        : 'AI Fill'}
-                    </>
-                  )}
+                  <Sparkles className="h-4 w-4" />
+                  {photos.length > 0
+                    ? `AI Fill from ${photos.length} ${plural(photos.length, 'photo')}`
+                    : 'AI Fill'}
                 </Button>
               );
             }
@@ -393,7 +449,7 @@ export function BinCreateForm({
           )}
 
           {/* Name with validation and AI badge */}
-          <div className="space-y-2">
+          <div key={aiFilledFields.has('name') ? `name-${aiFillCycle}` : 'name'} className={cn('space-y-2', aiFilledFields.has('name') && 'ai-field-fill')} style={aiFilledFields.has('name') ? { '--stagger': 0 } as React.CSSProperties : undefined}>
             <div className="flex items-center justify-between">
               <Label htmlFor="bin-name">Name</Label>
               {aiFilledFields.has('name') && <AiBadge onUndo={() => handleUndoAiField('name')} />}
@@ -406,9 +462,8 @@ export function BinCreateForm({
               placeholder="e.g., Holiday Decorations"
               maxLength={255}
               required
-              aria-busy={analyzing}
               aria-invalid={!!nameError}
-              className={cn(nameError && 'border-[var(--destructive)] focus-visible:ring-[var(--destructive)]', analyzing && 'ai-photo-shimmer')}
+              className={cn(nameError && 'border-[var(--destructive)] focus-visible:ring-[var(--destructive)]')}
             />
             {nameError && (
               <p role="alert" className="text-[12px] text-[var(--destructive)]">
@@ -418,14 +473,14 @@ export function BinCreateForm({
           </div>
 
           {/* Items */}
-          <div className={cn('space-y-2', analyzing && 'ai-photo-shimmer rounded-[var(--radius-md)]')} aria-busy={analyzing || undefined}>
-            <ItemList items={items} onItemsChange={setItems} hideWhenEmpty />
+          <div key={aiFilledFields.has('items') ? `items-${aiFillCycle}` : 'items'} className={cn('space-y-2', aiFilledFields.has('items') && 'ai-field-fill')} style={aiFilledFields.has('items') ? { '--stagger': 1 } as React.CSSProperties : undefined}>
+            <ItemList items={items} onItemsChange={setItems} hideWhenEmpty headerExtra={aiFilledFields.has('items') ? <AiBadge onUndo={() => handleUndoAiField('items')} /> : undefined} />
             <QuickAddWidget quickAdd={quickAdd} aiEnabled={showAi} />
           </div>
 
           {/* More Options accordion with optional fields */}
           <Disclosure
-            label={<>More options{analyzing && !moreOptionsOpen && <span className="ml-1.5 text-[var(--text-quaternary)] font-normal">(AI may fill)</span>}</>}
+            label="More options"
             open={moreOptionsOpen}
             onOpenChange={setMoreOptionsOpen}
             labelClassName="py-2 text-[var(--accent)] cursor-pointer"
@@ -436,7 +491,7 @@ export function BinCreateForm({
               <AreaPicker locationId={locationId} value={areaId} onChange={setAreaId} />
             </div>
 
-            <div className="space-y-2">
+            <div key={aiFilledFields.has('notes') ? `notes-${aiFillCycle}` : 'notes'} className={cn('space-y-2', aiFilledFields.has('notes') && 'ai-field-fill')} style={aiFilledFields.has('notes') ? { '--stagger': 2 } as React.CSSProperties : undefined}>
               <div className="flex items-center justify-between">
                 <Label htmlFor="bin-notes">Notes</Label>
                 {aiFilledFields.has('notes') && <AiBadge onUndo={() => handleUndoAiField('notes')} />}
@@ -451,7 +506,7 @@ export function BinCreateForm({
               />
             </div>
 
-            <div className="space-y-2">
+            <div key={aiFilledFields.has('tags') ? `tags-${aiFillCycle}` : 'tags'} className={cn('space-y-2', aiFilledFields.has('tags') && 'ai-field-fill')} style={aiFilledFields.has('tags') ? { '--stagger': 3 } as React.CSSProperties : undefined}>
               <div className="flex items-center justify-between">
                 <Label>Tags</Label>
                 {aiFilledFields.has('tags') && <AiBadge onUndo={() => handleUndoAiField('tags')} />}
@@ -595,17 +650,15 @@ export function BinCreateForm({
 
       {/* Footer */}
       {isFull ? (
-        <div className="sticky bottom-0 -mx-5 sm:-mx-8 px-5 sm:px-8 py-3 bg-[var(--bg-base)] border-t border-[var(--border-flat)] sm:static sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent sm:border-0 sm:pt-2">
-          <div className="flex gap-2 sm:justify-end">
-            {showCancel && (
-              <Button type="button" variant="ghost" onClick={onCancel} className="flex-1 min-h-[44px] sm:flex-initial sm:min-h-0">
-                Cancel
-              </Button>
-            )}
-            <Button type="submit" disabled={!name.trim() || submitting} className="flex-1 min-h-[44px] sm:flex-initial sm:min-h-0">
-              {submitting ? 'Creating...' : (submitLabel ?? 'Create')}
+        <div className="flex gap-2 justify-end pt-2">
+          {showCancel && (
+            <Button type="button" variant="ghost" onClick={onCancel}>
+              Cancel
             </Button>
-          </div>
+          )}
+          <Button type="submit" disabled={!name.trim() || submitting}>
+            {submitting ? 'Creating...' : (submitLabel ?? 'Create')}
+          </Button>
         </div>
       ) : (
         <Button

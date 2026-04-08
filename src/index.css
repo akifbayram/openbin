@@ -541,6 +541,19 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* --- AI Field Fill Reveal (staggered per field) --- */
+.ai-field-fill {
+  animation: aiFillReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--stagger, 0) * 80ms);
+}
+@keyframes aiFillReveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-field-fill { animation: none !important; opacity: 1 !important; }
+}
+
 /* --- AI Correction Panel Expand --- */
 .ai-correction-enter {
   display: grid;

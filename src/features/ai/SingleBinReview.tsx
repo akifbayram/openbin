@@ -130,12 +130,12 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     }
   }, [isAnyStreaming, anyStreamError]);
 
-  const applyPendingAiResult = useCallback(() => {
+  function applyPendingAiResult() {
     const result = pendingAiResult.current;
     if (!result) return;
     pendingAiResult.current = null;
 
-    preAiValues.current = { name, items, tags, notes };
+    // preAiValues was snapshotted when the stream completed (in trigger functions)
     const filled = new Set<AiField>();
 
     if (result.name) { setName(result.name); filled.add('name'); }
@@ -145,7 +145,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
     setAiFilledFields(filled);
     setAiFillCycle(c => c + 1);
-  }, [name, items, tags, notes]);
+  }
 
   // Completion flash timer — apply deferred result after 600ms
   useEffect(() => {
@@ -155,7 +155,8 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
       applyPendingAiResult();
     }, 600);
     return () => clearTimeout(timer);
-  }, [analyzeComplete, applyPendingAiResult]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- applyPendingAiResult reads from refs, no stale closure risk
+  }, [analyzeComplete]);
 
   function handleUndoAiField(field: AiField) {
     if (!preAiValues.current) return;
@@ -200,6 +201,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
       for (const file of compressed) formData.append('photos', file);
     }
     if (activeLocationId) formData.append('locationId', activeLocationId);
+    preAiValues.current = { name, items, tags, notes };
     expectingCompletionRef.current = true;
     const result = await streamAnalyze(formData);
     if (result) {
@@ -237,6 +239,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     formData.append('previousResult', JSON.stringify(previousResult));
     if (activeLocationId) formData.append('locationId', activeLocationId);
 
+    preAiValues.current = { name, items, tags, notes };
     expectingCompletionRef.current = true;
     const result = await streamReanalyze(formData);
     if (result) {
@@ -246,6 +249,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
   const triggerCorrection = useCallback(async (text: string) => {
     const previousResult = { name, items, tags, notes };
+    preAiValues.current = { name, items, tags, notes };
     expectingCompletionRef.current = true;
     const result = await streamCorrection({
       previousResult,

@@ -6,6 +6,7 @@ export type LabelThreshold = [progressMin: number, label: string];
 
 /** Walk thresholds in reverse to find the highest matching label. */
 export function resolveLabel(progress: number, thresholds: LabelThreshold[]): string {
+  if (!thresholds.length) return '';
   for (let i = thresholds.length - 1; i >= 0; i--) {
     if (progress >= thresholds[i][0]) return thresholds[i][1];
   }

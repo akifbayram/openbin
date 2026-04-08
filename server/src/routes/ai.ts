@@ -1,13 +1,12 @@
 import { Router } from 'express';
 import { d, generateUuid, query } from '../db.js';
 import { testProviderConnection } from '../lib/aiCaller.js';
-import { fetchExistingTags } from '../lib/aiContext.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
 import type { ImageInput } from '../lib/aiProviders.js';
 import { analyzeImages, reanalyzeImages } from '../lib/aiProviders.js';
+import { extractPhotoIds, extractUploadedFiles, validatePreviousResult, verifyLocationAndFetchMeta } from '../lib/aiRequestHelpers.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
-import { verifyOptionalLocationMembership } from '../lib/binAccess.js';
 import { AI_TASK_GROUPS, type AiTaskGroup, config, getEnvAiConfig, getEnvGroupOverride, isDemoUser, isGroupEnvLocked } from '../lib/config.js';
 import { decryptApiKey, encryptApiKey, maskApiKey, resolveMaskedApiKey } from '../lib/crypto.js';
 import { ALL_DEFAULT_PROMPTS } from '../lib/defaultPrompts.js';
@@ -285,22 +284,9 @@ router.post('/analyze-image', memoryPhotoUpload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'photos', maxCount: 5 },
 ]), ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('analyze image', async (req, res) => {
-  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-  const allFiles = [
-    ...(files?.photo || []),
-    ...(files?.photos || []),
-  ].slice(0, 5);
+  const allFiles = extractUploadedFiles(req);
 
-  if (allFiles.length === 0) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photo file is required (JPEG, PNG, WebP, or GIF, max 5MB)' });
-    return;
-  }
-
-  // Mock mode: return fake AI response without calling any provider
-  if (config.aiMock) {
-    res.json(buildMockAnalysisResult());
-    return;
-  }
+  if (config.aiMock) { res.json(buildMockAnalysisResult()); return; }
 
   const settings = await getUserAiSettings(req.user!.id);
   const taskConfig = await resolveTaskConfig(req.user!.id, 'vision', settings.config);
@@ -310,12 +296,7 @@ router.post('/analyze-image', memoryPhotoUpload.fields([
     mimeType: f.mimetype,
   }));
 
-  const locationId = req.body?.locationId;
-  if (!await verifyOptionalLocationMembership(locationId, req.user!.id)) {
-    res.status(403).json({ error: 'FORBIDDEN', message: 'Not a member of this location' });
-    return;
-  }
-  const existingTags = locationId ? await fetchExistingTags(locationId) : undefined;
+  const { existingTags } = await verifyLocationAndFetchMeta(req.body?.locationId, req.user!.id);
 
   const suggestions = await analyzeImages(taskConfig, images, existingTags, settings.custom_prompt, settings, isDemoUser(req));
   res.json(suggestions);
@@ -323,24 +304,9 @@ router.post('/analyze-image', memoryPhotoUpload.fields([
 
 // POST /api/ai/analyze — analyze stored photo(s)
 router.post('/analyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('analyze photo', async (req, res) => {
-  const { photoId, photoIds } = req.body;
-  let ids: string[] = [];
-  if (Array.isArray(photoIds) && photoIds.length > 0) {
-    ids = photoIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, 5);
-  } else if (typeof photoId === 'string') {
-    ids = [photoId];
-  }
+  const ids = extractPhotoIds(req.body);
 
-  if (ids.length === 0) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photoId or photoIds is required' });
-    return;
-  }
-
-  // Mock mode: return fake AI response without calling any provider
-  if (config.aiMock) {
-    res.json(buildMockAnalysisResult());
-    return;
-  }
+  if (config.aiMock) { res.json(buildMockAnalysisResult()); return; }
 
   const settings = await getUserAiSettings(req.user!.id);
   const taskConfig = await resolveTaskConfig(req.user!.id, 'vision', settings.config);
@@ -362,34 +328,10 @@ router.post('/analyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, ai
 
 // POST /api/ai/reanalyze — reanalyze stored photo(s) with previous result context
 router.post('/reanalyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('reanalyze photo', async (req, res) => {
-  const { photoIds, previousResult: rawPrev } = req.body;
+  const previousResult = validatePreviousResult(req.body.previousResult);
+  const ids = extractPhotoIds(req.body);
 
-  if (
-    !rawPrev ||
-    typeof rawPrev !== 'object' ||
-    typeof rawPrev.name !== 'string' ||
-    !Array.isArray(rawPrev.items)
-  ) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'previousResult must have name (string) and items (array)' });
-    return;
-  }
-
-  const previousResult = rawPrev;
-
-  let ids: string[] = [];
-  if (Array.isArray(photoIds) && photoIds.length > 0) {
-    ids = photoIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, 5);
-  }
-
-  if (ids.length === 0) {
-    res.status(422).json({ error: 'VALIDATION_ERROR', message: 'photoIds is required' });
-    return;
-  }
-
-  if (config.aiMock) {
-    res.json(buildMockAnalysisResult());
-    return;
-  }
+  if (config.aiMock) { res.json(buildMockAnalysisResult()); return; }
 
   const settings = await getUserAiSettings(req.user!.id);
   const taskConfig = await resolveTaskConfig(req.user!.id, 'vision', settings.config);

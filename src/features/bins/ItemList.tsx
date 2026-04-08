@@ -19,6 +19,7 @@ interface ItemListProps {
   collapsible?: boolean;
   checkouts?: ItemCheckout[];
   onItemsChange?: (items: BinItem[]) => void;
+  headerExtra?: React.ReactNode;
 }
 
 interface ItemRowProps {
@@ -225,7 +226,7 @@ function ItemRow({ text, quantity, isEditing, saved, checkoutButton, onStartEdit
   );
 }
 
-export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, checkouts = [], onItemsChange }: ItemListProps) {
+export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, checkouts = [], onItemsChange, headerExtra }: ItemListProps) {
   const storageKey = collapsible && binId ? `openbin-items-collapsed-${binId}` : null;
   const [collapsed, setCollapsed] = useState(() => storageKey ? localStorage.getItem(storageKey) === 'true' : false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -453,22 +454,27 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, c
             : `${displayItems.length} ${displayItems.length === 1 ? 'Item' : 'Items'}`}
           {checkouts.length > 0 && ` \u00b7 ${checkouts.length} out`}
         </Label>
-        {collapsible && (
-          <button
-            type="button"
-            onClick={() => setCollapsed((v) => {
-              const next = !v;
-              if (storageKey) {
-                if (next) localStorage.setItem(storageKey, 'true');
-                else localStorage.removeItem(storageKey);
-              }
-              return next;
-            })}
-            aria-label="Toggle items"
-            className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', !collapsed && 'rotate-180')} />
-          </button>
+        {(headerExtra || collapsible) && (
+          <span className="inline-flex items-center gap-1.5">
+            {headerExtra}
+            {collapsible && (
+              <button
+                type="button"
+                onClick={() => setCollapsed((v) => {
+                  const next = !v;
+                  if (storageKey) {
+                    if (next) localStorage.setItem(storageKey, 'true');
+                    else localStorage.removeItem(storageKey);
+                  }
+                  return next;
+                })}
+                aria-label="Toggle items"
+                className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', !collapsed && 'rotate-180')} />
+              </button>
+            )}
+          </span>
         )}
       </div>
 
@@ -533,12 +539,12 @@ export function ItemList({ items, binId, readOnly, hideWhenEmpty, collapsible, c
                 >
                   {i > 0 && <div className="h-px mx-3.5 bg-[var(--border-subtle)]" />}
                   {checkout ? (
-                    <div className="row-tight px-3.5 py-1 opacity-50">
-                      <span className="shrink-0 w-8" />
-                      <span className="flex-1 min-w-0 text-[15px] text-[var(--text-tertiary)] leading-relaxed line-through">
+                    <div className="group row-tight px-3.5 py-1 hover:bg-[var(--bg-hover)] transition-colors">
+                      <span className="shrink-0 w-8 opacity-50" />
+                      <span className="flex-1 min-w-0 text-[15px] text-[var(--text-tertiary)] leading-relaxed line-through opacity-50">
                         {item.name}
                       </span>
-                      <span className="shrink-0 text-[12px] text-[var(--text-tertiary)]">
+                      <span className="shrink-0 text-[12px] text-[var(--text-tertiary)] opacity-50">
                         Out &middot; {checkout.checked_out_by_name} &middot; {formatTimeAgo(checkout.checked_out_at)}
                       </span>
                       {!readOnly && binId && (
