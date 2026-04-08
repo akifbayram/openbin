@@ -81,7 +81,7 @@ describe('findOrCreateOAuthUser', () => {
     expect(second.created).toBe(false);
   });
 
-  it('auto-links when email matches existing password user', async () => {
+  it('does not auto-link when email matches existing password user', async () => {
     const { user } = await createTestUser(app, { email: 'link@example.com' });
     const result = await findOrCreateOAuthUser({
       provider: 'google',
@@ -89,8 +89,9 @@ describe('findOrCreateOAuthUser', () => {
       email: 'link@example.com',
       displayName: 'Linked',
     });
-    expect(result.user.id).toBe(user.id);
-    expect(result.created).toBe(false);
+    // Should create a NEW user, not hijack the existing one
+    expect(result.user.id).not.toBe(user.id);
+    expect(result.created).toBe(true);
   });
 
   it('rejects suspended user', async () => {

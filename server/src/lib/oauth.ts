@@ -1,8 +1,9 @@
 import crypto from 'node:crypto';
 import type { Response } from 'express';
 import * as jose from 'jose';
-import { generateUuid, query, withTransaction } from '../db.js';
+import { generateUuid, isUniqueViolation, query, withTransaction } from '../db.js';
 import { signToken } from '../middleware/auth.js';
+import { getRegistrationMode } from '../routes/admin.js';
 import { config } from './config.js';
 import { setAccessTokenCookie, setRefreshTokenCookie } from './cookies.js';
 import { ForbiddenError, UnauthorizedError } from './httpErrors.js';
@@ -36,8 +37,9 @@ export function validateState(cookieState: string | undefined, queryState: strin
 }
 
 export function clearOAuthCookies(res: Response): void {
+  const opts: import('express').CookieOptions = { httpOnly: true, secure: config.cookieSecure, sameSite: 'none', path: '/' };
   for (const name of ['oauth_state', 'oauth_code_verifier', 'oauth_nonce']) {
-    res.clearCookie(name, { path: '/' });
+    res.clearCookie(name, opts);
   }
 }
 
@@ -154,47 +156,65 @@ export async function findOrCreateOAuthUser(input: OAuthUserInput): Promise<OAut
     await query('DELETE FROM user_oauth_links WHERE provider = $1 AND provider_user_id = $2', [provider, providerUserId]);
   }
 
-  // 2. Check if email matches an existing user (auto-link)
-  if (email) {
-    const emailResult = await query<{ id: string; username: string; token_version: number; deleted_at: string | null; suspended_at: string | null }>(
-      'SELECT id, username, token_version, deleted_at, suspended_at FROM users WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL',
-      [email]
-    );
-    if (emailResult.rows.length > 0) {
-      const user = emailResult.rows[0];
-      if (user.suspended_at) throw new ForbiddenError('This account has been suspended');
+  // 2. Email-based auto-linking removed — it allowed account takeover when an
+  //    attacker controlled an OAuth identity with the same email as an existing user.
+  //    Users must explicitly link OAuth providers from account settings instead.
 
-      await query(
-        'INSERT INTO user_oauth_links (id, user_id, provider, provider_user_id, email) VALUES ($1, $2, $3, $4, $5)',
-        [generateUuid(), user.id, provider, providerUserId, email]
-      );
-      log.info(`Auto-linked ${provider} account to existing user "${user.username}"`);
-      return { user: { id: user.id, username: user.username, token_version: user.token_version }, created: false };
-    }
+  // 3. Block new user creation when registration is restricted
+  const regMode = await getRegistrationMode();
+  if (regMode === 'closed') {
+    throw new ForbiddenError('Registration is currently closed');
+  }
+  if (regMode === 'invite') {
+    throw new ForbiddenError('Registration requires an invite code');
   }
 
-  // 3. Create new user (transactional to prevent partial inserts on concurrent requests)
+  // 4. Create new user. If the email is already taken, retry without email to avoid
+  //    hijacking the existing account. Handled atomically via unique constraint.
   const username = await generateUsername(email);
   const userId = generateUuid();
 
+  let emailUsed: string | null = email;
+
   await withTransaction(async (txQuery) => {
-    await txQuery(
-      `INSERT INTO users (id, username, password_hash, display_name, email, plan, sub_status, active_until)
-       VALUES ($1, $2, NULL, $3, $4, $5, $6, $7)`,
-      [
-        userId,
-        username,
-        displayName || username,
-        email,
-        Plan.PLUS,
-        SubStatus.TRIAL,
-        new Date(Date.now() + config.trialPeriodDays * 24 * 60 * 60 * 1000).toISOString(),
-      ]
-    );
+    try {
+      await txQuery(
+        `INSERT INTO users (id, username, password_hash, display_name, email, plan, sub_status, active_until)
+         VALUES ($1, $2, NULL, $3, $4, $5, $6, $7)`,
+        [
+          userId,
+          username,
+          displayName || username,
+          email,
+          Plan.PLUS,
+          SubStatus.TRIAL,
+          new Date(Date.now() + config.trialPeriodDays * 24 * 60 * 60 * 1000).toISOString(),
+        ]
+      );
+    } catch (err: unknown) {
+      if (isUniqueViolation(err, 'idx_users_email_unique')) {
+        log.warn(`OAuth ${provider} login: email "${email}" already in use — creating account without email`);
+        emailUsed = null;
+        await txQuery(
+          `INSERT INTO users (id, username, password_hash, display_name, email, plan, sub_status, active_until)
+           VALUES ($1, $2, NULL, $3, NULL, $4, $5, $6)`,
+          [
+            userId,
+            username,
+            displayName || username,
+            Plan.PLUS,
+            SubStatus.TRIAL,
+            new Date(Date.now() + config.trialPeriodDays * 24 * 60 * 60 * 1000).toISOString(),
+          ]
+        );
+      } else {
+        throw err;
+      }
+    }
 
     await txQuery(
       'INSERT INTO user_oauth_links (id, user_id, provider, provider_user_id, email) VALUES ($1, $2, $3, $4, $5)',
-      [generateUuid(), userId, provider, providerUserId, email]
+      [generateUuid(), userId, provider, providerUserId, emailUsed]
     );
   });
 

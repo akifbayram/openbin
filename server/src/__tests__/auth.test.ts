@@ -637,3 +637,23 @@ describe('Avatar endpoints', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('GET /api/auth/invite-preview', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/auth/invite-preview?code=abc123');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns location info when authenticated with valid code', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+
+    const res = await request(app)
+      .get(`/api/auth/invite-preview?code=${location.invite_code}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe(location.name);
+    expect(res.body.memberCount).toBeDefined();
+  });
+});

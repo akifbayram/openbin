@@ -97,7 +97,22 @@ router.post('/:id/items/:itemId/return', asyncHandler(async (req, res) => {
   }
 
   const checkoutRow = activeCheckout.rows[0];
-  const returnBinId = targetBinId || checkoutRow.origin_bin_id;
+
+  // Verify checkout belongs to the bin in the URL (access was checked via verifyBinAccess above)
+  if (checkoutRow.origin_bin_id !== binId) {
+    throw new NotFoundError('Item is not checked out');
+  }
+
+  // Validate targetBinId belongs to same location and user has access
+  let returnBinId = checkoutRow.origin_bin_id;
+  if (targetBinId && targetBinId !== checkoutRow.origin_bin_id) {
+    const targetAccess = await verifyBinAccess(targetBinId, userId);
+    if (!targetAccess || targetAccess.locationId !== access.locationId) {
+      throw new NotFoundError('Target bin not found in this location');
+    }
+    await requireMemberOrAbove(targetAccess.locationId, userId, 'return items to target bin');
+    returnBinId = targetBinId;
+  }
 
   // Close the checkout
   await query(

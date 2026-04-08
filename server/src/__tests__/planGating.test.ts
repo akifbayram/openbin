@@ -194,7 +194,7 @@ describe('Export route plan gating', () => {
     expect(res.body.error).toBe('PLAN_RESTRICTED');
   });
 
-  it('GET /api/locations/:id/export/csv works for cloud FREE user (not gated)', async () => {
+  it('GET /api/locations/:id/export/csv is gated for cloud FREE user', async () => {
     mockFreeUser();
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
@@ -203,8 +203,8 @@ describe('Export route plan gating', () => {
       .get(`/api/locations/${location.id}/export/csv`)
       .set('Authorization', `Bearer ${token}`);
 
-    // CSV is not gated — should succeed (200) not 403
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('PLAN_RESTRICTED');
   });
 
   it('GET /api/locations/:id/export works for self-hosted without plan query', async () => {

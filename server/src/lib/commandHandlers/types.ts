@@ -11,6 +11,14 @@ export interface ActionContext {
   apiKeyId?: string;
 }
 
+/** Throw if a private bin is being accessed by someone other than its creator.
+ *  Mirrors the visibility check in verifyBinAccess() used by direct routes. */
+export function assertBinVisible(bin: { visibility: string; created_by: string }, userId: string): void {
+  if (bin.visibility === 'private' && bin.created_by !== userId) {
+    throw new Error('Bin not found');
+  }
+}
+
 export interface PendingActivity {
   locationId: string;
   userId: string;

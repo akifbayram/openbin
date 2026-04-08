@@ -107,9 +107,13 @@ export interface ExportData {
 
 /**
  * Fetch all non-deleted bins for a location, joined with area names.
- * Returns raw DB rows with area_name column.
+ * When userId is provided, private bins are filtered to only include the user's own.
  */
-export async function fetchLocationBins(locationId: string) {
+export async function fetchLocationBins(locationId: string, userId?: string) {
+  const visibilityFilter = userId
+    ? `AND (b.visibility = 'location' OR b.created_by = $2)`
+    : '';
+  const params = userId ? [locationId, userId] : [locationId];
   const result = await query(
     `SELECT b.id, b.short_code, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
        COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))}
@@ -118,9 +122,9 @@ export async function fetchLocationBins(locationId: string) {
        COALESCE((SELECT ${d.jsonGroupObject('bcfv.field_id', 'bcfv.value')} FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
        b.created_by, b.created_at, b.updated_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-     WHERE b.location_id = $1 AND b.deleted_at IS NULL
+     WHERE b.location_id = $1 AND b.deleted_at IS NULL ${visibilityFilter}
      ORDER BY b.updated_at DESC`,
-    [locationId]
+    params
   );
   return result.rows;
 }
@@ -423,7 +427,11 @@ export function mapCustomFieldsToIds(
  * Fetch all soft-deleted bins for a location.
  * Same shape as fetchLocationBins but with deleted_at included.
  */
-export async function fetchTrashedBins(locationId: string) {
+export async function fetchTrashedBins(locationId: string, userId?: string) {
+  const visibilityFilter = userId
+    ? `AND (b.visibility = 'location' OR b.created_by = $2)`
+    : '';
+  const params = userId ? [locationId, userId] : [locationId];
   const result = await query(
     `SELECT b.id, b.short_code, b.name, b.area_id, COALESCE(a.name, '') AS area_name,
        COALESCE((SELECT ${d.jsonGroupArray(d.jsonObject("'id'", 'bi.id', "'name'", 'bi.name', "'quantity'", 'bi.quantity'))}
@@ -432,9 +440,9 @@ export async function fetchTrashedBins(locationId: string) {
        COALESCE((SELECT ${d.jsonGroupObject('bcfv.field_id', 'bcfv.value')} FROM bin_custom_field_values bcfv WHERE bcfv.bin_id = b.id), '{}') AS custom_fields,
        b.created_by, b.deleted_at, b.created_at, b.updated_at
      FROM bins b LEFT JOIN areas a ON a.id = b.area_id
-     WHERE b.location_id = $1 AND b.deleted_at IS NOT NULL
+     WHERE b.location_id = $1 AND b.deleted_at IS NOT NULL ${visibilityFilter}
      ORDER BY b.deleted_at DESC`,
-    [locationId]
+    params
   );
   return result.rows;
 }
@@ -468,25 +476,30 @@ export async function fetchLocationSettings(locationId: string): Promise<ExportL
   };
 }
 
-/** Fetch pinned bins for all users in a location. */
-export async function fetchLocationPinnedBins(locationId: string): Promise<ExportPinnedBin[]> {
+/** Fetch pinned bins for a location. When userId is provided, returns only that user's pins. */
+export async function fetchLocationPinnedBins(locationId: string, userId?: string): Promise<ExportPinnedBin[]> {
+  const userFilter = userId ? 'AND pb.user_id = $2' : '';
+  const params = userId ? [locationId, userId] : [locationId];
   const result = await query<{ user_id: string; bin_id: string; position: number }>(
     `SELECT pb.user_id, pb.bin_id, pb.position
      FROM pinned_bins pb JOIN bins b ON b.id = pb.bin_id
-     WHERE b.location_id = $1 AND b.deleted_at IS NULL
+     WHERE b.location_id = $1 AND b.deleted_at IS NULL ${userFilter}
      ORDER BY pb.user_id, pb.position`,
-    [locationId]
+    params
   );
   return result.rows.map(r => ({ userId: r.user_id, binId: r.bin_id, position: r.position }));
 }
 
-/** Fetch saved views for all members of a location. */
-export async function fetchLocationSavedViews(locationId: string): Promise<ExportSavedView[]> {
+/** Fetch saved views for a location. When userId is provided, returns only that user's views. */
+export async function fetchLocationSavedViews(locationId: string, userId?: string): Promise<ExportSavedView[]> {
+  const userFilter = userId ? 'AND sv.user_id = $2' : '';
+  const params = userId ? [locationId, userId] : [locationId];
   const result = await query<{ user_id: string; name: string; search_query: string; sort: string; filters: string }>(
     `SELECT sv.user_id, sv.name, sv.search_query, sv.sort, sv.filters
      FROM saved_views sv JOIN location_members lm ON lm.user_id = sv.user_id AND lm.location_id = $1
+     WHERE 1=1 ${userFilter}
      ORDER BY sv.user_id, sv.name`,
-    [locationId]
+    params
   );
   return result.rows.map(r => ({
     userId: r.user_id,

@@ -125,9 +125,10 @@ export function PhotoUploadSection({
 									<button
 										type="button"
 										onClick={() => onRemovePhoto(i)}
-										className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center hover:bg-[var(--destructive)] hover:text-white transition-colors"
+										aria-label={`Remove photo ${i + 1}`}
+										className="absolute top-1 right-1 size-9 flex items-center justify-center rounded-[var(--radius-xs)] bg-black/50 text-white hover:bg-[var(--destructive)] transition-colors"
 									>
-										<X className="h-3 w-3" />
+										<X className="h-3.5 w-3.5" />
 									</button>
 								)}
 							</div>

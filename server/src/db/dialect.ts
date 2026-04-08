@@ -112,4 +112,9 @@ export const d = {
       ? `${col} IS ${param}`
       : `${col} IS NOT DISTINCT FROM ${param}`;
   },
+
+  /** Row-level lock for serializing concurrent writes. No-op on SQLite (WAL serializes). */
+  forUpdate(): string {
+    return currentDialect === 'sqlite' ? '' : 'FOR UPDATE';
+  },
 };

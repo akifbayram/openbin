@@ -1,14 +1,18 @@
 import type { TxQueryFn } from '../../db.js';
 import { d, generateUuid, isUniqueViolation } from '../../db.js';
+import { requireAdmin } from '../binAccess.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
 import { replaceCustomFieldValues } from '../customFieldHelpers.js';
+import { assertBinCreationAllowedTx } from '../planGate.js';
 import { generateShortCode } from '../shortCode.js';
-import type { ActionContext } from './types.js';
+import { type ActionContext, assertBinVisible } from './types.js';
 
 const MAX_ITEMS_PER_ACTION = 500;
 
 export async function handleCreateBin(action: Extract<CommandAction, { type: 'create_bin' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
+  await assertBinCreationAllowedTx(ctx.userId, tx);
+
   let areaId: string | null = null;
 
   // Resolve area by name if provided
@@ -77,8 +81,10 @@ export async function handleCreateBin(action: Extract<CommandAction, { type: 'cr
 }
 
 export async function handleDeleteBin(action: Extract<CommandAction, { type: 'delete_bin' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  await requireAdmin(ctx.locationId, ctx.userId, 'delete bins');
+  const bin = await tx<{ id: string; name: string; visibility: string; created_by: string }>('SELECT id, name, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   await tx(`UPDATE bins SET deleted_at = ${d.now()}, updated_at = ${d.now()} WHERE id = $1`, [action.bin_id]);
   ctx.pendingActivities.push({
     locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,
@@ -88,8 +94,11 @@ export async function handleDeleteBin(action: Extract<CommandAction, { type: 'de
 }
 
 export async function handleRestoreBin(action: Extract<CommandAction, { type: 'restore_bin' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NOT NULL', [action.bin_id]);
+  await requireAdmin(ctx.locationId, ctx.userId, 'restore bins');
+  await assertBinCreationAllowedTx(ctx.userId, tx);
+  const bin = await tx<{ id: string; name: string; visibility: string; created_by: string }>('SELECT id, name, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NOT NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found in trash: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   await tx(`UPDATE bins SET deleted_at = NULL, updated_at = ${d.now()} WHERE id = $1`, [action.bin_id]);
   ctx.pendingActivities.push({
     locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,
@@ -99,11 +108,14 @@ export async function handleRestoreBin(action: Extract<CommandAction, { type: 'r
 }
 
 export async function handleDuplicateBin(action: Extract<CommandAction, { type: 'duplicate_bin' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const src = await tx<{ id: string; name: string; area_id: string | null; notes: string; tags: string[]; icon: string; color: string; card_style: string; visibility: string }>(
-    'SELECT id, name, area_id, notes, tags, icon, color, card_style, visibility FROM bins WHERE id = $1 AND deleted_at IS NULL',
-    [action.bin_id]
+  await assertBinCreationAllowedTx(ctx.userId, tx);
+
+  const src = await tx<{ id: string; name: string; area_id: string | null; notes: string; tags: string[]; icon: string; color: string; card_style: string; visibility: string; created_by: string }>(
+    'SELECT id, name, area_id, notes, tags, icon, color, card_style, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL',
+    [action.bin_id, ctx.locationId]
   );
   if (src.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(src.rows[0], ctx.userId);
   const s = src.rows[0];
   const newName = action.new_name || `Copy of ${s.name}`;
 

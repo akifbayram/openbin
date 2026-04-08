@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 import * as jose from 'jose';
 import { d, query } from '../db.js';
 import { config } from '../lib/config.js';
+import { Plan } from '../lib/planGate.js';
 
 const JWT_SECRET_KEY = new TextEncoder().encode(config.jwtSecret);
 
@@ -178,7 +179,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
         res.status(403).json({ error: 'ACCOUNT_SUSPENDED', message: 'This account has been suspended' });
         return;
       }
-      if (!config.selfHosted && row.plan === 0) {
+      if (!config.selfHosted && row.plan !== Plan.PRO) {
         res.status(403).json({ error: 'PLAN_RESTRICTED', message: 'API key access requires a Pro plan' });
         return;
       }

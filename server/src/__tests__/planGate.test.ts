@@ -53,6 +53,7 @@ vi.mock('../db.js', () => ({
 import { query } from '../db.js';
 import { config } from '../lib/config.js';
 import {
+  checkAndIncrementAiCredits,
   checkLocationWritable,
   computeOverLimits,
   generateUpgradeUrl,
@@ -597,5 +598,90 @@ describe('getEffectiveMemberRole()', () => {
       .mockResolvedValueOnce({ rows: [{ location_id: 'loc1', cnt: 5 }], rowCount: 1 }); // memberResult (over limit)
     const role = await getEffectiveMemberRole('owner1', 'loc1', 'admin', 'owner1');
     expect(role).toBe('admin');
+  });
+});
+
+describe('checkAndIncrementAiCredits()', () => {
+  beforeEach(() => {
+    setConfig({ selfHosted: false, planLimits: { ...DEFAULT_PLAN_LIMITS } });
+    vi.mocked(query).mockReset();
+  });
+
+  it('allows and skips checks in self-hosted mode', async () => {
+    setConfig({ selfHosted: true });
+    const result = await checkAndIncrementAiCredits('user1');
+    expect(result.allowed).toBe(true);
+    expect(vi.mocked(query)).not.toHaveBeenCalled();
+  });
+
+  it('denies when plan has zero AI credits', async () => {
+    // Free plan has freeAiCreditsPerMonth: 0
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ plan: Plan.FREE, sub_status: SubStatus.ACTIVE, ai_credits_used: 0, ai_credits_reset_at: null, active_until: null }],
+      rowCount: 1,
+    });
+    const result = await checkAndIncrementAiCredits('user1');
+    expect(result.allowed).toBe(false);
+  });
+
+  it('uses atomic UPDATE for monthly credit increment', async () => {
+    const futureReset = new Date(Date.now() + 86400000).toISOString();
+    // 1. SELECT user
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, ai_credits_used: 10, ai_credits_reset_at: futureReset, active_until: null }],
+      rowCount: 1,
+    });
+    // 2. Atomic reset-check-and-increment RETURNING
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ ai_credits_used: 11, ai_credits_reset_at: futureReset }],
+      rowCount: 1,
+    });
+
+    const result = await checkAndIncrementAiCredits('user1');
+    expect(result.allowed).toBe(true);
+    expect(result.used).toBe(11);
+
+    // Verify atomic UPDATE query includes CASE for reset + increment
+    const calls = vi.mocked(query).mock.calls;
+    const updateCall = calls[calls.length - 1];
+    expect(updateCall[0]).toContain('UPDATE users SET');
+    expect(updateCall[0]).toContain('RETURNING');
+  });
+
+  it('denies when atomic UPDATE returns no rows (at limit)', async () => {
+    const futureReset = new Date(Date.now() + 86400000).toISOString();
+    // 1. SELECT user — at limit
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, ai_credits_used: 25, ai_credits_reset_at: futureReset, active_until: null }],
+      rowCount: 1,
+    });
+    // 2. Atomic UPDATE fails (at limit, no reset needed)
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [],
+      rowCount: 0,
+    });
+
+    const result = await checkAndIncrementAiCredits('user1');
+    expect(result.allowed).toBe(false);
+    expect(result.used).toBe(25);
+  });
+
+  it('resets and increments atomically when reset_at has passed', async () => {
+    const pastReset = new Date(Date.now() - 86400000).toISOString();
+    const futureReset = new Date(Date.now() + 30 * 86400000).toISOString();
+    // 1. SELECT user — reset_at is in the past
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ plan: Plan.PLUS, sub_status: SubStatus.ACTIVE, ai_credits_used: 25, ai_credits_reset_at: pastReset, active_until: null }],
+      rowCount: 1,
+    });
+    // 2. Atomic UPDATE resets to 0 and increments to 1 in one query
+    vi.mocked(query).mockResolvedValueOnce({
+      rows: [{ ai_credits_used: 1, ai_credits_reset_at: futureReset }],
+      rowCount: 1,
+    });
+
+    const result = await checkAndIncrementAiCredits('user1');
+    expect(result.allowed).toBe(true);
+    expect(result.used).toBe(1);
   });
 });

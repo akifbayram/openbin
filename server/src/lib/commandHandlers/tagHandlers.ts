@@ -2,11 +2,12 @@ import type { TxQueryFn } from '../../db.js';
 import { d, generateUuid } from '../../db.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
-import type { ActionContext } from './types.js';
+import { type ActionContext, assertBinVisible } from './types.js';
 
 export async function handleAddTags(action: Extract<CommandAction, { type: 'add_tags' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id, name, tags FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  const bin = await tx<{ id: string; name: string; tags: string[]; visibility: string; created_by: string }>('SELECT id, name, tags, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   const current: string[] = bin.rows[0].tags || [];
   const merged = [...new Set([...current, ...action.tags])];
   await tx(`UPDATE bins SET tags = $1, updated_at = ${d.now()} WHERE id = $2`, [merged, action.bin_id]);
@@ -19,8 +20,9 @@ export async function handleAddTags(action: Extract<CommandAction, { type: 'add_
 }
 
 export async function handleRemoveTags(action: Extract<CommandAction, { type: 'remove_tags' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id, name, tags FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  const bin = await tx<{ id: string; name: string; tags: string[]; visibility: string; created_by: string }>('SELECT id, name, tags, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   const current: string[] = bin.rows[0].tags || [];
   const removeSet = new Set(action.tags.map((t) => t.toLowerCase()));
   const filtered = current.filter((t) => !removeSet.has(t.toLowerCase()));
@@ -34,8 +36,9 @@ export async function handleRemoveTags(action: Extract<CommandAction, { type: 'r
 }
 
 export async function handleModifyTag(action: Extract<CommandAction, { type: 'modify_tag' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id, name, tags FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  const bin = await tx<{ id: string; name: string; tags: string[]; visibility: string; created_by: string }>('SELECT id, name, tags, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   const current: string[] = bin.rows[0].tags || [];
   const modified = current.map((t) => t.toLowerCase() === action.old_tag.toLowerCase() ? action.new_tag : t);
   await tx(`UPDATE bins SET tags = $1, updated_at = ${d.now()} WHERE id = $2`, [modified, action.bin_id]);

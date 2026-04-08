@@ -15,9 +15,9 @@ const router = Router();
 router.use(authenticate);
 
 /** Verify user has access to a photo via photo -> bin -> location chain */
-async function verifyPhotoAccess(photoId: string, userId: string): Promise<{ binId: string; storagePath: string; locationId: string; mimeType: string } | null> {
+async function verifyPhotoAccess(photoId: string, userId: string): Promise<{ binId: string; storagePath: string; locationId: string; mimeType: string; role: string } | null> {
   const result = await query(
-    `SELECT p.bin_id, p.storage_path, p.mime_type, b.location_id, b.visibility, b.created_by FROM photos p
+    `SELECT p.bin_id, p.storage_path, p.mime_type, b.location_id, b.visibility, b.created_by, lm.role FROM photos p
      JOIN bins b ON b.id = p.bin_id
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $2
      WHERE p.id = $1`,
@@ -26,7 +26,7 @@ async function verifyPhotoAccess(photoId: string, userId: string): Promise<{ bin
   if (result.rows.length === 0) return null;
   const row = result.rows[0];
   if (row.visibility === 'private' && row.created_by !== userId) return null;
-  return { binId: row.bin_id, storagePath: row.storage_path, locationId: row.location_id, mimeType: row.mime_type };
+  return { binId: row.bin_id, storagePath: row.storage_path, locationId: row.location_id, mimeType: row.mime_type, role: row.role };
 }
 
 // GET /api/photos — list photos for a bin
@@ -156,6 +156,11 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   const access = await verifyPhotoAccess(id, req.user!.id);
   if (!access) {
     throw new NotFoundError('Photo not found');
+  }
+
+  // Viewers cannot delete photos
+  if (access.role === 'viewer') {
+    throw new ForbiddenError('Viewers cannot delete photos');
   }
 
   // Get thumb path before deletion

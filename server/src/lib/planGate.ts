@@ -1,5 +1,6 @@
 import * as jose from 'jose';
-import { query } from '../db.js';
+import type { TxQueryFn } from '../db/types.js';
+import { d, query } from '../db.js';
 import { config } from './config.js';
 import { PlanRestrictedError } from './httpErrors.js';
 
@@ -260,6 +261,79 @@ export async function assertBinCreationAllowed(userId: string): Promise<void> {
   }
 }
 
+/**
+ * Transaction-safe variant of assertBinCreationAllowed.
+ * Must be called inside withTransaction(). Locks the user row (FOR UPDATE on PG)
+ * to serialize concurrent bin-creation requests and prevent limit bypass.
+ */
+export async function assertBinCreationAllowedTx(userId: string, tx: TxQueryFn): Promise<void> {
+  if (config.selfHosted) return;
+
+  // Lock user row to serialize concurrent creates (PG: FOR UPDATE; SQLite: no-op, WAL serializes)
+  const planRow = await tx<{ plan: number }>(`SELECT plan FROM users WHERE id = $1 ${d.forUpdate()}`, [userId]);
+  if (planRow.rows.length === 0) return;
+
+  const features = getFeatureMap(planRow.rows[0].plan as PlanTier);
+  // Also check user-level overrides
+  const overrideResult = await tx<{
+    max_bins: number | null; max_locations: number | null;
+    max_photo_storage_mb: number | null; max_members_per_location: number | null;
+    activity_retention_days: number | null; ai_credits_per_month: number | null;
+    ai_enabled: number | null;
+  }>('SELECT max_bins, max_locations, max_photo_storage_mb, max_members_per_location, activity_retention_days, ai_credits_per_month, ai_enabled FROM user_limit_overrides WHERE user_id = $1', [userId]);
+  const maxBins = overrideResult.rows.length > 0 && overrideResult.rows[0].max_bins !== null
+    ? overrideResult.rows[0].max_bins
+    : features.maxBins;
+
+  if (maxBins === null) return;
+
+  const countResult = await tx<{ cnt: number }>(
+    'SELECT COUNT(*) as cnt FROM bins WHERE created_by = $1 AND deleted_at IS NULL',
+    [userId],
+  );
+  if (countResult.rows[0].cnt >= maxBins) {
+    throw new PlanRestrictedError(
+      `You've reached the ${maxBins}-bin limit on your current plan. Upgrade to create more bins.`,
+    );
+  }
+}
+
+/**
+ * Transaction-safe photo storage quota check.
+ * Must be called inside withTransaction(). Locks the user row (FOR UPDATE on PG)
+ * to serialize concurrent photo uploads and prevent storage limit bypass.
+ */
+export async function assertPhotoStorageAllowedTx(userId: string, tx: TxQueryFn): Promise<void> {
+  if (config.selfHosted) return;
+
+  // Lock user row to serialize concurrent uploads (PG: FOR UPDATE; SQLite: no-op, WAL serializes)
+  const planRow = await tx<{ plan: number }>(`SELECT plan FROM users WHERE id = $1 ${d.forUpdate()}`, [userId]);
+  if (planRow.rows.length === 0) return;
+
+  const features = getFeatureMap(planRow.rows[0].plan as PlanTier);
+  const overrideResult = await tx<{
+    max_photo_storage_mb: number | null;
+  }>('SELECT max_photo_storage_mb FROM user_limit_overrides WHERE user_id = $1', [userId]);
+  const maxStorageMb = overrideResult.rows.length > 0 && overrideResult.rows[0].max_photo_storage_mb !== null
+    ? overrideResult.rows[0].max_photo_storage_mb
+    : features.maxPhotoStorageMb;
+
+  if (maxStorageMb === null) return;
+
+  // Block uploads entirely for zero-storage plans
+  if (maxStorageMb === 0) {
+    throw new PlanRestrictedError('Photo uploads are available on Plus and Pro plans');
+  }
+
+  const usageResult = await tx<{ total: number }>(
+    'SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1',
+    [userId],
+  );
+  if (usageResult.rows[0].total >= maxStorageMb * 1024 * 1024) {
+    throw new PlanRestrictedError(`Photo storage limit reached (${maxStorageMb} MB)`);
+  }
+}
+
 export interface AiCreditResult {
   allowed: boolean;
   used: number;
@@ -322,7 +396,7 @@ export async function checkAndIncrementAiCredits(userId: string): Promise<AiCred
     [userId],
   );
   if (result.rows.length === 0) return { allowed: true, used: 0, limit: 0, resetsAt: null };
-  let { plan, sub_status, ai_credits_used, ai_credits_reset_at } = result.rows[0];
+  const { plan, sub_status, ai_credits_used, ai_credits_reset_at } = result.rows[0];
 
   const features = getFeatureMap(plan as PlanTier);
 
@@ -346,22 +420,29 @@ export async function checkAndIncrementAiCredits(userId: string): Promise<AiCred
     return { allowed: true, used: updated.rows[0].ai_credits_used, limit: trialLimit, resetsAt: null };
   }
 
-  // Monthly credit check with reset
-  const now = new Date();
-  if (!ai_credits_reset_at || new Date(ai_credits_reset_at) <= now) {
-    // Reset credits and set next reset date (30 days from now)
-    const nextReset = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    await query('UPDATE users SET ai_credits_used = 0, ai_credits_reset_at = $1 WHERE id = $2', [nextReset, userId]);
-    ai_credits_used = 0;
-    ai_credits_reset_at = nextReset;
-  }
-
-  if (ai_credits_used >= limit) {
+  // Atomic reset-check-and-increment in a single query to prevent TOCTOU
+  const nowIso = new Date().toISOString();
+  const nextReset = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const updated = await query<{ ai_credits_used: number; ai_credits_reset_at: string }>(
+    `UPDATE users SET
+      ai_credits_used = CASE
+        WHEN ai_credits_reset_at IS NULL OR ai_credits_reset_at <= $3 THEN 1
+        ELSE ai_credits_used + 1
+      END,
+      ai_credits_reset_at = CASE
+        WHEN ai_credits_reset_at IS NULL OR ai_credits_reset_at <= $3 THEN $4
+        ELSE ai_credits_reset_at
+      END
+    WHERE id = $1 AND (
+      ai_credits_reset_at IS NULL OR ai_credits_reset_at <= $3 OR ai_credits_used < $2
+    )
+    RETURNING ai_credits_used, ai_credits_reset_at`,
+    [userId, limit, nowIso, nextReset],
+  );
+  if (updated.rows.length === 0) {
     return { allowed: false, used: ai_credits_used, limit, resetsAt: ai_credits_reset_at };
   }
-
-  await query('UPDATE users SET ai_credits_used = ai_credits_used + 1 WHERE id = $1', [userId]);
-  return { allowed: true, used: ai_credits_used + 1, limit, resetsAt: ai_credits_reset_at };
+  return { allowed: true, used: updated.rows[0].ai_credits_used, limit, resetsAt: updated.rows[0].ai_credits_reset_at };
 }
 
 /** Decrement ai_credits_used by 1 (floor 0). No-op on self-hosted or unlimited plans. */

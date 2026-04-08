@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { d, generateUuid, query } from '../db.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { ValidationError } from '../lib/httpErrors.js';
+import { verifyBinAccess } from '../lib/binAccess.js';
+import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -36,6 +37,12 @@ router.post('/', asyncHandler(async (req, res) => {
 
   if (!binId || typeof binId !== 'string') {
     throw new ValidationError('binId is required');
+  }
+
+  // Verify user is a member and bin is accessible (respects private visibility)
+  const access = await verifyBinAccess(binId, req.user!.id);
+  if (!access) {
+    throw new NotFoundError('Bin not found');
   }
 
   const id = generateUuid();

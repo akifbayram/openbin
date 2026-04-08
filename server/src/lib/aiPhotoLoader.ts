@@ -24,7 +24,8 @@ export async function loadPhotosForAnalysis(ids: string[], userId: string): Prom
     `SELECT p.id, p.storage_path, p.mime_type, b.location_id FROM photos p
      JOIN bins b ON b.id = p.bin_id
      JOIN location_members lm ON lm.location_id = b.location_id AND lm.user_id = $${ids.length + 1}
-     WHERE p.id IN (${placeholders})`,
+     WHERE p.id IN (${placeholders})
+       AND (b.visibility = 'location' OR b.created_by = $${ids.length + 1})`,
     [...ids, userId]
   );
 

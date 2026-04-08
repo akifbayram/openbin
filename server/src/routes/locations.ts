@@ -6,7 +6,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { getMemberRole, isLocationAdmin, verifyLocationMembership } from '../lib/binAccess.js';
 import { ConflictError, ForbiddenError, NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
-import { getEffectiveMemberRole, getFeatureMap, invalidateOverLimitCache, type PlanTier } from '../lib/planGate.js';
+import { getEffectiveMemberRole, getFeatureMap, invalidateOverLimitCache, isSelfHosted, type PlanTier } from '../lib/planGate.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { validateRetentionDays } from '../lib/validation.js';
 import { authenticate } from '../middleware/auth.js';
@@ -76,8 +76,8 @@ router.post('/', asyncHandler(async (req, res) => {
   const inviteCode = generateInviteCode();
 
   const location = await withTransaction(async (tx) => {
-    // Check plan limits inside the transaction
-    const planRow = await tx<{ plan: number }>('SELECT plan FROM users WHERE id = $1', [req.user!.id]);
+    // Lock user row (PG: FOR UPDATE serializes concurrent creates; SQLite: no-op, WAL serializes)
+    const planRow = await tx<{ plan: number }>(`SELECT plan FROM users WHERE id = $1 ${d.forUpdate()}`, [req.user!.id]);
     const features = planRow.rows.length > 0
       ? getFeatureMap(planRow.rows[0].plan as PlanTier)
       : getFeatureMap(1 as PlanTier); // PRO default
@@ -326,8 +326,8 @@ router.post('/join', asyncHandler(async (req, res) => {
 
   // Wrap member count check + INSERT in a transaction to prevent race conditions
   await withTransaction(async (tx) => {
-    // Check plan limits — lookup owner's plan inside the transaction
-    const planRow = await tx<{ plan: number }>('SELECT plan FROM users WHERE id = $1', [location.created_by]);
+    // Lock owner row (PG: FOR UPDATE serializes concurrent joins; SQLite: no-op, WAL serializes)
+    const planRow = await tx<{ plan: number }>(`SELECT plan FROM users WHERE id = $1 ${d.forUpdate()}`, [location.created_by]);
     const ownerFeatures = planRow.rows.length > 0
       ? getFeatureMap(planRow.rows[0].plan as PlanTier)
       : getFeatureMap(1 as PlanTier); // PRO default
@@ -605,7 +605,13 @@ router.post('/:id/members/:userId/reset-password', asyncHandler(async (req, res)
     entityName: targetUsername,
   });
 
-  res.json({ token: rawToken, expiresAt });
+  if (isSelfHosted()) {
+    // Self-hosted: return token directly (admin manages users locally)
+    res.json({ token: rawToken, expiresAt });
+  } else {
+    // Cloud: never expose raw token in API response to prevent account takeover
+    res.json({ message: 'Password reset initiated', expiresAt });
+  }
 }));
 
 // POST /api/locations/:id/regenerate-invite — new invite code (admin only)

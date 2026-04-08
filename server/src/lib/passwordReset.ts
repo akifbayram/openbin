@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { d, generateUuid, query } from '../db.js';
+import { invalidateUserStatusCache } from '../middleware/auth.js';
 import { config } from './config.js';
 import { UnauthorizedError } from './httpErrors.js';
 import { hashToken, revokeAllUserTokens } from './refreshTokens.js';
@@ -50,13 +51,14 @@ export async function consumeResetToken(
 
   const tokenHash = hashToken(rawToken);
 
+  // Atomically claim the token (prevents TOCTOU race with concurrent requests)
   const result = await query<{
     id: string;
     user_id: string;
-    expires_at: string;
-    used_at: string | null;
   }>(
-    `SELECT id, user_id, expires_at, used_at FROM password_reset_tokens WHERE token_hash = $1`,
+    `UPDATE password_reset_tokens SET used_at = ${d.now()}
+     WHERE token_hash = $1 AND used_at IS NULL AND expires_at > ${d.now()}
+     RETURNING id, user_id`,
     [tokenHash],
   );
 
@@ -66,29 +68,16 @@ export async function consumeResetToken(
 
   const token = result.rows[0];
 
-  if (token.used_at) {
-    throw new UnauthorizedError('This reset token has already been used');
-  }
-
-  if (new Date(token.expires_at) < new Date()) {
-    throw new UnauthorizedError('This reset token has expired');
-  }
-
-  // Hash new password and update user
+  // Hash new password and update user, bump token_version to invalidate existing JWTs
   const passwordHash = await bcrypt.hash(newPassword, config.bcryptRounds);
   await query(
-    `UPDATE users SET password_hash = $1, updated_at = ${d.now()} WHERE id = $2`,
+    `UPDATE users SET password_hash = $1, token_version = token_version + 1, updated_at = ${d.now()} WHERE id = $2`,
     [passwordHash, token.user_id],
-  );
-
-  // Mark token as used
-  await query(
-    `UPDATE password_reset_tokens SET used_at = ${d.now()} WHERE id = $1`,
-    [token.id],
   );
 
   // Revoke all refresh tokens (force re-login on all devices)
   await revokeAllUserTokens(token.user_id);
+  invalidateUserStatusCache(token.user_id);
 
   return { userId: token.user_id };
 }

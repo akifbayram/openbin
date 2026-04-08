@@ -2,6 +2,7 @@ import { d, generateUuid, isUniqueViolation, query, withTransaction } from '../d
 import { computeChanges } from './activityLog.js';
 import { fetchBinById } from './binQueries.js';
 import { replaceCustomFieldValues } from './customFieldHelpers.js';
+import { assertBinCreationAllowedTx } from './planGate.js';
 import { generateShortCode } from './shortCode.js';
 
 export function buildBinSetClauses(fields: {
@@ -162,8 +163,12 @@ export interface InsertBinFields {
 /**
  * Insert a new bin with items, retrying on short-code collision.
  * Used by both create and duplicate handlers.
+ *
+ * When `assertLimitUserId` is provided, the plan bin-count check is performed
+ * inside the transaction with a row-level lock (FOR UPDATE on PG) to prevent
+ * concurrent requests from bypassing the limit.
  */
-export async function insertBinWithItems(fields: InsertBinFields): Promise<Record<string, any>> {
+export async function insertBinWithItems(fields: InsertBinFields, assertLimitUserId?: string): Promise<Record<string, any>> {
   const binId = generateUuid();
   const maxRetries = 10;
 
@@ -172,6 +177,11 @@ export async function insertBinWithItems(fields: InsertBinFields): Promise<Recor
 
     try {
       await withTransaction(async (tx) => {
+        // Enforce bin creation limit inside the transaction to prevent TOCTOU bypass
+        if (assertLimitUserId) {
+          await assertBinCreationAllowedTx(assertLimitUserId, tx);
+        }
+
         await tx(
           `INSERT INTO bins (id, short_code, location_id, name, area_id, notes, tags, icon, color, card_style, created_by, visibility)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,

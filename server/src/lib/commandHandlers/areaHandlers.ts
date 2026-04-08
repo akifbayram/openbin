@@ -1,12 +1,14 @@
 import type { TxQueryFn } from '../../db.js';
 import { d, generateUuid } from '../../db.js';
+import { requireAdmin } from '../binAccess.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
-import type { ActionContext } from './types.js';
+import { type ActionContext, assertBinVisible } from './types.js';
 
 export async function handleSetArea(action: Extract<CommandAction, { type: 'set_area' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id, name, area_id FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  const bin = await tx<{ id: string; name: string; area_id: string | null; visibility: string; created_by: string }>('SELECT id, name, area_id, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   let areaId = action.area_id;
 
   // If area_id is null but area_name provided, look up or create
@@ -48,6 +50,7 @@ export async function handleSetArea(action: Extract<CommandAction, { type: 'set_
 }
 
 export async function handleRenameArea(action: Extract<CommandAction, { type: 'rename_area' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
+  await requireAdmin(ctx.locationId, ctx.userId, 'rename areas');
   const area = await tx('SELECT id, name FROM areas WHERE id = $1 AND location_id = $2', [action.area_id, ctx.locationId]);
   if (area.rows.length === 0) throw new Error(`Area not found: ${action.area_name}`);
   const oldName = area.rows[0].name as string;
@@ -61,6 +64,7 @@ export async function handleRenameArea(action: Extract<CommandAction, { type: 'r
 }
 
 export async function handleDeleteArea(action: Extract<CommandAction, { type: 'delete_area' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
+  await requireAdmin(ctx.locationId, ctx.userId, 'delete areas');
   const area = await tx('SELECT id, name FROM areas WHERE id = $1 AND location_id = $2', [action.area_id, ctx.locationId]);
   if (area.rows.length === 0) throw new Error(`Area not found: ${action.area_name}`);
   await tx('UPDATE bins SET area_id = NULL WHERE area_id = $1', [action.area_id]);

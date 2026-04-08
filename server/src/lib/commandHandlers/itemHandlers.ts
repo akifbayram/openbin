@@ -2,14 +2,15 @@ import type { TxQueryFn } from '../../db.js';
 import { d, generateUuid } from '../../db.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
-import type { ActionContext } from './types.js';
+import { type ActionContext, assertBinVisible } from './types.js';
 
 const MAX_ITEMS_PER_ACTION = 500;
 
 export async function handleAddItems(action: Extract<CommandAction, { type: 'add_items' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
   if (action.items.length > MAX_ITEMS_PER_ACTION) throw new Error('Too many items per action (max 500)');
-  const bin = await tx('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  const bin = await tx<{ id: string; name: string; visibility: string; created_by: string }>('SELECT id, name, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   const maxResult = await tx<{ max_pos: number | null }>('SELECT MAX(position) as max_pos FROM bin_items WHERE bin_id = $1', [action.bin_id]);
   let nextPos = (maxResult.rows[0]?.max_pos ?? -1) + 1;
   const itemNames: string[] = [];
@@ -29,8 +30,9 @@ export async function handleAddItems(action: Extract<CommandAction, { type: 'add
 }
 
 export async function handleRemoveItems(action: Extract<CommandAction, { type: 'remove_items' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  const bin = await tx<{ id: string; name: string; visibility: string; created_by: string }>('SELECT id, name, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   for (const itemName of action.items) {
     await tx('DELETE FROM bin_items WHERE bin_id = $1 AND LOWER(name) = LOWER($2)', [action.bin_id, itemName]);
   }
@@ -44,8 +46,9 @@ export async function handleRemoveItems(action: Extract<CommandAction, { type: '
 }
 
 export async function handleModifyItem(action: Extract<CommandAction, { type: 'modify_item' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id, name FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  const bin = await tx<{ id: string; name: string; visibility: string; created_by: string }>('SELECT id, name, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   await tx(`UPDATE bin_items SET name = $1, updated_at = ${d.now()} WHERE bin_id = $2 AND LOWER(name) = LOWER($3)`, [action.new_item, action.bin_id, action.old_item]);
   await tx(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [action.bin_id]);
   ctx.pendingActivities.push({
@@ -57,8 +60,9 @@ export async function handleModifyItem(action: Extract<CommandAction, { type: 'm
 }
 
 export async function handleReorderItems(action: Extract<CommandAction, { type: 'reorder_items' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  const bin = await tx<{ id: string; visibility: string; created_by: string }>('SELECT id, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   for (let i = 0; i < action.item_ids.length; i++) {
     await tx('UPDATE bin_items SET position = $1 WHERE id = $2 AND bin_id = $3', [i, action.item_ids[i], action.bin_id]);
   }
