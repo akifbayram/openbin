@@ -38,7 +38,7 @@ function createMockDb() {
       }
       return { all: vi.fn(() => []), run: vi.fn() };
     }),
-    transaction: vi.fn((fn: Function) => fn),
+    transaction: vi.fn((fn: () => void) => fn),
   };
 }
 
@@ -70,7 +70,6 @@ describe('runSqliteMigrations', () => {
   });
 
   it('seeds all migrations as applied when table is empty (bootstrap) — does not call migration functions', () => {
-    appliedMigrations = []; // empty table → bootstrap path
     const db = createMockDb();
 
     const sqliteFn = vi.fn();
@@ -90,7 +89,6 @@ describe('runSqliteMigrations', () => {
   });
 
   it('uses a transaction for bootstrap seeding', () => {
-    appliedMigrations = [];
     const db = createMockDb();
 
     const migrations: Migration[] = [{ name: '0001_init', sqlite: vi.fn() }];

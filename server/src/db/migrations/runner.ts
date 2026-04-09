@@ -3,7 +3,7 @@ import type pg from 'pg';
 import { createLogger } from '../../lib/logger.js';
 import type { Migration } from './types.js';
 
-const logger = createLogger('db:migrations');
+const log = createLogger('db:migrations');
 
 const CREATE_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -36,7 +36,7 @@ export function runSqliteMigrations(db: Database.Database, migrations: Migration
 
   // 3. Bootstrap: if table is empty and there are known migrations, seed all as applied
   if (applied.size === 0 && migrations.length > 0) {
-    logger.info('No migrations recorded — bootstrapping: marking all known migrations as applied');
+    log.info('No migrations recorded — bootstrapping: marking all known migrations as applied');
     const insert = db.prepare('INSERT INTO schema_migrations (name) VALUES (?)');
     const seed = db.transaction(() => {
       for (const m of migrations) {
@@ -55,22 +55,22 @@ export function runSqliteMigrations(db: Database.Database, migrations: Migration
 
     // 5. No sqlite function -> mark as applied without running
     if (!migration.sqlite) {
-      logger.info('Skipping sqlite-less migration: ' + migration.name);
+      log.info('Skipping sqlite-less migration: ' + migration.name);
       insertApplied.run(migration.name);
       continue;
     }
 
     // 6. Run migration -- do NOT record if it fails
-    logger.info('Running migration: ' + migration.name);
+    log.info('Running migration: ' + migration.name);
     try {
       migration.sqlite(db);
     } catch (err) {
-      logger.error('Migration failed: ' + migration.name, err);
+      log.error('Migration failed: ' + migration.name, err);
       throw err;
     }
 
     insertApplied.run(migration.name);
-    logger.info('Migration applied: ' + migration.name);
+    log.info('Migration applied: ' + migration.name);
   }
 }
 
@@ -88,7 +88,7 @@ export async function runPostgresMigrations(pool: pg.Pool, migrations: Migration
 
   // 3. Bootstrap: if table is empty and there are known migrations, seed all as applied
   if (applied.size === 0 && migrations.length > 0) {
-    logger.info('No migrations recorded — bootstrapping: marking all known migrations as applied');
+    log.info('No migrations recorded — bootstrapping: marking all known migrations as applied');
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -111,38 +111,20 @@ export async function runPostgresMigrations(pool: pg.Pool, migrations: Migration
 
     // 5. No postgres function -> mark as applied without running
     if (!migration.postgres) {
-      logger.info('Skipping postgres-less migration: ' + migration.name);
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [migration.name]);
-        await client.query('COMMIT');
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-      } finally {
-        client.release();
-      }
+      log.info('Skipping postgres-less migration: ' + migration.name);
+      await pool.query('INSERT INTO schema_migrations (name) VALUES ($1)', [migration.name]);
       continue;
     }
 
-    // 6. Run migration in a transaction -- do NOT record if it fails
-    logger.info('Running migration: ' + migration.name);
-    const client = await pool.connect();
+    log.info('Running migration: ' + migration.name);
     try {
-      await client.query('BEGIN');
-      // Migration receives the pool, not the client
       await migration.postgres(pool);
-      await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [migration.name]);
-      await client.query('COMMIT');
     } catch (err) {
-      await client.query('ROLLBACK');
-      logger.error('Migration failed: ' + migration.name, err);
+      log.error('Migration failed: ' + migration.name, err);
       throw err;
-    } finally {
-      client.release();
     }
+    await pool.query('INSERT INTO schema_migrations (name) VALUES ($1)', [migration.name]);
 
-    logger.info('Migration applied: ' + migration.name);
+    log.info('Migration applied: ' + migration.name);
   }
 }

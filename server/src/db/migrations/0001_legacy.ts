@@ -19,7 +19,7 @@ function addColumnIfNotExists(db: Database.Database, stmt: string): void {
   }
 }
 
-/** Try to create a unique index; if duplicates exist, count + log them, run dedupSql, then retry. */
+/** Try to create a unique index; if duplicates exist, log, run dedupSql, then retry. */
 function createUniqueIndexWithDedup(
   db: Database.Database,
   indexDdl: string,
@@ -29,20 +29,7 @@ function createUniqueIndexWithDedup(
   try {
     db.exec(indexDdl);
   } catch {
-    // Count rows that will be affected before deduplicating
-    try {
-      // Build a count query from the dedup SQL
-      const countSql = dedupSql.startsWith('DELETE')
-        ? dedupSql.replace(/^DELETE FROM (\w+)/, 'SELECT COUNT(*) as n FROM $1')
-        : dedupSql.replace(/^UPDATE (\w+) SET.*/, 'SELECT COUNT(*) as n FROM $1') +
-          dedupSql.slice(dedupSql.indexOf('WHERE'));
-      const result = db.prepare(countSql).get() as { n: number } | undefined;
-      if (result && result.n > 0) {
-        log.warn(`0001_legacy: deduplicating ${result.n} rows — ${description}`);
-      }
-    } catch {
-      log.warn(`0001_legacy: deduplicating rows — ${description} (count unavailable)`);
-    }
+    log.warn(`0001_legacy: deduplicating rows — ${description}`);
     db.exec(dedupSql);
     db.exec(indexDdl);
   }

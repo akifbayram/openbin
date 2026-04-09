@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import type pg from 'pg';
 
 export interface Migration {
-	/** Unique name, e.g. '0001_legacy'. Sorted lexicographically to determine run order. */
+	/** Unique name, e.g. '0001_legacy'. Run order is determined by position in the registry array. */
 	name: string;
 	/** Run on SQLite databases. Receives the raw better-sqlite3 handle. */
 	sqlite?: (db: Database.Database) => void;
