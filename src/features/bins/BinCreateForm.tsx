@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, Clock, Sparkles, X } from 'lucide-react';
+import { AlertTriangle, Check, Clock, RefreshCw, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { LabelThreshold } from '@/components/ui/ai-progress-bar';
@@ -9,6 +9,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip } from '@/components/ui/tooltip';
 import { AiConfiguredIndicator, InlineAiSetup } from '@/features/ai/InlineAiSetup';
 import { useAiProviderSetup } from '@/features/ai/useAiProviderSetup';
 import { useAiSettings } from '@/features/ai/useAiSettings';
@@ -19,7 +20,7 @@ import { useAiEnabled } from '@/lib/aiToggle';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { aiItemsToBinItems, binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
-import { cn, plural } from '@/lib/utils';
+import { cn, focusRing, plural } from '@/lib/utils';
 import type { AiSuggestions, BinItem, BinVisibility } from '@/types';
 import { AiBadge } from './AiBadge';
 import { BinPreviewCard } from './BinPreviewCard';
@@ -352,19 +353,21 @@ export function BinCreateForm({
                   <Check className="h-3.5 w-3.5 shrink-0" />
                   <span className="flex-1 min-w-0">AI filled {aiFilledFields.size} {plural(aiFilledFields.size, 'field')}</span>
                   {photos.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleReanalyze({
-                        name,
-                        items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
-                        tags,
-                        notes,
-                      })}
-                      className="shrink-0 inline-flex items-center gap-1 text-[12px] text-[var(--ai-accent)] hover:underline"
-                    >
-                      <Sparkles className="h-3 w-3" />
-                      Reanalyze
-                    </button>
+                    <Tooltip content="Re-run AI analysis on your photos with current field values as context">
+                      <button
+                        type="button"
+                        onClick={() => handleReanalyze({
+                          name,
+                          items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
+                          tags,
+                          notes,
+                        })}
+                        className={cn('shrink-0 h-6 w-6 inline-flex items-center justify-center rounded-[var(--radius-sm)] bg-[var(--ai-accent)]/10 text-[var(--ai-accent)] hover:bg-[var(--ai-accent)]/20 transition-colors', focusRing)}
+                        aria-label="Reanalyze photos with AI"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                      </button>
+                    </Tooltip>
                   )}
                 </output>
               );
@@ -538,21 +541,19 @@ export function BinCreateForm({
                 cardStyle={cardStyle}
                 areaName={areaName}
               />
-              <div className="flex gap-3">
-                <div className="flex-1 space-y-2">
-                  <Label className="text-[12px]">Icon</Label>
-                  <IconPicker value={icon} onChange={setIcon} />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <Label className="text-[12px]">Color</Label>
-                  <ColorPicker
-                    value={color}
-                    onChange={setColor}
-                    secondaryLabel={secondaryInfo?.label}
-                    secondaryValue={secondaryInfo?.value}
-                    onSecondaryChange={secondaryInfo ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label className="text-[12px]">Icon</Label>
+                <IconPicker value={icon} onChange={setIcon} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[12px]">Color</Label>
+                <ColorPicker
+                  value={color}
+                  onChange={setColor}
+                  secondaryLabel={secondaryInfo?.label}
+                  secondaryValue={secondaryInfo?.value}
+                  onSecondaryChange={secondaryInfo ? (c) => setCardStyle(setSecondaryColor(cardStyle, c)) : undefined}
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-[12px]">Style</Label>
