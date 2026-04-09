@@ -2,6 +2,17 @@ import { Check, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
+export type LabelThreshold = [progressMin: number, label: string];
+
+/** Walk thresholds in reverse to find the highest matching label. */
+export function resolveLabel(progress: number, thresholds: LabelThreshold[]): string {
+  if (!thresholds.length) return '';
+  for (let i = thresholds.length - 1; i >= 0; i--) {
+    if (progress >= thresholds[i][0]) return thresholds[i][1];
+  }
+  return thresholds[0][1];
+}
+
 interface AiProgressBarProps {
   /** Whether the AI operation is actively running */
   active: boolean;
@@ -9,6 +20,8 @@ interface AiProgressBarProps {
   complete?: boolean;
   /** Status text shown below the bar */
   label?: string;
+  /** Stepped labels that change as progress advances (overrides label) */
+  labels?: LabelThreshold[];
   /** Compact height variant for inline use */
   compact?: boolean;
   className?: string;
@@ -38,7 +51,7 @@ function useAsymptoticProgress(active: boolean, complete: boolean) {
     setProgress(0);
 
     const ceiling = 92;
-    const tau = 12_000; // time constant in ms — reaches ~63% of ceiling at tau
+    const tau = 6_000; // time constant in ms — reaches ~63% of ceiling at tau
 
     const id = setInterval(() => {
       const t = Date.now() - startRef.current;
@@ -55,10 +68,12 @@ export function AiProgressBar({
   active,
   complete = false,
   label,
+  labels,
   compact = false,
   className,
 }: AiProgressBarProps) {
   const progress = useAsymptoticProgress(active, complete);
+  const resolvedLabel = labels ? resolveLabel(progress, labels) : label;
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
@@ -81,7 +96,7 @@ export function AiProgressBar({
       </div>
 
       {/* Label row */}
-      {label && (
+      {resolvedLabel && (
         <div className="flex items-center gap-1.5 min-w-0">
           {complete ? (
             <Check className="h-3 w-3 text-[var(--color-success)] shrink-0" />
@@ -94,7 +109,7 @@ export function AiProgressBar({
               complete ? 'text-[var(--color-success)]' : 'text-[var(--text-tertiary)]',
             )}
           >
-            {label}
+            {resolvedLabel}
           </span>
         </div>
       )}

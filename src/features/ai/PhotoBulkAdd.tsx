@@ -249,7 +249,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="aspect-square flex flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+            className="aspect-square flex flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
           >
             <Camera className="h-4 w-4" />
             <span className="text-[10px]">Add more</span>

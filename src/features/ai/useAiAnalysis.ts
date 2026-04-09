@@ -6,10 +6,6 @@ import { mapAiError } from './aiErrors';
 
 export const MAX_AI_PHOTOS = 5;
 
-/** @deprecated Use mapAiError from aiErrors.ts instead */
-export function mapErrorMessage(err: unknown): string {
-  return mapAiError(err, 'Couldn\'t analyze the photo — try again');
-}
 
 export async function analyzeImageFile(file: File, locationId?: string): Promise<AiSuggestions> {
   const formData = new FormData();

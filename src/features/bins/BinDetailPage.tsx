@@ -1,6 +1,8 @@
 import { PackageOpen } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import type { LabelThreshold } from '@/components/ui/ai-progress-bar';
+import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -123,6 +125,10 @@ export function BinDetailPage() {
     else navigate('/bins');
   }
 
+  const detailLabels: LabelThreshold[] = actions.isReanalysis
+    ? [[0, 'Preparing reanalysis...'], [15, 'Comparing changes...'], [45, 'Updating suggestions...'], [75, 'Almost done...']]
+    : [[0, 'Uploading photos...'], [15, 'Identifying items...'], [45, 'Generating details...'], [75, 'Almost done...']];
+
   return (
     <div className="page-content max-w-5xl">
       <BinDetailToolbar
@@ -158,6 +164,15 @@ export function BinDetailPage() {
         onSaveName={autoSave.saveName}
         nameSaved={autoSave.savedFields.has('name')}
       />
+
+      {actions.isAnalyzing && (
+        <AiProgressBar
+          compact
+          active
+          labels={detailLabels}
+          className="mt-2 mb-1"
+        />
+      )}
 
       <BinDetailContent
         bin={bin}

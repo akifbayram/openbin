@@ -60,7 +60,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="w-full flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--border)] py-16 text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+          className="w-full flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--border-subtle)] py-16 text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
         >
           <ImagePlus className="h-10 w-10" />
           <span className="text-[15px] font-medium">Select photos</span>
@@ -89,7 +89,7 @@ export function BulkAddUploadStep({ photos, sharedAreaId, dispatch }: BulkAddUpl
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="aspect-square flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+                className="aspect-square flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
               >
                 <Camera className="h-5 w-5" />
                 <span className="text-[11px]">Add more</span>

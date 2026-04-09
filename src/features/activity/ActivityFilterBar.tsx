@@ -77,7 +77,6 @@ export function ActivityFilterBar({
 
   return (
     <div className="flex flex-col gap-2 mb-4">
-      {/* Search input */}
       <SearchInput
         placeholder="Search activity..."
         value={searchQuery}
@@ -85,7 +84,6 @@ export function ActivityFilterBar({
         onClear={searchQuery ? () => onSearchChange('') : undefined}
       />
 
-      {/* Entity type pills + filters row */}
       <div className="flex items-start gap-2 flex-wrap">
         <OptionGroup
           options={filterOptions}
@@ -96,13 +94,11 @@ export function ActivityFilterBar({
           className="shrink-0"
         />
 
-        {/* Desktop: inline filter controls */}
         <div className="hidden lg:flex ml-auto">
           {filterControls}
         </div>
       </div>
 
-      {/* Mobile: collapsible filter controls */}
       <div className="lg:hidden">
         <Disclosure
           label={<span>{hasActiveFilters ? 'Filters (active)' : 'Filters'}</span>}

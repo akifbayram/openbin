@@ -39,25 +39,33 @@ export function useAnimatedNumber(target: number, duration = 400) {
 export function StatCard({
   label,
   value,
+  variant = 'default',
   onClick,
 }: {
   label: string;
   value: number;
+  variant?: 'default' | 'warning';
   onClick?: () => void;
 }) {
   const animatedValue = useAnimatedNumber(value);
   const Wrapper = onClick ? 'button' : 'div';
+  const isWarning = variant === 'warning';
   return (
     <div className="flex-1">
       <Wrapper
         type={onClick ? 'button' : undefined}
         className={cn(
-          "w-full text-left rounded-[var(--radius-md)] bg-[var(--bg-input)] px-4 py-3",
-          onClick && "hover:bg-[var(--bg-active)] transition-colors duration-150",
+          "w-full text-left rounded-[var(--radius-md)] px-4 py-3",
+          isWarning
+            ? "bg-[var(--color-warning-soft)] hover:brightness-[0.97] transition-colors duration-150"
+            : cn("bg-[var(--bg-input)]", onClick && "hover:bg-[var(--bg-active)] transition-colors duration-150"),
         )}
         {...(onClick ? { onClick } : {})}
       >
-        <p className="text-[28px] font-bold text-[var(--text-primary)] leading-tight tabular-nums">
+        <p className={cn(
+          "text-[28px] font-bold leading-tight tabular-nums",
+          isWarning ? "text-[var(--color-warning)]" : "text-[var(--text-primary)]",
+        )}>
           {animatedValue}
         </p>
         <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">{label}</p>

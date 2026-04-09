@@ -12,7 +12,7 @@ import { remapCustomFieldsForMove, replaceCustomFieldValues } from '../lib/custo
 import { ForbiddenError, NotFoundError, OverLimitError, QuotaExceededError, ValidationError } from '../lib/httpErrors.js';
 import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
-import { assertBinCreationAllowed, assertLocationWritable, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache } from '../lib/planGate.js';
+import { assertLocationWritable, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache } from '../lib/planGate.js';
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { storage } from '../lib/storage.js';
@@ -41,10 +41,11 @@ router.post('/', asyncHandler(async (req, res) => {
   await requireMemberOrAbove(locationId, req.user!.id, 'create bins');
 
   await assertLocationWritable(locationId);
-  await assertBinCreationAllowed(req.user!.id);
 
   if (areaId) await verifyAreaInLocation(areaId, locationId);
 
+  // assertBinCreationAllowed check is performed inside the transaction (via assertLimitUserId)
+  // to prevent concurrent requests from bypassing the plan limit.
   const bin = await insertBinWithItems({
     locationId,
     name,
@@ -58,7 +59,7 @@ router.post('/', asyncHandler(async (req, res) => {
     visibility: visibility || 'location',
     items: Array.isArray(items) ? items : [],
     customFields: customFields || undefined,
-  });
+  }, req.user!.id);
 
   logRouteActivity(req, { entityType: 'bin', locationId, action: 'create', entityId: bin.id, entityName: bin.name });
 
@@ -365,10 +366,15 @@ router.post('/:id/restore', asyncHandler(async (req, res) => {
   const { locationId } = deletedAccess;
   await requireAdmin(locationId, req.user!.id, 'restore bins');
 
-  await query(
-    `UPDATE bins SET deleted_at = NULL, updated_at = ${d.now()} WHERE id = $1`,
-    [id]
-  );
+  // Enforce bin limit inside a transaction with row lock to prevent concurrent bypass
+  await withTransaction(async (tx) => {
+    const { assertBinCreationAllowedTx: assertLimitTx } = await import('../lib/planGate.js');
+    await assertLimitTx(req.user!.id, tx);
+    await tx(
+      `UPDATE bins SET deleted_at = NULL, updated_at = ${d.now()} WHERE id = $1`,
+      [id],
+    );
+  });
 
   const bin = (await fetchBinById(id))!;
 
@@ -525,16 +531,24 @@ router.post('/:id/photos', asyncHandler(async (req, res, next) => {
     }
   }
 
-  // Insert photo record + update bin timestamp in parallel
-  const [result] = await Promise.all([
-    query(
-      `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, thumb_path, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, bin_id, filename, mime_type, size, storage_path, thumb_path, created_by, created_at`,
-      [photoId, binId, path.basename(file.originalname).slice(0, 255), file.mimetype, file.size, storagePath, thumbPath, req.user!.id]
-    ),
-    query(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [binId]),
-  ]);
+  // Insert photo record + update bin timestamp inside a transaction with a
+  // serialized storage quota re-check to prevent concurrent uploads from
+  // bypassing the plan limit (the pre-multer check is best-effort only).
+  const result = await withTransaction(async (tx) => {
+    const { assertPhotoStorageAllowedTx } = await import('../lib/planGate.js');
+    await assertPhotoStorageAllowedTx(req.user!.id, tx);
+
+    const [insertResult] = await Promise.all([
+      tx(
+        `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, thumb_path, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, bin_id, filename, mime_type, size, storage_path, thumb_path, created_by, created_at`,
+        [photoId, binId, path.basename(file.originalname).slice(0, 255), file.mimetype, file.size, storagePath, thumbPath, req.user!.id]
+      ),
+      tx(`UPDATE bins SET updated_at = ${d.now()} WHERE id = $1`, [binId]),
+    ]);
+    return insertResult;
+  });
 
   invalidateOverLimitCache(req.user!.id);
 
@@ -613,6 +627,8 @@ router.post('/:id/duplicate', asyncHandler(async (req, res) => {
 
   await requireMemberOrAbove(access.locationId, req.user!.id, 'duplicate bins');
 
+  // assertBinCreationAllowed check is performed inside the transaction (via assertLimitUserId)
+
   // Fetch the source bin
   const src = await fetchBinById(id, { excludeDeleted: true });
   if (!src) {
@@ -647,7 +663,7 @@ router.post('/:id/duplicate', asyncHandler(async (req, res) => {
     visibility: src.visibility || 'location',
     items: itemsResult.rows,
     customFields: srcCustomFields,
-  });
+  }, req.user!.id);
 
   logRouteActivity(req, { entityType: 'bin', locationId: access.locationId, action: 'duplicate', entityId: newBin.id, entityName: newBin.name });
 

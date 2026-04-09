@@ -314,6 +314,64 @@ describe('POST /api/batch', () => {
     expect(res.body.errors.length).toBeGreaterThan(0);
   });
 
+  // --- Cross-location IDOR prevention ---
+
+  it('rejects batch operations targeting bins in another location', async () => {
+    // Create a second user with their own location and bin
+    const victim = await createTestUser(app);
+    const victimLoc = await createTestLocation(app, victim.token, 'Victim Location');
+    const victimBin = await createTestBin(app, victim.token, victimLoc.id, { name: 'Secret Bin', items: ['secret-item'] });
+
+    // Attacker tries to operate on victim's bin using attacker's own locationId
+    const deleteRes = await batch({
+      locationId,
+      operations: [{ type: 'delete_bin', bin_id: victimBin.id }],
+    });
+    expect(deleteRes.status).toBe(200);
+    expect(deleteRes.body.results[0].success).toBe(false);
+
+    // Verify victim's bin is NOT deleted
+    const binRes = await request(app)
+      .get(`/api/bins/${victimBin.id}`)
+      .set('Authorization', `Bearer ${victim.token}`);
+    expect(binRes.status).toBe(200);
+    expect(binRes.body.name).toBe('Secret Bin');
+  });
+
+  it('rejects add_items on a bin from another location', async () => {
+    const victim = await createTestUser(app);
+    const victimLoc = await createTestLocation(app, victim.token);
+    const victimBin = await createTestBin(app, victim.token, victimLoc.id, { name: 'Target Bin' });
+
+    const res = await batch({
+      locationId,
+      operations: [{ type: 'add_items', bin_id: victimBin.id, items: ['injected'] }],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.results[0].success).toBe(false);
+
+    // Verify no items were injected
+    const binRes = await request(app)
+      .get(`/api/bins/${victimBin.id}`)
+      .set('Authorization', `Bearer ${victim.token}`);
+    expect(binRes.status).toBe(200);
+    const itemNames = binRes.body.items.map((i: { name: string }) => i.name);
+    expect(itemNames).not.toContain('injected');
+  });
+
+  it('rejects duplicate_bin on a bin from another location', async () => {
+    const victim = await createTestUser(app);
+    const victimLoc = await createTestLocation(app, victim.token);
+    const victimBin = await createTestBin(app, victim.token, victimLoc.id, { name: 'Confidential', items: ['top-secret'] });
+
+    const res = await batch({
+      locationId,
+      operations: [{ type: 'duplicate_bin', bin_id: victimBin.id }],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.results[0].success).toBe(false);
+  });
+
   it('mixed success/failure: bad op does not block others in transaction', async () => {
     const res = await batch({
       locationId,

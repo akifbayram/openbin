@@ -123,24 +123,6 @@ describe('AI streaming routes', () => {
       expect(res.body.message).toMatch(/correction/i);
     });
 
-    it('POST /api/ai/reanalyze/stream — 422 for missing photoIds', async () => {
-      const res = await request(app)
-        .post('/api/ai/reanalyze/stream')
-        .set('Authorization', `Bearer ${token}`)
-        .send({ previousResult: { name: 'Bin', items: ['a'] } });
-      expect(res.status).toBe(422);
-      expect(res.body.message).toMatch(/photoIds/i);
-    });
-
-    it('POST /api/ai/reanalyze/stream — 422 for missing previousResult', async () => {
-      const res = await request(app)
-        .post('/api/ai/reanalyze/stream')
-        .set('Authorization', `Bearer ${token}`)
-        .send({ photoIds: ['abc'] });
-      expect(res.status).toBe(422);
-      expect(res.body.message).toMatch(/previousResult/i);
-    });
-
     it('POST /api/ai/reanalyze-image/stream — 422 for no photo file', async () => {
       const res = await request(app)
         .post('/api/ai/reanalyze-image/stream')

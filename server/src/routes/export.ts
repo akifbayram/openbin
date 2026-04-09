@@ -37,7 +37,7 @@ import {
   loadBinPhotosBase64,
   resolveArea,
 } from '../lib/exportHelpers.js';
-import { NotFoundError, ValidationError } from '../lib/httpErrors.js';
+import { NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
 import {
   buildDryRunPreview,
   type DryRunBin,
@@ -45,6 +45,7 @@ import {
   lookupArea,
 } from '../lib/importTransaction.js';
 import { safePath } from '../lib/pathSafety.js';
+import { getUserBinCount, getUserFeatures } from '../lib/planGate.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 import { requirePlusOrAbove } from '../middleware/requirePlan.js';
@@ -84,16 +85,17 @@ router.get('/locations/:id/export', requireLocationMember(), requirePlusOrAbove(
   }
 
   const locationName = locationResult.rows[0].name;
+  const userId = req.user!.id;
   const [bins, trashedBinsRaw, tagColors, fieldDefs, fieldIdToName, areaPathMap, locationSettings, pinnedBins, savedViews, members] = await Promise.all([
-    fetchLocationBins(locationId),
-    fetchTrashedBins(locationId),
+    fetchLocationBins(locationId, userId),
+    fetchTrashedBins(locationId, userId),
     fetchLocationTagColors(locationId),
     fetchLocationFieldDefs(locationId),
     buildFieldIdToNameMap(locationId),
     buildAreaPathMap(locationId),
     fetchLocationSettings(locationId),
-    fetchLocationPinnedBins(locationId),
-    fetchLocationSavedViews(locationId),
+    fetchLocationPinnedBins(locationId, userId),
+    fetchLocationSavedViews(locationId, userId),
     fetchLocationMembers(locationId),
   ]);
 
@@ -166,16 +168,17 @@ router.get('/locations/:id/export/zip', requireLocationMember(), requirePlusOrAb
   }
 
   const locationName = locationResult.rows[0].name;
+  const userId = req.user!.id;
   const [dbBins, trashedBinsRaw, tagColors, fieldDefs, fieldIdToName, areaPathMap, locationSettings, pinnedBins, savedViews, members] = await Promise.all([
-    fetchLocationBins(locationId),
-    fetchTrashedBins(locationId),
+    fetchLocationBins(locationId, userId),
+    fetchTrashedBins(locationId, userId),
     fetchLocationTagColors(locationId),
     fetchLocationFieldDefs(locationId),
     buildFieldIdToNameMap(locationId),
     buildAreaPathMap(locationId),
     fetchLocationSettings(locationId),
-    fetchLocationPinnedBins(locationId),
-    fetchLocationSavedViews(locationId),
+    fetchLocationPinnedBins(locationId, userId),
+    fetchLocationSavedViews(locationId, userId),
     fetchLocationMembers(locationId),
   ]);
 
@@ -277,7 +280,7 @@ router.get('/locations/:id/export/zip', requireLocationMember(), requirePlusOrAb
 }));
 
 // GET /api/locations/:id/export/csv — export bins as CSV (one row per item)
-router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(async (req, res) => {
+router.get('/locations/:id/export/csv', requireLocationMember(), requirePlusOrAbove(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
   await requireMemberOrAbove(locationId, req.user!.id, 'export location data');
 
@@ -287,7 +290,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
   }
 
   const [bins, areaPathMap] = await Promise.all([
-    fetchLocationBins(locationId),
+    fetchLocationBins(locationId, req.user!.id),
     buildAreaPathMap(locationId),
   ]);
 
@@ -334,6 +337,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(as
 // POST /api/locations/:id/import — import bins + photos
 router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLocationMember(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
+  await requireMemberOrAbove(locationId, req.user!.id, 'import JSON');
   const {
     bins, trashedBins, mode, tagColors, customFieldDefinitions,
     locationSettings, areas, pinnedBins, savedViews, members, dryRun,
@@ -554,6 +558,17 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
   const now = new Date().toISOString();
 
   const result = await withTransaction(async (tx) => {
+    // Enforce plan bin limit before CSV import
+    const features = await getUserFeatures(userId);
+    if (features.maxBins !== null) {
+      const currentCount = await getUserBinCount(userId);
+      if (currentCount + pendingBins.length > features.maxBins) {
+        throw new PlanRestrictedError(
+          `Import would exceed your bin limit. Remove bins or upgrade your plan.`,
+        );
+      }
+    }
+
     if (importMode === 'replace') {
       const existingPhotos = await tx<{ storage_path: string }>(
         'SELECT storage_path FROM photos WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1)',

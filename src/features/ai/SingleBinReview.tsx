@@ -1,5 +1,7 @@
 import { ArrowUp, ChevronDown, ChevronLeft, ChevronUp, Loader2, Sparkles } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { LabelThreshold } from '@/components/ui/ai-progress-bar';
+import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +9,7 @@ import { StepIndicator } from '@/components/ui/stepper';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { AreaPicker } from '@/features/areas/AreaPicker';
+import { AiBadge } from '@/features/bins/AiBadge';
 import type { CreatedBinInfo } from '@/features/bins/BinCreateSuccess';
 import { BinCreateSuccess } from '@/features/bins/BinCreateSuccess';
 import { ColorPicker } from '@/features/bins/ColorPicker';
@@ -26,7 +29,7 @@ import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
 import type { AiSuggestions, BinItem } from '@/types';
 import { AiSettingsSection } from './AiSettingsSection';
-import { AiAnalyzeError, AiStreamingPreview } from './AiStreamingPreview';
+import { AiAnalyzeError } from './AiStreamingPreview';
 
 import { MAX_AI_PHOTOS } from './useAiAnalysis';
 import { useAiSettings } from './useAiSettings';
@@ -40,6 +43,8 @@ interface SingleBinReviewProps {
   onClose: () => void;
   onRestart: () => void;
 }
+
+type AiField = 'name' | 'items' | 'notes' | 'tags';
 
 export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onClose, onRestart }: SingleBinReviewProps) {
   const t = useTerminology();
@@ -62,6 +67,17 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   const [correctionCount, setCorrectionCount] = useState(0);
   const MAX_CORRECTIONS = 3;
 
+  // AI field fill tracking
+  const [aiFilledFields, setAiFilledFields] = useState<Set<AiField>>(new Set());
+  const [aiFillCycle, setAiFillCycle] = useState(0);
+  const preAiValues = useRef<{ name: string; items: BinItem[]; tags: string[]; notes: string } | null>(null);
+
+  // Deferred AI result + completion flash
+  const pendingAiResult = useRef<AiSuggestions | null>(null);
+  const [analyzeComplete, setAnalyzeComplete] = useState(false);
+  const wasStreamingRef = useRef(false);
+  const expectingCompletionRef = useRef(false);
+
   const reviewQuickAdd = useQuickAdd({
     binName: name,
     existingItems: items.map((i) => i.name),
@@ -78,12 +94,14 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
   const {
     isStreaming: isCorrecting,
+    error: correctionError,
     stream: streamCorrection,
     cancel: cancelCorrection,
   } = useAiStream<AiSuggestions>('/api/ai/correct/stream', "Couldn't correct — try again");
 
   const {
     isStreaming: isReanalyzing,
+    error: reanalyzeError,
     stream: streamReanalyze,
     cancel: cancelReanalyze,
   } = useAiStream<AiSuggestions>('/api/ai/reanalyze-image/stream', "Couldn't reanalyze — try again");
@@ -91,14 +109,76 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
+  const isAnyStreaming = isAnalyzing || isCorrecting || isReanalyzing;
+  const anyStreamError = analyzeError || correctionError || reanalyzeError;
+  const showProgressBar = isAnyStreaming || analyzeComplete;
+
   const steps = BULK_ADD_STEPS;
-  const currentStepIndex = (isAnalyzing || isCorrecting || isReanalyzing) ? 1 : isCreating ? 3 : 2;
+  const currentStepIndex = showProgressBar ? 1 : isCreating ? 3 : 2;
 
   const autoAnalyzedRef = useRef(false);
 
+  // Race-free completion detection — fires before paint
+  useLayoutEffect(() => {
+    const justStopped = wasStreamingRef.current && !isAnyStreaming;
+    wasStreamingRef.current = isAnyStreaming;
+    if (justStopped && expectingCompletionRef.current) {
+      expectingCompletionRef.current = false;
+      if (!anyStreamError) {
+        setAnalyzeComplete(true);
+      }
+    }
+  }, [isAnyStreaming, anyStreamError]);
+
+  function applyPendingAiResult() {
+    const result = pendingAiResult.current;
+    if (!result) return;
+    pendingAiResult.current = null;
+
+    // preAiValues was snapshotted when the stream completed (in trigger functions)
+    const filled = new Set<AiField>();
+
+    if (result.name) { setName(result.name); filled.add('name'); }
+    if (result.items?.length) { setItems(aiItemsToBinItems(result.items)); filled.add('items'); }
+    if (result.tags?.length) { setTags(result.tags); filled.add('tags'); }
+    if (result.notes) { setNotes(result.notes); filled.add('notes'); }
+
+    setAiFilledFields(filled);
+    setAiFillCycle(c => c + 1);
+  }
+
+  // Completion flash timer — apply deferred result after 600ms
+  useEffect(() => {
+    if (!analyzeComplete) return;
+    const timer = setTimeout(() => {
+      setAnalyzeComplete(false);
+      applyPendingAiResult();
+    }, 600);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- applyPendingAiResult reads from refs, no stale closure risk
+  }, [analyzeComplete]);
+
+  function handleUndoAiField(field: AiField) {
+    if (!preAiValues.current) return;
+    switch (field) {
+      case 'name': setName(preAiValues.current.name); break;
+      case 'items': setItems(preAiValues.current.items); break;
+      case 'tags': setTags(preAiValues.current.tags); break;
+      case 'notes': setNotes(preAiValues.current.notes); break;
+    }
+    setAiFilledFields((prev) => {
+      const next = new Set(prev);
+      next.delete(field);
+      return next;
+    });
+  }
+
   // Abort streams on unmount
   useEffect(() => {
-    return () => { cancelAnalyze(); cancelCorrection(); cancelReanalyze(); };
+    return () => {
+      expectingCompletionRef.current = false;
+      cancelAnalyze(); cancelCorrection(); cancelReanalyze();
+    };
   }, [cancelAnalyze, cancelCorrection, cancelReanalyze]);
 
   const triggerAnalyze = useCallback(async () => {
@@ -121,12 +201,11 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
       for (const file of compressed) formData.append('photos', file);
     }
     if (activeLocationId) formData.append('locationId', activeLocationId);
+    preAiValues.current = { name, items, tags, notes };
+    expectingCompletionRef.current = true;
     const result = await streamAnalyze(formData);
     if (result) {
-      setName(result.name);
-      setItems(aiItemsToBinItems(result.items));
-      setTags(result.tags);
-      setNotes(result.notes);
+      pendingAiResult.current = result;
     }
   }, [files, aiSettings, activeLocationId, streamAnalyze]);
 
@@ -160,27 +239,25 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     formData.append('previousResult', JSON.stringify(previousResult));
     if (activeLocationId) formData.append('locationId', activeLocationId);
 
+    preAiValues.current = { name, items, tags, notes };
+    expectingCompletionRef.current = true;
     const result = await streamReanalyze(formData);
     if (result) {
-      setName(result.name);
-      setItems(aiItemsToBinItems(result.items));
-      setTags(result.tags);
-      setNotes(result.notes);
+      pendingAiResult.current = result;
     }
   }, [files, aiSettings, activeLocationId, streamReanalyze, name, items, tags, notes]);
 
   const triggerCorrection = useCallback(async (text: string) => {
     const previousResult = { name, items, tags, notes };
+    preAiValues.current = { name, items, tags, notes };
+    expectingCompletionRef.current = true;
     const result = await streamCorrection({
       previousResult,
       correction: text,
       locationId: activeLocationId || undefined,
     });
     if (result) {
-      setName(result.name);
-      setItems(aiItemsToBinItems(result.items));
-      setTags(result.tags);
-      setNotes(result.notes);
+      pendingAiResult.current = result;
       setCorrectionCount((c) => c + 1);
       setCorrectionText('');
       setCorrectionOpen(false);
@@ -214,6 +291,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
   }, [aiEnabled, aiSettings, triggerAnalyze]);
 
   function handleBack() {
+    expectingCompletionRef.current = false;
     cancelAnalyze();
     cancelCorrection();
     cancelReanalyze();
@@ -260,6 +338,13 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     }
   }
 
+  const photoCount = Math.min(files.length, MAX_AI_PHOTOS);
+  const streamLabels: LabelThreshold[] = isCorrecting
+    ? [[0, 'Applying correction...'], [15, 'Reprocessing...'], [45, 'Updating results...'], [75, 'Finishing up...']]
+    : isReanalyzing
+      ? [[0, 'Preparing reanalysis...'], [15, 'Comparing changes...'], [45, 'Updating suggestions...'], [75, 'Finishing up...']]
+      : [[0, `Analyzing ${photoCount} photo${photoCount !== 1 ? 's' : ''}...`], [15, 'Identifying items...'], [45, 'Streaming results...'], [75, 'Finishing up...']];
+
   if (successBin) {
     return (
       <BinCreateSuccess
@@ -274,58 +359,60 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
     <div className="space-y-5">
       <StepIndicator steps={steps} currentStepIndex={currentStepIndex} />
 
-      {(isAnalyzing || isCorrecting || isReanalyzing) ? (
-        <AiStreamingPreview
-          previewUrls={previewUrls}
-          streamedName=""
-          streamedItems={[]}
-          initialStatusLabel={isCorrecting ? 'Applying correction...' : isReanalyzing ? 'Reanalyzing...' : `Analyzing ${Math.min(files.length, MAX_AI_PHOTOS)} photo${Math.min(files.length, MAX_AI_PHOTOS) !== 1 ? 's' : ''}...`}
-        />
-      ) : (
-        <>
-          {/* Photo preview (compact if reviewed) */}
-          <div className="relative">
-            {previewUrls.length === 1 ? (
-              <img
-                src={previewUrls[0]}
-                alt="Preview 1"
+      {/* Photo preview — always visible */}
+      <div className="relative">
+        {previewUrls.length === 1 ? (
+          <img
+            src={previewUrls[0]}
+            alt="Preview 1"
+            className={cn(
+              'w-full rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
+              (name || showProgressBar) ? 'max-h-20 opacity-80' : 'aspect-square',
+            )}
+          />
+        ) : (
+          <div className="flex gap-2 overflow-x-auto">
+            {previewUrls.map((url, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: preview URLs have no stable identity
+              <img key={i}
+                src={url}
+                alt={`Preview ${i + 1}`}
                 className={cn(
-                  'w-full rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
-                  name ? 'max-h-20 opacity-80' : 'aspect-square',
+                  'shrink-0 flex-1 min-w-0 rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
+                  (name || showProgressBar) ? 'max-h-20 opacity-80' : 'aspect-square',
                 )}
               />
-            ) : (
-              <div className="flex gap-2 overflow-x-auto">
-                {previewUrls.map((url, i) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: preview URLs have no stable identity
-                  <img key={i}
-                    src={url}
-                    alt={`Preview ${i + 1}`}
-                    className={cn(
-                      'shrink-0 flex-1 min-w-0 rounded-[var(--radius-lg)] object-cover bg-black/5 dark:bg-white/5 transition-all duration-500 ease-in-out',
-                      name ? 'max-h-20 opacity-80' : 'aspect-square',
-                    )}
-                  />
-                ))}
-              </div>
-            )}
-            {aiEnabled && name && (
-              <button
-                type="button"
-                onClick={() => setCorrectionOpen(!correctionOpen)}
-                title="Adjust AI suggestions"
-                className={cn(
-                  'absolute top-2 right-2 p-1.5 rounded-full transition-colors',
-                  correctionOpen
-                    ? 'bg-[var(--ai-accent)] text-white'
-                    : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
-                )}
-              >
-                <Sparkles className="h-4 w-4" />
-              </button>
-            )}
+            ))}
           </div>
+        )}
+        {aiEnabled && name && !showProgressBar && (
+          <button
+            type="button"
+            onClick={() => setCorrectionOpen(!correctionOpen)}
+            title="Adjust AI suggestions"
+            className={cn(
+              'absolute top-2 right-2 p-1.5 rounded-full transition-colors animate-fade-in',
+              correctionOpen
+                ? 'bg-[var(--ai-accent)] text-white'
+                : 'bg-black/40 text-white hover:bg-[var(--ai-accent)]',
+            )}
+          >
+            <Sparkles className="h-4 w-4" />
+          </button>
+        )}
+      </div>
 
+      {showProgressBar ? (
+        <div className="flex items-center justify-center min-h-[44px]">
+          <AiProgressBar
+            active={isAnyStreaming}
+            complete={analyzeComplete}
+            labels={streamLabels}
+            className="w-full"
+          />
+        </div>
+      ) : (
+        <div className="animate-fade-in space-y-5">
           {/* AI action bar (correction + reanalyze) */}
           <div className={correctionOpen && name ? 'ai-correction-enter' : 'hidden'}>
             <div className="space-y-2">
@@ -369,7 +456,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             </div>
           </div>
 
-          {analyzeError && <AiAnalyzeError error={analyzeError} onRetry={triggerAnalyze} />}
+          {anyStreamError && <AiAnalyzeError error={anyStreamError} onRetry={triggerAnalyze} />}
 
           {/* Configure AI provider */}
           {aiEnabled && !aiSettings && (
@@ -392,8 +479,11 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
 
           {/* Form Fields */}
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="single-bin-name">Name</Label>
+            <div key={aiFilledFields.has('name') ? `name-${aiFillCycle}` : 'name'} className={cn('space-y-2', aiFilledFields.has('name') && 'ai-field-fill')} style={aiFilledFields.has('name') ? { '--stagger': 0 } as React.CSSProperties : undefined}>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="single-bin-name">Name</Label>
+                {aiFilledFields.has('name') && <AiBadge onUndo={() => handleUndoAiField('name')} />}
+              </div>
               <Input
                 id="single-bin-name"
                 value={name}
@@ -402,8 +492,8 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               />
             </div>
 
-            <div className="space-y-2">
-              <ItemList items={items} onItemsChange={setItems} />
+            <div key={aiFilledFields.has('items') ? `items-${aiFillCycle}` : 'items'} className={cn('space-y-2', aiFilledFields.has('items') && 'ai-field-fill')} style={aiFilledFields.has('items') ? { '--stagger': 1 } as React.CSSProperties : undefined}>
+              <ItemList items={items} onItemsChange={setItems} headerExtra={aiFilledFields.has('items') ? <AiBadge onUndo={() => handleUndoAiField('items')} /> : undefined} />
               <QuickAddWidget quickAdd={reviewQuickAdd} aiEnabled={false} />
             </div>
 
@@ -416,8 +506,11 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="single-bin-notes">Notes</Label>
+            <div key={aiFilledFields.has('notes') ? `notes-${aiFillCycle}` : 'notes'} className={cn('space-y-2', aiFilledFields.has('notes') && 'ai-field-fill')} style={aiFilledFields.has('notes') ? { '--stagger': 2 } as React.CSSProperties : undefined}>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="single-bin-notes">Notes</Label>
+                {aiFilledFields.has('notes') && <AiBadge onUndo={() => handleUndoAiField('notes')} />}
+              </div>
               <Textarea
                 id="single-bin-notes"
                 value={notes}
@@ -427,8 +520,11 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Tags</Label>
+            <div key={aiFilledFields.has('tags') ? `tags-${aiFillCycle}` : 'tags'} className={cn('space-y-2', aiFilledFields.has('tags') && 'ai-field-fill')} style={aiFilledFields.has('tags') ? { '--stagger': 3 } as React.CSSProperties : undefined}>
+              <div className="flex items-center justify-between">
+                <Label>Tags</Label>
+                {aiFilledFields.has('tags') && <AiBadge onUndo={() => handleUndoAiField('tags')} />}
+              </div>
               <TagInput tags={tags} onChange={setTags} suggestions={allTags} />
             </div>
 
@@ -454,7 +550,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
             </Button>
             <Button
               onClick={handleCreate}
-              disabled={!name.trim() || isAnalyzing || isCorrecting || isReanalyzing || isCreating}
+              disabled={!name.trim() || showProgressBar || isCreating}
               >
               {isCreating ? (
                 <>
@@ -466,7 +562,7 @@ export function SingleBinReview({ files, previewUrls, sharedAreaId, onBack, onCl
               )}
             </Button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

@@ -142,6 +142,40 @@ describe('POST /api/bins/:id/items/:itemId/return', () => {
     expect(binBRes.body.items.some((i: { id: string }) => i.id === itemId)).toBe(true);
   });
 
+  it('rejects return to bin in another location', async () => {
+    const { token } = await createTestUser(app);
+    const location = await createTestLocation(app, token);
+    const bin = await createTestBin(app, token, location.id, { items: ['Widget'] });
+
+    // Create another user with their own location and bin
+    const { token: victimToken } = await createTestUser(app);
+    const victimLoc = await createTestLocation(app, victimToken);
+    const victimBin = await createTestBin(app, victimToken, victimLoc.id, { name: 'Victim Bin' });
+
+    const itemsRes = await request(app)
+      .get(`/api/bins/${bin.id}`)
+      .set('Authorization', `Bearer ${token}`);
+    const itemId = itemsRes.body.items[0].id;
+
+    await request(app)
+      .post(`/api/bins/${bin.id}/items/${itemId}/checkout`)
+      .set('Authorization', `Bearer ${token}`);
+
+    // Try to return item to victim's bin in another location
+    const res = await request(app)
+      .post(`/api/bins/${bin.id}/items/${itemId}/return`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ targetBinId: victimBin.id });
+
+    expect(res.status).toBe(404);
+
+    // Verify item was NOT moved to victim's bin
+    const victimBinRes = await request(app)
+      .get(`/api/bins/${victimBin.id}`)
+      .set('Authorization', `Bearer ${victimToken}`);
+    expect(victimBinRes.body.items).toHaveLength(0);
+  });
+
   it('returns 404 if item not checked out', async () => {
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);

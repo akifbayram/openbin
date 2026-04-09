@@ -16,7 +16,6 @@ export function ViewModeToggle({ value, onChange }: { value: ViewMode; onChange:
       onChange={onChange}
       iconOnly
       size="sm"
-      shape="pill"
     />
   );
 }

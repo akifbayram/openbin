@@ -28,7 +28,7 @@ import { safePath } from '../lib/pathSafety.js';
 import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
 import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
-import { authenticate, signToken } from '../middleware/auth.js';
+import { authenticate, invalidateUserStatusCache, signToken } from '../middleware/auth.js';
 import { getMaintenanceMessage, isMaintenanceMode } from '../middleware/maintenance.js';
 
 import { getRegistrationMode } from './admin.js';
@@ -115,8 +115,8 @@ router.post('/demo-login', asyncHandler(async (_req, res) => {
   });
 }));
 
-// GET /api/auth/invite-preview?code=CODE — public (no auth required)
-router.get('/invite-preview', asyncHandler(async (req, res) => {
+// GET /api/auth/invite-preview?code=CODE — requires authentication to prevent info leakage
+router.get('/invite-preview', authenticate, asyncHandler(async (req, res) => {
   const { code } = req.query;
   if (!code || typeof code !== 'string') {
     throw new ValidationError('Invite code is required');
@@ -567,9 +567,10 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
   // Social-only users setting their first password
   if (!result.rows[0].password_hash) {
     const hash = await bcrypt.hash(newPassword, config.bcryptRounds);
-    await query('UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3',
+    await query('UPDATE users SET password_hash = $1, updated_at = $2, token_version = token_version + 1 WHERE id = $3',
       [hash, new Date().toISOString(), req.user!.id]);
     await revokeAllUserTokens(req.user!.id);
+    invalidateUserStatusCache(req.user!.id);
     res.json({ message: 'Password set successfully' });
     return;
   }
@@ -584,10 +585,11 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
   }
 
   const newHash = await bcrypt.hash(newPassword, config.bcryptRounds);
-  await query(`UPDATE users SET password_hash = $1, updated_at = ${d.now()} WHERE id = $2`, [newHash, req.user!.id]);
+  await query(`UPDATE users SET password_hash = $1, token_version = token_version + 1, updated_at = ${d.now()} WHERE id = $2`, [newHash, req.user!.id]);
 
   // Revoke all refresh tokens to force re-login on all devices
   await revokeAllUserTokens(req.user!.id);
+  invalidateUserStatusCache(req.user!.id);
   clearAuthCookies(res);
 
   log.info(`User ${req.user!.username} changed password`);
@@ -859,13 +861,17 @@ router.post('/oauth/apple/callback', asyncHandler(async (req, res) => {
       audience: config.appleClientId!,
     });
 
-    if (expectedNonce) {
-      const expectedHash = crypto.createHash('sha256').update(expectedNonce).digest('hex');
-      if (payload.nonce !== expectedHash) {
-        log.warn('Apple OAuth: nonce mismatch');
-        res.redirect('/?oauth=error&reason=nonce_mismatch');
-        return;
-      }
+    if (!expectedNonce) {
+      log.warn('Apple OAuth: nonce cookie missing');
+      res.redirect('/?oauth=error&reason=missing_nonce');
+      return;
+    }
+
+    const expectedHash = crypto.createHash('sha256').update(expectedNonce).digest('hex');
+    if (payload.nonce !== expectedHash) {
+      log.warn('Apple OAuth: nonce mismatch');
+      res.redirect('/?oauth=error&reason=nonce_mismatch');
+      return;
     }
 
     const email = payload.email as string | undefined;

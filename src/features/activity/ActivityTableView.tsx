@@ -72,7 +72,6 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, s
                 tabIndex={0}
                 role="button"
               >
-                {/* Icon */}
                 <div className="w-8 shrink-0 flex justify-center">
                   <div
                     className={cn('h-6 w-6 rounded-full bg-[var(--bg-elevated)] flex items-center justify-center', getActionColor(entry.action))}
@@ -81,7 +80,6 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, s
                   </div>
                 </div>
 
-                {/* Action badge — desktop only */}
                 <div className="hidden lg:block w-[72px] shrink-0">
                   <Badge
                     className={cn(
@@ -94,10 +92,8 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, s
                   </Badge>
                 </div>
 
-                {/* Description */}
                 <div className="flex-[2] min-w-0">
                   <p className="text-[13px] text-[var(--text-primary)] truncate">
-                    {/* Mobile: inline user name */}
                     <span className="lg:hidden font-medium truncate max-w-[10rem]" title={entry.display_name}>
                       <Highlight text={entry.display_name} query={searchQuery} />
                     </span>{' '}
@@ -105,7 +101,6 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, s
                   </p>
                 </div>
 
-                {/* User — desktop only */}
                 <div className="hidden lg:flex flex-1 min-w-0 items-center gap-1.5">
                   <span className="text-[13px] text-[var(--text-secondary)] truncate max-w-[10rem]" title={entry.display_name}>
                     <Highlight text={entry.display_name} query={searchQuery} />
@@ -117,19 +112,16 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, s
                   )}
                 </div>
 
-                {/* Type — desktop only */}
                 <div className="hidden lg:block w-[72px] shrink-0">
                   <Badge variant="outline" className="text-[11px] capitalize">
                     {entry.entity_type}
                   </Badge>
                 </div>
 
-                {/* Time */}
                 <span className="w-20 shrink-0 text-[12px] text-[var(--text-tertiary)] text-right">
                   {formatTimeAgo(entry.created_at)}
                 </span>
 
-                {/* Expand chevron */}
                 <div className="w-5 shrink-0 flex justify-center">
                   <ChevronRight
                     className={cn(
@@ -140,7 +132,6 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, s
                 </div>
               </TableRow>
 
-              {/* Expanded detail */}
               <div
                 id={detailId}
                 aria-hidden={!isExpanded}
@@ -153,7 +144,6 @@ export function ActivityTableView({ entries, hasMore, isLoadingMore, loadMore, s
                   {isExpanded && (
                     <ActivityRowDetail
                       entry={entry}
-                      isMobile={false}
                       onNavigate={
                         isClickable
                           ? () => navigate(`/bin/${entry.entity_id}`, { state: { backLabel: 'Activity', backPath: '/activity' } })

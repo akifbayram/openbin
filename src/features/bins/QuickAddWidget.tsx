@@ -1,5 +1,6 @@
 import { Check, ChevronLeft, Loader2, Plus, Sparkles } from 'lucide-react';
 import { useRef } from 'react';
+import type { LabelThreshold } from '@/components/ui/ai-progress-bar';
 import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,13 @@ interface QuickAddWidgetProps {
   aiGated?: boolean;
   onUpgrade?: () => void;
 }
+
+const QUICK_ADD_LABELS: LabelThreshold[] = [
+  [0, 'Processing text...'],
+  [15, 'Extracting items...'],
+  [45, 'Structuring results...'],
+  [75, 'Almost done...'],
+];
 
 export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade }: QuickAddWidgetProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -76,8 +84,13 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade }: Quic
             disabled={quickAdd.isStructuring}
             className="w-full min-h-[80px] bg-[var(--bg-elevated)] rounded-[var(--radius-sm)] px-3 py-2 text-base text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none resize-none disabled:opacity-50"
           />
+          {!quickAdd.isStructuring && !quickAdd.structureError && (
+            <p className="text-[12px] text-[var(--text-quaternary)] -mt-0.5">
+              Paste or type freely — AI will clean it up
+            </p>
+          )}
           {quickAdd.isStructuring && (
-            <AiProgressBar active complete={false} compact label="Extracting items..." />
+            <AiProgressBar active compact labels={QUICK_ADD_LABELS} />
           )}
           {quickAdd.structureError && (
             <p className="text-[13px] text-[var(--destructive)]">{quickAdd.structureError}</p>
@@ -103,7 +116,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade }: Quic
               ) : (
                 <Sparkles className="h-3.5 w-3.5" />
               )}
-              {quickAdd.isStructuring ? 'Thinking...' : 'Go'}
+              {quickAdd.isStructuring ? 'Extracting...' : 'Extract Items'}
             </Button>
           </div>
         </div>

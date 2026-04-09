@@ -1,17 +1,34 @@
 import type { TxQueryFn } from '../../db.js';
 import { d, generateUuid } from '../../db.js';
+import { getMemberRole } from '../binAccess.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
 import { replaceCustomFieldValues } from '../customFieldHelpers.js';
-import type { ActionContext } from './types.js';
+import { ForbiddenError } from '../httpErrors.js';
+import { type ActionContext, assertBinVisible } from './types.js';
 
 export async function handleUpdateBin(action: Extract<CommandAction, { type: 'update_bin' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx<{ id: string; name: string; notes: string; tags: string[]; area_id: string | null; icon: string; color: string; card_style: string; visibility: string }>(
-    'SELECT id, name, notes, tags, area_id, icon, color, card_style, visibility FROM bins WHERE id = $1 AND deleted_at IS NULL',
-    [action.bin_id]
+  const bin = await tx<{ id: string; name: string; notes: string; tags: string[]; area_id: string | null; icon: string; color: string; card_style: string; visibility: string; created_by: string }>(
+    'SELECT id, name, notes, tags, area_id, icon, color, card_style, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL',
+    [action.bin_id, ctx.locationId]
   );
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   const old = bin.rows[0];
+
+  // Members can only edit metadata on bins they created (matches direct PUT /api/bins/:id)
+  const hasMetadataChanges = action.name !== undefined || action.area_name !== undefined || action.notes !== undefined
+    || action.tags !== undefined || action.icon !== undefined || action.color !== undefined
+    || action.card_style !== undefined || action.visibility !== undefined || action.custom_fields !== undefined;
+  if (hasMetadataChanges) {
+    const role = await getMemberRole(ctx.locationId, ctx.userId);
+    if (role === 'member' && old.created_by !== ctx.userId) {
+      throw new ForbiddenError('Only admins or the bin creator can edit bin metadata');
+    }
+  }
+  if (action.visibility === 'private' && old.created_by !== ctx.userId) {
+    throw new ForbiddenError('Only the bin creator can set visibility to private');
+  }
 
   const updates: string[] = [];
   const params: unknown[] = [];

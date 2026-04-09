@@ -360,10 +360,10 @@ describe('renderChangeDiff', () => {
         items_added: { old: null, new: ['Cable'] },
       },
     });
-    const result = renderChangeDiff(e)!;
+    const result = renderChangeDiff(e);
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({ field: 'name', old: 'A', new: 'B' });
-    expect(result[1]).toEqual({ field: '+ items', old: '', new: 'Cable' });
+    expect(result?.[0]).toEqual({ field: 'name', old: 'A', new: 'B' });
+    expect(result?.[1]).toEqual({ field: '+ items', old: '', new: 'Cable' });
   });
 });
 

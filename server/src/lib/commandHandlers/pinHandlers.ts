@@ -2,11 +2,12 @@ import type { TxQueryFn } from '../../db.js';
 import { d } from '../../db.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
-import type { ActionContext } from './types.js';
+import { type ActionContext, assertBinVisible } from './types.js';
 
 export async function handlePinBin(action: Extract<CommandAction, { type: 'pin_bin' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  const bin = await tx<{ id: string; visibility: string; created_by: string }>('SELECT id, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   await tx(
     d.insertOrIgnore('INSERT INTO pinned_bins (user_id, bin_id, position) VALUES ($1, $2, (SELECT COALESCE(MAX(position),0)+1 FROM pinned_bins WHERE user_id = $1))'),
     [ctx.userId, action.bin_id]

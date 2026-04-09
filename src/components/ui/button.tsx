@@ -39,7 +39,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         className={cn(
-          'inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] text-[15px] font-semibold transition-colors duration-150',
+          'inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] text-[15px] font-semibold transition-[color,background-color,border-color,opacity] duration-150',
           focusRing,
           'disabled:pointer-events-none disabled:opacity-50',
           variants[variant],

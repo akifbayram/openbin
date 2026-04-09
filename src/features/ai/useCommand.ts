@@ -1,4 +1,3 @@
-import { mapAiError } from './aiErrors';
 
 export type CommandAction =
   | { type: 'add_items'; bin_id: string; bin_name: string; items: (string | { name: string; quantity?: number })[] }
@@ -28,7 +27,3 @@ export interface CommandResult {
   interpretation: string;
 }
 
-/** @deprecated Use mapAiError from aiErrors.ts instead */
-export function mapCommandErrorMessage(err: unknown): string {
-  return mapAiError(err, 'Couldn\'t understand that command — try rephrasing');
-}

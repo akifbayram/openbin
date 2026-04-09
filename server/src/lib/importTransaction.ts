@@ -22,6 +22,8 @@ import {
   resolveCreatedBy,
   resolveCustomFieldDefs,
 } from './exportHelpers.js';
+import { PlanRestrictedError } from './httpErrors.js';
+import { getUserBinCount, getUserFeatures } from './planGate.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -148,6 +150,31 @@ export async function executeFullImportTransaction(params: FullImportParams): Pr
   } = params;
 
   return withTransaction(async (tx: TxQueryFn) => {
+    // Enforce plan limits before importing
+    const features = await getUserFeatures(userId);
+    if (features.maxBins !== null) {
+      const currentCount = await getUserBinCount(userId);
+      const toImport = bins.length + (trashedBins?.length ?? 0);
+      if (currentCount + toImport > features.maxBins) {
+        throw new PlanRestrictedError(
+          'Import would exceed your plan\'s bin limit. Remove bins or upgrade your plan.',
+        );
+      }
+    }
+    if (features.maxPhotoStorageMb !== null) {
+      const allPhotos = [...bins, ...(trashedBins ?? [])].flatMap(b => b.photos ?? []);
+      // Estimate decoded size from base64 length without allocating buffers
+      const importPhotoBytes = allPhotos.reduce((sum, p) => sum + (p.data ? Math.ceil(p.data.length * 3 / 4) : 0), 0);
+      const importPhotoMb = importPhotoBytes / (1024 * 1024);
+      const currentMb = await query<{ total: number }>('SELECT COALESCE(SUM(size), 0) as total FROM photos WHERE created_by = $1', [userId]);
+      const currentPhotoMb = (currentMb.rows[0]?.total ?? 0) / (1024 * 1024);
+      if (currentPhotoMb + importPhotoMb > features.maxPhotoStorageMb) {
+        throw new PlanRestrictedError(
+          'Import would exceed your plan\'s photo storage limit. Remove photos or upgrade your plan.',
+        );
+      }
+    }
+
     // 1. Replace-mode cleanup
     if (importMode === 'replace') {
       await replaceCleanup(locationId, tx);

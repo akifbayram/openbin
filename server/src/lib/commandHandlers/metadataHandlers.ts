@@ -2,11 +2,12 @@ import type { TxQueryFn } from '../../db.js';
 import { d } from '../../db.js';
 import type { ActionResult } from '../commandExecutor.js';
 import type { CommandAction } from '../commandParser.js';
-import type { ActionContext } from './types.js';
+import { type ActionContext, assertBinVisible } from './types.js';
 
 export async function handleSetNotes(action: Extract<CommandAction, { type: 'set_notes' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id, name, notes FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  const bin = await tx<{ id: string; name: string; notes: string; visibility: string; created_by: string }>('SELECT id, name, notes, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   const oldNotes = (bin.rows[0].notes as string) || '';
   let newNotes: string;
   switch (action.mode) {
@@ -29,8 +30,9 @@ export async function handleSetNotes(action: Extract<CommandAction, { type: 'set
 }
 
 export async function handleSetIcon(action: Extract<CommandAction, { type: 'set_icon' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id, name, icon FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  const bin = await tx<{ id: string; name: string; icon: string; visibility: string; created_by: string }>('SELECT id, name, icon, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   await tx(`UPDATE bins SET icon = $1, updated_at = ${d.now()} WHERE id = $2`, [action.icon, action.bin_id]);
   ctx.pendingActivities.push({
     locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,
@@ -41,8 +43,9 @@ export async function handleSetIcon(action: Extract<CommandAction, { type: 'set_
 }
 
 export async function handleSetColor(action: Extract<CommandAction, { type: 'set_color' }>, ctx: ActionContext, tx: TxQueryFn): Promise<ActionResult> {
-  const bin = await tx('SELECT id, name, color FROM bins WHERE id = $1 AND deleted_at IS NULL', [action.bin_id]);
+  const bin = await tx<{ id: string; name: string; color: string; visibility: string; created_by: string }>('SELECT id, name, color, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
+  assertBinVisible(bin.rows[0], ctx.userId);
   await tx(`UPDATE bins SET color = $1, updated_at = ${d.now()} WHERE id = $2`, [action.color, action.bin_id]);
   ctx.pendingActivities.push({
     locationId: ctx.locationId, userId: ctx.userId, userName: ctx.userName, authMethod: ctx.authMethod, apiKeyId: ctx.apiKeyId,

@@ -51,9 +51,11 @@ function DialogTrigger({ children, asChild }: { children: React.ReactNode; asChi
 function DialogContent({
   children,
   className,
+  fullScreenMobile,
 }: {
   children: React.ReactNode;
   className?: string;
+  fullScreenMobile?: boolean;
 }) {
   const { open, onOpenChange } = React.useContext(DialogContext);
   const contentRef = React.useRef<HTMLDivElement>(null);
@@ -87,8 +89,10 @@ function DialogContent({
             aria-labelledby={titleId}
             className={cn(
               'relative z-[60] w-full sm:max-w-md flat-heavy',
-              'rounded-t-[var(--radius-xl)] sm:rounded-[var(--radius-xl)]',
-              'mx-0 sm:mx-4 max-h-[70vh] sm:max-h-[85vh] overflow-hidden flex flex-col',
+              fullScreenMobile
+                ? 'rounded-none sm:rounded-[var(--radius-xl)] h-[100dvh] sm:h-auto sm:max-h-[85vh]'
+                : 'rounded-t-[var(--radius-xl)] sm:rounded-[var(--radius-xl)] mx-0 sm:mx-4 max-h-[70vh] sm:max-h-[85vh]',
+              'overflow-hidden flex flex-col',
               'transition-all duration-200',
               className
             )}
@@ -105,9 +109,15 @@ function DialogContent({
             >
               <X className="h-4 w-4" />
             </button>
-            <AnimatedHeight className="overflow-y-auto min-h-0 px-5 sm:px-8 pt-7 pb-[calc(24px+var(--safe-bottom))] sm:pb-6">
-              {children}
-            </AnimatedHeight>
+            {fullScreenMobile ? (
+              <div className="flex-1 overflow-y-auto min-h-0 px-5 sm:px-8 pt-5 pb-[calc(24px+var(--safe-bottom))] sm:pb-6">
+                {children}
+              </div>
+            ) : (
+              <AnimatedHeight className="overflow-y-auto min-h-0 px-5 sm:px-8 pt-5 pb-[calc(24px+var(--safe-bottom))] sm:pb-6">
+                {children}
+              </AnimatedHeight>
+            )}
           </div>
           {/* Portal target for dropdowns — inside z-[60] stacking context but outside overflow-hidden panel */}
           <div ref={setPortalNode} className="absolute z-[70]" />

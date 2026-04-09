@@ -14,6 +14,8 @@ import type { PrintMode } from './usePrintSettings';
 
 interface PreviewPanelProps {
   selectedBins: Bin[];
+  expandedBins: Bin[];
+  expandedBinCount: number;
   pdfLoading: boolean;
   onDownloadPDF: () => void;
   labelSheetProps: React.ComponentProps<typeof LabelSheet>;
@@ -22,11 +24,11 @@ interface PreviewPanelProps {
   nameSheetProps: React.ComponentProps<typeof NameSheet>;
 }
 
-export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelSheetProps, printMode, itemSheetProps, nameSheetProps }: PreviewPanelProps) {
+export function PreviewPanel({ selectedBins, expandedBins, expandedBinCount, pdfLoading, onDownloadPDF, labelSheetProps, printMode, itemSheetProps, nameSheetProps }: PreviewPanelProps) {
   const t = useTerminology();
   const hasSelection = selectedBins.length > 0;
   const noun = printMode === 'items' ? 'List' : printMode === 'names' ? 'Name' : 'Label';
-  const printLabel = selectedBins.length !== 1 ? `${noun}s` : noun;
+  const printLabel = expandedBinCount !== 1 ? `${noun}s` : noun;
 
   const effectiveFormat = printMode === 'names'
     ? nameSheetProps.format
@@ -35,7 +37,7 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
   const perPage = (printMode === 'labels' || printMode === 'names')
     ? computeLabelsPerPage(effectiveFormat)
     : 0;
-  const pageCount = perPage > 0 && hasSelection ? Math.ceil(selectedBins.length / perPage) : 0;
+  const pageCount = perPage > 0 && hasSelection ? Math.ceil(expandedBinCount / perPage) : 0;
 
   const [currentPage, setCurrentPage] = useState(0);
   useEffect(() => { setCurrentPage(0); }, [pageCount]);
@@ -43,12 +45,11 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
   const canPrev = safePage > 0;
   const canNext = safePage < pageCount - 1;
 
-  // Slice bins for current preview page
   const previewBins = useMemo(() => {
     if (printMode === 'items' || perPage <= 0) return selectedBins;
     const start = safePage * perPage;
-    return selectedBins.slice(start, start + perPage);
-  }, [selectedBins, safePage, perPage, printMode]);
+    return expandedBins.slice(start, start + perPage);
+  }, [selectedBins, expandedBins, safePage, perPage, printMode]);
 
   const previewRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -82,7 +83,7 @@ export function PreviewPanel({ selectedBins, pdfLoading, onDownloadPDF, labelShe
         >
           <Printer className="h-5 w-5 mr-2.5" />
           {hasSelection
-            ? `Print ${selectedBins.length} ${printLabel}${pageCountLabel}`
+            ? `Print ${expandedBinCount} ${printLabel}${pageCountLabel}`
             : 'Print'}
         </Button>
         {(printMode === 'labels' || printMode === 'names') && (

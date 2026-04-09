@@ -14,7 +14,8 @@ vi.mock('@/lib/api', () => {
 });
 
 import { ApiError, apiFetch } from '@/lib/api';
-import { mapStructureErrorMessage, structureTextItems, useTextStructuring } from '../useTextStructuring';
+import { mapAiError } from '../aiErrors';
+import { structureTextItems, useTextStructuring } from '../useTextStructuring';
 
 const mockApiFetch = vi.mocked(apiFetch);
 
@@ -61,21 +62,21 @@ describe('structureTextItems', () => {
   });
 });
 
-describe('mapStructureErrorMessage', () => {
+describe('mapAiError (structure fallback)', () => {
   it('maps 422 to API key message', () => {
-    expect(mapStructureErrorMessage(new ApiError(422, 'fail'))).toBe('Invalid API key or model — check Settings > AI');
+    expect(mapAiError(new ApiError(422, 'fail'), 'Couldn\'t find items — try describing them differently')).toBe('Invalid API key or model — check Settings > AI');
   });
 
   it('maps 429 to rate limit message', () => {
-    expect(mapStructureErrorMessage(new ApiError(429, 'fail'))).toBe('AI provider rate limited — wait a moment and try again');
+    expect(mapAiError(new ApiError(429, 'fail'), 'Couldn\'t find items — try describing them differently')).toBe('AI provider rate limited — wait a moment and try again');
   });
 
   it('maps 502 to provider error message', () => {
-    expect(mapStructureErrorMessage(new ApiError(502, 'fail'))).toBe('Your AI provider returned an error — verify your settings');
+    expect(mapAiError(new ApiError(502, 'fail'), 'Couldn\'t find items — try describing them differently')).toBe('Your AI provider returned an error — verify your settings');
   });
 
   it('maps unknown error to generic message', () => {
-    expect(mapStructureErrorMessage(new TypeError('oops'))).toBe('Couldn\'t find items — try describing them differently');
+    expect(mapAiError(new TypeError('oops'), 'Couldn\'t find items — try describing them differently')).toBe('Couldn\'t find items — try describing them differently');
   });
 });
 

@@ -402,7 +402,6 @@ export function ReorganizePage() {
                           options={field.options}
                           value={field.value}
                           onChange={field.onChange}
-                          shape="rounded"
                           size="sm"
                         />
                         {field.hint && (

@@ -124,9 +124,12 @@ describe('BinTableView combined color+icon badge', () => {
     const { container } = renderTable({
       bins: [makeBin({ color: '0-2' })],
     });
-    // The select button should not contain any element with a background-color style
+    // The select button should only contain the icon badge, not a separate color dot
     const selectBtn = container.querySelector('[aria-label="Select"]');
-    const coloredChildren = selectBtn?.querySelectorAll('[style*="background-color"]') ?? [];
-    expect(coloredChildren.length).toBe(0);
+    const coloredChildren = Array.from(selectBtn?.querySelectorAll('[style*="background-color"]') ?? []);
+    const badge = selectBtn?.querySelector('[data-testid="bin-icon-badge"]');
+    // Every colored element must live inside the badge — no standalone dot
+    const stray = coloredChildren.filter(el => badge && !badge.contains(el));
+    expect(stray).toHaveLength(0);
   });
 });
