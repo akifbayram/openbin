@@ -63,6 +63,9 @@ export const overlayBackdrop =
 export const categoryHeader =
   'text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]';
 
+/** Settings section header: 13px semibold in primary text color. */
+export const sectionHeader = 'text-[13px] font-semibold text-[var(--text-primary)]';
+
 /** Inline icon-button: 36px tap target, flex-centered. */
 export const iconButton = 'shrink-0 flex items-center justify-center size-9';
 

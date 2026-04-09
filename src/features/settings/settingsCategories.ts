@@ -25,7 +25,7 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
   {
     id: 'account',
     label: 'Account',
-    description: 'Profile and account settings',
+    description: 'Profile, security, API keys',
     icon: User,
     path: 'account',
   },
@@ -55,7 +55,7 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
   {
     id: 'ai',
     label: 'AI',
-    description: 'Provider, prompts, API keys',
+    description: 'Provider, models, prompts',
     icon: Sparkles,
     path: 'ai',
     gate: 'admin',

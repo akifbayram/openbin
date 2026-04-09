@@ -8,6 +8,8 @@ import { useTerminology } from '@/lib/terminology';
 import { cn, inputBase } from '@/lib/utils';
 import { ENTITY_TYPE_FILTERS, type EntityTypeFilter } from './activityHelpers';
 
+const filterControl = cn(inputBase, 'flex-1 min-w-0 py-1.5 text-[13px]');
+
 interface ActivityFilterBarProps {
   entityTypeFilter: EntityTypeFilter;
   onEntityTypeChange: (v: EntityTypeFilter) => void;
@@ -49,7 +51,7 @@ export function ActivityFilterBar({
         value={userId}
         onChange={(e) => onUserIdChange(e.target.value)}
         aria-label="Filter by user"
-        className={cn(inputBase, '!w-auto min-w-[140px] !py-1.5 text-[13px]')}
+        className={filterControl}
       >
         <option value="">All users</option>
         {members.map((m) => (
@@ -63,14 +65,14 @@ export function ActivityFilterBar({
         value={dateFrom}
         onChange={(e) => onDateFromChange(e.target.value)}
         aria-label="From date"
-        className={cn(inputBase, '!w-auto !py-1.5 text-[13px]')}
+        className={filterControl}
       />
       <input
         type="date"
         value={dateTo}
         onChange={(e) => onDateToChange(e.target.value)}
         aria-label="To date"
-        className={cn(inputBase, '!w-auto !py-1.5 text-[13px]')}
+        className={filterControl}
       />
     </div>
   );
@@ -84,19 +86,15 @@ export function ActivityFilterBar({
         onClear={searchQuery ? () => onSearchChange('') : undefined}
       />
 
-      <div className="flex items-start gap-2 flex-wrap">
-        <OptionGroup
-          options={filterOptions}
-          value={entityTypeFilter}
-          onChange={onEntityTypeChange}
-          size="sm"
-          scrollable
-          className="shrink-0"
-        />
+      <OptionGroup
+        options={filterOptions}
+        value={entityTypeFilter}
+        onChange={onEntityTypeChange}
+        size="sm"
+      />
 
-        <div className="hidden lg:flex ml-auto">
-          {filterControls}
-        </div>
+      <div className="hidden lg:block">
+        {filterControls}
       </div>
 
       <div className="lg:hidden">

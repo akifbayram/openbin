@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { categoryHeader, cn } from '@/lib/utils';
+import { cn, sectionHeader } from '@/lib/utils';
 
 interface SettingsSectionProps {
   label: string;
@@ -17,17 +17,17 @@ export function SettingsSection({
   action,
 }: SettingsSectionProps) {
   return (
-    <div className="mb-7">
-      <div className={cn('flex items-center justify-between', description ? 'mb-1' : 'mb-3')}>
-        <h3 className={cn(categoryHeader, 'px-0', labelClassName)}>{label}</h3>
+    <div className="mb-8">
+      <div className={cn('flex items-center justify-between pb-2 border-b border-[var(--border-flat)]', description ? 'mb-1' : 'mb-3')}>
+        <h3 className={cn(sectionHeader, labelClassName)}>{label}</h3>
         {action}
       </div>
       {description && (
-        <p className="text-[13px] text-[var(--text-tertiary)] mb-3">
+        <p className="text-[13px] text-[var(--text-tertiary)] mb-3 mt-2">
           {description}
         </p>
       )}
-      <div>{children}</div>
+      {children}
     </div>
   );
 }

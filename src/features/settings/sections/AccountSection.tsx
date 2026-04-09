@@ -1,5 +1,5 @@
-import { Calendar, Eye, EyeOff, Link2, Link2Off, Loader2, MapPin, Trash2, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Calendar, Check, Copy, Eye, EyeOff, Key, Link2, Link2Off, Loader2, MapPin, Plus, Trash2, X } from 'lucide-react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,17 +14,33 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PasswordChecklist } from '@/components/ui/password-checklist';
 import { useToast } from '@/components/ui/toast';
+import { Tooltip } from '@/components/ui/tooltip';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useLocationList } from '@/features/locations/useLocations';
 import { compressImage } from '@/features/photos/compressImage';
 import { apiFetch, getAvatarUrl } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { allChecksPassing, computePasswordChecks } from '@/lib/passwordStrength';
+import { usePlan } from '@/lib/usePlan';
 import { useWarnOnUnload } from '@/lib/useWarnOnUnload';
 import { cn, EMAIL_REGEX, getErrorMessage } from '@/lib/utils';
 import type { User } from '@/types';
 import { SettingsPageHeader } from '../SettingsPageHeader';
 import { SettingsSection } from '../SettingsSection';
+import { createApiKey, revokeApiKey, useApiKeys } from '../useApiKeys';
+
+const UpgradePrompt = __EE__
+  ? lazy(() => import('@/ee/UpgradePrompt').then(m => ({ default: m.UpgradePrompt })))
+  : (() => null) as React.FC<Record<string, unknown>>;
+
+function formatDate(iso: string | null): string {
+  if (!iso) return 'Never';
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
 
 function validateDisplayName(value: string): string | undefined {
   if (!value.trim()) return 'Display name is required';
@@ -61,6 +77,18 @@ export function AccountSection() {
   const [unlinking, setUnlinking] = useState<string | null>(null);
   const hasPassword = user?.hasPassword !== false;
 
+  // API keys
+  const { isGated, isSelfHosted, planInfo } = usePlan();
+  const apiKeysGated = !isSelfHosted && isGated('apiKeys');
+  const { keys, isLoading: keysLoading } = useApiKeys();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [keyName, setKeyName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [newKey, setNewKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [revokeId, setRevokeId] = useState<string | null>(null);
+  const [revoking, setRevoking] = useState(false);
+
   // Delete account
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -86,6 +114,15 @@ export function AccountSection() {
   }, []);
 
   const passwordChecks = useMemo(() => computePasswordChecks(newPassword), [newPassword]);
+
+  // Reset form state when dialog opens (not on close, to avoid flash during exit animation)
+  useEffect(() => {
+    if (createOpen) {
+      setNewKey(null);
+      setKeyName('');
+      setCopied(false);
+    }
+  }, [createOpen]);
 
   if (!user) return null;
 
@@ -193,6 +230,45 @@ export function AccountSection() {
     } catch (err) {
       showToast({ message: getErrorMessage(err, 'Failed to delete account'), variant: 'error' });
       setDeleting(false);
+    }
+  }
+
+  async function handleCreateKey(e: React.FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      const result = await createApiKey(keyName.trim());
+      setNewKey(result.key);
+      setKeyName('');
+    } catch (err) {
+      showToast({ message: getErrorMessage(err, 'Failed to create API key'), variant: 'error' });
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleRevoke() {
+    if (!revokeId) return;
+    setRevoking(true);
+    try {
+      await revokeApiKey(revokeId);
+      showToast({ message: 'API key revoked', variant: 'success' });
+      setRevokeId(null);
+    } catch (err) {
+      showToast({ message: getErrorMessage(err, 'Failed to revoke API key'), variant: 'error' });
+    } finally {
+      setRevoking(false);
+    }
+  }
+
+  async function handleCopy() {
+    if (!newKey) return;
+    try {
+      await navigator.clipboard.writeText(newKey);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      showToast({ message: 'Failed to copy', variant: 'error' });
     }
   }
 
@@ -435,6 +511,76 @@ export function AccountSection() {
         </SettingsSection>
       )}
 
+      {/* API Keys */}
+      {apiKeysGated ? (
+        __EE__ && (
+          <Suspense fallback={null}>
+            <UpgradePrompt
+              feature="API Keys"
+              description="Create API keys to integrate with external tools."
+              upgradeUrl={planInfo.upgradeUrl}
+            />
+          </Suspense>
+        )
+      ) : (
+        <SettingsSection
+          label="API Keys"
+          description="API keys are tied to your account and work across all your locations. Use them for smart home integrations and automation."
+          action={
+            <Tooltip content="Create API key" side="bottom">
+              <Button
+                onClick={() => setCreateOpen(true)}
+                size="icon-sm"
+                aria-label="Create API key"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </Tooltip>
+          }
+        >
+          {keysLoading ? null : keys.length === 0 ? (
+            <p className="text-[13px] text-[var(--text-tertiary)] py-4 text-center">
+              No API keys yet. Create one to connect integrations.
+            </p>
+          ) : (
+            <div className="divide-y divide-[var(--border-subtle)]">
+              {keys.map((k) => (
+                <div
+                  key={k.id}
+                  className="flex items-center justify-between py-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-[var(--radius-sm)] bg-[var(--bg-active)] flex items-center justify-center shrink-0">
+                      <Key className="h-4 w-4 text-[var(--text-secondary)]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[14px] font-medium text-[var(--text-primary)] truncate">
+                        {k.name || k.key_prefix}
+                      </p>
+                      <p className="text-[12px] text-[var(--text-tertiary)]">
+                        {k.key_prefix}... &middot; Created {formatDate(k.created_at)}
+                        {k.last_used_at ? ` \u00b7 Last used ${formatDate(k.last_used_at)}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <Tooltip content="Revoke API key" side="bottom">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-[var(--destructive)] shrink-0"
+                      onClick={() => setRevokeId(k.id)}
+                      aria-label="Revoke API key"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </Tooltip>
+                </div>
+              ))}
+            </div>
+          )}
+        </SettingsSection>
+      )}
+
       {/* Danger zone */}
       <SettingsSection
         label="Danger Zone"
@@ -489,6 +635,87 @@ export function AccountSection() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create API Key Dialog */}
+      <Dialog open={createOpen} onOpenChange={(open) => !open && setCreateOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{newKey ? 'API Key Created' : 'Create API Key'}</DialogTitle>
+            <DialogDescription>
+              {newKey
+                ? 'Copy this key now — it won\'t be shown again.'
+                : 'Give your key a name to help you identify it later.'}
+            </DialogDescription>
+          </DialogHeader>
+          {newKey ? (
+            <div className="space-y-4">
+              <div className="row">
+                <code className="flex-1 text-[13px] bg-[var(--bg-input)] px-3 py-2 rounded-[var(--radius-sm)] break-all select-all font-mono">
+                  {newKey}
+                </code>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  className="shrink-0"
+                  onClick={handleCopy}
+                >
+                  {copied ? <Check className="h-4 w-4 text-[var(--color-success)]" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => setCreateOpen(false)}>
+                  Done
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <form onSubmit={handleCreateKey} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="key-name">Name</Label>
+                <Input
+                  id="key-name"
+                  value={keyName}
+                  onChange={(e) => setKeyName(e.target.value)}
+                  placeholder="e.g., Home Assistant, Alexa"
+                  autoFocus
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={creating}>
+                  {creating ? 'Creating...' : 'Create'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke Confirmation Dialog */}
+      <Dialog open={!!revokeId} onOpenChange={(open) => !open && setRevokeId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke API Key?</DialogTitle>
+            <DialogDescription>
+              Any integrations using this key will stop working immediately. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRevokeId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRevoke}
+              disabled={revoking}
+            >
+              {revoking ? 'Revoking...' : 'Revoke'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
