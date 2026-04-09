@@ -448,3 +448,9 @@ CREATE TABLE IF NOT EXISTS announcements (
   created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(active) WHERE active = 1;
+
+-- Migration version tracking
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  name       TEXT PRIMARY KEY,
+  applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
