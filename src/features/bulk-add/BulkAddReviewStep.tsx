@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { AiAnalyzeError } from '@/features/ai/AiStreamingPreview';
-import { mapErrorMessage } from '@/features/ai/useAiAnalysis';
+import { mapAiError } from '@/features/ai/aiErrors';
 import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useAiStream } from '@/features/ai/useAiStream';
 import { AreaPicker } from '@/features/areas/AreaPicker';
@@ -204,7 +204,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
-      dispatch({ type: 'SET_ANALYZE_ERROR', id: target.id, error: mapErrorMessage(err) });
+      dispatch({ type: 'SET_ANALYZE_ERROR', id: target.id, error: mapAiError(err, 'Couldn\'t analyze the photo — try again') });
     } finally {
       abortRef.current.delete(target.id);
     }
@@ -252,7 +252,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
-      dispatch({ type: 'SET_ANALYZE_ERROR', id: target.id, error: mapErrorMessage(err) });
+      dispatch({ type: 'SET_ANALYZE_ERROR', id: target.id, error: mapAiError(err, 'Couldn\'t analyze the photo — try again') });
     }
   }
 

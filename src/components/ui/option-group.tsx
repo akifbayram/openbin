@@ -15,8 +15,6 @@ interface OptionGroupProps<K extends string> {
   options: OptionGroupOption<K>[];
   value: K;
   onChange: (key: K) => void;
-  /** @deprecated Ignored — all option groups use unified radius */
-  shape?: 'pill' | 'rounded';
   size?: 'sm' | 'md' | 'lg';
   scrollable?: boolean;
   iconOnly?: boolean;
@@ -28,7 +26,6 @@ export function OptionGroup<K extends string>({
   options,
   value,
   onChange,
-  shape: _shape = 'pill',
   size = 'lg',
   scrollable,
   iconOnly,

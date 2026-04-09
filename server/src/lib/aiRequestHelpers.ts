@@ -52,9 +52,10 @@ export async function verifyLocationAndFetchMeta(
   if (!await verifyOptionalLocationMembership(locationId, userId)) {
     throw new ForbiddenError('Not a member of this location');
   }
+  if (!locationId) return { existingTags: undefined, customFieldDefs: undefined };
   const [existingTags, customFieldDefs] = await Promise.all([
-    locationId ? fetchExistingTags(locationId) : Promise.resolve(undefined),
-    locationId ? fetchCustomFieldDefs(locationId) : Promise.resolve(undefined),
+    fetchExistingTags(locationId),
+    fetchCustomFieldDefs(locationId),
   ]);
   return { existingTags, customFieldDefs };
 }
@@ -78,19 +79,17 @@ export function validatePreviousResult(value: unknown): Record<string, unknown> 
 export function sanitizePreviousResult(previousResult: Record<string, unknown>) {
   return {
     name: String(previousResult.name ?? '').slice(0, 255),
-    items: Array.isArray(previousResult.items)
-      ? (previousResult.items as unknown[]).slice(0, 100).map((i) => {
-          if (typeof i === 'string') return { name: i.slice(0, 500) };
-          if (i && typeof i === 'object') {
-            const obj = i as Record<string, unknown>;
-            return {
-              name: String(obj.name ?? '').slice(0, 500),
-              ...(typeof obj.quantity === 'number' ? { quantity: obj.quantity } : {}),
-            };
-          }
-          return { name: String(i).slice(0, 500) };
-        })
-      : [],
+    items: (previousResult.items as unknown[]).slice(0, 100).map((i) => {
+      if (typeof i === 'string') return { name: i.slice(0, 500) };
+      if (i && typeof i === 'object') {
+        const obj = i as Record<string, unknown>;
+        return {
+          name: String(obj.name ?? '').slice(0, 500),
+          ...(typeof obj.quantity === 'number' ? { quantity: obj.quantity } : {}),
+        };
+      }
+      return { name: String(i).slice(0, 500) };
+    }),
     tags: Array.isArray(previousResult.tags)
       ? (previousResult.tags as unknown[]).filter((t): t is string => typeof t === 'string').slice(0, 20)
       : [],

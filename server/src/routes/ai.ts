@@ -4,7 +4,7 @@ import { testProviderConnection } from '../lib/aiCaller.js';
 import { buildMockAnalysisResult, loadPhotosForAnalysis } from '../lib/aiPhotoLoader.js';
 import type { ImageInput } from '../lib/aiProviders.js';
 import { analyzeImages, reanalyzeImages } from '../lib/aiProviders.js';
-import { extractPhotoIds, extractUploadedFiles, validatePreviousResult, verifyLocationAndFetchMeta } from '../lib/aiRequestHelpers.js';
+import { extractPhotoIds, extractUploadedFiles, sanitizePreviousResult, validatePreviousResult, verifyLocationAndFetchMeta } from '../lib/aiRequestHelpers.js';
 import { aiRouteHandler, validateTextInput } from '../lib/aiRouteHandler.js';
 import { getUserAiSettings } from '../lib/aiSettings.js';
 import { AI_TASK_GROUPS, type AiTaskGroup, config, getEnvAiConfig, getEnvGroupOverride, isDemoUser, isGroupEnvLocked } from '../lib/config.js';
@@ -328,7 +328,7 @@ router.post('/analyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, ai
 
 // POST /api/ai/reanalyze — reanalyze stored photo(s) with previous result context
 router.post('/reanalyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('reanalyze photo', async (req, res) => {
-  const previousResult = validatePreviousResult(req.body.previousResult);
+  const previousResult = sanitizePreviousResult(validatePreviousResult(req.body.previousResult));
   const ids = extractPhotoIds(req.body);
 
   if (config.aiMock) { res.json(buildMockAnalysisResult()); return; }

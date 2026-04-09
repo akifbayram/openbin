@@ -18,10 +18,6 @@ interface StructureTextResult {
   items: AiSuggestedItem[];
 }
 
-/** @deprecated Use mapAiError from aiErrors.ts instead */
-export function mapStructureErrorMessage(err: unknown): string {
-  return mapAiError(err, 'Couldn\'t find items — try describing them differently');
-}
 
 export async function structureTextItems(options: StructureTextOptions): Promise<AiSuggestedItem[]> {
   const result = await apiFetch<StructureTextResult>('/api/ai/structure-text', {

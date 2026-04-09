@@ -223,8 +223,6 @@ export function resolveColor(key: string): ColorPreset | undefined {
   return undefined;
 }
 
-/** @deprecated Use resolveColor instead */
-export const getColorPreset = resolveColor;
 
 // Hue ranges for the filter UI
 export interface HueRange {

@@ -30,7 +30,6 @@ export function InlineAiSetup({ expanded, onExpandedChange, setup, label = 'Set 
             options={AI_PROVIDERS}
             value={setup.provider}
             onChange={setup.handleProviderChange}
-            shape="pill"
             size="sm"
           />
           {/* API key */}
