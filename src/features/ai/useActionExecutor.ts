@@ -37,6 +37,7 @@ interface UseActionExecutorOptions {
 const AREA_TYPES = new Set(['set_area', 'rename_area', 'delete_area', 'create_bin']);
 const PIN_TYPES = new Set(['pin_bin', 'unpin_bin']);
 const TAG_COLOR_TYPES = new Set(['set_tag_color']);
+const CHECKOUT_TYPES = new Set(['checkout_item', 'return_item']);
 
 export function useActionExecutor({ actions, checkedActions, onComplete }: UseActionExecutorOptions) {
   const { activeLocationId } = useAuth();
@@ -97,6 +98,7 @@ export function useActionExecutor({ actions, checkedActions, onComplete }: UseAc
       if ([...actionTypes].some((t) => AREA_TYPES.has(t))) notify(Events.AREAS);
       if ([...actionTypes].some((t) => PIN_TYPES.has(t))) notify(Events.PINS);
       if ([...actionTypes].some((t) => TAG_COLOR_TYPES.has(t))) notify(Events.TAG_COLORS);
+      if ([...actionTypes].some((t) => CHECKOUT_TYPES.has(t))) notify(Events.CHECKOUTS);
 
       const failedCount = selected.length - completedActions.length;
       if (failedCount > 0) {

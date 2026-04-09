@@ -23,7 +23,7 @@ const OperationSchema = z.object({
     "add_tags", "remove_tags", "modify_tag",
     "set_area", "set_notes", "set_icon", "set_color",
   ]).describe("Operation type"),
-  bin_id: z.string().optional().describe("Bin UUID (required for all types except create_bin)"),
+  bin_id: z.string().optional().describe("Bin ID (6-character short code; required for all types except create_bin)"),
   bin_name: z.string().optional().describe("Bin name (for logging; required for existing-bin operations)"),
   name: z.string().optional().describe("Bin name (create_bin, update_bin)"),
   items: z.array(z.string()).optional().describe("Item names (add_items, remove_items, create_bin)"),

@@ -691,6 +691,57 @@ components:
           nullable: true
           description: Parent tag name (null or empty to clear)
 
+    # ── Item Checkout ─────────────────────────────────────
+    ItemCheckout:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        origin_bin_id:
+          type: string
+          description: 6-character alphanumeric bin short code
+        location_id:
+          type: string
+          format: uuid
+        checked_out_by:
+          type: string
+          format: uuid
+        checked_out_at:
+          type: string
+          format: date-time
+        returned_at:
+          type: string
+          format: date-time
+          nullable: true
+        returned_by:
+          type: string
+          format: uuid
+          nullable: true
+        return_bin_id:
+          type: string
+          nullable: true
+          description: Bin the item was returned to (null if same as origin)
+
+    ItemCheckoutWithContext:
+      allOf:
+        - $ref: '#/components/schemas/ItemCheckout'
+        - type: object
+          properties:
+            item_name:
+              type: string
+            origin_bin_name:
+              type: string
+            origin_bin_icon:
+              type: string
+            origin_bin_color:
+              type: string
+            checked_out_by_name:
+              type: string
+
     # ── Activity ───────────────────────────────────────────
     ActivityLogEntry:
       type: object
@@ -3519,6 +3570,165 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
+
+  # ════════════════════════════════════════════════════════
+  # Item Checkouts
+  # ════════════════════════════════════════════════════════
+  /bins/{id}/items/{itemId}/checkout:
+    post:
+      tags: [Bins]
+      summary: Check out an item from a bin
+      description: |
+        Creates an active checkout record for the item. Fails with 409 if the item
+        is already checked out. Requires member role or above.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            description: 6-character alphanumeric bin short code
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Item checked out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkout:
+                    $ref: '#/components/schemas/ItemCheckout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Item is already checked out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bins/{id}/items/{itemId}/return:
+    post:
+      tags: [Bins]
+      summary: Return a checked-out item
+      description: |
+        Closes the active checkout. Optionally moves the item to a different bin
+        in the same location via targetBinId. Requires member role or above.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            description: 6-character alphanumeric bin short code (origin bin)
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targetBinId:
+                  type: string
+                  description: Return item to a different bin (must be in same location)
+      responses:
+        '200':
+          description: Item returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkout:
+                    $ref: '#/components/schemas/ItemCheckout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bins/{id}/checkouts:
+    get:
+      tags: [Bins]
+      summary: List active checkouts for a bin
+      description: Returns all items currently checked out from this bin.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            description: 6-character alphanumeric bin short code
+      responses:
+        '200':
+          description: Active checkouts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/ItemCheckout'
+                        - type: object
+                          properties:
+                            item_name:
+                              type: string
+                            checked_out_by_name:
+                              type: string
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /locations/{locationId}/checkouts:
+    get:
+      tags: [Locations]
+      summary: List active checkouts across a location
+      description: |
+        Returns all items currently checked out from any bin in the location,
+        enriched with item name, bin name, icon, and color.
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Active checkouts with context
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ItemCheckoutWithContext'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   # ════════════════════════════════════════════════════════
   # Photos

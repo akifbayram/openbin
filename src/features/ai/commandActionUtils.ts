@@ -1,5 +1,5 @@
 import {ArrowUpDown, CircleHelp,
-  Copy, FileText, FolderMinus, FolderPen, Image as ImageIcon,MapPin, Minus, Package, Palette, PenLine,Pin, PinOff,
+  Copy, FileText, FolderMinus, FolderPen, Image as ImageIcon, LogIn, LogOut, MapPin, Minus, Package, Palette, PenLine, Pin, PinOff,
   Plus, Tag, Trash2, Undo2,
 } from 'lucide-react';
 import type { Terminology } from '@/lib/terminology';
@@ -37,6 +37,8 @@ export function getActionIcon(action: CommandAction) {
     case 'delete_area': return FolderMinus;
     case 'set_tag_color': return Palette;
     case 'reorder_items': return ArrowUpDown;
+    case 'checkout_item': return LogOut;
+    case 'return_item': return LogIn;
     default: return CircleHelp;
   }
 }
@@ -93,6 +95,12 @@ export function describeAction(action: CommandAction, t: Terminology): string {
       return `Set color of tag "${action.tag}" to ${action.color}`;
     case 'reorder_items':
       return `Reorder items in "${action.bin_name}"`;
+    case 'checkout_item':
+      return `Check out "${action.item_name}" from "${action.bin_name}"`;
+    case 'return_item':
+      return action.target_bin_name
+        ? `Return "${action.item_name}" to "${action.target_bin_name}"`
+        : `Return "${action.item_name}" to "${action.bin_name}"`;
     default:
       return `Unknown action: ${(action as Record<string, unknown>).type}`;
   }

@@ -10,8 +10,9 @@ export const AVAILABLE_ICONS = [
   'Scissors', 'Hammer', 'Paintbrush', 'Leaf', 'Apple', 'Coffee', 'Wine', 'Baby', 'Dog', 'Cat',
 ];
 
-function formatItem(item: { name: string; quantity?: number | null }): string {
-  return item.quantity ? `${item.name} (×${item.quantity})` : item.name;
+function formatItem(item: { name: string; quantity?: number | null; checked_out_by?: string }): string {
+  const base = item.quantity ? `${item.name} (×${item.quantity})` : item.name;
+  return item.checked_out_by ? `${base} (checked out by ${item.checked_out_by})` : base;
 }
 
 /** Primitive defaults — if a field matches, it's omitted from AI context. */
@@ -132,7 +133,18 @@ async function fetchLocationData(locationId: string, userId: string, binIds?: st
     cfParams.push(...inClause.params);
   }
 
-  const [binsResult, areasResult, trashResult, cfResult] = await Promise.all([
+  let checkoutSql = `SELECT ic.item_id, u.display_name AS checked_out_by_name
+       FROM item_checkouts ic
+       JOIN users u ON u.id = ic.checked_out_by
+       WHERE ic.location_id = $1 AND ic.returned_at IS NULL`;
+  const checkoutParams: string[] = [locationId];
+  if (binIds?.length) {
+    const inClause = appendInClause(checkoutSql, 'ic.origin_bin_id', 2, binIds);
+    checkoutSql = inClause.sql;
+    checkoutParams.push(...inClause.params);
+  }
+
+  const [binsResult, areasResult, trashResult, cfResult, checkoutResult] = await Promise.all([
     query(binsSql, binsParams),
     query(
       'SELECT id, name FROM areas WHERE location_id = $1',
@@ -143,6 +155,7 @@ async function fetchLocationData(locationId: string, userId: string, binIds?: st
       [locationId]
     ),
     query<{ bin_id: string; field_name: string; value: string }>(cfSql, cfParams),
+    query<{ item_id: string; checked_out_by_name: string }>(checkoutSql, checkoutParams),
   ]);
 
   const customFieldsByBin = new Map<string, Record<string, string>>();
@@ -152,7 +165,12 @@ async function fetchLocationData(locationId: string, userId: string, binIds?: st
     map[row.field_name] = row.value;
   }
 
-  return { binsResult, areasResult, trashResult, customFieldsByBin };
+  const checkoutsByItem = new Map<string, string>();
+  for (const row of checkoutResult.rows) {
+    checkoutsByItem.set(row.item_id, row.checked_out_by_name);
+  }
+
+  return { binsResult, areasResult, trashResult, customFieldsByBin, checkoutsByItem };
 }
 
 function truncateNotes(notes: unknown): string {
@@ -179,7 +197,7 @@ const REORDER_INTENT = /reorder|rearrange|sort|move.*(?:up|down|first|last|befor
 
 /** Build context for command/execute endpoints. */
 export async function buildCommandContext(locationId: string, userId: string, binIds?: string[], userText?: string): Promise<CommandRequest['context']> {
-  const { binsResult, areasResult, trashResult, customFieldsByBin } = await fetchLocationData(locationId, userId, binIds);
+  const { binsResult, areasResult, trashResult, customFieldsByBin, checkoutsByItem } = await fetchLocationData(locationId, userId, binIds);
 
   const needsItemIds = userText ? REORDER_INTENT.test(userText) : false;
 
@@ -202,13 +220,15 @@ export async function buildCommandContext(locationId: string, userId: string, bi
       photo_count: (r.photo_count as number) || 0,
       ...(cf ? { custom_fields: cf } : {}),
     });
-    const items: Array<{ id: string; name: string; quantity?: number } | string> = needsItemIds
+    const items: Array<{ id: string; name: string; quantity?: number; checked_out_by?: string } | string> = needsItemIds
       ? sanitized.items.map((i) => {
-          const item: { id: string; name: string; quantity?: number } = { id: i.id, name: i.name };
+          const item: { id: string; name: string; quantity?: number; checked_out_by?: string } = { id: i.id, name: i.name };
           if (i.quantity != null) item.quantity = i.quantity;
+          const checkedOutBy = checkoutsByItem.get(i.id);
+          if (checkedOutBy) item.checked_out_by = checkedOutBy;
           return item;
         })
-      : sanitized.items.map(formatItem);
+      : sanitized.items.map((i) => formatItem({ ...i, checked_out_by: checkoutsByItem.get(i.id) }));
     return compactBin({ ...sanitized, items });
   });
 
@@ -228,7 +248,7 @@ export async function buildCommandContext(locationId: string, userId: string, bi
 
 /** Build context for the query (read-only) endpoint. */
 export async function buildInventoryContext(locationId: string, userId: string, binIds?: string[], userText?: string): Promise<InventoryContext> {
-  const { binsResult, areasResult, trashResult, customFieldsByBin } = await fetchLocationData(locationId, userId, binIds);
+  const { binsResult, areasResult, trashResult, customFieldsByBin, checkoutsByItem } = await fetchLocationData(locationId, userId, binIds);
 
   const allBins = binsResult.rows.map((r) => {
     const binId = r.id as string;
@@ -247,7 +267,7 @@ export async function buildInventoryContext(locationId: string, userId: string, 
     });
     return compactBin({
       ...sanitized,
-      items: sanitized.items.map(formatItem),
+      items: sanitized.items.map((i) => formatItem({ ...i, checked_out_by: checkoutsByItem.get(i.id) })),
     });
   });
 

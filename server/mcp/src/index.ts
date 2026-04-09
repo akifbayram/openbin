@@ -10,6 +10,7 @@ import { registerScanHistoryTools } from "./tools/scan-history.js";
 import { registerExportTools } from "./tools/export.js";
 import { registerActivityTools } from "./tools/activity.js";
 import { registerBatchTools } from "./tools/batch.js";
+import { registerCheckoutTools } from "./tools/checkouts.js";
 
 const apiKey = process.env.OPENBIN_API_KEY;
 if (!apiKey) {
@@ -34,6 +35,7 @@ registerScanHistoryTools(server, api);
 registerExportTools(server, api);
 registerActivityTools(server, api);
 registerBatchTools(server, api);
+registerCheckoutTools(server, api);
 
 async function main() {
   const transport = new StdioServerTransport();

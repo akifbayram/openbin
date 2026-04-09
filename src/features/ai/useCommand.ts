@@ -20,7 +20,9 @@ export type CommandAction =
   | { type: 'rename_area'; area_id: string; area_name: string; new_name: string }
   | { type: 'delete_area'; area_id: string; area_name: string }
   | { type: 'set_tag_color'; tag: string; color: string }
-  | { type: 'reorder_items'; bin_id: string; bin_name: string; item_ids: string[] };
+  | { type: 'reorder_items'; bin_id: string; bin_name: string; item_ids: string[] }
+  | { type: 'checkout_item'; bin_id: string; bin_name: string; item_name: string }
+  | { type: 'return_item'; bin_id: string; bin_name: string; item_name: string; target_bin_id?: string; target_bin_name?: string };
 
 export interface CommandResult {
   actions: CommandAction[];

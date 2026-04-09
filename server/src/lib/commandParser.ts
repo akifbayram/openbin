@@ -43,7 +43,9 @@ export type CommandAction =
   | { type: 'rename_area'; area_id: string; area_name: string; new_name: string }
   | { type: 'delete_area'; area_id: string; area_name: string }
   | { type: 'set_tag_color'; tag: string; color: string }
-  | { type: 'reorder_items'; bin_id: string; bin_name: string; item_ids: string[] };
+  | { type: 'reorder_items'; bin_id: string; bin_name: string; item_ids: string[] }
+  | { type: 'checkout_item'; bin_id: string; bin_name: string; item_name: string }
+  | { type: 'return_item'; bin_id: string; bin_name: string; item_name: string; target_bin_id?: string; target_bin_name?: string };
 
 export interface CommandRequest {
   text: string;
@@ -89,6 +91,8 @@ Available action types:
 - delete_area: Delete an area (bins become unassigned). Fields: area_id, area_name
 - set_tag_color: Set a tag's display color. Fields: tag, color
 - reorder_items: Reorder items in a bin. Fields: bin_id, bin_name, item_ids[] (item IDs in desired order)
+- checkout_item: Check out an item from a bin (marks it as in-use). Fields: bin_id, bin_name, item_name
+- return_item: Return a checked-out item. Fields: bin_id, bin_name, item_name, target_bin_id? (optional, to return to a different bin), target_bin_name?
 
 Available colors: ${availableColors.join(', ')}
 Available icons: ${availableIcons.join(', ')}
@@ -147,6 +151,7 @@ Query rules:
 - Sort matches by relevance (most relevant first)
 - Return at most 8 matching bins. For each bin, include only the most relevant items (up to 10), not the entire list.
 - Visibility, pin status, photo counts, and trash bins are available — use them to answer questions like "which bins are private?", "what's pinned?", "which bins have photos?", or "what's in the trash?"
+- Items may include checkout info (e.g. "Drill (checked out by Alice)"). Reference checkout status when relevant. Answer questions like "what's checked out?" or "who has the drill?" using this data.
 - When including trash bins in matches, set "is_trashed": true so the UI can link to the trash page instead of the bin detail page.
 
 ---

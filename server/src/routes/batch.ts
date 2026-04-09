@@ -16,7 +16,7 @@ const VALID_TYPES = new Set([
   'add_tags', 'remove_tags', 'modify_tag', 'set_area', 'set_notes',
   'set_icon', 'set_color', 'update_bin', 'restore_bin',
   'duplicate_bin', 'pin_bin', 'unpin_bin', 'rename_area', 'delete_area',
-  'set_tag_color', 'reorder_items',
+  'set_tag_color', 'reorder_items', 'checkout_item', 'return_item',
 ]);
 
 const MAX_OPS = 50;
@@ -330,6 +330,38 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
           bin_id: op.bin_id,
           bin_name: (op.bin_name as string) || '',
           item_ids: op.item_ids.filter((id: unknown): id is string => typeof id === 'string'),
+        });
+        break;
+
+      case 'checkout_item':
+        if (!op.bin_id || typeof op.bin_id !== 'string') {
+          throw new ValidationError(`operations[${i}]: checkout_item requires "bin_id"`);
+        }
+        if (typeof op.item_name !== 'string' || !op.item_name.trim()) {
+          throw new ValidationError(`operations[${i}]: checkout_item requires "item_name"`);
+        }
+        actions.push({
+          type: 'checkout_item',
+          bin_id: op.bin_id,
+          bin_name: (op.bin_name as string) || '',
+          item_name: op.item_name.trim(),
+        });
+        break;
+
+      case 'return_item':
+        if (!op.bin_id || typeof op.bin_id !== 'string') {
+          throw new ValidationError(`operations[${i}]: return_item requires "bin_id"`);
+        }
+        if (typeof op.item_name !== 'string' || !op.item_name.trim()) {
+          throw new ValidationError(`operations[${i}]: return_item requires "item_name"`);
+        }
+        actions.push({
+          type: 'return_item',
+          bin_id: op.bin_id,
+          bin_name: (op.bin_name as string) || '',
+          item_name: op.item_name.trim(),
+          target_bin_id: typeof op.target_bin_id === 'string' ? op.target_bin_id : undefined,
+          target_bin_name: typeof op.target_bin_name === 'string' ? op.target_bin_name : undefined,
         });
         break;
     }

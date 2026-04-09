@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { type ApiClient, withErrorHandling } from "../api-client.js";
+import { type BinDetail, resolveItemId } from "../resolve-item.js";
 
 interface Item {
   id: string;
@@ -16,43 +17,8 @@ interface ItemListResponse {
   count: number;
 }
 
-interface BinItem {
-  id: string;
-  name: string;
-}
-
-interface BinDetail {
-  id: string;
-  items: BinItem[];
-}
-
 interface AddItemsResponse {
   items: Array<{ id: string; name: string }>;
-}
-
-async function resolveItemId(
-  api: ApiClient,
-  bin_id: string,
-  item_id: string | undefined,
-  item_name: string | undefined,
-): Promise<{ id: string } | { error: string }> {
-  if (item_id) return { id: item_id };
-
-  const bin = await api.get<BinDetail>(`/api/bins/${encodeURIComponent(bin_id)}`);
-  const matches = bin.items.filter(
-    (i) => i.name.toLowerCase() === item_name!.toLowerCase(),
-  );
-
-  if (matches.length === 0) {
-    return { error: `No item named "${item_name}" found in this bin.` };
-  }
-  if (matches.length > 1) {
-    const list = matches.map((m) => `- ${m.name} [${m.id}]`).join("\n");
-    return {
-      error: `Multiple items named "${item_name}" found. Specify item_id to disambiguate:\n${list}`,
-    };
-  }
-  return { id: matches[0].id };
 }
 
 export function registerItemTools(server: McpServer, api: ApiClient) {
@@ -98,7 +64,7 @@ export function registerItemTools(server: McpServer, api: ApiClient) {
     "add_items",
     "Add items to a bin",
     {
-      bin_id: z.string().describe("Bin UUID"),
+      bin_id: z.string().describe("Bin ID (6-character short code)"),
       items: z.array(z.string()).min(1).describe("Item names to add"),
     },
     withErrorHandling(async ({ bin_id, items }) => {
@@ -122,18 +88,11 @@ export function registerItemTools(server: McpServer, api: ApiClient) {
     "remove_item",
     "Remove a single item from a bin. Provide item_id or item_name (not both).",
     {
-      bin_id: z.string().describe("Bin UUID"),
+      bin_id: z.string().describe("Bin ID (6-character short code)"),
       item_id: z.string().optional().describe("Item UUID"),
       item_name: z.string().optional().describe("Item name (case-insensitive match)"),
     },
     withErrorHandling(async ({ bin_id, item_id, item_name }) => {
-      if (!item_id && !item_name) {
-        return {
-          content: [{ type: "text" as const, text: "Provide either 'item_id' or 'item_name'." }],
-          isError: true,
-        };
-      }
-
       const resolved = await resolveItemId(api, bin_id, item_id, item_name);
       if ("error" in resolved) {
         return { content: [{ type: "text" as const, text: resolved.error }], isError: true };
@@ -153,19 +112,12 @@ export function registerItemTools(server: McpServer, api: ApiClient) {
     "rename_item",
     "Rename an item within a bin. Provide item_id or item_name (not both).",
     {
-      bin_id: z.string().describe("Bin UUID"),
+      bin_id: z.string().describe("Bin ID (6-character short code)"),
       item_id: z.string().optional().describe("Item UUID"),
       item_name: z.string().optional().describe("Current item name (case-insensitive match)"),
       name: z.string().describe("New item name"),
     },
     withErrorHandling(async ({ bin_id, item_id, item_name, name }) => {
-      if (!item_id && !item_name) {
-        return {
-          content: [{ type: "text" as const, text: "Provide either 'item_id' or 'item_name'." }],
-          isError: true,
-        };
-      }
-
       const resolved = await resolveItemId(api, bin_id, item_id, item_name);
       if ("error" in resolved) {
         return { content: [{ type: "text" as const, text: resolved.error }], isError: true };
@@ -191,7 +143,7 @@ export function registerItemTools(server: McpServer, api: ApiClient) {
     "reorder_items",
     "Reorder items within a bin. Provide item_ids or item_names (not both).",
     {
-      bin_id: z.string().describe("Bin UUID"),
+      bin_id: z.string().describe("Bin ID (6-character short code)"),
       item_ids: z.array(z.string()).optional().describe("Item UUIDs in the desired order"),
       item_names: z.array(z.string()).optional().describe("Item names in the desired order (resolved to IDs via bin lookup)"),
     },

@@ -108,7 +108,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
     "get_bin",
     "Get a single bin by ID or short code",
     {
-      id: z.string().optional().describe("Bin UUID"),
+      id: z.string().optional().describe("Bin ID (6-character short code)"),
       short_code: z.string().optional().describe("6-character short code (e.g. 'A1B2C3')"),
     },
     withErrorHandling(async ({ id, short_code }) => {
@@ -170,7 +170,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
     "update_bin",
     "Update an existing bin",
     {
-      id: z.string().describe("Bin UUID"),
+      id: z.string().describe("Bin ID (6-character short code)"),
       name: z.string().optional().describe("New bin name"),
       items: z
         .array(z.string())
@@ -214,7 +214,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
   server.tool(
     "delete_bin",
     "Soft-delete a bin (moves to trash, can be restored)",
-    { id: z.string().describe("Bin UUID") },
+    { id: z.string().describe("Bin ID (6-character short code)") },
     withErrorHandling(async ({ id }) => {
       const bin = await api.del<Bin>(`/api/bins/${encodeURIComponent(id)}`);
 
@@ -261,7 +261,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
   server.tool(
     "restore_bin",
     "Restore a soft-deleted bin from trash",
-    { id: z.string().describe("Bin UUID") },
+    { id: z.string().describe("Bin ID (6-character short code)") },
     withErrorHandling(async ({ id }) => {
       const bin = await api.post<Bin>(`/api/bins/${encodeURIComponent(id)}/restore`);
 
@@ -279,7 +279,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
   server.tool(
     "permanent_delete_bin",
     "Permanently delete a bin from trash (cannot be undone)",
-    { id: z.string().describe("Bin UUID (must already be in trash)") },
+    { id: z.string().describe("Bin ID (6-character short code; must already be in trash)") },
     withErrorHandling(async ({ id }) => {
       await api.del(`/api/bins/${encodeURIComponent(id)}/permanent`);
 
@@ -321,7 +321,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
   server.tool(
     "pin_bin",
     "Pin a bin for quick access",
-    { id: z.string().describe("Bin UUID") },
+    { id: z.string().describe("Bin ID (6-character short code)") },
     withErrorHandling(async ({ id }) => {
       await api.post(`/api/bins/${encodeURIComponent(id)}/pin`);
 
@@ -334,7 +334,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
   server.tool(
     "unpin_bin",
     "Unpin a bin",
-    { id: z.string().describe("Bin UUID") },
+    { id: z.string().describe("Bin ID (6-character short code)") },
     withErrorHandling(async ({ id }) => {
       await api.del(`/api/bins/${encodeURIComponent(id)}/pin`);
 
@@ -348,7 +348,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
     "reorder_pinned_bins",
     "Reorder pinned bins",
     {
-      bin_ids: z.array(z.string()).min(1).describe("Bin UUIDs in the desired order"),
+      bin_ids: z.array(z.string()).min(1).describe("Bin IDs (6-character short codes) in the desired order"),
     },
     withErrorHandling(async ({ bin_ids }) => {
       await api.put("/api/bins/pinned/reorder", { bin_ids });
@@ -365,7 +365,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
     "add_tags",
     "Add tags to a bin (merges with existing tags, does not replace them)",
     {
-      id: z.string().describe("Bin UUID"),
+      id: z.string().describe("Bin ID (6-character short code)"),
       tags: z.array(z.string()).min(1).describe("Tag names to add"),
     },
     withErrorHandling(async ({ id, tags }) => {
@@ -391,7 +391,7 @@ export function registerBinTools(server: McpServer, api: ApiClient) {
     "move_bin",
     "Move a bin to a different location (admin only). Area is unassigned after move.",
     {
-      id: z.string().describe("Bin UUID"),
+      id: z.string().describe("Bin ID (6-character short code)"),
       location_id: z.string().describe("Target location UUID"),
     },
     withErrorHandling(async ({ id, location_id }) => {

@@ -52,7 +52,7 @@ export function registerScanHistoryTools(server: McpServer, api: ApiClient) {
     "record_scan",
     "Record a QR scan for a bin (updates scan history)",
     {
-      bin_id: z.string().describe("Bin UUID"),
+      bin_id: z.string().describe("Bin ID (6-character short code)"),
     },
     withErrorHandling(async ({ bin_id }) => {
       await api.post("/api/scan-history", { binId: bin_id });

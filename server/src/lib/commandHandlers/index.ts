@@ -1,6 +1,7 @@
 import { handleDeleteArea, handleRenameArea, handleSetArea } from './areaHandlers.js';
 import { handleCreateBin, handleDeleteBin, handleDuplicateBin, handleRestoreBin } from './binCrudHandlers.js';
 import { handleUpdateBin } from './binUpdateHandler.js';
+import { handleCheckoutItem, handleReturnItem } from './checkoutHandlers.js';
 import { handleAddItems, handleModifyItem, handleRemoveItems, handleReorderItems } from './itemHandlers.js';
 import { handleSetColor, handleSetIcon, handleSetNotes } from './metadataHandlers.js';
 import { handlePinBin, handleUnpinBin } from './pinHandlers.js';
@@ -31,4 +32,6 @@ export const handlers: Record<string, ActionHandler> = {
   set_color: handleSetColor as ActionHandler,
   pin_bin: handlePinBin as ActionHandler,
   unpin_bin: handleUnpinBin as ActionHandler,
+  checkout_item: handleCheckoutItem as ActionHandler,
+  return_item: handleReturnItem as ActionHandler,
 };

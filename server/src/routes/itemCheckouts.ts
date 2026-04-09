@@ -200,14 +200,16 @@ router.get('/:id/checkouts', asyncHandler(async (req, res) => {
   const result = await query<{
     id: string;
     item_id: string;
+    item_name: string;
     origin_bin_id: string;
     location_id: string;
     checked_out_by: string;
     checked_out_by_name: string;
     checked_out_at: string;
   }>(
-    `SELECT ic.*, u.display_name AS checked_out_by_name
+    `SELECT ic.*, bi.name AS item_name, u.display_name AS checked_out_by_name
      FROM item_checkouts ic
+     JOIN bin_items bi ON bi.id = ic.item_id
      JOIN users u ON u.id = ic.checked_out_by
      WHERE ic.origin_bin_id = $1 AND ic.returned_at IS NULL
      ORDER BY ic.checked_out_at DESC`,

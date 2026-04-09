@@ -33,6 +33,9 @@ Rules:
 - For set_tag_color, use one of the available colors.
 - For reorder_items, provide item_ids from the bin's items list in the desired order.
 - For restore_bin, use bin IDs from the trash_bins list (not the bins list). Trash bins can ONLY be used with restore_bin.
+- For checkout_item, match the item name from the bin's items list. Only items that are NOT currently checked out can be checked out.
+- For return_item, match the item name from the bin's checked-out items. Optionally specify target_bin_id/target_bin_name to return to a different bin.
+- Items with a "checked_out_by" field in the context are currently checked out and cannot be checked out again until returned.
 - Capitalize item names properly.
 - If the command is ambiguous or references a bin that doesn't exist, return an empty actions array with an interpretation explaining the issue.`;
 
@@ -49,6 +52,7 @@ Rules:
 - Return at most 8 matching bins. For each bin, include only the most relevant items (up to 10), not the entire list.
 - Visibility, pin status, photo counts, and trash bins are available in the inventory context — use them to answer questions like "which bins are private?", "what's pinned?", "which bins have photos?", or "what's in the trash?"
 - Items may include a quantity (e.g. "Screwdrivers (×3)"). Reference quantities in your answer when relevant (e.g. "You have 3 screwdrivers in the Tools bin").
+- Items may include checkout info (e.g. "Drill (checked out by Alice)"). Reference checkout status when relevant (e.g. "The drill is currently checked out by Alice"). Answer questions like "what's checked out?" or "who has the drill?" using this data.
 - When including trash bins in matches, set "is_trashed": true so the UI can link to the trash page instead of the bin detail page.`;
 
 export const DEFAULT_STRUCTURE_PROMPT = `You are an inventory item extractor. The user will dictate or type a description of items in a storage bin. Your job is to parse this into a clean, structured list of individual items.

@@ -11,7 +11,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SkeletonList } from '@/components/ui/skeleton-list';
 import { type SortDirection, SortHeader } from '@/components/ui/sort-header';
 import { Table, TableHeader, TableRow } from '@/components/ui/table';
-import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useAuth } from '@/lib/auth';
 import { resolveColor } from '@/lib/colorPalette';
@@ -20,7 +19,8 @@ import { resolveIcon } from '@/lib/iconMap';
 import { usePermissions } from '@/lib/usePermissions';
 import { cn } from '@/lib/utils';
 import type { ItemCheckoutWithContext } from '@/types';
-import { returnItem, useLocationCheckouts } from './useCheckouts';
+import { ReturnItemDialog } from './ReturnItemDialog';
+import { useLocationCheckouts } from './useCheckouts';
 
 type CheckoutSortColumn = 'alpha' | 'time';
 
@@ -28,12 +28,11 @@ export function CheckoutsPage() {
   const { activeLocationId } = useAuth();
   const { checkouts, isLoading } = useLocationCheckouts(activeLocationId ?? undefined);
   const { canWrite } = usePermissions();
-  const { showToast } = useToast();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [sortColumn, setSortColumn] = useState<CheckoutSortColumn>('time');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [returningId, setReturningId] = useState<string | null>(null);
+  const [returningCheckout, setReturningCheckout] = useState<ItemCheckoutWithContext | null>(null);
 
   function handleSort(column: CheckoutSortColumn, direction: SortDirection) {
     setSortColumn(column);
@@ -59,18 +58,6 @@ export function CheckoutsPage() {
       return sortDirection === 'asc' ? cmp : -cmp;
     });
   }, [checkouts, search, sortColumn, sortDirection]);
-
-  async function handleReturn(co: ItemCheckoutWithContext) {
-    setReturningId(co.id);
-    try {
-      await returnItem(co.origin_bin_id, co.item_id);
-      showToast({ message: `${co.item_name} returned` });
-    } catch {
-      showToast({ message: 'Failed to return item' });
-    } finally {
-      setReturningId(null);
-    }
-  }
 
   return (
     <div className="page-content">
@@ -174,12 +161,8 @@ export function CheckoutsPage() {
                       <Tooltip content="Return item">
                         <button
                           type="button"
-                          onClick={() => handleReturn(co)}
-                          disabled={returningId === co.id}
-                          className={cn(
-                            'shrink-0 p-2 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors',
-                            returningId === co.id && 'opacity-50',
-                          )}
+                          onClick={() => setReturningCheckout(co)}
+                          className="shrink-0 p-2 rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
                           aria-label={`Return ${co.item_name}`}
                         >
                           <Undo2 className="h-4 w-4" />
@@ -194,6 +177,17 @@ export function CheckoutsPage() {
           </>
         )}
       </Crossfade>
+
+      {returningCheckout && (
+        <ReturnItemDialog
+          open
+          onOpenChange={(next) => { if (!next) setReturningCheckout(null); }}
+          itemName={returningCheckout.item_name}
+          binId={returningCheckout.origin_bin_id}
+          itemId={returningCheckout.item_id}
+          originBinName={returningCheckout.origin_bin_name}
+        />
+      )}
     </div>
   );
 }

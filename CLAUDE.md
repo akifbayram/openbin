@@ -2,7 +2,9 @@
 
 ## Project Overview
 
-Inventory with intelligence. Multi-user web app for organizing physical storage bins with QR codes and photo recognition. Data persists in SQLite via Express API. Flat material design system.
+Bin-centric inventory with intelligence. Multi-user web app for organizing physical storage bins with QR codes and photo recognition. Data persists in SQLite via Express API. Flat material design system.
+
+**Data model**: Location → Area → **Bin** → Items. The bin is the core entity — not individual items. Items exist only inside a bin (name + optional quantity, no independent identity). Custom fields, photos, tags, and QR codes all attach to bins. This is a "what's in this container" tool, not an asset tracker.
 
 **Core flows**: Register/login -> Create/join location -> Create bin -> Print QR label -> Scan to find contents.
 
