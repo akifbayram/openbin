@@ -87,6 +87,15 @@ vi.mock('../../lib/logger.js', () => ({
   }),
 }));
 
+vi.mock('../migrations/index.js', () => ({
+  migrations: [],
+}));
+
+vi.mock('../migrations/runner.js', () => ({
+  runSqliteMigrations: vi.fn(),
+  runPostgresMigrations: vi.fn(),
+}));
+
 vi.resetModules();
 
 const { initialize, getEngine } = await import('../init.js');
