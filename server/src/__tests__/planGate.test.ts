@@ -394,14 +394,14 @@ describe('generateUpgradeUrl()', () => {
     setConfig({ selfHosted: false, managerUrl: 'https://manager.example.com', subscriptionJwtSecret: 'sub-secret' });
     const url = await generateUpgradeUrl('user-id', 'user@example.com');
     expect(url).not.toBeNull();
-    expect(url).toMatch(/^https:\/\/manager\.example\.com\/auth\/openbin\?token=/);
+    expect(url).toMatch(/^https:\/\/manager\.example\.com\/plans\?token=/);
   });
 
   it('returns a URL with a valid JWT token', async () => {
     setConfig({ selfHosted: false, managerUrl: 'https://manager.example.com', subscriptionJwtSecret: 'sub-secret' });
     const url = await generateUpgradeUrl('user-id', 'user@example.com');
     expect(url).toBeTruthy();
-    const token = url!.split('?token=')[1];
+    const token = new URL(url!).searchParams.get('token')!;
     expect(token).toBeTruthy();
 
     // Verify the token is a valid JWT
@@ -426,7 +426,7 @@ describe('generateUpgradeUrl()', () => {
     setConfig({ selfHosted: false, managerUrl: 'https://manager.example.com', subscriptionJwtSecret: 'sub-secret' });
     const url = await generateUpgradeUrl('user-id', null);
     expect(url).toBeTruthy();
-    const token = url!.split('?token=')[1];
+    const token = new URL(url!).searchParams.get('token')!;
     const jose = await import('jose');
     const { payload: decoded } = await jose.jwtVerify(token, new TextEncoder().encode('sub-secret'));
     expect(decoded.userId).toBe('user-id');
