@@ -17,7 +17,6 @@ function sendManagerRequest(endpoint: string, payload: Record<string, unknown>, 
 interface NewUserPayload {
   userId: string;
   email: string | null;
-  username: string;
   activeUntil: string;
   status: string;
 }
@@ -26,7 +25,6 @@ export function notifyManagerNewUser(user: NewUserPayload): void {
   sendManagerRequest('/api/v1/users', {
     userId: user.userId,
     email: user.email,
-    username: user.username,
     activeUntil: user.activeUntil,
     status: user.status,
     action: 'create_user',

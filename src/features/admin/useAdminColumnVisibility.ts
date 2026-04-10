@@ -2,14 +2,14 @@ import { useCallback, useMemo, useState } from 'react';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 export type AdminFieldKey =
-  | 'username' | 'email' | 'role' | 'plan' | 'status'
+  | 'email' | 'role' | 'plan' | 'status'
   | 'bins' | 'locations' | 'storage' | 'created'
   | 'lastActive' | 'items' | 'photos' | 'scans30d'
   | 'aiCredits' | 'apiKeys' | 'apiRequests7d'
   | 'binPct' | 'storagePct' | 'binsCreated7d' | 'accountAge';
 
 const DEFAULT_VISIBILITY: Record<AdminFieldKey, boolean> = {
-  username: true, email: true, role: true, plan: true, status: true,
+  email: true, role: true, plan: true, status: true,
   bins: true, locations: true, storage: true, created: true,
   lastActive: false, items: false, photos: false, scans30d: false,
   aiCredits: false, apiKeys: false, apiRequests7d: false,
@@ -17,7 +17,7 @@ const DEFAULT_VISIBILITY: Record<AdminFieldKey, boolean> = {
 };
 
 export const ADMIN_FIELD_LABELS: Record<AdminFieldKey, string> = {
-  username: 'User', email: 'Email', role: 'Role', plan: 'Plan', status: 'Status',
+  email: 'Email', role: 'Role', plan: 'Plan', status: 'Status',
   bins: 'Bins', locations: 'Locations', storage: 'Storage', created: 'Created',
   lastActive: 'Last Active', items: 'Items', photos: 'Photos', scans30d: 'Scans (30d)',
   aiCredits: 'AI Credits', apiKeys: 'API Keys', apiRequests7d: 'API Reqs (7d)',

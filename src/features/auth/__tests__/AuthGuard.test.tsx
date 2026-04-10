@@ -47,7 +47,7 @@ describe('AuthGuard', () => {
 
   it('renders children when authenticated', () => {
     mockedUseAuth.mockReturnValue({
-      user: { id: '1', username: 'test' },
+      user: { id: '1', email: 'test@example.com' },
       loading: false,
     } as ReturnType<typeof useAuth>);
     renderWithRouter();
@@ -56,7 +56,7 @@ describe('AuthGuard', () => {
 
   it('does not show spinner when authenticated', () => {
     mockedUseAuth.mockReturnValue({
-      user: { id: '1', username: 'test' },
+      user: { id: '1', email: 'test@example.com' },
       loading: false,
     } as ReturnType<typeof useAuth>);
     renderWithRouter();

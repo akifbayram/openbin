@@ -11,10 +11,10 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function createUser(id: string, username: string) {
+async function createUser(id: string, displayName: string) {
   await query(
-    'INSERT INTO users (id, username, password_hash, display_name) VALUES ($1, $2, $3, $4)',
-    [id, username, 'hash', username],
+    'INSERT INTO users (id, email, password_hash, display_name) VALUES ($1, $2, $3, $4)',
+    [id, `${id}@test.local`, 'hash', displayName],
   );
 }
 

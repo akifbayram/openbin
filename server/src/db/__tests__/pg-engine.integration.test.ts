@@ -26,9 +26,9 @@ async function seedUserAndLocation() {
   const userId = crypto.randomUUID();
   const locationId = crypto.randomUUID();
   await pool.query(
-    `INSERT INTO users (id, username, password_hash, display_name, is_admin)
+    `INSERT INTO users (id, email, password_hash, display_name, is_admin)
      VALUES ($1, $2, 'hash', 'Test', FALSE)`,
-    [userId, `u_${userId.slice(0, 8)}`],
+    [userId, `u_${userId.slice(0, 8)}@test.local`],
   );
   await pool.query(
     `INSERT INTO locations (id, name, created_by, invite_code)
@@ -42,51 +42,51 @@ describe('pg-engine: query execution', () => {
   it('INSERT and SELECT round-trip', async () => {
     const id = crypto.randomUUID();
     await engine.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-       VALUES ($1, 'roundtrip', 'hash', 'RT User', FALSE)`,
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+       VALUES ($1, 'roundtrip@test.local', 'hash', 'RT User', FALSE)`,
       [id],
     );
-    const result = await engine.query<{ username: string }>('SELECT username FROM users WHERE id = $1', [id]);
+    const result = await engine.query<{ email: string }>('SELECT email FROM users WHERE id = $1', [id]);
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].username).toBe('roundtrip');
+    expect(result.rows[0].email).toBe('roundtrip@test.local');
   });
 
   it('parameterized query with $1, $2 binds correctly', async () => {
     const id = crypto.randomUUID();
     await engine.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin)
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin)
        VALUES ($1, $2, 'hash', 'Param', FALSE)`,
-      [id, 'param_user'],
+      [id, 'param_user@test.local'],
     );
     const result = await engine.query<{ id: string }>(
-      'SELECT id FROM users WHERE username = $1 AND display_name = $2',
-      ['param_user', 'Param'],
+      'SELECT id FROM users WHERE email = $1 AND display_name = $2',
+      ['param_user@test.local', 'Param'],
     );
     expect(result.rows[0].id).toBe(id);
   });
 
   it('INSERT with RETURNING returns inserted row', async () => {
     const id = crypto.randomUUID();
-    const result = await engine.query<{ id: string; username: string }>(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-       VALUES ($1, 'ret_user', 'hash', 'Ret', FALSE)
-       RETURNING id, username`,
+    const result = await engine.query<{ id: string; email: string }>(
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+       VALUES ($1, 'ret_user@test.local', 'hash', 'Ret', FALSE)
+       RETURNING id, email`,
       [id],
     );
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0].id).toBe(id);
-    expect(result.rows[0].username).toBe('ret_user');
+    expect(result.rows[0].email).toBe('ret_user@test.local');
   });
 
   it('COUNT(*) returns JavaScript Number (bigint parser)', async () => {
     await engine.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-       VALUES ($1, 'cnt1', 'hash', 'C1', FALSE)`,
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+       VALUES ($1, 'cnt1@test.local', 'hash', 'C1', FALSE)`,
       [crypto.randomUUID()],
     );
     await engine.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-       VALUES ($1, 'cnt2', 'hash', 'C2', FALSE)`,
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+       VALUES ($1, 'cnt2@test.local', 'hash', 'C2', FALSE)`,
       [crypto.randomUUID()],
     );
     const result = await engine.query<{ count: number }>('SELECT COUNT(*) AS count FROM users');
@@ -132,20 +132,21 @@ describe('pg-engine: parameter serialization', () => {
 
   it('null param stores NULL, not string "null"', async () => {
     const id = crypto.randomUUID();
+    // Insert with a valid email but test that a nullable column (avatar_path) accepts null
     await engine.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin, email)
-       VALUES ($1, 'null_test', 'hash', 'Null', FALSE, $2)`,
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin, avatar_path)
+       VALUES ($1, 'null_test@test.local', 'hash', 'Null', FALSE, $2)`,
       [id, null],
     );
-    const result = await engine.query<{ email: string | null }>('SELECT email FROM users WHERE id = $1', [id]);
-    expect(result.rows[0].email).toBeNull();
+    const result = await engine.query<{ avatar_path: string | null }>('SELECT avatar_path FROM users WHERE id = $1', [id]);
+    expect(result.rows[0].avatar_path).toBeNull();
   });
 
   it('boolean true stored and returned as native true', async () => {
     const id = crypto.randomUUID();
     await engine.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-       VALUES ($1, 'bool_test', 'hash', 'Bool', $2)`,
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+       VALUES ($1, 'bool_test@test.local', 'hash', 'Bool', $2)`,
       [id, true],
     );
     const result = await engine.query<{ is_admin: boolean }>('SELECT is_admin FROM users WHERE id = $1', [id]);
@@ -159,13 +160,13 @@ describe('pg-engine: transactions', () => {
     const id2 = crypto.randomUUID();
     await engine.withTransaction(async (txQuery) => {
       await txQuery(
-        `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-         VALUES ($1, 'tx1', 'hash', 'TX1', FALSE)`,
+        `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+         VALUES ($1, 'tx1@test.local', 'hash', 'TX1', FALSE)`,
         [id1],
       );
       await txQuery(
-        `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-         VALUES ($1, 'tx2', 'hash', 'TX2', FALSE)`,
+        `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+         VALUES ($1, 'tx2@test.local', 'hash', 'TX2', FALSE)`,
         [id2],
       );
     });
@@ -179,8 +180,8 @@ describe('pg-engine: transactions', () => {
     await expect(
       engine.withTransaction(async (txQuery) => {
         await txQuery(
-          `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-           VALUES ($1, 'rb1', 'hash', 'RB1', FALSE)`,
+          `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+           VALUES ($1, 'rb1@test.local', 'hash', 'RB1', FALSE)`,
           [id1],
         );
         // Force an error
@@ -196,15 +197,15 @@ describe('pg-engine: transactions', () => {
     await Promise.all([
       engine.withTransaction(async (txQuery) => {
         await txQuery(
-          `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-           VALUES ($1, 'conc1', 'hash', 'C1', FALSE)`,
+          `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+           VALUES ($1, 'conc1@test.local', 'hash', 'C1', FALSE)`,
           [id1],
         );
       }),
       engine.withTransaction(async (txQuery) => {
         await txQuery(
-          `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-           VALUES ($1, 'conc2', 'hash', 'C2', FALSE)`,
+          `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+           VALUES ($1, 'conc2@test.local', 'hash', 'C2', FALSE)`,
           [id2],
         );
       }),
@@ -218,19 +219,19 @@ describe('pg-engine: transactions', () => {
     await expect(
       engine.withTransaction(async (txQuery) => {
         await txQuery(
-          `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-           VALUES ($1, 'midway', 'hash', 'MW', FALSE)`,
+          `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+           VALUES ($1, 'midway@test.local', 'hash', 'MW', FALSE)`,
           [userId],
         );
-        // violate unique constraint by inserting duplicate username
+        // violate unique constraint by inserting duplicate email
         await txQuery(
-          `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-           VALUES ($1, 'midway', 'hash', 'MW2', FALSE)`,
+          `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+           VALUES ($1, 'midway@test.local', 'hash', 'MW2', FALSE)`,
           [crypto.randomUUID()],
         );
       }),
     ).rejects.toThrow();
-    const result = await engine.query('SELECT id FROM users WHERE username = $1', ['midway']);
+    const result = await engine.query('SELECT id FROM users WHERE email = $1', ['midway@test.local']);
     expect(result.rows).toHaveLength(0);
   });
 

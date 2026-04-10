@@ -54,7 +54,7 @@ describe('capitalize', () => {
 
 describe('fetchUser', () => {
   it('calls correct endpoint', async () => {
-    const mockDetail = { id: 'u1', username: 'admin', stats: {} };
+    const mockDetail = { id: 'u1', email: 'admin@example.com', stats: {} };
     mockApiFetch.mockResolvedValue(mockDetail);
 
     const result = await fetchUser('u1');

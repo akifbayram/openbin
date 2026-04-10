@@ -12,8 +12,8 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string, displayName: string, email?: string, inviteCode?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, displayName: string, inviteCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   setActiveLocationId: (id: string | null) => void;
@@ -114,10 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('openbin-auth-expired', handler);
   }, []);
 
-  const login = useCallback(async (username: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     const data = await apiFetch<{ token: string; user: User; activeLocationId?: string }>('/api/auth/login', {
       method: 'POST',
-      body: { username, password },
+      body: { email, password },
     });
     if (data.activeLocationId) {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_LOCATION, data.activeLocationId);
@@ -130,9 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const register = useCallback(async (username: string, password: string, displayName: string, email?: string, inviteCode?: string) => {
-    const body: Record<string, string> = { username, password, displayName };
-    if (email) body.email = email;
+  const register = useCallback(async (email: string, password: string, displayName: string, inviteCode?: string) => {
+    const body: Record<string, string> = { email, password, displayName };
     if (inviteCode) body.inviteCode = inviteCode;
     const data = await apiFetch<{ token: string; user: User; activeLocationId?: string }>('/api/auth/register', {
       method: 'POST',

@@ -9,7 +9,7 @@ const JWT_SECRET_KEY = new TextEncoder().encode(config.jwtSecret);
 
 export interface AuthUser {
   id: string;
-  username: string;
+  email: string;
 }
 
 declare global {
@@ -31,7 +31,7 @@ function extractToken(req: Request): string | undefined {
 
 interface JwtPayload {
   id: string;
-  username: string;
+  email: string;
   tv?: number; // token_version
 }
 
@@ -39,7 +39,7 @@ async function verifyJwt(token: string): Promise<(AuthUser & { tokenVersion: num
   try {
     const { payload } = await jose.jwtVerify(token, JWT_SECRET_KEY, { algorithms: ['HS256'] });
     const p = payload as unknown as JwtPayload;
-    return { id: p.id, username: p.username, tokenVersion: p.tv ?? 0 };
+    return { id: p.id, email: p.email, tokenVersion: p.tv ?? 0 };
   } catch {
     return null;
   }
@@ -160,7 +160,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   if (token.startsWith('sk_openbin_')) {
     const keyHash = crypto.createHash('sha256').update(token).digest('hex');
     query(
-      `SELECT ak.id AS key_id, u.id, u.username, u.deleted_at, u.suspended_at, u.plan
+      `SELECT ak.id AS key_id, u.id, u.email, u.deleted_at, u.suspended_at, u.plan
        FROM api_keys ak
        JOIN users u ON u.id = ak.user_id
        WHERE ak.key_hash = $1 AND ak.revoked_at IS NULL`,
@@ -170,7 +170,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
         res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid API key' });
         return;
       }
-      const row = result.rows[0] as { key_id: string; id: string; username: string; deleted_at: string | null; suspended_at: string | null; plan: number };
+      const row = result.rows[0] as { key_id: string; id: string; email: string; deleted_at: string | null; suspended_at: string | null; plan: number };
       if (row.deleted_at) {
         res.status(401).json({ error: 'ACCOUNT_DELETED', message: 'This account has been deleted' });
         return;
@@ -183,7 +183,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
         res.status(403).json({ error: 'PLAN_RESTRICTED', message: 'API key access requires a Pro plan' });
         return;
       }
-      req.user = { id: row.id, username: row.username };
+      req.user = { id: row.id, email: row.email };
       req.authMethod = 'api_key';
       req.apiKeyId = row.key_id;
       maybeUpdateLastActive(row.id);
@@ -207,7 +207,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
           res.status(401).json({ error: 'SESSION_REVOKED', message: 'Session has been revoked. Please log in again.' });
           return;
         }
-        req.user = { id: user.id, username: user.username };
+        req.user = { id: user.id, email: user.email };
         req.authMethod = 'jwt';
         maybeUpdateLastActive(user.id);
         next();
@@ -219,7 +219,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
 }
 
 export async function signToken(user: AuthUser, tokenVersion = 0): Promise<string> {
-  return new jose.SignJWT({ id: user.id, username: user.username, tv: tokenVersion })
+  return new jose.SignJWT({ id: user.id, email: user.email, tv: tokenVersion })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime(config.accessTokenExpiresIn)
     .sign(JWT_SECRET_KEY);

@@ -302,7 +302,7 @@ export function AccountSection() {
             >
               <UserAvatar
                 avatarUrl={avatarSrc}
-                displayName={user.displayName || user.username}
+                displayName={user.displayName || user.email}
                 size="lg"
               />
               <div
@@ -316,8 +316,8 @@ export function AccountSection() {
             </button>
           </div>
           <div className="min-w-0">
-            <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">{user.displayName || user.username}</p>
-            <p className="text-[13px] text-[var(--text-tertiary)]">@{user.username}</p>
+            <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">{user.displayName || user.email}</p>
+            <p className="text-[13px] text-[var(--text-tertiary)]">{user.email}</p>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[12px] text-[var(--text-tertiary)]">
               <span className="inline-flex items-center gap-1">
                 <Calendar className="h-3 w-3" />

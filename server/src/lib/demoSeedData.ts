@@ -16,15 +16,15 @@ export interface DemoBin {
   visibility?: 'location' | 'private';
 }
 
-export const DEMO_USERS: Record<DemoMember, string> = {
-  demo: 'Darrin DeYoung',
-  sarah: 'Sarah DeYoung',
-  alex: 'Alex DeYoung',
-  jordan: 'Jordan DeYoung',
-  pat: 'Pat DeYoung',
+export const DEMO_USERS: Record<DemoMember, { email: string; displayName: string }> = {
+  demo: { email: 'demo@openbin.local', displayName: 'Darrin DeYoung' },
+  sarah: { email: 'sarah@openbin.local', displayName: 'Sarah DeYoung' },
+  alex: { email: 'alex@openbin.local', displayName: 'Alex DeYoung' },
+  jordan: { email: 'jordan@openbin.local', displayName: 'Jordan DeYoung' },
+  pat: { email: 'pat@openbin.local', displayName: 'Pat DeYoung' },
 };
 
-export const DEMO_USERNAMES = Object.keys(DEMO_USERS) as DemoMember[];
+export const DEMO_MEMBERS = Object.keys(DEMO_USERS) as DemoMember[];
 
 export const HOME_AREAS = ['Garage', 'Kitchen', "Kids' Room", 'Basement', 'Closet', 'Office'];
 

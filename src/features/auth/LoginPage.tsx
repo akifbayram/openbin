@@ -23,7 +23,7 @@ export function LoginPage() {
   const { settings } = useAppSettings();
   const { preference, setThemePreference } = useTheme();
   const ThemeIcon = preference === 'light' ? Sun : preference === 'dark' ? Moon : Monitor;
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
@@ -31,7 +31,7 @@ export function LoginPage() {
   const [demoLoading, setDemoLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [oauthProviders, setOAuthProviders] = useState<string[]>([]);
-  const usernameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
   useOAuthReturn();
@@ -74,8 +74,8 @@ export function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError('');
-    if (!username.trim()) {
-      usernameRef.current?.focus();
+    if (!email.trim()) {
+      emailRef.current?.focus();
       return;
     }
     if (!password) {
@@ -84,11 +84,11 @@ export function LoginPage() {
     }
     setLoading(true);
     try {
-      await login(username.trim(), password);
+      await login(email.trim(), password);
       navigate('/');
     } catch (err) {
-      setFormError(getErrorMessage(err, 'Invalid username or password'));
-      usernameRef.current?.focus();
+      setFormError(getErrorMessage(err, 'Invalid email or password'));
+      emailRef.current?.focus();
     } finally {
       setLoading(false);
     }
@@ -136,15 +136,15 @@ export function LoginPage() {
                     </p>
                   )}
                   <div className="space-y-2">
-                    <Label htmlFor="login-username">Username</Label>
+                    <Label htmlFor="login-email">Email</Label>
                     <Input
-                      ref={usernameRef}
-                      id="login-username"
-                      value={username}
-                      onChange={(e) => { setUsername(e.target.value); if (formError) setFormError(''); }}
-                      placeholder="Enter username"
-                      autoComplete="username"
-                      autoCapitalize="none"
+                      ref={emailRef}
+                      id="login-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); if (formError) setFormError(''); }}
+                      placeholder="Enter email"
+                      autoComplete="email"
                       autoFocus
                       required
                       enterKeyHint="next"
@@ -170,7 +170,7 @@ export function LoginPage() {
                   </div>
                   <Button
                     type="submit"
-                    disabled={!username.trim() || !password || loading}
+                    disabled={!email.trim() || !password || loading}
                     fullWidth
                   >
                     <LogIn className="h-4 w-4 mr-2" />

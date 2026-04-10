@@ -31,9 +31,9 @@ const EMAIL = 'test@example.com';
 
 async function insertUser(id: string): Promise<void> {
   await query(
-    `INSERT INTO users (id, username, display_name, password_hash)
+    `INSERT INTO users (id, email, display_name, password_hash)
      VALUES ($1, $2, $3, $4)`,
-    [id, `user_${id}`, 'Test User', 'hash'],
+    [id, `user_${id}@test.local`, 'Test User', 'hash'],
   );
 }
 

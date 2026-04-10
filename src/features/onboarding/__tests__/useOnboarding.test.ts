@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/auth', () => ({
   useAuth: vi.fn(() => ({
-    user: { id: 'user-1', username: 'testuser', displayName: 'Test', email: null, avatarUrl: null, createdAt: '', updatedAt: '' },
+    user: { id: 'user-1', displayName: 'Test', email: 'testuser@example.com', avatarUrl: null, createdAt: '', updatedAt: '' },
   })),
 }));
 
@@ -27,7 +27,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockUseAuth.mockReturnValue({
-    user: { id: 'user-1', username: 'testuser', displayName: 'Test', email: null, avatarUrl: null, createdAt: '', updatedAt: '' },
+    user: { id: 'user-1', displayName: 'Test', email: 'testuser@example.com', avatarUrl: null, createdAt: '', updatedAt: '' },
   } as ReturnType<typeof useAuth>);
   mockApiFetch.mockResolvedValue(null);
 });

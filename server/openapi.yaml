@@ -129,8 +129,6 @@ components:
         id:
           type: string
           format: uuid
-        username:
-          type: string
         displayName:
           type: string
         email:
@@ -161,10 +159,11 @@ components:
 
     LoginRequest:
       type: object
-      required: [username, password]
+      required: [email, password]
       properties:
-        username:
+        email:
           type: string
+          format: email
         password:
           type: string
 
@@ -180,12 +179,11 @@ components:
 
     RegisterRequest:
       type: object
-      required: [username, password, displayName]
+      required: [email, password, displayName]
       properties:
-        username:
+        email:
           type: string
-          minLength: 3
-          maxLength: 50
+          format: email
         password:
           type: string
           minLength: 8
@@ -355,8 +353,6 @@ components:
           type: string
           format: date-time
         display_name:
-          type: string
-        username:
           type: string
 
     CreateLocationRequest:
@@ -1670,14 +1666,14 @@ paths:
                 error: FORBIDDEN
                 message: Registration is currently disabled
         '409':
-          description: Username already taken
+          description: Email already registered
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: CONFLICT
-                message: Username already taken
+                message: Email already registered
         '422':
           $ref: '#/components/responses/ValidationError'
         '429':
@@ -1686,7 +1682,7 @@ paths:
   /auth/login:
     post:
       tags: [Auth]
-      summary: Log in with username and password
+      summary: Log in with email and password
       description: Returns JWT token and user info. Rate limited to 5 per 15 minutes.
       security: []
       requestBody:
@@ -1710,7 +1706,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: UNAUTHORIZED
-                message: Invalid username or password
+                message: Invalid email or password
         '429':
           $ref: '#/components/responses/RateLimited'
 

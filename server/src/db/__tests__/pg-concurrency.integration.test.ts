@@ -26,9 +26,9 @@ async function seedUserAndLocation() {
   const userId = crypto.randomUUID();
   const locationId = crypto.randomUUID();
   await pool.query(
-    `INSERT INTO users (id, username, password_hash, display_name, is_admin)
+    `INSERT INTO users (id, email, password_hash, display_name, is_admin)
      VALUES ($1, $2, 'hash', 'Test', FALSE)`,
-    [userId, `u_${userId.slice(0, 8)}`],
+    [userId, `u_${userId.slice(0, 8)}@test.local`],
   );
   await pool.query(
     `INSERT INTO locations (id, name, created_by, invite_code)
@@ -58,12 +58,12 @@ describe('pg-concurrency: parallel writes', () => {
   });
 
   it('two concurrent INSERTs with same unique key — one gets 23505', async () => {
-    const username = `dup_${crypto.randomUUID().slice(0, 8)}`;
+    const email = `dup_${crypto.randomUUID().slice(0, 8)}@test.local`;
     const insert = (id: string) =>
       pool.query(
-        `INSERT INTO users (id, username, password_hash, display_name, is_admin)
+        `INSERT INTO users (id, email, password_hash, display_name, is_admin)
          VALUES ($1, $2, 'hash', 'Dup', FALSE)`,
-        [id, username],
+        [id, email],
       );
 
     const results = await Promise.allSettled([
@@ -78,17 +78,17 @@ describe('pg-concurrency: parallel writes', () => {
   });
 
   it('isUniqueViolation() identifies 23505 from real PG constraint violation', async () => {
-    const username = `uniq_${crypto.randomUUID().slice(0, 8)}`;
+    const email = `uniq_${crypto.randomUUID().slice(0, 8)}@test.local`;
     await pool.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin)
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin)
        VALUES ($1, $2, 'hash', 'U1', FALSE)`,
-      [crypto.randomUUID(), username],
+      [crypto.randomUUID(), email],
     );
     try {
       await pool.query(
-        `INSERT INTO users (id, username, password_hash, display_name, is_admin)
+        `INSERT INTO users (id, email, password_hash, display_name, is_admin)
          VALUES ($1, $2, 'hash', 'U2', FALSE)`,
-        [crypto.randomUUID(), username],
+        [crypto.randomUUID(), email],
       );
       expect.fail('Should have thrown');
     } catch (err) {

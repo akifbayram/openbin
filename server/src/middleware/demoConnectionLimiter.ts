@@ -1,7 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { config } from '../lib/config.js';
-import type { DemoMember } from '../lib/demoSeedData.js';
-import { DEMO_USERNAMES } from '../lib/demoSeedData.js';
+import { DEMO_MEMBERS, DEMO_USERS } from '../lib/demoSeedData.js';
 
 const PER_USER_MAX = 2;
 const TOTAL_DEMO_MAX = 6;
@@ -11,7 +10,7 @@ let totalDemoCount = 0;
 
 /** Check whether the authenticated user is a demo account. */
 export function isDemoUser(req: Request): boolean {
-  return config.demoMode && !!req.user && DEMO_USERNAMES.includes(req.user.username as DemoMember);
+  return config.demoMode && !!req.user && DEMO_MEMBERS.some((m) => DEMO_USERS[m].email === req.user!.email);
 }
 
 /**

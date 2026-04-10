@@ -95,29 +95,6 @@ export async function generateAppleClientSecret(): Promise<string> {
     .sign(key);
 }
 
-// -- Username generation --
-
-export async function generateUsername(email: string): Promise<string> {
-  const prefix = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').toLowerCase().slice(0, 50);
-  const base = prefix || 'user';
-
-  // Single query to find all taken usernames matching base or base+N
-  const taken = await query<{ username: string }>(
-    "SELECT username FROM users WHERE username = $1 OR username LIKE $1 || '%'",
-    [base]
-  );
-  const takenSet = new Set(taken.rows.map((r) => r.username));
-
-  if (!takenSet.has(base)) return base;
-
-  for (let i = 2; i < 1000; i++) {
-    const candidate = `${base}${i}`.slice(0, 50);
-    if (!takenSet.has(candidate)) return candidate;
-  }
-
-  return `${base}_${crypto.randomBytes(4).toString('hex')}`;
-}
-
 // -- Find or create OAuth user --
 
 interface OAuthUserInput {
@@ -128,7 +105,7 @@ interface OAuthUserInput {
 }
 
 interface OAuthUserResult {
-  user: { id: string; username: string; token_version: number };
+  user: { id: string; email: string; token_version: number };
   created: boolean;
 }
 
@@ -143,14 +120,14 @@ export async function findOrCreateOAuthUser(input: OAuthUserInput): Promise<OAut
 
   if (linkResult.rows.length > 0) {
     const userId = linkResult.rows[0].user_id;
-    const userResult = await query<{ id: string; username: string; token_version: number; deleted_at: string | null; suspended_at: string | null }>(
-      'SELECT id, username, token_version, deleted_at, suspended_at FROM users WHERE id = $1',
+    const userResult = await query<{ id: string; email: string; token_version: number; deleted_at: string | null; suspended_at: string | null }>(
+      'SELECT id, email, token_version, deleted_at, suspended_at FROM users WHERE id = $1',
       [userId]
     );
     const user = userResult.rows[0];
     if (user && !user.deleted_at) {
       if (user.suspended_at) throw new ForbiddenError('This account has been suspended');
-      return { user: { id: user.id, username: user.username, token_version: user.token_version }, created: false };
+      return { user: { id: user.id, email: user.email, token_version: user.token_version }, created: false };
     }
     // User deleted or missing — remove stale link so a fresh account can be created
     await query('DELETE FROM user_oauth_links WHERE provider = $1 AND provider_user_id = $2', [provider, providerUserId]);
@@ -169,22 +146,17 @@ export async function findOrCreateOAuthUser(input: OAuthUserInput): Promise<OAut
     throw new ForbiddenError('Registration requires an invite code');
   }
 
-  // 4. Create new user. If the email is already taken, retry without email to avoid
-  //    hijacking the existing account. Handled atomically via unique constraint.
-  const username = await generateUsername(email);
+  // 4. Create new user. Email is UNIQUE NOT NULL — if it's already taken, throw.
   const userId = generateUuid();
-
-  let emailUsed: string | null = email;
 
   await withTransaction(async (txQuery) => {
     try {
       await txQuery(
-        `INSERT INTO users (id, username, password_hash, display_name, email, plan, sub_status, active_until)
-         VALUES ($1, $2, NULL, $3, $4, $5, $6, $7)`,
+        `INSERT INTO users (id, password_hash, display_name, email, plan, sub_status, active_until)
+         VALUES ($1, NULL, $2, $3, $4, $5, $6)`,
         [
           userId,
-          username,
-          displayName || username,
+          displayName || email.split('@')[0],
           email,
           Plan.PLUS,
           SubStatus.TRIAL,
@@ -192,34 +164,21 @@ export async function findOrCreateOAuthUser(input: OAuthUserInput): Promise<OAut
         ]
       );
     } catch (err: unknown) {
-      if (isUniqueViolation(err, 'idx_users_email_unique')) {
-        log.warn(`OAuth ${provider} login: email "${email}" already in use — creating account without email`);
-        emailUsed = null;
-        await txQuery(
-          `INSERT INTO users (id, username, password_hash, display_name, email, plan, sub_status, active_until)
-           VALUES ($1, $2, NULL, $3, NULL, $4, $5, $6)`,
-          [
-            userId,
-            username,
-            displayName || username,
-            Plan.PLUS,
-            SubStatus.TRIAL,
-            new Date(Date.now() + config.trialPeriodDays * 24 * 60 * 60 * 1000).toISOString(),
-          ]
-        );
-      } else {
-        throw err;
+      if (isUniqueViolation(err, 'idx_users_email_unique') || isUniqueViolation(err)) {
+        log.warn(`OAuth ${provider} login: email "${email}" already in use — cannot create account`);
+        throw new ForbiddenError('An account with this email already exists. Please link this provider from account settings.');
       }
+      throw err;
     }
 
     await txQuery(
       'INSERT INTO user_oauth_links (id, user_id, provider, provider_user_id, email) VALUES ($1, $2, $3, $4, $5)',
-      [generateUuid(), userId, provider, providerUserId, emailUsed]
+      [generateUuid(), userId, provider, providerUserId, email]
     );
   });
 
-  log.info(`Created new user "${username}" via ${provider} OAuth`);
-  return { user: { id: userId, username, token_version: 0 }, created: true };
+  log.info(`Created new user "${email}" via ${provider} OAuth`);
+  return { user: { id: userId, email, token_version: 0 }, created: true };
 }
 
 // -- Finalize OAuth login (issue tokens, record history, redirect) --
@@ -227,10 +186,10 @@ export async function findOrCreateOAuthUser(input: OAuthUserInput): Promise<OAut
 export async function finalizeOAuthLogin(
   req: import('express').Request,
   res: Response,
-  user: { id: string; username: string; token_version: number },
+  user: { id: string; email: string; token_version: number },
   provider: string,
 ): Promise<void> {
-  const accessToken = await signToken({ id: user.id, username: user.username }, user.token_version);
+  const accessToken = await signToken({ id: user.id, email: user.email }, user.token_version);
   const refresh = await createRefreshToken(user.id);
   setAccessTokenCookie(res, accessToken);
   setRefreshTokenCookie(res, refresh.rawToken);
@@ -240,7 +199,7 @@ export async function finalizeOAuthLogin(
   query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 1)',
     [generateUuid(), user.id, ip, ua, provider]).catch(() => {});
 
-  log.info(`User "${user.username}" logged in via ${provider} OAuth`);
+  log.info(`User "${user.email}" logged in via ${provider} OAuth`);
   res.redirect('/?oauth=success');
 }
 

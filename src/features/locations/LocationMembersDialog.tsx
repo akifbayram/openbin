@@ -50,7 +50,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
     const q = memberSearch.toLowerCase();
     return members.filter((m) =>
       (m.display_name || '').toLowerCase().includes(q) ||
-      (m.username || '').toLowerCase().includes(q),
+      (m.email || '').toLowerCase().includes(q),
     );
   }, [members, memberSearch]);
 
@@ -206,7 +206,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
             {filteredMembers.map((member) => {
               const isSelf = member.user_id === user?.id;
               const displayName = member.display_name || member.user_id.slice(0, 8);
-              const showUsername = member.username && member.username !== member.display_name;
+              const showEmail = member.email && member.email !== member.display_name;
               return (
                 <div
                   key={member.id}
@@ -220,9 +220,9 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
                     <span className="text-[14px] text-[var(--text-primary)] truncate block">
                       {isSelf ? 'You' : displayName}
                     </span>
-                    {showUsername && (
+                    {showEmail && (
                       <span className="text-[12px] text-[var(--text-tertiary)] truncate block">
-                        @{member.username}
+                        {member.email}
                       </span>
                     )}
                   </div>
@@ -300,7 +300,7 @@ export function LocationMembersDialog({ locationId, open, onOpenChange }: Locati
           <DialogHeader>
             <DialogTitle>Remove member</DialogTitle>
             <DialogDescription>
-              Remove {memberToRemove?.display_name || memberToRemove?.username || 'this member'} from {location?.name ?? 'this location'}? They will lose access to all bins in this location.
+              Remove {memberToRemove?.display_name || memberToRemove?.email || 'this member'} from {location?.name ?? 'this location'}? They will lose access to all bins in this location.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

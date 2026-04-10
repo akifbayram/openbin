@@ -4,9 +4,8 @@ export type SubscriptionStatus = 'inactive' | 'active' | 'trial';
 
 export interface User {
   id: string;
-  username: string;
   displayName: string;
-  email: string | null;
+  email: string;
   avatarUrl: string | null;
   createdAt: string;
   updatedAt: string;
@@ -44,7 +43,7 @@ export interface LocationMember {
   role: 'admin' | 'member' | 'viewer';
   joined_at: string;
   display_name?: string;
-  username?: string;
+  email?: string;
 }
 
 export interface ActivityLogEntry {
@@ -222,7 +221,7 @@ export interface ExportDataV2 {
   customFieldDefinitions?: Array<{ name: string; position: number }>;
   pinnedBins?: Array<{ userId: string; binId: string; position: number }>;
   savedViews?: Array<{ userId: string; name: string; searchQuery: string; sort: string; filters: string }>;
-  members?: Array<{ userId: string; username: string; role: string; joinedAt: string }>;
+  members?: Array<{ userId: string; email: string; role: string; joinedAt: string }>;
   photos?: ExportedPhoto[];
 }
 

@@ -1,6 +1,5 @@
 import { ValidationError } from './httpErrors.js';
 
-const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,50}$/;
 const EMAIL_REGEX = /^[^\s@+]+@[^\s@]+\.[^\s@]+$/;
 export const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
 
@@ -9,11 +8,13 @@ export function stripUnicodeControl(text: string): string {
   return text.replace(/[\u200B-\u200F\u2028-\u202F\u2060-\u206F\uFEFF\u00AD]/g, '');
 }
 
-export function validateUsername(username: unknown): string {
-  if (!username || typeof username !== 'string' || !USERNAME_REGEX.test(username)) {
-    throw new ValidationError('Username must be 3-50 characters (alphanumeric and underscores only)');
+export function validateLoginEmail(email: unknown): string {
+  if (!email || typeof email !== 'string' || !email.trim()) {
+    throw new ValidationError('Email is required');
   }
-  return username;
+  const trimmed = email.trim().toLowerCase();
+  validateEmail(trimmed);
+  return trimmed;
 }
 
 export function isStrongPassword(password: string): boolean {

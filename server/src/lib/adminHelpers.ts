@@ -6,9 +6,9 @@ export async function getAdminCount(): Promise<number> {
   return result.rows[0].cnt;
 }
 
-export async function assertUserExists(userId: string): Promise<{ id: string; username: string }> {
-  const result = await query<{ id: string; username: string }>(
-    'SELECT id, username FROM users WHERE id = $1',
+export async function assertUserExists(userId: string): Promise<{ id: string; email: string }> {
+  const result = await query<{ id: string; email: string }>(
+    'SELECT id, email FROM users WHERE id = $1',
     [userId],
   );
   if (result.rows.length === 0) throw new NotFoundError('User not found');

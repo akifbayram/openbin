@@ -50,7 +50,7 @@ router.post('/maintenance', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'toggle_maintenance',
     targetType: 'system',
     details: { enabled, message: message ?? '' },
@@ -121,7 +121,7 @@ router.post('/announcements', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'create_announcement',
     targetType: 'announcement',
     targetId: id,
@@ -155,7 +155,7 @@ router.delete('/announcements/:id', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'delete_announcement',
     targetType: 'announcement',
     targetId: id,
@@ -304,11 +304,11 @@ router.get('/locations', asyncHandler(async (req, res) => {
       params,
     ),
     query<{
-    id: string; name: string; owner_username: string | null; owner_display_name: string | null;
+    id: string; name: string; owner_email: string | null; owner_display_name: string | null;
     member_count: number; bin_count: number; area_count: number; created_at: string;
   }>(
     `SELECT l.id, l.name,
-       u.username AS owner_username,
+       u.email AS owner_email,
        u.display_name AS owner_display_name,
        (SELECT COUNT(*) FROM location_members lm WHERE lm.location_id = l.id) AS member_count,
        (SELECT COUNT(*) FROM bins b WHERE b.location_id = l.id AND b.deleted_at IS NULL) AS bin_count,
@@ -326,7 +326,7 @@ router.get('/locations', asyncHandler(async (req, res) => {
   const results = dataResult.rows.map((row) => ({
     id: row.id,
     name: row.name,
-    ownerUsername: row.owner_username ?? null,
+    ownerEmail: row.owner_email ?? null,
     ownerDisplayName: row.owner_display_name ?? null,
     memberCount: row.member_count ?? 0,
     binCount: row.bin_count ?? 0,
@@ -370,7 +370,7 @@ router.post('/locations/:id/force-join', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'force_join_location',
     targetType: 'location',
     targetId: locationId,
@@ -396,7 +396,7 @@ router.delete('/locations/:locationId/members/:userId', asyncHandler(async (req,
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'remove_member',
     targetType: 'location_member',
     targetId: userId,
@@ -426,7 +426,7 @@ router.put('/locations/:locationId/members/:userId/role', asyncHandler(async (re
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'change_member_role',
     targetType: 'location_member',
     targetId: userId,
@@ -461,11 +461,11 @@ router.get('/bins', asyncHandler(async (req, res) => {
 
   const dataResult = await query<{
     id: string; name: string; short_code: string; location_name: string;
-    owner_username: string | null; created_at: string; updated_at: string;
+    owner_email: string | null; created_at: string; updated_at: string;
   }>(
     `SELECT b.id, b.name, b.short_code,
        l.name AS location_name,
-       u.username AS owner_username,
+       u.email AS owner_email,
        b.created_at, b.updated_at
      FROM bins b
      JOIN locations l ON b.location_id = l.id
@@ -481,7 +481,7 @@ router.get('/bins', asyncHandler(async (req, res) => {
     name: row.name,
     shortCode: row.short_code,
     locationName: row.location_name,
-    ownerUsername: row.owner_username ?? null,
+    ownerEmail: row.owner_email ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
@@ -498,9 +498,9 @@ router.get('/bins/:id', asyncHandler(async (req, res) => {
     area_id: string | null; notes: string; tags: string; icon: string;
     color: string; card_style: string; visibility: string;
     created_by: string | null; created_at: string; updated_at: string;
-    deleted_at: string | null; location_name: string; owner_username: string | null;
+    deleted_at: string | null; location_name: string; owner_email: string | null;
   }>(
-    `SELECT b.*, l.name AS location_name, u.username AS owner_username
+    `SELECT b.*, l.name AS location_name, u.email AS owner_email
      FROM bins b
      JOIN locations l ON b.location_id = l.id
      LEFT JOIN users u ON b.created_by = u.id
@@ -536,7 +536,7 @@ router.get('/bins/:id', asyncHandler(async (req, res) => {
     color: bin.color,
     cardStyle: bin.card_style,
     visibility: bin.visibility,
-    ownerUsername: bin.owner_username ?? null,
+    ownerEmail: bin.owner_email ?? null,
     createdBy: bin.created_by ?? null,
     createdAt: bin.created_at,
     updatedAt: bin.updated_at,
@@ -568,7 +568,7 @@ router.post('/locations/:id/regen-invite', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'regen_invite_code',
     targetType: 'location',
     targetId: locationId,

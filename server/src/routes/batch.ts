@@ -367,7 +367,7 @@ router.post('/batch', authenticate, batchLimiter, requireLocationMember(), async
     }
   }
 
-  const result = await executeActions(actions, locationId, req.user!.id, req.user!.username, req.authMethod, req.apiKeyId);
+  const result = await executeActions(actions, locationId, req.user!.id, req.user!.email, req.authMethod, req.apiKeyId);
 
   res.json({
     results: result.executed,

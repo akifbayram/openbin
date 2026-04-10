@@ -196,7 +196,7 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
             <button
               type="button"
               onClick={() => { navigate('/settings/account'); onItemClick?.(); }}
-              aria-label={user.displayName || user.username}
+              aria-label={user.displayName || user.email}
               aria-current={location.pathname === '/settings/account' ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-3 px-2 py-2.5 rounded-[var(--radius-sm)] text-[15px] font-medium w-full overflow-hidden whitespace-nowrap text-left border',
@@ -207,11 +207,11 @@ export function SidebarContent({ locations, activeLocationId, onLocationChange, 
             >
               <UserAvatar
                 avatarUrl={user.avatarUrl ? getAvatarUrl(user.avatarUrl) : null}
-                displayName={user.displayName || user.username}
+                displayName={user.displayName || user.email}
                 size="xs"
               />
               <span className={cn('flex-1 truncate', collapsed && 'w-0 opacity-0')} aria-hidden={collapsed || undefined}>
-                {user.displayName || user.username}
+                {user.displayName || user.email}
               </span>
             </button>
           )}

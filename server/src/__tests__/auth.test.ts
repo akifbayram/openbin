@@ -35,41 +35,41 @@ describe('POST /api/auth/register', () => {
   it('registers a new user', async () => {
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ username: 'newuser', password: 'StrongPass1!' });
+      .send({ email: 'newuser@test.local', password: 'StrongPass1!', displayName: 'New User' });
 
     expect(res.status).toBe(201);
     expect(getAccessCookie(res)).toBeDefined();
-    expect(res.body.user.username).toBe('newuser');
+    expect(res.body.user.email).toBe('newuser@test.local');
     expect(res.body.user.id).toBeDefined();
   });
 
   it('sets httpOnly cookies on register', async () => {
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ username: 'cookieuser', password: 'StrongPass1!' });
+      .send({ email: 'cookieuser@test.local', password: 'StrongPass1!', displayName: 'Cookie User' });
 
     expect(res.status).toBe(201);
     expect(getAccessCookie(res)).toBeDefined();
     expect(getRefreshCookie(res)).toBeDefined();
   });
 
-  it('lowercases the username', async () => {
+  it('lowercases the email', async () => {
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ username: 'MixedCase', password: 'StrongPass1!' });
+      .send({ email: 'MixedCase@Test.Local', password: 'StrongPass1!', displayName: 'Mixed Case' });
 
     expect(res.status).toBe(201);
-    expect(res.body.user.username).toBe('mixedcase');
+    expect(res.body.user.email).toBe('mixedcase@test.local');
   });
 
-  it('returns 409 for duplicate username', async () => {
+  it('returns 409 for duplicate email', async () => {
     await request(app)
       .post('/api/auth/register')
-      .send({ username: 'duplicate', password: 'StrongPass1!' });
+      .send({ email: 'duplicate@test.local', password: 'StrongPass1!', displayName: 'Duplicate' });
 
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ username: 'duplicate', password: 'StrongPass1!' });
+      .send({ email: 'duplicate@test.local', password: 'StrongPass1!', displayName: 'Duplicate2' });
 
     expect(res.status).toBe(409);
     expect(res.body.error).toBe('CONFLICT');
@@ -78,7 +78,7 @@ describe('POST /api/auth/register', () => {
   it('returns 422 for weak password', async () => {
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ username: 'weakpw', password: '123' });
+      .send({ email: 'weakpw@test.local', password: '123', displayName: 'Weak' });
 
     expect(res.status).toBe(422);
     expect(res.body.error).toBe('VALIDATION_ERROR');
@@ -95,7 +95,7 @@ describe('POST /api/auth/register', () => {
   it('uses displayName when provided', async () => {
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ username: 'withname', password: 'StrongPass1!', displayName: 'My Name' });
+      .send({ email: 'withname@test.local', password: 'StrongPass1!', displayName: 'My Name' });
 
     expect(res.status).toBe(201);
     expect(res.body.user.displayName).toBe('My Name');
@@ -106,25 +106,25 @@ describe('POST /api/auth/login', () => {
   it('logs in with valid credentials', async () => {
     await request(app)
       .post('/api/auth/register')
-      .send({ username: 'logintest', password: 'StrongPass1!' });
+      .send({ email: 'logintest@test.local', password: 'StrongPass1!', displayName: 'Login Test' });
 
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ username: 'logintest', password: 'StrongPass1!' });
+      .send({ email: 'logintest@test.local', password: 'StrongPass1!' });
 
     expect(res.status).toBe(200);
     expect(getAccessCookie(res)).toBeDefined();
-    expect(res.body.user.username).toBe('logintest');
+    expect(res.body.user.email).toBe('logintest@test.local');
   });
 
   it('sets httpOnly cookies on login', async () => {
     await request(app)
       .post('/api/auth/register')
-      .send({ username: 'cookielogin', password: 'StrongPass1!' });
+      .send({ email: 'cookielogin@test.local', password: 'StrongPass1!', displayName: 'Cookie Login' });
 
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ username: 'cookielogin', password: 'StrongPass1!' });
+      .send({ email: 'cookielogin@test.local', password: 'StrongPass1!' });
 
     expect(res.status).toBe(200);
     expect(getAccessCookie(res)).toBeDefined();
@@ -134,11 +134,11 @@ describe('POST /api/auth/login', () => {
   it('returns 401 for wrong password', async () => {
     await request(app)
       .post('/api/auth/register')
-      .send({ username: 'wrongpw', password: 'StrongPass1!' });
+      .send({ email: 'wrongpw@test.local', password: 'StrongPass1!', displayName: 'Wrong PW' });
 
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ username: 'wrongpw', password: 'WrongPass1!' });
+      .send({ email: 'wrongpw@test.local', password: 'WrongPass1!' });
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('UNAUTHORIZED');
@@ -147,7 +147,7 @@ describe('POST /api/auth/login', () => {
   it('returns 401 for non-existent user', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ username: 'nobody', password: 'StrongPass1!' });
+      .send({ email: 'nobody@test.local', password: 'StrongPass1!' });
 
     expect(res.status).toBe(401);
   });
@@ -161,13 +161,13 @@ describe('POST /api/auth/login', () => {
   });
 
   it('returns activeLocationId when user has a location', async () => {
-    const { token } = await createTestUser(app);
+    const { token, user } = await createTestUser(app);
     await createTestLocation(app, token, 'My Location');
 
     // Login again to check activeLocationId
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ username: (await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`)).body.username, password: 'TestPass123!' });
+      .send({ email: user.email, password: 'TestPass123!' });
 
     expect(res.status).toBe(200);
     expect(res.body.activeLocationId).toBeDefined();
@@ -184,13 +184,13 @@ describe('GET /api/auth/me', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.id).toBeDefined();
-    expect(res.body.username).toBeDefined();
+    expect(res.body.email).toBeDefined();
   });
 
   it('authenticates via access cookie', async () => {
     const regRes = await request(app)
       .post('/api/auth/register')
-      .send({ username: 'cookieme', password: 'StrongPass1!' });
+      .send({ email: 'cookieme@test.local', password: 'StrongPass1!', displayName: 'Cookie Me' });
 
     const accessCookie = getAccessCookie(regRes);
     expect(accessCookie).toBeDefined();
@@ -200,7 +200,7 @@ describe('GET /api/auth/me', () => {
       .set('Cookie', `openbin-access=${accessCookie}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.username).toBe('cookieme');
+    expect(res.body.email).toBe('cookieme@test.local');
   });
 
   it('returns 401 without token', async () => {
@@ -222,7 +222,7 @@ describe('POST /api/auth/refresh', () => {
   it('issues new tokens when refresh cookie is valid', async () => {
     const regRes = await request(app)
       .post('/api/auth/register')
-      .send({ username: 'refreshuser', password: 'StrongPass1!' });
+      .send({ email: 'refreshuser@test.local', password: 'StrongPass1!', displayName: 'Refresh User' });
 
     const refreshCookie = getRefreshCookie(regRes);
     expect(refreshCookie).toBeDefined();
@@ -257,7 +257,7 @@ describe('POST /api/auth/refresh', () => {
   it('detects replay attack and revokes entire family', async () => {
     const regRes = await request(app)
       .post('/api/auth/register')
-      .send({ username: 'replayuser', password: 'StrongPass1!' });
+      .send({ email: 'replayuser@test.local', password: 'StrongPass1!', displayName: 'Replay User' });
 
     const originalRefresh = getRefreshCookie(regRes)!;
 
@@ -287,7 +287,7 @@ describe('POST /api/auth/logout', () => {
   it('revokes refresh token and clears cookies', async () => {
     const regRes = await request(app)
       .post('/api/auth/register')
-      .send({ username: 'logoutuser', password: 'StrongPass1!' });
+      .send({ email: 'logoutuser@test.local', password: 'StrongPass1!', displayName: 'Logout User' });
 
     const refreshCookie = getRefreshCookie(regRes)!;
 
@@ -317,14 +317,14 @@ describe('POST /api/auth/logout-all', () => {
   it('revokes all refresh tokens for user', async () => {
     const regRes = await request(app)
       .post('/api/auth/register')
-      .send({ username: 'logoutall', password: 'StrongPass1!' });
+      .send({ email: 'logoutall@test.local', password: 'StrongPass1!', displayName: 'Logout All' });
 
     const token = getAccessCookie(regRes)!;
 
     // Login again to create a second refresh token
     const loginRes = await request(app)
       .post('/api/auth/login')
-      .send({ username: 'logoutall', password: 'StrongPass1!' });
+      .send({ email: 'logoutall@test.local', password: 'StrongPass1!' });
 
     const secondRefresh = getRefreshCookie(loginRes)!;
 
@@ -384,7 +384,7 @@ describe('PUT /api/auth/password', () => {
   it('changes password and revokes all refresh tokens', async () => {
     const regRes = await request(app)
       .post('/api/auth/register')
-      .send({ username: 'pwchangeuser', password: 'StrongPass1!' });
+      .send({ email: 'pwchangeuser@test.local', password: 'StrongPass1!', displayName: 'PW Change User' });
 
     const token = getAccessCookie(regRes)!;
     const refreshCookie = getRefreshCookie(regRes)!;
@@ -405,7 +405,7 @@ describe('PUT /api/auth/password', () => {
     // Verify new password works
     const loginRes = await request(app)
       .post('/api/auth/login')
-      .send({ username: 'pwchangeuser', password: 'NewStrongPass1!' });
+      .send({ email: 'pwchangeuser@test.local', password: 'NewStrongPass1!' });
 
     expect(loginRes.status).toBe(200);
   });
@@ -449,8 +449,9 @@ describe('POST /api/auth/register — invite code', () => {
     const res = await request(app)
       .post('/api/auth/register')
       .send({
-        username: `inviteuser_${Date.now()}`,
+        email: `inviteuser_${Date.now()}@test.local`,
         password: 'TestPass123!',
+        displayName: 'Invite User',
         inviteCode: location.invite_code,
       });
 
@@ -472,8 +473,9 @@ describe('POST /api/auth/register — invite code', () => {
     const res = await request(app)
       .post('/api/auth/register')
       .send({
-        username: `badinvite_${Date.now()}`,
+        email: `badinvite_${Date.now()}@test.local`,
         password: 'TestPass123!',
+        displayName: 'Bad Invite',
         inviteCode: 'nonexistent-code',
       });
 
@@ -514,7 +516,7 @@ describe('POST /api/auth/register — plan initialization', () => {
     // Default test environment is self-hosted (SELF_HOSTED=true by default in config)
     const regRes = await request(app)
       .post('/api/auth/register')
-      .send({ username: `plantest_sh_${Date.now()}`, password: 'StrongPass1!' });
+      .send({ email: `plantest_sh_${Date.now()}@test.local`, password: 'StrongPass1!', displayName: 'Plan Test' });
     expect(regRes.status).toBe(201);
 
     const token = getAccessCookie(regRes);

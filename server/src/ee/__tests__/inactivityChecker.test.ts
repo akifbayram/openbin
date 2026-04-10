@@ -39,15 +39,14 @@ async function insertUser(opts: {
 }): Promise<string> {
   const id = `ic-user-${++uid}`;
   await query(
-    `INSERT INTO users (id, username, display_name, password_hash, sub_status, last_active_at, email, is_admin, deleted_at, suspended_at, created_at)
-     VALUES ($1, $2, $3, 'hash', $4, $5, $6, $7, $8, $9, $10)`,
+    `INSERT INTO users (id, email, display_name, password_hash, sub_status, last_active_at, is_admin, deleted_at, suspended_at, created_at)
+     VALUES ($1, $2, $3, 'hash', $4, $5, $6, $7, $8, $9)`,
     [
       id,
-      `user_${id}`,
+      (opts.email !== undefined && opts.email !== null) ? opts.email : `user_${id}@test.local`,
       'Test User',
       opts.subStatus,
       opts.lastActiveAt ?? null,
-      opts.email !== undefined ? opts.email : 'test@example.com',
       opts.isAdmin ? 1 : 0,
       opts.deletedAt ?? null,
       opts.suspendedAt ?? null,
@@ -86,20 +85,21 @@ describe('inactivityChecker', () => {
     expect(result.rows[0].deleted_at).not.toBeNull();
   });
 
-  // --- Skips email for users without email ---
-  it('skips warning email for user without email but still deletes at 365+', async () => {
-    const id = await insertUser({ subStatus: SubStatus.INACTIVE, lastActiveAt: daysAgoIso(370), email: null });
+  // --- Deletion at 365+ days does not trigger warning emails ---
+  it('soft-deletes user at 365+ days and does not send warning emails', async () => {
+    const id = await insertUser({ subStatus: SubStatus.INACTIVE, lastActiveAt: daysAgoIso(370), email: 'nodelete@example.com' });
     await checkInactiveUsers();
+    // Deletion path runs — no warning emails sent
     expect(mockFireInactivityWarning30d).not.toHaveBeenCalled();
     expect(mockFireInactivityWarning7d).not.toHaveBeenCalled();
     const result = await query<{ deleted_at: string | null }>('SELECT deleted_at FROM users WHERE id = $1', [id]);
     expect(result.rows[0].deleted_at).not.toBeNull();
   });
 
-  it('skips warning email for user without email at 340 days', async () => {
-    const id = await insertUser({ subStatus: SubStatus.INACTIVE, lastActiveAt: daysAgoIso(340), email: null });
+  it('sends 30d warning for user inactive exactly 340 days with email', async () => {
+    const id = await insertUser({ subStatus: SubStatus.INACTIVE, lastActiveAt: daysAgoIso(340), email: 'warn30@example.com' });
     await checkInactiveUsers();
-    expect(mockFireInactivityWarning30d).not.toHaveBeenCalled();
+    expect(mockFireInactivityWarning30d).toHaveBeenCalledTimes(1);
     const result = await query<{ deleted_at: string | null }>('SELECT deleted_at FROM users WHERE id = $1', [id]);
     expect(result.rows[0].deleted_at).toBeNull();
   });

@@ -104,7 +104,7 @@ describe('Password Reset', () => {
       // Login with new password
       const loginRes = await request(app)
         .post('/api/auth/login')
-        .send({ username: member.user.username, password: newPassword });
+        .send({ email: member.user.email, password: newPassword });
 
       expect(loginRes.status).toBe(200);
     });
@@ -164,7 +164,7 @@ describe('Password Reset', () => {
 
       const loginRes = await request(app)
         .post('/api/auth/login')
-        .send({ username: member.user.username, password: member.password });
+        .send({ email: member.user.email, password: member.password });
 
       expect(loginRes.status).toBe(401);
     });

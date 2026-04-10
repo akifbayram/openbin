@@ -20,10 +20,10 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 let cache: { data: CloudMetrics; fetchedAt: number } | null = null;
 
 function demoExclusion(): { clause: string; params: string[] } {
-  const names = [...config.demoUsernames];
-  if (names.length === 0) return { clause: '', params: [] };
-  const placeholders = names.map((_, i) => `$${i + 1}`).join(', ');
-  return { clause: `AND u.username NOT IN (${placeholders})`, params: names };
+  const emails = [...config.demoEmails];
+  if (emails.length === 0) return { clause: '', params: [] };
+  const placeholders = emails.map((_, i) => `$${i + 1}`).join(', ');
+  return { clause: `AND u.email NOT IN (${placeholders})`, params: emails };
 }
 
 async function queryPlanDistribution(demo: { clause: string; params: string[] }) {

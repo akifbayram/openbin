@@ -1,9 +1,9 @@
 import type { Express } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { generateUuid, query } from '../db.js';
+import { query } from '../db.js';
 import { createApp } from '../index.js';
-import { findOrCreateOAuthUser, generateUsername } from '../lib/oauth.js';
+import { findOrCreateOAuthUser } from '../lib/oauth.js';
 import { signToken } from '../middleware/auth.js';
 import { createTestUser } from './helpers.js';
 
@@ -11,45 +11,6 @@ let app: Express;
 
 beforeEach(() => {
   app = createApp();
-});
-
-describe('generateUsername', () => {
-  it('extracts prefix from email', async () => {
-    const name = await generateUsername('jane.doe@gmail.com');
-    expect(name).toBe('janedoe');
-  });
-
-  it('strips non-alphanumeric/underscore chars', async () => {
-    const name = await generateUsername('j+a.n-e@example.com');
-    expect(name).toBe('jane');
-  });
-
-  it('truncates to 50 chars', async () => {
-    const long = `${'a'.repeat(60)}@example.com`;
-    const name = await generateUsername(long);
-    expect(name.length).toBeLessThanOrEqual(50);
-  });
-
-  it('appends numeric suffix on conflict', async () => {
-    await createTestUser(app, { username: 'testconflict' });
-    const name = await generateUsername('testconflict@example.com');
-    expect(name).toBe('testconflict2');
-  });
-
-  it('increments suffix until unique', async () => {
-    await createTestUser(app, { username: 'dupuser' });
-    await query(
-      "INSERT INTO users (id, username, password_hash, display_name, plan, sub_status) VALUES ($1, $2, $3, $4, 1, 1)",
-      [generateUuid(), 'dupuser2', 'hash', 'dup']
-    );
-    const name = await generateUsername('dupuser@example.com');
-    expect(name).toBe('dupuser3');
-  });
-
-  it('falls back to "user" for empty prefix', async () => {
-    const name = await generateUsername('@example.com');
-    expect(name).toBe('user');
-  });
 });
 
 describe('findOrCreateOAuthUser', () => {
@@ -60,7 +21,7 @@ describe('findOrCreateOAuthUser', () => {
       email: 'newuser@example.com',
       displayName: 'New User',
     });
-    expect(result.user.username).toBeTruthy();
+    expect(result.user.email).toBe('newuser@example.com');
     expect(result.created).toBe(true);
   });
 
@@ -81,17 +42,16 @@ describe('findOrCreateOAuthUser', () => {
     expect(second.created).toBe(false);
   });
 
-  it('does not auto-link when email matches existing password user', async () => {
-    const { user } = await createTestUser(app, { email: 'link@example.com' });
-    const result = await findOrCreateOAuthUser({
-      provider: 'google',
-      providerUserId: 'google-sub-789',
-      email: 'link@example.com',
-      displayName: 'Linked',
-    });
-    // Should create a NEW user, not hijack the existing one
-    expect(result.user.id).not.toBe(user.id);
-    expect(result.created).toBe(true);
+  it('throws ForbiddenError when email matches existing password user', async () => {
+    await createTestUser(app, { email: 'link@example.com' });
+    await expect(
+      findOrCreateOAuthUser({
+        provider: 'google',
+        providerUserId: 'google-sub-789',
+        email: 'link@example.com',
+        displayName: 'Linked',
+      })
+    ).rejects.toThrow('An account with this email already exists');
   });
 
   it('rejects suspended user', async () => {
@@ -167,7 +127,7 @@ describe('OAuth routes', () => {
     });
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ username: user.username, password: 'anything' });
+      .send({ email: user.email, password: 'anything' });
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('NO_PASSWORD');
   });

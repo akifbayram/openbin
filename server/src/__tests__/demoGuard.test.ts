@@ -6,8 +6,8 @@ vi.mock('../lib/config.js', async (importOriginal) => {
   const original = await importOriginal<typeof import('../lib/config.js')>();
   return {
     ...original,
-    isDemoUser: (req: { user?: { username: string } }) =>
-      !!req.user && req.user.username.toLowerCase() === 'demo',
+    isDemoUser: (req: { user?: { email: string } }) =>
+      !!req.user && req.user.email.toLowerCase() === 'demo@openbin.local',
   };
 });
 
@@ -23,7 +23,7 @@ beforeEach(() => {
 describe('demo user AI key guards', () => {
   describe('GET /api/ai/settings', () => {
     it('demo user sees sk-**** masked keys', async () => {
-      const { token, user } = await createTestUser(app, { username: 'demo' });
+      const { token, user } = await createTestUser(app, { email: 'demo@openbin.local' });
 
       // Insert settings directly for the demo user
       const { query: dbQuery } = await import('../db.js');
@@ -63,7 +63,7 @@ describe('demo user AI key guards', () => {
 
   describe('PUT /api/ai/settings', () => {
     it('blocks demo user with 403 DEMO_RESTRICTION', async () => {
-      const { token } = await createTestUser(app, { username: 'demo' });
+      const { token } = await createTestUser(app, { email: 'demo@openbin.local' });
 
       const res = await request(app)
         .put('/api/ai/settings')
@@ -86,7 +86,7 @@ describe('demo user AI key guards', () => {
     });
 
     it('blocks demo user setting customPrompt with 403 DEMO_RESTRICTION', async () => {
-      const { token, user } = await createTestUser(app, { username: 'demo' });
+      const { token, user } = await createTestUser(app, { email: 'demo@openbin.local' });
 
       const { query: dbQuery } = await import('../db.js');
       dbQuery(
@@ -105,7 +105,7 @@ describe('demo user AI key guards', () => {
     });
 
     it('blocks demo user setting commandPrompt with 403 DEMO_RESTRICTION', async () => {
-      const { token, user } = await createTestUser(app, { username: 'demo' });
+      const { token, user } = await createTestUser(app, { email: 'demo@openbin.local' });
 
       const { query: dbQuery } = await import('../db.js');
       dbQuery(
@@ -123,7 +123,7 @@ describe('demo user AI key guards', () => {
     });
 
     it('allows demo user to change temperature without prompt fields', async () => {
-      const { token, user } = await createTestUser(app, { username: 'demo' });
+      const { token, user } = await createTestUser(app, { email: 'demo@openbin.local' });
 
       const { query: dbQuery } = await import('../db.js');
       dbQuery(
@@ -153,7 +153,7 @@ describe('demo user AI key guards', () => {
 
   describe('POST /api/ai/test', () => {
     it('blocks demo user with 403 DEMO_RESTRICTION', async () => {
-      const { token } = await createTestUser(app, { username: 'demo' });
+      const { token } = await createTestUser(app, { email: 'demo@openbin.local' });
 
       const res = await request(app)
         .post('/api/ai/test')

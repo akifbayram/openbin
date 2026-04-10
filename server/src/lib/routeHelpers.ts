@@ -10,7 +10,7 @@ export function logRouteActivity(req: Request, opts: RouteActivityOptions): void
   logActivity({
     ...opts,
     userId: req.user!.id,
-    userName: req.user!.username,
+    userName: req.user!.email,
     authMethod: req.authMethod,
     apiKeyId: req.apiKeyId,
   });

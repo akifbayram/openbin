@@ -56,7 +56,7 @@ export function ActivityFilterBar({
         <option value="">All users</option>
         {members.map((m) => (
           <option key={m.user_id} value={m.user_id}>
-            {m.display_name || m.username}
+            {m.display_name || m.email}
           </option>
         ))}
       </select>

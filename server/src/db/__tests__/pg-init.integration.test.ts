@@ -90,10 +90,10 @@ describe('pg-init: schema loading', () => {
   it('admin user exists with correct attributes', async () => {
     await runInitialize();
     const { rows } = await pool.query(
-      `SELECT username, is_admin, plan, sub_status FROM users WHERE username = 'admin'`,
+      `SELECT email, is_admin, plan, sub_status FROM users WHERE email = 'admin@openbin.local'`,
     );
     expect(rows).toHaveLength(1);
-    expect(rows[0].username).toBe('admin');
+    expect(rows[0].email).toBe('admin@openbin.local');
     expect(rows[0].is_admin).toBe(true);
     expect(rows[0].plan).toBe(1);
     expect(rows[0].sub_status).toBe(1);
@@ -167,14 +167,14 @@ describe('pg-init: unique indexes', () => {
     const id1 = crypto.randomUUID();
     const id2 = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin, email)
-       VALUES ($1, 'emailtest1', 'hash', 'E1', FALSE, 'Test@Example.com')`,
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+       VALUES ($1, 'Test@Example.com', 'hash', 'E1', FALSE)`,
       [id1],
     );
     await expect(
       pool.query(
-        `INSERT INTO users (id, username, password_hash, display_name, is_admin, email)
-         VALUES ($1, 'emailtest2', 'hash', 'E2', FALSE, 'test@example.com')`,
+        `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+         VALUES ($1, 'test@example.com', 'hash', 'E2', FALSE)`,
         [id2],
       ),
     ).rejects.toThrow();
@@ -188,7 +188,7 @@ describe('pg-init: admin seed', () => {
     const { initialize } = await import('../init.js');
     await initialize();
     const { rows } = await pool.query(
-      `SELECT COUNT(*) AS count FROM users WHERE username = 'admin'`,
+      `SELECT COUNT(*) AS count FROM users WHERE email = 'admin@openbin.local'`,
     );
     expect(Number(rows[0].count)).toBe(1);
   });

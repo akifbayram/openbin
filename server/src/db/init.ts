@@ -24,20 +24,21 @@ let engine: DatabaseEngine | null = null;
 const ADMIN_ACTIVE_UNTIL_MS = 1000 * 365 * 24 * 60 * 60 * 1000;
 
 async function seedAdminUser(eng: DatabaseEngine): Promise<void> {
-  const { rows } = await eng.query("SELECT 1 FROM users WHERE username = 'admin'");
+  const adminEmail = config.adminEmail || 'admin@openbin.local';
+  const { rows } = await eng.query('SELECT 1 FROM users WHERE email = $1', [adminEmail]);
   if (rows.length === 0) {
     const plaintext = config.adminPassword || crypto.randomBytes(12).toString('base64url');
     const hash = await bcrypt.hash(plaintext, config.bcryptRounds);
 
     await eng.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin, plan, sub_status, active_until)
-       VALUES ($1, 'admin', $2, 'Admin', TRUE, 1, 1, $3)`,
-      [crypto.randomUUID(), hash, new Date(Date.now() + ADMIN_ACTIVE_UNTIL_MS).toISOString()],
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin, plan, sub_status, active_until)
+       VALUES ($1, $2, $3, 'Admin', TRUE, 1, 1, $4)`,
+      [crypto.randomUUID(), adminEmail, hash, new Date(Date.now() + ADMIN_ACTIVE_UNTIL_MS).toISOString()],
     );
 
     console.log('========================================');
     console.log('  Initial admin credentials:');
-    console.log('    Username: admin');
+    console.log(`    Email: ${adminEmail}`);
     console.log(`    Password: ${plaintext}`);
     console.log('========================================');
   }

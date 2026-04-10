@@ -129,7 +129,7 @@ export function AdminUserDetailPage() {
     if (!detail) return;
     try {
       await deleteUser(detail.id);
-      showToast({ message: `User ${detail.username} deleted`, variant: 'success' });
+      showToast({ message: `User ${detail.email} deleted`, variant: 'success' });
       navigate('/admin/users');
     } catch (err) {
       showToast({ message: getErrorMessage(err, 'Failed to delete user'), variant: 'error' });
@@ -228,7 +228,7 @@ export function AdminUserDetailPage() {
     if (!detail) return;
     try {
       await suspendUser(detail.id);
-      showToast({ message: `User ${detail.username} suspended`, variant: 'success' });
+      showToast({ message: `User ${detail.email} suspended`, variant: 'success' });
       refresh();
       setSuspendOpen(false);
     } catch (err) {
@@ -240,7 +240,7 @@ export function AdminUserDetailPage() {
     if (!detail) return;
     try {
       await reactivateUser(detail.id);
-      showToast({ message: `User ${detail.username} reactivated`, variant: 'success' });
+      showToast({ message: `User ${detail.email} reactivated`, variant: 'success' });
       refresh();
     } catch (err) {
       showToast({ message: getErrorMessage(err, 'Failed to reactivate user'), variant: 'error' });
@@ -368,7 +368,7 @@ export function AdminUserDetailPage() {
   return (
     <div className="page-content">
       <PageHeader
-        title={detail.displayName || detail.username}
+        title={detail.displayName || detail.email || ''}
         back
         backTo="/admin/users"
       />
@@ -388,16 +388,12 @@ export function AdminUserDetailPage() {
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Username</span>
-              <p className="text-[15px] text-[var(--text-primary)]">@{detail.username}</p>
+              <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Email</span>
+              <p className="text-[15px] text-[var(--text-primary)]">{detail.email || '—'}</p>
             </div>
             <div>
               <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Display Name</span>
               <p className="text-[15px] text-[var(--text-primary)]">{detail.displayName || '—'}</p>
-            </div>
-            <div>
-              <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">Email</span>
-              <p className="text-[15px] text-[var(--text-primary)]">{detail.email || '—'}</p>
             </div>
             {__EE__ && !planInfo.selfHosted && (
               <div>
@@ -695,7 +691,7 @@ export function AdminUserDetailPage() {
           <DialogHeader>
             <DialogTitle>Suspend User</DialogTitle>
             <DialogDescription>
-              Suspend <strong>{detail.username}</strong>? They will be immediately logged out and unable to access the app.
+              Suspend <strong>{detail.email}</strong>? They will be immediately logged out and unable to access the app.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -711,7 +707,7 @@ export function AdminUserDetailPage() {
           <DialogHeader>
             <DialogTitle>Revoke All Sessions</DialogTitle>
             <DialogDescription>
-              This will log <strong>{detail.username}</strong> out of all devices immediately.
+              This will log <strong>{detail.email}</strong> out of all devices immediately.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -727,7 +723,7 @@ export function AdminUserDetailPage() {
           <DialogHeader>
             <DialogTitle>Revoke All API Keys</DialogTitle>
             <DialogDescription>
-              This will immediately invalidate all API keys for <strong>{detail.username}</strong>. Any integrations using these keys will stop working.
+              This will immediately invalidate all API keys for <strong>{detail.email}</strong>. Any integrations using these keys will stop working.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -743,7 +739,7 @@ export function AdminUserDetailPage() {
           <DialogHeader>
             <DialogTitle>Delete User</DialogTitle>
             <DialogDescription>
-              Permanently delete <strong>{detail.username}</strong>? This cannot be undone. All their data will be removed.
+              Permanently delete <strong>{detail.email}</strong>? This cannot be undone. All their data will be removed.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -759,7 +755,7 @@ export function AdminUserDetailPage() {
           <DialogHeader>
             <DialogTitle>Regenerate API Key</DialogTitle>
             <DialogDescription>
-              This will revoke all existing API keys for <strong>{detail.username}</strong> and create a new one.
+              This will revoke all existing API keys for <strong>{detail.email}</strong> and create a new one.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -775,7 +771,7 @@ export function AdminUserDetailPage() {
           <DialogHeader>
             <DialogTitle>Change Plan</DialogTitle>
             <DialogDescription>
-              Change <strong>{detail.username}</strong>&apos;s plan from {capitalize(detail.plan)} to {pendingPlan ? capitalize(pendingPlan) : ''}?
+              Change <strong>{detail.email}</strong>&apos;s plan from {capitalize(detail.plan)} to {pendingPlan ? capitalize(pendingPlan) : ''}?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -791,7 +787,7 @@ export function AdminUserDetailPage() {
           <DialogHeader>
             <DialogTitle>Change Subscription Status</DialogTitle>
             <DialogDescription>
-              Change <strong>{detail.username}</strong>&apos;s status from {capitalize(detail.status)} to {pendingStatus ? capitalize(pendingStatus) : ''}?
+              Change <strong>{detail.email}</strong>&apos;s status from {capitalize(detail.status)} to {pendingStatus ? capitalize(pendingStatus) : ''}?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

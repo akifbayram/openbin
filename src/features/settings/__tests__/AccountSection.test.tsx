@@ -37,7 +37,6 @@ vi.mock('../useApiKeys', () => ({
 
 const baseUser = {
   id: '1',
-  username: 'testuser',
   displayName: 'Test User',
   email: 'test@example.com',
   avatarUrl: null,

@@ -14,7 +14,7 @@ describe('POST /api/admin/security/force-password-change/:id', () => {
   it('sets force_password_change flag on a user', async () => {
     const { token, user } = await createTestUser(app);
     makeAdmin(user.id);
-    const { user: target } = await createTestUser(app, { username: `target_${Date.now()}` });
+    const { user: target } = await createTestUser(app, { email: `target_${Date.now()}@test.local` });
 
     const res = await request(app)
       .post(`/api/admin/security/force-password-change/${target.id}`)
@@ -31,7 +31,7 @@ describe('POST /api/admin/security/force-password-change/:id', () => {
   it('clears force_password_change flag when enabled is false', async () => {
     const { token, user } = await createTestUser(app);
     makeAdmin(user.id);
-    const { user: target } = await createTestUser(app, { username: `target2_${Date.now()}` });
+    const { user: target } = await createTestUser(app, { email: `target2_${Date.now()}@test.local` });
 
     const db = getDb();
     db.prepare('UPDATE users SET force_password_change = 1 WHERE id = ?').run(target.id);
@@ -60,7 +60,7 @@ describe('POST /api/admin/security/force-password-change/:id', () => {
   it('logs an audit entry', async () => {
     const { token, user } = await createTestUser(app);
     makeAdmin(user.id);
-    const { user: target } = await createTestUser(app, { username: `audit_target_${Date.now()}` });
+    const { user: target } = await createTestUser(app, { email: `audit_target_${Date.now()}@test.local` });
 
     await request(app)
       .post(`/api/admin/security/force-password-change/${target.id}`)
@@ -76,14 +76,15 @@ describe('POST /api/admin/security/force-password-change/:id', () => {
 describe('Login rejects users with force_password_change', () => {
   it('returns FORCE_PASSWORD_CHANGE error code on login', async () => {
     const password = 'TestPass123!';
-    const { user } = await createTestUser(app, { username: `fpc_user_${Date.now()}`, password });
+    const email = `fpc_user_${Date.now()}@test.local`;
+    const { user } = await createTestUser(app, { email, password });
 
     const db = getDb();
     db.prepare('UPDATE users SET force_password_change = 1 WHERE id = ?').run(user.id);
 
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ username: user.username, password });
+      .send({ email, password });
 
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('FORCE_PASSWORD_CHANGE');
@@ -91,7 +92,8 @@ describe('Login rejects users with force_password_change', () => {
 
   it('allows login after password is changed', async () => {
     const password = 'TestPass123!';
-    const { user } = await createTestUser(app, { username: `fpc_clear_${Date.now()}`, password });
+    const email = `fpc_clear_${Date.now()}@test.local`;
+    const { user } = await createTestUser(app, { email, password });
 
     const db = getDb();
     db.prepare('UPDATE users SET force_password_change = 1 WHERE id = ?').run(user.id);
@@ -99,7 +101,7 @@ describe('Login rejects users with force_password_change', () => {
     // Should fail
     const failRes = await request(app)
       .post('/api/auth/login')
-      .send({ username: user.username, password });
+      .send({ email, password });
     expect(failRes.status).toBe(403);
 
     // Clear the flag (simulating password change)
@@ -108,7 +110,7 @@ describe('Login rejects users with force_password_change', () => {
     // Should succeed
     const successRes = await request(app)
       .post('/api/auth/login')
-      .send({ username: user.username, password });
+      .send({ email, password });
     expect(successRes.status).toBe(200);
   });
 });
@@ -119,7 +121,7 @@ describe('POST /api/admin/security/force-logout-all', () => {
     makeAdmin(user.id);
 
     // Create a second user
-    const { user: other } = await createTestUser(app, { username: `other_${Date.now()}` });
+    const { user: other } = await createTestUser(app, { email: `other_${Date.now()}@test.local` });
 
     // Verify initial token_version is 0
     const db = getDb();

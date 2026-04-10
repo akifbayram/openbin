@@ -26,7 +26,7 @@ import { requirePro, requireWriteApi } from '../middleware/requirePlan.js';
 // ---- Helpers ----
 
 function makeReq(userId = 'user-123'): Partial<Request> {
-  return { user: { id: userId, username: 'testuser' } };
+  return { user: { id: userId, email: 'testuser@test.local' } };
 }
 
 function makeRes(): Partial<Response> {

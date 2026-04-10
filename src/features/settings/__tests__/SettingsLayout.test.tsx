@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsLayout } from '../SettingsLayout';
 
 vi.mock('@/lib/auth', () => ({
-  useAuth: vi.fn(() => ({ user: { id: '1', username: 'test', isAdmin: false }, activeLocationId: 'loc-1', token: 't' })),
+  useAuth: vi.fn(() => ({ user: { id: '1', email: 'test@example.com', isAdmin: false }, activeLocationId: 'loc-1', token: 't' })),
 }));
 
 vi.mock('@/lib/usePermissions', () => ({

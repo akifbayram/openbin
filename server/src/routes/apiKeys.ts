@@ -51,7 +51,7 @@ router.post('/', requirePro(), asyncHandler(async (req, res) => {
     [id, req.user!.id, keyHash, keyPrefix, (name || '').trim().slice(0, 255)]
   );
 
-  log.info(`API key created: ${keyPrefix} by user ${req.user!.username}`);
+  log.info(`API key created: ${keyPrefix} by user ${req.user!.email}`);
 
   res.status(201).json({
     id,
@@ -76,7 +76,7 @@ router.delete('/:id', requirePro(), asyncHandler(async (req, res) => {
     throw new NotFoundError('API key not found');
   }
 
-  log.info(`API key revoked: ${id} by user ${req.user!.username}`);
+  log.info(`API key revoked: ${id} by user ${req.user!.email}`);
   res.json({ message: 'API key revoked' });
 }));
 
