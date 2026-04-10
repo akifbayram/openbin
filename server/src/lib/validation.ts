@@ -13,9 +13,7 @@ export function validateLoginEmail(email: unknown): string {
     throw new ValidationError('Email is required');
   }
   const trimmed = email.trim().toLowerCase();
-  if (!EMAIL_REGEX.test(trimmed) || trimmed.length > 255) {
-    throw new ValidationError('Invalid email address');
-  }
+  validateEmail(trimmed);
   return trimmed;
 }
 

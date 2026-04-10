@@ -16,7 +16,7 @@ import { createLogger } from '../lib/logger.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { getFeatureMap, invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
 import { restoreBackup } from '../lib/restore.js';
-import { validateDisplayName, validateEmail, validateLoginEmail, validatePassword } from '../lib/validation.js';
+import { validateDisplayName, validateLoginEmail, validatePassword } from '../lib/validation.js';
 import { authenticate, invalidateDeletedCache } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 
@@ -293,7 +293,7 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
     }
   }
 
-  if (email !== undefined && email !== '') validateEmail(email);
+  const normalizedEmail = (email !== undefined && email !== '') ? validateLoginEmail(email) : undefined;
   if (displayName !== undefined) validateDisplayName(displayName);
   if (password !== undefined) validatePassword(password);
 
@@ -316,7 +316,7 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   }
   if (email !== undefined) {
     updates.push(`email = ${nextParam()}`);
-    updateParams.push(email === '' ? null : email);
+    updateParams.push(email === '' ? null : normalizedEmail ?? null);
   }
   if (displayName !== undefined) {
     updates.push(`display_name = ${nextParam()}`);

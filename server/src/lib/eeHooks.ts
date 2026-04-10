@@ -1,7 +1,6 @@
 export interface NewUserPayload {
   userId: string;
   email: string | null;
-  username: string;
   activeUntil: string;
   status: string;
 }

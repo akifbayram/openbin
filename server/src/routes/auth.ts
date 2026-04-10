@@ -190,9 +190,6 @@ router.post('/register', asyncHandler(async (req, res) => {
       ]
     );
   } catch (err: unknown) {
-    if (isUniqueViolation(err, 'idx_users_email_unique')) {
-      throw new ConflictError('Registration failed — please try different credentials');
-    }
     if (isUniqueViolation(err)) {
       throw new ConflictError('Registration failed — please try different credentials');
     }
@@ -456,8 +453,9 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
     validateDisplayName(displayName);
   }
 
+  let normalizedEmail: string | undefined;
   if (email !== undefined && email !== null && email !== '') {
-    validateEmail(email);
+    normalizedEmail = validateLoginEmail(email);
   }
 
   // Check if user currently has no email (for welcome email trigger)
@@ -474,7 +472,7 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
   }
   if (email !== undefined) {
     updates.push(`email = $${idx++}`);
-    values.push(email === '' ? null : email);
+    values.push(email === '' ? null : normalizedEmail ?? null);
   }
 
   if (updates.length === 0) {
