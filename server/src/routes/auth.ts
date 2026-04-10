@@ -53,7 +53,7 @@ router.get('/status', async (_req, res) => {
 
   // Include active announcement banner if any
   const announcementResult = await query<{ id: string; text: string; type: string; dismissible: number | boolean }>(
-    "SELECT id, text, type, dismissible FROM announcements WHERE active = TRUE OR active = 1 ORDER BY created_at DESC LIMIT 1",
+    "SELECT id, text, type, dismissible FROM announcements WHERE active = TRUE ORDER BY created_at DESC LIMIT 1",
   );
   if (announcementResult.rows.length > 0) {
     const a = announcementResult.rows[0];
