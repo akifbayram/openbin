@@ -78,7 +78,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
     throw new NotFoundError('Saved view not found');
   }
 
-  res.json({ message: 'Saved view deleted' });
+  res.status(204).end();
 }));
 
 export default router;

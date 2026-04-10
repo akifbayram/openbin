@@ -75,7 +75,7 @@ router.delete('/', asyncHandler(async (req, res) => {
     [req.user!.id]
   );
 
-  res.json({ message: 'Scan history cleared' });
+  res.status(204).end();
 }));
 
 export default router;

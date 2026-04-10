@@ -53,7 +53,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=selfhosted
 
       - name: Scan selfhosted image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           format: sarif
@@ -97,7 +97,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=cloud
 
       - name: Scan cloud image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cloud
           format: sarif

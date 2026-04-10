@@ -251,7 +251,7 @@ CREATE TABLE IF NOT EXISTS scan_history (
   scanned_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_scan_history_user ON scan_history(user_id, scanned_at DESC);
--- idx_scan_history_user_bin created in db.ts migration (needs dedup handling for existing DBs)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_scan_history_user_bin ON scan_history(user_id, bin_id);
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   id TEXT PRIMARY KEY,
@@ -340,7 +340,7 @@ CREATE TABLE IF NOT EXISTS email_log (
   sent_at    TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_email_log_dedup ON email_log(user_id, email_type, sent_at);
--- idx_email_log_daily created in db.ts migration (needs dedup handling for existing DBs)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_email_log_daily ON email_log(user_id, email_type, (left(sent_at, 10)));
 -- NOTE: FK on user_id added after initial release. SQLite cannot add FK constraints to
 -- existing columns via ALTER TABLE, so existing DBs only get the constraint after a
 -- fresh install or manual table rebuild. This matches the project's migration pattern.
