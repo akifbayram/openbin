@@ -67,7 +67,7 @@ function DialogContent({
     onClose: () => onOpenChange(false),
   });
 
-  useFocusTrap({ active: open, containerRef: contentRef });
+  useFocusTrap({ active: open && visible, containerRef: contentRef });
 
   if (!visible) return null;
 

@@ -11,7 +11,7 @@ interface MobileDrawerProps {
 export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const { visible, isEntered } = useOverlayAnimation({ open, onClose });
-  useFocusTrap({ active: open, containerRef: panelRef });
+  useFocusTrap({ active: open && visible, containerRef: panelRef });
 
   if (!visible) return null;
 

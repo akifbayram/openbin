@@ -3,16 +3,12 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getDb } from '../db.js';
 import { createApp } from '../index.js';
-import { createTestUser } from './helpers.js';
+import { createTestUser, makeAdmin } from './helpers.js';
 
 let app: Express;
 beforeEach(() => {
   app = createApp();
 });
-
-function makeAdmin(userId: string) {
-  getDb().prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(userId);
-}
 
 describe('POST /api/admin/security/force-password-change/:id', () => {
   it('sets force_password_change flag on a user', async () => {

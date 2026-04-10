@@ -37,7 +37,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
     examplesOpen, setExamplesOpen,
     executionResult,
     fileInputRef,
-    state, isAiReady, aiSettingsLoading, selectedCount,
+    state, isAiReady, aiSettings, aiSettingsLoading, selectedCount,
     actions, interpretation, error,
     handleParse, handleBack, toggleAction,
     handleClose, handlePhotoSelect, handleBinClick,
@@ -137,6 +137,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
           <div key="photo">
             <PhotoBulkAdd
               initialFiles={initialFiles}
+              aiSettings={aiSettings}
               onClose={() => handleClose(false)}
               onBack={() => { setPhotoMode(false); setInitialFiles([]); }}
             />

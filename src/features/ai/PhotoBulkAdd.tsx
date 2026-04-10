@@ -17,6 +17,7 @@ import { addPhoto } from '@/features/photos/usePhotos';
 import { useAuth } from '@/lib/auth';
 import { binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
+import type { AiSettings } from '@/types';
 import { SingleBinReview } from './SingleBinReview';
 import { MAX_AI_PHOTOS } from './useAiAnalysis';
 
@@ -25,6 +26,7 @@ const DEMO_MAX_PHOTOS = 3;
 
 interface PhotoBulkAddProps {
   initialFiles: File[];
+  aiSettings: AiSettings | null;
   onClose: () => void;
   onBack: () => void;
 }
@@ -36,7 +38,7 @@ function initState(files: File[]): BulkAddState {
   };
 }
 
-export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProps) {
+export function PhotoBulkAdd({ initialFiles, aiSettings, onClose, onBack }: PhotoBulkAddProps) {
   const t = useTerminology();
   const { activeLocationId, demoMode: isDemo } = useAuth();
   const [state, dispatch] = useReducer(bulkAddReducer, initialFiles, initState);
@@ -49,11 +51,12 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
   const effectiveMax = isDemo ? DEMO_MAX_PHOTOS : (mode === 'single-bin' ? MAX_AI_PHOTOS : MAX_PHOTOS);
 
   // Cleanup ObjectURLs on unmount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: cleanup-only effect captures final state via ref-like closure
   useEffect(() => {
     return () => {
       for (const p of state.photos) URL.revokeObjectURL(p.previewUrl);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-go back if all photos removed in upload step (only after having had photos)
   useEffect(() => {
@@ -189,6 +192,7 @@ export function PhotoBulkAdd({ initialFiles, onClose, onBack }: PhotoBulkAddProp
           photos={state.photos}
           currentIndex={state.currentIndex}
           editingFromSummary={state.editingFromSummary}
+          aiSettings={aiSettings}
           dispatch={dispatch}
         />
       </div>

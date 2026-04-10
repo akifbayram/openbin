@@ -94,9 +94,11 @@ function SystemTab() {
         setMaintenance(m);
         setMaintenanceMsg(m.message || '');
       })
-      .catch(() => {})
+      .catch((err) => {
+        showToast({ message: getErrorMessage(err, 'Failed to load system status'), variant: 'error' });
+      })
       .finally(() => setLoadingHealth(false));
-  }, []);
+  }, [showToast]);
 
   const handleToggleMaintenance = useCallback(async (enabled: boolean) => {
     try {

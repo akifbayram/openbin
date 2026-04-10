@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../index.js';
-import { createTestBin, createTestLocation, createTestUser } from './helpers.js';
+import { createShare as createShareHelper, createTestBin, createTestLocation, createTestUser } from './helpers.js';
 
 let app: Express;
 beforeEach(() => {
@@ -17,11 +17,8 @@ describe('bin shares', () => {
     return { user, location, bin };
   }
 
-  async function createShare(token: string, binId: string) {
-    return request(app)
-      .post(`/api/bins/${binId}/share`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({});
+  function createShare(token: string, binId: string) {
+    return createShareHelper(app, token, binId);
   }
 
   it('POST create share — returns 201 with token', async () => {

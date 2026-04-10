@@ -211,6 +211,7 @@ export function useCommandInputState(onOpenChange: (open: boolean) => void, sele
     // Derived
     state,
     isAiReady,
+    aiSettings: settings,
     aiSettingsLoading,
     selectedCount,
     // Command

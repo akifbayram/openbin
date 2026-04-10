@@ -3,16 +3,12 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getDb } from '../db.js';
 import { createApp } from '../index.js';
-import { createTestLocation, createTestUser } from './helpers.js';
+import { createTestLocation, createTestUser, makeAdmin } from './helpers.js';
 
 let app: Express;
 beforeEach(() => {
   app = createApp();
 });
-
-function makeAdmin(userId: string) {
-  getDb().prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(userId);
-}
 
 describe('POST /api/admin/system/locations/:id/regen-invite', () => {
   it('regenerates the invite code for a location', async () => {

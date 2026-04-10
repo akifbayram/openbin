@@ -2,13 +2,7 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../index.js';
-import { createTestBin, createTestLocation, createTestUser } from './helpers.js';
-
-// Minimal 1x1 red PNG
-const PNG_1x1 = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
-  'base64',
-);
+import { createTestBin, createTestLocation, createTestUser, TEST_PNG } from './helpers.js';
 
 let app: Express;
 
@@ -20,7 +14,7 @@ async function uploadPhoto(app: Express, token: string, binId: string) {
   const res = await request(app)
     .post(`/api/bins/${binId}/photos`)
     .set('Authorization', `Bearer ${token}`)
-    .attach('photo', PNG_1x1, 'test.png');
+    .attach('photo', TEST_PNG, 'test.png');
   return res;
 }
 

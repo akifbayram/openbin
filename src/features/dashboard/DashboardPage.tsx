@@ -30,7 +30,7 @@ import { useDebounce } from '@/lib/useDebounce';
 import { usePermissions } from '@/lib/usePermissions';
 import { usePlan } from '@/lib/usePlan';
 import { useUserPreferences } from '@/lib/userPreferences';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 import type { Bin } from '@/types';
 import { DashboardChecklist } from './DashboardChecklist';
 import { DashboardDialogs } from './DashboardDialogs';
@@ -250,7 +250,9 @@ export function DashboardPage() {
               navigate(qs ? `/bins?${qs}` : '/bins');
             }}
             onDelete={(viewId) => {
-              deleteView(viewId).catch(() => {});
+              deleteView(viewId).catch((err) => {
+                showToast({ message: getErrorMessage(err, 'Failed to delete saved view'), variant: 'error' });
+              });
             }}
           />
           </section>

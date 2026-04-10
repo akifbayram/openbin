@@ -112,6 +112,10 @@ components:
             - CONFLICT
             - RATE_LIMITED
             - INTERNAL_ERROR
+            - GONE
+            - MALWARE_DETECTED
+            - SCAN_UNAVAILABLE
+            - SERVICE_NOT_CONFIGURED
         message:
           type: string
       example:
@@ -4290,8 +4294,16 @@ paths:
             type: string
             format: uuid
       responses:
-        '204':
+        '200':
           description: Saved view deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Saved view deleted
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -4364,8 +4376,16 @@ paths:
       summary: Clear scan history
       description: Deletes all scan history entries for the current user.
       responses:
-        '204':
+        '200':
           description: Scan history cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Scan history cleared
         '401':
           $ref: '#/components/responses/Unauthorized'
 

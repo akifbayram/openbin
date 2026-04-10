@@ -2,6 +2,9 @@ import { defineConfig } from 'vitest/config'
 import path from 'path'
 
 export default defineConfig({
+  define: {
+    __EE__: JSON.stringify(false),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

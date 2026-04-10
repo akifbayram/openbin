@@ -58,8 +58,8 @@ export function useAuditLog(page = 1, filters: { action?: string; actorId?: stri
       const params = new URLSearchParams();
       params.set('page', String(page));
       if (filters.action) params.set('action', filters.action);
-      if (filters.actorId) params.set('actorId', filters.actorId);
-      if (filters.targetType) params.set('targetType', filters.targetType);
+      if (filters.actorId) params.set('actor_id', filters.actorId);
+      if (filters.targetType) params.set('target_type', filters.targetType);
       const data = await apiFetch<{ results: AuditLogEntry[]; count: number }>(`/api/admin/system/audit-log?${params}`);
       setEntries(data.results);
       setCount(data.count);

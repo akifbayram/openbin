@@ -110,8 +110,10 @@ export function AccountSection() {
 
     apiFetch<{ results: { provider: string; email: string | null; created_at: string }[] }>('/api/auth/oauth/links')
       .then((data) => setOauthLinks(data.results))
-      .catch(() => {});
-  }, []);
+      .catch((err) => {
+        showToast({ message: getErrorMessage(err, 'Failed to load connected accounts'), variant: 'error' });
+      });
+  }, [showToast]);
 
   const passwordChecks = useMemo(() => computePasswordChecks(newPassword), [newPassword]);
 

@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { AiSettingsSection } from '@/features/ai/AiSettingsSection';
 import { AiAnalyzeError } from '@/features/ai/AiStreamingPreview';
 import { mapAiError } from '@/features/ai/aiErrors';
-import { useAiSettings } from '@/features/ai/useAiSettings';
 import { useAiStream } from '@/features/ai/useAiStream';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { ColorPicker } from '@/features/bins/ColorPicker';
@@ -24,7 +23,7 @@ import { useAuth } from '@/lib/auth';
 import { aiItemsToBinItems } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
 import { cn } from '@/lib/utils';
-import type { AiSuggestions, BinItem } from '@/types';
+import type { AiSettings, AiSuggestions, BinItem } from '@/types';
 import type { BulkAddAction, BulkAddPhoto } from './useBulkAdd';
 
 const ANALYZE_LABELS: LabelThreshold[] = [
@@ -58,13 +57,13 @@ interface BulkAddReviewStepProps {
   photos: BulkAddPhoto[];
   currentIndex: number;
   editingFromSummary: boolean;
+  aiSettings: AiSettings | null;
   dispatch: React.Dispatch<BulkAddAction>;
 }
 
-export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, dispatch }: BulkAddReviewStepProps) {
+export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, aiSettings, dispatch }: BulkAddReviewStepProps) {
   const t = useTerminology();
   const { activeLocationId } = useAuth();
-  const { settings: aiSettings } = useAiSettings();
   const { aiEnabled, setAiEnabled } = useAiEnabled();
   const allTags = useAllTags();
   const [aiSetupExpanded, setAiSetupExpanded] = useState(false);
@@ -137,6 +136,7 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
   }, [cancelCorrection, cancelReanalyze]);
 
   // Reset correction state when navigating between photos
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only reset on index change, setters are stable
   useEffect(() => {
     setCorrectionOpen(false);
     setCorrectionText('');
@@ -145,12 +145,13 @@ export function BulkAddReviewStep({ photos, currentIndex, editingFromSummary, di
   }, [currentIndex]);
 
   // Auto-analyze on first visit to each photo
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on photo?.id and status to avoid re-triggering
   useEffect(() => {
     if (photo && photo.status === 'pending' && aiEnabled && aiSettings && !autoAnalyzedRef.current.has(photo.id)) {
       autoAnalyzedRef.current.add(photo.id);
       triggerAnalyze(photo);
     }
-  }, [photo?.id, photo?.status, aiSettings]);
+  }, [photo?.id, photo?.status, aiEnabled, aiSettings, triggerAnalyze]);
 
   if (!photo) return null;
 

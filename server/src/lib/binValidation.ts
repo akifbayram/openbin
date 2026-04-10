@@ -72,6 +72,21 @@ export function validateBinFields(fields: {
   if (cardStyle !== undefined && typeof cardStyle === 'string' && cardStyle.length > 500) {
     throw new ValidationError('Card style too long (max 500 characters)');
   }
+  if (cardStyle !== undefined && typeof cardStyle === 'string' && cardStyle !== '') {
+    try {
+      const parsed = JSON.parse(cardStyle);
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        throw new ValidationError('Card style must be a JSON object');
+      }
+      const VALID_VARIANTS = ['default', 'border', 'gradient', 'stripe', 'photo'];
+      if (parsed.variant && !VALID_VARIANTS.includes(parsed.variant)) {
+        throw new ValidationError('Invalid card style variant');
+      }
+    } catch (err) {
+      if (err instanceof ValidationError) throw err;
+      throw new ValidationError('Card style must be valid JSON');
+    }
+  }
   if (visibility !== undefined && visibility !== 'location' && visibility !== 'private') {
     throw new ValidationError('visibility must be "location" or "private"');
   }

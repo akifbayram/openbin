@@ -65,6 +65,20 @@ router.post('/:locationId/areas', requireLocationAdmin('locationId'), asyncHandl
     if (parentResult.rows.length === 0) {
       throw new ValidationError('Parent area not found in this location');
     }
+
+    // Enforce max nesting depth (10 levels)
+    const depthResult = await query<{ depth: number }>(
+      `WITH RECURSIVE ancestors AS (
+        SELECT id, parent_id, 1 AS depth FROM areas WHERE id = $1
+        UNION ALL
+        SELECT a.id, a.parent_id, anc.depth + 1 FROM areas a JOIN ancestors anc ON a.id = anc.parent_id
+      )
+      SELECT MAX(depth) AS depth FROM ancestors`,
+      [resolvedParentId]
+    );
+    if ((depthResult.rows[0]?.depth ?? 0) >= 10) {
+      throw new ValidationError('Area hierarchy too deep (max 10 levels)');
+    }
   }
 
   // Check for duplicate sibling name (SQLite UNIQUE treats NULLs as distinct, so check manually for root areas)

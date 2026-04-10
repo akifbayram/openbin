@@ -157,7 +157,7 @@ router.delete('/:locationId/custom-fields/:fieldId', requirePlusOrAbove(), async
   // CASCADE deletes all bin_custom_field_values for this field
   await query('DELETE FROM location_custom_fields WHERE id = $1', [fieldId]);
 
-  res.status(204).end();
+  res.json({ message: 'Custom field deleted' });
 }));
 
 export default router;

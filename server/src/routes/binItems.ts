@@ -116,6 +116,18 @@ router.put('/:id/items/reorder', asyncHandler(async (req, res) => {
 
   const _access = await verifyBinEditAccess(id, req.user!.id);
 
+  // Verify all item IDs belong to this bin
+  const existing = await query<{ id: string }>(
+    'SELECT id FROM bin_items WHERE bin_id = $1',
+    [id]
+  );
+  const binItemIds = new Set(existing.rows.map((r) => r.id));
+  for (const itemId of item_ids) {
+    if (!binItemIds.has(itemId)) {
+      throw new ValidationError('One or more item IDs do not belong to this bin');
+    }
+  }
+
   for (let i = 0; i < item_ids.length; i++) {
     await query(
       'UPDATE bin_items SET position = $1 WHERE id = $2 AND bin_id = $3',

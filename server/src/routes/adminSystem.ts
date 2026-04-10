@@ -224,8 +224,8 @@ router.get('/audit-log', asyncHandler(async (req, res) => {
   const offset = (page - 1) * limit;
 
   const action = typeof req.query.action === 'string' ? req.query.action.trim() : '';
-  const actorId = typeof req.query.actorId === 'string' ? req.query.actorId.trim() : '';
-  const targetType = typeof req.query.targetType === 'string' ? req.query.targetType.trim() : '';
+  const actorId = typeof req.query.actor_id === 'string' ? req.query.actor_id.trim() : '';
+  const targetType = typeof req.query.target_type === 'string' ? req.query.target_type.trim() : '';
 
   const conditions: string[] = [];
   const params: unknown[] = [];

@@ -97,8 +97,10 @@ export function AdminUserDetailPage() {
   // Load overrides when detail loads
   useEffect(() => {
     if (!detail || planInfo.selfHosted) return;
-    fetchOverrides(detail.id).then(o => setOverrides(o)).catch(() => {});
-  }, [detail, planInfo.selfHosted]);
+    fetchOverrides(detail.id).then(o => setOverrides(o)).catch((err) => {
+      showToast({ message: getErrorMessage(err, 'Failed to load user overrides'), variant: 'error' });
+    });
+  }, [detail, planInfo.selfHosted, showToast]);
 
   const handleSaveActiveUntil = useCallback(async () => {
     if (!detail) return;

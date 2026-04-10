@@ -52,15 +52,13 @@ router.get('/status', async (_req, res) => {
   }
 
   // Include active announcement banner if any
-  try {
-    const announcementResult = await query<{ id: string; text: string; type: string; dismissible: number | boolean }>(
-      "SELECT id, text, type, dismissible FROM announcements WHERE active = TRUE OR active = 1 ORDER BY created_at DESC LIMIT 1",
-    );
-    if (announcementResult.rows.length > 0) {
-      const a = announcementResult.rows[0];
-      body.announcement = { id: a.id, text: a.text, type: a.type, dismissible: !!a.dismissible };
-    }
-  } catch { /* ignore — table may not exist yet */ }
+  const announcementResult = await query<{ id: string; text: string; type: string; dismissible: number | boolean }>(
+    "SELECT id, text, type, dismissible FROM announcements WHERE active = TRUE OR active = 1 ORDER BY created_at DESC LIMIT 1",
+  );
+  if (announcementResult.rows.length > 0) {
+    const a = announcementResult.rows[0];
+    body.announcement = { id: a.id, text: a.text, type: a.type, dismissible: !!a.dismissible };
+  }
 
   // Include maintenance mode status
   if (isMaintenanceMode()) {

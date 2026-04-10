@@ -63,6 +63,12 @@ export async function handleReorderItems(action: Extract<CommandAction, { type: 
   const bin = await tx<{ id: string; visibility: string; created_by: string }>('SELECT id, visibility, created_by FROM bins WHERE id = $1 AND location_id = $2 AND deleted_at IS NULL', [action.bin_id, ctx.locationId]);
   if (bin.rows.length === 0) throw new Error(`Bin not found: ${action.bin_name}`);
   assertBinVisible(bin.rows[0], ctx.userId);
+  // Verify all item IDs belong to this bin
+  const existing = await tx<{ id: string }>('SELECT id FROM bin_items WHERE bin_id = $1', [action.bin_id]);
+  const binItemIds = new Set(existing.rows.map((r) => r.id));
+  for (const itemId of action.item_ids) {
+    if (!binItemIds.has(itemId)) throw new Error('One or more item IDs do not belong to this bin');
+  }
   for (let i = 0; i < action.item_ids.length; i++) {
     await tx('UPDATE bin_items SET position = $1 WHERE id = $2 AND bin_id = $3', [i, action.item_ids[i], action.bin_id]);
   }

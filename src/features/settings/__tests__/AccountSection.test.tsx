@@ -21,6 +21,20 @@ vi.mock('@/components/ui/toast', () => ({
   useToast: vi.fn(() => ({ showToast: vi.fn() })),
 }));
 
+vi.mock('@/lib/usePlan', () => ({
+  usePlan: () => ({
+    isGated: () => false,
+    isSelfHosted: true,
+    planInfo: null,
+  }),
+}));
+
+vi.mock('../useApiKeys', () => ({
+  useApiKeys: vi.fn(() => ({ keys: [], isLoading: false })),
+  createApiKey: vi.fn(),
+  revokeApiKey: vi.fn(),
+}));
+
 const baseUser = {
   id: '1',
   username: 'testuser',

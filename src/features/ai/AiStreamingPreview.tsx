@@ -20,7 +20,7 @@ export function AiStreamingPreview({ previewUrls, streamedName, streamedItems, i
   const imgClass = 'w-full h-full object-cover rounded-[var(--radius-lg)] bg-black/5 dark:bg-white/5 transition-[filter] duration-700 ease-out';
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" aria-live="polite" aria-atomic="false">
       {previewUrls.length === 1 ? (
         <div className={shimmerClass}>
           <img src={previewUrls[0]} alt="Preview 1" className={imgClass} />

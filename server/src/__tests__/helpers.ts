@@ -1,5 +1,23 @@
 import type { Express } from 'express';
 import request from 'supertest';
+import { getDb } from '../db.js';
+
+/** Minimal 1x1 PNG for upload tests. */
+export const TEST_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+export function makeAdmin(userId: string) {
+  getDb().prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(userId);
+}
+
+export async function createShare(app: Express, token: string, binId: string) {
+  return request(app)
+    .post(`/api/bins/${binId}/share`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({});
+}
 
 let userCounter = 0;
 

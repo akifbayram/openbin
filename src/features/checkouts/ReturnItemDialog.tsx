@@ -10,11 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { SearchInput } from '@/components/ui/search-input';
 import { useToast } from '@/components/ui/toast';
 import { useBinList } from '@/features/bins/useBins';
 import { resolveColor } from '@/lib/colorPalette';
 import { resolveIcon } from '@/lib/iconMap';
-import { cn, inputBase } from '@/lib/utils';
+import { cn, focusRing } from '@/lib/utils';
 import { returnItem } from './useCheckouts';
 
 interface ReturnItemDialogProps {
@@ -83,45 +84,53 @@ export function ReturnItemDialog({ open, onOpenChange, itemName, binId, itemId, 
         <div className="flex flex-col gap-1.5">
           <button
             type="button"
+            aria-pressed={mode === 'origin'}
             onClick={() => { setMode('origin'); setTargetId(null); }}
             className={cn(
-              'w-full text-left px-3 py-2.5 rounded-[var(--radius-md)] transition-colors border flex items-center',
+              'w-full text-left px-3 py-2.5 rounded-[var(--radius-md)] transition-colors duration-150 border flex items-center',
+              focusRing,
               mode === 'origin'
                 ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
                 : 'text-[var(--text-primary)] border-[var(--border-flat)] hover:border-[var(--text-tertiary)]',
             )}
           >
-            <span className="flex-1 text-[15px] truncate">
-              Original bin{originBinName ? ` \u2014 ${originBinName}` : ''}
-            </span>
-            <Check className={cn('h-4 w-4 shrink-0 ml-2 transition-opacity', mode === 'origin' ? 'opacity-100' : 'opacity-0')} />
+            <div className="flex-1 min-w-0">
+              <span className="text-[15px] truncate block">Original bin</span>
+              {originBinName && (
+                <span className={cn('text-[13px] truncate block', mode === 'origin' ? 'text-white/70' : 'text-[var(--text-tertiary)]')}>
+                  {originBinName}
+                </span>
+              )}
+            </div>
+            <Check className={cn('h-4 w-4 shrink-0 ml-2 transition-opacity duration-150', mode === 'origin' ? 'opacity-100' : 'opacity-0')} />
           </button>
 
           <button
             type="button"
+            aria-pressed={mode === 'different'}
             onClick={() => setMode('different')}
             className={cn(
-              'w-full text-left px-3 py-2.5 rounded-[var(--radius-md)] transition-colors border flex items-center',
+              'w-full text-left px-3 py-2.5 rounded-[var(--radius-md)] transition-colors duration-150 border flex items-center',
+              focusRing,
               mode === 'different'
                 ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
                 : 'text-[var(--text-primary)] border-[var(--border-flat)] hover:border-[var(--text-tertiary)]',
             )}
           >
             <span className="flex-1 text-[15px] truncate">Different bin</span>
-            <Check className={cn('h-4 w-4 shrink-0 ml-2 transition-opacity', mode === 'different' ? 'opacity-100' : 'opacity-0')} />
+            <Check className={cn('h-4 w-4 shrink-0 ml-2 transition-opacity duration-150', mode === 'different' ? 'opacity-100' : 'opacity-0')} />
           </button>
         </div>
 
         {mode === 'different' && (
           <div className="flex flex-col gap-2">
-            <input
-              type="text"
+            <SearchInput
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onClear={search ? () => setSearch('') : undefined}
               placeholder="Search bins..."
-              className={cn(inputBase, 'h-9 text-[14px]')}
             />
-            <div className="max-h-48 overflow-y-auto flex flex-col gap-1">
+            <div className="max-h-52 overflow-y-auto flex flex-col gap-1">
               {otherBins.length === 0 ? (
                 <p className="text-[13px] text-[var(--text-tertiary)] text-center py-4">
                   {search ? 'No matching bins' : 'No other bins available'}
@@ -135,9 +144,11 @@ export function ReturnItemDialog({ open, onOpenChange, itemName, binId, itemId, 
                     <button
                       key={b.id}
                       type="button"
+                      aria-pressed={isSelected}
                       onClick={() => setTargetId(b.id)}
                       className={cn(
-                        'w-full text-left px-3 py-2 rounded-[var(--radius-sm)] transition-colors flex items-center gap-2 border',
+                        'w-full text-left px-3 py-2.5 rounded-[var(--radius-sm)] transition-colors duration-150 flex items-center gap-2 border',
+                        focusRing,
                         isSelected
                           ? 'bg-[var(--accent)]/10 border-[var(--accent)]'
                           : 'border-transparent hover:bg-[var(--bg-hover)]',
