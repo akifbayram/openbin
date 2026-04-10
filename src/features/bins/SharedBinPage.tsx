@@ -98,7 +98,7 @@ export function SharedBinPage() {
             <h2 className="text-sm font-medium text-[var(--text-secondary)]">Items</h2>
             <ul className="space-y-1">
               {bin.items.map((item) => (
-                <li key={item.id} className="flex items-center justify-between text-sm py-1 border-b border-[var(--border-subtle)] last:border-0">
+                <li key={item.name} className="flex items-center justify-between text-sm py-1 border-b border-[var(--border-subtle)] last:border-0">
                   <span>{item.name}</span>
                   {item.quantity != null && (
                     <span className="text-[var(--text-tertiary)] tabular-nums">{item.quantity}</span>

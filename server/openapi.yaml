@@ -93,6 +93,11 @@ components:
           nullable: true
         viewCount:
           type: integer
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional expiration timestamp. Null means the share never expires.
         createdAt:
           type: string
           format: date-time
@@ -5634,6 +5639,11 @@ paths:
                   type: string
                   enum: [public, unlisted]
                   default: unlisted
+                expiresAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  description: Optional expiration timestamp (ISO 8601). Null or omitted means the share never expires.
       responses:
         '201':
           description: Share link created

@@ -9,7 +9,10 @@ import {
   CUSTOM_FIELD_DEFINITIONS,
   CUSTOM_FIELD_VALUES,
   DEMO_ACTIVITY_ENTRIES,
+  DEMO_BIN_SHARES,
   DEMO_BINS,
+  DEMO_CHECKOUTS,
+  DEMO_RETURNED_CHECKOUTS,
   DEMO_USERS,
   HOME_AREAS,
   NESTED_AREAS,
@@ -21,6 +24,7 @@ import {
   SCANNED_BIN_NAMES_SARAH,
   STORAGE_AREAS,
   TAG_COLORS,
+  TAG_HIERARCHY,
   TRASHED_BINS,
 } from './demoSeedData.js';
 import { pushLog } from './logBuffer.js';
@@ -38,6 +42,7 @@ interface ExternalDemoData {
   bins: DemoBin[];
   trashedBins: DemoBin[];
   tagColors: Record<string, string>;
+  tagHierarchy: Record<string, string[]>;
   pinnedBinNames: string[];
   pinnedBinNamesPat: string[];
   scannedBinNames: Record<string, string[]>;
@@ -53,6 +58,9 @@ interface ExternalDemoData {
     changes?: Record<string, { old: unknown; new: unknown }>;
     daysAgo: number;
   }>;
+  checkouts: Array<{ binName: string; itemName: string; checkedOutBy: DemoMember; daysAgo: number }>;
+  returnedCheckouts: Array<{ binName: string; itemName: string; checkedOutBy: DemoMember; returnedBy: DemoMember; checkedOutDaysAgo: number; returnedDaysAgo: number }>;
+  binShares: Array<{ binName: string; createdBy: DemoMember; visibility: 'public' | 'unlisted'; viewCount: number }>;
 }
 
 const REQUIRED_KEYS: (keyof ExternalDemoData)[] = [
@@ -306,12 +314,21 @@ async function createTrashedBins(
   }
 }
 
-async function seedTagColors(tx: TxQueryFn, homeLocationId: string, storageLocationId: string, tagColors: Record<string, string>): Promise<void> {
+async function seedTagColors(tx: TxQueryFn, homeLocationId: string, storageLocationId: string, tagColors: Record<string, string>, hierarchy: Record<string, string[]>): Promise<void> {
+  // Build reverse map: child → parent
+  const childToParent = new Map<string, string>();
+  for (const [parent, children] of Object.entries(hierarchy)) {
+    for (const child of children) {
+      childToParent.set(child, parent);
+    }
+  }
+
   for (const locId of [homeLocationId, storageLocationId]) {
     for (const [tag, color] of Object.entries(tagColors)) {
+      const parentTag = childToParent.get(tag) ?? null;
       await tx(
-        'INSERT INTO tag_colors (id, location_id, tag, color) VALUES ($1, $2, $3, $4)',
-        [generateUuid(), locId, tag, color],
+        'INSERT INTO tag_colors (id, location_id, tag, color, parent_tag) VALUES ($1, $2, $3, $4, $5)',
+        [generateUuid(), locId, tag, color, parentTag],
       );
     }
   }
@@ -447,6 +464,71 @@ async function seedActivityLog(
   }
 }
 
+async function seedCheckouts(
+  tx: TxQueryFn,
+  homeLocationId: string,
+  storageLocationId: string,
+  userIdMap: Map<DemoMember, string>,
+  binIdMap: Map<string, string>,
+  bins: DemoBin[],
+  activeCheckouts: Array<{ binName: string; itemName: string; checkedOutBy: DemoMember; daysAgo: number }>,
+  returnedCheckouts: Array<{ binName: string; itemName: string; checkedOutBy: DemoMember; returnedBy: DemoMember; checkedOutDaysAgo: number; returnedDaysAgo: number }>,
+): Promise<void> {
+  // Helper to find item id by bin name and item name
+  async function findItemId(binName: string, itemName: string): Promise<string | null> {
+    const binId = binIdMap.get(binName);
+    if (!binId) return null;
+    const result = await tx<{ id: string }>('SELECT id FROM bin_items WHERE bin_id = $1 AND name = $2', [binId, itemName]);
+    return result.rows.length > 0 ? result.rows[0].id : null;
+  }
+
+  function getLocationId(binName: string): string {
+    const bin = bins.find((b) => b.name === binName);
+    return bin?.location === 'storage' ? storageLocationId : homeLocationId;
+  }
+
+  // Active checkouts
+  for (const co of activeCheckouts) {
+    const itemId = await findItemId(co.binName, co.itemName);
+    const binId = binIdMap.get(co.binName);
+    if (!itemId || !binId) continue;
+    await tx(
+      `INSERT INTO item_checkouts (id, item_id, origin_bin_id, location_id, checked_out_by, checked_out_at)
+       VALUES ($1, $2, $3, $4, $5, ${d.daysAgo(co.daysAgo)})`,
+      [generateUuid(), itemId, binId, getLocationId(co.binName), userIdMap.get(co.checkedOutBy)!],
+    );
+  }
+
+  // Returned checkouts
+  for (const co of returnedCheckouts) {
+    const itemId = await findItemId(co.binName, co.itemName);
+    const binId = binIdMap.get(co.binName);
+    if (!itemId || !binId) continue;
+    await tx(
+      `INSERT INTO item_checkouts (id, item_id, origin_bin_id, location_id, checked_out_by, checked_out_at, returned_at, returned_by, return_bin_id)
+       VALUES ($1, $2, $3, $4, $5, ${d.daysAgo(co.checkedOutDaysAgo)}, ${d.daysAgo(co.returnedDaysAgo)}, $6, $3)`,
+      [generateUuid(), itemId, binId, getLocationId(co.binName), userIdMap.get(co.checkedOutBy)!, userIdMap.get(co.returnedBy)!],
+    );
+  }
+}
+
+async function seedBinShares(
+  tx: TxQueryFn,
+  binIdMap: Map<string, string>,
+  userIdMap: Map<DemoMember, string>,
+  shares: Array<{ binName: string; createdBy: DemoMember; visibility: 'public' | 'unlisted'; viewCount: number }>,
+): Promise<void> {
+  for (const share of shares) {
+    const binId = binIdMap.get(share.binName);
+    if (!binId) continue;
+    const token = crypto.randomBytes(16).toString('hex');
+    await tx(
+      'INSERT INTO bin_shares (id, bin_id, token, visibility, created_by, view_count) VALUES ($1, $2, $3, $4, $5, $6)',
+      [generateUuid(), binId, token, share.visibility, userIdMap.get(share.createdBy)!, share.viewCount],
+    );
+  }
+}
+
 export async function seedDemoData(): Promise<void> {
   if (!config.demoMode) return;
 
@@ -468,9 +550,13 @@ export async function seedDemoData(): Promise<void> {
     alex: SCANNED_BIN_NAMES_ALEX,
     pat: SCANNED_BIN_NAMES_PAT,
   };
+  const tagHierarchyDefs = external?.tagHierarchy ?? TAG_HIERARCHY;
   const cfDefs = external?.customFieldDefinitions ?? CUSTOM_FIELD_DEFINITIONS;
   const cfValues = external?.customFieldValues ?? CUSTOM_FIELD_VALUES;
   const activityEntries = external?.activityEntries ?? DEMO_ACTIVITY_ENTRIES;
+  const checkouts = external?.checkouts ?? DEMO_CHECKOUTS;
+  const returnedCheckoutsList = external?.returnedCheckouts ?? DEMO_RETURNED_CHECKOUTS;
+  const binShares = external?.binShares ?? DEMO_BIN_SHARES;
 
   const startTime = Date.now();
 
@@ -489,12 +575,14 @@ export async function seedDemoData(): Promise<void> {
       const binIdMap = await createBins(tx, homeLocationId, storageLocationId, areaMap, userIdMap, bins);
       await createTrashedBins(tx, homeLocationId, storageLocationId, areaMap, userIdMap, binIdMap, trashedBinsList);
 
-      await seedTagColors(tx, homeLocationId, storageLocationId, tagColorDefs);
+      await seedTagColors(tx, homeLocationId, storageLocationId, tagColorDefs, tagHierarchyDefs);
       await seedPins(tx, userId, userIdMap.get('pat')!, binIdMap, pinnedNames, pinnedNamesPat);
       await seedSavedViews(tx, userId, userIdMap.get('sarah')!, areaMap);
       await seedScanHistory(tx, userIdMap, binIdMap, scannedNames);
       await seedOnboardingPrefs(tx, userIdMap);
       await seedCustomFields(tx, homeLocationId, binIdMap, cfDefs, cfValues);
+      await seedCheckouts(tx, homeLocationId, storageLocationId, userIdMap, binIdMap, bins, checkouts, returnedCheckoutsList);
+      await seedBinShares(tx, binIdMap, userIdMap, binShares);
       await seedActivityLog(tx, homeLocationId, storageLocationId, userIdMap, binIdMap, activityEntries);
     });
 
@@ -502,7 +590,7 @@ export async function seedDemoData(): Promise<void> {
     const homeBins = bins.filter((b) => b.location === 'home').length;
     const storageBins = bins.filter((b) => b.location === 'storage').length;
     const totalAreas = homeAreaNames.length + Object.values(nestedAreaDefs).flat().length + storageAreaNames.length;
-    const message = `Demo data seeded in ${elapsed}ms (${members.length} users, ${homeBins} + ${storageBins} bins, ${trashedBinsList.length} trashed, ${totalAreas} areas, ${cfDefs.length} custom fields, ${activityEntries.length} activity log entries across 2 locations)`;
+    const message = `Demo data seeded in ${elapsed}ms (${members.length} users, ${homeBins} + ${storageBins} bins, ${trashedBinsList.length} trashed, ${totalAreas} areas, ${cfDefs.length} custom fields, ${checkouts.length + returnedCheckoutsList.length} checkouts, ${binShares.length} shares, ${activityEntries.length} activity log entries across 2 locations)`;
     log.info(message);
     pushLog({ level: 'info', message });
   } catch (err) {

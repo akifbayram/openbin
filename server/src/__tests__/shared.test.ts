@@ -27,10 +27,12 @@ describe('GET /api/shared/:token', () => {
 
     const res = await request(app).get(`/api/shared/${shareRes.body.token}`);
     expect(res.status).toBe(200);
-    expect(res.body.id).toBe(bin.id);
     expect(res.body.name).toBe(bin.name);
     expect(res.body.shareToken).toBe(shareRes.body.token);
     expect(res.body.photos).toBeInstanceOf(Array);
+    // Internal IDs should be stripped from shared response
+    expect(res.body.id).toBeUndefined();
+    expect(res.body.area_id).toBeUndefined();
   });
 
   it('returns 404 for invalid token', async () => {
@@ -102,6 +104,30 @@ describe('GET /api/shared/:token', () => {
     expect(res.status).toBe(200);
     const items = typeof res.body.items === 'string' ? JSON.parse(res.body.items) : res.body.items;
     expect(items.length).toBe(2);
+    // Items should only have name/quantity, no id
+    expect(items[0].id).toBeUndefined();
+    expect(items[0].name).toBeDefined();
+  });
+
+  it('returns security headers (Referrer-Policy, X-Robots-Tag)', async () => {
+    const { user, bin } = await setup();
+    const shareRes = await createShare(app, user.token, bin.id);
+
+    const res = await request(app).get(`/api/shared/${shareRes.body.token}`);
+    expect(res.status).toBe(200);
+    expect(res.headers['referrer-policy']).toBe('no-referrer');
+    expect(res.headers['x-robots-tag']).toBe('noindex, nofollow');
+  });
+
+  it('returns 404 for expired share', async () => {
+    const { user, bin } = await setup();
+    const shareRes = await createShare(app, user.token, bin.id);
+
+    // Manually set expires_at to the past
+    getDb().prepare("UPDATE bin_shares SET expires_at = datetime('now', '-1 hour') WHERE token = ?").run(shareRes.body.token);
+
+    const res = await request(app).get(`/api/shared/${shareRes.body.token}`);
+    expect(res.status).toBe(404);
   });
 });
 

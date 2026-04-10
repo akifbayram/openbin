@@ -1,4 +1,4 @@
-import { Check, Copy, Eye, Globe, Link2, Loader2, Lock, Trash2 } from 'lucide-react';
+import { Check, Clock, Copy, Eye, Globe, Link2, Loader2, Lock, Trash2 } from 'lucide-react';
 import { lazy, Suspense, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -23,14 +23,23 @@ export function ShareBinDialog({ binId, open, onOpenChange }: ShareBinDialogProp
   const { share, isLoading, setShare } = useBinShare(open ? binId : undefined);
   const { showToast } = useToast();
   const [visibility, setVisibility] = useState<'public' | 'unlisted'>('unlisted');
+  const [expiry, setExpiry] = useState<string>('none');
   const [creating, setCreating] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  function computeExpiresAt(): string | null {
+    if (expiry === 'none') return null;
+    const now = new Date();
+    const hours = { '1h': 1, '24h': 24, '7d': 168, '30d': 720 }[expiry];
+    if (!hours) return null;
+    return new Date(now.getTime() + hours * 3600_000).toISOString();
+  }
+
   async function handleCreate() {
     setCreating(true);
     try {
-      const result = await createShare(binId, visibility);
+      const result = await createShare(binId, visibility, computeExpiresAt());
       setShare(result);
     } catch (err) {
       showToast({ message: getErrorMessage(err, 'Failed to create share link'), variant: 'error' });
@@ -119,6 +128,12 @@ export function ShareBinDialog({ binId, open, onOpenChange }: ShareBinDialogProp
                 <Eye className="h-3 w-3" />
                 {share.viewCount} view{share.viewCount !== 1 ? 's' : ''}
               </span>
+              {share.expiresAt && (
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Expires {new Date(share.expiresAt).toLocaleDateString()}
+                </span>
+              )}
             </div>
 
             {/* Revoke */}
@@ -174,6 +189,22 @@ export function ShareBinDialog({ binId, open, onOpenChange }: ShareBinDialogProp
                   </div>
                 </label>
               </div>
+            </div>
+
+            {/* Expiration selector */}
+            <div className="space-y-2">
+              <span className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Expiration</span>
+              <select
+                value={expiry}
+                onChange={(e) => setExpiry(e.target.value)}
+                className="w-full rounded-[var(--radius-sm)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)] border border-[var(--border-flat)] outline-none"
+              >
+                <option value="none">Never</option>
+                <option value="1h">1 hour</option>
+                <option value="24h">24 hours</option>
+                <option value="7d">7 days</option>
+                <option value="30d">30 days</option>
+              </select>
             </div>
 
             <Button onClick={handleCreate} disabled={creating}>

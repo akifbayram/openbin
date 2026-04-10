@@ -1,4 +1,5 @@
 import { legacy } from './0001_legacy.js';
+import { shareExpires } from './0002_share_expires.js';
 import type { Migration } from './types.js';
 
 /**
@@ -7,4 +8,5 @@ import type { Migration } from './types.js';
  */
 export const migrations: Migration[] = [
   legacy,
+  shareExpires,
 ];

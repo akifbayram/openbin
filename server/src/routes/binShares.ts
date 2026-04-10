@@ -24,30 +24,36 @@ router.post('/:id/share', requirePro(), asyncHandler(async (req, res) => {
 
   await requireAdmin(access.locationId, userId, 'share bins');
 
-  const { visibility } = req.body;
+  const { visibility, expiresAt } = req.body;
   if (visibility && visibility !== 'public' && visibility !== 'unlisted') {
     throw new ValidationError('visibility must be "public" or "unlisted"');
+  }
+  if (expiresAt !== undefined && expiresAt !== null) {
+    const d = new Date(expiresAt);
+    if (Number.isNaN(d.getTime())) throw new ValidationError('expiresAt must be a valid ISO 8601 date');
+    if (d < new Date()) throw new ValidationError('expiresAt must be in the future');
   }
 
   // Return existing active share if one exists
   const existing = await query(
-    'SELECT id, token, visibility, view_count, created_at FROM bin_shares WHERE bin_id = $1 AND revoked_at IS NULL',
+    'SELECT id, token, visibility, view_count, expires_at, created_at FROM bin_shares WHERE bin_id = $1 AND revoked_at IS NULL',
     [binId],
   );
   if (existing.rows.length > 0) {
     const share = existing.rows[0];
     const url = config.baseUrl ? `${config.baseUrl}/s/${share.token}` : null;
-    res.json({ id: share.id, token: share.token, visibility: share.visibility, url, viewCount: share.view_count, createdAt: share.created_at });
+    res.json({ id: share.id, token: share.token, visibility: share.visibility, url, viewCount: share.view_count, expiresAt: share.expires_at, createdAt: share.created_at });
     return;
   }
 
   const id = generateUuid();
   const token = crypto.randomBytes(16).toString('hex');
   const vis = visibility || 'unlisted';
+  const expires = expiresAt ? new Date(expiresAt).toISOString() : null;
 
   await query(
-    'INSERT INTO bin_shares (id, bin_id, token, visibility, created_by) VALUES ($1, $2, $3, $4, $5)',
-    [id, binId, token, vis, userId],
+    'INSERT INTO bin_shares (id, bin_id, token, visibility, created_by, expires_at) VALUES ($1, $2, $3, $4, $5, $6)',
+    [id, binId, token, vis, userId, expires],
   );
 
   logRouteActivity(req, {
@@ -58,7 +64,7 @@ router.post('/:id/share', requirePro(), asyncHandler(async (req, res) => {
   });
 
   const url = config.baseUrl ? `${config.baseUrl}/s/${token}` : null;
-  res.status(201).json({ id, token, visibility: vis, url, viewCount: 0, createdAt: new Date().toISOString() });
+  res.status(201).json({ id, token, visibility: vis, url, viewCount: 0, expiresAt: expires, createdAt: new Date().toISOString() });
 }));
 
 // DELETE /api/bins/:id/share — revoke the share link
@@ -97,7 +103,7 @@ router.get('/:id/share', asyncHandler(async (req, res) => {
   if (!access) throw new NotFoundError('Bin not found');
 
   const result = await query(
-    'SELECT id, token, visibility, view_count, created_at FROM bin_shares WHERE bin_id = $1 AND revoked_at IS NULL',
+    'SELECT id, token, visibility, view_count, expires_at, created_at FROM bin_shares WHERE bin_id = $1 AND revoked_at IS NULL',
     [binId],
   );
 
@@ -105,7 +111,7 @@ router.get('/:id/share', asyncHandler(async (req, res) => {
 
   const share = result.rows[0];
   const url = config.baseUrl ? `${config.baseUrl}/s/${share.token}` : null;
-  res.json({ id: share.id, token: share.token, visibility: share.visibility, url, viewCount: share.view_count, createdAt: share.created_at });
+  res.json({ id: share.id, token: share.token, visibility: share.visibility, url, viewCount: share.view_count, expiresAt: share.expires_at, createdAt: share.created_at });
 }));
 
 export { router as binSharesRoutes };

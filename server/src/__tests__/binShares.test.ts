@@ -46,7 +46,7 @@ describe('bin shares', () => {
 
     const res = await request(app).get(`/api/shared/${shareRes.body.token}`);
     expect(res.status).toBe(200);
-    expect(res.body.id).toBe(bin.id);
+    expect(res.body.id).toBeUndefined();
     expect(res.body.name).toBe(bin.name);
     expect(res.body.shareToken).toBe(shareRes.body.token);
   });

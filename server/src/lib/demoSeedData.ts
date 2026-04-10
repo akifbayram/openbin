@@ -682,6 +682,56 @@ export const DEMO_ACTIVITY_ENTRIES: DemoActivityEntry[] = [
   { user: 'alex', action: 'create', entityType: 'bin', entityName: 'Print Fails', binName: 'Print Fails', daysAgo: 1, location: 'home' },
 ];
 
+/** Tag hierarchy: parent → children. Single-level only. */
+export const TAG_HIERARCHY: Record<string, string[]> = {
+  outdoor: ['sports', 'garden', 'field-collecting'],
+  homelab: ['networking', 'server', 'hardware', 'sbc', 'nas', 'self-hosted', 'smart-home'],
+  kids: ['baby', 'toys', 'school'],
+  'd&d': ['tabletop-rpg', 'rulebooks', 'dice', 'miniatures', 'dm'],
+  coffee: ['brewing', 'specialty'],
+  knitting: ['yarn', 'crafts', 'wip'],
+  geology: ['minerals', 'specimens', 'lapidary'],
+};
+
+/** Items that are currently checked out (active). bin → item name → checked out by */
+export const DEMO_CHECKOUTS: Array<{
+  binName: string;
+  itemName: string;
+  checkedOutBy: DemoMember;
+  daysAgo: number;
+}> = [
+  { binName: 'Power Tools', itemName: 'Cordless drill', checkedOutBy: 'demo', daysAgo: 2 },
+  { binName: 'Camping Gear', itemName: 'Cooler (hard shell)', checkedOutBy: 'sarah', daysAgo: 1 },
+  { binName: 'Board Games', itemName: 'Catan', checkedOutBy: 'alex', daysAgo: 3 },
+  { binName: 'Brewing Equipment', itemName: 'AeroPress', checkedOutBy: 'demo', daysAgo: 0 },
+];
+
+/** Past returned checkouts for history. */
+export const DEMO_RETURNED_CHECKOUTS: Array<{
+  binName: string;
+  itemName: string;
+  checkedOutBy: DemoMember;
+  returnedBy: DemoMember;
+  checkedOutDaysAgo: number;
+  returnedDaysAgo: number;
+}> = [
+  { binName: 'Bike Gear', itemName: 'Bike pump', checkedOutBy: 'alex', returnedBy: 'alex', checkedOutDaysAgo: 7, returnedDaysAgo: 5 },
+  { binName: 'Power Tools', itemName: 'Impact driver', checkedOutBy: 'demo', returnedBy: 'demo', checkedOutDaysAgo: 10, returnedDaysAgo: 8 },
+  { binName: 'D&D Rulebooks', itemName: "Player's Handbook (5e)", checkedOutBy: 'alex', returnedBy: 'pat', checkedOutDaysAgo: 6, returnedDaysAgo: 4 },
+];
+
+/** Bins to create share links for. */
+export const DEMO_BIN_SHARES: Array<{
+  binName: string;
+  createdBy: DemoMember;
+  visibility: 'public' | 'unlisted';
+  viewCount: number;
+}> = [
+  { binName: 'Board Games', createdBy: 'demo', visibility: 'unlisted', viewCount: 3 },
+  { binName: 'D&D Rulebooks', createdBy: 'alex', visibility: 'public', viewCount: 12 },
+  { binName: 'Mineral Specimens', createdBy: 'jordan', visibility: 'unlisted', viewCount: 7 },
+];
+
 export const TAG_COLORS: Record<string, string> = {
   tools: '0:3',
   dad: '25:3',

@@ -218,6 +218,7 @@ function sqliteLegacy(db: Database.Database): void {
       created_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
       view_count  INTEGER NOT NULL DEFAULT 0,
       created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+      expires_at  TEXT,
       revoked_at  TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_bin_shares_token ON bin_shares(token) WHERE revoked_at IS NULL;

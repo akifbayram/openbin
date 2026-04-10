@@ -7,15 +7,14 @@ export interface BinShare {
   visibility: 'public' | 'unlisted';
   url: string | null;
   viewCount: number;
+  expiresAt: string | null;
   createdAt: string;
 }
 
 export interface SharedBin {
-  id: string;
   name: string;
-  area_id: string | null;
   area_name: string;
-  items: Array<{ id: string; name: string; quantity: number | null }>;
+  items: Array<{ name: string; quantity: number | null }>;
   notes: string;
   tags: string[];
   icon: string;
@@ -24,7 +23,7 @@ export interface SharedBin {
   custom_fields: Record<string, string>;
   created_at: string;
   updated_at: string;
-  photos: Array<{ id: string; filename: string; mime_type: string; size: number; created_at: string }>;
+  photos: Array<{ id: string; filename: string }>;
   shareToken: string;
 }
 
@@ -46,10 +45,10 @@ export function useBinShare(binId: string | undefined) {
   return { share, isLoading, setShare };
 }
 
-export async function createShare(binId: string, visibility: 'public' | 'unlisted'): Promise<BinShare> {
+export async function createShare(binId: string, visibility: 'public' | 'unlisted', expiresAt?: string | null): Promise<BinShare> {
   return apiFetch<BinShare>(`/api/bins/${binId}/share`, {
     method: 'POST',
-    body: { visibility },
+    body: { visibility, expiresAt: expiresAt || undefined },
   });
 }
 

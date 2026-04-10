@@ -310,6 +310,7 @@ CREATE TABLE IF NOT EXISTS bin_shares (
   created_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
   view_count  INTEGER NOT NULL DEFAULT 0,
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at  TEXT,
   revoked_at  TEXT
 );
 -- idx_bin_shares_active created in db.ts migration (needs dedup handling for existing DBs)
