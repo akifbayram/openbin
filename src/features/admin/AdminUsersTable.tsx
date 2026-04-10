@@ -38,7 +38,7 @@ export function AdminUsersTable({
     <Table>
       <TableHeader>
         <div className="flex-1 min-w-0">
-          <SortHeader label="User" column="username" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} />
+          <SortHeader label="User" column="email" currentColumn={sortColumn} currentDirection={sortDirection} onSort={onSort} />
         </div>
         {isVisible('email') && (
           <div className="hidden lg:block w-40">
@@ -153,8 +153,8 @@ export function AdminUsersTable({
             className={cn((u.deletedAt || u.suspendedAt) && 'opacity-50')}
           >
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-[14px] text-[var(--text-primary)] truncate">{u.displayName || u.username}</div>
-              <div className="text-[12px] text-[var(--text-tertiary)] truncate">@{u.username}</div>
+              <div className="font-medium text-[14px] text-[var(--text-primary)] truncate">{u.displayName || u.email}</div>
+              <div className="text-[12px] text-[var(--text-tertiary)] truncate">{u.email}</div>
             </div>
             {isVisible('email') && (
               <div className="hidden lg:block w-40 text-[14px] text-[var(--text-secondary)] truncate">{u.email || '—'}</div>
@@ -237,7 +237,7 @@ export function AdminUsersTable({
                 size="icon-sm"
                 onClick={(e) => { e.stopPropagation(); onDelete(u); }}
                 disabled={isSelf}
-                aria-label={`Delete ${u.username}`}
+                aria-label={`Delete ${u.email}`}
                 className="text-[var(--destructive)] hover:text-[var(--destructive)]"
               >
                 <Trash2 className="h-3.5 w-3.5" />

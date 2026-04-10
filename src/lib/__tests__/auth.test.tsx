@@ -23,9 +23,8 @@ const mockApiFetch = vi.mocked(apiFetch);
 function makeUser(overrides: Partial<User> = {}): User {
   return {
     id: 'user-1',
-    username: 'testuser',
     displayName: 'Test User',
-    email: null,
+    email: 'testuser@example.com',
     avatarUrl: null,
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z',
@@ -135,12 +134,12 @@ describe('useAuth', () => {
       });
 
       await act(async () => {
-        await result.current.login('testuser', 'password');
+        await result.current.login('testuser@example.com', 'password');
       });
 
       expect(mockApiFetch).toHaveBeenCalledWith('/api/auth/login', {
         method: 'POST',
-        body: { username: 'testuser', password: 'password' },
+        body: { email: 'testuser@example.com', password: 'password' },
       });
       expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBe('loc-1');
       expect(result.current.user).toEqual(user);
@@ -163,7 +162,7 @@ describe('useAuth', () => {
       });
 
       await act(async () => {
-        await result.current.login('testuser', 'password');
+        await result.current.login('testuser@example.com', 'password');
       });
 
       expect(result.current.activeLocationId).toBe('existing-loc');
@@ -188,12 +187,12 @@ describe('useAuth', () => {
       });
 
       await act(async () => {
-        await result.current.register('newuser', 'password', 'New User');
+        await result.current.register('newuser@example.com', 'password', 'New User');
       });
 
       expect(mockApiFetch).toHaveBeenCalledWith('/api/auth/register', {
         method: 'POST',
-        body: { username: 'newuser', password: 'password', displayName: 'New User' },
+        body: { email: 'newuser@example.com', password: 'password', displayName: 'New User' },
       });
       expect(localStorage.getItem(STORAGE_KEYS.ACTIVE_LOCATION)).toBeNull();
       expect(result.current.user).toEqual(user);

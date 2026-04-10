@@ -51,7 +51,7 @@ export function AdminUsersPage() {
   const { visibility, toggleField, isVisible } = useAdminColumnVisibility();
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ username: '', password: '', displayName: '', email: '', isAdmin: false });
+  const [createForm, setCreateForm] = useState({ email: '', password: '', displayName: '', isAdmin: false });
   const [createLoading, setCreateLoading] = useState(false);
 
   const sortParam = `${sortDirection === 'desc' ? '-' : ''}${sortColumn}`;
@@ -68,7 +68,7 @@ export function AdminUsersPage() {
     if (!deleteTarget) return;
     try {
       await deleteUser(deleteTarget.id);
-      showToast({ message: `User ${deleteTarget.username} deleted`, variant: 'success' });
+      showToast({ message: `User ${deleteTarget.email} deleted`, variant: 'success' });
       setDeleteTarget(null);
     } catch (err) {
       showToast({ message: getErrorMessage(err, 'Failed to delete user'), variant: 'error' });
@@ -88,15 +88,14 @@ export function AdminUsersPage() {
     setCreateLoading(true);
     try {
       await createUser({
-        username: createForm.username,
+        email: createForm.email,
         password: createForm.password,
         displayName: createForm.displayName || undefined,
-        email: createForm.email || undefined,
         isAdmin: createForm.isAdmin,
       });
-      showToast({ message: `User ${createForm.username} created`, variant: 'success' });
+      showToast({ message: `User ${createForm.email} created`, variant: 'success' });
       setCreateOpen(false);
-      setCreateForm({ username: '', password: '', displayName: '', email: '', isAdmin: false });
+      setCreateForm({ email: '', password: '', displayName: '', isAdmin: false });
     } catch (err) {
       showToast({ message: getErrorMessage(err, 'Failed to create user'), variant: 'error' });
     } finally {
@@ -268,7 +267,7 @@ export function AdminUsersPage() {
           <DialogHeader>
             <DialogTitle>Delete User</DialogTitle>
             <DialogDescription>
-              Permanently delete <strong>{deleteTarget?.username}</strong>? This cannot be undone. All their data will be removed.
+              Permanently delete <strong>{deleteTarget?.email}</strong>? This cannot be undone. All their data will be removed.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -282,7 +281,7 @@ export function AdminUsersPage() {
       <Dialog open={createOpen} onOpenChange={(open) => {
         if (!open) {
           setCreateOpen(false);
-          setCreateForm({ username: '', password: '', displayName: '', email: '', isAdmin: false });
+          setCreateForm({ email: '', password: '', displayName: '', isAdmin: false });
         }
       }}>
         <DialogContent>
@@ -291,13 +290,14 @@ export function AdminUsersPage() {
             <DialogDescription>Create a new user account.</DialogDescription>
           </DialogHeader>
           <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }} className="space-y-5">
-            <FormField label="Username" htmlFor="create-username">
+            <FormField label="Email" htmlFor="create-email">
               <Input
-                id="create-username"
-                value={createForm.username}
-                onChange={(e) => setCreateForm((f) => ({ ...f, username: e.target.value }))}
-                placeholder="Username"
-                autoComplete="off"
+                id="create-email"
+                type="email"
+                value={createForm.email}
+                onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="Email"
+                autoComplete="email"
               />
             </FormField>
             <FormField label="Password" htmlFor="create-password" hint="8+ characters, mixed case, one digit">
@@ -318,15 +318,6 @@ export function AdminUsersPage() {
                 placeholder="Optional"
               />
             </FormField>
-            <FormField label="Email" htmlFor="create-email">
-              <Input
-                id="create-email"
-                type="email"
-                value={createForm.email}
-                onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="Optional"
-              />
-            </FormField>
             <div className="flex items-center gap-2">
               <Switch
                 checked={createForm.isAdmin}
@@ -336,7 +327,7 @@ export function AdminUsersPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" type="button" onClick={() => setCreateOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={!createForm.username || !createForm.password || createLoading}>
+              <Button type="submit" disabled={!createForm.email || !createForm.password || createLoading}>
                 {createLoading ? 'Creating...' : 'Create'}
               </Button>
             </DialogFooter>

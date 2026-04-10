@@ -16,8 +16,6 @@ import { cycleThemePreference, useTheme } from '@/lib/theme';
 import { cn, EMAIL_REGEX, focusRing, getErrorMessage } from '@/lib/utils';
 import { SocialButtons, SocialDivider } from './SocialButtons';
 
-const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,50}$/;
-
 export function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -26,14 +24,12 @@ export function RegisterPage() {
   const { settings } = useAppSettings();
   const { preference, setThemePreference } = useTheme();
   const ThemeIcon = preference === 'light' ? Sun : preference === 'dark' ? Moon : Monitor;
-  const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [inviteCode, setInviteCode] = useState(searchParams.get('invite') ?? '');
   const [registrationMode, setRegistrationMode] = useState<'open' | 'invite'>('open');
-  const [selfHosted, setSelfHosted] = useState(true);
   const [oauthProviders, setOAuthProviders] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusLoaded, setStatusLoaded] = useState(false);
@@ -42,7 +38,6 @@ export function RegisterPage() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const markTouched = useCallback((field: string) => setTouched((t) => ({ ...t, [field]: true })), []);
 
-  const usernameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
@@ -57,7 +52,6 @@ export function RegisterPage() {
           navigate('/login');
         }
         setRegistrationMode(data.registrationMode ?? 'open');
-        if (data.selfHosted === false) setSelfHosted(false);
         if (Array.isArray(data.oauthProviders)) setOAuthProviders(data.oauthProviders);
       })
       .catch(() => {})
@@ -102,13 +96,13 @@ export function RegisterPage() {
 
   const fieldErrors = useMemo(() => {
     const errors: Record<string, string | undefined> = {};
-    if (username && !USERNAME_REGEX.test(username)) {
-      errors.username = 'Must be 3\u201350 characters (letters, numbers, underscores)';
-    }
-    if (!selfHosted && touched.email && !email.trim()) {
+    if (touched.email && !email.trim()) {
       errors.email = 'Email is required';
     } else if (email && !EMAIL_REGEX.test(email)) {
       errors.email = 'Enter a valid email address';
+    }
+    if (!displayName.trim() && touched.displayName) {
+      errors.displayName = 'Display name is required';
     }
     if (confirmPassword && password !== confirmPassword) {
       errors.confirmPassword = 'Passwords do not match';
@@ -117,20 +111,19 @@ export function RegisterPage() {
       errors.inviteCode = 'An invite code is required to register';
     }
     return errors;
-  }, [username, email, password, confirmPassword, inviteCode, registrationMode, selfHosted, touched.email, touched.inviteCode]);
+  }, [email, displayName, password, confirmPassword, inviteCode, registrationMode, touched.email, touched.displayName, touched.inviteCode]);
 
   function validate(): string | null {
-    if (!USERNAME_REGEX.test(username)) {
-      usernameRef.current?.focus();
-      return 'Username must be 3\u201350 characters (letters, numbers, underscores)';
-    }
-    if (!selfHosted && !email.trim()) {
+    if (!email.trim()) {
       emailRef.current?.focus();
       return 'Email is required';
     }
-    if (email && !EMAIL_REGEX.test(email)) {
+    if (!EMAIL_REGEX.test(email)) {
       emailRef.current?.focus();
       return 'Please enter a valid email address';
+    }
+    if (!displayName.trim()) {
+      return 'Display name is required';
     }
     if (!allChecksPassing(passwordChecks)) {
       passwordRef.current?.focus();
@@ -151,13 +144,13 @@ export function RegisterPage() {
     e.preventDefault();
     const error = validate();
     if (error) {
-      setTouched({ username: true, email: true, confirmPassword: true, inviteCode: true });
+      setTouched({ email: true, displayName: true, confirmPassword: true, inviteCode: true });
       showToast({ message: error, variant: 'error' });
       return;
     }
     setLoading(true);
     try {
-      await register(username.trim(), password, displayName.trim() || username.trim(), email.trim() || undefined, inviteCode.trim() || undefined);
+      await register(email.trim(), password, displayName.trim(), inviteCode.trim() || undefined);
       navigate('/');
     } catch (err) {
       showToast({
@@ -168,8 +161,6 @@ export function RegisterPage() {
       setLoading(false);
     }
   }
-
-  const optionalHint = <span className="font-normal normal-case tracking-normal text-[var(--text-tertiary)]">(optional)</span>;
 
   return (
     <div className="auth-pattern min-h-dvh flex flex-col items-center justify-center px-6 py-8 bg-[var(--bg-base)]">
@@ -237,44 +228,7 @@ export function RegisterPage() {
                   <fieldset className="space-y-4">
                     <legend className="sr-only">Account details</legend>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="reg-username">Username</Label>
-                        {username.length > 0 && (
-                          <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">{username.length}/50</span>
-                        )}
-                      </div>
-                      <Input
-                        ref={usernameRef}
-                        id="reg-username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        onBlur={() => markTouched('username')}
-                        placeholder="Letters, numbers, underscores"
-                        autoComplete="username"
-                        autoCapitalize="none"
-                        autoFocus
-                        required
-                        enterKeyHint="next"
-                        aria-invalid={touched.username && !!fieldErrors.username}
-                        aria-describedby={touched.username && fieldErrors.username ? 'reg-username-error' : undefined}
-                      />
-                      {touched.username && fieldErrors.username && (
-                        <p id="reg-username-error" role="alert" className="text-[13px] text-[var(--destructive)]">{fieldErrors.username}</p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="reg-display-name">Display Name {optionalHint}</Label>
-                      <Input
-                        id="reg-display-name"
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        placeholder="How you appear to others"
-                        autoComplete="name"
-                        enterKeyHint="next"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="reg-email">Email{selfHosted && <> {optionalHint}</>}</Label>
+                      <Label htmlFor="reg-email">Email</Label>
                       <Input
                         ref={emailRef}
                         id="reg-email"
@@ -282,15 +236,33 @@ export function RegisterPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         onBlur={() => markTouched('email')}
-                        placeholder={selfHosted ? 'For password recovery' : 'Required for account recovery'}
+                        placeholder="Enter your email"
                         autoComplete="email"
-                        required={!selfHosted}
+                        autoFocus
+                        required
                         enterKeyHint="next"
                         aria-invalid={touched.email && !!fieldErrors.email}
                         aria-describedby={touched.email && fieldErrors.email ? 'reg-email-error' : undefined}
                       />
                       {touched.email && fieldErrors.email && (
                         <p id="reg-email-error" role="alert" className="text-[13px] text-[var(--destructive)]">{fieldErrors.email}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-display-name">Display Name</Label>
+                      <Input
+                        id="reg-display-name"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        onBlur={() => markTouched('displayName')}
+                        placeholder="How you appear to others"
+                        autoComplete="name"
+                        enterKeyHint="next"
+                        aria-invalid={touched.displayName && !!fieldErrors.displayName}
+                        aria-describedby={touched.displayName && fieldErrors.displayName ? 'reg-display-name-error' : undefined}
+                      />
+                      {touched.displayName && fieldErrors.displayName && (
+                        <p id="reg-display-name-error" role="alert" className="text-[13px] text-[var(--destructive)]">{fieldErrors.displayName}</p>
                       )}
                     </div>
                   </fieldset>
@@ -351,7 +323,7 @@ export function RegisterPage() {
                     <legend className="sr-only">Invitation</legend>
                     <div className="space-y-2">
                       <Label htmlFor="reg-invite">
-                        Invite Code{registrationMode !== 'invite' && <> {optionalHint}</>}
+                        Invite Code{registrationMode !== 'invite' && <> <span className="font-normal normal-case tracking-normal text-[var(--text-tertiary)]">(optional)</span></>}
                       </Label>
                       <Input
                         ref={inviteRef}
@@ -374,7 +346,7 @@ export function RegisterPage() {
                   <div className="mt-6 space-y-4">
                     <Button
                       type="submit"
-                      disabled={!username.trim() || !password || !confirmPassword || loading}
+                      disabled={!email.trim() || !displayName.trim() || !password || !confirmPassword || loading}
                       fullWidth
                     >
                       <UserPlus className="h-4 w-4 mr-2" />

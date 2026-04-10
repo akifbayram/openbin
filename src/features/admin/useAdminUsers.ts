@@ -3,7 +3,6 @@ import { apiFetch } from '@/lib/api';
 
 export interface AdminUser {
   id: string;
-  username: string;
   displayName: string;
   email: string | null;
   isAdmin: boolean;
@@ -87,7 +86,7 @@ export function useAdminUsers(query = '', page = 1, sort = '-created') {
   }, []);
 
   const createUser = useCallback(async (data: {
-    username: string; password: string; displayName?: string; email?: string; isAdmin?: boolean;
+    email: string; password: string; displayName?: string; isAdmin?: boolean;
   }) => {
     const result = await apiFetch<AdminUser>('/api/admin/users', { method: 'POST', body: data });
     await fetchUsers();
@@ -99,7 +98,6 @@ export function useAdminUsers(query = '', page = 1, sort = '-created') {
 
 export interface AdminUserDetail {
   id: string;
-  username: string;
   displayName: string;
   email: string | null;
   isAdmin: boolean;
