@@ -22,10 +22,12 @@ COPY server/tsconfig.json ./
 COPY server/src ./src
 RUN npm run build
 RUN if [ "$BUILD_EDITION" != "cloud" ]; then rm -rf dist/ee; fi
+RUN npm prune --omit=dev
 
 # ── Stage 3: Runtime ─────────────────────────
 FROM node:22-alpine
-RUN apk add --no-cache postgresql-client
+RUN apk upgrade --no-cache && apk add --no-cache postgresql-client \
+    && npm cache clean --force && rm -rf /usr/local/lib/node_modules/npm
 WORKDIR /app
 COPY --chown=node:node --from=server-builder /app/package.json /app/package-lock.json* ./
 COPY --chown=node:node --from=server-builder /app/node_modules ./node_modules
