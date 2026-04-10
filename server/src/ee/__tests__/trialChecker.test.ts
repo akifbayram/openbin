@@ -31,15 +31,14 @@ async function insertUser(opts: {
 }): Promise<string> {
   const id = `tc-user-${++uid}`;
   await query(
-    `INSERT INTO users (id, username, display_name, password_hash, sub_status, active_until, email, created_at)
-     VALUES ($1, $2, $3, 'hash', $4, $5, $6, $7)`,
+    `INSERT INTO users (id, email, display_name, password_hash, sub_status, active_until, created_at)
+     VALUES ($1, $2, $3, 'hash', $4, $5, $6)`,
     [
       id,
-      `user_${id}`,
+      (opts.email !== undefined && opts.email !== null) ? opts.email : `user_${id}@test.local`,
       'Test User',
       opts.subStatus,
       opts.activeUntil ?? null,
-      opts.email ?? null,
       opts.createdAt ?? new Date().toISOString(),
     ],
   );
@@ -166,10 +165,10 @@ describe('trialChecker queries', () => {
     expect(result.rows.map((r) => r.id)).toContain(id);
   });
 
-  // --- Queries exclude users without email ---
+  // --- Email is always present (NOT NULL) — verify query still works ---
 
-  it('trial expiring query excludes users without email', async () => {
-    const id = await insertUser({ subStatus: SubStatus.TRIAL, activeUntil: daysFromNow(2), email: null });
+  it('trial expiring query includes users with email (email is always present)', async () => {
+    const id = await insertUser({ subStatus: SubStatus.TRIAL, activeUntil: daysFromNow(2), email: 'trialtest@example.com' });
     const result = await query<{ id: string }>(
       `SELECT id FROM users
        WHERE sub_status = $1 AND active_until IS NOT NULL
@@ -177,6 +176,6 @@ describe('trialChecker queries', () => {
        AND email IS NOT NULL`,
       [SubStatus.TRIAL],
     );
-    expect(result.rows.map((r) => r.id)).not.toContain(id);
+    expect(result.rows.map((r) => r.id)).toContain(id);
   });
 });

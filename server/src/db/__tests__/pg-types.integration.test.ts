@@ -22,9 +22,9 @@ async function seedUserAndLocation(p: pg.Pool) {
   const userId = crypto.randomUUID();
   const locationId = crypto.randomUUID();
   await p.query(
-    `INSERT INTO users (id, username, password_hash, display_name, is_admin)
+    `INSERT INTO users (id, email, password_hash, display_name, is_admin)
      VALUES ($1, $2, 'hash', 'Test User', FALSE)`,
-    [userId, `user_${userId.slice(0, 8)}`],
+    [userId, `user_${userId.slice(0, 8)}@test.local`],
   );
   await p.query(
     `INSERT INTO locations (id, name, created_by, invite_code)
@@ -159,9 +159,9 @@ describe('pg-types: Boolean behavior', () => {
   it('users.is_admin TRUE returns JS true', async () => {
     const userId = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin)
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin)
        VALUES ($1, $2, 'hash', 'Admin', TRUE)`,
-      [userId, `admin_${userId.slice(0, 8)}`],
+      [userId, `admin_${userId.slice(0, 8)}@test.local`],
     );
     const { rows } = await pool.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
     expect(rows[0].is_admin).toBe(true);
@@ -171,9 +171,9 @@ describe('pg-types: Boolean behavior', () => {
   it('users.is_admin FALSE returns JS false', async () => {
     const userId = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin)
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin)
        VALUES ($1, $2, 'hash', 'User', FALSE)`,
-      [userId, `user_${userId.slice(0, 8)}`],
+      [userId, `user_${userId.slice(0, 8)}@test.local`],
     );
     const { rows } = await pool.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
     expect(rows[0].is_admin).toBe(false);
@@ -200,14 +200,14 @@ describe('pg-types: Boolean behavior', () => {
     const adminId = crypto.randomUUID();
     const userId = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin)
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin)
        VALUES ($1, $2, 'hash', 'Admin', TRUE)`,
-      [adminId, `admin_${adminId.slice(0, 8)}`],
+      [adminId, `admin_${adminId.slice(0, 8)}@test.local`],
     );
     await pool.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin)
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin)
        VALUES ($1, $2, 'hash', 'User', FALSE)`,
-      [userId, `user_${userId.slice(0, 8)}`],
+      [userId, `user_${userId.slice(0, 8)}@test.local`],
     );
     const { rows } = await pool.query('SELECT id FROM users WHERE is_admin = TRUE');
     expect(rows).toHaveLength(1);
@@ -217,9 +217,9 @@ describe('pg-types: Boolean behavior', () => {
   it('users.plan and sub_status remain INTEGER', async () => {
     const userId = crypto.randomUUID();
     await pool.query(
-      `INSERT INTO users (id, username, password_hash, display_name, is_admin, plan, sub_status)
+      `INSERT INTO users (id, email, password_hash, display_name, is_admin, plan, sub_status)
        VALUES ($1, $2, 'hash', 'User', FALSE, 1, 1)`,
-      [userId, `user_${userId.slice(0, 8)}`],
+      [userId, `user_${userId.slice(0, 8)}@test.local`],
     );
     const { rows } = await pool.query('SELECT plan, sub_status FROM users WHERE id = $1', [userId]);
     expect(rows[0].plan).toBe(1);

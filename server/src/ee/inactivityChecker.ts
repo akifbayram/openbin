@@ -15,8 +15,7 @@ const WARNING_7D_DAYS = INACTIVITY_DAYS - 7;   // 358
 
 interface InactiveUser {
   id: string;
-  email: string | null;
-  username: string;
+  email: string;
   display_name: string;
   last_active_at: string | null;
   created_at: string;
@@ -26,7 +25,7 @@ export async function checkInactiveUsers(): Promise<void> {
   if (!(await acquireJobLock('inactivity_checker', 7200))) return;
   try {
     const candidates = await query<InactiveUser>(
-      `SELECT id, email, username, display_name, last_active_at, created_at
+      `SELECT id, email, display_name, last_active_at, created_at
        FROM users
        WHERE sub_status = $1
          AND deleted_at IS NULL

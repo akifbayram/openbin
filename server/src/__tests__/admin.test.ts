@@ -42,16 +42,17 @@ describe('GET /api/admin/users', () => {
   it('filters by search query', async () => {
     const { token, user } = await createTestUser(app);
     makeAdmin(user.id);
-    const { user: other } = await createTestUser(app, { username: `searchable_${Date.now()}` });
+    const searchEmail = `searchable_${Date.now()}@test.local`;
+    const { user: other } = await createTestUser(app, { email: searchEmail });
 
     const res = await request(app)
       .get('/api/admin/users')
-      .query({ q: other.username })
+      .query({ q: searchEmail })
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
     expect(res.body.results.length).toBe(1);
-    expect(res.body.results[0].username).toBe(other.username);
+    expect(res.body.results[0].email).toBe(other.email);
   });
 });
 
@@ -63,21 +64,21 @@ describe('POST /api/admin/users', () => {
     const res = await request(app)
       .post('/api/admin/users')
       .set('Authorization', `Bearer ${token}`)
-      .send({ username: `newuser_${Date.now()}`, password: 'StrongPass1!', displayName: 'New User' });
+      .send({ email: `newuser_${Date.now()}@test.local`, password: 'StrongPass1!', displayName: 'New User' });
 
     expect(res.status).toBe(201);
-    expect(res.body.username).toBeDefined();
+    expect(res.body.email).toBeDefined();
     expect(res.body.displayName).toBe('New User');
   });
 
-  it('rejects duplicate username (409)', async () => {
+  it('rejects duplicate email (409)', async () => {
     const { token, user } = await createTestUser(app);
     makeAdmin(user.id);
 
     const res = await request(app)
       .post('/api/admin/users')
       .set('Authorization', `Bearer ${token}`)
-      .send({ username: user.username, password: 'StrongPass1!' });
+      .send({ email: user.email, password: 'StrongPass1!', displayName: 'Duplicate' });
 
     expect(res.status).toBe(409);
   });
@@ -89,7 +90,7 @@ describe('POST /api/admin/users', () => {
     const res = await request(app)
       .post('/api/admin/users')
       .set('Authorization', `Bearer ${token}`)
-      .send({ username: `weakpw_${Date.now()}`, password: '123' });
+      .send({ email: `weakpw_${Date.now()}@test.local`, password: '123', displayName: 'Weak PW' });
 
     expect(res.status).toBe(422);
   });
@@ -195,7 +196,7 @@ describe('PUT /api/admin/users/:id', () => {
     // Verify new password works
     const loginRes = await request(app)
       .post('/api/auth/login')
-      .send({ username: target.username, password: 'NewStrongPass1!' });
+      .send({ email: target.email, password: 'NewStrongPass1!' });
     expect(loginRes.status).toBe(200);
   });
 

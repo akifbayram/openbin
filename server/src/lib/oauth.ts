@@ -164,7 +164,7 @@ export async function findOrCreateOAuthUser(input: OAuthUserInput): Promise<OAut
         ]
       );
     } catch (err: unknown) {
-      if (isUniqueViolation(err, 'idx_users_email_unique')) {
+      if (isUniqueViolation(err, 'idx_users_email_unique') || isUniqueViolation(err)) {
         log.warn(`OAuth ${provider} login: email "${email}" already in use — cannot create account`);
         throw new ForbiddenError('An account with this email already exists. Please link this provider from account settings.');
       }

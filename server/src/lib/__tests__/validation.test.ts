@@ -4,33 +4,29 @@ import {
   validateBinName,
   validateDisplayName,
   validateEmail,
+  validateLoginEmail,
   validatePassword,
   validateRequiredString,
   validateRetentionDays,
-  validateUsername,
 } from '../validation.js';
 
-describe('validateUsername', () => {
-  it('accepts a valid username', () => {
-    expect(validateUsername('alice_42')).toBe('alice_42');
+describe('validateLoginEmail', () => {
+  it('accepts a valid email', () => {
+    expect(validateLoginEmail('alice@example.com')).toBe('alice@example.com');
   });
 
-  it('rejects too-short usernames', () => {
-    expect(() => validateUsername('ab')).toThrow();
+  it('lowercases and trims the email', () => {
+    expect(validateLoginEmail('  Alice@Example.COM  ')).toBe('alice@example.com');
   });
 
-  it('rejects too-long usernames', () => {
-    expect(() => validateUsername('a'.repeat(51))).toThrow();
-  });
-
-  it('rejects special characters', () => {
-    expect(() => validateUsername('alice!')).toThrow();
+  it('rejects invalid email format', () => {
+    expect(() => validateLoginEmail('notanemail')).toThrow();
   });
 
   it('rejects empty / null / non-string', () => {
-    expect(() => validateUsername('')).toThrow();
-    expect(() => validateUsername(null)).toThrow();
-    expect(() => validateUsername(123)).toThrow();
+    expect(() => validateLoginEmail('')).toThrow();
+    expect(() => validateLoginEmail(null)).toThrow();
+    expect(() => validateLoginEmail(123)).toThrow();
   });
 });
 

@@ -23,8 +23,8 @@ beforeAll(async () => {
   userId = crypto.randomUUID();
   locationId = crypto.randomUUID();
   await pool.query(
-    `INSERT INTO users (id, username, password_hash, display_name, is_admin)
-     VALUES ($1, 'queryuser', 'hash', 'Query User', FALSE)`,
+    `INSERT INTO users (id, email, password_hash, display_name, is_admin)
+     VALUES ($1, 'queryuser@test.local', 'hash', 'Query User', FALSE)`,
     [userId],
   );
   await pool.query(
