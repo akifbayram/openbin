@@ -19,8 +19,8 @@ router.post('/suspend/:id', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Cannot suspend yourself');
   }
 
-  const targetResult = await query<{ id: string; username: string; is_admin: number; suspended_at: string | null }>(
-    'SELECT id, username, is_admin, suspended_at FROM users WHERE id = $1',
+  const targetResult = await query<{ id: string; email: string; is_admin: number; suspended_at: string | null }>(
+    'SELECT id, email, is_admin, suspended_at FROM users WHERE id = $1',
     [targetId],
   );
   const target = targetResult.rows[0];
@@ -39,11 +39,11 @@ router.post('/suspend/:id', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'suspend_user',
     targetType: 'user',
     targetId,
-    targetName: target.username,
+    targetName: target.email,
     details: { reason: reason || null },
   });
 
@@ -54,8 +54,8 @@ router.post('/suspend/:id', asyncHandler(async (req, res) => {
 router.post('/reactivate/:id', asyncHandler(async (req, res) => {
   const targetId = req.params.id;
 
-  const targetResult = await query<{ id: string; username: string; suspended_at: string | null }>(
-    'SELECT id, username, suspended_at FROM users WHERE id = $1',
+  const targetResult = await query<{ id: string; email: string; suspended_at: string | null }>(
+    'SELECT id, email, suspended_at FROM users WHERE id = $1',
     [targetId],
   );
   const target = targetResult.rows[0];
@@ -74,11 +74,11 @@ router.post('/reactivate/:id', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'reactivate_user',
     targetType: 'user',
     targetId,
-    targetName: target.username,
+    targetName: target.email,
   });
 
   res.json({ message: 'User reactivated' });
@@ -104,11 +104,11 @@ router.post('/revoke-sessions/:id', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'revoke_sessions',
     targetType: 'user',
     targetId,
-    targetName: target.username,
+    targetName: target.email,
   });
 
   res.json({ message: 'All sessions revoked' });
@@ -127,11 +127,11 @@ router.post('/revoke-all-api-keys/:id', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'revoke_all_api_keys',
     targetType: 'user',
     targetId,
-    targetName: target.username,
+    targetName: target.email,
     details: { count: revokedCount },
   });
 
@@ -190,11 +190,11 @@ router.post('/force-password-change/:id', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'force_password_change',
     targetType: 'user',
     targetId,
-    targetName: target.username,
+    targetName: target.email,
     details: { enabled },
   });
 
@@ -210,7 +210,7 @@ router.post('/force-logout-all', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'force_logout_all',
     targetType: 'system',
   });

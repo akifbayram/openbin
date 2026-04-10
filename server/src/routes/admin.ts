@@ -16,7 +16,7 @@ import { createLogger } from '../lib/logger.js';
 import { createPasswordResetToken } from '../lib/passwordReset.js';
 import { getFeatureMap, invalidateOverLimitCache, isSelfHosted, Plan, type PlanTier, planLabel, SubStatus, type SubStatusType, subStatusLabel, validatePlanTransition } from '../lib/planGate.js';
 import { restoreBackup } from '../lib/restore.js';
-import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
+import { validateDisplayName, validateEmail, validateLoginEmail, validatePassword } from '../lib/validation.js';
 import { authenticate, invalidateDeletedCache } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 
@@ -36,7 +36,7 @@ router.get('/users', asyncHandler(async (req, res) => {
   let whereClause = '';
   const params: unknown[] = [];
   if (q) {
-    whereClause = 'WHERE (LOWER(u.username) LIKE $1 OR LOWER(u.email) LIKE $1 OR LOWER(u.display_name) LIKE $1)';
+    whereClause = 'WHERE (LOWER(u.email) LIKE $1 OR LOWER(u.display_name) LIKE $1)';
     params.push(`%${q.toLowerCase()}%`);
   }
 
@@ -50,7 +50,6 @@ router.get('/users', asyncHandler(async (req, res) => {
   const field = desc ? sortField.slice(1) : sortField;
 
   const sortMap: Record<string, string> = {
-    username: 'u.username',
     email: 'u.email',
     plan: 'u.plan',
     status: 'u.sub_status',
@@ -74,7 +73,7 @@ router.get('/users', asyncHandler(async (req, res) => {
   const orderDir = desc ? 'DESC' : 'ASC';
 
   const usersResult = await query(
-    `SELECT u.id, u.username, u.display_name, u.email, u.is_admin, u.plan, u.sub_status,
+    `SELECT u.id, u.email, u.display_name, u.is_admin, u.plan, u.sub_status,
        u.active_until, u.deleted_at, u.suspended_at, u.created_at, u.last_active_at,
        u.ai_credits_used, u.ai_credits_reset_at,
        (SELECT COUNT(*) FROM bins b JOIN location_members lm ON b.location_id = lm.location_id WHERE lm.user_id = u.id AND b.deleted_at IS NULL) AS bin_count,
@@ -96,9 +95,8 @@ router.get('/users', asyncHandler(async (req, res) => {
     const features = getFeatureMap(u.plan as PlanTier);
     return {
       id: u.id,
-      username: u.username,
-      displayName: u.display_name,
       email: u.email || null,
+      displayName: u.display_name,
       isAdmin: !!u.is_admin,
       plan: planLabel(u.plan),
       status: subStatusLabel(u.sub_status),
@@ -128,12 +126,11 @@ router.get('/users', asyncHandler(async (req, res) => {
 
 // POST /api/admin/users — create a new user (admin only)
 router.post('/users', asyncHandler(async (req, res) => {
-  const { username, password, displayName, email, isAdmin } = req.body;
+  const { email, password, displayName, isAdmin } = req.body;
 
-  validateUsername(username);
+  const trimmedEmail = validateLoginEmail(email);
   validatePassword(password);
   if (displayName !== undefined) validateDisplayName(displayName);
-  if (email !== undefined && email !== '') validateEmail(email);
 
   const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
   const userId = generateUuid();
@@ -141,15 +138,14 @@ router.post('/users', asyncHandler(async (req, res) => {
   let result: import('../db.js').QueryResult<Record<string, unknown>>;
   try {
     result = await query(
-      `INSERT INTO users (id, username, password_hash, display_name, email, is_admin, plan, sub_status, active_until)
-       VALUES ($1, $2, $3, $4, $5, ${isAdmin ? 'TRUE' : 'FALSE'}, $6, $7, $8)
-       RETURNING id, username, display_name, email, is_admin, plan, sub_status, created_at`,
+      `INSERT INTO users (id, password_hash, display_name, email, is_admin, plan, sub_status, active_until)
+       VALUES ($1, $2, $3, $4, ${isAdmin ? 'TRUE' : 'FALSE'}, $5, $6, $7)
+       RETURNING id, email, display_name, is_admin, plan, sub_status, created_at`,
       [
         userId,
-        username.toLowerCase(),
         passwordHash,
-        displayName || username,
-        email || null,
+        displayName || trimmedEmail.split('@')[0],
+        trimmedEmail,
         Plan.PLUS,
         isSelfHosted() ? SubStatus.ACTIVE : SubStatus.TRIAL,
         isSelfHosted()
@@ -159,23 +155,22 @@ router.post('/users', asyncHandler(async (req, res) => {
     );
   } catch (err: unknown) {
     if (isUniqueViolation(err)) {
-      throw new ConflictError('Username already taken');
+      throw new ConflictError('Email already taken');
     }
     throw err;
   }
 
   const user = result.rows[0] as {
-    id: string; username: string; display_name: string; email: string | null;
+    id: string; email: string; display_name: string;
     is_admin: number; plan: PlanTier; sub_status: SubStatusType; created_at: string;
   };
 
-  log.info(`User ${req.user!.username} created user ${username}`);
+  log.info(`User ${req.user!.email} created user ${trimmedEmail}`);
 
   res.status(201).json({
     id: user.id,
-    username: user.username,
-    displayName: user.display_name,
     email: user.email,
+    displayName: user.display_name,
     isAdmin: !!user.is_admin,
     plan: planLabel(user.plan),
     status: subStatusLabel(user.sub_status),
@@ -188,13 +183,13 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
   const userId = req.params.id;
 
   const userResult = await query<{
-    id: string; username: string; display_name: string; email: string | null;
+    id: string; email: string; display_name: string;
     is_admin: number; plan: PlanTier; sub_status: SubStatusType;
     active_until: string | null; deleted_at: string | null; suspended_at: string | null;
     created_at: string; updated_at: string;
     last_active_at: string | null; ai_credits_used: number | null; ai_credits_reset_at: string | null;
   }>(
-    'SELECT id, username, display_name, email, is_admin, plan, sub_status, active_until, deleted_at, suspended_at, force_password_change, created_at, updated_at, last_active_at, ai_credits_used, ai_credits_reset_at FROM users WHERE id = $1',
+    'SELECT id, email, display_name, is_admin, plan, sub_status, active_until, deleted_at, suspended_at, force_password_change, created_at, updated_at, last_active_at, ai_credits_used, ai_credits_reset_at FROM users WHERE id = $1',
     [userId],
   );
 
@@ -218,9 +213,8 @@ router.get('/users/:id', asyncHandler(async (req, res) => {
 
   res.json({
     id: row.id,
-    username: row.username,
-    displayName: row.display_name,
     email: row.email,
+    displayName: row.display_name,
     isAdmin: !!row.is_admin,
     plan: planLabel(row.plan),
     status: subStatusLabel(row.sub_status),
@@ -260,8 +254,8 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
     throw new ValidationError('Nothing to update');
   }
 
-  const targetResult = await query<{ id: string; username: string; is_admin: number; sub_status: number; plan: number }>(
-    'SELECT id, username, is_admin, sub_status, plan FROM users WHERE id = $1',
+  const targetResult = await query<{ id: string; email: string; is_admin: number; sub_status: number; plan: number }>(
+    'SELECT id, email, is_admin, sub_status, plan FROM users WHERE id = $1',
     [targetId],
   );
   const target = targetResult.rows[0];
@@ -403,7 +397,7 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
   }
 
   const { password: _, ...safeBody } = req.body;
-  log.info(`User ${req.user!.username} updated user ${target.username}: ${JSON.stringify(safeBody)}`);
+  log.info(`User ${req.user!.email} updated user ${target.email}: ${JSON.stringify(safeBody)}`);
 
   res.json({ message: 'User updated' });
 }));
@@ -416,8 +410,8 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Cannot delete your own account via admin');
   }
 
-  const targetResult = await query<{ id: string; username: string; is_admin: number }>(
-    'SELECT id, username, is_admin FROM users WHERE id = $1',
+  const targetResult = await query<{ id: string; email: string; is_admin: number }>(
+    'SELECT id, email, is_admin FROM users WHERE id = $1',
     [targetId],
   );
   const target = targetResult.rows[0];
@@ -437,7 +431,7 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
 
   getEeHooks().onUserUpdate?.({ userId: targetId, action: 'delete_user' });
 
-  log.info(`User ${req.user!.username} soft-deleted user ${target.username}`);
+  log.info(`User ${req.user!.email} soft-deleted user ${target.email}`);
 
   res.json({ message: 'User marked for deletion' });
 }));
@@ -446,8 +440,8 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
 router.post('/users/:id/regenerate-api-key', asyncHandler(async (req, res) => {
   const targetId = req.params.id;
 
-  const targetResult = await query<{ id: string; username: string }>(
-    'SELECT id, username FROM users WHERE id = $1',
+  const targetResult = await query<{ id: string; email: string }>(
+    'SELECT id, email FROM users WHERE id = $1',
     [targetId],
   );
   const target = targetResult.rows[0];
@@ -470,7 +464,7 @@ router.post('/users/:id/regenerate-api-key', asyncHandler(async (req, res) => {
     [id, targetId, keyHash, keyPrefix, 'Admin-generated key'],
   );
 
-  log.info(`User ${req.user!.username} regenerated API key for user ${target.username}`);
+  log.info(`User ${req.user!.email} regenerated API key for user ${target.email}`);
 
   res.json({ keyPrefix, name: 'Admin-generated key', createdAt: new Date().toISOString() });
 }));
@@ -479,20 +473,19 @@ router.post('/users/:id/regenerate-api-key', asyncHandler(async (req, res) => {
 router.post('/users/:id/send-password-reset', asyncHandler(async (req, res) => {
   const targetId = req.params.id;
 
-  const targetResult = await query<{ id: string; username: string; email: string | null; display_name: string }>(
-    'SELECT id, username, email, display_name FROM users WHERE id = $1',
+  const targetResult = await query<{ id: string; email: string; display_name: string }>(
+    'SELECT id, email, display_name FROM users WHERE id = $1',
     [targetId],
   );
   const target = targetResult.rows[0];
   if (!target) throw new NotFoundError('User not found');
-  if (!target.email) throw new ValidationError('User does not have an email address');
 
   const { rawToken } = await createPasswordResetToken(targetId, req.user!.id);
   const resetUrl = `${config.baseUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
 
   firePasswordResetEmail(targetId, target.email, target.display_name, resetUrl);
 
-  log.info(`User ${req.user!.username} sent password reset for user ${target.username}`);
+  log.info(`User ${req.user!.email} sent password reset for user ${target.email}`);
 
   res.json({ message: 'Password reset email sent' });
 }));
@@ -515,7 +508,7 @@ router.patch('/registration', asyncHandler(async (req, res) => {
     [mode],
   );
 
-  log.info(`User ${req.user!.username} changed registration mode to ${mode}`);
+  log.info(`User ${req.user!.email} changed registration mode to ${mode}`);
 
   res.json({ mode });
 }));
@@ -542,7 +535,7 @@ export async function getRegistrationMode(): Promise<string> {
 // POST /api/admin/backup — trigger on-demand backup
 router.post('/backup', asyncHandler(async (req, res) => {
   const zipPath = await runBackup();
-  log.info(`On-demand backup created by ${req.user!.username}`);
+  log.info(`On-demand backup created by ${req.user!.email}`);
   res.json({ message: 'Backup created', filename: path.basename(zipPath) });
 }));
 
@@ -572,7 +565,7 @@ router.post('/restore', restoreUpload, asyncHandler(async (req, res) => {
     throw new HttpError(500, 'RESTORE_FAILED', result.error || 'Unknown restore error');
   }
 
-  log.info(`Backup restored by ${req.user!.username}`);
+  log.info(`Backup restored by ${req.user!.email}`);
   res.json({ message: 'Backup restored successfully' });
 }));
 

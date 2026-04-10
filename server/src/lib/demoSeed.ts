@@ -30,7 +30,7 @@ import { generateShortCode } from './shortCode.js';
 const log = createLogger('demoSeed');
 
 interface ExternalDemoData {
-  users: Record<string, string>;
+  users: Record<string, { email: string; displayName: string }>;
   locations: { home: string; storage: string };
   homeAreas: string[];
   nestedAreas: Record<string, string[]>;
@@ -94,11 +94,13 @@ async function createLocation(tx: TxQueryFn, userId: string, name: string): Prom
   return locationId;
 }
 
-async function cleanupExistingDemoUsers(tx: TxQueryFn, usernames: string[]): Promise<void> {
-  for (const username of usernames) {
+async function cleanupExistingDemoUsers(tx: TxQueryFn, members: DemoMember[], users: Record<DemoMember, { email: string; displayName: string }>): Promise<void> {
+  for (const member of members) {
+    const info = users[member];
+    if (!info) continue;
     const existing = await tx<{ id: string }>(
-      'SELECT id FROM users WHERE username = $1',
-      [username],
+      'SELECT id FROM users WHERE email = $1',
+      [info.email],
     );
     if (existing.rows.length > 0) {
       await tx('DELETE FROM locations WHERE created_by = $1', [existing.rows[0].id]);
@@ -107,14 +109,14 @@ async function cleanupExistingDemoUsers(tx: TxQueryFn, usernames: string[]): Pro
   }
 }
 
-async function createDemoUsers(tx: TxQueryFn, passwordHash: string, users: Record<string, string>): Promise<Map<DemoMember, string>> {
+async function createDemoUsers(tx: TxQueryFn, passwordHash: string, users: Record<DemoMember, { email: string; displayName: string }>): Promise<Map<DemoMember, string>> {
   const userIdMap = new Map<DemoMember, string>();
-  for (const [username, displayName] of Object.entries(users)) {
+  for (const [member, info] of Object.entries(users) as [DemoMember, { email: string; displayName: string }][]) {
     const id = generateUuid();
-    userIdMap.set(username as DemoMember, id);
+    userIdMap.set(member, id);
     await tx(
-      'INSERT INTO users (id, username, password_hash, display_name) VALUES ($1, $2, $3, $4)',
-      [id, username, passwordHash, displayName],
+      'INSERT INTO users (id, email, password_hash, display_name) VALUES ($1, $2, $3, $4)',
+      [id, info.email, passwordHash, info.displayName],
     );
   }
   return userIdMap;
@@ -379,8 +381,8 @@ async function seedScanHistory(tx: TxQueryFn, userIdMap: Map<DemoMember, string>
 }
 
 async function seedOnboardingPrefs(tx: TxQueryFn, userIdMap: Map<DemoMember, string>): Promise<void> {
-  for (const [username, id] of userIdMap.entries()) {
-    const prefs = username === 'demo'
+  for (const [member, id] of userIdMap.entries()) {
+    const prefs = member === 'demo'
       ? { onboarding_completed: false, onboarding_step: 0 }
       : { onboarding_completed: true };
     await tx(
@@ -450,7 +452,7 @@ export async function seedDemoData(): Promise<void> {
 
   const external = loadExternalDemoData();
   const users = external?.users ?? DEMO_USERS;
-  const usernames = Object.keys(users);
+  const members = Object.keys(users) as DemoMember[];
   const locationNames = external?.locations ?? { home: 'Our House', storage: 'Self Storage Unit' };
   const homeAreaNames = external?.homeAreas ?? HOME_AREAS;
   const nestedAreaDefs = external?.nestedAreas ?? NESTED_AREAS;
@@ -474,11 +476,11 @@ export async function seedDemoData(): Promise<void> {
 
   try {
     await withTransaction(async (tx) => {
-      await cleanupExistingDemoUsers(tx, usernames);
+      await cleanupExistingDemoUsers(tx, members, users as Record<DemoMember, { email: string; displayName: string }>);
 
       const randomPassword = crypto.randomBytes(32).toString('hex');
       const passwordHash = bcrypt.hashSync(randomPassword, 10);
-      const userIdMap = await createDemoUsers(tx, passwordHash, users);
+      const userIdMap = await createDemoUsers(tx, passwordHash, users as Record<DemoMember, { email: string; displayName: string }>);
       const userId = userIdMap.get('demo')!;
 
       const { homeLocationId, storageLocationId } = await setupLocations(tx, userId, locationNames);
@@ -500,7 +502,7 @@ export async function seedDemoData(): Promise<void> {
     const homeBins = bins.filter((b) => b.location === 'home').length;
     const storageBins = bins.filter((b) => b.location === 'storage').length;
     const totalAreas = homeAreaNames.length + Object.values(nestedAreaDefs).flat().length + storageAreaNames.length;
-    const message = `Demo data seeded in ${elapsed}ms (${usernames.length} users, ${homeBins} + ${storageBins} bins, ${trashedBinsList.length} trashed, ${totalAreas} areas, ${cfDefs.length} custom fields, ${activityEntries.length} activity log entries across 2 locations)`;
+    const message = `Demo data seeded in ${elapsed}ms (${members.length} users, ${homeBins} + ${storageBins} bins, ${trashedBinsList.length} trashed, ${totalAreas} areas, ${cfDefs.length} custom fields, ${activityEntries.length} activity log entries across 2 locations)`;
     log.info(message);
     pushLog({ level: 'info', message });
   } catch (err) {

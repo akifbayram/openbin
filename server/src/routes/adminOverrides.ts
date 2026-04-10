@@ -87,11 +87,11 @@ router.put('/overrides/:userId', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'update_overrides',
     targetType: 'user',
     targetId: userId,
-    targetName: target.username,
+    targetName: target.email,
     details: { maxBins, maxLocations, maxPhotoStorageMb, maxMembersPerLocation, activityRetentionDays, aiCreditsPerMonth, aiEnabled },
   });
 
@@ -112,11 +112,11 @@ router.delete('/overrides/:userId', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'clear_overrides',
     targetType: 'user',
     targetId: userId,
-    targetName: target.username,
+    targetName: target.email,
   });
 
   res.json({ message: 'Overrides cleared' });
@@ -142,11 +142,11 @@ router.post('/ai-credits/grant/:userId', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'grant_ai_credits',
     targetType: 'user',
     targetId: userId,
-    targetName: target.username,
+    targetName: target.email,
     details: { amount },
   });
 
@@ -170,11 +170,11 @@ router.post('/ai-credits/reset/:userId', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'reset_ai_credits',
     targetType: 'user',
     targetId: userId,
-    targetName: target.username,
+    targetName: target.email,
   });
 
   res.json({ message: 'AI credits reset' });
@@ -192,8 +192,8 @@ router.post('/extend-trial/:userId', asyncHandler(async (req, res) => {
     throw new ValidationError('days must be an integer between 1 and 90');
   }
 
-  const userResult = await query<{ id: string; username: string; sub_status: number; active_until: string | null }>(
-    'SELECT id, username, sub_status, active_until FROM users WHERE id = $1',
+  const userResult = await query<{ id: string; email: string; sub_status: number; active_until: string | null }>(
+    'SELECT id, email, sub_status, active_until FROM users WHERE id = $1',
     [userId],
   );
   const target = userResult.rows[0];
@@ -216,11 +216,11 @@ router.post('/extend-trial/:userId', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'extend_trial',
     targetType: 'user',
     targetId: userId,
-    targetName: target.username,
+    targetName: target.email,
     details: { days, newActiveUntil },
   });
 
@@ -254,11 +254,11 @@ router.post('/grant-comp/:userId', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'grant_comp_plan',
     targetType: 'user',
     targetId: userId,
-    targetName: target.username,
+    targetName: target.email,
     details: { plan: planLabel(plan as PlanTier), days, activeUntil },
   });
 
@@ -293,11 +293,11 @@ router.post('/force-downgrade/:userId', asyncHandler(async (req, res) => {
 
   logAdminAction({
     actorId: req.user!.id,
-    actorName: req.user!.username,
+    actorName: req.user!.email,
     action: 'force_downgrade',
     targetType: 'user',
     targetId: userId,
-    targetName: target.username,
+    targetName: target.email,
     details: { from: planLabel(oldPlan), to: planLabel(plan as PlanTier) },
   });
 

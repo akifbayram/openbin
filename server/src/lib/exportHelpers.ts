@@ -85,7 +85,7 @@ export interface ExportSavedView {
 
 export interface ExportMember {
   userId: string;
-  username: string;
+  email: string;
   role: 'admin' | 'member' | 'viewer';
   joinedAt: string;
 }
@@ -510,16 +510,16 @@ export async function fetchLocationSavedViews(locationId: string, userId?: strin
   }));
 }
 
-/** Fetch location members with usernames for export. */
+/** Fetch location members with emails for export. */
 export async function fetchLocationMembers(locationId: string): Promise<ExportMember[]> {
-  const result = await query<{ user_id: string; username: string; role: 'admin' | 'member' | 'viewer'; joined_at: string }>(
-    `SELECT lm.user_id, u.username, lm.role, lm.joined_at
+  const result = await query<{ user_id: string; email: string; role: 'admin' | 'member' | 'viewer'; joined_at: string }>(
+    `SELECT lm.user_id, u.email, lm.role, lm.joined_at
      FROM location_members lm JOIN users u ON u.id = lm.user_id
      WHERE lm.location_id = $1
      ORDER BY lm.joined_at`,
     [locationId]
   );
-  return result.rows.map(r => ({ userId: r.user_id, username: r.username, role: r.role, joinedAt: r.joined_at }));
+  return result.rows.map(r => ({ userId: r.user_id, email: r.email, role: r.role, joinedAt: r.joined_at }));
 }
 
 /** Apply exported location settings. */

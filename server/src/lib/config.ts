@@ -58,6 +58,7 @@ export const config = Object.freeze({
 
   // Auth
   adminPassword: process.env.ADMIN_PASSWORD || null,
+  adminEmail: process.env.ADMIN_EMAIL || null,
   jwtSecret: resolveJwtSecret(),
   accessTokenExpiresIn: '15m',
   refreshTokenMaxDays: 7,
@@ -131,7 +132,7 @@ export const config = Object.freeze({
   demoMode: parseBool(process.env.DEMO_MODE, false),
   demoSeedPath: null as string | null,
   aiMock: parseBool(process.env.AI_MOCK, false),
-  demoUsernames: new Set<string>(),
+  demoEmails: new Set<string>(),
 
   // ClamAV malware scanning (opt-in for cloud deployments)
   clamavHost: process.env.CLAMAV_HOST || null,
@@ -290,8 +291,8 @@ export function isGroupEnvLocked(group: AiTaskGroup): boolean {
   return !!(o.provider || o.apiKey || o.model || o.endpointUrl);
 }
 
-/** Returns true if the request user is in the DEMO_USERNAMES list. */
-export function isDemoUser(req: { user?: { username: string } }): boolean {
+/** Returns true if the request user is a demo account. */
+export function isDemoUser(req: { user?: { email: string } }): boolean {
   if (!req.user) return false;
-  return config.demoUsernames.has(req.user.username.toLowerCase());
+  return config.demoEmails.has(req.user.email.toLowerCase());
 }

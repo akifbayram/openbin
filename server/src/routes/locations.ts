@@ -354,7 +354,7 @@ router.post('/join', asyncHandler(async (req, res) => {
     locationId: location.id,
     action: 'join',
     entityType: 'member',
-    entityName: req.user!.username,
+    entityName: req.user!.email,
   });
 
   // Get area count for the joined location
@@ -429,8 +429,8 @@ router.get('/:id/members', asyncHandler(async (req, res) => {
 
   const result = await query(
     `SELECT lm.id, lm.location_id, lm.user_id, lm.role, lm.joined_at,
-            COALESCE(u.display_name, u.username) AS display_name,
-            u.username
+            COALESCE(u.display_name, u.email) AS display_name,
+            u.email
      FROM location_members lm
      LEFT JOIN users u ON u.id = lm.user_id
      WHERE lm.location_id = $1
@@ -488,9 +488,9 @@ router.delete('/:id/members/:userId', asyncHandler(async (req, res) => {
     }
   }
 
-  // Get username for activity log
-  const userResult = await query('SELECT username FROM users WHERE id = $1', [userId]);
-  const removedUsername = userResult.rows[0]?.username ?? 'unknown';
+  // Get email for activity log
+  const userResult = await query('SELECT email FROM users WHERE id = $1', [userId]);
+  const removedEmail = userResult.rows[0]?.email ?? 'unknown';
 
   const result = await query(
     'DELETE FROM location_members WHERE location_id = $1 AND user_id = $2 RETURNING id',
@@ -509,7 +509,7 @@ router.delete('/:id/members/:userId', asyncHandler(async (req, res) => {
     locationId: id,
     action,
     entityType: 'member',
-    entityName: removedUsername,
+    entityName: removedEmail,
   });
 
   res.json({ message: 'Member removed' });
@@ -556,15 +556,15 @@ router.put('/:id/members/:userId/role', asyncHandler(async (req, res) => {
     [role, id, userId]
   );
 
-  // Get username for activity log
-  const userResult = await query('SELECT username FROM users WHERE id = $1', [userId]);
-  const targetUsername = userResult.rows[0]?.username ?? 'unknown';
+  // Get email for activity log
+  const userResult = await query('SELECT email FROM users WHERE id = $1', [userId]);
+  const targetEmail = userResult.rows[0]?.email ?? 'unknown';
 
   logRouteActivity(req, {
     locationId: id,
     action: 'change_role',
     entityType: 'member',
-    entityName: targetUsername,
+    entityName: targetEmail,
     changes: { role: { old: targetRole, new: role } },
   });
 
@@ -593,16 +593,16 @@ router.post('/:id/members/:userId/reset-password', asyncHandler(async (req, res)
 
   const { rawToken, expiresAt } = await createPasswordResetToken(userId, req.user!.id);
 
-  // Get username for activity log
-  const userResult = await query('SELECT username FROM users WHERE id = $1', [userId]);
-  const targetUsername = userResult.rows[0]?.username ?? 'unknown';
+  // Get email for activity log
+  const userResult = await query('SELECT email FROM users WHERE id = $1', [userId]);
+  const targetEmail = userResult.rows[0]?.email ?? 'unknown';
 
   logRouteActivity(req, {
     locationId: id,
     action: 'reset_password',
     entityType: 'member',
     entityId: userId,
-    entityName: targetUsername,
+    entityName: targetEmail,
   });
 
   if (isSelfHosted()) {
