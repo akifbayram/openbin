@@ -27,7 +27,7 @@ import { consumeResetToken, createPasswordResetToken } from '../lib/passwordRese
 import { safePath } from '../lib/pathSafety.js';
 import { isSelfHosted, Plan, planLabel, SubStatus, subStatusLabel } from '../lib/planGate.js';
 import { createRefreshToken, revokeAllUserTokens, revokeSingleToken, rotateRefreshToken } from '../lib/refreshTokens.js';
-import { validateDisplayName, validateEmail, validatePassword, validateUsername } from '../lib/validation.js';
+import { validateDisplayName, validateEmail, validateLoginEmail, validatePassword } from '../lib/validation.js';
 import { authenticate, invalidateUserStatusCache, signToken } from '../middleware/auth.js';
 import { getMaintenanceMessage, isMaintenanceMode } from '../middleware/maintenance.js';
 
@@ -75,8 +75,8 @@ router.post('/demo-login', asyncHandler(async (_req, res) => {
   }
 
   const result = await query(
-    'SELECT id, username, display_name, email, avatar_path, active_location_id FROM users WHERE username = $1',
-    ['demo'],
+    'SELECT id, display_name, email, avatar_path, active_location_id FROM users WHERE email = $1',
+    ['demo@openbin.local'],
   );
 
   if (result.rows.length === 0) {
@@ -95,7 +95,7 @@ router.post('/demo-login', asyncHandler(async (_req, res) => {
     await query('INSERT INTO user_preferences (id, user_id, settings) VALUES ($1, $2, $3)', [generateUuid(), user.id, resetSettings]);
   }
 
-  const token = await signToken({ id: user.id, username: user.username });
+  const token = await signToken({ id: user.id, email: user.email });
   const refresh = await createRefreshToken(user.id);
 
   setAccessTokenCookie(res, token);
@@ -104,9 +104,8 @@ router.post('/demo-login', asyncHandler(async (_req, res) => {
   res.json({
     user: {
       id: user.id,
-      username: user.username,
       displayName: user.display_name,
-      email: user.email || null,
+      email: user.email,
       avatarUrl: user.avatar_path ? `/api/auth/avatar/${user.id}` : null,
     },
     activeLocationId: user.active_location_id || null,
@@ -146,7 +145,7 @@ router.post('/register', asyncHandler(async (req, res) => {
     throw new ForbiddenError('Registration is currently disabled');
   }
 
-  const { username, password, displayName, email, inviteCode } = req.body;
+  const { email, password, displayName, inviteCode } = req.body;
 
   // In invite mode, invite code is required
   if (regMode === 'invite' && !inviteCode) {
@@ -166,28 +165,22 @@ router.post('/register', asyncHandler(async (req, res) => {
     locationToJoin = locResult.rows[0] as { id: string; default_join_role: string };
   }
 
-  validateUsername(username);
+  const trimmedEmail = validateLoginEmail(email);
   validatePassword(password);
-  if (displayName !== undefined) validateDisplayName(displayName);
-  const trimmedEmail = (typeof email === 'string' && email.trim()) || null;
-  if (!isSelfHosted() && !trimmedEmail) {
-    throw new ValidationError('Email is required');
-  }
-  if (trimmedEmail) validateEmail(trimmedEmail);
+  validateDisplayName(displayName);
 
   const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
   const userId = generateUuid();
   let result: import('../db.js').QueryResult<Record<string, unknown>>;
   try {
     result = await query(
-      `INSERT INTO users (id, username, password_hash, display_name, email, plan, sub_status, active_until)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, username, display_name, email, created_at, active_until`,
+      `INSERT INTO users (id, password_hash, display_name, email, plan, sub_status, active_until)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, display_name, email, created_at, active_until`,
       [
         userId,
-        username.toLowerCase(),
         passwordHash,
-        displayName || username,
+        displayName.trim(),
         trimmedEmail,
         Plan.PLUS,
         isSelfHosted() ? SubStatus.ACTIVE : SubStatus.TRIAL,
@@ -206,7 +199,7 @@ router.post('/register', asyncHandler(async (req, res) => {
     throw err;
   }
 
-  const user = result.rows[0] as { id: string; username: string; display_name: string; email: string | null; created_at: string; active_until: string };
+  const user = result.rows[0] as { id: string; display_name: string; email: string; created_at: string; active_until: string };
 
   // Auto-join location if invite code was valid
   if (locationToJoin) {
@@ -217,20 +210,19 @@ router.post('/register', asyncHandler(async (req, res) => {
     await query('UPDATE users SET active_location_id = $1 WHERE id = $2', [locationToJoin.id, user.id]);
   }
 
-  const token = await signToken({ id: user.id, username: user.username });
+  const token = await signToken({ id: user.id, email: user.email });
   const refresh = await createRefreshToken(user.id);
 
   setAccessTokenCookie(res, token);
   setRefreshTokenCookie(res, refresh.rawToken);
 
-  log.info(`New user registered: ${user.username}`);
+  log.info(`New user registered: ${user.email}`);
 
   res.status(201).json({
     user: {
       id: user.id,
-      username: user.username,
       displayName: user.display_name,
-      email: user.email || null,
+      email: user.email,
       avatarUrl: null,
       createdAt: user.created_at,
     },
@@ -240,7 +232,6 @@ router.post('/register', asyncHandler(async (req, res) => {
   getEeHooks().onNewUser?.({
     userId: user.id,
     email: user.email,
-    username: user.username,
     activeUntil: user.active_until,
     status: 'trial',
   });
@@ -254,32 +245,32 @@ router.post('/register', asyncHandler(async (req, res) => {
 
 // POST /api/auth/login
 router.post('/login', asyncHandler(async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
 
-  if (!username || !password) {
-    throw new ValidationError('Username and password required');
+  if (!email || !password) {
+    throw new ValidationError('Email and password required');
   }
 
   const result = await query(
-    'SELECT id, username, password_hash, display_name, email, avatar_path, active_location_id, deleted_at, suspended_at, token_version, force_password_change, is_admin FROM users WHERE username = $1',
-    [username.toLowerCase()]
+    'SELECT id, password_hash, display_name, email, avatar_path, active_location_id, deleted_at, suspended_at, token_version, force_password_change, is_admin FROM users WHERE email = $1',
+    [email.toLowerCase().trim()]
   );
 
   const ip = req.ip || req.socket.remoteAddress || null;
   const ua = req.headers['user-agent'] || null;
 
   if (result.rows.length === 0) {
-    // Constant-time rejection — prevent timing-based username enumeration
+    // Constant-time rejection — prevent timing-based email enumeration
     await bcrypt.compare(password, '$2b$12$000000000000000000000uVjKPCGJcotDu8bMahKn7VoPxpL0Wi');
-    log.warn(`Login failed: unknown user "${username}"`);
-    throw new UnauthorizedError('Invalid username or password');
+    log.warn(`Login failed: unknown email "${email}"`);
+    throw new UnauthorizedError('Invalid email or password');
   }
 
   const user = result.rows[0];
 
   // Social-only users have no password
   if (!user.password_hash) {
-    log.warn(`Login failed: no password set for "${username}" (social-only account)`);
+    log.warn(`Login failed: no password set for "${email}" (social-only account)`);
     query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 0)',
       [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
     res.status(401).json({ error: 'NO_PASSWORD', message: 'This account uses social login. Sign in with Google or Apple, or set a password from account settings.' });
@@ -288,22 +279,22 @@ router.post('/login', asyncHandler(async (req, res) => {
 
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
-    log.warn(`Login failed: bad password for user "${username}"`);
+    log.warn(`Login failed: bad password for email "${email}"`);
     // Record failed login
     query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 0)', [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
-    throw new UnauthorizedError('Invalid username or password');
+    throw new UnauthorizedError('Invalid email or password');
   }
   if (user.deleted_at) {
-    log.warn(`Login failed: deleted user "${username}"`);
-    throw new UnauthorizedError('Invalid username or password');
+    log.warn(`Login failed: deleted user "${email}"`);
+    throw new UnauthorizedError('Invalid email or password');
   }
   if (user.suspended_at) {
-    log.warn(`Login failed: suspended user "${username}"`);
+    log.warn(`Login failed: suspended user "${email}"`);
     query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 0)', [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
     throw new ForbiddenError('This account has been suspended');
   }
   if (user.force_password_change) {
-    log.info(`Login blocked: force password change required for "${username}"`);
+    log.info(`Login blocked: force password change required for "${email}"`);
     query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 0)', [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
     res.status(403).json({ error: 'FORCE_PASSWORD_CHANGE', message: 'You must change your password before logging in. Please use the password reset flow.' });
     return;
@@ -312,7 +303,7 @@ router.post('/login', asyncHandler(async (req, res) => {
   // Record successful login
   query('INSERT INTO login_history (id, user_id, ip_address, user_agent, method, success) VALUES ($1, $2, $3, $4, $5, 1)', [generateUuid(), user.id, ip, ua, 'password']).catch(() => {});
 
-  const token = await signToken({ id: user.id, username: user.username }, user.token_version ?? 0);
+  const token = await signToken({ id: user.id, email: user.email }, user.token_version ?? 0);
   const refresh = await createRefreshToken(user.id);
 
   setAccessTokenCookie(res, token);
@@ -345,14 +336,13 @@ router.post('/login', asyncHandler(async (req, res) => {
     }
   }
 
-  log.info(`User "${user.username}" logged in`);
+  log.info(`User "${user.email}" logged in`);
 
   res.json({
     user: {
       id: user.id,
-      username: user.username,
       displayName: user.display_name,
-      email: user.email || null,
+      email: user.email,
       avatarUrl: user.avatar_path ? `/api/auth/avatar/${user.id}` : null,
       isAdmin: !!user.is_admin,
     },
@@ -376,8 +366,8 @@ router.post('/refresh', asyncHandler(async (req, res) => {
   }
 
   // Look up user for new access token (reject soft-deleted/suspended users)
-  const userResult = await query<{ id: string; username: string; deleted_at: string | null; suspended_at: string | null; token_version: number }>(
-    'SELECT id, username, deleted_at, suspended_at, token_version FROM users WHERE id = $1',
+  const userResult = await query<{ id: string; email: string; deleted_at: string | null; suspended_at: string | null; token_version: number }>(
+    'SELECT id, email, deleted_at, suspended_at, token_version FROM users WHERE id = $1',
     [rotated.userId],
   );
   if (userResult.rows.length === 0 || userResult.rows[0].deleted_at !== null) {
@@ -390,7 +380,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
   }
 
   const user = userResult.rows[0];
-  const accessToken = await signToken({ id: user.id, username: user.username }, user.token_version ?? 0);
+  const accessToken = await signToken({ id: user.id, email: user.email }, user.token_version ?? 0);
 
   setAccessTokenCookie(res, accessToken);
   setRefreshTokenCookie(res, rotated.rawToken);
@@ -418,7 +408,7 @@ router.post('/logout-all', authenticate, asyncHandler(async (req, res) => {
 // GET /api/auth/me
 router.get('/me', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
-    'SELECT id, username, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until, is_admin, password_hash FROM users WHERE id = $1',
+    'SELECT id, display_name, email, avatar_path, active_location_id, created_at, updated_at, plan, sub_status, active_until, is_admin, password_hash FROM users WHERE id = $1',
     [req.user!.id]
   );
 
@@ -443,9 +433,8 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
 
   res.json({
     id: user.id,
-    username: user.username,
     displayName: user.display_name,
-    email: user.email || null,
+    email: user.email,
     avatarUrl: user.avatar_path ? `/api/auth/avatar/${user.id}` : null,
     activeLocationId,
     demoMode: config.demoMode,
@@ -498,7 +487,7 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
   let result: import('../db.js').QueryResult<Record<string, unknown>>;
   try {
     result = await query(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, username, display_name, email, avatar_path, created_at, updated_at`,
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, display_name, email, avatar_path, created_at, updated_at`,
       values
     );
   } catch (err: unknown) {
@@ -508,10 +497,9 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
     throw err;
   }
 
-  const user = result.rows[0] as { id: string; username: string; display_name: string; email: string | null; avatar_path: string | null; created_at: string; updated_at: string };
+  const user = result.rows[0] as { id: string; display_name: string; email: string | null; avatar_path: string | null; created_at: string; updated_at: string };
   res.json({
     id: user.id,
-    username: user.username,
     displayName: user.display_name,
     email: user.email || null,
     avatarUrl: user.avatar_path ? `/api/auth/avatar/${user.id}` : null,
@@ -590,7 +578,7 @@ router.put('/password', authenticate, asyncHandler(async (req, res) => {
   invalidateUserStatusCache(req.user!.id);
   clearAuthCookies(res);
 
-  log.info(`User ${req.user!.username} changed password`);
+  log.info(`User ${req.user!.email} changed password`);
   res.json({ message: 'Password updated successfully' });
 }));
 
@@ -675,7 +663,7 @@ router.delete('/account', authenticate, asyncHandler(async (req, res) => {
 
   clearAuthCookies(res);
 
-  log.info(`User ${req.user!.username} deleted their account`);
+  log.info(`User ${req.user!.email} deleted their account`);
 
   res.json({ message: 'Account deleted' });
 }));
@@ -942,7 +930,7 @@ router.delete('/oauth/link/:provider', authenticate, asyncHandler(async (req, re
     throw new NotFoundError('Provider not linked');
   }
 
-  log.info(`User "${req.user!.username}" unlinked ${provider}`);
+  log.info(`User "${req.user!.email}" unlinked ${provider}`);
   res.json({ success: true });
 }));
 

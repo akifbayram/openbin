@@ -1,9 +1,8 @@
 CREATE TABLE IF NOT EXISTS users (
   id                 TEXT PRIMARY KEY,
-  username           TEXT UNIQUE NOT NULL,
   password_hash      TEXT,
-  display_name       TEXT NOT NULL DEFAULT '',
-  email              TEXT,
+  display_name       TEXT NOT NULL,
+  email              TEXT UNIQUE NOT NULL,
   avatar_path        TEXT,
   active_location_id TEXT,
   plan               INTEGER NOT NULL DEFAULT 1,
