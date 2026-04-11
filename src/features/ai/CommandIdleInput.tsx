@@ -1,9 +1,14 @@
-import { Camera, ChevronDown, ImagePlus, Sparkles } from 'lucide-react';
-import { type Dispatch, type SetStateAction, useMemo } from 'react';
+import { Camera, ChevronDown, ImagePlus, Plus, Sparkles } from 'lucide-react';
+import { type Dispatch, type SetStateAction, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useTerminology } from '@/lib/terminology';
+import { useClickOutside } from '@/lib/useClickOutside';
+import { usePopover } from '@/lib/usePopover';
+import type { useTranscription } from '@/lib/useTranscription';
 import { cn } from '@/lib/utils';
+import { TranscriptionMicButton } from './TranscriptionMicButton';
 
 interface CommandIdleInputProps {
   text: string;
@@ -16,6 +21,7 @@ interface CommandIdleInputProps {
   onPhotoClick: () => void;
   onCameraClick?: () => void;
   isScoped?: boolean;
+  transcription?: ReturnType<typeof useTranscription>;
 }
 
 export function CommandIdleInput({
@@ -29,8 +35,13 @@ export function CommandIdleInput({
   onPhotoClick,
   onCameraClick,
   isScoped,
+  transcription,
 }: CommandIdleInputProps) {
   const t = useTerminology();
+  const isTranscribing = transcription && transcription.state !== 'idle';
+  const attachPopover = usePopover();
+  const attachRef = useRef<HTMLDivElement>(null);
+  useClickOutside(attachRef, attachPopover.close);
 
   const examples = useMemo(() => isScoped ? [
     { label: 'Auto-tag', example: 'Auto-tag these based on their contents' },
@@ -50,14 +61,17 @@ export function CommandIdleInput({
 
   return (
     <div className="space-y-3">
-      <div className="relative">
+      <div className={cn(
+        'rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border-flat)] transition-all duration-200',
+        'focus-within:ring-2 focus-within:ring-[var(--accent)]',
+      )}>
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="What would you like to do?"
           rows={3}
-          className={cn("min-h-[80px] bg-[var(--bg-elevated)]", onCameraClick ? "pr-[4.5rem]" : "pr-12")}
-          disabled={isLoading}
+          className="min-h-[60px] border-0 bg-transparent focus-visible:ring-0 focus-visible:shadow-none"
+          disabled={isLoading || !!isTranscribing}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
@@ -65,27 +79,60 @@ export function CommandIdleInput({
             }
           }}
         />
-        <div data-tour="photo-buttons" className="absolute right-2.5 bottom-2.5 flex items-center gap-0.5">
-          {onCameraClick && (
-            <button
-              type="button"
-              onClick={onCameraClick}
-              className="p-1.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
-              title="Take photos with camera"
-              aria-label="Take photos with camera"
-            >
-              <Camera className="h-5 w-5" />
-            </button>
+        <div data-tour="photo-buttons" className="flex items-center gap-0.5 px-2 pb-2">
+          {!isTranscribing && onCameraClick ? (
+            <div ref={attachRef} className="relative">
+              <Tooltip content="Add photos">
+                <button
+                  type="button"
+                  onClick={attachPopover.toggle}
+                  className="p-1.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+                  aria-label="Add photos"
+                  aria-expanded={attachPopover.isOpen}
+                >
+                  <Plus className={cn('h-5 w-5 transition-transform duration-200', attachPopover.isOpen && 'rotate-45')} />
+                </button>
+              </Tooltip>
+              {attachPopover.visible && (
+                <div className={cn(
+                  attachPopover.animating === 'exit' ? 'animate-popover-exit' : 'animate-popover-enter',
+                  'absolute left-0 bottom-full mb-1 w-44 rounded-[var(--radius-md)] flat-popover overflow-hidden z-20',
+                )}>
+                  <button
+                    type="button"
+                    onClick={() => { onPhotoClick(); attachPopover.close(); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  >
+                    <ImagePlus className="h-4 w-4 text-[var(--text-tertiary)]" />
+                    Upload photos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { onCameraClick(); attachPopover.close(); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  >
+                    <Camera className="h-4 w-4 text-[var(--text-tertiary)]" />
+                    Take photo
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : !isTranscribing ? (
+            <Tooltip content={`Upload photos to auto-create ${t.bins} with AI`}>
+              <button
+                type="button"
+                onClick={onPhotoClick}
+                className="p-1.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+                aria-label="Upload photos"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            </Tooltip>
+          ) : null}
+          <div className="flex-1" />
+          {transcription && (
+            <TranscriptionMicButton transcription={transcription} />
           )}
-          <button
-            type="button"
-            onClick={onPhotoClick}
-            className="p-1.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
-            title={`Upload photos to auto-create ${t.bins} with AI`}
-            aria-label="Upload photos"
-          >
-            <ImagePlus className="h-5 w-5" />
-          </button>
         </div>
       </div>
 

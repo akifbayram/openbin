@@ -612,3 +612,12 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-card-stagger { animation: none !important; opacity: 1; }
 }
+
+/* ─── Dictation Progress ─── */
+@keyframes dictation-progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[dictation-progress_1\.5s_linear\] { animation: none; width: 100%; }
+}

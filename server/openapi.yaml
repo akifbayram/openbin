@@ -4889,6 +4889,47 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /ai/transcribe:
+    post:
+      summary: Transcribe audio to text
+      description: Accepts an audio file and returns transcribed text using the user's configured AI provider. Supports OpenAI (Whisper) and Gemini. Anthropic is not supported.
+      tags: [AI]
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [audio]
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  description: Audio file (webm, mp4, ogg, mpeg, wav). Max 10MB.
+      responses:
+        '200':
+          description: Transcription result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [text]
+                properties:
+                  text:
+                    type: string
+                    description: Transcribed text from audio
+        '400':
+          description: No audio file or unsupported format
+        '402':
+          description: AI credits exhausted
+        '403':
+          description: AI not configured, provider doesn't support transcription, or plan restricted
+        '422':
+          description: Validation error
+
   # ════════════════════════════════════════════════════════
   # AI Streaming
   # ════════════════════════════════════════════════════════

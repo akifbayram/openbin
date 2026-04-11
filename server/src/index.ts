@@ -66,7 +66,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+    res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
     if (config.frameAncestors) {
       res.setHeader('X-Frame-Options', `ALLOW-FROM ${config.frameAncestors.split(' ')[0]}`);
     } else {
