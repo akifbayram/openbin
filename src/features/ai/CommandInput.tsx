@@ -4,7 +4,9 @@ import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { takeCapturedPhotos } from '@/features/capture/capturedPhotos';
+import { isRecordingSupported } from '@/lib/audioRecorder';
 import { useTerminology } from '@/lib/terminology';
+import { useTranscription } from '@/lib/useTranscription';
 import { CommandActionPreview } from './CommandActionPreview';
 import { CommandIdleInput } from './CommandIdleInput';
 import { CommandSuccess } from './CommandSuccess';
@@ -13,6 +15,7 @@ import { AiSetupView } from './InlineAiSetup';
 import { InventoryQueryResult } from './InventoryQueryResult';
 import { PhotoBulkAdd } from './PhotoBulkAdd';
 import { useActionExecutor } from './useActionExecutor';
+import { useAiSettings } from './useAiSettings';
 import { useCommandInputState } from './useCommandInputState';
 
 interface CommandInputProps {
@@ -44,6 +47,30 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
     handleExecuteComplete, handleAskAnother, handleFollowUp,
     scopeInfo,
   } = useCommandInputState(onOpenChange, selectedBinIds);
+
+  const { settings: aiSettingsForMic } = useAiSettings();
+  const canTranscribe = isAiReady && !!aiSettingsForMic && aiSettingsForMic.provider !== 'anthropic' && isRecordingSupported();
+
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const handleFollowUpRef = useRef(handleFollowUp);
+  handleFollowUpRef.current = handleFollowUp;
+  const handleParseRef = useRef(handleParse);
+  handleParseRef.current = handleParse;
+  const setTextRef = useRef(setText);
+  setTextRef.current = setText;
+
+  const transcription = useTranscription({
+    onTranscribed: (text) => {
+      if (stateRef.current === 'query-result') {
+        handleFollowUpRef.current(text);
+      } else {
+        setTextRef.current(text);
+        // Defer parse to next tick so setText has flushed
+        setTimeout(() => handleParseRef.current(), 0);
+      }
+    },
+  });
 
   const { isExecuting, executingProgress, executeActions } = useActionExecutor({
     actions,
@@ -108,6 +135,10 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
   useEffect(() => {
     if (!open) setShowProgress(false);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) transcription.cancel();
+  }, [open, transcription]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -175,6 +206,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
               onBinClick={handleBinClick}
               onBack={handleBack}
               onFollowUp={handleFollowUp}
+              transcription={canTranscribe ? transcription : undefined}
             />
           </div>
         ) : effectiveState === 'preview' && actions ? (
@@ -211,6 +243,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
               onPhotoClick={() => fileInputRef.current?.click()}
               onCameraClick={handleCameraClick}
               isScoped={scopeInfo.isScoped}
+              transcription={canTranscribe ? transcription : undefined}
             />
           </div>
         )}

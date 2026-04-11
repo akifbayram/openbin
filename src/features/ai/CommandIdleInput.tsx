@@ -3,7 +3,9 @@ import { type Dispatch, type SetStateAction, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTerminology } from '@/lib/terminology';
+import type { useTranscription } from '@/lib/useTranscription';
 import { cn } from '@/lib/utils';
+import { TranscriptionMicButton } from './TranscriptionMicButton';
 
 interface CommandIdleInputProps {
   text: string;
@@ -16,6 +18,7 @@ interface CommandIdleInputProps {
   onPhotoClick: () => void;
   onCameraClick?: () => void;
   isScoped?: boolean;
+  transcription?: ReturnType<typeof useTranscription>;
 }
 
 export function CommandIdleInput({
@@ -29,8 +32,10 @@ export function CommandIdleInput({
   onPhotoClick,
   onCameraClick,
   isScoped,
+  transcription,
 }: CommandIdleInputProps) {
   const t = useTerminology();
+  const isTranscribing = transcription && transcription.state !== 'idle';
 
   const examples = useMemo(() => isScoped ? [
     { label: 'Auto-tag', example: 'Auto-tag these based on their contents' },
@@ -57,7 +62,7 @@ export function CommandIdleInput({
           placeholder="What would you like to do?"
           rows={3}
           className={cn("min-h-[80px] bg-[var(--bg-elevated)]", onCameraClick ? "pr-[4.5rem]" : "pr-12")}
-          disabled={isLoading}
+          disabled={isLoading || !!isTranscribing}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
@@ -65,28 +70,37 @@ export function CommandIdleInput({
             }
           }}
         />
-        <div data-tour="photo-buttons" className="absolute right-2.5 bottom-2.5 flex items-center gap-0.5">
-          {onCameraClick && (
+        {isTranscribing ? (
+          <div className="absolute inset-0 flex items-center px-3 rounded-[var(--radius-sm)] bg-[var(--bg-elevated)] border border-[var(--border-flat)]">
+            <TranscriptionMicButton transcription={transcription} />
+          </div>
+        ) : (
+          <div data-tour="photo-buttons" className="absolute right-2.5 bottom-2.5 flex items-center gap-0.5">
+            {transcription && (
+              <TranscriptionMicButton transcription={transcription} />
+            )}
+            {onCameraClick && (
+              <button
+                type="button"
+                onClick={onCameraClick}
+                className="p-1.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
+                title="Take photos with camera"
+                aria-label="Take photos with camera"
+              >
+                <Camera className="h-5 w-5" />
+              </button>
+            )}
             <button
               type="button"
-              onClick={onCameraClick}
+              onClick={onPhotoClick}
               className="p-1.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
-              title="Take photos with camera"
-              aria-label="Take photos with camera"
+              title={`Upload photos to auto-create ${t.bins} with AI`}
+              aria-label="Upload photos"
             >
-              <Camera className="h-5 w-5" />
+              <ImagePlus className="h-5 w-5" />
             </button>
-          )}
-          <button
-            type="button"
-            onClick={onPhotoClick}
-            className="p-1.5 rounded-[var(--radius-lg)] text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--bg-active)] transition-colors"
-            title={`Upload photos to auto-create ${t.bins} with AI`}
-            aria-label="Upload photos"
-          >
-            <ImagePlus className="h-5 w-5" />
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Collapsible examples */}
