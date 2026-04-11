@@ -25,7 +25,7 @@ import { demoMemoryPhotoUpload, memoryPhotoUpload } from '../lib/uploadConfig.js
 import { authenticate } from '../middleware/auth.js';
 import { demoConnectionLimiter, isDemoUser as isDemoConn } from '../middleware/demoConnectionLimiter.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
-import { checkAiCredits, requireAiAccess } from '../middleware/requirePlan.js';
+import { checkAiCredits, requireAiAccess, requirePlusOrAbove } from '../middleware/requirePlan.js';
 
 const streamRouter = Router();
 streamRouter.use(authenticate);
@@ -198,7 +198,7 @@ function demoAwareAnalyzeUpload(req: import('express').Request, res: import('exp
 }
 
 // POST /api/ai/analyze-image/stream
-streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnalyzeUpload, ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('stream analyze image', async (req, res) => {
+streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnalyzeUpload, ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('stream analyze image', async (req, res) => {
   const allFiles = extractUploadedFiles(req);
 
   if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
@@ -221,7 +221,7 @@ streamRouter.post('/analyze-image/stream', demoConnectionLimiter, demoAwareAnaly
 }));
 
 // POST /api/ai/analyze/stream — stream analysis of stored photos
-streamRouter.post('/analyze/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('stream analyze photo', async (req, res) => {
+streamRouter.post('/analyze/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('stream analyze photo', async (req, res) => {
   const ids = extractPhotoIds(req.body);
 
   if (config.aiMock) { await sendMockJsonStream(res, buildMockAnalysisResult()); return; }
@@ -283,7 +283,7 @@ streamRouter.post('/correct/stream', ...aiRateLimiters, requireAiAccess(), check
 streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'photos', maxCount: 5 },
-]), ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('stream reanalyze image', async (req, res) => {
+]), ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('stream reanalyze image', async (req, res) => {
   const allFiles = extractUploadedFiles(req);
 
   let rawPrev: unknown = null;
@@ -317,7 +317,7 @@ streamRouter.post('/reanalyze-image/stream', memoryPhotoUpload.fields([
 }));
 
 // POST /api/ai/reorganize/stream
-streamRouter.post('/reorganize/stream', ...aiRateLimiters, requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream reorganization', async (req, res) => {
+streamRouter.post('/reorganize/stream', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, requireLocationMember(), aiRouteHandler('stream reorganization', async (req, res) => {
   const { locationId: _locationId, bins: inputBins, maxBins, areaName,
     userNotes, strictness, granularity, ambiguousPolicy, duplicates, outliers,
     minItemsPerBin, maxItemsPerBin } = req.body;

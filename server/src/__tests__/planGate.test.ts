@@ -9,36 +9,36 @@ vi.mock('../lib/config.js', () => ({
     subscriptionJwtSecret: null as string | null,
     jwtSecret: 'test-jwt-secret',
     planLimits: {
-      freeAi: false,
+      freeAi: true,
       freeApiKeys: false,
       freeCustomFields: false,
       freeFullExport: false,
       freeReorganize: false,
       freeBinSharing: false,
-      freeMaxBins: 50,
+      freeMaxBins: 10,
       freeMaxLocations: 1,
       freeMaxStorageMb: 0,
       freeMaxMembers: 1,
       freeActivityRetentionDays: 7,
-      freeAiCreditsPerMonth: 0,
+      freeAiCreditsPerMonth: 10,
       plusAi: true,
       plusApiKeys: false,
-      plusCustomFields: true,
+      plusCustomFields: false,
       plusFullExport: true,
       plusReorganize: true,
       plusBinSharing: false,
-      plusMaxBins: 500,
+      plusMaxBins: 100,
       plusMaxLocations: 1,
       plusMaxStorageMb: 100,
       plusMaxMembers: 1,
       plusActivityRetentionDays: 30,
       plusAiCreditsPerMonth: 25,
-      proMaxBins: 5000,
+      proMaxBins: 1000,
       proMaxLocations: 10,
-      proMaxMembers: 25,
-      proMaxStorageMb: 1000,
+      proMaxMembers: 10,
+      proMaxStorageMb: 1024,
       proActivityRetentionDays: 90,
-      proAiCreditsPerMonth: 500,
+      proAiCreditsPerMonth: 250,
       trialAiCredits: 25,
     },
   },
@@ -72,36 +72,36 @@ import {
 
 // Default plan limits matching config.ts defaults
 const DEFAULT_PLAN_LIMITS = {
-  freeAi: false as const,
+  freeAi: true as const,
   freeApiKeys: false as const,
   freeCustomFields: false,
   freeFullExport: false,
   freeReorganize: false as const,
   freeBinSharing: false as const,
-  freeMaxBins: 50 as number | null,
+  freeMaxBins: 10 as number | null,
   freeMaxLocations: 1 as number | null,
   freeMaxStorageMb: 0,
   freeMaxMembers: 1 as number | null,
   freeActivityRetentionDays: 7 as number | null,
-  freeAiCreditsPerMonth: 0 as const,
+  freeAiCreditsPerMonth: 10 as const,
   plusAi: true,
   plusApiKeys: false,
-  plusCustomFields: true,
+  plusCustomFields: false,
   plusFullExport: true,
   plusReorganize: true,
   plusBinSharing: false,
-  plusMaxBins: 500 as number | null,
+  plusMaxBins: 100 as number | null,
   plusMaxLocations: 1 as number | null,
   plusMaxStorageMb: 100 as number | null,
   plusMaxMembers: 1 as number | null,
   plusActivityRetentionDays: 30 as number | null,
   plusAiCreditsPerMonth: 25,
-  proMaxBins: 5000 as number | null,
+  proMaxBins: 1000 as number | null,
   proMaxLocations: 10 as number | null,
-  proMaxMembers: 25 as number | null,
-  proMaxStorageMb: 1000 as number | null,
+  proMaxMembers: 10 as number | null,
+  proMaxStorageMb: 1024 as number | null,
   proActivityRetentionDays: 90 as number | null,
-  proAiCreditsPerMonth: 500 as number | null,
+  proAiCreditsPerMonth: 250 as number | null,
   trialAiCredits: 25,
 };
 
@@ -229,12 +229,12 @@ describe('getFeatureMap()', () => {
     expect(features.fullExport).toBe(true);
     expect(features.reorganize).toBe(true);
     expect(features.binSharing).toBe(true);
-    expect(features.maxBins).toBe(5000);
+    expect(features.maxBins).toBe(1000);
     expect(features.maxLocations).toBe(10);
-    expect(features.maxPhotoStorageMb).toBe(1000);
-    expect(features.maxMembersPerLocation).toBe(25);
+    expect(features.maxPhotoStorageMb).toBe(1024);
+    expect(features.maxMembersPerLocation).toBe(10);
     expect(features.activityRetentionDays).toBe(90);
-    expect(features.aiCreditsPerMonth).toBe(500);
+    expect(features.aiCreditsPerMonth).toBe(250);
   });
 
   it('returns PLUS features for PLUS plan (cloud)', () => {
@@ -242,11 +242,11 @@ describe('getFeatureMap()', () => {
     const features = getFeatureMap(Plan.PLUS);
     expect(features.ai).toBe(true);
     expect(features.apiKeys).toBe(false);
-    expect(features.customFields).toBe(true);
+    expect(features.customFields).toBe(false);
     expect(features.fullExport).toBe(true);
     expect(features.reorganize).toBe(true);
     expect(features.binSharing).toBe(false);
-    expect(features.maxBins).toBe(500);
+    expect(features.maxBins).toBe(100);
     expect(features.maxLocations).toBe(1);
     expect(features.maxPhotoStorageMb).toBe(100);
     expect(features.maxMembersPerLocation).toBe(1);
@@ -614,12 +614,15 @@ describe('checkAndIncrementAiCredits()', () => {
     expect(vi.mocked(query)).not.toHaveBeenCalled();
   });
 
-  it('denies when plan has zero AI credits', async () => {
-    // Free plan has freeAiCreditsPerMonth: 0
+  it('denies when plan AI credits are exhausted', async () => {
+    // Free plan has freeAiCreditsPerMonth: 10
+    const futureReset = new Date(Date.now() + 86400000).toISOString();
     vi.mocked(query).mockResolvedValueOnce({
-      rows: [{ plan: Plan.FREE, sub_status: SubStatus.ACTIVE, ai_credits_used: 0, ai_credits_reset_at: null, active_until: null }],
+      rows: [{ plan: Plan.FREE, sub_status: SubStatus.ACTIVE, ai_credits_used: 10, ai_credits_reset_at: futureReset, active_until: null }],
       rowCount: 1,
     });
+    // Atomic UPDATE fails (at limit, no reset needed)
+    vi.mocked(query).mockResolvedValueOnce({ rows: [], rowCount: 0 });
     const result = await checkAndIncrementAiCredits('user1');
     expect(result.allowed).toBe(false);
   });

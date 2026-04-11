@@ -30,7 +30,7 @@ function makeReq(userId = 'user-123'): Partial<Request> {
 }
 
 function makeRes(): Partial<Response> {
-  return {};
+  return { locals: {} } as Partial<Response>;
 }
 
 /** Run the middleware and return the first argument passed to next(). */

@@ -31,6 +31,7 @@ export function RegisterPage() {
   const [inviteCode, setInviteCode] = useState(searchParams.get('invite') ?? '');
   const [registrationMode, setRegistrationMode] = useState<'open' | 'invite'>('open');
   const [oauthProviders, setOAuthProviders] = useState<string[]>([]);
+  const [selfHosted, setSelfHosted] = useState(true);
   const [loading, setLoading] = useState(false);
   const [statusLoaded, setStatusLoaded] = useState(false);
   const [invitePreview, setInvitePreview] = useState<{ name: string; memberCount: number } | null>(null);
@@ -53,6 +54,7 @@ export function RegisterPage() {
         }
         setRegistrationMode(data.registrationMode ?? 'open');
         if (Array.isArray(data.oauthProviders)) setOAuthProviders(data.oauthProviders);
+        if (typeof data.selfHosted === 'boolean') setSelfHosted(data.selfHosted);
       })
       .catch(() => {})
       .finally(() => setStatusLoaded(true));
@@ -352,12 +354,14 @@ export function RegisterPage() {
                       <UserPlus className="h-4 w-4 mr-2" />
                       {loading ? 'Creating account...' : 'Create Account'}
                     </Button>
-                    <p className="text-center text-[12px] text-[var(--text-tertiary)] leading-relaxed">
-                      By creating an account, you agree to the{' '}
-                      <Link to="/terms" className="text-[var(--accent)] hover:underline focus-visible:underline focus-visible:outline-none">Terms of Service</Link>
-                      {' '}and{' '}
-                      <Link to="/privacy" className="text-[var(--accent)] hover:underline focus-visible:underline focus-visible:outline-none">Privacy Policy</Link>.
-                    </p>
+                    {!selfHosted && (
+                      <p className="text-center text-[12px] text-[var(--text-tertiary)] leading-relaxed">
+                        By creating an account, you agree to the{' '}
+                        <Link to="/terms" className="text-[var(--accent)] hover:underline focus-visible:underline focus-visible:outline-none">Terms of Service</Link>
+                        {' '}and{' '}
+                        <Link to="/privacy" className="text-[var(--accent)] hover:underline focus-visible:underline focus-visible:outline-none">Privacy Policy</Link>.
+                      </p>
+                    )}
                   </div>
                 </form>
               </CardContent>

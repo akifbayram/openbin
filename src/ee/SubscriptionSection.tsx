@@ -104,18 +104,17 @@ function isNearLimit(tile: UsageTile): boolean {
 }
 
 const PLUS_FEATURES: Array<{ key: keyof PlanFeatures; label: string }> = [
-  { key: 'maxBins', label: 'Up to 500 bins' },
-  { key: 'ai', label: 'AI-powered features' },
-  { key: 'customFields', label: 'Custom fields' },
+  { key: 'maxBins', label: 'Up to 100 bins' },
+  { key: 'reorganize', label: 'AI reorganization' },
+  { key: 'fullExport', label: 'Full data export' },
 ];
 
 const PRO_FEATURES: Array<{ key: keyof PlanFeatures; label: string }> = [
-  { key: 'maxBins', label: 'Unlimited bins' },
+  { key: 'maxBins', label: 'Up to 1,000 bins' },
+  { key: 'customFields', label: 'Custom fields' },
   { key: 'apiKeys', label: 'API keys' },
-  { key: 'reorganize', label: 'AI reorganization' },
   { key: 'binSharing', label: 'Bin sharing links' },
-  { key: 'maxLocations', label: 'Unlimited locations' },
-  { key: 'maxPhotoStorageMb', label: 'Expanded photo storage' },
+  { key: 'maxLocations', label: 'Up to 10 locations' },
 ];
 
 function getNextTierFeatures(plan: PlanTier, features: PlanFeatures): string[] {

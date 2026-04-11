@@ -17,7 +17,7 @@ import { structureText } from '../lib/structureText.js';
 import { resolveTaskConfig } from '../lib/taskRouting.js';
 import { memoryPhotoUpload } from '../lib/uploadConfig.js';
 import { authenticate } from '../middleware/auth.js';
-import { checkAiCredits, requireAiAccess } from '../middleware/requirePlan.js';
+import { checkAiCredits, requireAiAccess, requirePlusOrAbove } from '../middleware/requirePlan.js';
 
 const MOCK_AI_SETTINGS = {
   id: null,
@@ -283,7 +283,7 @@ router.delete('/settings', requireAiAccess(), aiRouteHandler('delete AI settings
 router.post('/analyze-image', memoryPhotoUpload.fields([
   { name: 'photo', maxCount: 1 },
   { name: 'photos', maxCount: 5 },
-]), ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('analyze image', async (req, res) => {
+]), ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('analyze image', async (req, res) => {
   const allFiles = extractUploadedFiles(req);
 
   if (config.aiMock) { res.json(buildMockAnalysisResult()); return; }
@@ -303,7 +303,7 @@ router.post('/analyze-image', memoryPhotoUpload.fields([
 }));
 
 // POST /api/ai/analyze — analyze stored photo(s)
-router.post('/analyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('analyze photo', async (req, res) => {
+router.post('/analyze', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('analyze photo', async (req, res) => {
   const ids = extractPhotoIds(req.body);
 
   if (config.aiMock) { res.json(buildMockAnalysisResult()); return; }
@@ -327,7 +327,7 @@ router.post('/analyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, ai
 }));
 
 // POST /api/ai/reanalyze — reanalyze stored photo(s) with previous result context
-router.post('/reanalyze', ...aiRateLimiters, requireAiAccess(), checkAiCredits, aiRouteHandler('reanalyze photo', async (req, res) => {
+router.post('/reanalyze', ...aiRateLimiters, requirePlusOrAbove(), requireAiAccess(), checkAiCredits, aiRouteHandler('reanalyze photo', async (req, res) => {
   const previousResult = sanitizePreviousResult(validatePreviousResult(req.body.previousResult));
   const ids = extractPhotoIds(req.body);
 

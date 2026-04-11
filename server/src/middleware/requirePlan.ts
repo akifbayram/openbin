@@ -20,18 +20,21 @@ function requirePlanAccess(
   message: string,
   check: (planInfo: { plan: import('../lib/planGate.js').PlanTier; subStatus: import('../lib/planGate.js').SubStatusType }) => boolean,
 ): RequestHandler {
-  return asyncHandler(async (req, _res, next) => {
+  return asyncHandler(async (req, res, next) => {
     if (isSelfHosted()) {
       next();
       return;
     }
 
     const userId = req.user!.id;
-    const planInfo = await getUserPlanInfo(userId);
+    const planInfo = res.locals.planInfo ?? await getUserPlanInfo(userId);
 
     if (!planInfo) {
       throw new PlanRestrictedError('User plan not found');
     }
+
+    // Stash for downstream middleware to avoid re-fetching
+    res.locals.planInfo = planInfo;
 
     if (!isSubscriptionActive(planInfo)) {
       const upgradeUrl = await generateUpgradeUrl(userId, planInfo.email);
@@ -114,7 +117,7 @@ export function requireAiAccess(): RequestHandler {
     if (isSelfHosted()) { next(); return; }
 
     const userId = req.user!.id;
-    const planInfo = await getUserPlanInfo(userId);
+    const planInfo = res.locals.planInfo ?? await getUserPlanInfo(userId);
     if (!planInfo) throw new PlanRestrictedError('User plan not found');
 
     if (!isSubscriptionActive(planInfo)) {

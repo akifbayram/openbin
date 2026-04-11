@@ -29,8 +29,8 @@ vi.mock('@/components/ui/toast', () => ({
 import { SubscriptionSection } from '../SubscriptionSection';
 
 const BASE_FEATURES = {
-  ai: true, apiKeys: false, customFields: true, fullExport: true,
-  reorganize: false, binSharing: false, maxBins: 500, maxLocations: 1,
+  ai: true, apiKeys: false, customFields: false, fullExport: true,
+  reorganize: true, binSharing: false, maxBins: 100, maxLocations: 1,
   maxPhotoStorageMb: 100, maxMembersPerLocation: 1, activityRetentionDays: 30,
   aiCreditsPerMonth: 25,
 };
@@ -217,9 +217,9 @@ describe('SubscriptionSection', () => {
       makePlanInfo({
         status: 'active',
         portalUrl: 'https://billing.example.com/portal',
-        features: { ...BASE_FEATURES, maxBins: 500 },
+        features: { ...BASE_FEATURES, maxBins: 100 },
       }),
-      { usage: { ...BASE_USAGE, binCount: 520 } },
+      { usage: { ...BASE_USAGE, binCount: 120 } },
     );
     renderSection();
     expect(screen.getByText('Usage')).toBeDefined();
@@ -235,19 +235,20 @@ describe('SubscriptionSection', () => {
       upgradePlusUrl: 'https://billing.example.com/plus',
       features: {
         ...BASE_FEATURES,
-        ai: false,
+        ai: true,
         customFields: false,
-        fullExport: true,
-        maxBins: 50,
+        fullExport: false,
+        reorganize: false,
+        maxBins: 10,
         maxLocations: 1,
         maxPhotoStorageMb: 0,
         maxMembersPerLocation: 1,
-        aiCreditsPerMonth: 0,
+        aiCreditsPerMonth: 10,
       },
     }));
     renderSection();
     expect(screen.getByText('Unlock with Plus')).toBeDefined();
-    expect(screen.getByText('AI-powered features')).toBeDefined();
+    expect(screen.getByText('AI reorganization')).toBeDefined();
   });
 
   it('shows "Unlock with Pro" section for active Plus users', () => {
@@ -257,9 +258,6 @@ describe('SubscriptionSection', () => {
       upgradeProUrl: 'https://billing.example.com/pro',
       features: {
         ...BASE_FEATURES,
-        apiKeys: false,
-        reorganize: false,
-        binSharing: false,
       },
     }));
     renderSection();

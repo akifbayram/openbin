@@ -10,6 +10,7 @@ vi.mock('../lib/planGate.js', async (importOriginal) => {
     ...actual,
     isSelfHosted: vi.fn(),
     getUserPlanInfo: vi.fn(),
+    getUserFeatures: vi.fn(),
     isProUser: vi.fn(),
     isPlusOrAbove: vi.fn(),
     isSubscriptionActive: vi.fn(),
@@ -25,6 +26,7 @@ import { createApp } from '../index.js';
 import {
   generateUpgradePlanUrl,
   generateUpgradeUrl,
+  getUserFeatures,
   getUserPlanInfo,
   hasAiAccess,
   isPlusOrAbove,
@@ -52,6 +54,12 @@ function mockProUser() {
   vi.mocked(isProUser).mockReturnValue(true);
   vi.mocked(isPlusOrAbove).mockReturnValue(true);
   vi.mocked(hasAiAccess).mockReturnValue(true);
+  vi.mocked(getUserFeatures).mockResolvedValue({
+    ai: true, apiKeys: true, customFields: true, fullExport: true,
+    reorganize: true, binSharing: true, maxBins: null, maxLocations: null,
+    maxPhotoStorageMb: null, maxMembersPerLocation: null, activityRetentionDays: null,
+    aiCreditsPerMonth: null,
+  });
   vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
   vi.mocked(generateUpgradePlanUrl).mockResolvedValue(null);
 }
@@ -69,7 +77,13 @@ function mockFreeUser() {
   vi.mocked(isSubscriptionActive).mockReturnValue(true);
   vi.mocked(isProUser).mockReturnValue(false);
   vi.mocked(isPlusOrAbove).mockReturnValue(false);
-  vi.mocked(hasAiAccess).mockReturnValue(false);
+  vi.mocked(hasAiAccess).mockReturnValue(true);
+  vi.mocked(getUserFeatures).mockResolvedValue({
+    ai: true, apiKeys: false, customFields: false, fullExport: false,
+    reorganize: false, binSharing: false, maxBins: 10, maxLocations: 1,
+    maxPhotoStorageMb: 0, maxMembersPerLocation: 1, activityRetentionDays: 7,
+    aiCreditsPerMonth: 10,
+  });
   vi.mocked(generateUpgradeUrl).mockResolvedValue(null);
   vi.mocked(generateUpgradePlanUrl).mockResolvedValue(null);
 }
@@ -84,6 +98,7 @@ beforeEach(() => {
   app = createApp();
   vi.mocked(isSelfHosted).mockReset();
   vi.mocked(getUserPlanInfo).mockReset();
+  vi.mocked(getUserFeatures).mockReset();
   vi.mocked(isProUser).mockReset();
   vi.mocked(isPlusOrAbove).mockReset();
   vi.mocked(isSubscriptionActive).mockReset();
@@ -97,7 +112,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('AI route plan gating', () => {
-  it('GET /api/ai/settings returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
+  it('GET /api/ai/settings returns 200 for cloud FREE user (AI assistant available to all)', async () => {
     mockFreeUser();
     const { token } = await createTestUser(app);
 
@@ -105,8 +120,7 @@ describe('AI route plan gating', () => {
       .get('/api/ai/settings')
       .set('Authorization', `Bearer ${token}`);
 
-    expect(res.status).toBe(403);
-    expect(res.body.error).toBe('PLAN_RESTRICTED');
+    expect(res.status).toBe(200);
   });
 
   it('GET /api/ai/settings works for self-hosted (no DB plan query)', async () => {
@@ -135,7 +149,7 @@ describe('AI route plan gating', () => {
     expect(res.body.error).toBe('PLAN_RESTRICTED');
   });
 
-  it('POST /api/ai/structure-text returns 403 PLAN_RESTRICTED for cloud FREE user', async () => {
+  it('POST /api/ai/structure-text passes plan gate for cloud FREE user (AI assistant available to all)', async () => {
     mockFreeUser();
     const { token } = await createTestUser(app);
 
@@ -144,8 +158,8 @@ describe('AI route plan gating', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ text: 'hello world' });
 
-    expect(res.status).toBe(403);
-    expect(res.body.error).toBe('PLAN_RESTRICTED');
+    // Free users pass the plan gate; non-403 means the gate didn't block
+    expect(res.body.error).not.toBe('PLAN_RESTRICTED');
   });
 
 });
@@ -194,7 +208,7 @@ describe('Export route plan gating', () => {
     expect(res.body.error).toBe('PLAN_RESTRICTED');
   });
 
-  it('GET /api/locations/:id/export/csv is gated for cloud FREE user', async () => {
+  it('GET /api/locations/:id/export/csv is available for cloud FREE user', async () => {
     mockFreeUser();
     const { token } = await createTestUser(app);
     const location = await createTestLocation(app, token);
@@ -203,8 +217,7 @@ describe('Export route plan gating', () => {
       .get(`/api/locations/${location.id}/export/csv`)
       .set('Authorization', `Bearer ${token}`);
 
-    expect(res.status).toBe(403);
-    expect(res.body.error).toBe('PLAN_RESTRICTED');
+    expect(res.status).toBe(200);
   });
 
   it('GET /api/locations/:id/export works for self-hosted without plan query', async () => {

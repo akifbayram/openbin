@@ -6,12 +6,30 @@ interface QrConfig {
 }
 
 let cached: QrConfig = { qrPayloadMode: 'app' };
+let selfHostedCached = true; // default true (safe: hides cloud-only UI until confirmed)
+let initPromise: Promise<void> | null = null;
 
 export function getQrConfig(): QrConfig {
   return cached;
 }
 
+/** Whether the instance is self-hosted (available after initQrConfig resolves). */
+export function isSelfHostedInstance(): boolean {
+  return selfHostedCached;
+}
+
+/** Wait for the initial config fetch to complete. */
+export function waitForConfig(): Promise<void> {
+  return initPromise ?? Promise.resolve();
+}
+
 export async function initQrConfig(): Promise<void> {
+  const p = _doInit();
+  initPromise = p;
+  return p;
+}
+
+async function _doInit(): Promise<void> {
   try {
     const res = await fetch('/api/auth/status');
     if (!res.ok) return;
@@ -21,7 +39,10 @@ export async function initQrConfig(): Promise<void> {
     } else {
       cached = { qrPayloadMode: 'app' };
     }
+    if (typeof data.selfHosted === 'boolean') {
+      selfHostedCached = data.selfHosted;
+    }
   } catch {
-    // Keep default (app mode) on network failure
+    // Keep defaults on network failure
   }
 }

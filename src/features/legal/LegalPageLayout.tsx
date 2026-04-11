@@ -1,7 +1,9 @@
 import { ChevronLeft, Monitor, Moon, Sun } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { BrandIcon } from '@/components/BrandIcon';
 import { Card, CardContent } from '@/components/ui/card';
+import { isSelfHostedInstance, waitForConfig } from '@/lib/qrConfig';
 import { cycleThemePreference, useTheme } from '@/lib/theme';
 import { cn, focusRing } from '@/lib/utils';
 
@@ -15,6 +17,20 @@ interface LegalPageLayoutProps {
 
 export function LegalPageLayout({ title, crossLink, children }: LegalPageLayoutProps) {
   const { preference, setThemePreference } = useTheme();
+  const navigate = useNavigate();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    waitForConfig().then(() => {
+      if (cancelled) return;
+      if (isSelfHostedInstance()) navigate('/login', { replace: true });
+      else setReady(true);
+    });
+    return () => { cancelled = true; };
+  }, [navigate]);
+
+  if (!ready) return null;
   const ThemeIcon = preference === 'light' ? Sun : preference === 'dark' ? Moon : Monitor;
 
   return (

@@ -57,9 +57,8 @@ export function isPlusOrAbove(planInfo: { plan: PlanTier; subStatus: SubStatusTy
 
 export function hasAiAccess(planInfo: { plan: PlanTier; subStatus: SubStatusType }): boolean {
   if (config.selfHosted) return true;
-  if (planInfo.plan === Plan.PRO && planInfo.subStatus !== SubStatus.INACTIVE) return true;
-  if (planInfo.plan === Plan.PLUS && planInfo.subStatus === SubStatus.TRIAL) return true;
-  return planInfo.plan === Plan.PLUS && planInfo.subStatus === SubStatus.ACTIVE;
+  // AI assistant is available for all plans; credits limit usage per tier
+  return planInfo.subStatus !== SubStatus.INACTIVE;
 }
 
 export function isPlanRestricted(planInfo: { plan: PlanTier; subStatus: SubStatusType }): boolean {

@@ -66,18 +66,18 @@ const FREE_PLAN: PlanInfo = {
   selfHosted: false,
   locked: false,
   features: {
-    ai: false,
+    ai: true,
     apiKeys: false,
     customFields: false,
-    fullExport: true,
+    fullExport: false,
     reorganize: false,
     binSharing: false,
-    maxBins: 50,
+    maxBins: 10,
     maxLocations: 1,
     maxPhotoStorageMb: 0,
     maxMembersPerLocation: 1,
     activityRetentionDays: 7,
-    aiCreditsPerMonth: 0,
+    aiCreditsPerMonth: 10,
   },
   upgradeUrl: 'https://example.com/upgrade',
   upgradePlusUrl: 'https://example.com/auth/openbin?token=abc&plan=plus',
@@ -98,15 +98,15 @@ const PLUS_PLAN: PlanInfo = {
   features: {
     ai: true,
     apiKeys: false,
-    customFields: true,
+    customFields: false,
     fullExport: true,
     reorganize: true,
     binSharing: false,
-    maxBins: 500,
-    maxLocations: 3,
-    maxPhotoStorageMb: 500,
-    maxMembersPerLocation: 5,
-    activityRetentionDays: 90,
+    maxBins: 100,
+    maxLocations: 1,
+    maxPhotoStorageMb: 100,
+    maxMembersPerLocation: 1,
+    activityRetentionDays: 30,
     aiCreditsPerMonth: 25,
   },
   upgradeUrl: 'https://example.com/upgrade',
@@ -132,12 +132,12 @@ const PRO_PLAN: PlanInfo = {
     fullExport: true,
     reorganize: true,
     binSharing: true,
-    maxBins: 5000,
+    maxBins: 1000,
     maxLocations: 10,
-    maxPhotoStorageMb: 1000,
-    maxMembersPerLocation: 25,
+    maxPhotoStorageMb: 1024,
+    maxMembersPerLocation: 10,
     activityRetentionDays: 90,
-    aiCreditsPerMonth: 500,
+    aiCreditsPerMonth: 250,
   },
   upgradeUrl: null,
   upgradePlusUrl: null,
@@ -235,10 +235,10 @@ describe('usePlan', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.isGated('ai')).toBe(true);
+    expect(result.current.isGated('ai')).toBe(false);
     expect(result.current.isGated('apiKeys')).toBe(true);
     expect(result.current.isGated('customFields')).toBe(true);
-    expect(result.current.isGated('fullExport')).toBe(false);
+    expect(result.current.isGated('fullExport')).toBe(true);
   });
 
   it('isGated returns false for numeric limit features (not boolean)', async () => {
