@@ -44,6 +44,7 @@ export function useDictation(options: UseDictationOptions) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelledRef = useRef(false);
+  const startRef = useRef<() => void>(() => {});
 
   const {
     structuredItems,
@@ -108,6 +109,10 @@ export function useDictation(options: UseDictationOptions) {
           setTranscript(null);
           clearStructured();
         }
+      }).catch(() => {
+        if (cancelledRef.current) return;
+        setState('idle');
+        setTranscript(null);
       });
     },
     [structure, binName, existingItems, locationId, showToast, clearStructured],
@@ -128,7 +133,8 @@ export function useDictation(options: UseDictationOptions) {
       }
 
       const formData = new FormData();
-      formData.append('audio', blob, 'recording.webm');
+      const ext = blob.type.includes('mp4') ? 'mp4' : blob.type.includes('ogg') ? 'ogg' : 'webm';
+      formData.append('audio', blob, `recording.${ext}`);
       const result = await apiFetch<TranscribeResponse>('/api/ai/transcribe', {
         method: 'POST',
         body: formData,
@@ -159,7 +165,7 @@ export function useDictation(options: UseDictationOptions) {
       showToast({
         message,
         variant: 'error',
-        action: { label: 'Retry', onClick: () => { /* will be wired via start */ } },
+        action: { label: 'Retry', onClick: () => startRef.current() },
       });
       setState('idle');
     }
@@ -187,6 +193,7 @@ export function useDictation(options: UseDictationOptions) {
       showToast({ message, variant: 'error' });
     }
   }, [state, clearStructured, showToast, handleStopInternal]);
+  startRef.current = start;
 
   const stop = useCallback(() => {
     handleStopInternal();
