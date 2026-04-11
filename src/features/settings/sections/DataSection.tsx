@@ -1,4 +1,4 @@
-import { Clock, Download, Lock, Trash2, Upload } from 'lucide-react';
+import { Clock, Download, Trash2, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import {
 import { LocationSelectList } from '@/features/locations/LocationSelectList';
 import { useLocationList } from '@/features/locations/useLocations';
 import { useAuth } from '@/lib/auth';
-import { usePlan } from '@/lib/usePlan';
+
 import { cn } from '@/lib/utils';
 import type { Location } from '@/types';
 import { SettingsPageHeader } from '../SettingsPageHeader';
@@ -43,8 +43,7 @@ function LocationPickerSection({
 export function DataSection() {
   const navigate = useNavigate();
   const { activeLocationId } = useAuth();
-  const { isGated, isSelfHosted } = usePlan();
-  const exportGated = !isSelfHosted && isGated('fullExport');
+
   const actions = useDataSectionActions();
   const {
     fileInputRef,
@@ -120,7 +119,7 @@ export function DataSection() {
           icon={Download}
           label="Export Data"
           description="Backup or download your data"
-          onClick={() => { setSelectedLocationId(activeLocationId ?? null); if (exportGated) setExportFormat('csv'); setExportDialogOpen(true); }}
+          onClick={() => { setSelectedLocationId(activeLocationId ?? null); setExportDialogOpen(true); }}
           disabled={!activeLocationId}
         />
         <SettingsRow
@@ -156,47 +155,29 @@ export function DataSection() {
             <div className="space-y-2.5">
               <span id="export-format-label" className="text-[13px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Format</span>
               <div className="flex flex-col gap-3" role="radiogroup" aria-labelledby="export-format-label">
-                <label className={cn('flex items-start gap-2 text-sm', exportGated ? 'opacity-50 pointer-events-none' : 'cursor-pointer')}>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
                     type="radio"
                     name="export-format"
                     checked={exportFormat === 'zip'}
                     onChange={() => setExportFormat('zip')}
-                    disabled={exportGated}
                     className="accent-[var(--accent)] mt-0.5"
                   />
                   <div>
-                    <span className="text-[var(--text-primary)]">
-                      Backup (ZIP)
-                      {exportGated && (
-                        <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-[var(--radius-xs)] bg-[var(--bg-input)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--text-tertiary)]">
-                          <Lock className="h-2.5 w-2.5" />
-                          Pro
-                        </span>
-                      )}
-                    </span>
+                    <span className="text-[var(--text-primary)]">Backup (ZIP)</span>
                     <p className="text-[13px] text-[var(--text-tertiary)]">All data including photos</p>
                   </div>
                 </label>
-                <label className={cn('flex items-start gap-2 text-sm', exportGated ? 'opacity-50 pointer-events-none' : 'cursor-pointer')}>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
                     type="radio"
                     name="export-format"
                     checked={exportFormat === 'json'}
                     onChange={() => setExportFormat('json')}
-                    disabled={exportGated}
                     className="accent-[var(--accent)] mt-0.5"
                   />
                   <div>
-                    <span className="text-[var(--text-primary)]">
-                      Backup (JSON)
-                      {exportGated && (
-                        <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-[var(--radius-xs)] bg-[var(--bg-input)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--text-tertiary)]">
-                          <Lock className="h-2.5 w-2.5" />
-                          Pro
-                        </span>
-                      )}
-                    </span>
+                    <span className="text-[var(--text-primary)]">Backup (JSON)</span>
                     <p className="text-[13px] text-[var(--text-tertiary)]">Data and settings, no photos</p>
                   </div>
                 </label>
@@ -204,7 +185,7 @@ export function DataSection() {
                   <input
                     type="radio"
                     name="export-format"
-                    checked={exportFormat === 'csv' || exportGated}
+                    checked={exportFormat === 'csv'}
                     onChange={() => setExportFormat('csv')}
                     className="accent-[var(--accent)] mt-0.5"
                   />

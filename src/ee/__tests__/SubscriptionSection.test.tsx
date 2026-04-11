@@ -237,7 +237,7 @@ describe('SubscriptionSection', () => {
         ...BASE_FEATURES,
         ai: false,
         customFields: false,
-        fullExport: false,
+        fullExport: true,
         maxBins: 50,
         maxLocations: 1,
         maxPhotoStorageMb: 0,

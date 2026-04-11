@@ -92,7 +92,7 @@ export const config = Object.freeze({
     freeAi: false,
     freeApiKeys: false,
     freeCustomFields: parseBool(process.env.PLAN_FREE_CUSTOM_FIELDS, false),
-    freeFullExport: parseBool(process.env.PLAN_FREE_FULL_EXPORT, false),
+    freeFullExport: parseBool(process.env.PLAN_FREE_FULL_EXPORT, true),
     freeReorganize: false,
     freeBinSharing: false,
     freeMaxBins: parseNullableInt(process.env.PLAN_FREE_MAX_BINS, 50),

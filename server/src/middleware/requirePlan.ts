@@ -6,6 +6,7 @@ import {
   checkAndIncrementAiCredits,
   generateUpgradePlanUrl,
   generateUpgradeUrl,
+  getUserFeatures,
   getUserPlanInfo,
   hasAiAccess,
   isPlusOrAbove,
@@ -90,6 +91,21 @@ export function requireWriteApi(): RequestHandler {
 
 export function requirePlusOrAbove(): RequestHandler {
   return requirePlanAccess('This feature requires a Plus or Pro plan', isPlusOrAbove);
+}
+
+/** Checks the fullExport feature flag — respects per-plan config and PLAN_FREE_FULL_EXPORT env. */
+export function requireExportAccess(): RequestHandler {
+  return asyncHandler(async (req, _res, next) => {
+    if (isSelfHosted()) { next(); return; }
+
+    const userId = req.user!.id;
+    const features = await getUserFeatures(userId);
+    if (features.fullExport) { next(); return; }
+
+    const planInfo = await getUserPlanInfo(userId);
+    const upgradeUrl = planInfo ? await generateUpgradeUrl(userId, planInfo.email) : null;
+    throw new PlanRestrictedError('Export requires a Plus or Pro plan', upgradeUrl);
+  });
 }
 
 /** Allows Pro+active, Plus+active, and Trial users. Blocks Free and inactive. */

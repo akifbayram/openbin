@@ -107,7 +107,6 @@ const PLUS_FEATURES: Array<{ key: keyof PlanFeatures; label: string }> = [
   { key: 'maxBins', label: 'Up to 500 bins' },
   { key: 'ai', label: 'AI-powered features' },
   { key: 'customFields', label: 'Custom fields' },
-  { key: 'fullExport', label: 'Full data export' },
 ];
 
 const PRO_FEATURES: Array<{ key: keyof PlanFeatures; label: string }> = [

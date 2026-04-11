@@ -44,8 +44,15 @@ export function TermsPage() {
           <li>Not create accounts through automated means or under false pretenses.</li>
         </UL>
         <P>
-          We reserve the right to suspend or terminate accounts that violate these Terms or remain inactive for
-          an extended period.
+          We reserve the right to suspend or terminate accounts that violate these Terms.
+        </P>
+        <P>
+          An account is considered inactive if no login, API call, or other authenticated activity has occurred
+          for twelve (12) consecutive months. Before terminating an inactive account, we will send at least one
+          notice to the email address on file at least thirty (30) days before the scheduled termination date.
+          You may reactivate your account at any time during that notice period by logging in. If you do not
+          reactivate within the notice period, your account and its data will be deleted in accordance with our{' '}
+          <Link to="/privacy" className="text-[var(--accent)] hover:underline">Privacy Policy</Link>.
         </P>
       </Section>
 
@@ -62,7 +69,38 @@ export function TermsPage() {
         </UL>
       </Section>
 
-      <Section title="6. Your Data">
+      <Section title="6. Copyright Infringement (DMCA)">
+        <P>
+          We respect the intellectual property rights of others. If you believe content hosted on the Service
+          infringes your copyright, you may submit a takedown notice to our designated DMCA agent:
+        </P>
+        <P>
+          DMCA Agent: <a href="mailto:dmca@openbin.app" className="text-[var(--accent)] hover:underline">dmca@openbin.app</a>
+        </P>
+        <P>Your notice must include:</P>
+        <UL>
+          <li>Identification of the copyrighted work you claim is infringed.</li>
+          <li>Identification of the material you claim is infringing, with enough detail for us to locate it.</li>
+          <li>Your contact information (name, address, phone number, and email).</li>
+          <li>A statement that you have a good-faith belief the use is not authorized by the copyright owner, its agent, or the law.</li>
+          <li>A statement, under penalty of perjury, that the information in the notice is accurate and that you are the copyright owner or authorized to act on their behalf.</li>
+          <li>Your physical or electronic signature.</li>
+        </UL>
+        <P>
+          If your content is removed and you believe the takedown was in error, you may file a counter-notification
+          containing: identification of the removed material and its prior location, a statement under penalty of
+          perjury that the material was removed by mistake, your name and contact information, and consent to the
+          jurisdiction of federal court in your district. We will forward the counter-notification to the
+          original complainant, and if they do not file a court action within 10 business days, we may restore
+          the material.
+        </P>
+        <P>
+          We will terminate the accounts of users who are determined to be repeat infringers in appropriate
+          circumstances.
+        </P>
+      </Section>
+
+      <Section title="7. Your Data">
         <P>
           You retain full ownership of all content you upload to the Service, including bin data, items, photos,
           notes, and tags ("Your Data"). We do not claim any intellectual property rights over Your Data.
@@ -78,7 +116,7 @@ export function TermsPage() {
         </P>
       </Section>
 
-      <Section title="7. AI Features">
+      <Section title="8. AI Features">
         <P>
           The Service offers optional AI-powered features including photo recognition and content suggestions.
           These features may use third-party AI providers (such as OpenAI, Anthropic, or Google) to process
@@ -92,7 +130,7 @@ export function TermsPage() {
         </UL>
       </Section>
 
-      <Section title="8. Subscriptions & Billing">
+      <Section title="9. Subscriptions & Billing">
         <P>
           Certain features of the Service require a paid subscription. If you purchase a subscription:
         </P>
@@ -100,7 +138,6 @@ export function TermsPage() {
           <li>You agree to pay all applicable fees as described at the time of purchase.</li>
           <li>Subscriptions renew automatically unless canceled before the renewal date.</li>
           <li>You may cancel your subscription at any time through your account settings or billing portal.</li>
-          <li>Refunds are handled in accordance with our refund policy and applicable law.</li>
           <li>We may change pricing with at least 30 days' notice before your next billing cycle.</li>
         </UL>
         <P>
@@ -109,7 +146,39 @@ export function TermsPage() {
         </P>
       </Section>
 
-      <Section title="9. Self-Hosted Deployments">
+      <Section title="9a. Cancellation & Refund Policy">
+        <P>
+          <strong>Right of withdrawal (EU/EEA customers).</strong> If you are a consumer in the European Union
+          or European Economic Area, you have the right to withdraw from your subscription within 14 days of
+          purchase without giving any reason, in accordance with the EU Consumer Rights Directive
+          (2011/83/EU). To exercise this right, contact us at{' '}
+          <a href="mailto:legal@openbin.app" className="text-[var(--accent)] hover:underline">
+            legal@openbin.app
+          </a>{' '}
+          with a clear statement of your decision to withdraw. We will process your refund within 14 days
+          of receiving your withdrawal notice, using the same payment method used for the original purchase.
+        </P>
+        <P>
+          <strong>Cancellation.</strong> When you cancel a subscription, you retain access to paid features
+          until the end of your current billing period. No further charges will be made after cancellation.
+        </P>
+        <P>
+          <strong>Prorated refunds.</strong> If you cancel your subscription outside the 14-day withdrawal
+          period, you may request a prorated refund for any full, unused months remaining in your current
+          billing cycle. Partial months are not refunded. Refund requests must be submitted within 30 days
+          of cancellation by contacting{' '}
+          <a href="mailto:legal@openbin.app" className="text-[var(--accent)] hover:underline">
+            legal@openbin.app
+          </a>.
+        </P>
+        <P>
+          <strong>Exceptions.</strong> Refunds are not available where the Service was fully consumed or where
+          prohibited by applicable law. Nothing in this section limits any refund rights you may have under
+          mandatory consumer protection laws in your jurisdiction.
+        </P>
+      </Section>
+
+      <Section title="10. Self-Hosted Deployments">
         <P>
           The {appName} server software is available under the AGPL-3.0 license. If you self-host the Service,
           these Terms apply only to your use of our hosted cloud services, customer support, and any
@@ -117,7 +186,7 @@ export function TermsPage() {
         </P>
       </Section>
 
-      <Section title="10. Intellectual Property">
+      <Section title="11. Intellectual Property">
         <P>
           The Service, including its design, code (subject to the AGPL-3.0 license), documentation, and branding,
           is owned by {appName} and its contributors. Nothing in these Terms grants you rights to use our
@@ -125,7 +194,7 @@ export function TermsPage() {
         </P>
       </Section>
 
-      <Section title="11. Privacy">
+      <Section title="12. Privacy">
         <P>
           Your use of the Service is also governed by our{' '}
           <Link to="/privacy" className="text-[var(--accent)] hover:underline">Privacy Policy</Link>,
@@ -133,7 +202,7 @@ export function TermsPage() {
         </P>
       </Section>
 
-      <Section title="12. Service Availability">
+      <Section title="13. Service Availability">
         <P>
           We strive to maintain high availability but do not guarantee uninterrupted access. The Service may
           be temporarily unavailable due to maintenance, updates, or circumstances beyond our control. We will
@@ -141,7 +210,7 @@ export function TermsPage() {
         </P>
       </Section>
 
-      <Section title="13. Termination">
+      <Section title="14. Termination">
         <P>
           You may delete your account at any time from your profile settings. We may suspend or terminate your
           access if you violate these Terms or if we are required to do so by law. Upon termination:
@@ -149,11 +218,16 @@ export function TermsPage() {
         <UL>
           <li>Your right to access the Service ceases immediately.</li>
           <li>We will delete your account data in accordance with our retention policy.</li>
-          <li>Provisions that by their nature should survive termination will remain in effect.</li>
+          <li>
+            The following sections will survive termination: Section 7 (Your Data, limited to ownership
+            and export rights), Section 11 (Intellectual Property), Section 15 (Disclaimers), Section 16
+            (Limitation of Liability), Section 17 (Indemnification), Section 19 (Governing Law), and this
+            Section 14 (Termination).
+          </li>
         </UL>
       </Section>
 
-      <Section title="14. Disclaimers">
+      <Section title="15. Disclaimers">
         <P>
           THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR
           IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
@@ -162,7 +236,7 @@ export function TermsPage() {
         </P>
       </Section>
 
-      <Section title="15. Limitation of Liability">
+      <Section title="16. Limitation of Liability">
         <P>
           TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL {appName.toUpperCase()}, ITS AFFILIATES,
           OR CONTRIBUTORS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES,
@@ -175,7 +249,7 @@ export function TermsPage() {
         </P>
       </Section>
 
-      <Section title="16. Indemnification">
+      <Section title="17. Indemnification">
         <P>
           You agree to indemnify and hold harmless {appName} and its contributors from any claims, damages,
           losses, or expenses (including reasonable legal fees) arising from your use of the Service, your
@@ -183,7 +257,7 @@ export function TermsPage() {
         </P>
       </Section>
 
-      <Section title="17. Changes to Terms">
+      <Section title="18. Changes to Terms">
         <P>
           We may modify these Terms at any time. Material changes will be communicated via email or a
           prominent notice within the Service at least 30 days before taking effect. Your continued use of the
@@ -191,7 +265,7 @@ export function TermsPage() {
         </P>
       </Section>
 
-      <Section title="18. Governing Law">
+      <Section title="19. Governing Law">
         <P>
           These Terms are governed by the laws of the State of Delaware, United States, without regard to
           conflict of law principles. Any disputes arising from these Terms shall be resolved in the state
@@ -199,7 +273,7 @@ export function TermsPage() {
         </P>
       </Section>
 
-      <Section title="19. Contact">
+      <Section title="20. Contact">
         <P>
           If you have questions about these Terms, please contact us at{' '}
           <a href="mailto:legal@openbin.app" className="text-[var(--accent)] hover:underline">

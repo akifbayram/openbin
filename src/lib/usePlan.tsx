@@ -56,7 +56,7 @@ const LOCKED_FALLBACK: PlanInfo = {
     ai: false,
     apiKeys: false,
     customFields: false,
-    fullExport: false,
+    fullExport: true,
     reorganize: false,
     binSharing: false,
     maxBins: 50,

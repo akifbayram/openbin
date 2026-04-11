@@ -69,7 +69,7 @@ const FREE_PLAN: PlanInfo = {
     ai: false,
     apiKeys: false,
     customFields: false,
-    fullExport: false,
+    fullExport: true,
     reorganize: false,
     binSharing: false,
     maxBins: 50,
@@ -238,7 +238,7 @@ describe('usePlan', () => {
     expect(result.current.isGated('ai')).toBe(true);
     expect(result.current.isGated('apiKeys')).toBe(true);
     expect(result.current.isGated('customFields')).toBe(true);
-    expect(result.current.isGated('fullExport')).toBe(true);
+    expect(result.current.isGated('fullExport')).toBe(false);
   });
 
   it('isGated returns false for numeric limit features (not boolean)', async () => {
