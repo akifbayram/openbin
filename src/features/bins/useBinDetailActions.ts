@@ -7,8 +7,10 @@ import { useLocationList } from '@/features/locations/useLocations';
 import { usePhotos } from '@/features/photos/usePhotos';
 import { pinBin, unpinBin } from '@/features/pins/usePins';
 import { useAiEnabled } from '@/lib/aiToggle';
+import { isRecordingSupported } from '@/lib/audioRecorder';
 import { useAuth } from '@/lib/auth';
 import { useTerminology } from '@/lib/terminology';
+import { useDictation } from '@/lib/useDictation';
 import { usePermissions } from '@/lib/usePermissions';
 import type { AiSuggestions, Bin } from '@/types';
 import { addBin, deleteBin, moveBin, restoreBin, updateBin } from './useBins';
@@ -42,6 +44,15 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     aiConfigured: aiEnabled && !!aiSettings,
     onNavigateAiSetup: () => setAiSetupOpen(true),
   });
+
+  const dictation = useDictation({
+    binId: id,
+    binName: bin?.name ?? '',
+    existingItems: bin?.items.map((i) => i.name) ?? [],
+    locationId: activeLocationId ?? undefined,
+  });
+
+  const canTranscribe = aiEnabled && !!aiSettings && aiSettings.provider !== 'anthropic' && isRecordingSupported();
 
   async function handleDelete() {
     if (!id || !bin) return;
@@ -177,6 +188,8 @@ export function useBinDetailActions(bin: Bin | null | undefined, id: string | un
     photos,
     otherLocations,
     quickAdd,
+    dictation,
+    canTranscribe,
     // Flags
     canEdit,
     canDelete,

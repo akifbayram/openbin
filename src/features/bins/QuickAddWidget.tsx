@@ -5,7 +5,9 @@ import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
+import type { useDictation } from '@/lib/useDictation';
 import { cn } from '@/lib/utils';
+import { DictationButton } from './DictationButton';
 import type { useQuickAdd } from './useQuickAdd';
 
 interface QuickAddWidgetProps {
@@ -13,6 +15,8 @@ interface QuickAddWidgetProps {
   aiEnabled: boolean;
   aiGated?: boolean;
   onUpgrade?: () => void;
+  dictation?: ReturnType<typeof useDictation>;
+  canTranscribe?: boolean;
 }
 
 const QUICK_ADD_LABELS: LabelThreshold[] = [
@@ -22,7 +26,7 @@ const QUICK_ADD_LABELS: LabelThreshold[] = [
   [75, 'Almost done...'],
 ];
 
-export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade }: QuickAddWidgetProps) {
+export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictation, canTranscribe }: QuickAddWidgetProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div data-tour="quick-add" className="mt-3 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)]">
@@ -69,7 +73,14 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade }: Quic
               </button>
             </Tooltip>
           )}
+          {canTranscribe && dictation && dictation.state === 'idle' && (
+            <DictationButton dictation={dictation} />
+          )}
         </div>
+      )}
+
+      {dictation && dictation.state !== 'idle' && (
+        <DictationButton dictation={dictation} />
       )}
 
       {(quickAdd.state === 'expanded' || quickAdd.state === 'processing') && (

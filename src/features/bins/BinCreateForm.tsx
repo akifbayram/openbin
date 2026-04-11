@@ -17,9 +17,11 @@ import { AreaPicker } from '@/features/areas/AreaPicker';
 import { useAreaList } from '@/features/areas/useAreas';
 import { getCapturedReturnTarget, hasCapturedPhotos, setCapturedReturnTarget, takeCapturedPhotos } from '@/features/capture/capturedPhotos';
 import { useAiEnabled } from '@/lib/aiToggle';
+import { isRecordingSupported } from '@/lib/audioRecorder';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { aiItemsToBinItems, binItemsToPayload } from '@/lib/itemQuantities';
 import { useTerminology } from '@/lib/terminology';
+import { useDictation } from '@/lib/useDictation';
 import { cn, focusRing, plural } from '@/lib/utils';
 import type { AiSuggestions, BinItem, BinVisibility } from '@/types';
 import { AiBadge } from './AiBadge';
@@ -205,6 +207,8 @@ export function BinCreateForm({
 
   // Completion flash: hold progress bar at 100% briefly, then apply AI result
   const [analyzeComplete, setAnalyzeComplete] = useState(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- applyPendingAiResult reads from refs, no stale closure risk
+  // biome-ignore lint/correctness/useExhaustiveDependencies: applyPendingAiResult reads from refs, no stale closure risk
   useEffect(() => {
     if (!analyzeComplete) return;
     const timer = setTimeout(() => {
@@ -212,7 +216,6 @@ export function BinCreateForm({
       applyPendingAiResult();
     }, 600);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- applyPendingAiResult reads from refs, no stale closure risk
   }, [analyzeComplete]);
 
   // Clear AI success banner when all photos are removed so the user can re-analyze with new photos
@@ -257,6 +260,15 @@ export function BinCreateForm({
     onNavigateAiSetup: handleAiSetupNeeded,
     onAdd: (newItems) => setItems([...items, ...newItems]),
   });
+
+  const dictation = useDictation({
+    binName: name,
+    existingItems: items.map((i) => i.name),
+    locationId: locationId ?? undefined,
+    onAdd: (newItems) => setItems([...items, ...newItems]),
+  });
+
+  const canTranscribe = aiReady && !!aiSettings?.provider && aiSettings.provider !== 'anthropic' && isRecordingSupported();
 
   function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -478,7 +490,7 @@ export function BinCreateForm({
           {/* Items */}
           <div key={aiFilledFields.has('items') ? `items-${aiFillCycle}` : 'items'} className={cn('space-y-2', aiFilledFields.has('items') && 'ai-field-fill')} style={aiFilledFields.has('items') ? { '--stagger': 1 } as React.CSSProperties : undefined}>
             <ItemList items={items} onItemsChange={setItems} hideWhenEmpty headerExtra={aiFilledFields.has('items') ? <AiBadge onUndo={() => handleUndoAiField('items')} /> : undefined} />
-            <QuickAddWidget quickAdd={quickAdd} aiEnabled={showAi} />
+            <QuickAddWidget quickAdd={quickAdd} aiEnabled={showAi} dictation={dictation} canTranscribe={canTranscribe} />
           </div>
 
           {/* More Options accordion with optional fields */}
@@ -586,7 +598,7 @@ export function BinCreateForm({
           {/* Items */}
           <div className="text-left">
             <ItemList items={items} onItemsChange={setItems} hideWhenEmpty />
-            <QuickAddWidget quickAdd={quickAdd} aiEnabled={showAi} />
+            <QuickAddWidget quickAdd={quickAdd} aiEnabled={showAi} dictation={dictation} canTranscribe={canTranscribe} />
           </div>
 
           {/* Area */}
