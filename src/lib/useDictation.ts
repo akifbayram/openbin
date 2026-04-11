@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
 import { addItemsToBin } from '@/features/bins/useBins';
@@ -41,6 +41,13 @@ export function useDictation(options: UseDictationOptions) {
     structure,
     clearStructured,
   } = useTextStructuring();
+
+  // Cleanup auto-advance timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    };
+  }, []);
 
   const advanceToStructuring = useCallback(
     (text: string) => {

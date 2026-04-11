@@ -15,7 +15,6 @@ import { AiSetupView } from './InlineAiSetup';
 import { InventoryQueryResult } from './InventoryQueryResult';
 import { PhotoBulkAdd } from './PhotoBulkAdd';
 import { useActionExecutor } from './useActionExecutor';
-import { useAiSettings } from './useAiSettings';
 import { useCommandInputState } from './useCommandInputState';
 
 interface CommandInputProps {
@@ -48,8 +47,7 @@ export function CommandInput({ open, onOpenChange, autoTriggerPhoto }: CommandIn
     scopeInfo,
   } = useCommandInputState(onOpenChange, selectedBinIds);
 
-  const { settings: aiSettingsForMic } = useAiSettings();
-  const canTranscribe = isAiReady && !!aiSettingsForMic && aiSettingsForMic.provider !== 'anthropic' && isRecordingSupported();
+  const canTranscribe = isAiReady && !!aiSettings && aiSettings.provider !== 'anthropic' && isRecordingSupported();
 
   const stateRef = useRef(state);
   stateRef.current = state;
