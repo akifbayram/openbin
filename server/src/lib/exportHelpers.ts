@@ -543,18 +543,21 @@ export async function importAreas(locationId: string, areas: ExportArea[], userI
   let count = 0;
   for (const area of areas) {
     if (!area.path) continue;
-    const creator = await resolveCreatedBy(area.createdBy, userId, tx);
+    const creator = await resolveCreatedBy(area.createdBy, locationId, userId, tx);
     await resolveArea(locationId, area.path, creator, tx);
     count++;
   }
   return count;
 }
 
-/** Resolve a createdBy user ID, falling back to the importing user if not found. */
-export async function resolveCreatedBy(createdBy: string | undefined, fallbackUserId: string, tx?: TxQueryFn): Promise<string> {
+/** Resolve a createdBy user ID, falling back to the importing user if not a location member. */
+export async function resolveCreatedBy(createdBy: string | undefined, locationId: string, fallbackUserId: string, tx?: TxQueryFn): Promise<string> {
   if (!createdBy) return fallbackUserId;
   const q = tx ?? query;
-  const result = await q<{ id: string }>('SELECT id FROM users WHERE id = $1', [createdBy]);
+  const result = await q<{ user_id: string }>(
+    'SELECT user_id FROM location_members WHERE location_id = $1 AND user_id = $2',
+    [locationId, createdBy],
+  );
   return result.rows.length > 0 ? createdBy : fallbackUserId;
 }
 
@@ -665,7 +668,7 @@ function isAllowedImageBuffer(buf: Buffer): boolean {
 }
 
 /** Import photos from base64 data into storage. */
-export async function importPhotos(binId: string, photos: ExportPhoto[], userId: string, tx?: TxQueryFn): Promise<{ imported: number; skipped: number }> {
+export async function importPhotos(binId: string, locationId: string, photos: ExportPhoto[], userId: string, tx?: TxQueryFn): Promise<{ imported: number; skipped: number }> {
   const q = tx ?? query;
   let imported = 0;
   let skipped = 0;
@@ -700,7 +703,7 @@ export async function importPhotos(binId: string, photos: ExportPhoto[], userId:
       fs.writeFileSync(fullPath, buffer);
     }
 
-    const resolvedPhotoCreator = await resolveCreatedBy(photo.createdBy, userId, tx);
+    const resolvedPhotoCreator = await resolveCreatedBy(photo.createdBy, locationId, userId, tx);
     await q(
       `INSERT INTO photos (id, bin_id, filename, mime_type, size, storage_path, created_by, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,

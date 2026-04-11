@@ -37,7 +37,7 @@ import {
   loadBinPhotosBase64,
   resolveArea,
 } from '../lib/exportHelpers.js';
-import { NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
+import { ForbiddenError, NotFoundError, PlanRestrictedError, ValidationError } from '../lib/httpErrors.js';
 import {
   buildDryRunPreview,
   type DryRunBin,
@@ -46,6 +46,8 @@ import {
 } from '../lib/importTransaction.js';
 import { safePath } from '../lib/pathSafety.js';
 import { getUserBinCount, getUserFeatures } from '../lib/planGate.js';
+import { importLimiter } from '../lib/rateLimiters.js';
+import { logRouteActivity } from '../lib/routeHelpers.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireLocationMember } from '../middleware/locationAccess.js';
 import { requireExportAccess } from '../middleware/requirePlan.js';
@@ -280,7 +282,7 @@ router.get('/locations/:id/export/zip', requireLocationMember(), requireExportAc
 }));
 
 // GET /api/locations/:id/export/csv — export bins as CSV (one row per item)
-router.get('/locations/:id/export/csv', requireLocationMember(), requireExportAccess(), asyncHandler(async (req, res) => {
+router.get('/locations/:id/export/csv', requireLocationMember(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
   await requireMemberOrAbove(locationId, req.user!.id, 'export location data');
 
@@ -335,7 +337,7 @@ router.get('/locations/:id/export/csv', requireLocationMember(), requireExportAc
 }));
 
 // POST /api/locations/:id/import — import bins + photos
-router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLocationMember(), asyncHandler(async (req, res) => {
+router.post('/locations/:id/import', importLimiter, express.json({ limit: '50mb' }), requireLocationMember(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
   await requireMemberOrAbove(locationId, req.user!.id, 'import JSON');
   const {
@@ -387,6 +389,11 @@ router.post('/locations/:id/import', express.json({ limit: '50mb' }), requireLoc
     members,
   });
 
+  if (importMode === 'replace') {
+    logRouteActivity(req, { locationId, action: 'replace_import', entityType: 'location', entityId: locationId, entityName: 'replace: all existing data cleared' });
+  }
+  logRouteActivity(req, { locationId, action: 'import', entityType: 'location', entityId: locationId, entityName: `${importMode}: ${result.binsImported} bins imported` });
+
   res.json(result);
 }));
 
@@ -396,7 +403,7 @@ const csvUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 }).single('file');
 
-router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asyncHandler(async (req, res) => {
+router.post('/locations/:id/import/csv', importLimiter, csvUpload, requireLocationMember(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
   const userId = req.user!.id;
 
@@ -556,6 +563,7 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
   }
 
   const now = new Date().toISOString();
+  const isAdmin = await isLocationAdminCheck(locationId, userId);
 
   const result = await withTransaction(async (tx) => {
     // Enforce plan bin limit before CSV import
@@ -570,6 +578,9 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
     }
 
     if (importMode === 'replace') {
+      if (!isAdmin) {
+        throw new ForbiddenError('Only admins can use replace mode');
+      }
       const existingPhotos = await tx<{ storage_path: string }>(
         'SELECT storage_path FROM photos WHERE bin_id IN (SELECT id FROM bins WHERE location_id = $1)',
         [locationId]
@@ -625,6 +636,11 @@ router.post('/locations/:id/import/csv', csvUpload, requireLocationMember(), asy
     return { binsImported, binsSkipped, itemsImported };
   });
 
+  if (importMode === 'replace') {
+    logRouteActivity(req, { locationId, action: 'replace_import', entityType: 'location', entityId: locationId, entityName: 'replace: all existing data cleared' });
+  }
+  logRouteActivity(req, { locationId, action: 'import', entityType: 'location', entityId: locationId, entityName: `${importMode}: ${result.binsImported} bins imported` });
+
   res.json(result);
 }));
 
@@ -634,7 +650,7 @@ const zipUpload = multer({
   limits: { fileSize: 25 * 1024 * 1024 },
 }).single('file');
 
-router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asyncHandler(async (req, res) => {
+router.post('/locations/:id/import/zip', importLimiter, zipUpload, requireLocationMember(), asyncHandler(async (req, res) => {
   const locationId = req.params.id;
   const userId = req.user!.id;
 
@@ -799,6 +815,11 @@ router.post('/locations/:id/import/zip', zipUpload, requireLocationMember(), asy
     savedViews: manifest.savedViews,
     members: manifest.members,
   });
+
+  if (importMode === 'replace') {
+    logRouteActivity(req, { locationId, action: 'replace_import', entityType: 'location', entityId: locationId, entityName: 'replace: all existing data cleared' });
+  }
+  logRouteActivity(req, { locationId, action: 'import', entityType: 'location', entityId: locationId, entityName: `${importMode}: ${result.binsImported} bins imported` });
 
   res.json(result);
 }));

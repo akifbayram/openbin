@@ -54,4 +54,12 @@ export const metricsLimiter: RequestHandler = isTest ? noop : rateLimit({
 });
 
 
+export const importLimiter: RequestHandler = isTest ? noop : rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'RATE_LIMITED', message: 'Too many import attempts, please try again later' },
+});
+
 export { aiRateLimiters } from './aiRateLimiter.js';

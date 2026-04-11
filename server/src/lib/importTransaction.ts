@@ -22,7 +22,7 @@ import {
   resolveCreatedBy,
   resolveCustomFieldDefs,
 } from './exportHelpers.js';
-import { PlanRestrictedError } from './httpErrors.js';
+import { ForbiddenError, PlanRestrictedError } from './httpErrors.js';
 import { getUserBinCount, getUserFeatures } from './planGate.js';
 
 // ---------------------------------------------------------------------------
@@ -175,8 +175,11 @@ export async function executeFullImportTransaction(params: FullImportParams): Pr
       }
     }
 
-    // 1. Replace-mode cleanup
+    // 1. Replace-mode cleanup (admin only)
     if (importMode === 'replace') {
+      if (!isAdmin) {
+        throw new ForbiddenError('Only admins can use replace mode');
+      }
       await replaceCleanup(locationId, tx);
     }
 
@@ -225,7 +228,7 @@ export async function executeFullImportTransaction(params: FullImportParams): Pr
         resolvedCustomFields = mapCustomFieldsToIds(resolvedCustomFields, fieldNameToId);
       }
 
-      const resolvedCreatedBy = await resolveCreatedBy(bin.createdBy, userId, tx);
+      const resolvedCreatedBy = await resolveCreatedBy(bin.createdBy, locationId, userId, tx);
       const binId = await insertBinWithShortCode(locationId, {
         name: bin.name,
         notes: bin.notes || '',
@@ -256,7 +259,7 @@ export async function executeFullImportTransaction(params: FullImportParams): Pr
       if (await importSingleBin(bin)) {
         const newBinId = oldToNewBinId.get(bin.id)!;
         if (bin.photos && Array.isArray(bin.photos)) {
-          const photoResult = await importPhotos(newBinId, bin.photos, userId, tx);
+          const photoResult = await importPhotos(newBinId, locationId, bin.photos, userId, tx);
           photosImported += photoResult.imported;
           photosSkipped += photoResult.skipped;
         }
@@ -273,7 +276,7 @@ export async function executeFullImportTransaction(params: FullImportParams): Pr
         if (await importSingleBin(bin, { deletedAt: bin.deletedAt })) {
           const newBinId = oldToNewBinId.get(bin.id)!;
           if (bin.photos && Array.isArray(bin.photos)) {
-            const photoResult = await importPhotos(newBinId, bin.photos, userId, tx);
+            const photoResult = await importPhotos(newBinId, locationId, bin.photos, userId, tx);
             photosImported += photoResult.imported;
             photosSkipped += photoResult.skipped;
           }

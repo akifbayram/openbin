@@ -400,8 +400,8 @@ describe('executeFullImportTransaction', () => {
     expect(row.default_join_role).toBe('viewer');
   });
 
-  it('does NOT apply location settings when not admin', async () => {
-    const result = await executeFullImportTransaction({
+  it('does NOT apply location settings when not admin (replace mode blocked)', async () => {
+    await expect(executeFullImportTransaction({
       locationId: LOCATION_ID,
       userId: USER_ID,
       isAdmin: false,
@@ -416,9 +416,7 @@ describe('executeFullImportTransaction', () => {
         termArea: 'X',
         defaultJoinRole: 'viewer',
       },
-    });
-
-    expect(result.settingsApplied).toBe(false);
+    })).rejects.toThrow('Only admins can use replace mode');
   });
 
   it('does NOT apply location settings in merge mode', async () => {
@@ -457,7 +455,7 @@ describe('executeFullImportTransaction', () => {
       await executeFullImportTransaction({
         locationId: LOCATION_ID,
         userId: USER_ID,
-        isAdmin: true,
+          isAdmin: true,
         importMode: 'replace',
         bins: [badBin],
       });
