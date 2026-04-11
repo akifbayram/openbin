@@ -469,7 +469,7 @@ router.post('/transcribe', memoryAudioUpload.single('audio'), ...aiRateLimiters,
     throw new ValidationError('Anthropic does not support audio transcription. Switch to OpenAI or Gemini for dictation.');
   }
 
-  const result = await transcribeAudio(taskConfig, file.buffer, file.mimetype, settings);
+  const result = await transcribeAudio(taskConfig, file.buffer, file.mimetype);
   res.json(result);
 }));
 

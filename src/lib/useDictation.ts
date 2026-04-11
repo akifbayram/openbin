@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { mapAiError } from '@/features/ai/aiErrors';
 import { useTextStructuring } from '@/features/ai/useTextStructuring';
 import { addItemsToBin } from '@/features/bins/useBins';
 import { apiFetch } from '@/lib/api';
 import type { RecordingHandle } from '@/lib/audioRecorder';
-import { isRecordingSupported, startRecording } from '@/lib/audioRecorder';
+import { startRecording } from '@/lib/audioRecorder';
 import { Events, notify } from '@/lib/eventBus';
 import { clientItemId } from '@/lib/itemQuantities';
 import type { AiSuggestedItem, BinItem } from '@/types';
@@ -35,38 +35,36 @@ export function useDictation(options: UseDictationOptions) {
   const { binId, binName, existingItems, locationId, onAdd } = options;
   const { showToast } = useToast();
 
+  // Stabilize existingItems to avoid rebuilding the callback chain on every render.
+  // The key is a content-based string so the memo only updates when items actually change.
+  const existingItemsKey = existingItems.join('\0');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional content-based stabilization
+  const stableExistingItems = useMemo(() => existingItems, [existingItemsKey]);
+
   const [state, setState] = useState<DictationState>('idle');
   const [transcript, setTranscript] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
 
   const recordingRef = useRef<RecordingHandle | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelledRef = useRef(false);
   const startRef = useRef<() => void>(() => {});
 
   const {
     structuredItems,
-    isStructuring,
-    error: structureError,
     structure,
     clearStructured,
   } = useTextStructuring();
 
   // Tick elapsed time during recording
+  const isRecording = state === 'recording';
   useEffect(() => {
-    if (state === 'recording') {
-      setDuration(0);
-      timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [state]);
+    if (!isRecording) return;
+    setDuration(0);
+    const id = setInterval(() => setDuration((d) => d + 1), 1000);
+    return () => clearInterval(id);
+  }, [isRecording]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -97,7 +95,7 @@ export function useDictation(options: UseDictationOptions) {
       structure({
         text,
         mode: 'items',
-        context: { binName, existingItems },
+        context: { binName, existingItems: stableExistingItems },
         locationId,
       }).then((items) => {
         if (cancelledRef.current) return;
@@ -115,7 +113,7 @@ export function useDictation(options: UseDictationOptions) {
         setTranscript(null);
       });
     },
-    [structure, binName, existingItems, locationId, showToast, clearStructured],
+    [structure, binName, stableExistingItems, locationId, showToast, clearStructured],
   );
 
   const handleStopInternal = useCallback(async () => {
@@ -133,7 +131,9 @@ export function useDictation(options: UseDictationOptions) {
       }
 
       const formData = new FormData();
-      const ext = blob.type.includes('mp4') ? 'mp4' : blob.type.includes('ogg') ? 'ogg' : 'webm';
+      let ext = 'webm';
+      if (blob.type.includes('mp4')) ext = 'mp4';
+      else if (blob.type.includes('ogg')) ext = 'ogg';
       formData.append('audio', blob, `recording.${ext}`);
       const result = await apiFetch<TranscribeResponse>('/api/ai/transcribe', {
         method: 'POST',
@@ -186,10 +186,13 @@ export function useDictation(options: UseDictationOptions) {
       recordingRef.current = handle;
       setState('recording');
     } catch (err) {
-      const message =
-        err instanceof DOMException && err.name === 'NotAllowedError'
-          ? 'Microphone access is required for dictation'
-          : 'Could not start recording';
+      let message = 'Could not start recording';
+      if (err instanceof DOMException) {
+        if (err.name === 'NotAllowedError') message = 'Microphone access was denied by the browser';
+        else if (err.name === 'NotFoundError') message = 'No microphone found on this device';
+        else if (err.name === 'NotReadableError') message = 'Microphone is in use by another application';
+        else message = `Recording error: ${err.name}`;
+      }
       showToast({ message, variant: 'error' });
     }
   }, [state, clearStructured, showToast, handleStopInternal]);
@@ -254,9 +257,6 @@ export function useDictation(options: UseDictationOptions) {
     error,
     duration,
     structuredItems,
-    isStructuring,
-    structureError,
-    isSupported: isRecordingSupported(),
     start,
     stop,
     cancel,

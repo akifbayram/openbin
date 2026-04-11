@@ -86,15 +86,15 @@ async function transcribeGemini(
       model: provider(config.model),
       messages: [
         {
-          role: 'user' as const,
+          role: 'user',
           content: [
             {
-              type: 'file' as const,
+              type: 'file',
               data: audioBuffer,
               mediaType: mimeType,
             },
             {
-              type: 'text' as const,
+              type: 'text',
               text: 'Transcribe this audio exactly as spoken. Return only the transcribed text, nothing else.',
             },
           ],
