@@ -1,10 +1,11 @@
 import { useCallback, useMemo } from 'react';
+import type { ConversationTurnPayload } from './conversationTurns';
 import { useAiStream } from './useAiStream';
 import type { CommandAction, CommandResult } from './useCommand';
 import type { QueryMatch, QueryResult } from './useInventoryQuery';
 
 /** Union of command and query responses from the unified /ask endpoint. */
-type AskResult = CommandResult | QueryResult | (CommandResult & QueryResult);
+export type AskResult = CommandResult | QueryResult | (CommandResult & QueryResult);
 
 export type AskClassified =
   | { kind: 'command'; actions: CommandAction[]; interpretation: string }
@@ -15,7 +16,7 @@ function isValidAction(a: unknown): a is CommandAction {
 }
 
 /** Classify unified AI response as command or query based on which fields are present. */
-function classifyResult(result: AskResult): AskClassified {
+export function classifyResult(result: AskResult): AskClassified {
   const asCmd = result as Partial<CommandResult>;
   const asQuery = result as Partial<QueryResult>;
 
@@ -57,7 +58,7 @@ export function useStreamingAsk() {
   );
 
   const ask = useCallback(
-    (options: { text: string; locationId: string; binIds?: string[] }) => stream(options),
+    (options: { text: string; locationId: string; binIds?: string[]; history?: ConversationTurnPayload[] }) => stream(options),
     [stream]
   );
 
