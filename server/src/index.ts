@@ -32,6 +32,7 @@ import binItemsRoutes from './routes/binItems.js';
 import binPinsRoutes from './routes/binPins.js';
 import { binSharesRoutes } from './routes/binShares.js';
 import binsRoutes from './routes/bins.js';
+import binUsageRoutes from './routes/binUsage.js';
 import customFieldsRoutes from './routes/customFields.js';
 import exportRoutes from './routes/export.js';
 import itemCheckoutsRoutes, { locationCheckoutsRouter as locationCheckoutsRoutes } from './routes/itemCheckouts.js';
@@ -146,6 +147,7 @@ export function createApp(opts?: { mountEeRoutes?: (app: express.Express) => voi
   app.use('/api/bins', binPinsRoutes);
   app.use('/api/bins', binSharesRoutes);
   app.use('/api/bins', binsRoutes);
+  app.use('/api/bins', binUsageRoutes);  // new — mounts GET/POST /:id/usage
   app.use('/api/bins', binItemsRoutes);
   app.use('/api/bins', itemCheckoutsRoutes);
   app.use('/api/photos', photosRoutes);
