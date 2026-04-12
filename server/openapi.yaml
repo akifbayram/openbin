@@ -3735,6 +3735,94 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /bins/{id}/usage:
+    get:
+      summary: Get usage history for a bin
+      tags: [Bins]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Usage rows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date: { type: string, format: date }
+                        count: { type: integer }
+                  count: { type: integer }
+        '404': { description: Bin not found }
+    post:
+      summary: Record a usage dot for a bin
+      tags: [Bins]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [trigger]
+              properties:
+                trigger:
+                  type: string
+                  enum: [scan, manual]
+      responses:
+        '201':
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  recorded: { type: boolean }
+        '200':
+          description: Trigger disabled in user preferences; nothing recorded
+        '404': { description: Bin not found }
+        '422': { description: Invalid trigger value }
+
+  /locations/{id}/usage:
+    get:
+      summary: Get aggregate usage for a location
+      tags: [Locations]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Aggregated daily rows across all bins in the location
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date: { type: string, format: date }
+                        binCount: { type: integer }
+                        totalCount: { type: integer }
+                  count: { type: integer }
+        '403': { description: Not a member of this location }
+
   # ════════════════════════════════════════════════════════
   # Photos
   # ════════════════════════════════════════════════════════

@@ -240,7 +240,12 @@ router.get('/:id', asyncHandler(async (req, res) => {
     throw new NotFoundError('Bin not found');
   }
 
-  // Fire-and-forget: record a usage dot if the user has view tracking enabled
+  // Fire-and-forget: record a usage dot if the user has view tracking enabled.
+  // Note: when both scan and view prefs are enabled, a single QR scan can
+  // increment `count` multiple times (ScanDialog's validate fetch, the scan
+  // POST, and the detail page's mount fetch each trigger a write). This
+  // does not affect the dot's existence (one dot per UTC day) but does inflate
+  // the per-day `count` field. The default config (view=false) avoids this.
   getUserUsageTrackingPrefs(req.user!.id)
     .then((prefs) => {
       if (prefs.view) recordBinUsage(id, req.user!.id);

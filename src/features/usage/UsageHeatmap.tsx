@@ -13,7 +13,7 @@ interface UsageHeatmapProps {
   onDayClick?: (date: string) => void;
 }
 
-const OPACITY_BY_STEP = [0, 0.22, 0.48, 0.72, 1];
+const OPACITY_BY_STEP = [0, 0.22, 0.48, 0.72];
 
 function asCount(entry: AnyUsageDay, mode: 'per-bin' | 'aggregate'): number {
   if (mode === 'aggregate') return (entry as LocationUsageDay).binCount;

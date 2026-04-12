@@ -397,6 +397,87 @@ async function seedScanHistory(tx: TxQueryFn, userIdMap: Map<DemoMember, string>
   }
 }
 
+type UsageProfile = 'hot' | 'warm' | 'historical' | 'cold' | 'silent';
+
+function pickProfile(binName: string): UsageProfile {
+  const hash = (binName.charCodeAt(0) + (binName.charCodeAt(1) || 0)) % 10;
+  if (hash < 2) return 'hot';        // ~20%
+  if (hash < 5) return 'warm';       // ~30%
+  if (hash < 7) return 'historical'; // ~20%
+  if (hash < 9) return 'cold';       // ~20%
+  return 'silent';                   // ~10%
+}
+
+function generateDatesForProfile(
+  profile: UsageProfile,
+  binName: string,
+): Array<{ date: string; count: number }> {
+  const hash = binName.charCodeAt(0) + (binName.charCodeAt(1) || 0);
+  const now = Date.now();
+  const utcDate = (daysAgo: number): string =>
+    new Date(now - daysAgo * 86_400_000).toISOString().slice(0, 10);
+
+  const results: Array<{ date: string; count: number }> = [];
+
+  if (profile === 'hot') {
+    // Last 60 days, ~4 days/week
+    for (let i = 0; i < 60; i++) {
+      if ((hash + i) % 7 < 4) {
+        const count = ((hash + i) % 2) + 1; // 1 or 2
+        results.push({ date: utcDate(i), count });
+      }
+    }
+  } else if (profile === 'warm') {
+    // Last 180 days, ~1 day/week
+    for (let i = 0; i < 180; i++) {
+      if ((hash + i) % 7 === 0) {
+        results.push({ date: utcDate(i), count: 1 });
+      }
+    }
+  } else if (profile === 'historical') {
+    // 300–480 days ago, ~3 of 10 days
+    for (let i = 300; i < 480; i++) {
+      if ((hash + i) % 10 < 3) {
+        const count = ((hash + i) % 2) + 1; // 1 or 2
+        results.push({ date: utcDate(i), count });
+      }
+    }
+  } else if (profile === 'cold') {
+    // Just 3 scattered hits far in the past
+    for (const daysAgo of [400, 550, 730]) {
+      results.push({ date: utcDate(daysAgo), count: 1 });
+    }
+  }
+  // 'silent' returns []
+  return results;
+}
+
+async function seedBinUsageDays(
+  tx: TxQueryFn,
+  binIdMap: Map<string, string>,
+  userIdMap: Map<DemoMember, string>,
+): Promise<void> {
+  const userIds = [...userIdMap.values()];
+  let userIdx = 0;
+
+  for (const [binName, binId] of binIdMap.entries()) {
+    const profile = pickProfile(binName);
+    if (profile === 'silent') continue;
+
+    const dates = generateDatesForProfile(profile, binName);
+    for (const { date, count } of dates) {
+      const recordedAt = `${date}T00:00:00.000Z`;
+      const userId = userIds[userIdx % userIds.length];
+      userIdx++;
+      await tx(
+        `INSERT INTO bin_usage_days (bin_id, date, count, last_user_id, last_recorded_at)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [binId, date, count, userId, recordedAt],
+      );
+    }
+  }
+}
+
 async function seedOnboardingPrefs(tx: TxQueryFn, userIdMap: Map<DemoMember, string>): Promise<void> {
   for (const [member, id] of userIdMap.entries()) {
     const prefs = member === 'demo'
@@ -579,6 +660,7 @@ export async function seedDemoData(): Promise<void> {
       await seedPins(tx, userId, userIdMap.get('pat')!, binIdMap, pinnedNames, pinnedNamesPat);
       await seedSavedViews(tx, userId, userIdMap.get('sarah')!, areaMap);
       await seedScanHistory(tx, userIdMap, binIdMap, scannedNames);
+      await seedBinUsageDays(tx, binIdMap, userIdMap);
       await seedOnboardingPrefs(tx, userIdMap);
       await seedCustomFields(tx, homeLocationId, binIdMap, cfDefs, cfValues);
       await seedCheckouts(tx, homeLocationId, storageLocationId, userIdMap, binIdMap, bins, checkouts, returnedCheckoutsList);

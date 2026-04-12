@@ -280,7 +280,7 @@ export function BinFilterDialog({
                 onChange={(e) =>
                   setDraft((d) => ({ ...d, unusedSince: e.target.value || undefined }))
                 }
-                className="rounded-[var(--radius-xs)] bg-[var(--bg-input)] px-2.5 py-1 text-[13px] text-[var(--text-primary)]"
+                className="rounded-[var(--radius-xs)] bg-[var(--bg-input)] border border-[var(--border-flat)] px-2.5 py-1 text-[13px] text-[var(--text-primary)]"
               />
               {draft.unusedSince && (
                 <button

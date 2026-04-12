@@ -32,7 +32,7 @@ Bin-centric inventory with intelligence. Multi-user web app for organizing physi
 - **Icons**: `lucide-react` — import named icons (e.g. `import { Plus } from 'lucide-react'`).
 - **Responsive**: mobile-first. Breakpoint `lg` (1024px).
 - **Server error handling**: Routes use `throw new ValidationError(...)` etc. from `server/src/lib/httpErrors.ts`, wrapped in `asyncHandler()` to forward to the global error handler.
-- **Event bus**: `notify()` and `useRefreshOn()` from `lib/eventBus.ts`. 9 event types: `BINS`, `LOCATIONS`, `PHOTOS`, `PINS`, `AREAS`, `TAG_COLORS`, `SCAN_HISTORY`, `CUSTOM_FIELDS`, `PLAN`.
+- **Event bus**: `notify()` and `useRefreshOn()` from `lib/eventBus.ts`. 11 event types: `BINS`, `LOCATIONS`, `PHOTOS`, `PINS`, `AREAS`, `TAG_COLORS`, `SCAN_HISTORY`, `CUSTOM_FIELDS`, `PLAN`, `CHECKOUTS`, `BIN_USAGE`.
 
 ## API Documentation
 

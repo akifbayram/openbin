@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { useUserPreferences } from '@/lib/userPreferences';
@@ -42,7 +43,7 @@ export function BinUsageSection({ binId }: BinUsageSectionProps) {
             ) : usage.length === 0 ? (
               <div className="text-[13px] text-[var(--text-tertiary)]">
                 No activity recorded yet. Update triggers in{' '}
-                <a href="/settings/preferences" className="underline text-[var(--accent)]">preferences</a>.
+                <Link to="/settings/preferences" className="underline text-[var(--accent)]">preferences</Link>.
               </div>
             ) : (
               <>
