@@ -44,6 +44,7 @@ export interface BinListFilterParams {
   hasItems?: string;
   hasNotes?: string;
   needsOrganizing?: string;
+  unusedSince?: string;  // NEW — ISO 'YYYY-MM-DD'
   sort?: string;
   sortDir?: string;
 }
@@ -151,6 +152,17 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
     whereClauses.push(`${emptyTags} AND b.area_id IS NULL AND NOT EXISTS (SELECT 1 FROM bin_items bi WHERE bi.bin_id = b.id)`);
   }
 
+  // Unused-since filter: match bins whose most recent usage row is before the cutoff,
+  // OR bins that have no usage row at all.
+  if (filters.unusedSince && /^\d{4}-\d{2}-\d{2}$/.test(filters.unusedSince)) {
+    const p = `$${paramIdx}`;
+    whereClauses.push(
+      `((SELECT MAX(date) FROM bin_usage_days WHERE bin_id = b.id) IS NULL OR (SELECT MAX(date) FROM bin_usage_days WHERE bin_id = b.id) < ${p})`,
+    );
+    params.push(filters.unusedSince);
+    paramIdx++;
+  }
+
   const validSorts: Record<string, string> = {
     name: `b.name ${d.nocase()}`,
     created_at: 'b.created_at',
@@ -162,6 +174,10 @@ export function buildBinListQuery(filters: BinListFilterParams): BinListQuery {
   let orderClause: string;
   if (sortKey === 'area') {
     orderClause = `CASE WHEN a.name IS NULL OR a.name = '' THEN 1 ELSE 0 END ASC, a.name ${d.nocase()} ${dir}, b.name ${d.nocase()} ASC`;
+  } else if (sortKey === 'last_used') {
+    // Subquery-based to keep BIN_SELECT_COLS untouched; NULLs (never-used) always sort to the tail.
+    const lastUsedExpr = '(SELECT MAX(date) FROM bin_usage_days WHERE bin_id = b.id)';
+    orderClause = `CASE WHEN ${lastUsedExpr} IS NULL THEN 1 ELSE 0 END ASC, ${lastUsedExpr} ${dir}, b.name ${d.nocase()} ASC`;
   } else {
     const orderBy = validSorts[sortKey] || 'b.updated_at';
     orderClause = `${orderBy} ${dir}`;
