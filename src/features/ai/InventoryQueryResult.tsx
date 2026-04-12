@@ -69,30 +69,27 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
       )}
 
       {!isStreaming && onFollowUp && (
-        isTranscribing ? (
-          <div className="rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-elevated)] px-3 py-2.5">
-            <TranscriptionMicButton transcription={transcription} />
-          </div>
-        ) : (
-          <div className="relative">
-            <Textarea
-              value={followUp}
-              onChange={(e) => setFollowUp(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && followUp.trim()) {
-                  e.preventDefault();
-                  onFollowUp(followUp.trim());
-                  setFollowUp('');
-                }
-              }}
-              placeholder="Ask a follow-up..."
-              rows={1}
-              className={cn("min-h-[44px] bg-[var(--bg-elevated)]", transcription ? "pr-[4.5rem]" : "pr-12")}
-            />
-            <div className="absolute right-2.5 bottom-2.5 flex items-center gap-0.5">
-              {transcription && (
-                <TranscriptionMicButton transcription={transcription} />
-              )}
+        <div className="relative">
+          <Textarea
+            value={followUp}
+            onChange={(e) => setFollowUp(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && followUp.trim()) {
+                e.preventDefault();
+                onFollowUp(followUp.trim());
+                setFollowUp('');
+              }
+            }}
+            placeholder="Ask a follow-up..."
+            rows={1}
+            disabled={!!isTranscribing}
+            className={cn("min-h-[44px] bg-[var(--bg-elevated)]", transcription ? "pr-[4.5rem]" : "pr-12")}
+          />
+          <div className="absolute right-2.5 bottom-2.5 flex items-center gap-0.5">
+            {transcription && (
+              <TranscriptionMicButton transcription={transcription} />
+            )}
+            {!isTranscribing && (
               <button
                 type="button"
                 onClick={() => { if (followUp.trim()) { onFollowUp(followUp.trim()); setFollowUp(''); } }}
@@ -107,9 +104,9 @@ export function InventoryQueryResult({ queryResult, streamingText, isStreaming, 
               >
                 <Sparkles className="h-5 w-5" />
               </button>
-            </div>
+            )}
           </div>
-        )
+        </div>
       )}
 
       {!isStreaming && (

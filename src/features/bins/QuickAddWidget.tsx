@@ -28,9 +28,10 @@ const QUICK_ADD_LABELS: LabelThreshold[] = [
 
 export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictation, canTranscribe }: QuickAddWidgetProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const isRecording = dictation?.state === 'recording';
   return (
     <div data-tour="quick-add" className="mt-3 rounded-[var(--radius-sm)] border border-[var(--border-flat)] bg-[var(--bg-input)] p-2.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--accent)]">
-      {quickAdd.state === 'input' && (
+      {quickAdd.state === 'input' && (!dictation || dictation.state === 'idle' || isRecording) && (
         <div className="row-tight">
           <Input
             ref={inputRef}
@@ -44,9 +45,10 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
             }}
             onPaste={quickAdd.handlePaste}
             placeholder="Add item..."
+            disabled={isRecording}
             className="h-7 border-0 bg-transparent px-0.5 py-0 text-base focus-visible:ring-0 focus-visible:shadow-none"
           />
-          {quickAdd.value.trim() && (
+          {!isRecording && quickAdd.value.trim() && (
             <Tooltip content="Add item">
               <button
                 type="button"
@@ -61,7 +63,7 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
               </button>
             </Tooltip>
           )}
-          {(aiEnabled || aiGated) && (
+          {!isRecording && (aiEnabled || aiGated) && (
             <Tooltip content="Add with AI">
               <button
                 type="button"
@@ -73,13 +75,13 @@ export function QuickAddWidget({ quickAdd, aiEnabled, aiGated, onUpgrade, dictat
               </button>
             </Tooltip>
           )}
-          {canTranscribe && dictation && dictation.state === 'idle' && (
+          {canTranscribe && dictation && (dictation.state === 'idle' || isRecording) && (
             <DictationButton dictation={dictation} />
           )}
         </div>
       )}
 
-      {dictation && dictation.state !== 'idle' && (
+      {dictation && dictation.state !== 'idle' && !isRecording && (
         <DictationButton dictation={dictation} />
       )}
 

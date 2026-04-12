@@ -5,7 +5,7 @@ import { AiProgressBar } from '@/components/ui/ai-progress-bar';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { useDictation } from '@/lib/useDictation';
-import { cn } from '@/lib/utils';
+import { cn, formatElapsed } from '@/lib/utils';
 
 const TRANSCRIBE_LABELS: LabelThreshold[] = [
   [0, 'Sending audio...'],
@@ -70,10 +70,7 @@ export function DictationButton({ dictation }: DictationButtonProps) {
     setChecked(new Map());
   }
 
-  // Format seconds as M:SS
-  const minutes = Math.floor(duration / 60);
-  const seconds = duration % 60;
-  const elapsed = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const elapsed = formatElapsed(duration);
 
   if (state === 'idle') {
     return (
@@ -92,23 +89,19 @@ export function DictationButton({ dictation }: DictationButtonProps) {
 
   if (state === 'recording') {
     return (
-      <output className="flex items-center gap-3 w-full" aria-live="polite" aria-label="Recording audio">
-        <div className="relative flex items-center justify-center size-5">
-          <span className="absolute size-5 rounded-full bg-[var(--destructive)] opacity-30 animate-ping" />
-          <span className="size-2.5 rounded-full bg-[var(--destructive)]" />
-        </div>
-        <span className="text-sm font-medium text-[var(--destructive)]">Recording</span>
-        <span className="text-sm text-[var(--text-tertiary)] tabular-nums">{elapsed}</span>
-        <div className="flex-1" />
-        <button
-          type="button"
-          onClick={stop}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-[13px] font-medium text-[var(--destructive)] bg-[var(--destructive)]/10 border border-[var(--destructive)]/25 hover:bg-[var(--destructive)]/15 transition-colors"
-          aria-label="Stop recording"
-        >
-          <Square className="h-3 w-3 fill-current" />
-          Stop
-        </button>
+      <output className="shrink-0 flex items-center gap-1.5" aria-label={`Recording: ${elapsed}`}>
+        <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">{elapsed}</span>
+        <Tooltip content="Stop recording">
+          <button
+            type="button"
+            onClick={stop}
+            className="relative flex items-center justify-center size-9 rounded-full bg-[var(--destructive)] text-[var(--text-on-accent)] hover:bg-[var(--destructive-hover)] active:bg-[var(--destructive-active)] transition-colors"
+            aria-label="Stop recording"
+          >
+            <span className="absolute inset-[-3px] rounded-full bg-[var(--destructive)]/25 animate-pulse motion-reduce:animate-none" />
+            <Square className="h-3.5 w-3.5 fill-current" />
+          </button>
+        </Tooltip>
       </output>
     );
   }
