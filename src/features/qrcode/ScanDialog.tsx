@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { BinCreateDialog } from '@/features/bins/BinCreateDialog';
 import { lookupBinByCode } from '@/features/bins/useBins';
 import { recordScan } from '@/features/dashboard/scanHistory';
+import { recordBinUsage } from '@/features/usage/recordBinUsage';
 import { ApiError, apiFetch } from '@/lib/api';
 import { BIN_URL_REGEX } from '@/lib/qr';
 import { useTerminology } from '@/lib/terminology';
@@ -54,6 +55,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
       const bin = await lookupBinByCode(code);
       haptic();
       recordScan(bin.id);
+      recordBinUsage(bin.id, 'manual');
       onOpenChange(false);
       navigate(`/bin/${bin.id}`);
     } catch {
@@ -73,6 +75,7 @@ export function ScanDialog({ open, onOpenChange }: ScanDialogProps) {
         try {
           await apiFetch(`/api/bins/${binId}`);
           recordScan(binId);
+          recordBinUsage(binId, 'scan');
           onOpenChange(false);
           navigate(`/bin/${binId}`);
         } catch (err: unknown) {

@@ -20,6 +20,7 @@ import { useBulkSelection } from '@/features/bins/useBulkSelection';
 import { useReopenCreateOnCapture } from '@/features/capture/useAutoOpenOnCapture';
 import { useScanDialog } from '@/features/qrcode/ScanDialogContext';
 import { getCommandInputRef } from '@/features/tour/TourProvider';
+import { LocationActivityWidget } from '@/features/usage/LocationActivityWidget';
 import { useAiEnabled } from '@/lib/aiToggle';
 import { useAuth } from '@/lib/auth';
 import { useDashboardSettings } from '@/lib/dashboardSettings';
@@ -311,6 +312,11 @@ export function DashboardPage() {
           </section>
         )}
 
+        {/* Activity heatmap */}
+        {dashSettings.showActivity && activeLocationId && (
+          <LocationActivityWidget locationId={activeLocationId} />
+        )}
+
         {/* First-run onboarding (0 bins) */}
         {totalBins === 0 && (
           <div className="flex flex-col items-center justify-center gap-6 py-16">
@@ -365,6 +371,7 @@ export function DashboardPage() {
                 { key: 'showPinnedBins' as const, label: `Pinned ${t.Bins}` },
                 { key: 'showRecentlyScanned' as const, label: 'Recently Scanned' },
                 { key: 'showRecentlyUpdated' as const, label: 'Recently Updated' },
+                { key: 'showActivity' as const, label: 'Activity' },
               ]).map(({ key, label }) => (
                 <div key={key} className="flex items-center justify-between py-2 px-3 rounded-[var(--radius-md)]">
                   <span className="text-[14px] text-[var(--text-primary)]">{label}</span>

@@ -200,6 +200,65 @@ export function PreferencesSection() {
           </FormField>
         </div>
       </SettingsSection>
+
+      <SettingsSection label="Usage Tracking">
+        <SettingsRow
+          label="Scan QR code"
+          description="Record a usage dot when you scan a QR code"
+          control={
+            <Switch
+              checked={preferences.usage_tracking_scan}
+              onCheckedChange={(checked) => updatePreferences({ usage_tracking_scan: checked })}
+            />
+          }
+        />
+        <SettingsRow
+          label="Manual code lookup"
+          description={`Record when you look up a ${t.bin} by typing its code`}
+          control={
+            <Switch
+              checked={preferences.usage_tracking_manual_lookup}
+              onCheckedChange={(checked) => updatePreferences({ usage_tracking_manual_lookup: checked })}
+            />
+          }
+        />
+        <SettingsRow
+          label={`View ${t.bin}`}
+          description={`Record every time you open a ${t.bin} detail page`}
+          control={
+            <Switch
+              checked={preferences.usage_tracking_view}
+              onCheckedChange={(checked) => updatePreferences({ usage_tracking_view: checked })}
+            />
+          }
+        />
+        <SettingsRow
+          label={`Modify ${t.bin}`}
+          description={`Record when you edit a ${t.bin}'s contents or metadata`}
+          control={
+            <Switch
+              checked={preferences.usage_tracking_modify}
+              onCheckedChange={(checked) => updatePreferences({ usage_tracking_modify: checked })}
+            />
+          }
+        />
+        <SettingsRow
+          label="Default granularity"
+          description="Heatmap display: day / week / month"
+          control={
+            <OptionGroup
+              options={[
+                { key: 'daily' as const, label: 'Day' },
+                { key: 'weekly' as const, label: 'Week' },
+                { key: 'monthly' as const, label: 'Month' },
+              ]}
+              value={preferences.usage_granularity}
+              onChange={(v) => updatePreferences({ usage_granularity: v })}
+              size="sm"
+            />
+          }
+        />
+      </SettingsSection>
     </>
   );
 }

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Bin-centric inventory with intelligence. Multi-user web app for organizing physical storage bins with QR codes and photo recognition. Data persists in SQLite via Express API. Flat material design system.
+Bin-centric inventory with intelligence. Multi-user web app for organizing physical storage bins with QR codes and photo recognition. Data persists in SQLite via Express API.
 
 **Data model**: Location → Area → **Bin** → Items. The bin is the core entity — not individual items. Items exist only inside a bin (name + optional quantity, no independent identity). Custom fields, photos, tags, and QR codes all attach to bins. This is a "what's in this container" tool, not an asset tracker.
 
@@ -25,14 +25,10 @@ Bin-centric inventory with intelligence. Multi-user web app for organizing physi
 - **Key utilities**: `apiFetch()` in `lib/api.ts`, `useAuth()` in `lib/auth.tsx`, `useAppSettings()` in `lib/appSettings.ts`, `LocationProvider` in `features/locations/useLocations.tsx`, `usePermissions()` in `lib/usePermissions.ts`, `cn()` in `lib/utils.ts`. Read the source for signatures.
 - **Soft deletes**: `DELETE /api/bins/:id` sets `deleted_at`. All bin queries filter `WHERE deleted_at IS NULL`.
 - **API response envelopes**: Lists return `{ results: T[], count }`. Errors return `{ error: "CODE", message }`. See `server/openapi.yaml` for details.
-- **CSS**: use `var(--token)` design tokens, not raw colors. Surface classes `flat-card`, `flat-nav`, `flat-heavy`, `flat-popover` provide opaque backgrounds with solid borders — no blur, no shadow. Use `cn()` from `lib/utils.ts` (clsx + tailwind-merge) for className composition. **Do not** add `backdrop-blur-*`, `shadow-*`, or `rounded-full` (except pills/avatars) — the design is deliberately flat.
-- **Border tokens**: `--border-flat` for structural/container borders (cards, inputs, pickers, panels). `--border-subtle` for internal separators (dividers between list items, section breaks within a card).
-- **Radius tokens**: `--radius-xs` (4px) through `--radius-xl` (12px), `--radius-full` (9999px). Use `var(--radius-*)` instead of hardcoded values or Tailwind `rounded-*`.
-- **Shared class constants** in `lib/utils.ts`: `inputBase` (form controls), `flatCard`, `focusRing`, `focusRingInset`, `categoryHeader`, `iconButton`, `rowAction`, `overlayBackdrop`, `disclosureSectionLabel`. Use these instead of hand-rolling the same patterns.
 - **Icons**: `lucide-react` — import named icons (e.g. `import { Plus } from 'lucide-react'`).
 - **Responsive**: mobile-first. Breakpoint `lg` (1024px).
 - **Server error handling**: Routes use `throw new ValidationError(...)` etc. from `server/src/lib/httpErrors.ts`, wrapped in `asyncHandler()` to forward to the global error handler.
-- **Event bus**: `notify()` and `useRefreshOn()` from `lib/eventBus.ts`. 9 event types: `BINS`, `LOCATIONS`, `PHOTOS`, `PINS`, `AREAS`, `TAG_COLORS`, `SCAN_HISTORY`, `CUSTOM_FIELDS`, `PLAN`.
+- **Event bus**: `notify()` and `useRefreshOn()` from `lib/eventBus.ts`. 11 event types: `BINS`, `LOCATIONS`, `PHOTOS`, `PINS`, `AREAS`, `TAG_COLORS`, `SCAN_HISTORY`, `CUSTOM_FIELDS`, `PLAN`, `CHECKOUTS`, `BIN_USAGE`.
 
 ## API Documentation
 

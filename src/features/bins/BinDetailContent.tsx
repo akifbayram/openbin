@@ -10,6 +10,7 @@ import { AiSuggestionsPanel } from '@/features/ai/AiSuggestionsPanel';
 import { AreaPicker } from '@/features/areas/AreaPicker';
 import { QRCodeDisplay } from '@/features/qrcode/QRCodeDisplay';
 import { useTagStyle } from '@/features/tags/useTagStyle';
+import { BinUsageSection } from '@/features/usage/BinUsageSection';
 import { getSecondaryColorInfo, setSecondaryColor } from '@/lib/cardStyle';
 import { useTerminology } from '@/lib/terminology';
 import type { useDictation } from '@/lib/useDictation';
@@ -146,6 +147,7 @@ export function BinDetailContent({
         </Card>
 
         {photosSection}
+        <BinUsageSection binId={bin.id} />
       </div>
 
       {/* Right column */}

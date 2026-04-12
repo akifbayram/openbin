@@ -28,7 +28,7 @@ export function binMatchesSearch(bin: Bin, regex: RegExp): boolean {
 /** Notify all useBinList / useBin instances to refetch */
 export const notifyBinsChanged = () => notify(Events.BINS);
 
-export type SortOption = 'updated' | 'created' | 'name' | 'area';
+export type SortOption = 'updated' | 'created' | 'name' | 'area' | 'last_used';
 
 export interface BinFilters {
   tags: string[];
@@ -37,6 +37,7 @@ export interface BinFilters {
   hasItems: boolean;
   hasNotes: boolean;
   needsOrganizing?: boolean;
+  unusedSince?: string;  // 'YYYY-MM-DD'
 }
 
 export const EMPTY_FILTERS: BinFilters = {
@@ -49,6 +50,7 @@ export function countActiveFilters(f: BinFilters): number {
   if (f.areas.length) n++;
   if (f.hasItems) n++;
   if (f.hasNotes) n++;
+  if (f.unusedSince) n++;
   return n;
 }
 
@@ -115,6 +117,10 @@ export function useBinList(searchQuery?: string, sort: SortOption = 'updated', f
       });
     } else if (sort === 'created') {
       filtered.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    } else if (sort === 'last_used') {
+      // Bin type doesn't carry last_used; fall back to updated_at order.
+      // Server-side paginated list honors the true last_used order.
+      filtered.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
     } else {
       filtered.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
     }
@@ -134,7 +140,13 @@ function buildFilterParams(
   const p = new URLSearchParams();
   if (searchQuery?.trim()) p.set('q', searchQuery.trim());
 
-  const sortMap: Record<SortOption, string> = { updated: 'updated_at', created: 'created_at', name: 'name', area: 'area' };
+  const sortMap: Record<SortOption, string> = {
+    updated: 'updated_at',
+    created: 'created_at',
+    name: 'name',
+    area: 'area',
+    last_used: 'last_used',
+  };
   p.set('sort', sortMap[sort]);
   p.set('sort_dir', sortDir);
 
@@ -147,6 +159,7 @@ function buildFilterParams(
     if (filters.hasItems) p.set('has_items', 'true');
     if (filters.hasNotes) p.set('has_notes', 'true');
     if (filters.needsOrganizing) p.set('needs_organizing', 'true');
+    if (filters.unusedSince) p.set('unused_since', filters.unusedSince);
   }
 
   const qs = p.toString();

@@ -14,6 +14,7 @@ import { cleanupBinPhotos } from '../lib/photoCleanup.js';
 import { generateThumbnail } from '../lib/photoHelpers.js';
 import { assertLocationWritable, generateUpgradeUrl, getUserFeatures, getUserPlanInfo, invalidateOverLimitCache } from '../lib/planGate.js';
 import { sensitiveAuthLimiter } from '../lib/rateLimiters.js';
+import { getUserUsageTrackingPrefs, recordBinUsage } from '../lib/recordBinUsage.js';
 import { logRouteActivity } from '../lib/routeHelpers.js';
 import { storage } from '../lib/storage.js';
 import { generateThumbnailBuffer } from '../lib/thumbnailPool.js';
@@ -98,6 +99,7 @@ router.get('/', asyncHandler(async (req, res) => {
     hasItems: req.query.has_items as string | undefined,
     hasNotes: req.query.has_notes as string | undefined,
     needsOrganizing: req.query.needs_organizing as string | undefined,
+    unusedSince: req.query.unused_since as string | undefined,  // NEW
     sort: req.query.sort as string | undefined,
     sortDir: req.query.sort_dir as string | undefined,
   });
@@ -238,6 +240,18 @@ router.get('/:id', asyncHandler(async (req, res) => {
     throw new NotFoundError('Bin not found');
   }
 
+  // Fire-and-forget: record a usage dot if the user has view tracking enabled.
+  // Note: when both scan and view prefs are enabled, a single QR scan can
+  // increment `count` multiple times (ScanDialog's validate fetch, the scan
+  // POST, and the detail page's mount fetch each trigger a write). This
+  // does not affect the dot's existence (one dot per UTC day) but does inflate
+  // the per-day `count` field. The default config (view=false) avoids this.
+  getUserUsageTrackingPrefs(req.user!.id)
+    .then((prefs) => {
+      if (prefs.view) recordBinUsage(id, req.user!.id);
+    })
+    .catch(() => {});
+
   res.json(bin);
 }));
 
@@ -325,6 +339,13 @@ router.put('/:id', asyncHandler(async (req, res) => {
   }
 
   res.json(bin);
+
+  // Fire-and-forget: record a usage dot if the user has modify tracking enabled
+  getUserUsageTrackingPrefs(req.user!.id)
+    .then((prefs) => {
+      if (prefs.modify) recordBinUsage(id, req.user!.id);
+    })
+    .catch(() => {});
 }));
 
 // DELETE /api/bins/:id — soft-delete bin (admin only)
